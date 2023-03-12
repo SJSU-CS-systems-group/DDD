@@ -1,4 +1,4 @@
-package com.ddd.model.poc;
+package com.ddd.model.v2;
 
 public interface PayloadDecryptedBundleStore {
 

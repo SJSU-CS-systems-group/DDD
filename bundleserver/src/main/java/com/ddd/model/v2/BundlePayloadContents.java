@@ -1,8 +1,9 @@
-package com.ddd.model.poc;
+package com.ddd.model.v2;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+
 import javax.validation.constraints.NotNull;
 
 public class BundlePayloadContents {
