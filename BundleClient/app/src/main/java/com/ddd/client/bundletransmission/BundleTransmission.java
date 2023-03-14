@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.commons.io.FileUtils;
 import com.ddd.client.applicationdatamanager.ApplicationDataManager;
 import com.ddd.client.bundlesecurity.BundleSecurity;
 import com.ddd.model.ADU;
@@ -15,15 +14,19 @@ import com.ddd.utils.AckRecordUtils;
 import com.ddd.utils.BundleUtils;
 import com.ddd.utils.Constants;
 
+import org.apache.commons.io.FileUtils;
+
 public class BundleTransmission {
 
   private BundleSecurity bundleSecurity;
 
   private ApplicationDataManager applicationDataManager;
 
+  private String RootDirectory;
+
   /* Bundle generation directory */
-  private static final String BUNDLE_GENERATION_DIRECTORY =
-      "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Client\\BundleTransmission\\bundle-generation";
+  private static String BUNDLE_GENERATION_DIRECTORY =
+      "/BundleTransmission/bundle-generation";
 
   private static final String RETRANSMISSION_BUNDLE_DIRECTORY = "retransmission-bundle";
 
@@ -33,16 +36,18 @@ public class BundleTransmission {
 
   private long BUNDLE_SIZE_LIMIT = 10000;
 
-  public BundleTransmission() {
-    this.bundleSecurity = new BundleSecurity();
-    this.applicationDataManager = new ApplicationDataManager();
+  public BundleTransmission(String rootFolder) {
+    RootDirectory = rootFolder;
+    BUNDLE_GENERATION_DIRECTORY = RootDirectory+BUNDLE_GENERATION_DIRECTORY;
+    this.bundleSecurity = new BundleSecurity(RootDirectory);
+    this.applicationDataManager = new ApplicationDataManager(RootDirectory);
   }
 
   private String getAckRecordLocation() {
     return BUNDLE_GENERATION_DIRECTORY
-        + FileSystems.getDefault().getSeparator()
+        + "/"
         + TO_BE_BUNDLED_DIRECTORY
-        + FileSystems.getDefault().getSeparator()
+        + "/"
         + Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME;
   }
 
@@ -99,7 +104,7 @@ public class BundleTransmission {
     Bundle.Builder builder = this.generateBundleBuilder();
     String bundleId = this.bundleSecurity.generateNewBundleId();
     builder.setBundleId(bundleId);
-    builder.setSource(new File(targetDir + FileSystems.getDefault().getSeparator() + bundleId));
+    builder.setSource(new File(targetDir + "/" + bundleId));
     Bundle bundle = builder.build();
     this.bundleSecurity.encryptBundleContents(bundle);
     BundleUtils.writeBundleToFile(bundle, targetDir, bundleId);
@@ -111,7 +116,7 @@ public class BundleTransmission {
   private Bundle generateNewBundle(Bundle.Builder builder, File targetDir) {
     String bundleId = this.bundleSecurity.generateNewBundleId();
     builder.setBundleId(bundleId);
-    builder.setSource(new File(targetDir + FileSystems.getDefault().getSeparator() + bundleId));
+    builder.setSource(new File(targetDir + "/" + bundleId));
     Bundle bundle = builder.build();
     this.bundleSecurity.encryptBundleContents(bundle);
     BundleUtils.writeBundleToFile(bundle, targetDir, bundleId);
@@ -124,13 +129,13 @@ public class BundleTransmission {
     File retxmnDir =
         new File(
             BUNDLE_GENERATION_DIRECTORY
-                + FileSystems.getDefault().getSeparator()
+                + "/"
                 + RETRANSMISSION_BUNDLE_DIRECTORY);
 
     File toSendDir =
         new File(
             BUNDLE_GENERATION_DIRECTORY
-                + FileSystems.getDefault().getSeparator()
+                + "/"
                 + TO_SEND_DIRECTORY);
 
     File[] contents = retxmnDir.listFiles();
@@ -151,7 +156,7 @@ public class BundleTransmission {
         builder.setSource(
             new File(
                 toSendDir
-                    + FileSystems.getDefault().getSeparator()
+                    + "/"
                     + retxmnBundleBuilder.getBundleId()));
 
         toSend = builder.build();

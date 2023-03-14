@@ -18,7 +18,7 @@ public class ADUUtils {
     File aduFile =
         new File(
             targetDirectory.getAbsolutePath()
-                + FileSystems.getDefault().getSeparator()
+                + "/"
                 + aduFileName);
 
     try (BufferedInputStream bufferedInputStream =
@@ -44,7 +44,7 @@ public class ADUUtils {
     for (final ADU adu : adus) {
       String appId = adu.getAppId();
       File appDirectory =
-          new File(targetDirectory + FileSystems.getDefault().getSeparator() + appId);
+          new File(targetDirectory + "/" + appId);
       if (!appDirectory.exists()) {
         appDirectory.mkdirs();
       }
@@ -79,7 +79,7 @@ public class ADUUtils {
       return ret;
     }
     File appSubDirectory =
-        new File(aduDirectory.getAbsolutePath() + FileSystems.getDefault().getSeparator() + appId);
+        new File(aduDirectory.getAbsolutePath() + "/" + appId);
 
     for (final File aduFile : appSubDirectory.listFiles()) {
       String aduFileName = aduFile.getName();

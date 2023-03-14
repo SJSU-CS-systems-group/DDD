@@ -1,9 +1,11 @@
 package com.ddd.utils;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.FileSystems;
@@ -23,8 +25,12 @@ public class BundleUtils {
 
   private static String readBundleIdFromFile(File bundleIdFile) {
     String bundleId = "";
-    try {
-      bundleId = Files.readString(Paths.get(bundleIdFile.getAbsolutePath()));
+    try (BufferedReader bufferedReader = new BufferedReader(new FileReader(bundleIdFile))){
+      String line = "";
+      while ((line = bufferedReader.readLine()) != null) {
+        bundleId = line.trim();
+      }
+      return bundleId;
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -55,11 +61,11 @@ public class BundleUtils {
     String path = inputFile.getAbsolutePath();
 
     String ackPath =
-        path + FileSystems.getDefault().getSeparator() + Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME;
+        path + "/" + Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME;
     String bundleIdPath =
-        path + FileSystems.getDefault().getSeparator() + Constants.BUNDLE_IDENTIFIER_FILE_NAME;
+        path + "/" + Constants.BUNDLE_IDENTIFIER_FILE_NAME;
     String aduPath =
-        path + FileSystems.getDefault().getSeparator() + Constants.BUNDLE_ADU_DIRECTORY_NAME;
+        path + "/" + Constants.BUNDLE_ADU_DIRECTORY_NAME;
 
     Bundle.Builder builder = new Bundle.Builder();
 
@@ -107,14 +113,14 @@ public class BundleUtils {
   public static void writeBundleToFile(Bundle bundle, File targetDirectory, String bundleFileName) {
     String bundleId = bundle.getBundleId();
     String bundleFilePath =
-        targetDirectory.getAbsolutePath() + FileSystems.getDefault().getSeparator() + bundleId;
+        targetDirectory.getAbsolutePath() + "/" + bundleId;
 
     File bundleFile = new File(bundleFilePath);
     bundleFile.mkdirs();
 
     String ackPath =
         bundleFilePath
-            + FileSystems.getDefault().getSeparator()
+            + "/"
             + Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME;
 
     File ackRecordFile = new File(ackPath);
@@ -127,7 +133,7 @@ public class BundleUtils {
 
     String bundleIdPath =
         bundleFilePath
-            + FileSystems.getDefault().getSeparator()
+            + "/"
             + Constants.BUNDLE_IDENTIFIER_FILE_NAME;
     File bundleIdFile = new File(bundleIdPath);
     try {
@@ -140,7 +146,7 @@ public class BundleUtils {
 
     String aduPath =
         bundleFilePath
-            + FileSystems.getDefault().getSeparator()
+            + "/"
             + Constants.BUNDLE_ADU_DIRECTORY_NAME;
 
     List<ADU> adus = bundle.getADUs();
@@ -151,13 +157,13 @@ public class BundleUtils {
       ADUUtils.writeADUs(bundle.getADUs(), aduDirectory);
     }
 
-    String zipFilePath = bundleFile.getAbsolutePath() + ".zip";
-    try {
-      zipFolder(bundleFile.getAbsolutePath(), zipFilePath);
-      FileUtils.deleteDirectory(bundleFile);
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
+//    String zipFilePath = bundleFile.getAbsolutePath() + ".zip";
+//    try {
+//      zipFolder(bundleFile.getAbsolutePath(), zipFilePath);
+//      FileUtils.deleteDirectory(bundleFile);
+//    } catch (IOException e) {
+//      e.printStackTrace();
+//    }
     System.out.println(
         "[BundleUtils] Wrote bundle with id = " + bundleId + " to " + targetDirectory);
   }

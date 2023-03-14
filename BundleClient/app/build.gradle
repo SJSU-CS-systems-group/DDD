@@ -33,7 +33,7 @@ android {
 protobuf {
     protoc { artifact = 'com.google.protobuf:protoc:3.17.3' }
     plugins {
-        grpc { artifact = 'io.grpc:protoc-gen-grpc-java:1.50.2:osx-x86_64' // CURRENT_GRPC_VERSION need to change for windows, MAC specific
+        grpc { artifact = 'io.grpc:protoc-gen-grpc-java:1.50.2' // CURRENT_GRPC_VERSION need to change for windows, MAC specific
         }
     }
     generateProtoTasks {
@@ -63,4 +63,7 @@ dependencies {
     implementation 'io.grpc:grpc-protobuf-lite:1.50.2' // CURRENT_GRPC_VERSION
     implementation 'io.grpc:grpc-stub:1.50.2' // CURRENT_GRPC_VERSION
     implementation 'org.apache.tomcat:annotations-api:6.0.53'
+    implementation 'com.google.code.gson:gson:2.8.7'
+    implementation group: 'commons-io', name: 'commons-io', version: '2.4'
+    implementation 'org.apache.commons:commons-text:1.9'
 }

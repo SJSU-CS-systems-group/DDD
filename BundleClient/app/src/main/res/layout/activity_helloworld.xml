@@ -30,6 +30,11 @@
             android:paddingBottom="12dp"
             android:textSize="16sp"
             android:text="Response:" />
+    <Button
+        android:id="@+id/generate_bundle_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Generate Bundle" />
 
     <TextView
             android:id="@+id/grpc_response_text"

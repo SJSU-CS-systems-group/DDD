@@ -13,11 +13,12 @@ import com.ddd.model.Bundle;
 
 public class BundleSecurity {
 
-  private static final String LARGEST_BUNDLE_ID_RECEIVED =
-      "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Client\\Shared\\DB\\LARGEST_BUNDLE_ID_RECEIVED.txt";
+  private static String RootFolder;
+  private static String LARGEST_BUNDLE_ID_RECEIVED =
+      "/Shared/DB/LARGEST_BUNDLE_ID_RECEIVED.txt";
 
-  private static final String BUNDLE_ID_NEXT_COUNTER =
-      "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Client\\Shared\\DB\\BUNDLE_ID_NEXT_COUNTER.txt";
+  private static String BUNDLE_ID_NEXT_COUNTER =
+      "/Shared/DB/BUNDLE_ID_NEXT_COUNTER.txt";
 
   private int counter = 0;
 
@@ -25,8 +26,11 @@ public class BundleSecurity {
 
   private String getLargestBundleIdReceived() {
     String bundleId = "";
-    try {
-      bundleId = Files.readString(Paths.get(LARGEST_BUNDLE_ID_RECEIVED));
+    try (BufferedReader bufferedReader = new BufferedReader(new FileReader(new File(LARGEST_BUNDLE_ID_RECEIVED)))){
+      String line = "";
+      while ((line = bufferedReader.readLine()) != null) {
+        bundleId = line.trim();
+      }
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -51,7 +55,10 @@ public class BundleSecurity {
     }
   }
 
-  public BundleSecurity() {
+  public BundleSecurity(String rootFolder) {
+    RootFolder = rootFolder;
+    LARGEST_BUNDLE_ID_RECEIVED = RootFolder+ LARGEST_BUNDLE_ID_RECEIVED;
+    BUNDLE_ID_NEXT_COUNTER = RootFolder+ BUNDLE_ID_NEXT_COUNTER;
     try (BufferedReader bufferedReader =
         new BufferedReader(new FileReader(new File(BUNDLE_ID_NEXT_COUNTER)))) {
       this.counter = Integer.valueOf(bufferedReader.readLine());

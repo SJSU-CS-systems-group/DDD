@@ -1,5 +1,11 @@
 package com.ddd.client.applicationdatamanager;
 
+import android.content.ContentResolver;
+import android.content.ContentValues;
+import android.content.Context;
+import android.database.Cursor;
+import android.net.Uri;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -13,6 +19,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import com.ddd.datastore.providers.MessageProvider;
 import com.ddd.model.ADU;
 import com.ddd.model.Bundle;
 import com.ddd.utils.ADUUtils;
@@ -27,17 +35,20 @@ class StateManager {
   private DataStoreAdaptor dataStoreAdaptor;
 
   /* Database tables */
-  private static final String SENT_BUNDLE_DETAILS =
-      "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Client\\Shared\\DB\\SENT_BUNDLE_DETAILS.json";
+  private static String SENT_BUNDLE_DETAILS =
+      "/Shared/DB/SENT_BUNDLE_DETAILS.json";
 
-  private static final String LARGEST_ADU_ID_RECEIVED =
-      "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Client\\Shared\\DB\\LARGEST_ADU_ID_RECEIVED.json";
+  private static String LARGEST_ADU_ID_RECEIVED =
+      "/Shared/DB/LARGEST_ADU_ID_RECEIVED.json";
 
-  private static final String LARGEST_ADU_ID_DELIVERED =
-      "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Client\\Shared\\DB\\LARGEST_ADU_ID_DELIVERED.json";
+  private static String LARGEST_ADU_ID_DELIVERED =
+      "/Shared/DB/LARGEST_ADU_ID_DELIVERED.json";
 
-  public StateManager() {
-    this.dataStoreAdaptor = new DataStoreAdaptor();
+  public StateManager(String rootFolder) {
+    SENT_BUNDLE_DETAILS = rootFolder+SENT_BUNDLE_DETAILS;
+    LARGEST_ADU_ID_DELIVERED = rootFolder+LARGEST_ADU_ID_DELIVERED;
+    LARGEST_ADU_ID_RECEIVED = rootFolder+LARGEST_ADU_ID_DELIVERED;
+    this.dataStoreAdaptor = new DataStoreAdaptor(rootFolder);
   }
 
   /* Largest ADU ID received */
@@ -176,96 +187,6 @@ class StateManager {
   }
 }
 
-class DataStoreAdaptor {
-
-  private static final String ADU_LOCATION =
-      "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Client\\ApplicationDataManager\\ADU";
-
-  private static final String SEND_SUBDIR = "send";
-
-  private static final String RECV_SUBDIR = "receive";
-
-  public void persistADU(ADU adu) {
-    File receiveDir =
-        new File(
-            ADU_LOCATION
-                + FileSystems.getDefault().getSeparator()
-                + RECV_SUBDIR
-                + FileSystems.getDefault().getSeparator()
-                + adu.getAppId());
-    if (!receiveDir.exists()) {
-      receiveDir.mkdirs();
-    }
-    ADUUtils.writeADU(adu, receiveDir);
-    System.out.println(
-        "[ADM-DSA] Persisting inbound ADU "
-            + adu.getAppId()
-            + "-"
-            + adu.getADUId()
-            + " to the Data Store");
-  }
-
-  public void deleteADUs(String appId, long aduIdEnd) {
-    File aduSendDir =
-        new File(
-            ADU_LOCATION
-                + FileSystems.getDefault().getSeparator()
-                + SEND_SUBDIR
-                + FileSystems.getDefault().getSeparator()
-                + appId);
-
-    for (final File appDir : aduSendDir.listFiles()) {
-      String currAppId = appDir.getName();
-      if (!currAppId.equals(appId)) {
-        continue;
-      }
-      for (final File aduFile : appDir.listFiles()) {
-        ADU adu = ADUUtils.readADUFromFile(aduFile, currAppId);
-        if (adu.getADUId() <= aduIdEnd) {
-          adu.getSource().delete();
-        }
-      }
-    }
-    System.out.println("[DSA] Deleted ADUs for application " + appId + " with id upto " + aduIdEnd);
-    System.out.println(
-        "[ADM-DSA] Deleting outbound ADUs of application " + appId + " upto id " + aduIdEnd);
-  }
-
-  private ADU fetchADU(String appId, long aduId) {
-    File aduDirectory =
-        new File(ADU_LOCATION + FileSystems.getDefault().getSeparator() + SEND_SUBDIR);
-    System.out.println(
-        "[ADM-DSA] Fetching ADU id = "
-            + aduId
-            + " of application: "
-            + appId
-            + " from "
-            + aduDirectory.getAbsolutePath());
-    if (!aduDirectory.exists() || aduDirectory.listFiles().length == 0) {
-      return null;
-    }
-
-    ADU ret = null;
-    for (ADU adu : ADUUtils.readADUs(aduDirectory, appId)) {
-      if (adu.getADUId() == aduId) {
-        ret = adu;
-      }
-    }
-    return ret;
-  }
-
-  public List<ADU> fetchADUs(String appId, long aduIdStart) {
-    ADU adu = null;
-    List<ADU> ret = new ArrayList<>();
-    long aduId = aduIdStart;
-    while ((adu = this.fetchADU(appId, aduId)) != null) {
-      ret.add(adu);
-      aduId++;
-    }
-    return ret;
-  }
-}
-
 public class ApplicationDataManager {
 
   private StateManager stateManager;
@@ -274,12 +195,13 @@ public class ApplicationDataManager {
 
   private Long APP_DATA_SIZE_LIMIT = 10000L;
 
-  private static final String REGISTERED_APP_IDS =
-      "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Client\\Shared\\DB\\REGISTERED_APP_IDS.txt";
+  private static String REGISTERED_APP_IDS =
+      "/Shared/DB/REGISTERED_APP_IDS.txt";
 
-  public ApplicationDataManager() {
-    this.stateManager = new StateManager();
-    this.dataStoreAdaptor = new DataStoreAdaptor();
+  public ApplicationDataManager(String rootDir) {
+    REGISTERED_APP_IDS = rootDir+REGISTERED_APP_IDS;
+    this.stateManager = new StateManager(rootDir);
+    this.dataStoreAdaptor = new DataStoreAdaptor(rootDir);
   }
 
   public List<String> getRegisteredAppIds() {
