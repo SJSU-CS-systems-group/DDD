@@ -161,6 +161,7 @@ public class JarUtils {
                 byte[] fileBytes = helper.getDataFromFile(destinationFile);
 //                String fileChecksum = Base64.getEncoder().encodeToString(messageDigest.digest(fileBytes));
                 String fileChecksum = Base64.encodeToString(messageDigest.digest(fileBytes), Base64.DEFAULT);
+                fileChecksum = fileChecksum.trim().replaceAll("\n$", "");
                 String manifestChecksum =
                         manifest.getEntries().get(entry.getName()).getValue("SHA-256-Digest");
                 if (!fileChecksum.equals(manifestChecksum)) {

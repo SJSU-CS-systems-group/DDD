@@ -49,7 +49,7 @@ public class HelloworldActivity extends AppCompatActivity {
   private static final int WRITE_EXTERNAL_STORAGE = 1002;
   // gRPC set up
   private Button connectButton;
-  private Button generateBundleButton;
+  private Button detectTransportButton;
   private FileChooserFragment fragment;
   private TextView resultText;
 
@@ -75,7 +75,7 @@ public class HelloworldActivity extends AppCompatActivity {
     // set up view
     setContentView(R.layout.activity_helloworld);
     connectButton = (Button) findViewById(R.id.connect_button);
-    generateBundleButton = (Button) findViewById(R.id.generate_bundle_button);
+    detectTransportButton = (Button) findViewById(R.id.detect_transport_button);
     resultText = (TextView) findViewById(R.id.grpc_response_text);
     resultText.setMovementMethod(new ScrollingMovementMethod());
 
@@ -92,7 +92,7 @@ public class HelloworldActivity extends AppCompatActivity {
       }
     });
 
-    generateBundleButton.setOnClickListener(new View.OnClickListener() {
+    detectTransportButton.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View view) {
         BundleDeliveryAgent agent = new BundleDeliveryAgent(getApplicationContext().getApplicationInfo().dataDir);

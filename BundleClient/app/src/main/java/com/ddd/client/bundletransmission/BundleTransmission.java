@@ -85,6 +85,11 @@ public class BundleTransmission {
       this.bundleSecurity.registerBundleId(bundle.getBundleId());
       this.applicationDataManager.processAcknowledgement(bundle.getAckRecord().getBundleId());
       this.applicationDataManager.storeADUs(bundle.getADUs());
+      try {
+        FileUtils.deleteDirectory(bundle.getSource());
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
     }
   }
 
