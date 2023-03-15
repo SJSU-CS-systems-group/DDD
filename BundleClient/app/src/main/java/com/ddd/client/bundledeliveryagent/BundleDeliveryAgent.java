@@ -14,11 +14,11 @@ public class BundleDeliveryAgent {
   }
 
   public void start() {
-//    System.out.println("[BDA] Starting Bundle Delivery Agent");
+    System.out.println("[BDA] Starting Bundle Delivery Agent");
     this.bundleTransmission = new BundleTransmission(ROOT_FOLDER);
 //    this.bundleTransmission.processReceivedBundles(ROOT_FOLDER + RelativePath);
     Bundle toSend = this.bundleTransmission.generateBundleForTransmission();
-    this.bundleTransmission.deleteSentBundle(toSend);
-//    System.out.println("[BDA] An outbound bundle generated with id: " + toSend.getBundleId());
+    this.bundleTransmission.notifyBundleSent(toSend);
+    System.out.println("[BDA] An outbound bundle generated with id: " + toSend.getBundleId());
   }
 }

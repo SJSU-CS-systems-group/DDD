@@ -26,7 +26,7 @@ public class BundleSecurity {
 
   private String getLargestBundleIdReceived() {
     String bundleId = "";
-    try (BufferedReader bufferedReader = new BufferedReader(new FileReader(new File(LARGEST_BUNDLE_ID_RECEIVED)))){
+    try (BufferedReader bufferedReader = new BufferedReader(new FileReader(new File(RootFolder+ LARGEST_BUNDLE_ID_RECEIVED)))){
       String line = "";
       while ((line = bufferedReader.readLine()) != null) {
         bundleId = line.trim();
@@ -48,7 +48,7 @@ public class BundleSecurity {
 
   private void writeCounterToDB() {
     try (BufferedWriter bufferedWriter =
-        new BufferedWriter(new FileWriter(new File(BUNDLE_ID_NEXT_COUNTER)))) {
+        new BufferedWriter(new FileWriter(new File(RootFolder+ BUNDLE_ID_NEXT_COUNTER)))) {
       bufferedWriter.write(String.valueOf(this.counter));
     } catch (IOException e) {
       e.printStackTrace();
@@ -57,11 +57,29 @@ public class BundleSecurity {
 
   public BundleSecurity(String rootFolder) {
     RootFolder = rootFolder;
-    LARGEST_BUNDLE_ID_RECEIVED = RootFolder+ LARGEST_BUNDLE_ID_RECEIVED;
-    BUNDLE_ID_NEXT_COUNTER = RootFolder+ BUNDLE_ID_NEXT_COUNTER;
-    try (BufferedReader bufferedReader =
-        new BufferedReader(new FileReader(new File(BUNDLE_ID_NEXT_COUNTER)))) {
-      this.counter = Integer.valueOf(bufferedReader.readLine());
+
+    File bundleIdNextCounter = new File(RootFolder+ BUNDLE_ID_NEXT_COUNTER);
+
+    try {
+      bundleIdNextCounter.getParentFile().mkdirs();
+      bundleIdNextCounter.createNewFile();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    File largestBundleIdReceived = new File(RootFolder+ LARGEST_BUNDLE_ID_RECEIVED);
+
+    try {
+      largestBundleIdReceived.getParentFile().mkdirs();
+      largestBundleIdReceived.createNewFile();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+
+    try (BufferedReader bufferedReader = new BufferedReader(new FileReader(bundleIdNextCounter))) {
+      String line = bufferedReader.readLine();
+      if (StringUtils.isNotEmpty(line)) {
+        this.counter = Integer.valueOf(line);
+      }
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -73,7 +91,7 @@ public class BundleSecurity {
 
   public void registerBundleId(String bundleId) {
     try (BufferedWriter bufferedWriter =
-        new BufferedWriter(new FileWriter(new File(LARGEST_BUNDLE_ID_RECEIVED)))) {
+        new BufferedWriter(new FileWriter(new File(RootFolder+ LARGEST_BUNDLE_ID_RECEIVED)))) {
       bufferedWriter.write(bundleId);
     } catch (IOException e) {
       e.printStackTrace();

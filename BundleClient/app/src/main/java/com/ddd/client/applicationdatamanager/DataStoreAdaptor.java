@@ -6,9 +6,11 @@ import android.net.Uri;
 import com.ddd.datastore.filestore.FileStoreHelper;
 import com.ddd.datastore.providers.MessageProvider;
 import com.ddd.model.ADU;
+import com.ddd.model.Bundle;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 

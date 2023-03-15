@@ -4,7 +4,10 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+
 import com.ddd.client.applicationdatamanager.ApplicationDataManager;
 import com.ddd.client.bundlesecurity.BundleSecurity;
 import com.ddd.model.ADU;
@@ -36,15 +39,32 @@ public class BundleTransmission {
 
   private long BUNDLE_SIZE_LIMIT = 10000;
 
+  private String ROOT_DIR = "";
   public BundleTransmission(String rootFolder) {
-    RootDirectory = rootFolder;
-    BUNDLE_GENERATION_DIRECTORY = RootDirectory+BUNDLE_GENERATION_DIRECTORY;
-    this.bundleSecurity = new BundleSecurity(RootDirectory);
-    this.applicationDataManager = new ApplicationDataManager(RootDirectory);
+    ROOT_DIR = rootFolder;
+    this.bundleSecurity = new BundleSecurity(ROOT_DIR);
+    this.applicationDataManager = new ApplicationDataManager(ROOT_DIR);
+    try {
+      File bundleGenerationDir = new File(ROOT_DIR+BUNDLE_GENERATION_DIRECTORY);
+      bundleGenerationDir.mkdirs();
+      File toBeBundledDir =
+              new File(bundleGenerationDir + File.separator + TO_BE_BUNDLED_DIRECTORY);
+      toBeBundledDir.mkdirs();
+      File ackRecFile =
+              new File(toBeBundledDir + File.separator + Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME);
+      ackRecFile.createNewFile();
+
+      FileUtils.writeLines(ackRecFile, Arrays.asList(new String[] {"HB"}));
+
+      File tosendDir = new File(bundleGenerationDir + File.separator + TO_SEND_DIRECTORY);
+      tosendDir.mkdirs();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
   }
 
   private String getAckRecordLocation() {
-    return BUNDLE_GENERATION_DIRECTORY
+    return ROOT_DIR + BUNDLE_GENERATION_DIRECTORY
         + "/"
         + TO_BE_BUNDLED_DIRECTORY
         + "/"
@@ -113,8 +133,7 @@ public class BundleTransmission {
     return bundle;
   }
 
-  private Bundle generateNewBundle(Bundle.Builder builder, File targetDir) {
-    String bundleId = this.bundleSecurity.generateNewBundleId();
+  private Bundle generateNewBundle(Bundle.Builder builder, File targetDir, String bundleId) {
     builder.setBundleId(bundleId);
     builder.setSource(new File(targetDir + "/" + bundleId));
     Bundle bundle = builder.build();
@@ -126,54 +145,38 @@ public class BundleTransmission {
   }
 
   public Bundle generateBundleForTransmission() {
-    File retxmnDir =
-        new File(
-            BUNDLE_GENERATION_DIRECTORY
-                + "/"
-                + RETRANSMISSION_BUNDLE_DIRECTORY);
-
     File toSendDir =
-        new File(
-            BUNDLE_GENERATION_DIRECTORY
-                + "/"
-                + TO_SEND_DIRECTORY);
+            new File(
+                    ROOT_DIR + BUNDLE_GENERATION_DIRECTORY
+                            + File.separator
+                            + TO_SEND_DIRECTORY);
 
-    File[] contents = retxmnDir.listFiles();
     Bundle toSend = null;
-    if (contents.length == 0) {
+    Optional<Bundle.Builder> optional = this.applicationDataManager.getLastSentBundleBuilder();
+    if (!optional.isPresent()) {
       toSend = this.generateNewBundle(toSendDir);
-      this.storeForRetransmission(toSend, retxmnDir);
     } else {
-      File retxmnBundleFile = new File(retxmnDir.listFiles()[0].getAbsolutePath());
-      Bundle.Builder retxmnBundleBuilder = BundleUtils.readBundleFromFile(retxmnBundleFile);
+      Bundle.Builder lastSentBundleBuilder = optional.get();
       Bundle.Builder newBundleBuilder = this.generateBundleBuilder();
 
-      if (BundleUtils.doContentsMatch(newBundleBuilder, retxmnBundleBuilder)) {
-        Bundle.Builder builder = new Bundle.Builder();
-        builder.setAckRecord(retxmnBundleBuilder.getAckRecord());
-        builder.setBundleId(retxmnBundleBuilder.getBundleId());
-        builder.setADUs(retxmnBundleBuilder.getADUs());
-        builder.setSource(
-            new File(
-                toSendDir
-                    + "/"
-                    + retxmnBundleBuilder.getBundleId()));
-
-        toSend = builder.build();
-        BundleUtils.writeBundleToFile(toSend, toSendDir, toSend.getBundleId());
+      String bundleId = "";
+      if (BundleUtils.doContentsMatch(newBundleBuilder, lastSentBundleBuilder)) {
+        bundleId = lastSentBundleBuilder.getBundleId();
       } else {
-        toSend = this.generateNewBundle(newBundleBuilder, toSendDir);
-        this.storeForRetransmission(toSend, retxmnDir);
+        bundleId = this.bundleSecurity.generateNewBundleId();
       }
+      toSend = this.generateNewBundle(newBundleBuilder, toSendDir, bundleId);
     }
     return toSend;
   }
 
-  public void deleteSentBundle(Bundle bundle) {
-    try {
-      FileUtils.deleteDirectory(bundle.getSource());
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
+
+  public void notifyBundleSent(Bundle bundle) {
+    // TODO
+//    try {
+//      FileUtils.deleteDirectory(bundle.getSource());
+//    } catch (IOException e) {
+//      e.printStackTrace();
+//    }
   }
 }
