@@ -17,11 +17,12 @@ public class BundleDeliveryAgent {
     receivedBundlesDir.mkdirs();
   }
 
-  public void start() {
+  public Bundle send() {
     System.out.println("[BDA] Starting Bundle Delivery Agent");
     this.bundleTransmission = new BundleTransmission(ROOT_FOLDER);
-    this.bundleTransmission.processReceivedBundles(ROOT_FOLDER + RelativePath);
-//    Bundle toSend = this.bundleTransmission.generateBundleForTransmission();
+//    this.bundleTransmission.processReceivedBundles(ROOT_FOLDER + RelativePath);
+    Bundle toSend = this.bundleTransmission.generateBundleForTransmission();
+    return toSend;
 //    this.bundleTransmission.notifyBundleSent(toSend);
 //    System.out.println("[BDA] An outbound bundle generated with id: " + toSend.getBundleId());
   }

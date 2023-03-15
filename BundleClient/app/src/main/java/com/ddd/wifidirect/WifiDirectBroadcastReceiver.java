@@ -73,7 +73,7 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
             // Gets the wifiP2pGroup
             // Not needed at this time
             // WifiP2pGroup group = (WifiP2pGroup)  intent.
-                    //getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP);
+            //getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP);
 
             NetworkInfo networkInfo = (NetworkInfo) intent
                     .getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
@@ -82,9 +82,9 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
                 // we are connected, request connection
                 // info to find group owner IP
                 this.manager.setConnected(true);
-               this.manager.getManager().requestConnectionInfo(this.manager.getChannel(), this.manager);
+                this.manager.getManager().requestConnectionInfo(this.manager.getChannel(), this.manager);
             }
-        else {
+            else {
                 // It's a disconnect
                 this.manager.setConnected(false);
                 Log.d(this.manager.TAG,

@@ -129,7 +129,7 @@ public class BundleTransmission {
     Bundle.Builder builder = this.generateBundleBuilder();
     String bundleId = this.bundleSecurity.generateNewBundleId();
     builder.setBundleId(bundleId);
-    builder.setSource(new File(targetDir + "/" + bundleId));
+    builder.setSource(new File(targetDir + "/" + bundleId + ".jar"));
     Bundle bundle = builder.build();
     this.bundleSecurity.encryptBundleContents(bundle);
     BundleUtils.writeBundleToFile(bundle, targetDir, bundleId);
@@ -140,7 +140,7 @@ public class BundleTransmission {
 
   private Bundle generateNewBundle(Bundle.Builder builder, File targetDir, String bundleId) {
     builder.setBundleId(bundleId);
-    builder.setSource(new File(targetDir + "/" + bundleId));
+    builder.setSource(new File(targetDir + "/" + bundleId + ".jar"));
     Bundle bundle = builder.build();
     this.bundleSecurity.encryptBundleContents(bundle);
     BundleUtils.writeBundleToFile(bundle, targetDir, bundleId);

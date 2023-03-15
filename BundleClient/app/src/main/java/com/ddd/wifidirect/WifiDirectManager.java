@@ -20,6 +20,8 @@ import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleOwner;
 
+import com.ddd.bundleclient.HelloworldActivity;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -33,7 +35,7 @@ import java.util.concurrent.Future;
  */
 public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener, WifiP2pManager.PeerListListener {
 
-    public static final String TAG = "wDebug";
+    public static final String TAG = HelloworldActivity.TAG;
     private final IntentFilter intentFilter = new IntentFilter();
 
     private WifiP2pManager manager;
@@ -164,7 +166,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
             @Override
             public void onFailure(int reasonCode) {
 
-                Log.d("wDebug","Failed to create a group with reasonCode: " + reasonCode);
+                Log.d(TAG,"Failed to create a group with reasonCode: " + reasonCode);
                 cFuture.complete(false);
             }
         });
@@ -188,7 +190,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
             return cBuilder.build();
         }
         catch(Exception e) {
-            Log.d("wDebug", "BuildGroupConfigexception " + e) ;
+            Log.d(TAG, "BuildGroupConfigexception " + e) ;
         }
         return null;
     }
@@ -208,7 +210,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
 
             @Override
             public void onFailure(int reasonCode) {
-                Log.d("wDebug","Failed to remove a group with reasonCode: " +
+                Log.d(TAG,"Failed to remove a group with reasonCode: " +
                         reasonCode + " Note: this could mean device was never part of a group");
                 cFuture.complete(false);
             }
@@ -274,10 +276,10 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
 //            else {
 //                config.groupOwnerIntent = WifiP2pConfig.GROUP_OWNER_INTENT_MIN;
 //            }
-//            return config;
+            return config;
         }
         catch(Exception e) {
-            Log.d("wDebug", "makeConfigException " + e) ;
+            Log.d(TAG, "makeConfigException " + e) ;
         }
         return null;
     }

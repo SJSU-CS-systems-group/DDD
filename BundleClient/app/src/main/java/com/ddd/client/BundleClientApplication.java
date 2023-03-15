@@ -8,6 +8,6 @@ public class BundleClientApplication {
 
   public static void main(String[] args) {
     System.out.println("Starting Bundle Client!");
-    bundleDeliveryAgent.start();
+    bundleDeliveryAgent.send();
   }
 }

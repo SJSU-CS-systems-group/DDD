@@ -5,35 +5,35 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.net.wifi.p2p.WifiP2pDevice;
+import android.net.wifi.p2p.WifiP2pGroup;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
-import android.text.TextUtils;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.FragmentManager;
 
 import com.ddd.client.bundledeliveryagent.BundleDeliveryAgent;
+import com.ddd.client.bundletransmission.BundleTransmission;
 import com.ddd.wifidirect.WifiDirectManager;
 import com.google.protobuf.ByteString;
 
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.ref.WeakReference;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import io.grpc.ManagedChannel;
@@ -88,7 +88,12 @@ public class HelloworldActivity extends AppCompatActivity {
     connectButton.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View view) {
-        sendMessage(wifiDirectManager);
+        try {
+          connectButton.setEnabled(true);
+          exchangeMessage(wifiDirectManager);
+        } catch (ExecutionException | InterruptedException e) {
+          e.printStackTrace();
+        }
       }
     });
 
@@ -96,72 +101,106 @@ public class HelloworldActivity extends AppCompatActivity {
       @Override
       public void onClick(View view) {
         BundleDeliveryAgent agent = new BundleDeliveryAgent(getApplicationContext().getApplicationInfo().dataDir);
-        agent.start();
+        agent.send();
       }
     });
   }
 
 
-  public void sendMessage(WifiDirectManager wifiDirectManager) {
+  public void exchangeMessage(WifiDirectManager wifiDirectManager) throws ExecutionException, InterruptedException {
     // connect to transport
     connectTransport(wifiDirectManager);
-    // check if connection successful, using intents?
+    // check if connection successful by getting group info and checking group owner
+    CompletableFuture<WifiP2pGroup> getGroup = wifiDirectManager.requestGroupInfo();
+    getGroup.thenApply((group) -> {
+      Log.d(TAG,group.toString());
+      if (!group.isGroupOwner()){
+//      start request task
+        Log.d(TAG,"Connection Successful!");
+        // receive task
 
-    //start grpc task
+        //send task
+        new GrpcSendTask(this)
+                .execute(
+                        "192.168.49.1",
+                        "7777");
+      }
+      return group;
+    });
 
-//    sendButton.setEnabled(false);
-//    resultText.setText("");
-//    new GrpcTask(this)
-//        .execute(
-//                "192.168.49.1",
-//                "7777",
-//                this.fragment.getPath());
   }
 
-  private class GrpcTask extends AsyncTask<String, Void, String> {
+  public void connectTransport(WifiDirectManager wifiDirectManager){
+    String SJSUHostDeviceName = this.getString(R.string.tansport_host);
+    // we need to check and request for necessary permissions
+    if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+      requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+              HelloworldActivity.PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION);
+    }
+    if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+      requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+              HelloworldActivity.WRITE_EXTERNAL_STORAGE);
+    }
+    CompletableFuture<Boolean> completedFuture = wifiDirectManager.discoverPeers();
+    completedFuture.thenApply((b) -> {
+      Log.d(TAG,  "Did DiscoverPeers succeed?: " + b);
+      if( b ){
+        ArrayList<WifiP2pDevice> devices = wifiDirectManager.getPeerList();
+        Log.d(TAG, "Logging Devices: \n");
+        if(devices.isEmpty()) {
+          Log.d(TAG,"No devices found yet");
+        }
+        for(WifiP2pDevice d: devices) {
+//          Log.d(TAG, d.toString());
+          if(d.deviceName.contains(SJSUHostDeviceName))
+            Log.d(TAG,"Trying to make connection with "+d.toString());
+          wifiDirectManager.connect(wifiDirectManager.makeConfig(
+                  d, false));
+        }
+      }
+      return b;
+    });
+    String message = "I tried to find some peers!: ";
+    Log.d(TAG, message);
+  }
+
+  private class GrpcSendTask extends AsyncTask<String, Void, String> {
     private final WeakReference<Activity> activityReference;
     private ManagedChannel channel;
 
-    private GrpcTask(Activity activity) {
+    private GrpcSendTask(Activity activity) {
       this.activityReference = new WeakReference<Activity>(activity);
     }
 
     @Override
     protected String doInBackground(String... params) {
       String host = params[0];
-      String portStr = params[2];
-      String pathStr = params[3];
-      int port = TextUtils.isEmpty(portStr) ? 0 : Integer.valueOf(portStr);
+      String portStr = params[1];
+      int port =Integer.parseInt(portStr);
       try {
         channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
         FileServiceGrpc.FileServiceStub stub = FileServiceGrpc.newStub(channel);
         StreamObserver<FileUploadRequest> streamObserver = stub.uploadFile(new FileUploadObserver());
-
-// input file for testing
-        Path path = null;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-          path = Paths.get(pathStr);
-        }
-//        Log.d("wDebug",path.toString());
-// build metadata
+        // get file from shashank
+        BundleTransmission bundleTransmission = new BundleTransmission(getApplicationContext().getApplicationInfo().dataDir);
+        com.ddd.model.Bundle toSend = bundleTransmission.generateBundleForTransmission();
+        bundleTransmission.notifyBundleSent(toSend);
+        System.out.println("[BDA] An outbound bundle generated with id: " + toSend.getBundleId());
         Date current = Calendar.getInstance().getTime();
         FileUploadRequest metadata = FileUploadRequest.newBuilder()
                 .setMetadata(MetaData.newBuilder()
-                        .setName("payload_"+current.getTime())
-                        .setType("zip").build())
+                        .setName(toSend.getBundleId())
+                        .setType("jar").build())
                 .build();
         streamObserver.onNext(metadata);
 
 // upload file as chunk
         current = Calendar.getInstance().getTime();
-        Log.d("wDebug","Started file transfer");
-        InputStream inputStream = null;
-//        ZipInputStream inputStream = null;
+        Log.d(TAG,"Started file transfer");
+        FileInputStream inputStream = null;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//          inputStream = Files.newInputStream(path);
-          inputStream = getResources().openRawResource(R.raw.payload);
-//            inputStream = new java.io.File(R.raw.sampleaudio);
-
+//          inputStream = getResources().openRawResource(R.raw.payload);
+          inputStream = new FileInputStream(toSend.getSource());
         }
         int chunkSize = 1000*1000*4;
         byte[] bytes = new byte[chunkSize];
@@ -198,44 +237,10 @@ public class HelloworldActivity extends AppCompatActivity {
         return;
       }
       TextView resultText = (TextView) activity.findViewById(R.id.grpc_response_text);
-      Button sendButton = (Button) activity.findViewById(R.id.connect_button);
+      Button connectButton = (Button) activity.findViewById(R.id.connect_button);
       resultText.setText(result);
-      sendButton.setEnabled(true);
+      connectButton.setEnabled(true);
     }
-  }
-
-  public void connectTransport(WifiDirectManager wifiDirectManager){
-    String SJSUHostDeviceName = this.getString(R.string.tansport_host);
-    // we need to check and request for necessary permissions
-    if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-      requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-              HelloworldActivity.PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION);
-    }
-    if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-      requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
-              HelloworldActivity.WRITE_EXTERNAL_STORAGE);
-    }
-    CompletableFuture<Boolean> completedFuture = wifiDirectManager.discoverPeers();
-    completedFuture.thenApply((b) -> {
-      Toast.makeText(HelloworldActivity.this, "Did DiscoverPeers succeed?: " + b, Toast.LENGTH_SHORT).show();
-      if( b ){
-        ArrayList<WifiP2pDevice> devices = wifiDirectManager.getPeerList();
-        Log.d(TAG, "Logging Devices: \n");
-        if(devices.isEmpty()) {
-          Log.d(TAG,"No devices found yet");
-        }
-        for(WifiP2pDevice d: devices) {
-          Log.d(TAG, d.toString());
-          if(d.deviceName.contains(SJSUHostDeviceName))
-            Log.d(TAG,"Trying to make connection with "+d.toString());
-          wifiDirectManager.connect(wifiDirectManager.makeConfig(
-                  d, false));
-        }
-      }
-      return b;
-    });
-    String message = "I tried to find some peers!: ";
-    Log.d(TAG, message);
   }
 
 }
