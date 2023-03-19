@@ -33,7 +33,7 @@
         </activity>
         <provider
             android:name="com.ddd.datastore.providers.MessageProvider"
-            android:authorities="com.example.contentprovidertest.providers"
+            android:authorities="com.ddd.datastore.providers"
             android:exported="true"
             android:multiprocess="true"
             android:grantUriPermissions="true"

@@ -37,7 +37,7 @@ public class BundleTransmission {
 
   private static final String TO_SEND_DIRECTORY = "to-send";
 
-  private long BUNDLE_SIZE_LIMIT = 10000;
+  private long BUNDLE_SIZE_LIMIT = 1000000000;
 
   private String ROOT_DIR = "";
   public BundleTransmission(String rootFolder) {
@@ -178,10 +178,6 @@ public class BundleTransmission {
 
   public void notifyBundleSent(Bundle bundle) {
     // TODO
-//    try {
-//      FileUtils.deleteDirectory(bundle.getSource());
-//    } catch (IOException e) {
-//      e.printStackTrace();
-//    }
+    FileUtils.deleteQuietly(bundle.getSource());
   }
 }

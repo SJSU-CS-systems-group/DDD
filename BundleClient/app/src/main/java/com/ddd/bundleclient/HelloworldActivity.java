@@ -181,25 +181,24 @@ public class HelloworldActivity extends AppCompatActivity {
         channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
         FileServiceGrpc.FileServiceStub stub = FileServiceGrpc.newStub(channel);
         StreamObserver<FileUploadRequest> streamObserver = stub.uploadFile(new FileUploadObserver());
-        // get file from shashank
         BundleTransmission bundleTransmission = new BundleTransmission(getApplicationContext().getApplicationInfo().dataDir);
         com.ddd.model.Bundle toSend = bundleTransmission.generateBundleForTransmission();
-        bundleTransmission.notifyBundleSent(toSend);
         System.out.println("[BDA] An outbound bundle generated with id: " + toSend.getBundleId());
         Date current = Calendar.getInstance().getTime();
         FileUploadRequest metadata = FileUploadRequest.newBuilder()
                 .setMetadata(MetaData.newBuilder()
                         .setName(toSend.getBundleId())
+//                        .setName("hello")
                         .setType("jar").build())
                 .build();
         streamObserver.onNext(metadata);
 
-// upload file as chunk
+//      upload file as chunk
         current = Calendar.getInstance().getTime();
         Log.d(TAG,"Started file transfer");
         FileInputStream inputStream = null;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//          inputStream = getResources().openRawResource(R.raw.payload);
+//        inputStream = getResources().openRawResource(R.raw.payload);
           inputStream = new FileInputStream(toSend.getSource());
         }
         int chunkSize = 1000*1000*4;
@@ -212,9 +211,10 @@ public class HelloworldActivity extends AppCompatActivity {
           streamObserver.onNext(uploadRequest);
         }
 
-// close the stream
+        // close the stream
         inputStream.close();
         streamObserver.onCompleted();
+        bundleTransmission.notifyBundleSent(toSend);
         return "Complete";
       } catch (Exception e) {
         StringWriter sw = new StringWriter();

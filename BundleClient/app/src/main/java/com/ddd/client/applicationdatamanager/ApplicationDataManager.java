@@ -231,7 +231,7 @@ public class ApplicationDataManager {
 
   private DataStoreAdaptor dataStoreAdaptor;
 
-  private Long APP_DATA_SIZE_LIMIT = 10000L;
+  private Long APP_DATA_SIZE_LIMIT = 1000000000L;
 
   private static String REGISTERED_APP_IDS =
       "/Shared/REGISTERED_APP_IDS.txt";

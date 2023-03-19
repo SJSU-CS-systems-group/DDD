@@ -2,7 +2,9 @@ package com.ddd.client.applicationdatamanager;
 
 import android.content.ContentValues;
 import android.net.Uri;
+import android.util.Log;
 
+import com.ddd.bundleclient.HelloworldActivity;
 import com.ddd.datastore.filestore.FileStoreHelper;
 import com.ddd.datastore.providers.MessageProvider;
 import com.ddd.model.ADU;
@@ -60,6 +62,7 @@ public class DataStoreAdaptor {
             File file = sendFileStoreHelper.getADUFile(appId, aduId + "");
             FileInputStream fis = new FileInputStream(file);
             int fileSize = fis.available();
+            Log.d(HelloworldActivity.TAG, "size:"+fileSize);
             ADU adu = new ADU(file, appId, aduId, fileSize);
             return adu;
         }catch (Exception ex){
@@ -73,6 +76,7 @@ public class DataStoreAdaptor {
         List<ADU> ret = new ArrayList<>();
         long aduId = aduIdStart;
         while ((adu = this.fetchADU(appId, aduId)) != null) {
+            Log.d(HelloworldActivity.TAG,adu.getADUId() + adu.getAppId());
             ret.add(adu);
             aduId++;
         }
