@@ -16,15 +16,6 @@ import java.util.List;
 
 public class DataStoreAdaptor {
 
-    private static final String ADU_LOCATION =
-            "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Client\\ApplicationDataManager\\ADU";
-
-    static final Uri CONTENT_URL=Uri.parse("content://com.example.contentprovidertest.providers/messages");
-
-    private static final String SEND_SUBDIR = "send";
-
-    private static final String RECV_SUBDIR = "receive";
-
     private FileStoreHelper sendFileStoreHelper;
     private FileStoreHelper receiveFileStoreHelper;
     //ContentResolver contentResolver;
