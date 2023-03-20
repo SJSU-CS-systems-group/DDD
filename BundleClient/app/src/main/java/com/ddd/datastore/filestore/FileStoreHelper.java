@@ -8,6 +8,7 @@ import com.google.gson.Gson;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -32,12 +33,14 @@ public class FileStoreHelper {
         return sb.toString();
     }
 
-    public static String getStringFromFile (String filePath) throws Exception {
+    public static String getStringFromFile (String filePath) {
         File fl = new File(filePath);
-        FileInputStream fin = new FileInputStream(fl);
-        String ret = convertStreamToString(fin);
-        //Make sure you close all streams.
-        fin.close();
+        String ret = "";
+        try (FileInputStream fin = new FileInputStream(fl)){
+           ret = convertStreamToString(fin);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return ret;
     }
 
