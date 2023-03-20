@@ -28,7 +28,7 @@ import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SessionState;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 
-import ddd.SecurityUtils;
+import com.ddd.client.bundlesecurity.SecurityUtils;
 
 public class ClientSecurity {
 
