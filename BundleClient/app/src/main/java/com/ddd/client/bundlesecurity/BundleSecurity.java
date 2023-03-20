@@ -10,6 +10,10 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import org.apache.commons.lang3.StringUtils;
 import com.ddd.model.Bundle;
+import com.ddd.model.BundleWrapper;
+import com.ddd.model.EncryptedBundle;
+import com.ddd.model.EncryptionHeader;
+import com.ddd.utils.JarUtils;
 
 public class BundleSecurity {
 
@@ -106,8 +110,17 @@ public class BundleSecurity {
     return this.clientId + "-" + counterString;
   }
 
-  public void encryptBundleContents(Bundle bundle) {
+  public BundleWrapper wrapBundleContents(Bundle bundle, String bundleWrapperPath) {
     System.out.println("[BS] Encrypting contents of the bundle with id: " + bundle.getBundleId());
+    File payloadFile = bundle.getSource(); // Payload JAR
+    File bundleWrapperFile = new File(bundleWrapperPath + bundle.getBundleId() + ".jar");
+    File unencryptedBundleWrapperDir =  bundleWrapperFile.getParentFile(); // TODO read, encrypt and put in a directory
+    File encryptedPayloadFile = null;
+    // TODO encrypt and Path of encrypted payload
+    JarUtils.dirToJar(unencryptedBundleWrapperDir.getAbsolutePath(), bundleWrapperFile.getPath());
+    EncryptionHeader encHeader = null; // TODO construct
+    BundleWrapper wrapper = new BundleWrapper (bundle.getBundleId(), encHeader, new EncryptedBundle(encryptedPayloadFile), bundleWrapperFile);
+    return wrapper;
   }
 
   public boolean isLatestReceivedBundleId(String bundleId) {

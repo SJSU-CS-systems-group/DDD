@@ -13,6 +13,7 @@ import com.ddd.client.bundlesecurity.BundleSecurity;
 import com.ddd.model.ADU;
 import com.ddd.model.Acknowledgement;
 import com.ddd.model.Bundle;
+import com.ddd.model.BundleWrapper;
 import com.ddd.utils.AckRecordUtils;
 import com.ddd.utils.BundleUtils;
 import com.ddd.utils.Constants;
@@ -125,38 +126,38 @@ public class BundleTransmission {
     BundleUtils.writeBundleToFile(bundle, targetDirectory, bundle.getBundleId());
   }
 
-  private Bundle generateNewBundle(File targetDir) {
+  private BundleWrapper generateNewBundle(File targetDir) {
     Bundle.Builder builder = this.generateBundleBuilder();
     String bundleId = this.bundleSecurity.generateNewBundleId();
     builder.setBundleId(bundleId);
     builder.setSource(new File(targetDir + "/" + bundleId + ".jar"));
     Bundle bundle = builder.build();
-    this.bundleSecurity.encryptBundleContents(bundle);
-    BundleUtils.writeBundleToFile(bundle, targetDir, bundleId);
+    BundleUtils.writeBundleToFile(bundle, targetDir, bundleId + "-payload");
+    BundleWrapper wrapper = this.bundleSecurity.wrapBundleContents(bundle, bundle.getSource().getParent());
     this.applicationDataManager.notifyBundleSent(bundle);
     System.out.println("[BT] Generated new bundle for transmission with bundle id: " + bundleId);
-    return bundle;
+    return wrapper;
   }
 
-  private Bundle generateNewBundle(Bundle.Builder builder, File targetDir, String bundleId) {
+  private BundleWrapper generateNewBundle(Bundle.Builder builder, File targetDir, String bundleId) {
     builder.setBundleId(bundleId);
     builder.setSource(new File(targetDir + "/" + bundleId + ".jar"));
     Bundle bundle = builder.build();
-    this.bundleSecurity.encryptBundleContents(bundle);
-    BundleUtils.writeBundleToFile(bundle, targetDir, bundleId);
+    BundleUtils.writeBundleToFile(bundle, targetDir, bundleId + "-payload");
+    BundleWrapper wrapper = this.bundleSecurity.wrapBundleContents(bundle, bundle.getSource().getParent());
     this.applicationDataManager.notifyBundleSent(bundle);
     System.out.println("[BT] Generated new bundle for transmission with bundle id: " + bundleId);
-    return bundle;
+    return wrapper;
   }
 
-  public Bundle generateBundleForTransmission() {
+  public BundleWrapper generateBundleForTransmission() {
     File toSendDir =
             new File(
                     ROOT_DIR + BUNDLE_GENERATION_DIRECTORY
                             + File.separator
                             + TO_SEND_DIRECTORY);
 
-    Bundle toSend = null;
+    BundleWrapper toSend = null;
     Optional<Bundle.Builder> optional = this.applicationDataManager.getLastSentBundleBuilder();
     if (!optional.isPresent()) {
       toSend = this.generateNewBundle(toSendDir);
@@ -176,8 +177,8 @@ public class BundleTransmission {
   }
 
 
-  public void notifyBundleSent(Bundle bundle) {
+  public void notifyBundleSent(BundleWrapper bundleWrapper) {
     // TODO
-    FileUtils.deleteQuietly(bundle.getSource());
+    FileUtils.deleteQuietly(bundleWrapper.getSource());
   }
 }
