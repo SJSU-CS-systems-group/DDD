@@ -1,5 +1,9 @@
 package com.ddd.client.bundlesecurity;
 
+import android.util.Base64;
+
+import com.ddd.datastore.filestore.FileStoreHelper;
+
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -9,7 +13,6 @@ import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-import java.util.Base64;
 import java.util.List;
 
 import org.whispersystems.libsignal.IdentityKey;
@@ -43,21 +46,21 @@ public class SecurityUtils {
         byte[] publicKey = decodePublicKeyfromFile(publicKeyPath);
         MessageDigest md = MessageDigest.getInstance("SHA-1");
         byte[] hashedKey = md.digest(publicKey);
-        return Base64.getEncoder().encodeToString(hashedKey);
+        return android.util.Base64.encodeToString(hashedKey, android.util.Base64.DEFAULT);
     }
 
     public static String generateID(byte[] publicKey) throws NoSuchAlgorithmException
     {
         MessageDigest md = MessageDigest.getInstance("SHA-1");
         byte[] hashedKey = md.digest(publicKey);
-        return Base64.getEncoder().encodeToString(hashedKey);
+        return android.util.Base64.encodeToString(hashedKey, android.util.Base64.DEFAULT);
     }
 
     public static void createEncodedPublicKeyFile(ECPublicKey publicKey, String path) throws FileNotFoundException, IOException
     {
         String encodedKey = "-----BEGIN EC PUBLIC KEY-----\n";
         try (FileOutputStream stream = new FileOutputStream(path)) {
-            encodedKey += Base64.getEncoder().encodeToString(publicKey.serialize());
+            encodedKey += android.util.Base64.encodeToString(publicKey.serialize(), android.util.Base64.DEFAULT);
             encodedKey += "\n-----END EC PUBLIC KEY-----";
             stream.write(encodedKey.getBytes());
         }
@@ -66,15 +69,16 @@ public class SecurityUtils {
     public static byte[] decodePublicKeyfromFile(String path) throws IOException, InvalidKeyException
     {
         System.out.println(path);
-        List<String> encodedKeyList = Files.readAllLines(Paths.get(path.trim()));
+//        List<String> encodedKeyList = Files.readAllLines(Paths.get(path.trim()));
+        String[] encodedKeyArr = FileStoreHelper.getStringFromFile(path.trim()).split("\n");
 
-        if (encodedKeyList.size() != 3) {
+        if (encodedKeyArr.length != 3) {
             throw new InvalidKeyException("Error: Invalid Public Key Length");
         }
 
-        if ((true == encodedKeyList.get(0).equals("-----BEGIN EC PUBLIC KEY-----")) &&
-        (true == encodedKeyList.get(2).equals("-----END EC PUBLIC KEY-----"))) {
-            return Base64.getDecoder().decode(encodedKeyList.get(1));
+        if ((true == encodedKeyArr[0].equals("-----BEGIN EC PUBLIC KEY-----")) &&
+        (true == encodedKeyArr[2].equals("-----END EC PUBLIC KEY-----"))) {
+            return Base64.decode(encodedKeyArr[1], Base64.DEFAULT);
         }
 
         throw new InvalidKeyException("Error: Invalid Public Key Format");
@@ -92,8 +96,8 @@ public class SecurityUtils {
 
     public static boolean verifySignature(byte[] message, ECPublicKey publicKey, String signaturePath) throws InvalidKeyException, IOException
     {
-        byte[] encodedsignature = Files.readAllBytes(Paths.get(signaturePath));
-        byte[] signature = Base64.getDecoder().decode(encodedsignature);
+        byte[] encodedsignature = FileStoreHelper.getStringFromFile(signaturePath).getBytes();;
+        byte[] signature = Base64.decode(encodedsignature, Base64.DEFAULT);
         
         return Curve.verifySignature(publicKey, message, signature);
     }

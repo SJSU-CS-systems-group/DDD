@@ -1,7 +1,10 @@
 package com.ddd.client.bundlesecurity;
 
+import android.util.Base64;
+
 import org.whispersystems.libsignal.util.guava.Optional;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -10,7 +13,6 @@ import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
-import java.util.Base64;
 
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
@@ -28,7 +30,8 @@ import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SessionState;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 
-import ddd.SecurityUtils;
+import com.ddd.client.bundlesecurity.SecurityUtils;
+import com.ddd.datastore.filestore.FileStoreHelper;
 
 public class ClientSecurity {
 
@@ -124,7 +127,7 @@ public class ClientSecurity {
     private void createSignature(byte[] fileContents, String signedFilePath) throws java.security.InvalidKeyException, NoSuchAlgorithmException, SignatureException, InvalidKeySpecException, InvalidKeyException
     {
         byte[] signedData = Curve.calculateSignature(ourIdentityKeyPair.getPrivateKey(), fileContents);
-        String encodedSignature = Base64.getEncoder().encodeToString(signedData);
+        String encodedSignature = android.util.Base64.encodeToString(signedData, Base64.DEFAULT);
 
         try (FileOutputStream stream = new FileOutputStream(signedFilePath)) {
             stream.write(encodedSignature.getBytes());
@@ -136,8 +139,12 @@ public class ClientSecurity {
     public static synchronized ClientSecurity getInstance(int deviceID, String clientKeyPath, String serverKeyPath) throws NoSuchAlgorithmException, IOException, InvalidKeyException
     {
         /* Create Directory if it does not exist */
-        Files.createDirectories(Paths.get(clientKeyPath));
 
+//        Files.createDirectories(Paths.get(clientKeyPath));
+        File file = new File(clientKeyPath);
+        if (!file.exists()) {
+            file.mkdirs();
+        }
         if (singleClientInstance == null) {
             singleClientInstance = new ClientSecurity(deviceID, clientKeyPath, serverKeyPath);
         }
@@ -151,11 +158,19 @@ public class ClientSecurity {
         String bundlePath    = encPath + bundleID + "\\";
         String encBundlePath = bundlePath + SecurityUtils.PAYLOAD_FILENAME;
         String signPath      = bundlePath + SecurityUtils.SIGN_FILENAME;
-        byte[] fileContents  =  Files.readAllBytes(Paths.get(toBeEncPath));
-        
+//        byte[] fileContents  =  Files.readAllBytes(Paths.get(toBeEncPath));
+        byte[] fileContents  = new byte[0];
+        try {
+            fileContents = FileStoreHelper.getStringFromFile(toBeEncPath).getBytes();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         /* Create Directory if it does not exist */
-        Files.createDirectories(Paths.get(bundlePath));
-
+//        Files.createDirectories(Paths.get(bundlePath));
+        File file = new File(bundlePath);
+        if (!file.exists()) {
+            file.mkdirs();
+        }
         /* Create Signature with plaintext*/
         createSignature(fileContents, signPath);
 
@@ -175,8 +190,11 @@ public class ClientSecurity {
         String   bundleIDPath = bundlePath + SecurityUtils.BUNDLEID_FILENAME;
 
         /* Create Directory if it does not exist */
-        Files.createDirectories(Paths.get(bundlePath));
-        
+//        Files.createDirectories(Paths.get(bundlePath));
+        File file = new File(bundlePath);
+        if (!file.exists()) {
+            file.mkdirs();
+        }
         /* Create Bundle ID File */
         FileOutputStream stream = new FileOutputStream(bundleIDPath);
         stream.write(bundleID.getBytes());
@@ -188,8 +206,22 @@ public class ClientSecurity {
 
     public void decrypt(String bundlePath, String decryptedPath) throws NoSuchAlgorithmException, IOException, InvalidKeyException
     {
-        byte[] encryptedData = Files.readAllBytes(Paths.get(bundlePath + SecurityUtils.PAYLOAD_FILENAME));
-        String bundleID      = new String ((Files.readAllBytes(Paths.get(bundlePath+SecurityUtils.BUNDLEID_FILENAME))));
+//        byte[] encryptedData = Files.readAllBytes(Paths.get(bundlePath + SecurityUtils.PAYLOAD_FILENAME));
+        byte[] encryptedData  = new byte[0];
+        try {
+            encryptedData = FileStoreHelper.getStringFromFile(bundlePath + SecurityUtils.PAYLOAD_FILENAME).getBytes();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        byte[] bundleIDData  = new byte[0];
+        try {
+            bundleIDData = FileStoreHelper.getStringFromFile(bundlePath+SecurityUtils.BUNDLEID_FILENAME).getBytes();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        String bundleID      = new String (bundleIDData);
+
         String decryptedFile = decryptedPath + bundleID + SecurityUtils.DECRYPTED_FILE_EXT;
         
         try {
@@ -205,7 +237,8 @@ public class ClientSecurity {
                 System.out.println("Invalid Signature, Aborting bundle "+ bundleID);
 
                 try {
-                    Files.deleteIfExists(Paths.get(decryptedFile));
+                    File file = new File(decryptedFile);
+                    file.delete();
                 }
                 catch (Exception e) {
                     System.out.printf("Error: Failed to delete decrypted file [%s]", decryptedFile);
