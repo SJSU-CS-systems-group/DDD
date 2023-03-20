@@ -6,13 +6,15 @@ public class BundleWrapper {
     private String bundleId;
     private EncryptionHeader encHeader;
     private EncryptedBundle encbundle;
+    private File payloadSignature;
     private File source;
 
-    public BundleWrapper(String bundleId, EncryptionHeader encHeader, EncryptedBundle encbundle, File source) {
+    public BundleWrapper(String bundleId, EncryptionHeader encHeader, EncryptedBundle encbundle, File source, File payloadSignature) {
         this.bundleId = bundleId;
         this.encHeader = encHeader;
         this.encbundle = encbundle;
         this.source = source;
+        this.payloadSignature = payloadSignature;
     }
 
     public String getBundleId() {
@@ -29,5 +31,9 @@ public class BundleWrapper {
 
     public File getSource() {
         return source;
+    }
+
+    public File getPayloadSignature() {
+        return payloadSignature;
     }
 }

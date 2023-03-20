@@ -5,12 +5,10 @@ import java.io.File;
 public class EncryptionHeader {
     private File clientBaseKey;
     private File clientIdentityKey;
-    private File payloadSignature;
 
-    public EncryptionHeader(File clientBaseKey, File clientIdentityKey, File payloadSignature) {
+    public EncryptionHeader(File clientBaseKey, File clientIdentityKey) {
         this.clientBaseKey = clientBaseKey;
         this.clientIdentityKey = clientIdentityKey;
-        this.payloadSignature = payloadSignature;
     }
 
     public File getClientBaseKey() {
@@ -19,9 +17,5 @@ public class EncryptionHeader {
 
     public File getClientIdentityKey() {
         return clientIdentityKey;
-    }
-
-    public File getPayloadSignature() {
-        return payloadSignature;
     }
 }
