@@ -155,7 +155,7 @@ public class ClientSecurity {
     /* Encrypts File and creates signature for plain text */
     public String[] encrypt(String toBeEncPath, String encPath, String bundleID) throws IOException, java.security.InvalidKeyException, NoSuchAlgorithmException, SignatureException, InvalidKeySpecException, InvalidKeyException
     {
-        String bundlePath    = encPath + bundleID + "\\";
+        String bundlePath    = encPath +"/"+ bundleID + "/";
         String encBundlePath = bundlePath + SecurityUtils.PAYLOAD_FILENAME;
         String signPath      = bundlePath + SecurityUtils.SIGN_FILENAME;
 //        byte[] fileContents  =  Files.readAllBytes(Paths.get(toBeEncPath));
@@ -186,7 +186,7 @@ public class ClientSecurity {
     /* Add Headers (Identity, Base Key & Bundle ID) to Bundle Path */
     public String[] createEncryptionHeader(String encPath, String bundleID) throws IOException
     {
-        String   bundlePath   = encPath + bundleID + "\\";
+        String   bundlePath   = encPath +File.separator+ bundleID + File.separator;
         String   bundleIDPath = bundlePath + SecurityUtils.BUNDLEID_FILENAME;
 
         /* Create Directory if it does not exist */

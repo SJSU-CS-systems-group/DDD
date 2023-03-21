@@ -215,7 +215,8 @@ public class HelloworldActivity extends AppCompatActivity {
         // close the stream
         inputStream.close();
         streamObserver.onCompleted();
-        bundleTransmission.notifyBundleSent(toSend);
+//        bundleTransmission.notifyBundleSent(toSend);
+        Log.d(TAG,"Completed file transfer");
         return "Complete";
       } catch (Exception e) {
         StringWriter sw = new StringWriter();
