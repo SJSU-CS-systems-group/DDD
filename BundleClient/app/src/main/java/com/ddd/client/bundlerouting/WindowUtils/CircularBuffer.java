@@ -1,11 +1,11 @@
-package ddd.client.bundlerouting.WindowUtils
+package com.ddd.client.bundlerouting.WindowUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import ddd.client.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
-import ddd.client.bundlerouting.WindowUtils.WindowExceptions.BufferUnderflow;
-import ddd.client.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
+import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
+import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions.BufferUnderflow;
+import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
 
 public class CircularBuffer {
     private String[] buffer = null;

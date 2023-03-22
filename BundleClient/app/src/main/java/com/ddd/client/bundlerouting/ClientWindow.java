@@ -1,8 +1,8 @@
-package ddd.client.bundlerouting;
+package com.ddd.client.bundlerouting;
 
-import ddd.client.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
-import ddd.client.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
-import ddd.client.bundlerouting.WindowUtils.CircularBuffer;
+import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
+import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
+import com.ddd.client.bundlerouting.WindowUtils.CircularBuffer;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -24,7 +24,7 @@ public class ClientWindow {
      * Returns:
      * None
      */
-    ClientWindow(int length) throws InvalidLength, BufferOverflow
+        public ClientWindow(int length) throws InvalidLength, BufferOverflow
     {
         if (length > 0) {
             windowLength = length;

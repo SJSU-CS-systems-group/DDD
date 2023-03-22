@@ -5,6 +5,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
+import android.util.Log;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.ddd.bundleclient.HelloworldActivity;
 import com.ddd.datastore.providers.MessageProvider;
 import com.ddd.model.ADU;
 import com.ddd.model.Bundle;
@@ -110,6 +112,7 @@ class StateManager {
   public void updateLargestADUIdReceived(String appId, Long aduId) {
     Map<String, Long> largestADUIdReceivedDetails = this.getLargestADUIdReceivedDetails();
     largestADUIdReceivedDetails.put(appId, aduId);
+    Log.d(HelloworldActivity.TAG, "[ADM] (In Progress) Updating Largest ADU id: "+aduId);
     this.writeLargestADUIdReceivedDetails(largestADUIdReceivedDetails);
   }
 
@@ -277,7 +280,7 @@ public class ApplicationDataManager {
   }
 
   public void storeADUs(List<ADU> adus) {
-    System.out.println("[ADM] Storing ADUs in the Data Store");
+    System.out.println("[ADM] Storing ADUs in the Data Store, Size:" + adus.size());
 
     for (final ADU adu : adus) {
       Long largestAduIdReceived = this.stateManager.getLargestADUIdReceived(adu.getAppId());
@@ -289,7 +292,9 @@ public class ApplicationDataManager {
       if (largestAduIdReceived != null && adu.getADUId() <= largestAduIdReceived) {
         continue;
       }
+      Log.d(HelloworldActivity.TAG, "[ADM] Updating Largest ADU id: "+adu.getADUId()+","+adu.getSource());
       this.stateManager.updateLargestADUIdReceived(adu.getAppId(), adu.getADUId());
+      Log.d(HelloworldActivity.TAG, "[ADM] Updated Largest ADU id: "+adu.getADUId()+","+adu.getSource());
       this.dataStoreAdaptor.persistADU(adu);
     }
   }

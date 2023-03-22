@@ -1,5 +1,7 @@
 package com.ddd.utils;
 
+import android.util.Log;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -23,6 +25,8 @@ import java.util.Optional;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import org.apache.commons.io.FileUtils;
+
+import com.ddd.bundleclient.HelloworldActivity;
 import com.ddd.model.ADU;
 import com.ddd.model.Acknowledgement;
 import com.ddd.model.Bundle;
@@ -82,6 +86,7 @@ public class BundleUtils {
     String ackPath = path + File.separator + Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME;
     String bundleIdPath = path + File.separator + Constants.BUNDLE_IDENTIFIER_FILE_NAME;
     String aduPath = path + File.separator + Constants.BUNDLE_ADU_DIRECTORY_NAME;
+    Log.d(HelloworldActivity.TAG, "[BU] ADU Path: "+ aduPath);
 
     Bundle.Builder builder = new Bundle.Builder();
 
