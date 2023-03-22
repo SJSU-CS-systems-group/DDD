@@ -13,7 +13,7 @@ public class ClientWindow {
     private int windowLength    = 10; /* Default Value */
 
     /* Begin and End are used as Unsigned Long */
-    private long begin          = Long.MAX_VALUE - 10;
+    private long begin          = 0;
     private long end            = 0;
 
     /* 
