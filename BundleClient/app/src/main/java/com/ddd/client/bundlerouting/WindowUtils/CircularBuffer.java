@@ -28,7 +28,7 @@ public class CircularBuffer {
     public void add(String item) throws BufferOverflow
     {
         if (capacity + 1 > length) {
-            throw new BufferOverflow("Exceeding lenght["+length+"]");
+            throw new BufferOverflow("Exceeding lenght("+length+")");
         }
 
         end = (end + 1) % length;
@@ -36,7 +36,7 @@ public class CircularBuffer {
         capacity++;
     }
 
-    public void delete() throws BufferUnderflow
+    private void delete() throws BufferUnderflow
     {
         if (capacity == 0) {
             throw new BufferUnderflow("Buffer is empty");
@@ -47,13 +47,45 @@ public class CircularBuffer {
         capacity--;
     }
 
+    public int deleteUntilIndex(int index) throws InvalidLength
+    {
+        int i = start;
+        int count = 1;
+
+        if (index > length) {
+            throw new InvalidLength("Invalid Index provided, length = ["+length+"]");
+        }
+
+        /* Delete elements until provided index */
+        while (buffer[i] != buffer[index]) {
+            try {
+                delete();
+                count++;
+                i = (i + 1) % length;
+            } catch (BufferUnderflow e) {
+                // TODO Change to LOG Warn
+                System.out.println("ERROR: Buffer is Empty");
+            }
+        }
+
+        /* Delete the element at index */
+        try {
+            delete();
+        } catch (BufferUnderflow e) {
+            // TODO Change to LOG Warn
+            System.out.println("ERROR: Buffer is Empty");
+        }
+
+        /* Return number of deleted items */
+        return count;
+    }
+
     public String[] getBuffer()
     {
         List<String> sList = new ArrayList<String>();
         int count = capacity;
         int i = start;
 
-        System.out.println("Capacity = "+capacity);
         while(count != 0) {
             sList.add(buffer[i]);
             i = (i + 1) % length;

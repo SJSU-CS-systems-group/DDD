@@ -21,5 +21,25 @@ public class WindowExceptions {
             super(errorMessage);
         }
     }
-    
+
+    public static class ItemNotFound extends Exception {
+        public ItemNotFound(String errorMessage)
+        {
+            super(errorMessage);
+        }
+    }
+
+    public static class RecievedOldACK extends Exception {
+        public RecievedOldACK(String errorMessage)
+        {
+            super(errorMessage);
+        }
+    }
+
+    public static class RecievedInvalidACK extends Exception {
+        public RecievedInvalidACK(String errorMessage)
+        {
+            super(errorMessage);
+        }
+    }
 }

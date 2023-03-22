@@ -13,10 +13,10 @@ public class ClientWindow {
     private int windowLength    = 10; /* Default Value */
 
     /* Begin and End are used as Unsigned Long */
-    private long begin          = 1;
-    private long end            = windowLength;
+    private long begin          = Long.MAX_VALUE - 10;
+    private long end            = 0;
 
-        /* 
+    /* 
      * Allocate and Initialize Window with provided size
      * Uses default size(10) if provided size is <= 0
      * Parameter:
@@ -35,7 +35,19 @@ public class ClientWindow {
 
         window = new CircularBuffer(windowLength);
 
-        updateSlots(begin, windowLength);
+        /* Initialize Slots */
+        fillWindow(windowLength, begin);
+    }
+
+    public void fillWindow(int count, long startCounter) throws BufferOverflow
+    {
+        long length = startCounter + count;
+
+        for (long i = startCounter; i < length; ++i) {
+            window.add(generateBundleID(i));
+        }
+
+        end = begin + windowLength;
     }
 
     String generateBundleID(long counter)
@@ -43,11 +55,30 @@ public class ClientWindow {
         return Long.toUnsignedString(counter);
     }
 
-    private void updateSlots(long begin, long length) throws BufferOverflow
+    public void processACK(String ackPath) throws IOException, RecievedOldACK, RecievedInvalidACK, InvalidLength, BufferOverflow
     {
-        for (long i = begin; i < length; ++i) {
-            window.add(generateBundleID(i));
+        String ackStr = new String(Files.readAllBytes(Paths.get(ackPath)));
+        // TODO: Decrypt Bundle ID
+        System.out.println("Ack from file = "+ackStr);
+        long ack = Long.parseUnsignedLong(ackStr);
+
+        if (Long.compareUnsigned(ack,begin) == -1) {
+            throw new RecievedOldACK("Received old ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(begin) + "]" );
+        } else if (Long.compareUnsigned(ack,end) == 1) {
+            throw new RecievedInvalidACK("Received Invalid ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(end) + "]" );
         }
+
+        /* Index will be an int as windowLength is int */
+        int ackIndex = (int) Long.remainderUnsigned(ack, windowLength);
+
+        /* Delete ACKs until ackIndex */
+        int noDeleted = window.deleteUntilIndex(ackIndex);
+
+        begin = ack + 1;
+        /* Add new bundleIDs to window */
+        fillWindow(noDeleted, end);
+        // TODO: Change to log
+        System.out.println("Updated Begin: "+Long.toUnsignedString(begin)+"; End: "+Long.toUnsignedString(end));
     }
 
     public String[] getWindow()
