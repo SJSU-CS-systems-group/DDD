@@ -115,20 +115,6 @@ public class MessageProvider extends ContentProvider {
         byte[] data = (byte[]) contentValues.get("data");
         sendFileStoreHelper.AddFile(appName, data);
 
-        //notify app that someone sent data for the app
-        if(destination.equals("APP")) {
-            Intent intent = new Intent("android.intent.dtn.SEND_DATA");
-            intent.setPackage(appName);
-            intent.setType("text/plain");
-            intent.putExtra(Intent.EXTRA_TEXT, data);
-            getContext().startService(intent);
-        }
-
-        /*long rowID = sqlDB.insert(TABLE_NAME, null, contentValues);
-        if(rowID>0){
-            Uri _uri= ContentUris.withAppendedId(CONTENT_URI, rowID);
-            getContext().getContentResolver().notifyChange(_uri, null);
-        }*/
         return null;
     }
 

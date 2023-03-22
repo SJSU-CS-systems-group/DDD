@@ -1,6 +1,8 @@
 package com.ddd.client.applicationdatamanager;
 
 import android.content.ContentValues;
+import android.content.Context;
+import android.content.Intent;
 import android.net.Uri;
 import android.util.Log;
 
@@ -9,6 +11,7 @@ import com.ddd.datastore.filestore.FileStoreHelper;
 import com.ddd.datastore.providers.MessageProvider;
 import com.ddd.model.ADU;
 import com.ddd.model.Bundle;
+import com.ddd.wifidirect.WifiDirectBroadcastReceiver;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -20,6 +23,7 @@ public class DataStoreAdaptor {
 
     private FileStoreHelper sendFileStoreHelper;
     private FileStoreHelper receiveFileStoreHelper;
+    private Context applicationContext;
     //ContentResolver contentResolver;
 /*
     public DataStoreAdaptor(ContentResolver contentResolver){
@@ -31,10 +35,19 @@ public class DataStoreAdaptor {
         receiveFileStoreHelper = new FileStoreHelper(appRootDataDirectory + "/receive");
     }
 
+    private void sendDataToApp(ADU adu){
+        //notify app that someone sent data for the app
+        Intent intent = new Intent("android.intent.dtn.SEND_DATA");
+        intent.setPackage(adu.getAppId());
+        intent.setType("text/plain");
+        intent.putExtra(Intent.EXTRA_TEXT, receiveFileStoreHelper.getDataFromFile(adu.getSource()));
+        if(applicationContext==null) applicationContext = WifiDirectBroadcastReceiver.ApplicationContext;
+        applicationContext.startService(intent);
+    }
+
     public void persistADU(ADU adu) {
-        ContentValues values=new ContentValues();
-        values.put(MessageProvider.message, adu.getSource().toString());
         receiveFileStoreHelper.AddFile(adu.getAppId(), receiveFileStoreHelper.getDataFromFile(adu.getSource()));
+        sendDataToApp(adu);
         System.out.println(
                 "[ADM-DSA] Persisting inbound ADU "
                         + adu.getAppId()
