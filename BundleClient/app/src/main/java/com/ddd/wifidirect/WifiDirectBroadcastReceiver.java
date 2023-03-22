@@ -58,6 +58,7 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
                 manager.getManager().requestPeers(manager.getChannel(), this.manager);
             }
 
+
         }
 //         Broadcast intent action indicating that the state of Wi-Fi p2p
 //         connectivity has changed.
