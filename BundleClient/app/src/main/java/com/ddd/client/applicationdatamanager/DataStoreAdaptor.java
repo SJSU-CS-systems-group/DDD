@@ -40,12 +40,14 @@ public class DataStoreAdaptor {
         Intent intent = new Intent("android.intent.dtn.SEND_DATA");
         intent.setPackage(adu.getAppId());
         intent.setType("text/plain");
+        Log.d(HelloworldActivity.TAG,new String(receiveFileStoreHelper.getDataFromFile(adu.getSource()))+", Source:"+adu.getSource());
         intent.putExtra(Intent.EXTRA_TEXT, receiveFileStoreHelper.getDataFromFile(adu.getSource()));
-        if(applicationContext==null) applicationContext = WifiDirectBroadcastReceiver.ApplicationContext;
+        if(applicationContext==null) applicationContext = HelloworldActivity.ApplicationContext;
         applicationContext.startService(intent);
     }
 
     public void persistADU(ADU adu) {
+        Log.d(HelloworldActivity.TAG,"Persisting ADUs: " + adu.getADUId() +","+ adu.getSource());
         receiveFileStoreHelper.AddFile(adu.getAppId(), receiveFileStoreHelper.getDataFromFile(adu.getSource()));
         sendDataToApp(adu);
         System.out.println(

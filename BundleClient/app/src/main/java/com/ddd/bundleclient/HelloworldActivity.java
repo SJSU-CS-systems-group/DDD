@@ -3,6 +3,7 @@ package com.ddd.bundleclient;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
@@ -20,11 +21,15 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.FragmentManager;
 
 import com.ddd.client.bundledeliveryagent.BundleDeliveryAgent;
+import com.ddd.client.bundlerouting.ClientWindow;
+import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions;
 import com.ddd.client.bundletransmission.BundleTransmission;
 import com.ddd.wifidirect.WifiDirectManager;
 import com.google.protobuf.ByteString;
 
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -52,7 +57,11 @@ public class HelloworldActivity extends AppCompatActivity {
   private Button detectTransportButton;
   private FileChooserFragment fragment;
   private TextView resultText;
+  // context
+  public static Context ApplicationContext;
 
+  // instantiate window for bundles
+  public static ClientWindow clientWindow;
 
   /** check for location permissions manually, will give a prompt*/
   @Override
@@ -78,12 +87,19 @@ public class HelloworldActivity extends AppCompatActivity {
     detectTransportButton = (Button) findViewById(R.id.detect_transport_button);
     resultText = (TextView) findViewById(R.id.grpc_response_text);
     resultText.setMovementMethod(new ScrollingMovementMethod());
-
     FragmentManager fragmentManager = this.getSupportFragmentManager();
     this.fragment = (FileChooserFragment) fragmentManager.findFragmentById(R.id.fragment_fileChooser);
 
     // set up wifi direct
     wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle());
+    try {
+      clientWindow = new ClientWindow(0);
+    } catch (WindowExceptions.InvalidLength e) {
+      e.printStackTrace();
+    } catch (WindowExceptions.BufferOverflow e) {
+      e.printStackTrace();
+    }
+    ApplicationContext = getApplicationContext();
 
     connectButton.setOnClickListener(new View.OnClickListener() {
       @Override
@@ -118,12 +134,13 @@ public class HelloworldActivity extends AppCompatActivity {
 //      start request task
         Log.d(TAG,"Connection Successful!");
         // receive task
-
-        //send task
-        new GrpcSendTask(this)
-                .execute(
-                        "192.168.49.1",
-                        "7777");
+        new GrpcReceiveTask(this).execute("192.168.49.1",
+                "7777");
+//        send task
+//        new GrpcSendTask(this)
+//                .execute(
+//                        "192.168.49.1",
+//                        "7777");
       }
       return group;
     });
@@ -162,6 +179,103 @@ public class HelloworldActivity extends AppCompatActivity {
     });
     String message = "I tried to find some peers!: ";
     Log.d(TAG, message);
+  }
+
+  private class GrpcReceiveTask extends AsyncTask<String, Void, String> {
+    private final WeakReference<Activity> activityReference;
+    private ManagedChannel channel;
+
+    private GrpcReceiveTask(Activity activity) {
+      this.activityReference = new WeakReference<Activity>(activity);
+    }
+
+    @Override
+    protected String doInBackground(String... params) {
+      ApplicationContext = getApplicationContext();
+      String host = params[0];
+      String portStr = params[1];
+      String FILE_PATH = getApplicationContext().getApplicationInfo().dataDir + "/Shared/received-bundles";
+      java.io.File file = new java.io.File(FILE_PATH);
+      file.mkdirs();
+      int port = Integer.parseInt(portStr);
+      channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
+      FileServiceGrpc.FileServiceStub stub = FileServiceGrpc.newStub(channel);
+      String[] bundleRequests = clientWindow.getWindow();
+      for(String bundleName: bundleRequests){
+//        String testBundleName = "client0-"+bundleName+".jar";
+        String testBundleName = "client0-0.jar";
+        ReqFilePath request = ReqFilePath.newBuilder()
+                .setValue(testBundleName)
+                .build();
+        Log.d(TAG, "Downloading file: " + testBundleName);
+
+        StreamObserver<Bytes> downloadObserver = new StreamObserver<Bytes>() {
+          FileOutputStream fileOutputStream = null;
+
+          @Override
+          public void onNext(Bytes fileContent) {
+            try {
+              if (fileOutputStream == null) {
+                fileOutputStream = new FileOutputStream(FILE_PATH+"/"+testBundleName);
+              }
+              // Write the downloaded data to the file
+              fileOutputStream.write(fileContent.getValue().toByteArray());
+            } catch (IOException e) {
+              onError(e);
+            }
+          }
+
+          @Override
+          public void onError(Throwable t) {
+            Log.d(TAG, "Error downloading file: " + t.getMessage(), t);
+            // Notify Shashank that bundle does not exist?
+            if (fileOutputStream != null) {
+              try {
+                fileOutputStream.close();
+              } catch (IOException e) {
+                Log.d(TAG, "Error closing output stream", e);
+              }
+            }
+          }
+
+          @Override
+          public void onCompleted() {
+            try {
+              fileOutputStream.flush();
+              fileOutputStream.close();
+            } catch (IOException e) {
+              Log.d(HelloworldActivity.TAG, "Error closing output stream", e);
+            }
+            Log.d(TAG, "File download complete");
+          }
+        };
+
+        stub.downloadFile(request, downloadObserver);
+        break;
+      }
+
+      return "Complete";
+    }
+
+    @Override
+    protected void onPostExecute(String result) {
+      try {
+        channel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+      Activity activity = activityReference.get();
+      if (activity == null) {
+        return;
+      }
+      String FILE_PATH = getApplicationContext().getApplicationInfo().dataDir + "/Shared/received-bundles";
+      BundleTransmission bundleTransmission = new BundleTransmission(getApplicationContext().getApplicationInfo().dataDir);
+      bundleTransmission.processReceivedBundles(FILE_PATH);
+      TextView resultText = (TextView) activity.findViewById(R.id.grpc_response_text);
+      Button connectButton = (Button) activity.findViewById(R.id.connect_button);
+      resultText.setText(result);
+      connectButton.setEnabled(true);
+    }
   }
 
   private class GrpcSendTask extends AsyncTask<String, Void, String> {
@@ -214,7 +328,7 @@ public class HelloworldActivity extends AppCompatActivity {
         // close the stream
         inputStream.close();
         streamObserver.onCompleted();
-        bundleTransmission.notifyBundleSent(toSend);
+//        bundleTransmission.notifyBundleSent(toSend);
         return "Complete";
       } catch (Exception e) {
         StringWriter sw = new StringWriter();

@@ -149,6 +149,7 @@ public class FileStoreHelper {
                 metadata.lastReceivedMessageId++;
                 setMetadata(folder, metadata);
             } catch (Exception e) {
+                Log.d("deepak", "Error: "+e.getMessage());
                 e.printStackTrace();
             }
         }else{

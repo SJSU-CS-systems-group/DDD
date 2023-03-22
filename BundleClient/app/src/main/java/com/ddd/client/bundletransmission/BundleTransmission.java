@@ -1,5 +1,7 @@
 package com.ddd.client.bundletransmission;
 
+import android.util.Log;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileSystems;
@@ -8,6 +10,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
+import com.ddd.bundleclient.HelloworldActivity;
 import com.ddd.client.applicationdatamanager.ApplicationDataManager;
 import com.ddd.client.bundlesecurity.BundleSecurity;
 import com.ddd.model.ADU;
@@ -73,10 +76,11 @@ public class BundleTransmission {
 
   public void processReceivedBundles(String bundlesLocation) {
     File bundleStorageDirectory = new File(bundlesLocation);
-
+    Log.d(HelloworldActivity.TAG, "inside receives"+bundlesLocation);
     for (final File bundleFile : bundleStorageDirectory.listFiles()) {
       Bundle bundle = BundleUtils.readBundleFromFile(bundleFile).build();
       if (!this.bundleSecurity.isLatestReceivedBundleId(bundle.getBundleId())) {
+        Log.d(HelloworldActivity.TAG, "kuch log");
         continue;
       }
       AckRecordUtils.writeAckRecordToFile(
@@ -86,7 +90,9 @@ public class BundleTransmission {
       this.applicationDataManager.processAcknowledgement(bundle.getAckRecord().getBundleId());
       this.applicationDataManager.storeADUs(bundle.getADUs());
       try {
+        Log.d(HelloworldActivity.TAG,"Deleting Directory");
         FileUtils.deleteDirectory(bundle.getSource());
+        Log.d(HelloworldActivity.TAG,"Deleted Directory");
       } catch (IOException e) {
         e.printStackTrace();
       }
