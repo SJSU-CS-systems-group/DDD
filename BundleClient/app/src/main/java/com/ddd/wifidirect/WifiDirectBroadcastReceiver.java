@@ -17,6 +17,7 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
 
     private WifiDirectManager manager;
     public static final String TAG = "wDebug";
+    public static Context ApplicationContext;
 
     /**
      * ctor
@@ -37,6 +38,7 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
+        ApplicationContext = context;
         // Broadcast intent action to indicate whether Wi-Fi p2p is enabled or disabled
         if (WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION.equals(action)) {
 
