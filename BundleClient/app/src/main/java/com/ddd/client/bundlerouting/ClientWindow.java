@@ -24,13 +24,12 @@ public class ClientWindow {
      * Returns:
      * None
      */
-        public ClientWindow(int length) throws InvalidLength, BufferOverflow
+    public ClientWindow(int length) throws InvalidLength, BufferOverflow
     {
         if (length > 0) {
             windowLength = length;
         } else {
-            //TODO: Change to log
-            System.out.printf("Invalid window size, using default size [%d]", windowLength);
+            Log.d(HelloworldActivity.Tag, "Invalid window size, using default size [%d]", windowLength);
         }
 
         window = new CircularBuffer(windowLength);
@@ -58,8 +57,7 @@ public class ClientWindow {
     public void processACK(String ackPath) throws IOException, RecievedOldACK, RecievedInvalidACK, InvalidLength, BufferOverflow
     {
         String ackStr = new String(Files.readAllBytes(Paths.get(ackPath)));
-        // TODO: Decrypt Bundle ID
-        System.out.println("Ack from file = "+ackStr);
+        Log.d(HelloworldActivity.Tag, "Ack from file = "+ackStr);
         long ack = Long.parseUnsignedLong(ackStr);
 
         if (Long.compareUnsigned(ack,begin) == -1) {
@@ -77,8 +75,7 @@ public class ClientWindow {
         begin = ack + 1;
         /* Add new bundleIDs to window */
         fillWindow(noDeleted, end);
-        // TODO: Change to log
-        System.out.println("Updated Begin: "+Long.toUnsignedString(begin)+"; End: "+Long.toUnsignedString(end));
+        Log.d(HelloworldActivity.Tag, "Updated Begin: "+Long.toUnsignedString(begin)+"; End: "+Long.toUnsignedString(end));
     }
 
     public String[] getWindow()
