@@ -1,0 +1,94 @@
+plugins {
+    id 'com.android.application'
+    id "com.google.protobuf" version "0.8.17"
+}
+
+android {
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    compileSdk 31
+
+    defaultConfig {
+        applicationId "com.ddd.bundletransport"
+        minSdk 24
+        targetSdk 31
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        debug { minifyEnabled false }
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    lintOptions {
+        abortOnError false
+        disable 'GoogleAppIndexingWarning', 'HardcodedText', 'InvalidPackage'
+        textReport true
+        textOutput "stdout"
+    }
+
+    sourceSets {
+        main {
+            proto {
+                // srcDir 'src/main/proto'
+            }
+            java {
+                // srcDir 'src/main/java'
+            }
+        }
+    }
+}
+
+dependencies {
+    // replace 'io.grpc:grpc-okhttp:1.42.0' with 'io.grpc:grpc-netty-shaded:1.42.0'
+    implementation 'io.grpc:grpc-netty-shaded:1.50.2'
+    implementation 'io.grpc:grpc-protobuf-lite:1.50.2'
+    implementation 'io.grpc:grpc-stub:1.50.2'
+    compileOnly 'org.apache.tomcat:annotations-api:6.0.53' // necessary for Java 9+
+
+    implementation 'com.google.protobuf:protobuf-javalite:3.17.3'
+
+    def work_version = "2.7.0"
+    implementation "androidx.work:work-runtime:$work_version"
+
+    implementation 'androidx.appcompat:appcompat:1.3.1'
+    implementation 'com.google.android.material:material:1.4.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.1'
+    implementation 'androidx.lifecycle:lifecycle-common-java8:2.3.1'
+    testImplementation 'junit:junit:4.+'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.3'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
+}
+
+
+protobuf {
+    protoc {
+        artifact = 'com.google.protobuf:protoc:3.17.3'
+    }
+    plugins {
+        grpc {
+            // https://repo.maven.apache.org/maven2/io/grpc/protoc-gen-grpc-java/1.42.0/
+            // for macOS M1, using 'osx-x86_64' version
+            artifact = 'io.grpc:protoc-gen-grpc-java:1.42.0:osx-x86_64'
+        }
+    }
+    generateProtoTasks {
+        all().each { task ->
+            task.builtins {
+                java {
+                    option "lite"
+                }
+            }
+            task.plugins {
+                grpc { option 'lite' }
+            }
+        }
+    }
+}
