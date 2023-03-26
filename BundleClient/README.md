@@ -1,4 +1,4 @@
-gRPC Hello World Example (Android Java)
+gRPC Bundle Client (Android Java)
 ========================
 
 PREREQUISITES
@@ -20,7 +20,7 @@ INSTALL
 If the cradle build option does not exist - 
 app -> edit configurations -> '+' -> Gradle -> Run options: build --debug --stacktrace -> Apply -> OK
 
-3.Clean and build the project this will generate necessary client and stub implementation using proto file.
+3. Clean and build the project this will generate necessary client and stub implementation using proto file.
 
 Note the gRPC version are different for M1 Macs, in case you are trying to build on MAC OSX, your gRPC version in the build.gradle(Module) should like io.grpc:protoc-gen-grpc-java:1.42.0:osx-x86_64
 In stead of io.grpc:protoc-gen-grpc-java:1.42.0
