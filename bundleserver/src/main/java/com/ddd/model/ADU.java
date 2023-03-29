@@ -12,7 +12,7 @@ public class ADU {
 
   private long size;
 
-  private final String clientId;
+  private String clientId;
 
   public ADU(File source, String appId, long aduId, long size, String clientId) {
     this.source = source;
@@ -20,6 +20,13 @@ public class ADU {
     this.aduId = aduId;
     this.size = size;
     this.clientId = clientId;
+  }
+
+  public ADU(File source, String appId, long aduId, long size) {
+    this.source = source;
+    this.appId = appId;
+    this.aduId = aduId;
+    this.size = size;
   }
 
   public File getSource() {
