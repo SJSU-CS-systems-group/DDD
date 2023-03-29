@@ -2,6 +2,7 @@ package com.ddd.datastore.filestore;
 
 import android.util.Log;
 
+import com.ddd.client.applicationdatamanager.ApplicationDataManager;
 import com.ddd.datastore.model.Metadata;
 import com.google.gson.Gson;
 
@@ -15,10 +16,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FileStoreHelper {
-    String RootFolder="";
-
+    private String RootFolder="";
+    private String appFolder="";
     public FileStoreHelper(String rootFolder){
         RootFolder = rootFolder;
+    }
+
+    public FileStoreHelper(String rootFolder, String appFolder){
+        RootFolder = rootFolder;
+        appFolder = appFolder;
     }
 
     public static String convertStreamToString(InputStream is) throws Exception {
@@ -131,6 +137,19 @@ public class FileStoreHelper {
         return appData;
     }
 
+    private void registerAppId(String appId){
+        ApplicationDataManager adm = new ApplicationDataManager(appFolder);
+        List<String> appIds = adm.getRegisteredAppIds();
+
+        //check if appId already exists
+        for(int i=0;i<appIds.size();i++) {
+            if(appIds.get(i).equals(appId)){
+                return;
+            }
+        }
+        adm.registerAppId(appId);
+    }
+
     public void AddFile(String folder, byte data[]){
         File f = new File(RootFolder+"/"+folder);
         if(f.isDirectory()){
@@ -153,6 +172,8 @@ public class FileStoreHelper {
                 e.printStackTrace();
             }
         }else{
+            //first ADU for an application
+            registerAppId(folder);
             f.mkdirs();
             File metadataFile = new File(RootFolder +"/"+ folder + "/metadata.json");
             try {

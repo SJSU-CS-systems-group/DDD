@@ -262,6 +262,10 @@ public class ApplicationDataManager {
   }
 
   public void registerAppId(String appId) {
+    File file = new File(ROOT_DIR + "/Shared");
+    if(!file.exists()){
+      file.mkdirs();
+    }
     try (BufferedWriter bufferedWriter =
         new BufferedWriter(new FileWriter(new File(ROOT_DIR + REGISTERED_APP_IDS)))) {
       bufferedWriter.append(appId);

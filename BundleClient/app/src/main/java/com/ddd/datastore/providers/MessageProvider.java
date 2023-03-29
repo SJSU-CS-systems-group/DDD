@@ -52,8 +52,8 @@ public class MessageProvider extends ContentProvider {
     public boolean onCreate() {
         DBHelper dbHelper=new DBHelper(getContext());
         sqlDB=dbHelper.getWritableDatabase();
-        sendFileStoreHelper = new FileStoreHelper(getContext().getApplicationInfo().dataDir+"/send");
-        receiveFileStoreHelper = new FileStoreHelper(getContext().getApplicationInfo().dataDir+"/receive");
+        sendFileStoreHelper = new FileStoreHelper(getContext().getApplicationInfo().dataDir+"/send", getContext().getApplicationInfo().dataDir);
+        receiveFileStoreHelper = new FileStoreHelper(getContext().getApplicationInfo().dataDir+"/receive", getContext().getApplicationInfo().dataDir);
         if(sqlDB!=null) return true;
         return false;
     }
