@@ -86,6 +86,11 @@ public class BundleTransmission {
     if (!bundle.getADUs().isEmpty()) {
       this.applicationDataManager.storeADUs(clientId, bundle.getADUs());
     }
+    try {
+      FileUtils.deleteDirectory(bundle.getSource());
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
   }
 
   public void processReceivedBundles() {
@@ -221,6 +226,11 @@ public class BundleTransmission {
           bundlesToSend.add(bundle);
           this.storeForRetransmission(bundle, clientRetransmissionSubDirectory);
         }
+        try {
+          FileUtils.deleteDirectory(retransmissionBundleBuilder.getSource());
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
       } else {
         deletionSet.addAll(bundleIdsPresent);
         String bundleId = this.bundleSecurity.generateBundleId(clientId);
@@ -243,6 +253,11 @@ public class BundleTransmission {
               retransmissionBundleDirectoryContents[
                   0]); // there is guaranteed to be a retransmission bundle since the sender window
       // is full
+      try {
+	    FileUtils.deleteDirectory(retransmissionBundleBuilder.getSource());
+	  } catch (IOException e) {
+	    e.printStackTrace();
+	  }
       if (bundleIdsPresent.contains(retransmissionBundleBuilder.getBundleId())) {
         deletionSet.addAll(bundleIdsPresent);
         deletionSet.remove(retransmissionBundleBuilder.getBundleId());
@@ -260,6 +275,11 @@ public class BundleTransmission {
         BundleUtils.writeBundleToFile(bundle, bundleGenerationDirectory, bundle.getBundleId());
         bundlesToSend.add(bundle);
       }
+      try {
+  	    FileUtils.deleteDirectory(retransmissionBundleBuilder.getSource());
+  	  } catch (IOException e) {
+  	    e.printStackTrace();
+  	  }
     }
 
     // TODO commit bundle id - in the exception handling phase.
@@ -279,14 +299,30 @@ public class BundleTransmission {
     }
     return new BundleTransferDTO(deletionSet, bundlesToSend);
   }
+  
+  public BundleTransferDTO getBundlesForTransmission(
+	      String transportId, Set<String> bundleIdsPresent) {
+    List<String> clientIds = this.bundleRouting.getClientIdsReachableFromTransport(transportId);
+    Set<String> deletionSet = new HashSet<>();
+    List<Bundle> bundlesToSend = new ArrayList<>();
+    for (String clientId : clientIds) {
+      BundleTransferDTO dtoForClient =
+          this.generateBundleForTransmission(clientId, bundleIdsPresent);
+      deletionSet.addAll(dtoForClient.getDeletionSet());
+      bundlesToSend.addAll(dtoForClient.getBundles());
+    }
+    return new BundleTransferDTO(deletionSet, bundlesToSend);
+  }
 
   public void deleteSentBundles(List<Bundle> bundles) {
-    for (Bundle bundle : bundles) {
-      try {
-        FileUtils.deleteDirectory(bundle.getSource());
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
-    }
+    // TODO
+    //    for (Bundle bundle : bundles) {
+    //      try {
+    //        FileUtils.delete(bundle.getSource());
+    //      } catch (IOException e) {
+    //        e.printStackTrace();
+    //      }
+    //    }
+    // TODO: Commented out for the moment.
   }
 }
