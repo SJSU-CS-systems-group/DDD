@@ -55,7 +55,6 @@ public class DTNAdapterClient {
                     .setClientId(clientId)
                     .build();
             PrepareResponse response = client.blockingStub.prepareData(data);
-            System.out.println("[DTNAdapterClient.SendData] response: appData.getDataCount()- " + appData.getDataCount());
             System.out.println("[DTNAdapterClient.PrepareData] response: "+response);
         } catch (StatusRuntimeException e) {
             e.printStackTrace();
