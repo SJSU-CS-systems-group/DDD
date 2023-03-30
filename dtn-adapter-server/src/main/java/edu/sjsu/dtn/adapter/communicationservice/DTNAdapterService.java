@@ -37,8 +37,8 @@ public class DTNAdapterService extends DTNAdapterGrpc.DTNAdapterImplBase{
     }
 
     @Override
-    public void prepareData(ClientData request, StreamObserver<Status> responseObserver) {
-        responseObserver.onNext(Status.newBuilder().setCode(StatusCode.SUCCESS).build());
+    public void prepareData(ClientData request, StreamObserver<PrepareResponse> responseObserver) {
+        responseObserver.onNext(PrepareResponse.newBuilder().setCode(StatusCode.SUCCESS).build());
         responseObserver.onCompleted();
     }
 }

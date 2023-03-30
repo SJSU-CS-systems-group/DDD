@@ -1,8 +1,10 @@
 package com.ddd.server.api;
 
 import com.google.protobuf.ByteString;
+import edu.sjsu.dtn.adapter.communicationservice.ClientData;
 import edu.sjsu.dtn.adapter.communicationservice.DTNAdapterGrpc;
 import edu.sjsu.dtn.adapter.communicationservice.AppData;
+import edu.sjsu.dtn.adapter.communicationservice.PrepareResponse;
 import io.grpc.Channel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
@@ -44,5 +46,19 @@ public class DTNAdapterClient {
         }
 
         return null;
+    }
+
+    public void PrepareData(String clientId){
+        DTNAdapterClient client = new DTNAdapterClient(ipAddress, port);
+        try {
+            ClientData data = ClientData.newBuilder()
+                    .setClientId(clientId)
+                    .build();
+            PrepareResponse response = client.blockingStub.prepareData(data);
+            System.out.println("[DTNAdapterClient.SendData] response: appData.getDataCount()- " + appData.getDataCount());
+            System.out.println("[DTNAdapterClient.PrepareData] response: "+response);
+        } catch (StatusRuntimeException e) {
+            e.printStackTrace();
+        }
     }
 }
