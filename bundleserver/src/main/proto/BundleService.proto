@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "edu.sjsu.ddd.bundleserver.service";
+option java_outer_classname = "BundleServerService";
+option objc_class_prefix = "BSS";
+
+package protobuf;
+
+enum Status {
+  PENDING = 0;
+  IN_PROGRESS = 1;
+  SUCCESS = 2;
+  FAILED = 3;
+  UNAVAILABLE = 4;
+}
+
+message BundleMetaData {
+  string bid = 1;
+  string transportId = 2;
+}
+
+message BundleList{
+  string transportId = 1;
+  string bundleList = 2;
+}
+
+message File {
+  bytes content = 1;
+}
+
+message BundleUploadRequest {
+  oneof request {
+    BundleMetaData metadata = 1;
+    File file = 2;
+    BundleList bundleList = 3; 
+  }
+}
+
+message BundleUploadResponse {
+  string bid = 1;
+  Status status = 2;
+}
+
+message BundleDownloadRequest {
+  BundleList bundleList = 1;
+}
+
+message BundleDownloadResponse{
+  oneof request{
+    BundleMetaData metadata = 1;
+    BundleList bundleList = 2;
+    File file = 3;
+    Status status = 4;
+  }
+}
+
+service BundleService {
+  rpc UploadBundle(stream BundleUploadRequest) returns (BundleUploadResponse) {}
+  rpc DownloadBundle(BundleDownloadRequest) returns (stream BundleDownloadResponse) {}
+}

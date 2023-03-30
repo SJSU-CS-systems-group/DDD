@@ -22,22 +22,22 @@ import com.google.gson.reflect.TypeToken;
 class StateManager {
 
   private static final String LARGEST_ADU_ID_RECEIVED =
-      "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Server\\Shared\\DB\\LARGEST_ADU_ID_RECEIVED.json";
+      "/Users/adityasinghania/Downloads/Data/Shared/DB/LARGEST_ADU_ID_RECEIVED.json";
 
   private static final String SENT_BUNDLE_DETAILS =
-      "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Server\\Shared\\DB\\SENT_BUNDLE_DETAILS.json";
+      "/Users/adityasinghania/Downloads/Data/Shared/DB/SENT_BUNDLE_DETAILS.json";
 
   private static final String LARGEST_ADU_ID_DELIVERED =
-      "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Server\\Shared\\DB\\LARGEST_ADU_ID_DELIVERED.json";
+      "/Users/adityasinghania/Downloads/Data/Shared/DB/LARGEST_ADU_ID_DELIVERED.json";
 
   private static final String LAST_SENT_BUNDLE_STRUCTURE =
-      "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Server\\Shared\\DB\\LAST_SENT_BUNDLE_STRUCTURE.json";
+      "/Users/adityasinghania/Downloads/Data/Shared/DB/LAST_SENT_BUNDLE_STRUCTURE.json";
 
   private DataStoreAdaptor dataStoreAdaptor;
 
   public StateManager() {
     this.dataStoreAdaptor =
-        new DataStoreAdaptor("C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Server");
+        new DataStoreAdaptor("/Users/adityasinghania/Downloads/Data");
     try {
       File sentBundleDetails = new File(SENT_BUNDLE_DETAILS);
       sentBundleDetails.getParentFile().mkdirs();
@@ -223,12 +223,11 @@ public class ApplicationDataManager {
   private Long APP_DATA_SIZE_LIMIT = 10000L;
 
   private static final String REGISTERED_APP_IDS =
-      "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Server\\Shared\\DB\\REGISTERED_APP_IDS.txt";
+      "/Users/adityasinghania/Downloads/Data/Shared/DB/REGISTERED_APP_IDS.txt";
 
   public ApplicationDataManager() {
     this.stateManager = new StateManager();
-    this.dataStoreAdaptor =
-        new DataStoreAdaptor("C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Server");
+    this.dataStoreAdaptor = new DataStoreAdaptor("/Users/adityasinghania/Downloads/Data");
   }
 
   public List<String> getRegisteredAppIds() {

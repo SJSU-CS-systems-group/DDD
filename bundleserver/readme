@@ -10,9 +10,9 @@ to connect to DB -
 run "mysql -u root -p"
 
 
-CREATE DATABASE dtn_server_db
+CREATE DATABASE dtn_server_db;
 
-use dtn_server_db
+use dtn_server_db;
 
 create table app_data_table (
     app_name varchar(100) not null,

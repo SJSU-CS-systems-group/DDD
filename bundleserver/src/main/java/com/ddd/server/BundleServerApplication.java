@@ -13,31 +13,32 @@ public class BundleServerApplication {
 
   public static void main(String[] args) {
     SpringApplication.run(BundleServerApplication.class, args);
+    DTNBundleServer.begin();
 
-    /* Receive Bundles */
-    BundleServerEndpoint bundleServerEndpoint = new BundleServerEndpoint();
-    bundleServerEndpoint.receiveBundles();
+    // /* Receive Bundles */
+    // BundleServerEndpoint bundleServerEndpoint = new BundleServerEndpoint();
+    // bundleServerEndpoint.receiveBundles();
 
-    /* Send Bundles */
-    Set<String> bundleIdsPresent = new HashSet<>();
-    String transportId = "transport-0";
-    BundleTransferDTO bundleTransferDTO =
-        bundleServerEndpoint.generateBundles(transportId, bundleIdsPresent);
+    // /* Send Bundles */
+    // Set<String> bundleIdsPresent = new HashSet<>();
+    // String transportId = "transport-0";
+    // BundleTransferDTO bundleTransferDTO =
+    //     bundleServerEndpoint.generateBundles(transportId, bundleIdsPresent);
 
-    System.out.println(
-        "[BundleServerApp] Following are the bundle ids that the transport "
-            + transportId
-            + " should delete");
+    // System.out.println(
+    //     "[BundleServerApp] Following are the bundle ids that the transport "
+    //         + transportId
+    //         + " should delete");
 
-    for (String bundleId : bundleTransferDTO.getDeletionSet()) {
-      System.out.println(bundleId);
-    }
-    System.out.println(
-        "[BundleServerApp] Following are the ids of the bundles to be sent to transport "
-            + transportId);
+    // for (String bundleId : bundleTransferDTO.getDeletionSet()) {
+    //   System.out.println(bundleId);
+    // }
+    // System.out.println(
+    //     "[BundleServerApp] Following are the ids of the bundles to be sent to transport "
+    //         + transportId);
 
-    for (Bundle bundle : bundleTransferDTO.getBundles()) {
-      System.out.println(bundle.getBundleId());
-    }
+    // for (Bundle bundle : bundleTransferDTO.getBundles()) {
+    //   System.out.println(bundle.getBundleId());
+    // }
   }
 }

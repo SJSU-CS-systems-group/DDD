@@ -23,11 +23,11 @@ import com.ddd.utils.Constants;
 public class BundleTransmission {
 
   private static final String BUNDLE_RECEIVED_LOCATION =
-      "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Server\\Shared\\received-bundles";
+      "/Users/adityasinghania/Downloads/Data/Shared/receive";
 
   /* Bundle generation directory */
   private static final String BUNDLE_GENERATION_DIRECTORY =
-      "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Server\\BundleTransmission\\bundle-generation";
+      "/Users/adityasinghania/Downloads/Data/BundleTransmission/bundle-generation";
 
   private static final String RETRANSMISSION_BUNDLE_DIRECTORY = "retransmission-bundle";
 
@@ -109,17 +109,17 @@ public class BundleTransmission {
     }
   }
 
-  public void processReceivedBundles() {
+  public void processReceivedBundles(String transportId) {
     File receivedBundlesDirectory = new File(BUNDLE_RECEIVED_LOCATION);
-
-    for (final File transportDir : receivedBundlesDirectory.listFiles()) {
-      String transportId = transportDir.getName();
+    File transportDir = new File(receivedBundlesDirectory, transportId);
+    // for (final File transportDir : receivedBundlesDirectory.listFiles()) {
+      // String transportId = transportDir.getName();
       this.bundleRouting.registerReceiptFromTransport(transportId);
       for (final File bundleFile : transportDir.listFiles()) {
         Bundle bundle = BundleUtils.readBundleFromFile(bundleFile).build();
         this.processReceivedBundle(bundle);
       }
-    }
+    // }
   }
 
   private String getAckRecordLocation(String clientId) {

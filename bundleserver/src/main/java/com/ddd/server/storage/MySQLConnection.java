@@ -3,8 +3,6 @@ package com.ddd.server.storage;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.Statement;
 
 public class MySQLConnection {
     public MySQLConnection(){
@@ -15,7 +13,7 @@ public class MySQLConnection {
         try{
             Class.forName("com.mysql.jdbc.Driver");
             Connection con= DriverManager.getConnection(
-                    "jdbc:mysql://localhost:3306/dtn_server_db","root","password");
+                    "jdbc:mysql://localhost:3306/dtn_server_db?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC","root","");
             return con;
             /*Statement stmt=con.createStatement();
             ResultSet rs=stmt.executeQuery("select * from emp");

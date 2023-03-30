@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class DTNAdapterService extends DTNAdapterGrpc.DTNAdapterImplBase{
-    private static final String ROOT_DIRECTORY = "C:\\Users\\dmuna\\Documents\\java\\DTN-bundle-server-adapter\\FileStore";
+    private static final String ROOT_DIRECTORY = "/Users/adityasinghania/Downloads/Data/DTN-bundle-server-adapter/FileStore";
     @Override
     public void saveData(AppData request, StreamObserver<AppData> responseObserver) {
         FileStoreHelper sendHelper = new FileStoreHelper(ROOT_DIRECTORY + "/send");

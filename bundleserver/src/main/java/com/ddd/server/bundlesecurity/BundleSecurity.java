@@ -22,10 +22,10 @@ import com.google.gson.reflect.TypeToken;
 public class BundleSecurity {
 
   private static final String LARGEST_BUNDLE_ID_RECEIVED =
-      "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Server\\Shared\\DB\\LARGEST_BUNDLE_ID_RECEIVED.json";
+      "/Users/adityasinghania/Downloads/Data/Shared/DB/LARGEST_BUNDLE_ID_RECEIVED.json";
 
   private static final String BUNDLE_ID_NEXT_COUNTER =
-      "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Server\\Shared\\DB\\BUNDLE_ID_NEXT_COUNTER.json";
+      "/Users/adityasinghania/Downloads/Data/Shared/DB/BUNDLE_ID_NEXT_COUNTER.json";
 
   private Integer counter;
 

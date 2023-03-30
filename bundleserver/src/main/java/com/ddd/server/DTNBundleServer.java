@@ -4,7 +4,8 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 
 import java.io.IOException;
-import java.net.URL;
+
+import com.ddd.server.service.BundleServerServiceImpl;
 
 public class DTNBundleServer {
     public int port=8080;
@@ -16,6 +17,7 @@ public class DTNBundleServer {
     public DTNBundleServer(ServerBuilder<?> serverBuilder, int port) {
         this.port = port;
         server = serverBuilder.addService(new DTNCommunicationService())
+                .addService(new BundleServerServiceImpl())
                 .build();
     }
     public void start() throws IOException {
@@ -28,7 +30,7 @@ public class DTNBundleServer {
         }
     }
 
-    public static void main(String[] args){
+    public static void begin(){
         try {
             DTNBundleServer admServer = new DTNBundleServer(8080);
             admServer.start();
