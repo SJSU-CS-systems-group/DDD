@@ -12,6 +12,14 @@ public class DTNAdapterService extends DTNAdapterGrpc.DTNAdapterImplBase{
     @Override
     public void saveData(AppData request, StreamObserver<AppData> responseObserver) {
         FileStoreHelper sendHelper = new FileStoreHelper(ROOT_DIRECTORY + "/send");
+
+        FileStoreHelper helper = new FileStoreHelper(ROOT_DIRECTORY + "/receive");
+        for(int i=0;i< request.getDataCount();i++) {
+            helper.AddFile(request.getClientId(), request.getData(i).toByteArray());
+            sendHelper.AddFile(request.getClientId(), (request.getData(i).toByteArray().toString()+" was processed").getBytes());
+        }
+
+
         List<byte[]> dataList = sendHelper.getAppData(request.getClientId());
         List<ByteString> dataListConverted = new ArrayList<>();
         System.out.println("[DTNAdapterService.saveData] data to send: ");
@@ -24,8 +32,6 @@ public class DTNAdapterService extends DTNAdapterGrpc.DTNAdapterImplBase{
                 .addAllData(dataListConverted)
                 .build();
 
-        FileStoreHelper helper = new FileStoreHelper(ROOT_DIRECTORY + "/receive");
-        helper.AddFile(request.getClientId(), request.getData(0).toByteArray());
         responseObserver.onNext(appData);
         responseObserver.onCompleted();
     }
