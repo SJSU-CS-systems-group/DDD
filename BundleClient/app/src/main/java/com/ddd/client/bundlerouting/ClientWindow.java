@@ -1,9 +1,14 @@
 package com.ddd.client.bundlerouting;
 
+import android.util.Log;
+
+import com.ddd.bundleclient.HelloworldActivity;
+import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions;
 import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
 import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
 import com.ddd.client.bundlerouting.WindowUtils.CircularBuffer;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -29,7 +34,7 @@ public class ClientWindow {
         if (length > 0) {
             windowLength = length;
         } else {
-            Log.d(HelloworldActivity.Tag, "Invalid window size, using default size [%d]", windowLength);
+            Log.d(HelloworldActivity.TAG, "Invalid window size, using default size [%d]" + length);
         }
 
         window = new CircularBuffer(windowLength);
@@ -54,16 +59,19 @@ public class ClientWindow {
         return Long.toUnsignedString(counter);
     }
 
-    public void processACK(String ackPath) throws IOException, RecievedOldACK, RecievedInvalidACK, InvalidLength, BufferOverflow
+    public void processACK(String ackPath) throws IOException, WindowExceptions.RecievedOldACK, WindowExceptions.RecievedInvalidACK, InvalidLength, BufferOverflow
     {
-        String ackStr = new String(Files.readAllBytes(Paths.get(ackPath)));
-        Log.d(HelloworldActivity.Tag, "Ack from file = "+ackStr);
+        String ackStr = null;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            ackStr = new String(Files.readAllBytes(Paths.get(ackPath)));
+        }
+        Log.d(HelloworldActivity.TAG, "Ack from file = "+ackStr);
         long ack = Long.parseUnsignedLong(ackStr);
 
         if (Long.compareUnsigned(ack,begin) == -1) {
-            throw new RecievedOldACK("Received old ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(begin) + "]" );
+            throw new WindowExceptions.RecievedOldACK("Received old ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(begin) + "]" );
         } else if (Long.compareUnsigned(ack,end) == 1) {
-            throw new RecievedInvalidACK("Received Invalid ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(end) + "]" );
+            throw new WindowExceptions.RecievedInvalidACK("Received Invalid ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(end) + "]" );
         }
 
         /* Index will be an int as windowLength is int */
@@ -75,7 +83,7 @@ public class ClientWindow {
         begin = ack + 1;
         /* Add new bundleIDs to window */
         fillWindow(noDeleted, end);
-        Log.d(HelloworldActivity.Tag, "Updated Begin: "+Long.toUnsignedString(begin)+"; End: "+Long.toUnsignedString(end));
+        Log.d(HelloworldActivity.TAG, "Updated Begin: "+Long.toUnsignedString(begin)+"; End: "+Long.toUnsignedString(end));
     }
 
     public String[] getWindow()

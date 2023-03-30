@@ -1,8 +1,11 @@
 package com.ddd.client.bundlerouting.WindowUtils;
 
+import android.util.Log;
+
 import java.util.ArrayList;
 import java.util.List;
 
+import com.ddd.bundleclient.HelloworldActivity;
 import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
 import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions.BufferUnderflow;
 import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
@@ -63,7 +66,7 @@ public class CircularBuffer {
                 count++;
                 i = (i + 1) % length;
             } catch (BufferUnderflow e) {
-                Log.w(HelloworldActivity.Tag, "ERROR: Buffer is Empty");
+                Log.w(HelloworldActivity.TAG, "ERROR: Buffer is Empty");
             }
         }
 
@@ -71,7 +74,7 @@ public class CircularBuffer {
         try {
             delete();
         } catch (BufferUnderflow e) {
-            Log.w(HelloworldActivity.Tag, "ERROR: Buffer is Empty");
+            Log.w(HelloworldActivity.TAG, "ERROR: Buffer is Empty");
         }
 
         /* Return number of deleted items */
