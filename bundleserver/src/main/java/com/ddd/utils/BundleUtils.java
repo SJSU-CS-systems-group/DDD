@@ -10,6 +10,9 @@ import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+
+import org.apache.commons.io.FileUtils;
+
 import com.ddd.model.ADU;
 import com.ddd.model.Acknowledgement;
 import com.ddd.model.Bundle;
@@ -46,22 +49,27 @@ public class BundleUtils {
    *            | gmail-0
    *            | gmail-1
    * */
-  public static Bundle.Builder readBundleFromFile(File inputFile) {
-    String path = inputFile.getAbsolutePath();
+  public static Bundle.Builder readBundleFromFile(File bundleFile) {
+    String bundleFileName = bundleFile.getName();
+    File extractedBundleFile =
+        new File(
+            bundleFile.getParent()
+                + File.separator
+                + bundleFileName.substring(0, bundleFileName.lastIndexOf('.')));
+    JarUtils.jarToDir(bundleFile.getAbsolutePath(), extractedBundleFile.getAbsolutePath());
 
-    String ackPath =
-        path + FileSystems.getDefault().getSeparator() + Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME;
-    String bundleIdPath =
-        path + FileSystems.getDefault().getSeparator() + Constants.BUNDLE_IDENTIFIER_FILE_NAME;
-    String aduPath =
-        path + FileSystems.getDefault().getSeparator() + Constants.BUNDLE_ADU_DIRECTORY_NAME;
+    String path = extractedBundleFile.getAbsolutePath();
+
+    String ackPath = path + File.separator + Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME;
+    String bundleIdPath = path + File.separator + Constants.BUNDLE_IDENTIFIER_FILE_NAME;
+    String aduPath = path + File.separator + Constants.BUNDLE_ADU_DIRECTORY_NAME;
 
     Bundle.Builder builder = new Bundle.Builder();
 
     builder.setAckRecord(AckRecordUtils.readAckRecordFromFile(new File(ackPath)));
     builder.setBundleId(readBundleIdFromFile(new File(bundleIdPath)));
     builder.setADUs(ADUUtils.readADUs(new File(aduPath)));
-    builder.setSource(inputFile);
+    builder.setSource(extractedBundleFile);
 
     return builder;
   }
@@ -111,6 +119,14 @@ public class BundleUtils {
       File aduDirectory = new File(aduPath);
       aduDirectory.mkdirs();
       ADUUtils.writeADUs(bundle.getADUs(), aduDirectory);
+    }
+    String jarFilePath = bundleFile.getAbsolutePath() + ".jar";
+    try {
+      JarUtils.dirToJar(bundleFile.getAbsolutePath(), jarFilePath);
+      FileUtils.deleteDirectory(bundleFile);
+      System.out.println("Folder has been compressed to JAR file.");
+    } catch (IOException e) {
+      e.printStackTrace();
     }
     System.out.println(
         "[BundleUtils] Wrote bundle with id = " + bundleId + " to " + targetDirectory);
