@@ -1,5 +1,6 @@
 package com.ddd.server.service;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -8,14 +9,18 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
+import com.ddd.model.BundleTransferDTO;
 import com.ddd.server.bundletransmission.BundleTransmission;
 import com.google.protobuf.ByteString;
 
 import edu.sjsu.ddd.bundleserver.service.BundleDownloadRequest;
 import edu.sjsu.ddd.bundleserver.service.BundleDownloadResponse;
+import edu.sjsu.ddd.bundleserver.service.BundleList;
 import edu.sjsu.ddd.bundleserver.service.BundleUploadRequest;
 import edu.sjsu.ddd.bundleserver.service.BundleUploadResponse;
 import edu.sjsu.ddd.bundleserver.service.Status;
@@ -108,41 +113,43 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
 
     @Override
     public void downloadBundle(BundleDownloadRequest request, StreamObserver<BundleDownloadResponse> responseObserver) {
+        String transportFiles = request.getBundleList().getBundleList();
+        String[] filesOnTransport = null;
+        Set<String> filesOnTransportSet = Collections.<String>emptySet();
+        if (!transportFiles.isEmpty()){
+            filesOnTransport = transportFiles.split(",");
+            List<String> filesOnTransportList = Arrays.asList(filesOnTransport);
+            filesOnTransportSet = new HashSet<String>( filesOnTransportList );
+        }
         
-        String[] filesOnTransport = request.getBundleList().getBundleList().split(",");
-        List<String> filesOnTransportList = Arrays.asList(filesOnTransport);
-        HashSet<String> filesOnTransportSet = new HashSet<String>( filesOnTransportList );
-
-        
-        java.io.File directoryPath = new java.io.File(SendDir+java.io.File.separator+request.getBundleList().getTransportId());
-        java.io.File[] filesList = directoryPath.listFiles();
-        System.out.println("List of files and directories in the specified directory:");
-        String requestedPath = null ;
-        for(java.io.File file : filesList) {
-            if(!filesOnTransportSet.contains(file.getName())){                
-                requestedPath = String.valueOf(Paths.get(SendDir+java.io.File.separator+request.getBundleList().getTransportId()).resolve(file.getName()));
-                break;
+        BundleTransmission bundleTransmission = new BundleTransmission();
+        List<File> bundlesList = bundleTransmission.getBundlesForTransmission(transportFiles);
+        if ( bundlesList.size() < 1 ){
+            BundleTransferDTO bundleTransferDTO = bundleTransmission.generateBundlesForTransmission(request.getBundleList().getTransportId(), filesOnTransportSet);
+            BundleDownloadResponse response = BundleDownloadResponse.newBuilder()
+                                                .setBundleList( BundleList.newBuilder().setBundleList(String.join(", ", bundleTransferDTO.getDeletionSet())))
+                                                .build();
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();                      
+        } else {
+            for( File bundle : bundlesList ){
+                if( !filesOnTransportSet.contains(bundle.getName()) ) {                    
+                    System.out.println("Downloading "+bundle.getName());
+                    InputStream in;                 
+                    try {
+                        in = new FileInputStream(bundle);
+                    } catch (Exception ex) {
+                        responseObserver.onError(ex);
+                        return;
+                    }
+                    StreamHandler handler = new StreamHandler(in);
+                    Exception ex = handler.handle(bytes -> {
+                        responseObserver.onNext(BundleDownloadResponse.newBuilder().setFile(edu.sjsu.ddd.bundleserver.service.File.newBuilder().setContent(bytes)).build());
+                    });
+                    if (ex != null) ex.printStackTrace();
+                    responseObserver.onCompleted();
+                }
             }
-        }
-        
-        
-        System.out.println("Downloading "+requestedPath);
-        assert requestedPath != null;
-        java.io.File file = new java.io.File(requestedPath);
-        InputStream in;
-        try {
-            in = new FileInputStream(file);
-        } catch (Exception ex) {
-            responseObserver.onError(ex);
-            return;
-        }
-        // StreamHandler handler = new StreamHandler(in);
-        // Exception ex = handler.handle(bytes -> {
-        //     responseObserver.onNext(Bytes.newBuilder().setValue(bytes).build());
-        // });
-        // if (ex != null) ex.printStackTrace();
-
-        responseObserver.onCompleted();
+        }               
     }
-
   }

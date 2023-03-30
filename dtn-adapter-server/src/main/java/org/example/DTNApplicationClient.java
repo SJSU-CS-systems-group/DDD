@@ -41,7 +41,7 @@ public class DTNApplicationClient {
         DTNApplicationClient client = new DTNApplicationClient(ip, port);
 
         ConnectionData data = ConnectionData.newBuilder()
-                .setAppName("com.android.mysignal")
+                .setAppName("com.example.mysignal")
                 .setUrl("localhost:8090")
                 .build();
         try {

@@ -319,6 +319,9 @@ public class BundleTransmission {
   public List<File> getBundlesForTransmission(String transportId) {
     List<File> bundles = new ArrayList<>();
     File recvTransportSubDir = new File(BUNDLE_RECEIVED_LOCATION + transportId);
+    if (recvTransportSubDir.listFiles() == null){
+      return bundles;
+    }
     for (File bundleFile : recvTransportSubDir.listFiles()) {
       bundles.add(bundleFile);
     }
