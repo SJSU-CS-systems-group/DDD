@@ -1,11 +1,6 @@
 package com.ddd.server.applicationdatamanager;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -230,6 +225,19 @@ public class ApplicationDataManager {
     this.dataStoreAdaptor = new DataStoreAdaptor("/Users/adityasinghania/Downloads/Data");
   }
 
+  public void registerAppId(String appId) {
+    File file = new File("/Users/adityasinghania/Downloads/Data/Shared");
+    if(!file.exists()){
+      file.mkdirs();
+    }
+    try (BufferedWriter bufferedWriter =
+                 new BufferedWriter(new FileWriter(new File(REGISTERED_APP_IDS)))) {
+      bufferedWriter.append(appId);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
   public List<String> getRegisteredAppIds() {
     List<String> registeredAppIds = new ArrayList<>();
     try (BufferedReader bufferedReader =
@@ -253,16 +261,24 @@ public class ApplicationDataManager {
   }
 
   public void storeADUs(String clientId, List<ADU> adus) {
+    Map<String, List<ADU>> appIdToADUMap = new HashMap<>();
+
     for (ADU adu : adus) {
       Long largestAduIdReceived = this.stateManager.largestADUIdReceived(clientId, adu.getAppId());
       if (largestAduIdReceived != null && adu.getADUId() <= largestAduIdReceived) {
         continue;
       }
       this.stateManager.updateLargestADUIdReceived(clientId, adu.getAppId(), adu.getADUId());
-      List<ADU> aduList = new ArrayList<>();
-      adus.add(adu);
-      // TODO: group adus by appId and then call this method
-      this.dataStoreAdaptor.persistADUsForServer(clientId, adu.getAppId(), aduList);
+
+      if (appIdToADUMap.containsKey(adu.getClientId())) {
+        appIdToADUMap.get(adu.getClientId()).add(adu);
+      } else {
+        appIdToADUMap.put(adu.getClientId(), new ArrayList<>());
+        appIdToADUMap.get(adu.getClientId()).add(adu);
+      }
+    }
+    for(String appId: appIdToADUMap.keySet()){
+      this.dataStoreAdaptor.persistADUsForServer(clientId, appId, appIdToADUMap.get(appId));
     }
   }
 

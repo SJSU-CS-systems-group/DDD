@@ -1,6 +1,7 @@
 package com.ddd.utils;
 
 import com.ddd.model.Metadata;
+import com.ddd.server.applicationdatamanager.ApplicationDataManager;
 import com.google.gson.Gson;
 
 import java.io.BufferedReader;
@@ -98,6 +99,19 @@ public class FileStoreHelper {
         }
     }
 
+    private void registerAppId(String appId){
+        ApplicationDataManager adm = new ApplicationDataManager();
+        List<String> appIds = adm.getRegisteredAppIds();
+
+        //check if appId already exists
+        for(int i=0;i<appIds.size();i++) {
+            if(appIds.get(i).equals(appId)){
+                return;
+            }
+        }
+        adm.registerAppId(appId);
+    }
+
     public byte[] getDataFromFile(File file){
         try {
             FileInputStream fis = new FileInputStream(file);
@@ -185,6 +199,7 @@ public class FileStoreHelper {
                 e.printStackTrace();
             }
         }else{
+            registerAppId(folder);
             f.mkdirs();
             File metadataFile = new File(RootFolder +"/"+folder + "/metadata.json");
             try {

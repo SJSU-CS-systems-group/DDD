@@ -16,7 +16,7 @@ public class DTNAdapterService extends DTNAdapterGrpc.DTNAdapterImplBase{
         FileStoreHelper helper = new FileStoreHelper(ROOT_DIRECTORY + "/receive");
         for(int i=0;i< request.getDataCount();i++) {
             helper.AddFile(request.getClientId(), request.getData(i).toByteArray());
-            sendHelper.AddFile(request.getClientId(), (request.getData(i).toByteArray().toString()+" was processed").getBytes());
+            sendHelper.AddFile(request.getClientId(), (new String(request.getData(i).toByteArray())+" was processed").getBytes());
         }
 
 
