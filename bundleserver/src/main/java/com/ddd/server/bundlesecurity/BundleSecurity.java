@@ -1,6 +1,5 @@
 package com.ddd.server.bundlesecurity;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -9,9 +8,7 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.apache.commons.lang3.StringUtils;
-
 import com.ddd.model.Bundle;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -26,8 +23,6 @@ public class BundleSecurity {
 
   private static final String BUNDLE_ID_NEXT_COUNTER =
       "/Users/adityasinghania/Downloads/Data/Shared/DB/BUNDLE_ID_NEXT_COUNTER.json";
-
-  private Integer counter;
 
   private Long getRecvdBundleIdCounter(String bundleId) {
     return Long.valueOf(bundleId.split("-")[1]);
@@ -47,6 +42,9 @@ public class BundleSecurity {
     try {
       Type mapType = new TypeToken<Map<String, String>>() {}.getType();
       ret = gson.fromJson(new FileReader(LARGEST_BUNDLE_ID_RECEIVED), mapType);
+      if (ret == null) {
+        ret = new HashMap<>();
+      }
     } catch (JsonSyntaxException e) {
       e.printStackTrace();
     } catch (JsonIOException e) {
@@ -80,6 +78,9 @@ public class BundleSecurity {
     try {
       Type mapType = new TypeToken<Map<String, Long>>() {}.getType();
       ret = gson.fromJson(new FileReader(BUNDLE_ID_NEXT_COUNTER), mapType);
+      if (ret == null) {
+        ret = new HashMap<>();
+      }
     } catch (JsonSyntaxException e) {
       e.printStackTrace();
     } catch (JsonIOException e) {
@@ -105,7 +106,7 @@ public class BundleSecurity {
     nextBundleIdCounters.put(clientId, counter);
     this.writeBundleIdNextCounters(nextBundleIdCounters);
   }
-  
+
   public BundleSecurity() {
     File bundleIdNextCounter = new File(BUNDLE_ID_NEXT_COUNTER);
 
@@ -123,17 +124,8 @@ public class BundleSecurity {
     } catch (IOException e) {
       e.printStackTrace();
     }
-
-    try (BufferedReader bufferedReader = new BufferedReader(new FileReader(bundleIdNextCounter))) {
-      String line = bufferedReader.readLine();
-      if (StringUtils.isNotEmpty(line)) {
-        this.counter = Integer.valueOf(line);
-      }
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
   }
-  
+
   public String getClientIdFromRecvdBundleId(String bundleId) {
     String clientId = bundleId.split("-")[0];
     System.out.println(
