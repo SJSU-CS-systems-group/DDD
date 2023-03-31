@@ -1,11 +1,6 @@
 package com.ddd.server.applicationdatamanager;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -228,6 +223,19 @@ public class ApplicationDataManager {
   public ApplicationDataManager() {
     this.stateManager = new StateManager();
     this.dataStoreAdaptor = new DataStoreAdaptor("/Users/adityasinghania/Downloads/Data");
+  }
+
+  public void registerAppId(String appId) {
+    File file = new File("/Users/adityasinghania/Downloads/Data/Shared");
+    if(!file.exists()){
+      file.mkdirs();
+    }
+    try (BufferedWriter bufferedWriter =
+                 new BufferedWriter(new FileWriter(new File(REGISTERED_APP_IDS)))) {
+      bufferedWriter.append(appId);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
   }
 
   public List<String> getRegisteredAppIds() {
