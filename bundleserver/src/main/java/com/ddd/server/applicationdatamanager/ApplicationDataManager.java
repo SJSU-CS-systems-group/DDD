@@ -67,6 +67,9 @@ class StateManager {
     try {
       Type mapType = new TypeToken<Map<String, Map<String, Long>>>() {}.getType();
       ret = gson.fromJson(new FileReader(LARGEST_ADU_ID_RECEIVED), mapType);
+      if (ret == null){
+        ret = new HashMap<>();
+      }
     } catch (JsonSyntaxException e) {
       e.printStackTrace();
     } catch (JsonIOException e) {
@@ -105,6 +108,9 @@ class StateManager {
     try {
       Type mapType = new TypeToken<Map<String, Map<String, Long>>>() {}.getType();
       ret = gson.fromJson(new FileReader(LARGEST_ADU_ID_DELIVERED), mapType);
+      if (ret == null){
+        ret = new HashMap<>();
+      }
     } catch (JsonSyntaxException e) {
       e.printStackTrace();
     } catch (JsonIOException e) {
@@ -143,6 +149,9 @@ class StateManager {
     try {
       Type mapType = new TypeToken<Map<String, Map<String, Long>>>() {}.getType();
       ret = gson.fromJson(new FileReader(new File(SENT_BUNDLE_DETAILS)), mapType);
+      if (ret == null){
+        ret = new HashMap<>();
+      }
     } catch (JsonSyntaxException e) {
       e.printStackTrace();
     } catch (JsonIOException e) {
@@ -218,7 +227,7 @@ public class ApplicationDataManager {
   private Long APP_DATA_SIZE_LIMIT = 10000L;
 
   private static final String REGISTERED_APP_IDS =
-      "/Users/adityasinghania/Downloads/Data/Shared/DB/REGISTERED_APP_IDS.txt";
+      "/Users/adityasinghania/Downloads/Data/Shared/REGISTERED_APP_IDS.txt";
 
   public ApplicationDataManager() {
     this.stateManager = new StateManager();
@@ -270,11 +279,11 @@ public class ApplicationDataManager {
       }
       this.stateManager.updateLargestADUIdReceived(clientId, adu.getAppId(), adu.getADUId());
 
-      if (appIdToADUMap.containsKey(adu.getClientId())) {
-        appIdToADUMap.get(adu.getClientId()).add(adu);
+      if (appIdToADUMap.containsKey(adu.getAppId())) {
+        appIdToADUMap.get(adu.getAppId()).add(adu);
       } else {
-        appIdToADUMap.put(adu.getClientId(), new ArrayList<>());
-        appIdToADUMap.get(adu.getClientId()).add(adu);
+        appIdToADUMap.put(adu.getAppId(), new ArrayList<>());
+        appIdToADUMap.get(adu.getAppId()).add(adu);
       }
     }
     for(String appId: appIdToADUMap.keySet()){

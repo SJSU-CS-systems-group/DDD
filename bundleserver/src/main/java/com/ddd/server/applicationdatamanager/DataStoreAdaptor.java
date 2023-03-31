@@ -36,6 +36,7 @@ public class DataStoreAdaptor {
             MySQLConnection mysql = new MySQLConnection();
             Connection con = mysql.GetConnection();
             Statement stmt = con.createStatement();
+            System.out.println("select address from registered_app_adapter_table where app_id='"+appId+"';");
 
             ResultSet rs = stmt.executeQuery("select address from registered_app_adapter_table where app_id='"+appId+"';");
             String adapterAddress="";
@@ -90,7 +91,7 @@ public class DataStoreAdaptor {
     public void saveDataFromAdaptor(String clientId, String appId, AppData appData){
         try {
             for(int i=0;i<appData.getDataCount();i++){
-                receiveFileStoreHelper.AddFile(appId, clientId, appData.getData(i).toByteArray());
+                sendFileStoreHelper.AddFile(appId, clientId, appData.getData(i).toByteArray());
             }
         } catch (Exception ex){
             ex.printStackTrace();

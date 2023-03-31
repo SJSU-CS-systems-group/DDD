@@ -30,7 +30,6 @@ import com.google.protobuf.ByteString;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.ref.WeakReference;
@@ -268,9 +267,9 @@ public class HelloworldActivity extends AppCompatActivity {
       if (activity == null) {
         return;
       }
-      String FILE_PATH = getApplicationContext().getApplicationInfo().dataDir + "/Shared/received-bundles";
-      BundleTransmission bundleTransmission = new BundleTransmission(getApplicationContext().getApplicationInfo().dataDir);
-      bundleTransmission.processReceivedBundles(FILE_PATH);
+//      String FILE_PATH = getApplicationContext().getApplicationInfo().dataDir + "/Shared/received-bundles";
+//      BundleTransmission bundleTransmission = new BundleTransmission(getApplicationContext().getApplicationInfo().dataDir);
+//      bundleTransmission.processReceivedBundles(FILE_PATH);
       TextView resultText = (TextView) activity.findViewById(R.id.grpc_response_text);
       Button connectButton = (Button) activity.findViewById(R.id.connect_button);
       resultText.setText(result);

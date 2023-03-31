@@ -43,7 +43,8 @@ message BundleUploadResponse {
 }
 
 message BundleDownloadRequest {
-  BundleList bundleList = 1;
+  string bundleList = 1;
+  string transportId = 2;
 }
 
 message BundleDownloadResponse{

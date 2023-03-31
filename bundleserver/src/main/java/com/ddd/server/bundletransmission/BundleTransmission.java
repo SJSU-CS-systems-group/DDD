@@ -1,6 +1,7 @@
 package com.ddd.server.bundletransmission;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.util.ArrayList;
@@ -115,7 +116,13 @@ public class BundleTransmission {
     // for (final File transportDir : receivedBundlesDirectory.listFiles()) {
       // String transportId = transportDir.getName();
       this.bundleRouting.registerReceiptFromTransport(transportId);
-      for (final File bundleFile : transportDir.listFiles()) {
+      for (final File bundleFile : transportDir.listFiles(new FileFilter() {
+        @Override
+        public boolean accept(File file) {
+            return !file.isHidden();
+        }
+    })) {
+        System.out.println(bundleFile.getAbsolutePath());
         Bundle bundle = BundleUtils.readBundleFromFile(bundleFile).build();
         this.processReceivedBundle(bundle);
       }
@@ -318,11 +325,18 @@ public class BundleTransmission {
 
   public List<File> getBundlesForTransmission(String transportId) {
     List<File> bundles = new ArrayList<>();
-    File recvTransportSubDir = new File(BUNDLE_RECEIVED_LOCATION + transportId);
-    if (recvTransportSubDir.listFiles() == null){
+    File recvTransportSubDir = new File(BUNDLE_GENERATION_DIRECTORY+File.separator+TO_SEND_DIRECTORY+File.separator+transportId);
+    System.out.println(BUNDLE_GENERATION_DIRECTORY+File.separator+TO_SEND_DIRECTORY+File.separator+transportId);
+    File[] recvTransport =  recvTransportSubDir.listFiles(new FileFilter() {
+      @Override
+      public boolean accept(File file) {
+          return !file.isHidden();
+      }
+  });
+    if (recvTransport == null){
       return bundles;
     }
-    for (File bundleFile : recvTransportSubDir.listFiles()) {
+    for (File bundleFile : recvTransport) {
       bundles.add(bundleFile);
     }
     return bundles;

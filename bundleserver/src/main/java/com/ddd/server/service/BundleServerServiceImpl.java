@@ -113,7 +113,8 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
 
     @Override
     public void downloadBundle(BundleDownloadRequest request, StreamObserver<BundleDownloadResponse> responseObserver) {
-        String transportFiles = request.getBundleList().getBundleList();
+        String transportFiles = request.getBundleList();
+        System.out.println("Transport id :"+request.getTransportId());
         String[] filesOnTransport = null;
         Set<String> filesOnTransportSet = Collections.<String>emptySet();
         if (!transportFiles.isEmpty()){
@@ -123,9 +124,9 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
         }
         
         BundleTransmission bundleTransmission = new BundleTransmission();
-        List<File> bundlesList = bundleTransmission.getBundlesForTransmission(transportFiles);
-        if ( bundlesList.size() < 1 ){
-            BundleTransferDTO bundleTransferDTO = bundleTransmission.generateBundlesForTransmission(request.getBundleList().getTransportId(), filesOnTransportSet);
+        List<File> bundlesList = bundleTransmission.getBundlesForTransmission(request.getTransportId());
+        if ( bundlesList.isEmpty() ){
+            BundleTransferDTO bundleTransferDTO = bundleTransmission.generateBundlesForTransmission(request.getTransportId(), filesOnTransportSet);
             BundleDownloadResponse response = BundleDownloadResponse.newBuilder()
                                                 .setBundleList( BundleList.newBuilder().setBundleList(String.join(", ", bundleTransferDTO.getDeletionSet())))
                                                 .build();

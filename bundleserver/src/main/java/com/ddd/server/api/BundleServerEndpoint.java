@@ -15,7 +15,7 @@ public class BundleServerEndpoint {
   public void receiveBundles() {
     System.out.println(
         "[BSE] Started execution of bundle server endpoint for receiving bundles flow");
-    this.bundleTransmission.processReceivedBundles();
+    // this.bundleTransmission.processReceivedBundles();
   }
 
   public BundleTransferDTO generateBundles(String transportId, Set<String> bundleIdsPresent) {

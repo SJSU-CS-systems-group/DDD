@@ -42,7 +42,7 @@ public class BundleSecurity {
     try {
       Type mapType = new TypeToken<Map<String, String>>() {}.getType();
       ret = gson.fromJson(new FileReader(LARGEST_BUNDLE_ID_RECEIVED), mapType);
-      if (ret == null) {
+      if (ret == null){
         ret = new HashMap<>();
       }
     } catch (JsonSyntaxException e) {
@@ -78,7 +78,7 @@ public class BundleSecurity {
     try {
       Type mapType = new TypeToken<Map<String, Long>>() {}.getType();
       ret = gson.fromJson(new FileReader(BUNDLE_ID_NEXT_COUNTER), mapType);
-      if (ret == null) {
+      if (ret == null){
         ret = new HashMap<>();
       }
     } catch (JsonSyntaxException e) {
@@ -149,10 +149,7 @@ public class BundleSecurity {
   }
 
   public String generateBundleId(String clientId) {
-    Long counter = 0L;
-    if (counter != null) {
-      counter = this.getBundleIdNextCounters().get(clientId);
-    }
+    Long counter = this.getBundleIdNextCounters().getOrDefault(clientId,0L);
     this.writeCounterToDB(clientId, counter + 1);
     return clientId + "#" + counter.toString();
   }
