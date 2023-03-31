@@ -150,6 +150,8 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
                     responseObserver.onCompleted();
                 }
             }
+            responseObserver.onNext(BundleDownloadResponse.newBuilder().setStatus(Status.SUCCESS).build());
+            responseObserver.onCompleted();
         }               
     }
   }
