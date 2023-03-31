@@ -253,16 +253,24 @@ public class ApplicationDataManager {
   }
 
   public void storeADUs(String clientId, List<ADU> adus) {
+    Map<String, List<ADU>> appIdToADUMap = new HashMap<>();
+
     for (ADU adu : adus) {
       Long largestAduIdReceived = this.stateManager.largestADUIdReceived(clientId, adu.getAppId());
       if (largestAduIdReceived != null && adu.getADUId() <= largestAduIdReceived) {
         continue;
       }
       this.stateManager.updateLargestADUIdReceived(clientId, adu.getAppId(), adu.getADUId());
-      List<ADU> aduList = new ArrayList<>();
-      adus.add(adu);
-      // TODO: group adus by appId and then call this method
-      this.dataStoreAdaptor.persistADUsForServer(clientId, adu.getAppId(), aduList);
+
+      if (appIdToADUMap.containsKey(adu.getClientId())) {
+        appIdToADUMap.get(adu.getClientId()).add(adu);
+      } else {
+        appIdToADUMap.put(adu.getClientId(), new ArrayList<>());
+        appIdToADUMap.get(adu.getClientId()).add(adu);
+      }
+    }
+    for(String appId: appIdToADUMap.keySet()){
+      this.dataStoreAdaptor.persistADUsForServer(clientId, appId, appIdToADUMap.get(appId));
     }
   }
 
