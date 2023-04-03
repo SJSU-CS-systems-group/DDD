@@ -21,6 +21,7 @@ import com.google.protobuf.ByteString;
 import edu.sjsu.ddd.bundleserver.service.BundleDownloadRequest;
 import edu.sjsu.ddd.bundleserver.service.BundleDownloadResponse;
 import edu.sjsu.ddd.bundleserver.service.BundleList;
+import edu.sjsu.ddd.bundleserver.service.BundleMetaData;
 import edu.sjsu.ddd.bundleserver.service.BundleUploadRequest;
 import edu.sjsu.ddd.bundleserver.service.BundleUploadResponse;
 import edu.sjsu.ddd.bundleserver.service.Status;
@@ -114,7 +115,8 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
     @Override
     public void downloadBundle(BundleDownloadRequest request, StreamObserver<BundleDownloadResponse> responseObserver) {
         String transportFiles = request.getBundleList();
-        System.out.println("Transport id :"+request.getTransportId());
+        System.out.println("[BDA] bundles on transport"+transportFiles);
+        System.out.println("[BDA]Request from Transport id :"+request.getTransportId());
         String[] filesOnTransport = null;
         Set<String> filesOnTransportSet = Collections.<String>emptySet();
         if (!transportFiles.isEmpty()){
@@ -125,17 +127,22 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
         
         BundleTransmission bundleTransmission = new BundleTransmission();
         List<File> bundlesList = bundleTransmission.getBundlesForTransmission(request.getTransportId());
+        System.out.println(bundleTransmission);
         if ( bundlesList.isEmpty() ){
             BundleTransferDTO bundleTransferDTO = bundleTransmission.generateBundlesForTransmission(request.getTransportId(), filesOnTransportSet);
             BundleDownloadResponse response = BundleDownloadResponse.newBuilder()
                                                 .setBundleList( BundleList.newBuilder().setBundleList(String.join(", ", bundleTransferDTO.getDeletionSet())))
                                                 .build();
+            System.out.println("[BDA] Sending "+String.join(", ", bundleTransferDTO.getDeletionSet())+" to delete on Transport id :"+request.getTransportId());
             responseObserver.onNext(response);
             responseObserver.onCompleted();                      
         } else {
+
             for( File bundle : bundlesList ){
                 if( !filesOnTransportSet.contains(bundle.getName()) ) {                    
-                    System.out.println("Downloading "+bundle.getName());
+                    System.out.println("[BDA]Downloading "+bundle.getName()+" to Transport id :"+request.getTransportId());
+                    BundleMetaData bundleMetaData = BundleMetaData.newBuilder().setBid(bundle.getName()).build();
+                    responseObserver.onNext(BundleDownloadResponse.newBuilder().setMetadata(bundleMetaData).build());
                     InputStream in;                 
                     try {
                         in = new FileInputStream(bundle);
@@ -151,6 +158,7 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
                     responseObserver.onCompleted();
                 }
             }
+            System.out.println("[BDA] All bundles were transferred completing status success");
             responseObserver.onNext(BundleDownloadResponse.newBuilder().setStatus(Status.SUCCESS).build());
             responseObserver.onCompleted();
         }               
