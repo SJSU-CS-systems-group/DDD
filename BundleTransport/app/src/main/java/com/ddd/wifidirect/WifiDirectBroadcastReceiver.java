@@ -78,10 +78,10 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
             Log.d(MainActivity.TAG, "WifiDirectBroadcastReceiver INTENT PEERS_CHANGED");
             ArrayList<WifiP2pDevice> newPeers = manager.getPeerList();
             //stop the gRPC server when  no devices are connected
-            if(newPeers.size() == 0){
-                Log.d(MainActivity.TAG, "Stopping server, no devices are connected to group");
-                WorkManager.getInstance(context).cancelUniqueWork(MainActivity.TAG);
-            }
+//            if(newPeers.size() == 0){
+//                Log.d(MainActivity.TAG, "Stopping server, no devices are connected to group");
+//                WorkManager.getInstance(context).cancelUniqueWork(MainActivity.TAG);
+//            }
         }
 //         Broadcast intent action indicating that the state of Wi-Fi p2p
 //         connectivity has changed.

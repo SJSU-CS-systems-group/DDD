@@ -8,11 +8,23 @@
         android:id="@+id/btn_start_rpc_server"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Start Server" />
+        android:text="Start gRPC Server" />
 
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/btn_stop_rpc_server"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Stop Server" />
+        android:text="Stop gRPC Server" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btn_connect_bundle_server"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="connect to bundle server" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btn_clear_storage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Free up Space" />
 </LinearLayout>

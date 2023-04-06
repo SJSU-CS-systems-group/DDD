@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package protobuf;
 
-option go_package = "./protobuf";
 
 option java_multiple_files = true;
 option java_package = "com.ddd.bundletransport.service";
@@ -20,6 +19,7 @@ enum Status {
   IN_PROGRESS = 1;
   SUCCESS = 2;
   FAILED = 3;
+  UNAVAILABLE = 4;
 }
 
 message MetaData {
