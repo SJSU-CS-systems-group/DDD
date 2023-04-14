@@ -24,6 +24,7 @@ import com.ddd.client.bundledeliveryagent.BundleDeliveryAgent;
 import com.ddd.client.bundlerouting.ClientWindow;
 import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions;
 import com.ddd.client.bundletransmission.BundleTransmission;
+import com.ddd.model.BundleWrapper;
 import com.ddd.wifidirect.WifiDirectManager;
 import com.google.protobuf.ByteString;
 
@@ -295,7 +296,7 @@ public class HelloworldActivity extends AppCompatActivity {
         FileServiceGrpc.FileServiceStub stub = FileServiceGrpc.newStub(channel);
         StreamObserver<FileUploadRequest> streamObserver = stub.uploadFile(new FileUploadObserver());
         BundleTransmission bundleTransmission = new BundleTransmission(getApplicationContext().getApplicationInfo().dataDir);
-        com.ddd.model.Bundle toSend = bundleTransmission.generateBundleForTransmission();
+        BundleWrapper toSend = bundleTransmission.generateBundleForTransmission();
         System.out.println("[BDA] An outbound bundle generated with id: " + toSend.getBundleId());
         Date current = Calendar.getInstance().getTime();
         FileUploadRequest metadata = FileUploadRequest.newBuilder()
@@ -328,6 +329,7 @@ public class HelloworldActivity extends AppCompatActivity {
         inputStream.close();
         streamObserver.onCompleted();
 //        bundleTransmission.notifyBundleSent(toSend);
+        Log.d(TAG,"Completed file transfer");
         return "Complete";
       } catch (Exception e) {
         StringWriter sw = new StringWriter();

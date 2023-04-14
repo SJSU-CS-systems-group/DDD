@@ -1,5 +1,7 @@
 package com.ddd.client.bundlesecurity;
 
+import android.util.Log;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -8,11 +10,23 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.security.NoSuchAlgorithmException;
+import java.security.SignatureException;
+import java.security.spec.InvalidKeySpecException;
+
 import org.apache.commons.lang3.StringUtils;
+import org.whispersystems.libsignal.InvalidKeyException;
+
+import com.ddd.bundleclient.HelloworldActivity;
 import com.ddd.model.Bundle;
+import com.ddd.model.BundleWrapper;
+import com.ddd.model.EncryptedBundle;
+import com.ddd.model.EncryptionHeader;
+import com.ddd.utils.JarUtils;
 
 public class BundleSecurity {
 
+  static ClientSecurity client = null;
   private static String RootFolder;
   private static String LARGEST_BUNDLE_ID_RECEIVED =
       "/Shared/DB/LARGEST_BUNDLE_ID_RECEIVED.txt";
@@ -57,6 +71,9 @@ public class BundleSecurity {
 
   public BundleSecurity(String rootFolder) {
     RootFolder = rootFolder;
+    // TODO: Add actual server key path
+    String clientKeyPath = RootFolder + "/Keys/Client/";
+    String serverKeyPath = RootFolder + "/Keys/Server/";
 
     File bundleIdNextCounter = new File(RootFolder+ BUNDLE_ID_NEXT_COUNTER);
 
@@ -83,6 +100,18 @@ public class BundleSecurity {
     } catch (IOException e) {
       e.printStackTrace();
     }
+
+    /* Initializing Security Module*/
+    try {
+      client = ClientSecurity.getInstance(1, clientKeyPath, serverKeyPath);
+      Log.d(HelloworldActivity.TAG,"Kuch Bhi");
+    } catch (NoSuchAlgorithmException e) {
+      e.printStackTrace();
+    } catch (IOException e) {
+      e.printStackTrace();
+    } catch (InvalidKeyException e) {
+      e.printStackTrace();
+    }
   }
 
   public void decryptBundleContents(Bundle bundle) {
@@ -106,8 +135,50 @@ public class BundleSecurity {
     return this.clientId + "-" + counterString;
   }
 
-  public void encryptBundleContents(Bundle bundle) {
-    System.out.println("[BS] Encrypting contents of the bundle with id: " + bundle.getBundleId());
+  public BundleWrapper wrapBundleContents(Bundle bundle, String bundleWrapperPath) {
+    System.out.println("[BS] Encrypting contents of the bundle with id: " + bundle.getBundleId() + "wrapper path :"+bundleWrapperPath);
+    String bundleID = bundle.getBundleId();
+    File payloadFile = bundle.getSource(); // Payload JAR
+    File bundleWrapperFile = new File(bundleWrapperPath +File.separator+ bundle.getBundleId() + ".jar");
+    File unencryptedBundleWrapperParentDir =  payloadFile.getParentFile(); // TODO read, encrypt and put in a directory
+    File unencryptedBundleWrapperDir = new File(unencryptedBundleWrapperParentDir + File.separator + bundleID);
+
+    /* Sign and Encryption */
+    String[] signNencryptedPath = new String[0];
+    try {
+      Log.d(HelloworldActivity.TAG,"payload "+payloadFile.getAbsolutePath() );
+      Log.d(HelloworldActivity.TAG,"Path "+unencryptedBundleWrapperParentDir.getAbsolutePath());
+      Log.d(HelloworldActivity.TAG,"ID "+bundleID);
+      signNencryptedPath = client.encrypt(payloadFile.getAbsolutePath(), unencryptedBundleWrapperParentDir.getAbsolutePath(),bundleID);
+    } catch (IOException e) {
+      e.printStackTrace();
+    } catch (java.security.InvalidKeyException e) {
+      e.printStackTrace();
+    } catch (NoSuchAlgorithmException e) {
+      e.printStackTrace();
+    } catch (SignatureException e) {
+      e.printStackTrace();
+    } catch (InvalidKeySpecException e) {
+      e.printStackTrace();
+    } catch (InvalidKeyException e) {
+      e.printStackTrace();
+    }
+
+    /* Create Headers */
+    String[] encHeaderPath = new String[0];
+    try {
+      encHeaderPath = client.createEncryptionHeader(unencryptedBundleWrapperParentDir.getAbsolutePath(), bundleID);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    EncryptionHeader encHeader = new EncryptionHeader(new File(encHeaderPath[0]), new File(encHeaderPath[1]));
+
+    File encryptedPayloadFile = new File(signNencryptedPath[1]);
+    // TODO encrypt and Path of encrypted payload
+    Log.d(HelloworldActivity.TAG,"New Path"+unencryptedBundleWrapperDir.getAbsolutePath()+"  "+bundleWrapperFile.getPath());
+    JarUtils.dirToJar(unencryptedBundleWrapperDir.getAbsolutePath(), bundleWrapperFile.getPath());
+    BundleWrapper wrapper = new BundleWrapper (bundle.getBundleId(), encHeader, new EncryptedBundle(encryptedPayloadFile), bundleWrapperFile, new File(signNencryptedPath[0]));
+    return wrapper;
   }
 
   public boolean isLatestReceivedBundleId(String bundleId) {
