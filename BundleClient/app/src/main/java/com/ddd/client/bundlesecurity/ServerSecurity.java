@@ -196,7 +196,8 @@ public class ServerSecurity {
     public void decrypt(String bundlePath, String decryptedPath) throws NoSuchAlgorithmException, IOException, InvalidKeyException, java.security.InvalidKeyException, InvalidKeySpecException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, ClientSessionException
     {
         ClientSession client = getClientSessionFromFile(bundlePath);
-        byte[] encryptedData = Files.readAllBytes(Paths.get(bundlePath + File.separator + SecurityUtils.PAYLOAD_FILENAME));
+        String payloadFile   = bundlePath + File.separator + SecurityUtils.PAYLOAD_FILENAME;
+        byte[] encryptedData = SecurityUtils.readFromFile(payloadFile);
         String bundleID      = getBundleIDFromFile(bundlePath, client.clientID);
         String decryptedFile = decryptedPath + File.separator + bundleID + SecurityUtils.DECRYPTED_FILE_EXT;
         String signatureFile = bundlePath + File.separator + SecurityUtils.SIGN_FILENAME;
@@ -233,61 +234,12 @@ public class ServerSecurity {
         return;
     }
 
-    public void decryptChunks(String bundlePath, String decryptedPath) throws NoSuchAlgorithmException, IOException, InvalidKeyException, java.security.InvalidKeyException, InvalidKeySpecException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, ClientSessionException
-    {
-        ClientSession client = getClientSessionFromFile(bundlePath);
-        String payloadPath   = bundlePath + File.separator + SecurityUtils.PAYLOAD_DIR;
-        String signPath      = bundlePath + File.separator + SecurityUtils.SIGNATURE_DIR;
-        
-        String bundleID      = getBundleIDFromFile(bundlePath, client.clientID);
-        String decryptedFile = decryptedPath + File.separator + bundleID + SecurityUtils.DECRYPTED_FILE_EXT;
-        
-        /* Create Directory if it does not exist */
-        Files.createDirectories(Paths.get(decryptedPath));
-        
-        System.out.println(decryptedFile);
-        int fileCount = new File(payloadPath).list().length;
-
-        try {
-                for (int i = 1; i <= fileCount; ++i) {
-                    String payloadName      = SecurityUtils.PAYLOAD_FILENAME + String.valueOf(i);
-                    String signatureFile    = signPath + File.separator + payloadName + SecurityUtils.SIGNATURE_FILENAME;
-
-                    byte[] encryptedData = SecurityUtils.readFromFile(payloadPath + File.separator + payloadName);
-                    byte[] serverDecryptedMessage  = client.cipherSession.decrypt(new SignalMessage (encryptedData));
-                    try (FileOutputStream stream = new FileOutputStream(decryptedFile, true)) {
-                        stream.write(serverDecryptedMessage);
-                    }
-                    System.out.printf("Decrypted Size = %d\n", serverDecryptedMessage.length);
-
-                    if (SecurityUtils.verifySignature(serverDecryptedMessage, client.IdentityKey.getPublicKey(), signatureFile)) {
-                        System.out.println("Verified Signature!");
-                    } else {
-                        // Failed to verify sign, delete bundle and return
-                        System.out.println("Invalid Signature ["+ payloadName +"], Aborting bundle "+ bundleID);
-
-                        try {
-                            Files.deleteIfExists(Paths.get(decryptedFile));
-                        }
-                        catch (Exception e) {
-                            System.out.printf("Error: Failed to delete decrypted file [%s]", decryptedFile);
-                            System.out.println(e);
-                        }
-                    }
-                }
-        } catch (Exception e) {
-            System.out.println("Failed to Decrypt Client's Message\n" + e);
-            e.printStackTrace();
-        }
-        return;
-    }
-
     public void encrypt(String toBeEncPath, String encPath, String bundleID, String clientID) throws IOException, java.security.InvalidKeyException, NoSuchAlgorithmException, SignatureException, InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, ClientSessionException
     {
         String bundlePath    = encPath + File.separator + bundleID;
         String encBundlePath = bundlePath + File.separator + SecurityUtils.PAYLOAD_FILENAME;
         String signPath      = bundlePath + File.separator + SecurityUtils.SIGN_FILENAME;
-        byte[] fileContents  =  Files.readAllBytes(Paths.get(toBeEncPath));
+        byte[] fileContents  = SecurityUtils.readFromFile(toBeEncPath);
 
         /* Create Directory if it does not exist */
         Files.createDirectories(Paths.get(bundlePath));

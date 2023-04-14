@@ -196,7 +196,7 @@ public class ClientSecurity {
         String bundlePath    = encPath + File.separator + bundleID + File.separator;
         String encBundlePath = bundlePath + SecurityUtils.PAYLOAD_FILENAME;
         String signPath      = bundlePath + SecurityUtils.SIGN_FILENAME;
-        byte[] fileContents  =  Files.readAllBytes(Paths.get(toBeEncPath));
+        byte[] fileContents  = SecurityUtils.readFromFile(toBeEncPath);
 
         /* Create Directory if it does not exist */
         Files.createDirectories(Paths.get(bundlePath));
@@ -218,7 +218,8 @@ public class ClientSecurity {
     // TODO: return decrypted file path 
     public void decrypt(String bundlePath, String decryptedPath) throws NoSuchAlgorithmException, IOException, InvalidKeyException, java.security.InvalidKeyException, InvalidKeySpecException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException
     {
-        byte[] encryptedData = Files.readAllBytes(Paths.get(bundlePath + File.separator + SecurityUtils.PAYLOAD_FILENAME));
+        String payloadFile = bundlePath + File.separator + SecurityUtils.PAYLOAD_FILENAME;
+        byte[] encryptedData = SecurityUtils.readFromFile(payloadFile);
         String bundleID      = getBundleIDFromFile(bundlePath);
         String decryptedFile = decryptedPath + File.separator + bundleID + SecurityUtils.DECRYPTED_FILE_EXT;
         String signatureFile = bundlePath + File.separator + SecurityUtils.SIGN_FILENAME;

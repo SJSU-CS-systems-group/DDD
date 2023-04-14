@@ -61,10 +61,7 @@ public class ClientWindow {
 
     public void processACK(String ackPath) throws IOException, WindowExceptions.RecievedOldACK, WindowExceptions.RecievedInvalidACK, InvalidLength, BufferOverflow
     {
-        String ackStr = null;
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            ackStr = new String(Files.readAllBytes(Paths.get(ackPath)));
-        }
+        String ackStr = new String(SecurityUtils.readFromFile(ackPath));
         Log.d(HelloworldActivity.TAG, "Ack from file = "+ackStr);
         long ack = Long.parseUnsignedLong(ackStr);
 

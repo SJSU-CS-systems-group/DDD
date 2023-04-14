@@ -46,6 +46,8 @@ public class SecurityUtils {
     public static final String SIGN_FILENAME        = PAYLOAD_FILENAME + ".signature";
     public static final String BUNDLEID_FILENAME    = "bundle.id";
     public static final String DECRYPTED_FILE_EXT   = ".decrypted";
+    public static final String PUBLICKEY_HEADER    = "-----BEGIN EC PUBLIC KEY-----";
+    public static final String PUBLICKEY_FOOTER    = "-----END EC PUBLIC KEY-----";
     
     public static final int CHUNKSIZE  = 1024 * 1024; /* 1MB */
     public static final int ITERATIONS = 65536;
@@ -91,24 +93,24 @@ public class SecurityUtils {
 
     public static void createEncodedPublicKeyFile(ECPublicKey publicKey, String path) throws FileNotFoundException, IOException
     {
-        String encodedKey = "-----BEGIN EC PUBLIC KEY-----\n";
+        String encodedKey = PUBLICKEY_HEADER+"\n";
         try (FileOutputStream stream = new FileOutputStream(path)) {
             encodedKey += Base64.getUrlEncoder().encodeToString(publicKey.serialize());
-            encodedKey += "\n-----END EC PUBLIC KEY-----";
+            encodedKey += "\n"+PUBLICKEY_FOOTER;
             stream.write(encodedKey.getBytes());
         }
     }
 
     public static byte[] decodePublicKeyfromFile(String path) throws IOException, InvalidKeyException
     {
-        List<String> encodedKeyList = Files.readAllLines(Paths.get(path.trim()));
+        String[] encodedKeyArr = FileStoreHelper.getStringFromFile(path.trim()).split("\n");
 
-        if (encodedKeyList.size() != 3) {
+        if (encodedKeyArr.length != 3) {
             throw new InvalidKeyException("Error: Invalid Public Key Length");
         }
 
-        if ((true == encodedKeyList.get(0).equals("-----BEGIN EC PUBLIC KEY-----")) &&
-        (true == encodedKeyList.get(2).equals("-----END EC PUBLIC KEY-----"))) {
+        if ((true == encodedKeyArr[0].equals(PUBLICKEY_HEADER)) &&
+        (true == encodedKeyArr[2].equals(PUBLICKEY_FOOTER))) {
             return Base64.getUrlDecoder().decode(encodedKeyList.get(1));
         }
 
@@ -127,7 +129,7 @@ public class SecurityUtils {
 
     public static boolean verifySignature(byte[] message, ECPublicKey publicKey, String signaturePath) throws InvalidKeyException, IOException
     {
-        byte[] encodedsignature = Files.readAllBytes(Paths.get(signaturePath));
+        byte[] encodedsignature = SecurityUtils.readFromFile(signaturePath);
         byte[] signature = Base64.getUrlDecoder().decode(encodedsignature);
         
         return Curve.verifySignature(publicKey, message, signature);
