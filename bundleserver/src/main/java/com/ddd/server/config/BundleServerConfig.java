@@ -104,7 +104,6 @@ public class BundleServerConfig {
     private String registeredAppIdsPath;
 
     private StateManager stateManager = new StateManager();
-    private DataStoreAdaptor dataStoreAdaptor = new DataStoreAdaptor();
     
     public StateManager getStateManager() {
       return stateManager;
@@ -114,6 +113,7 @@ public class BundleServerConfig {
       this.stateManager = stateManager;
     }
 
+    private DataStoreAdaptor dataStoreAdaptor = new DataStoreAdaptor();
     
     public DataStoreAdaptor getDataStoreAdaptor() {
       return dataStoreAdaptor;

@@ -9,6 +9,7 @@ import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.stereotype.Service;
 import com.ddd.model.Bundle;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -16,13 +17,13 @@ import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 
+@Service
 public class BundleSecurity {
 
-  private static final String LARGEST_BUNDLE_ID_RECEIVED =
-      "/Users/adityasinghania/Downloads/Data/Shared/DB/LARGEST_BUNDLE_ID_RECEIVED.json";
+  private static final String LARGEST_BUNDLE_ID_RECEIVED ="C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Server\\Shared\\DB\\LARGEST_BUNDLE_ID_RECEIVED.json";
 
   private static final String BUNDLE_ID_NEXT_COUNTER =
-      "/Users/adityasinghania/Downloads/Data/Shared/DB/BUNDLE_ID_NEXT_COUNTER.json";
+      "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Server\\Shared\\DB\\BUNDLE_ID_NEXT_COUNTER.json";
 
   private Long getRecvdBundleIdCounter(String bundleId) {
     return Long.valueOf(bundleId.split("-")[1]);

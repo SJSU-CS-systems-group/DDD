@@ -7,14 +7,12 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
-import org.springframework.stereotype.Service;
 import com.ddd.model.ADU;
 import com.ddd.server.api.DTNAdapterClient;
 import com.ddd.server.storage.MySQLConnection;
 import com.ddd.utils.FileStoreHelper;
 import edu.sjsu.dtn.adapter.communicationservice.AppData;
 
-@Service
 public class DataStoreAdaptor {
   private FileStoreHelper sendFileStoreHelper;
   private FileStoreHelper receiveFileStoreHelper;

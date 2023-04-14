@@ -27,9 +27,10 @@ public class ApplicationDataManager {
   
   @Autowired
   private BundleServerConfig bundleServerConfig;
-
+  
   public ApplicationDataManager() {
-    this.dataStoreAdaptor = new DataStoreAdaptor(bundleServerConfig.getBundleStoreRoot());
+//    this.dataStoreAdaptor = new DataStoreAdaptor(bundleServerConfig.getBundleStoreRoot()); 
+    this.dataStoreAdaptor = new DataStoreAdaptor("/Users/adityasinghania/Downloads/Data/Shared");
   }
 
   public List<String> getRegisteredAppIds() {
