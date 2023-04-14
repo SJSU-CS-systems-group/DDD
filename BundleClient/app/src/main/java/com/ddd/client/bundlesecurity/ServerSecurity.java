@@ -1,4 +1,4 @@
-package ddd;
+package com.ddd.client.bundlesecurity;
 
 import org.whispersystems.libsignal.util.guava.Optional;
 
@@ -14,7 +14,6 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Stream;
@@ -42,6 +41,7 @@ import org.whispersystems.libsignal.state.SignalProtocolStore;
 import ddd.SecurityUtils;
 import ddd.SecurityUtils.ClientSession;
 import ddd.Security.SecurityExceptions.ClientSessionException;
+import android.util.Base64;
 
 public class ServerSecurity {
 
@@ -153,7 +153,7 @@ public class ServerSecurity {
     private void createSignature(byte[] fileContents, String signedFilePath) throws java.security.InvalidKeyException, NoSuchAlgorithmException, SignatureException, InvalidKeySpecException, InvalidKeyException
     {
         byte[] signedData = Curve.calculateSignature(ourIdentityKeyPair.getPrivateKey(), fileContents);
-        String encodedSignature = Base64.getUrlEncoder().encodeToString(signedData);
+        String encodedSignature = Base64.getUrlEncoder().encodeToString(signedData, Base64.DEFAULT);
 
         try (FileOutputStream stream = new FileOutputStream(signedFilePath)) {
             stream.write(encodedSignature.getBytes());
@@ -165,7 +165,7 @@ public class ServerSecurity {
     private String getsharedSecret(ClientSession client) throws ClientSessionException, InvalidKeyException
     {
         byte[] agreement = Curve.calculateAgreement(client.IdentityKey.getPublicKey(), ourIdentityKeyPair.getPrivateKey());
-        String secretKey = Base64.getUrlEncoder().encodeToString(agreement);
+        String secretKey = Base64.getUrlEncoder().encodeToString(agreement, Base64.DEFAULT);
         return secretKey;
     }
 
@@ -179,7 +179,7 @@ public class ServerSecurity {
         }
 
         byte[] agreement = Curve.calculateAgreement(client.IdentityKey.getPublicKey(), ourIdentityKeyPair.getPrivateKey());
-        String secretKey = Base64.getUrlEncoder().encodeToString(agreement);
+        String secretKey = Base64.getUrlEncoder().encodeToString(agreement, Base64.DEFAULT);
         return secretKey;
     }
 
@@ -203,7 +203,7 @@ public class ServerSecurity {
         String signatureFile = bundlePath + File.separator + SecurityUtils.SIGN_FILENAME;
         
         /* Create Directory if it does not exist */
-        Files.createDirectories(Paths.get(decryptedPath));
+        SecurityUtils.createDirectory(decryptedPath);
         
         System.out.println(decryptedFile);
         try {
@@ -220,7 +220,7 @@ public class ServerSecurity {
                 System.out.println("Invalid Signature, Aborting bundle "+ bundleID);
 
                 try {
-                    Files.deleteIfExists(Paths.get(decryptedFile));
+                    new File(decryptedFile).delete();
                 }
                 catch (Exception e) {
                     System.out.printf("Error: Failed to delete decrypted file [%s]", decryptedFile);
@@ -242,7 +242,7 @@ public class ServerSecurity {
         byte[] fileContents  = SecurityUtils.readFromFile(toBeEncPath);
 
         /* Create Directory if it does not exist */
-        Files.createDirectories(Paths.get(bundlePath));
+        SecurityUtils.createDirectory(bundlePath);
 
         /* Create Signature with plaintext*/
         createSignature(fileContents, signPath);
@@ -268,7 +268,7 @@ public class ServerSecurity {
         String bundlePath   = encPath + File.separator + bundleID;
 
         /* Create Directory if it does not exist */
-        Files.createDirectories(Paths.get(bundlePath));
+        SecurityUtils.createDirectory(bundlePath);
         
         /* Write Keys to Bundle directory */
         writeKeysToFiles(bundlePath);

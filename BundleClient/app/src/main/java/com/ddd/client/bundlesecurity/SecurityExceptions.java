@@ -1,4 +1,4 @@
-package ddd.Security;
+package com.ddd.client.bundlesecurity;
 
 public class SecurityExceptions {
     public static class ClientSessionException extends Exception {

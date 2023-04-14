@@ -1,4 +1,4 @@
-package ddd;
+package com.ddd.client.bundlesecurity;
 
 import org.whispersystems.libsignal.util.guava.Optional;
 
@@ -14,7 +14,7 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
-import java.util.Base64;
+import java.util.Arrays;
 import java.util.List;
 
 import javax.crypto.BadPaddingException;
@@ -37,7 +37,9 @@ import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SessionState;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 
-import ddd.SecurityUtils;
+import com.ddd.client.bundlesecurity.SecurityUtils;
+
+import android.util.Base64;
 
 public class ClientSecurity {
 
@@ -79,11 +81,14 @@ public class ClientSecurity {
         createCipher();
     }
     
-    private void writeKeysToFiles(String path) throws IOException
+    private String[] writeKeysToFiles(String path) throws IOException
     {
-        SecurityUtils.createEncodedPublicKeyFile(ourIdentityKeyPair.getPublicKey().getPublicKey(), path + File.separator + "clientIdentity.pub");
-        SecurityUtils.createEncodedPublicKeyFile(ourBaseKey.getPublicKey(), path + File.separator + "clientBase.pub");
-        return;
+        String[] clientKeypaths = { path + File.separator + "clientIdentity.pub",
+                                    path + File.separator + "clientBase.pub"};
+
+        SecurityUtils.createEncodedPublicKeyFile(ourIdentityKeyPair.getPublicKey().getPublicKey(), clientKeypaths[0]);
+        SecurityUtils.createEncodedPublicKeyFile(ourBaseKey.getPublicKey(), clientKeypaths[1]);
+        return clientKeypaths;
     }
 
     private void InitializeServerKeysFromFiles(String path) throws IOException, InvalidKeyException
@@ -132,7 +137,7 @@ public class ClientSecurity {
     private void createSignature(byte[] fileContents, String signedFilePath) throws java.security.InvalidKeyException, NoSuchAlgorithmException, SignatureException, InvalidKeySpecException, InvalidKeyException
     {
         byte[] signedData = Curve.calculateSignature(ourIdentityKeyPair.getPrivateKey(), fileContents);
-        String encodedSignature = Base64.getUrlEncoder().encodeToString(signedData);
+        String encodedSignature = Base64.getUrlEncoder().encodeToString(signedData, Base64.DEFAULT);
 
         try (FileOutputStream stream = new FileOutputStream(signedFilePath)) {
             stream.write(encodedSignature.getBytes());
@@ -160,24 +165,24 @@ public class ClientSecurity {
     {
         byte[] agreement = Curve.calculateAgreement(theirIdentityKey.getPublicKey(), ourIdentityKeyPair.getPrivateKey());
 
-        String secretKey = Base64.getUrlEncoder().encodeToString(agreement);
+        String secretKey = Base64.getUrlEncoder().encodeToString(agreement, Base64.DEFAULT);
 
         return SecurityUtils.encryptAesCbcPkcs5(secretKey, bundleID);
     }
 
     /* Add Headers (Identity, Base Key & Bundle ID) to Bundle Path */
-    private void createEncryptionHeader(String encPath, String bundleID) throws IOException, java.security.InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, InvalidKeyException
+    private String[] createEncryptionHeader(String encPath, String bundleID) throws IOException, java.security.InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, InvalidKeyException
     {
         String bundlePath   = encPath + File.separator + bundleID + File.separator;
 
         /* Create Directory if it does not exist */
-        Files.createDirectories(Paths.get(bundlePath));
-        
-        /* Write Keys to Bundle directory */
-        writeKeysToFiles(bundlePath);
+        SecurityUtils.createDirectory(bundlePath);
 
         /* Create Bundle ID File */
         createBundleIDFile(bundleID, bundlePath);
+
+        /* Write Keys to Bundle directory */
+        return writeKeysToFiles(bundlePath);
     }
 
     /* Initialize or get previous client Security Instance */
@@ -191,15 +196,18 @@ public class ClientSecurity {
     }
 
     /* Encrypts File and creates signature for plain text */
-    public String encrypt(String toBeEncPath, String encPath, String bundleID) throws IOException, java.security.InvalidKeyException, NoSuchAlgorithmException, SignatureException, InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException
+    public String[] encrypt(String toBeEncPath, String encPath, String bundleID) throws IOException, java.security.InvalidKeyException, NoSuchAlgorithmException, SignatureException, InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException
     {
         String bundlePath    = encPath + File.separator + bundleID + File.separator;
         String encBundlePath = bundlePath + SecurityUtils.PAYLOAD_FILENAME;
         String signPath      = bundlePath + SecurityUtils.SIGN_FILENAME;
         byte[] fileContents  = SecurityUtils.readFromFile(toBeEncPath);
+        List <String> returnPaths = new List<String>();
+        returnPaths.add(encBundlePath);
+        returnPaths.add(signPath);
 
         /* Create Directory if it does not exist */
-        Files.createDirectories(Paths.get(bundlePath));
+        SecurityUtils.createDirectory(bundlePath);
 
         /* Create Signature with plaintext*/
         createSignature(fileContents, signPath);
@@ -211,8 +219,12 @@ public class ClientSecurity {
         stream.close();
 
         /* Create Encryption Headers */
-        createEncryptionHeader(encPath, bundleID);
-        return bundlePath;
+        String[] clientKeyPaths = createEncryptionHeader(encPath, bundleID);
+        for (String clientKeyPath: clientKeyPaths) {
+            returnPaths.add(clientKeyPath);
+        }
+        
+        return returnPaths.toArray(new String[returnPaths.size()]);
     }
     
     // TODO: return decrypted file path 
@@ -238,8 +250,7 @@ public class ClientSecurity {
                 System.out.println("Invalid Signature, Aborting bundle "+ bundleID);
 
                 try {
-                    Files.deleteIfExists(Paths.get(decryptedFile));
-                }
+                    new File(decryptedFile).delete();                }
                 catch (Exception e) {
                     System.out.printf("Error: Failed to delete decrypted file [%s]", decryptedFile);
                     System.out.println(e);
@@ -255,7 +266,7 @@ public class ClientSecurity {
     public String decryptBundleID(String encryptedBundleID) throws InvalidKeyException, java.security.InvalidKeyException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException
     {
         byte[] agreement = Curve.calculateAgreement(theirIdentityKey.getPublicKey(), ourIdentityKeyPair.getPrivateKey());
-        String secretKey = Base64.getUrlEncoder().encodeToString(agreement);
+        String secretKey = Base64.getUrlEncoder().encodeToString(agreement, Base64.DEFAULT);
         byte[] bundleIDBytes = SecurityUtils.dencryptAesCbcPkcs5(secretKey, encryptedBundleID);
         return new String(bundleIDBytes, StandardCharsets.UTF_8);
     }

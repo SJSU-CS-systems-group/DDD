@@ -1,4 +1,4 @@
-package ddd;
+package com.ddd.client.bundlesecurity;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -13,7 +13,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
-import java.util.Base64;
 import java.util.List;
 
 import javax.crypto.BadPaddingException;
@@ -37,6 +36,8 @@ import org.whispersystems.libsignal.ecc.ECPublicKey;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.impl.InMemorySignalProtocolStore;
 import org.whispersystems.libsignal.util.KeyHelper;
+
+import android.util.Base64;
 
 public class SecurityUtils {
     public static final String PAYLOAD_FILENAME     = "payload";
@@ -74,8 +75,9 @@ public class SecurityUtils {
         byte[] publicKey = decodePublicKeyfromFile(publicKeyPath);
         MessageDigest md = MessageDigest.getInstance("SHA-1");
         byte[] hashedKey = md.digest(publicKey);
-        return Base64.getUrlEncoder().encodeToString(hashedKey);
+        return Base64.getUrlEncoder().encodeToString(hashedKey, Base64.DEFAULT);
     }
+
 
     /* Creates an ID based on the given public key byte array
      * Generates a SHA-1 hash and then encodes it in Base64 (URL safe)
@@ -88,14 +90,14 @@ public class SecurityUtils {
     {
         MessageDigest md = MessageDigest.getInstance("SHA-1");
         byte[] hashedKey = md.digest(publicKey);
-        return Base64.getUrlEncoder().encodeToString(hashedKey);
+        return Base64.getUrlEncoder().encodeToString(hashedKey, Base64.DEFAULT);
     }
 
     public static void createEncodedPublicKeyFile(ECPublicKey publicKey, String path) throws FileNotFoundException, IOException
     {
         String encodedKey = PUBLICKEY_HEADER+"\n";
         try (FileOutputStream stream = new FileOutputStream(path)) {
-            encodedKey += Base64.getUrlEncoder().encodeToString(publicKey.serialize());
+            encodedKey += Base64.getUrlEncoder().encodeToString(publicKey.serialize(), Base64.DEFAULT);
             encodedKey += "\n"+PUBLICKEY_FOOTER;
             stream.write(encodedKey.getBytes());
         }
@@ -103,15 +105,22 @@ public class SecurityUtils {
 
     public static byte[] decodePublicKeyfromFile(String path) throws IOException, InvalidKeyException
     {
-        String[] encodedKeyArr = FileStoreHelper.getStringFromFile(path.trim()).split("\n");
+        String[] encodedKeyArr = null;
+
+        try {
+            encodedKeyArr = FileStoreHelper.getStringFromFile(path.trim()).split("\n");
+        } catch (Exception e) {
+            throw new IOException();
+            e.printStackTrace();
+        }
 
         if (encodedKeyArr.length != 3) {
             throw new InvalidKeyException("Error: Invalid Public Key Length");
         }
 
         if ((true == encodedKeyArr[0].equals(PUBLICKEY_HEADER)) &&
-        (true == encodedKeyArr[2].equals(PUBLICKEY_FOOTER))) {
-            return Base64.getUrlDecoder().decode(encodedKeyList.get(1));
+            (true == encodedKeyArr[2].equals(PUBLICKEY_FOOTER))) {
+            return Base64.getUrlDecoder().decode(encodedKeyArr[1], Base64.DEFAULT);
         }
 
         throw new InvalidKeyException("Error: Invalid Public Key Format");
@@ -130,7 +139,7 @@ public class SecurityUtils {
     public static boolean verifySignature(byte[] message, ECPublicKey publicKey, String signaturePath) throws InvalidKeyException, IOException
     {
         byte[] encodedsignature = SecurityUtils.readFromFile(signaturePath);
-        byte[] signature = Base64.getUrlDecoder().decode(encodedsignature);
+        byte[] signature = Base64.getUrlDecoder().decode(encodedsignature, Base64.DEFAULT);
         
         return Curve.verifySignature(publicKey, message, signature);
     }
@@ -157,13 +166,13 @@ public class SecurityUtils {
         
         byte[] encryptedData = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
         
-        return Base64.getUrlEncoder().encodeToString(encryptedData);
+        return Base64.getUrlEncoder().encodeToString(encryptedData, Base64.DEFAULT);
     }
 
     public static byte[] dencryptAesCbcPkcs5(String sharedSecret, String cipherText) throws NoSuchAlgorithmException, InvalidKeySpecException, java.security.InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException
     {
         byte[] iv = new byte[16];
-        byte[] encryptedData = Base64.getUrlDecoder().decode(cipherText);
+        byte[] encryptedData = Base64.getUrlDecoder().decode(cipherText, Base64.DEFAULT);
 
         /* Create SecretKeyFactory object */
         SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
@@ -187,5 +196,13 @@ public class SecurityUtils {
             fis.read(bytes);
         }
         return bytes;
+    }
+
+    public static void createDirectory(String dirPath)
+    {
+        File file = new File(dirPath);
+        if (!file.exists()) {
+            file.mkdirs();
+        }
     }
 }

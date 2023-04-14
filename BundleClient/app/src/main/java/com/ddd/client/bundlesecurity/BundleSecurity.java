@@ -144,40 +144,23 @@ public class BundleSecurity {
     File unencryptedBundleWrapperDir = new File(unencryptedBundleWrapperParentDir + File.separator + bundleID);
 
     /* Sign and Encryption */
-    String[] signNencryptedPath = new String[0];
+    String[] returnPaths = null;
     try {
       Log.d(HelloworldActivity.TAG,"payload "+payloadFile.getAbsolutePath() );
       Log.d(HelloworldActivity.TAG,"Path "+unencryptedBundleWrapperParentDir.getAbsolutePath());
       Log.d(HelloworldActivity.TAG,"ID "+bundleID);
-      signNencryptedPath = client.encrypt(payloadFile.getAbsolutePath(), unencryptedBundleWrapperParentDir.getAbsolutePath(),bundleID);
-    } catch (IOException e) {
-      e.printStackTrace();
-    } catch (java.security.InvalidKeyException e) {
-      e.printStackTrace();
-    } catch (NoSuchAlgorithmException e) {
-      e.printStackTrace();
-    } catch (SignatureException e) {
-      e.printStackTrace();
-    } catch (InvalidKeySpecException e) {
-      e.printStackTrace();
-    } catch (InvalidKeyException e) {
+      returnPaths = client.encrypt(payloadFile.getAbsolutePath(), unencryptedBundleWrapperParentDir.getAbsolutePath(),bundleID);
+    } catch (Exception e) {
       e.printStackTrace();
     }
 
-    /* Create Headers */
-    String[] encHeaderPath = new String[0];
-    try {
-      encHeaderPath = client.createEncryptionHeader(unencryptedBundleWrapperParentDir.getAbsolutePath(), bundleID);
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-    EncryptionHeader encHeader = new EncryptionHeader(new File(encHeaderPath[0]), new File(encHeaderPath[1]));
+    EncryptionHeader encHeader = new EncryptionHeader(new File(returnPaths[2]), new File(returnPaths[3]));
 
-    File encryptedPayloadFile = new File(signNencryptedPath[1]);
+    File encryptedPayloadFile = new File(returnPaths[1]);
     // TODO encrypt and Path of encrypted payload
     Log.d(HelloworldActivity.TAG,"New Path"+unencryptedBundleWrapperDir.getAbsolutePath()+"  "+bundleWrapperFile.getPath());
     JarUtils.dirToJar(unencryptedBundleWrapperDir.getAbsolutePath(), bundleWrapperFile.getPath());
-    BundleWrapper wrapper = new BundleWrapper (bundle.getBundleId(), encHeader, new EncryptedBundle(encryptedPayloadFile), bundleWrapperFile, new File(signNencryptedPath[0]));
+    BundleWrapper wrapper = new BundleWrapper (bundle.getBundleId(), encHeader, new EncryptedBundle(encryptedPayloadFile), bundleWrapperFile, new File(returnPaths[0]));
     return wrapper;
   }
 

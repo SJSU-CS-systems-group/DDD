@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
+import com.ddd.client.bundlesecurity.SecurityUtils;
 
 public class ClientWindow {
     CircularBuffer window       = null;
