@@ -7,15 +7,20 @@ import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
-
+import java.util.Map;
+import java.util.Optional;
 import org.apache.commons.io.FileUtils;
-
 import com.ddd.model.ADU;
 import com.ddd.model.Acknowledgement;
 import com.ddd.model.Bundle;
+import com.google.gson.JsonIOException;
+import com.google.gson.JsonSyntaxException;
+import com.google.gson.reflect.TypeToken;
 
 public class BundleUtils {
 
@@ -130,6 +135,71 @@ public class BundleUtils {
     }
     System.out.println(
         "[BundleUtils] Wrote bundle with id = " + bundleId + " to " + targetDirectory);
+  }
+
+  public static Map<String, Object> getBundleStructureMap(Bundle bundle) {
+    Map<String, Object> lastSentBundleStructure = new HashMap<>();
+    Map<String, Long[]> aduRange = new HashMap<>();
+
+    for (ADU adu : bundle.getADUs()) {
+      String appId = adu.getAppId();
+      if (aduRange.containsKey(appId)) {
+        Long[] limits = aduRange.get(appId);
+        limits[0] = Math.min(limits[0], adu.getADUId());
+        limits[1] = Math.max(limits[1], adu.getADUId());
+        aduRange.put(adu.getAppId(), limits);
+      } else {
+        aduRange.put(appId, new Long[] {adu.getADUId(), adu.getADUId()});
+      }
+    }
+
+    lastSentBundleStructure.put("acknowledgement", bundle.getAckRecord().getBundleId());
+    lastSentBundleStructure.put("bundle-id", bundle.getBundleId());
+    if (!aduRange.isEmpty()) {
+      lastSentBundleStructure.put("ADU", aduRange);
+    }
+
+    return lastSentBundleStructure;
+  }
+
+  @SuppressWarnings("unchecked")
+  public static Optional<Bundle.Builder> bundleStructureToBuilder(
+      Map<String, Object> bundleStructureMap) {
+    if (bundleStructureMap.isEmpty()) {
+      return Optional.empty();
+    } else {
+      try {
+        new TypeToken<Map<String, Object>>() {}.getType();
+
+        Bundle.Builder builder = new Bundle.Builder();
+        builder.setAckRecord(
+            new Acknowledgement((String) bundleStructureMap.get("acknowledgement")));
+        builder.setBundleId((String) bundleStructureMap.get("bundle-id"));
+        if (bundleStructureMap.containsKey("ADU")) {
+          List<ADU> aduList = new ArrayList<>();
+          Map<String, List<Object>> aduRange =
+              (Map<String, List<Object>>) bundleStructureMap.get("ADU");
+          for (Map.Entry<String, List<Object>> entry : aduRange.entrySet()) {
+            String appId = entry.getKey();
+            List<Object> range = entry.getValue();
+            Long min = ((Double) range.get(0)).longValue();
+            Long max = ((Double) range.get(1)).longValue();
+            for (Long counter = min; counter <= max; counter++) {
+              aduList.add(new ADU(null, appId, counter, 0));
+            }
+          }
+          builder.setADUs(aduList);
+          builder.setSource(null);
+        }
+        return Optional.of(builder);
+      } catch (JsonSyntaxException e) {
+        e.printStackTrace();
+        return Optional.empty();
+      } catch (JsonIOException e) {
+        e.printStackTrace();
+        return Optional.empty();
+      }
+    }
   }
 
   public static boolean doContentsMatch(Bundle.Builder a, Bundle.Builder b) {
