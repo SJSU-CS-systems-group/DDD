@@ -8,6 +8,6 @@ public class BundleServerApplication {
 
   public static void main(String[] args) {
     SpringApplication.run(BundleServerApplication.class, args);
-    DTNBundleServer.begin();
+    //    DTNBundleServer.begin();
   }
 }

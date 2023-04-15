@@ -1,13 +1,12 @@
 package com.ddd.server;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
-import com.ddd.model.Bundle;
+import com.ddd.model.BundleDTO;
 import com.ddd.model.BundleTransferDTO;
 import com.ddd.server.api.BundleServerEndpoint;
 import com.ddd.server.config.BundleServerConfig;
@@ -24,8 +23,8 @@ public class StartupRunner implements CommandLineRunner {
 
     this.setUpFileStore();
     /* Receive Bundles */
-    String transportId = "transport-0";
-    this.bundleServerEndpoint.receiveBundles(transportId);
+    String transportId = "transport0";
+    //    this.bundleServerEndpoint.receiveBundles(transportId);
 
     /* Send Bundles */
     Set<String> bundleIdsPresent = new HashSet<>();
@@ -44,7 +43,7 @@ public class StartupRunner implements CommandLineRunner {
         "[BundleServerApp] Following are the ids of the bundles to be sent to transport "
             + transportId);
 
-    for (Bundle bundle : bundleTransferDTO.getBundles()) {
+    for (BundleDTO bundle : bundleTransferDTO.getBundles()) {
       System.out.println(bundle.getBundleId());
     }
   }
@@ -61,20 +60,18 @@ public class StartupRunner implements CommandLineRunner {
     toBeBundledDir.mkdirs();
     File tosendDir = new File(this.bundleStoreConfig.getBundleTransmission().getToSendDirectory());
     tosendDir.mkdirs();
-    
-    File dbRoot = new File(this.bundleStoreConfig.getDbRoot());
-    dbRoot.mkdirs();
-    File sentBundleDetails = new File(bundleStoreConfig.getApplicationDataManager().getStateManager().getSentBundleDetails());
-    try {
-      sentBundleDetails.createNewFile();
-      File largestADUIdReceived = new File(bundleStoreConfig.getApplicationDataManager().getStateManager().getLargestAduIdReceived());
-      largestADUIdReceived.createNewFile();
-      File largestADUIdDelivered = new File(bundleStoreConfig.getApplicationDataManager().getStateManager().getLargestAduIdDelivered());
-      largestADUIdDelivered.createNewFile();
-      File lastSentBundleStructure = new File(bundleStoreConfig.getApplicationDataManager().getStateManager().getLastSentBundleStructure());
-      lastSentBundleStructure.createNewFile();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
+    File receivedProcessingDir =
+        new File(this.bundleStoreConfig.getBundleTransmission().getReceivedProcessingDirectory());
+    receivedProcessingDir.mkdirs();
+
+    File unCompressedPayloadDir =
+        new File(this.bundleStoreConfig.getBundleTransmission().getUncompressedPayloadDirectory());
+    unCompressedPayloadDir.mkdirs();
+    File compressedPayloadDir =
+        new File(this.bundleStoreConfig.getBundleTransmission().getCompressedPayloadDirectory());
+    compressedPayloadDir.mkdirs();
+    File encryptedPayloadDir =
+        new File(this.bundleStoreConfig.getBundleTransmission().getEncryptedPayloadDirectory());
+    encryptedPayloadDir.mkdirs();
   }
 }

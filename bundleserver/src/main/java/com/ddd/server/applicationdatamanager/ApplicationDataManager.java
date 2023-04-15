@@ -14,23 +14,22 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.ddd.model.ADU;
-import com.ddd.model.Bundle;
+import com.ddd.model.UncompressedPayload;
 import com.ddd.server.config.BundleServerConfig;
 
 @Service
 public class ApplicationDataManager {
 
-  @Autowired
-  private StateManager stateManager;
-  
+  @Autowired private StateManager stateManager;
+
   private DataStoreAdaptor dataStoreAdaptor;
-  
-  @Autowired
-  private BundleServerConfig bundleServerConfig;
-  
+
+  @Autowired private BundleServerConfig bundleServerConfig;
+
   public ApplicationDataManager() {
-//    this.dataStoreAdaptor = new DataStoreAdaptor(bundleServerConfig.getBundleStoreRoot()); 
-    this.dataStoreAdaptor = new DataStoreAdaptor("/Users/adityasinghania/Downloads/Data/Shared");
+    //    this.dataStoreAdaptor = new DataStoreAdaptor(bundleServerConfig.getBundleStoreRoot());
+    this.dataStoreAdaptor =
+        new DataStoreAdaptor("C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/");
   }
 
   public List<String> getRegisteredAppIds() {
@@ -48,7 +47,7 @@ public class ApplicationDataManager {
     }
     return registeredAppIds;
   }
-  
+
   public void registerAppId(String appId) {
     try (BufferedWriter bufferedWriter =
         new BufferedWriter(
@@ -66,7 +65,8 @@ public class ApplicationDataManager {
     this.stateManager.processAcknowledgement(clientId, bundleId);
   }
 
-  public void storeADUs(String clientId, List<ADU> adus) {
+  public void storeADUs(String clientId, String bundleId, List<ADU> adus) {
+    this.registerRecvdBundleId(clientId, bundleId);
     Map<String, List<ADU>> appIdToADUMap = new HashMap<>();
 
     for (ADU adu : adus) {
@@ -108,11 +108,19 @@ public class ApplicationDataManager {
     return res;
   }
 
-  public void notifyBundleGenerated(String clientId, Bundle bundle) {
+  public void notifyBundleGenerated(String clientId, UncompressedPayload bundle) {
     this.stateManager.registerSentBundleDetails(clientId, bundle);
   }
 
-  public Optional<Bundle.Builder> getLastSentBundleBuilder(String clientId) {
-    return this.stateManager.getLastSentBundleBuilder(clientId);
+  public Optional<UncompressedPayload.Builder> getLastSentBundlePayloadBuilder(String clientId) {
+    return this.stateManager.getLastSentBundlePayloadBuilder(clientId);
+  }
+
+  private void registerRecvdBundleId(String clientId, String bundleId) {
+    this.stateManager.registerRecvdBundleId(clientId, bundleId);
+  }
+
+  public Optional<String> getLargestRecvdBundleId(String clientId) {
+    return this.stateManager.getLargestRecvdBundleId(clientId);
   }
 }

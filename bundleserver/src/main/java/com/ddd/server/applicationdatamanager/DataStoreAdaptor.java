@@ -72,7 +72,7 @@ public class DataStoreAdaptor {
     System.out.println("[DSA] Stored ADUs for application " + appId + " for client " + clientId);
   }
 
-  private ADU fetchADU(String clientId, String appId, long aduId) {
+  public ADU fetchADU(String clientId, String appId, long aduId) {
     try {
       File file = this.sendFileStoreHelper.getADUFile(clientId, appId, aduId + "");
       FileInputStream fis = new FileInputStream(file);
@@ -80,7 +80,7 @@ public class DataStoreAdaptor {
       ADU adu = new ADU(file, appId, aduId, fileSize, clientId);
       return adu;
     } catch (Exception ex) {
-      ex.printStackTrace();
+//      ex.printStackTrace();
     }
     return null;
   }

@@ -2,6 +2,7 @@ package com.ddd.server.api;
 
 import java.util.Set;
 import org.springframework.stereotype.Component;
+import com.ddd.model.BundleDTO;
 import com.ddd.model.BundleTransferDTO;
 import com.ddd.server.bundletransmission.BundleTransmission;
 
@@ -22,10 +23,17 @@ public class BundleServerEndpoint {
 
   public BundleTransferDTO generateBundles(String transportId, Set<String> bundleIdsPresent) {
     System.out.println(
+        "[BSE] Following are the bundle ids that are present on the bundle transport");
+    for (String bundleIdPresent : bundleIdsPresent) {
+      System.out.println(bundleIdPresent);
+    }
+    System.out.println(
         "[BSE] Started execution of bundle server endpoint for generating bundles flow");
     BundleTransferDTO ret =
         this.bundleTransmission.generateBundlesForTransmission(transportId, bundleIdsPresent);
-    this.bundleTransmission.notifyBundleSent(ret.getBundles());
+    for (BundleDTO bundleDTO : ret.getBundles()) {
+      this.bundleTransmission.notifyBundleSent(bundleDTO.getBundle());
+    }
     return ret;
   }
 }

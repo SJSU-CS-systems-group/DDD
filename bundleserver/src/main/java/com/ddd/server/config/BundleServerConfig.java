@@ -8,13 +8,6 @@ import org.springframework.stereotype.Component;
 public class BundleServerConfig {
   private String bundleStoreRoot;
   private String registeredAppIds;
-  private String dbRoot;
-  
-  public String getDbRoot() {
-  return dbRoot;}
-
-  public void setDbRoot(String dbRoot) {
-  this.dbRoot = dbRoot;}
 
   public String getRegisteredAppIds() {
     return this.registeredAppIds;
@@ -57,6 +50,39 @@ public class BundleServerConfig {
     private String bundleGenerationDirectory;
     private String toBeBundledDirectory;
     private String toSendDirectory;
+    private String receivedProcessingDirectory;
+
+    private String uncompressedPayloadDirectory;
+    private String compressedPayloadDirectory;
+    private String encryptedPayloadDirectory;
+
+    public String getUncompressedPayloadDirectory() {
+      return this.uncompressedPayloadDirectory;
+    }
+
+    public void setUncompressedPayloadDirectory(String uncompressedPayloadDirectory) {
+      this.uncompressedPayloadDirectory = uncompressedPayloadDirectory;
+    }
+
+    public String getCompressedPayloadDirectory() {
+      return this.compressedPayloadDirectory;
+    }
+
+    public void setCompressedPayloadDirectory(String compressedPayloadDirectory) {
+      this.compressedPayloadDirectory = compressedPayloadDirectory;
+    }
+
+    public String getEncryptedPayloadDirectory() {
+      return this.encryptedPayloadDirectory;
+    }
+
+    public void setEncryptedPayloadDirectory(String encryptedPayloadDirectory) {
+      this.encryptedPayloadDirectory = encryptedPayloadDirectory;
+    }
+
+    public void setReceivedProcessingDirectory(String receivedProcessingDirectory) {
+      this.receivedProcessingDirectory = receivedProcessingDirectory;
+    }
 
     public Long getBundleSizeLimit() {
       return this.bundleSizeLimit;
@@ -97,31 +123,15 @@ public class BundleServerConfig {
     public void setToSendDirectory(String toSendDirectory) {
       this.toSendDirectory = toSendDirectory;
     }
+
+    public String getReceivedProcessingDirectory() {
+      return this.receivedProcessingDirectory;
+    }
   }
 
   public static class ApplicationDataManager {
     private Long appDataSizeLimit;
     private String registeredAppIdsPath;
-
-    private StateManager stateManager = new StateManager();
-    
-    public StateManager getStateManager() {
-      return stateManager;
-    }
-
-    public void setStateManager(StateManager stateManager) {
-      this.stateManager = stateManager;
-    }
-
-    private DataStoreAdaptor dataStoreAdaptor = new DataStoreAdaptor();
-    
-    public DataStoreAdaptor getDataStoreAdaptor() {
-      return dataStoreAdaptor;
-    }
-
-    public void setDataStoreAdaptor(DataStoreAdaptor dataStoreAdaptor) {
-      this.dataStoreAdaptor = dataStoreAdaptor;
-    }
 
     public Long getAppDataSizeLimit() {
       return this.appDataSizeLimit;
@@ -175,18 +185,6 @@ public class BundleServerConfig {
 
       public void setLastSentBundleStructure(String lastSentBundleStructure) {
         this.lastSentBundleStructure = lastSentBundleStructure;
-      }
-    }
-
-    public static class DataStoreAdaptor {
-      private String appDataRoot;
-
-      public String getAppDataRoot() {
-        return this.appDataRoot;
-      }
-
-      public void setAppDataRoot(String appDataRoot) {
-        this.appDataRoot = appDataRoot;
       }
     }
   }

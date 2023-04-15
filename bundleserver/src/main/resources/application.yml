@@ -1,20 +1,31 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/dtn_server_db?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
+    username: root
+    password: password
+
 bundle-server:
-  bunde-store-root: "/Users/adityasinghania/Downloads/Data/"
-  registered-app-ids: "/Users/adityasinghania/Downloads/Data/Shared/REGISTERED_APP_IDS.txt"
-  db-root: "/Users/adityasinghania/Downloads/Data/Shared/DB/" 
+  bunde-store-root: "C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/"
+  registered-app-ids: "C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/Shared/REGISTERED_APP_IDS.txt"
+  db-root: "C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/Shared/DB/" 
   bundle-transmission:
     bundle-size-limit: 104857600    
-    bundle-received-location: "/Users/adityasinghania/Downloads/Data/Shared/receive"
-    bundle-generation-directory: "/Users/adityasinghania/Downloads/Data/BundleTransmission/bundle-generation"
-    to-be-bundled-directory: "/Users/adityasinghania/Downloads/Data/BundleTransmission/bundle-generation/to-be-bundled"
-    to-send-directory: "/Users/adityasinghania/Downloads/Data/BundleTransmission/bundle-generation/to-send"
+    bundle-received-location: "C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/Shared/received-bundles"
+    bundle-generation-directory: "C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/BundleTransmission/bundle-generation"
+    to-be-bundled-directory: "C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/BundleTransmission/bundle-generation/to-be-bundled"
+    to-send-directory: "C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/BundleTransmission/bundle-generation/to-send"
+    received-processing-directory: "C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/BundleTransmission/received-processing"
+    uncompressed-payload-directory: "C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/BundleTransmission/bundle-generation/uncompressed-payload"
+    compressed-payload-directory: "C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/BundleTransmission/bundle-generation/compressed-payload"
+    encrypted-payload-directory: "C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/BundleTransmission/bundle-generation/encrypted-payload"
   application-data-manager:
     app-data-size-limit: 31457280
-    registered-app-ids-path:  "/Users/adityasinghania/Downloads/Data/Shared/REGISTERED_APP_IDS.txt"
+    registered-app-ids-path:  "C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/Shared/REGISTERED_APP_IDS.txt"
     state-manager:
-      largest-adu-id-received: "/Users/adityasinghania/Downloads/Data/Shared/DB/LARGEST_ADU_ID_RECEIVED.json"
-      sent-bundle-details: "/Users/adityasinghania/Downloads/Data/Shared/DB/SENT_BUNDLE_DETAILS.json"
-      largest-adu-id-delivered: "/Users/adityasinghania/Downloads/Data/Shared/DB/LARGEST_ADU_ID_DELIVERED.json"
-      last-sent-bundle-structure: "/Users/adityasinghania/Downloads/Data/Shared/DB/LARGEST_ADU_ID_RECEIVED.json"
+      largest-adu-id-received: "C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/Shared/DB/LARGEST_ADU_ID_RECEIVED.json"
+      sent-bundle-details: "C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/Shared/DB/SENT_BUNDLE_DETAILS.json"
+      largest-adu-id-delivered: "C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/Shared/DB/LARGEST_ADU_ID_DELIVERED.json"
+      last-sent-bundle-structure: "C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/Shared/DB/LARGEST_ADU_ID_RECEIVED.json"
     data-store-adaptor:
-      app-data-root: "/Users/adityasinghania/Downloads/Data/Shared/"
+      app-data-root: "C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/"

@@ -7,9 +7,9 @@ public class BundleTransferDTO {
 
   private Set<String> deletionSet;
 
-  private List<Bundle> bundles;
+  private List<BundleDTO> bundles;
 
-  public BundleTransferDTO(Set<String> deletionSet, List<Bundle> bundles) {
+  public BundleTransferDTO(Set<String> deletionSet, List<BundleDTO> bundles) {
     this.deletionSet = deletionSet;
     this.bundles = bundles;
   }
@@ -18,7 +18,7 @@ public class BundleTransferDTO {
     return this.deletionSet;
   }
 
-  public List<Bundle> getBundles() {
+  public List<BundleDTO> getBundles() {
     return this.bundles;
   }
 }

@@ -14,6 +14,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import com.ddd.model.BundleTransferDTO;
 import com.ddd.server.bundletransmission.BundleTransmission;
 import com.google.protobuf.ByteString;
@@ -27,6 +28,7 @@ import edu.sjsu.ddd.bundleserver.service.BundleUploadResponse;
 import edu.sjsu.ddd.bundleserver.service.Status;
 import io.grpc.stub.StreamObserver;
 
+//@Service
 public class BundleServerServiceImpl extends BundleServiceImplBase {
     
     private static final String BundleDir = "/Users/adityasinghania/Downloads/Data/Shared";

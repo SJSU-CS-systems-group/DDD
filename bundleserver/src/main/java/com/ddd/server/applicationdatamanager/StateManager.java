@@ -1,233 +1,231 @@
 package com.ddd.server.applicationdatamanager;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.ddd.model.ADU;
-import com.ddd.model.Bundle;
-import com.ddd.server.config.BundleServerConfig;
+import com.ddd.model.UncompressedPayload;
+import com.ddd.server.repository.LargestAduIdDeliveredRepository;
+import com.ddd.server.repository.LargestAduIdReceivedRepository;
+import com.ddd.server.repository.LargestBundleIdReceivedRepository;
+import com.ddd.server.repository.LastBundleIdSentRepository;
+import com.ddd.server.repository.SentAduDetailsRepository;
+import com.ddd.server.repository.SentBundleDetailsRepository;
+import com.ddd.server.repository.entity.LargestAduIdDelivered;
+import com.ddd.server.repository.entity.LargestAduIdReceived;
+import com.ddd.server.repository.entity.LargestBundleIdReceived;
+import com.ddd.server.repository.entity.LastBundleIdSent;
+import com.ddd.server.repository.entity.SentAduDetails;
+import com.ddd.server.repository.entity.SentBundleDetails;
 import com.ddd.utils.BundleUtils;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonIOException;
-import com.google.gson.JsonSyntaxException;
-import com.google.gson.reflect.TypeToken;
 
 @Service
 class StateManager {
-  @Autowired
-  private BundleServerConfig config;
 
   private DataStoreAdaptor dataStoreAdaptor;
 
-  public StateManager() {
-    this.dataStoreAdaptor = new DataStoreAdaptor("/Users/adityasinghania/Downloads/Data/Shared/");
-  }
-  
-  /* Largest ADU ID received */
+  private LargestAduIdReceivedRepository largestAduIdReceivedRepository;
 
-  private void writeLargestADUIdReceivedDetails(
-      Map<String, Map<String, Long>> largestADUIdReceivedDetails) {
-    Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    String jsonString = gson.toJson(largestADUIdReceivedDetails);
-    try (FileWriter writer = new FileWriter(new File(config.getApplicationDataManager().getStateManager().getLargestAduIdReceived()))) {
-      writer.write(jsonString);
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
+  private LargestAduIdDeliveredRepository largestAduIdDeliveredRepository;
 
-  private Map<String, Map<String, Long>> getLargestADUIdReceivedDetails() {
-    Gson gson = new Gson();
-    Map<String, Map<String, Long>> ret = new HashMap<>();
-    try {
-      Type mapType = new TypeToken<Map<String, Map<String, Long>>>() {}.getType();
-      ret = gson.fromJson(new FileReader(config.getApplicationDataManager().getStateManager().getLargestAduIdReceived()), mapType);
-      if (ret == null) {
-        ret = new HashMap<>();
-      }
-    } catch (JsonSyntaxException e) {
-      e.printStackTrace();
-    } catch (JsonIOException e) {
-      e.printStackTrace();
-    } catch (FileNotFoundException e) {
-      e.printStackTrace();
-    }
-    return ret;
+  private LastBundleIdSentRepository lastBundleIdSentRepository;
+
+  private LargestBundleIdReceivedRepository largestBundleIdReceivedRepository;
+
+  private SentBundleDetailsRepository sentBundleDetailsRepository;
+
+  private SentAduDetailsRepository sentAduDetailsRepository;
+
+  public StateManager(
+      LargestAduIdReceivedRepository largestAduIdReceivedRepository,
+      LargestAduIdDeliveredRepository largestAduIdDeliveredRepository,
+      LastBundleIdSentRepository lastBundleIdSentRepository,
+      SentBundleDetailsRepository sentBundleDetailsRepository,
+      SentAduDetailsRepository sentAduDetailsRepository,
+      LargestBundleIdReceivedRepository largestBundleIdReceivedRepository) {
+    this.dataStoreAdaptor =
+        new DataStoreAdaptor("C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/");
+    this.largestAduIdReceivedRepository = largestAduIdReceivedRepository;
+    this.largestAduIdDeliveredRepository = largestAduIdDeliveredRepository;
+    this.lastBundleIdSentRepository = lastBundleIdSentRepository;
+    this.sentBundleDetailsRepository = sentBundleDetailsRepository;
+    this.sentAduDetailsRepository = sentAduDetailsRepository;
+    this.largestBundleIdReceivedRepository = largestBundleIdReceivedRepository;
   }
 
+  @Transactional(rollbackFor = Exception.class)
+  public void registerRecvdBundleId(String clientId, String bundleId) {
+    LargestBundleIdReceived largestBundleIdReceived =
+        new LargestBundleIdReceived(clientId, bundleId);
+    this.largestBundleIdReceivedRepository.save(largestBundleIdReceived);
+    System.out.println("[SM] Registered bundle identifier: " + bundleId + " of client " + clientId);
+  }
+
+  @Transactional(rollbackFor = Exception.class)
   public Long largestADUIdReceived(String clientId, String appId) {
     Long ret = null;
-    Map<String, Map<String, Long>> receivedADUIds = this.getLargestADUIdReceivedDetails();
-    Map<String, Long> map = receivedADUIds.get(clientId);
-    if (map != null) {
-      ret = map.get(appId);
+    Optional<LargestAduIdReceived> opt =
+        this.largestAduIdReceivedRepository.findByClientIdAndAppId(clientId, appId);
+    if (opt.isPresent()) {
+      LargestAduIdReceived record = opt.get();
+      ret = record.getAduId();
     }
     return ret;
   }
 
+  @Transactional(rollbackFor = Exception.class)
   public void updateLargestADUIdReceived(String clientId, String appId, Long aduId) {
-    Map<String, Map<String, Long>> largestADUIdReceivedDetails =
-        this.getLargestADUIdReceivedDetails();
-    Map<String, Long> clientDetails =
-        largestADUIdReceivedDetails.getOrDefault(clientId, new HashMap<>());
-    clientDetails.put(appId, aduId);
-    largestADUIdReceivedDetails.put(clientId, clientDetails);
-    this.writeLargestADUIdReceivedDetails(largestADUIdReceivedDetails);
-  }
-
-  /* Largest ADU ID Delivered Details*/
-
-  private Map<String, Map<String, Long>> getLargestADUIdDeliveredDetails() {
-    Gson gson = new Gson();
-    Map<String, Map<String, Long>> ret = new HashMap<>();
-    try {
-      Type mapType = new TypeToken<Map<String, Map<String, Long>>>() {}.getType();
-      ret = gson.fromJson(new FileReader(config.getApplicationDataManager().getStateManager().getLargestAduIdDelivered()), mapType);
-      if (ret == null) {
-        ret = new HashMap<>();
-      }
-    } catch (JsonSyntaxException e) {
-      e.printStackTrace();
-    } catch (JsonIOException e) {
-      e.printStackTrace();
-    } catch (FileNotFoundException e) {
-      e.printStackTrace();
+    Optional<LargestAduIdReceived> opt =
+        this.largestAduIdReceivedRepository.findByClientIdAndAppId(clientId, appId);
+    LargestAduIdReceived record = null;
+    if (opt.isPresent()) {
+      record = opt.get();
+      record.setAduId(aduId);
+    } else {
+      record = new LargestAduIdReceived(clientId, appId, aduId);
     }
-    return ret;
+    this.largestAduIdReceivedRepository.save(record);
   }
 
-  private void writeLargestADUIdDeliveredDetails(
-      Map<String, Map<String, Long>> largestADUIdDeliveredDetails) {
-    Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    String jsonString = gson.toJson(largestADUIdDeliveredDetails);
-    try (FileWriter writer = new FileWriter(new File(config.getApplicationDataManager().getStateManager().getLargestAduIdDelivered()))) {
-      writer.write(jsonString);
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
-
+  @Transactional(rollbackFor = Exception.class)
   public Long getLargestADUIdDeliveredByAppId(String clientId, String appId) {
-    Map<String, Map<String, Long>> largestADUIdDeliveredDetails =
-        this.getLargestADUIdDeliveredDetails();
     Long ret = null;
-    if (largestADUIdDeliveredDetails.get(clientId) != null) {
-      ret = largestADUIdDeliveredDetails.get(clientId).get(appId);
+    Optional<LargestAduIdDelivered> opt =
+        this.largestAduIdDeliveredRepository.findByClientIdAndAppId(clientId, appId);
+    if (opt.isPresent()) {
+      LargestAduIdDelivered record = opt.get();
+      ret = record.getAduId();
     }
     return ret;
   }
 
   /* Sent bundle Details*/
-  private Map<String, Map<String, Long>> getSentBundleDetails() {
-    Gson gson = new Gson();
-    Map<String, Map<String, Long>> ret = new HashMap<>();
-    try {
-      Type mapType = new TypeToken<Map<String, Map<String, Long>>>() {}.getType();
-      ret = gson.fromJson(new FileReader(new File(config.getApplicationDataManager().getStateManager().getSentBundleDetails())), mapType);
-      if (ret == null) {
-        ret = new HashMap<>();
-      }
-    } catch (JsonSyntaxException e) {
-      e.printStackTrace();
-    } catch (JsonIOException e) {
-      e.printStackTrace();
-    } catch (FileNotFoundException e) {
-      e.printStackTrace();
+  private Map<String, Long> getSentBundleAduRangeDetails(String bundleId) {
+    Map<String, Long> ret = new HashMap<>();
+    List<SentAduDetails> sentAduDetailsList =
+        this.sentAduDetailsRepository.findByBundleId(bundleId);
+
+    for (SentAduDetails sentAduDetails : sentAduDetailsList) {
+      ret.put(sentAduDetails.getAppId(), sentAduDetails.getAduIdRangeEnd());
     }
+
     return ret;
   }
 
-  private void writeSentBundleDetails(Map<String, Map<String, Long>> sentBundleDetails) {
-    Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    String jsonString = gson.toJson(sentBundleDetails);
-    try (FileWriter writer = new FileWriter(new File(config.getApplicationDataManager().getStateManager().getSentBundleDetails()))) {
-      writer.write(jsonString);
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
-
-  private Map<String, Map<String, Object>> getLastSentBundleStructure() {
-    Gson gson = new Gson();
-    Map<String, Map<String, Object>> ret = new HashMap<>();
-    try {
-      Type mapType = new TypeToken<Map<String, Map<String, Object>>>() {}.getType();
-      ret = gson.fromJson(new FileReader(new File(config.getApplicationDataManager().getStateManager().getLastSentBundleStructure())), mapType);
-      if (ret == null) {
-        ret = new HashMap<>();
-      }
-    } catch (JsonSyntaxException e) {
-      e.printStackTrace();
-    } catch (JsonIOException e) {
-      e.printStackTrace();
-    } catch (FileNotFoundException e) {
-      e.printStackTrace();
-    }
-    return ret;
-  }
-
-  private void writeLastSentBundleStructure(String clientId, Bundle lastSentBundle) {
-    Map<String, Map<String, Object>> lastSentBundleStructureMap = this.getLastSentBundleStructure();
-    Map<String, Object> structure = BundleUtils.getBundleStructureMap(lastSentBundle);
-    lastSentBundleStructureMap.put(clientId, structure);
-    Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    String jsonString = gson.toJson(lastSentBundleStructureMap);
-    try (FileWriter writer = new FileWriter(new File(config.getApplicationDataManager().getStateManager().getLastSentBundleStructure()))) {
-      writer.write(jsonString);
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
-
-  public void registerSentBundleDetails(String clientId, Bundle sentBundle) {
-    if (sentBundle.getADUs().isEmpty()) {
-      return;
-    }
-    Map<String, Map<String, Long>> sentBundleDetails = this.getSentBundleDetails();
-    if (sentBundleDetails.containsKey(sentBundle.getBundleId())) {
-      return;
-    }
-    Map<String, Long> bundleDetails = new HashMap<>();
-    for (ADU adu : sentBundle.getADUs()) {
-      String appId = adu.getAppId();
-      Long aduId = adu.getADUId();
-
-      if (!bundleDetails.containsKey(appId) || bundleDetails.get(appId) < aduId) {
-        bundleDetails.put(appId, aduId);
-      }
-    }
-    sentBundleDetails.put(sentBundle.getBundleId(), bundleDetails);
-    this.writeSentBundleDetails(sentBundleDetails);
+  @Transactional(rollbackFor = Exception.class)
+  public void registerSentBundleDetails(String clientId, UncompressedPayload sentBundle) {
+    LastBundleIdSent lastBundleIdSent = new LastBundleIdSent(clientId, sentBundle.getBundleId());
+    this.lastBundleIdSentRepository.save(lastBundleIdSent);
     this.writeLastSentBundleStructure(clientId, sentBundle);
   }
 
+  private Map<String, Object> getLastSentBundleStructure(String clientId) {
+    Map<String, Object> ret = new HashMap<>();
+    Optional<LastBundleIdSent> opt = this.lastBundleIdSentRepository.findByClientId(clientId);
+    if (opt.isPresent()) {
+      String bundleId = opt.get().getBundleId();
+      Optional<SentBundleDetails> bundleDetailsOpt =
+          this.sentBundleDetailsRepository.findByBundleId(bundleId);
+
+      SentBundleDetails bundleDetails =
+          bundleDetailsOpt
+              .get(); // assume this is guaranteed to be present. TODO: add FK on LastBundleIdSent
+      // to SentBundleDetails
+      ret.put("bundle-id", bundleId);
+      ret.put("acknowledgement", bundleDetails.getAckedBundleId());
+
+      List<SentAduDetails> bundleAduDetailsList =
+          this.sentAduDetailsRepository.findByBundleId(bundleId);
+
+      //      Map<String, List<Object>> aduRangeMap = new HashMap<>();
+      //      for (SentAduDetails bundleAduDetails : bundleAduDetailsList) {
+      //        aduRangeMap.put(
+      //            bundleAduDetails.getAppId(),
+      //            Arrays.asList(
+      //                new Object[] {
+      //                  bundleAduDetails.getAduIdRangeStart(), bundleAduDetails.getAduIdRangeEnd()
+      //                }));
+      //      }
+
+      Map<String, List<ADU>> aduMap = new HashMap<>();
+      for (SentAduDetails bundleAduDetails : bundleAduDetailsList) {
+        Long rangeStart = bundleAduDetails.getAduIdRangeStart();
+        Long rangeEnd = bundleAduDetails.getAduIdRangeEnd();
+        String appId = bundleAduDetails.getAppId();
+        List<ADU> aduList = new ArrayList<>();
+        for (Long aduId = rangeStart; aduId <= rangeEnd; aduId++) {
+          ADU adu = this.dataStoreAdaptor.fetchADU(clientId, appId, aduId);
+          aduList.add(adu);
+        }
+        aduMap.put(appId, aduList);
+      }
+      if (!aduMap.isEmpty()) {
+        ret.put("ADU", aduMap);
+      }
+      //      if (!aduRangeMap.isEmpty()) {
+      //        ret.put("ADU", aduRangeMap);
+      //      }
+    }
+    return ret;
+  }
+
+  private void writeLastSentBundleStructure(String clientId, UncompressedPayload lastSentBundle) {
+    Optional<SentBundleDetails> opt =
+        this.sentBundleDetailsRepository.findByBundleId(lastSentBundle.getBundleId());
+    if (!opt.isEmpty()) {
+      return;
+    }
+    SentBundleDetails sentBundleDetails = new SentBundleDetails();
+    sentBundleDetails.setAckedBundleId(lastSentBundle.getAckRecord().getBundleId());
+    sentBundleDetails.setBundleId(lastSentBundle.getBundleId());
+    this.sentBundleDetailsRepository.save(sentBundleDetails);
+
+    Map<String, Long[]> aduRangeMap = new HashMap<>();
+    for (ADU adu : lastSentBundle.getADUs()) {
+      Long[] entry = null;
+      if (aduRangeMap.containsKey(adu.getAppId())) {
+        Long[] minmax = aduRangeMap.get(adu.getAppId());
+        minmax[0] = Math.min(minmax[0], adu.getADUId());
+        minmax[1] = Math.max(minmax[1], adu.getADUId());
+        entry = minmax;
+      } else {
+        entry = new Long[] {adu.getADUId(), adu.getADUId()};
+      }
+      aduRangeMap.put(adu.getAppId(), entry);
+    }
+
+    for (String appId : aduRangeMap.keySet()) {
+      Long[] minmax = aduRangeMap.get(appId);
+      SentAduDetails sentAduDetails =
+          new SentAduDetails(lastSentBundle.getBundleId(), appId, minmax[0], minmax[1]);
+      this.sentAduDetailsRepository.save(sentAduDetails);
+    }
+  }
+
+  @Transactional(rollbackFor = Exception.class)
   public void processAcknowledgement(String clientId, String bundleId) {
-    Map<String, Map<String, Long>> sentBundleDetails = this.getSentBundleDetails();
-    Map<String, Long> sentDetails = sentBundleDetails.getOrDefault(bundleId, new HashMap<>());
-    Map<String, Map<String, Long>> largestADUIdDeliveredDetails =
-        this.getLargestADUIdDeliveredDetails();
-    Map<String, Long> largestADUDetails =
-        largestADUIdDeliveredDetails.getOrDefault(clientId, new HashMap<>());
+    Map<String, Long> sentDetails = this.getSentBundleAduRangeDetails(bundleId);
     for (String appId : sentDetails.keySet()) {
       this.dataStoreAdaptor.deleteADUs(clientId, appId, sentDetails.get(appId));
-      Long aduId = sentDetails.get(appId);
-      if (!largestADUDetails.containsKey(appId) || aduId > largestADUDetails.get(appId)) {
-        largestADUDetails.put(appId, aduId);
+      Optional<LargestAduIdDelivered> opt =
+          this.largestAduIdDeliveredRepository.findByClientIdAndAppId(clientId, appId);
+      LargestAduIdDelivered record = null;
+      Long deliveredAduId = sentDetails.get(appId);
+      if (opt.isPresent()) {
+        record = opt.get();
+        if (record.getAduId() < deliveredAduId) {
+          record.setAduId(deliveredAduId);
+        }
+      } else {
+        record = new LargestAduIdDelivered(clientId, appId, deliveredAduId);
       }
+      this.largestAduIdDeliveredRepository.save(record);
     }
-    if (!largestADUDetails.keySet().isEmpty()) {
-      largestADUIdDeliveredDetails.put(clientId, largestADUDetails);
-      this.writeLargestADUIdDeliveredDetails(largestADUIdDeliveredDetails);
-    }
+
     System.out.println(
         "[SM] Processed acknowledgement for sent bundle id "
             + bundleId
@@ -235,10 +233,15 @@ class StateManager {
             + clientId);
   }
 
-  public Optional<Bundle.Builder> getLastSentBundleBuilder(String clientId) {
-    Map<String, Map<String, Object>> lastSentBundleStructureMap = this.getLastSentBundleStructure();
-    Map<String, Object> structure =
-        lastSentBundleStructureMap.getOrDefault(clientId, new HashMap<>());
+  @Transactional(rollbackFor = Exception.class)
+  public Optional<UncompressedPayload.Builder> getLastSentBundlePayloadBuilder(String clientId) {
+    Map<String, Object> structure = this.getLastSentBundleStructure(clientId);
     return BundleUtils.bundleStructureToBuilder(structure);
+  }
+
+  public Optional<String> getLargestRecvdBundleId(String clientId) {
+    Optional<LargestBundleIdReceived> opt =
+        this.largestBundleIdReceivedRepository.findByClientId(clientId);
+    return (opt.isPresent() ? Optional.of(opt.get().getBundleId()) : Optional.empty());
   }
 }
