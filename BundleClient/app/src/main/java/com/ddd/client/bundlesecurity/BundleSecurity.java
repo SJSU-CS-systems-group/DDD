@@ -150,18 +150,20 @@ public class BundleSecurity {
       Log.d(HelloworldActivity.TAG,"Path "+unencryptedBundleWrapperParentDir.getAbsolutePath());
       Log.d(HelloworldActivity.TAG,"ID "+bundleID);
       returnPaths = client.encrypt(payloadFile.getAbsolutePath(), unencryptedBundleWrapperParentDir.getAbsolutePath(),bundleID);
+
+
+      EncryptionHeader encHeader = new EncryptionHeader(new File(returnPaths[2]), new File(returnPaths[3]));
+
+      File encryptedPayloadFile = new File(returnPaths[1]);
+      // TODO encrypt and Path of encrypted payload
+      Log.d(HelloworldActivity.TAG,"New Path"+unencryptedBundleWrapperDir.getAbsolutePath()+"  "+bundleWrapperFile.getPath());
+      JarUtils.dirToJar(unencryptedBundleWrapperDir.getAbsolutePath(), bundleWrapperFile.getPath());
+      BundleWrapper wrapper = new BundleWrapper (bundle.getBundleId(), encHeader, new EncryptedBundle(encryptedPayloadFile), bundleWrapperFile, new File(returnPaths[0]));
+      return wrapper;
     } catch (Exception e) {
       e.printStackTrace();
     }
-
-    EncryptionHeader encHeader = new EncryptionHeader(new File(returnPaths[2]), new File(returnPaths[3]));
-
-    File encryptedPayloadFile = new File(returnPaths[1]);
-    // TODO encrypt and Path of encrypted payload
-    Log.d(HelloworldActivity.TAG,"New Path"+unencryptedBundleWrapperDir.getAbsolutePath()+"  "+bundleWrapperFile.getPath());
-    JarUtils.dirToJar(unencryptedBundleWrapperDir.getAbsolutePath(), bundleWrapperFile.getPath());
-    BundleWrapper wrapper = new BundleWrapper (bundle.getBundleId(), encHeader, new EncryptedBundle(encryptedPayloadFile), bundleWrapperFile, new File(returnPaths[0]));
-    return wrapper;
+    return null;
   }
 
   public boolean isLatestReceivedBundleId(String bundleId) {
