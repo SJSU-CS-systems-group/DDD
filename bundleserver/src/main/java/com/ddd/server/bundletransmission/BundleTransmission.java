@@ -3,39 +3,37 @@ package com.ddd.server.bundletransmission;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
-import java.nio.file.FileSystems;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.apache.commons.io.FileUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.ddd.model.ADU;
 import com.ddd.model.Acknowledgement;
 import com.ddd.model.Bundle;
+import com.ddd.model.BundleDTO;
 import com.ddd.model.BundleTransferDTO;
+import com.ddd.model.Payload;
+import com.ddd.model.UncompressedBundle;
+import com.ddd.model.UncompressedPayload;
 import com.ddd.server.applicationdatamanager.ApplicationDataManager;
 import com.ddd.server.bundlerouting.BundleRouting;
 import com.ddd.server.bundlesecurity.BundleSecurity;
+import com.ddd.server.config.BundleServerConfig;
+import com.ddd.server.repository.LargestBundleIdReceivedRepository;
 import com.ddd.utils.AckRecordUtils;
 import com.ddd.utils.BundleUtils;
 import com.ddd.utils.Constants;
 
+@Service
 public class BundleTransmission {
 
-  private static final String BUNDLE_RECEIVED_LOCATION =
-      "/Users/adityasinghania/Downloads/Data/Shared/receive";
-
-  /* Bundle generation directory */
-  private static final String BUNDLE_GENERATION_DIRECTORY =
-      "/Users/adityasinghania/Downloads/Data/BundleTransmission/bundle-generation";
-
-  private static final String RETRANSMISSION_BUNDLE_DIRECTORY = "retransmission-bundle";
-
-  private static final String TO_BE_BUNDLED_DIRECTORY = "to-be-bundled";
-
-  private static final String TO_SEND_DIRECTORY = "to-send";
-
-  private long BUNDLE_SIZE_LIMIT = 10000;
+  private BundleServerConfig config;
 
   private BundleSecurity bundleSecurity;
 
@@ -43,32 +41,38 @@ public class BundleTransmission {
 
   private BundleRouting bundleRouting;
 
-  public BundleTransmission() {
-    this.bundleSecurity = new BundleSecurity();
-    this.applicationDataManager = new ApplicationDataManager();
-    this.bundleRouting = new BundleRouting();
-    File bundleGenerationDir = new File(BUNDLE_GENERATION_DIRECTORY);
-    bundleGenerationDir.mkdirs();
-    File toBeBundledDir = new File(bundleGenerationDir + File.separator + TO_BE_BUNDLED_DIRECTORY);
-    toBeBundledDir.mkdirs();
-    File tosendDir = new File(bundleGenerationDir + File.separator + TO_SEND_DIRECTORY);
-    tosendDir.mkdirs();
+  public BundleTransmission(
+      BundleSecurity bundleSecurity,
+      ApplicationDataManager applicationDataManager,
+      BundleRouting bundleRouting,
+      LargestBundleIdReceivedRepository largestBundleIdReceivedRepository,
+      BundleServerConfig config) {
+    this.bundleSecurity = bundleSecurity;
+    this.applicationDataManager = applicationDataManager;
+    this.config = config;
+    this.bundleRouting = bundleRouting;
   }
 
-  private void processReceivedBundle(Bundle bundle) {
-    this.bundleSecurity.decryptBundleContents(bundle);
-    String clientId = this.bundleSecurity.getClientIdFromRecvdBundleId(bundle.getBundleId());
-    if (!this.bundleSecurity.isLatestReceivedBundleId(clientId, bundle.getBundleId())) {
+  @Transactional(rollbackFor = Exception.class)
+  public void processReceivedBundle(UncompressedPayload bundle) {
+    String clientId = this.bundleSecurity.getClientIdFromBundleId(bundle.getBundleId());
+    Optional<String> opt = this.applicationDataManager.getLargestRecvdBundleId(clientId);
+
+    if (!opt.isEmpty()
+        && !this.bundleSecurity.isLatestReceivedBundleId( // comparator here
+            clientId, bundle.getBundleId(), opt.get())) {
       return;
     }
-    this.bundleSecurity.registerRecvdBundleId(bundle.getBundleId());
+
+    AckRecordUtils.writeAckRecordToFile(
+        new Acknowledgement(bundle.getBundleId()), new File(this.getAckRecordLocation(clientId)));
+
+    this.bundleSecurity.decryptBundleContents(bundle);
 
     File clientAckSubDirectory =
         new File(
-            BUNDLE_GENERATION_DIRECTORY
-                + FileSystems.getDefault().getSeparator()
-                + TO_BE_BUNDLED_DIRECTORY
-                + FileSystems.getDefault().getSeparator()
+            this.config.getBundleTransmission().getToBeBundledDirectory()
+                + File.separator
                 + clientId);
 
     if (!clientAckSubDirectory.exists()) {
@@ -77,7 +81,7 @@ public class BundleTransmission {
     File ackFile =
         new File(
             clientAckSubDirectory.getAbsolutePath()
-                + FileSystems.getDefault().getSeparator()
+                + File.separator
                 + Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME);
     try {
       if (!ackFile.exists()) {
@@ -88,53 +92,61 @@ public class BundleTransmission {
       e.printStackTrace();
     }
 
-    this.bundleSecurity.registerAck(bundle.getAckRecord().getBundleId());
-    this.applicationDataManager.processAck(clientId, bundle.getAckRecord().getBundleId());
+    //     this.bundleSecurity.processACK(clientId, bundle.getAckRecord().getBundleId());
+    //    this.bundleRouting.addClient(clientId, 0);
+    //    this.bundleRouting.processClientMetadata(transportId);
+    // if ack not a HB:
+    this.applicationDataManager.processAcknowledgement(
+        clientId, bundle.getAckRecord().getBundleId());
     if (!bundle.getADUs().isEmpty()) {
-      this.applicationDataManager.storeADUs(clientId, bundle.getADUs());
-    }
-    try {
-      FileUtils.deleteDirectory(bundle.getSource());
-    } catch (IOException e) {
-      e.printStackTrace();
+      this.applicationDataManager.storeADUs(clientId, bundle.getBundleId(), bundle.getADUs());
     }
   }
 
   public void processReceivedBundles(String transportId) {
-    File receivedBundlesDirectory = new File(BUNDLE_RECEIVED_LOCATION);
-    File transportDir = new File(receivedBundlesDirectory, transportId);
-    // for (final File transportDir : receivedBundlesDirectory.listFiles()) {
-    // String transportId = transportDir.getName();
-    this.bundleRouting.registerReceiptFromTransport(transportId);
-    for (final File bundleFile :
-        transportDir.listFiles(
-            new FileFilter() {
-              @Override
-              public boolean accept(File file) {
-                return !file.isHidden();
-              }
-            })) {
-      System.out.println(bundleFile.getAbsolutePath());
-      Bundle bundle = BundleUtils.readBundleFromFile(bundleFile).build();
-      this.processReceivedBundle(bundle);
+    File receivedBundlesDirectory =
+        new File(this.config.getBundleTransmission().getBundleReceivedLocation());
+    for (final File transportDir : receivedBundlesDirectory.listFiles()) {
+      if (!transportId.equals(transportDir.getName())) {
+        continue;
+      }
+      File bundleRecvProcDir =
+          new File(
+              this.config.getBundleTransmission().getReceivedProcessingDirectory()
+                  + File.separator
+                  + transportId);
+      bundleRecvProcDir.mkdirs();
+
+      for (final File bundleFile : transportDir.listFiles()) {
+        Bundle bundle = new Bundle(bundleFile);
+        UncompressedBundle uncompressedBundle =
+            BundleUtils.extractBundle(bundle, bundleRecvProcDir.getAbsolutePath());
+        Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
+        UncompressedPayload uncompressedPayload =
+            BundleUtils.extractPayload(payload, uncompressedBundle.getSource().getAbsolutePath());
+        this.processReceivedBundle(uncompressedPayload);
+        try {
+          FileUtils.deleteDirectory(uncompressedBundle.getSource());
+          FileUtils.delete(bundleFile);
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+      }
     }
-    // }
   }
 
   private String getAckRecordLocation(String clientId) {
-    return BUNDLE_GENERATION_DIRECTORY
-        + FileSystems.getDefault().getSeparator()
-        + TO_BE_BUNDLED_DIRECTORY
-        + FileSystems.getDefault().getSeparator()
+    return this.config.getBundleTransmission().getToBeBundledDirectory()
+        + File.separator
         + clientId
-        + FileSystems.getDefault().getSeparator()
+        + File.separator
         + Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME;
   }
 
-  private Bundle.Builder generateBundleBuilder(String clientId) {
+  private UncompressedPayload.Builder generatePayloadBuilder(String clientId) {
     List<ADU> ADUs = this.applicationDataManager.fetchADUs(clientId);
 
-    Bundle.Builder builder = new Bundle.Builder();
+    UncompressedPayload.Builder builder = new UncompressedPayload.Builder();
 
     File ackFile = new File(this.getAckRecordLocation(clientId));
     new File(ackFile.getParent()).mkdirs();
@@ -153,7 +165,7 @@ public class BundleTransmission {
 
     List<ADU> adusToPack = new ArrayList<>();
     for (ADU adu : ADUs) {
-      if (adu.getSize() + totalSize > this.BUNDLE_SIZE_LIMIT) {
+      if (adu.getSize() + totalSize > this.config.getBundleTransmission().getBundleSizeLimit()) {
         break;
       }
       totalSize += adu.getSize();
@@ -164,152 +176,122 @@ public class BundleTransmission {
     return builder;
   }
 
-  private void storeForRetransmission(Bundle bundle, File targetDirectory) {
-    for (final File bundleFile : targetDirectory.listFiles()) {
-      try {
-        FileUtils.deleteDirectory(bundleFile);
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
-    }
-    BundleUtils.writeBundleToFile(bundle, targetDirectory, bundle.getBundleId());
-  }
-
   private BundleTransferDTO generateBundleForTransmission(
-      String clientId, Set<String> bundleIdsPresent) {
+      String transportId, String clientId, Set<String> bundleIdsPresent) {
     Set<String> deletionSet = new HashSet<>();
-    List<Bundle> bundlesToSend = new ArrayList<>();
-    File retransmissionBundleDirectory =
-        new File(
-            BUNDLE_GENERATION_DIRECTORY
-                + FileSystems.getDefault().getSeparator()
-                + RETRANSMISSION_BUNDLE_DIRECTORY);
-    File clientRetransmissionSubDirectory =
-        new File(
-            retransmissionBundleDirectory + FileSystems.getDefault().getSeparator() + clientId);
-    if (!retransmissionBundleDirectory.exists()) {
-      retransmissionBundleDirectory.mkdirs();
-    }
-    if (!clientRetransmissionSubDirectory.exists()) {
-      clientRetransmissionSubDirectory.mkdirs();
-    }
-    File bundleGenerationDirectory =
-        new File(
-            BUNDLE_GENERATION_DIRECTORY
-                + FileSystems.getDefault().getSeparator()
-                + TO_SEND_DIRECTORY
-                + FileSystems.getDefault().getSeparator()
-                + clientId);
-    if (!bundleGenerationDirectory.exists()) {
-      bundleGenerationDirectory.mkdirs();
-    }
-    File[] retransmissionBundleDirectoryContents = clientRetransmissionSubDirectory.listFiles();
+    List<BundleDTO> bundlesToSend = new ArrayList<>();
 
-    if (!this.bundleSecurity.isSenderWindowFull(clientId)) {
-      Bundle.Builder generatedBundleBuilder = this.generateBundleBuilder(clientId);
-      if (retransmissionBundleDirectoryContents.length > 0) {
-        Bundle.Builder retransmissionBundleBuilder =
-            BundleUtils.readBundleFromFile(retransmissionBundleDirectoryContents[0]);
-        if (BundleUtils.doContentsMatch(generatedBundleBuilder, retransmissionBundleBuilder)) {
-          if (bundleIdsPresent.contains(retransmissionBundleBuilder.getBundleId())) {
-            deletionSet.addAll(bundleIdsPresent);
-            deletionSet.remove(retransmissionBundleBuilder.getBundleId());
-          } else {
-            Bundle.Builder builder = new Bundle.Builder();
-            builder.setAckRecord(retransmissionBundleBuilder.getAckRecord());
-            builder.setBundleId(retransmissionBundleBuilder.getBundleId());
-            builder.setADUs(retransmissionBundleBuilder.getADUs());
-            builder.setSource(
-                new File(
-                    bundleGenerationDirectory
-                        + FileSystems.getDefault().getSeparator()
-                        + retransmissionBundleBuilder.getBundleId()));
-            Bundle bundle = builder.build();
-            BundleUtils.writeBundleToFile(bundle, bundleGenerationDirectory, bundle.getBundleId());
-            bundlesToSend.add(bundle);
-          }
-        } else {
-          deletionSet.addAll(bundleIdsPresent);
-          String bundleId = this.bundleSecurity.generateBundleId(clientId);
-          generatedBundleBuilder.setBundleId(bundleId);
-          generatedBundleBuilder.setSource(
-              new File(
-                  bundleGenerationDirectory + FileSystems.getDefault().getSeparator() + bundleId));
-          Bundle bundle = generatedBundleBuilder.build();
-          this.bundleSecurity.encryptBundleContents(bundle);
-          BundleUtils.writeBundleToFile(bundle, bundleGenerationDirectory, bundle.getBundleId());
-          this.applicationDataManager.notifyBundleGenerated(bundle);
-          bundlesToSend.add(bundle);
-          this.storeForRetransmission(bundle, clientRetransmissionSubDirectory);
-        }
-        try {
-          FileUtils.deleteDirectory(retransmissionBundleBuilder.getSource());
-        } catch (IOException e) {
-          e.printStackTrace();
-        }
+    Optional<UncompressedPayload.Builder> optional =
+        this.applicationDataManager.getLastSentBundlePayloadBuilder(clientId);
+    UncompressedPayload.Builder generatedPayloadBuilder = this.generatePayloadBuilder(clientId);
+
+    Optional<UncompressedPayload> toSendOpt = Optional.empty();
+    String bundleId = "";
+    boolean isRetransmission = false;
+
+    if (this.bundleSecurity.isSenderWindowFull(clientId)) {
+      UncompressedPayload.Builder retxmnBundlePayloadBuilder =
+          optional.get(); // there was definitely a bundle sent previously if sender window is full
+
+      bundleId = retxmnBundlePayloadBuilder.getBundleId();
+      retxmnBundlePayloadBuilder.setSource(
+          new File(
+              this.config.getBundleTransmission().getUncompressedPayloadDirectory()
+                  + File.separator
+                  + bundleId));
+      UncompressedPayload toSend = retxmnBundlePayloadBuilder.build();
+      toSendOpt = Optional.of(toSend);
+      isRetransmission = true;
+
+    } else if (!generatedPayloadBuilder
+        .getADUs()
+        .isEmpty()) { // to ensure we never send a pure ack bundle i.e. a bundle with no ADUs
+      if (optional.isEmpty()) { // no bundle ever sent
+        bundleId = this.bundleSecurity.generateBundleId(clientId);
       } else {
-        deletionSet.addAll(bundleIdsPresent);
-        String bundleId = this.bundleSecurity.generateBundleId(clientId);
-        generatedBundleBuilder.setBundleId(bundleId);
-        generatedBundleBuilder.setSource(
-            new File(
-                bundleGenerationDirectory.getAbsolutePath()
-                    + FileSystems.getDefault().getSeparator()
-                    + bundleId));
-        Bundle bundle = generatedBundleBuilder.build();
-        this.bundleSecurity.encryptBundleContents(bundle);
-        BundleUtils.writeBundleToFile(bundle, bundleGenerationDirectory, bundle.getBundleId());
-        this.applicationDataManager.notifyBundleGenerated(bundle);
-        bundlesToSend.add(bundle);
-        this.storeForRetransmission(bundle, clientRetransmissionSubDirectory);
+        UncompressedPayload.Builder retxmnBundlePayloadBuilder = optional.get();
+        if (optional.isPresent()
+            && BundleUtils.doContentsMatch(generatedPayloadBuilder, optional.get())) {
+          bundleId = retxmnBundlePayloadBuilder.getBundleId();
+          isRetransmission = true;
+        } else { // new data to send
+          bundleId = this.bundleSecurity.generateBundleId(clientId);
+        }
       }
-    } else {
-      Bundle.Builder retransmissionBundleBuilder =
-          BundleUtils.readBundleFromFile(
-              retransmissionBundleDirectoryContents[
-                  0]); // there is guaranteed to be a retransmission bundle since the sender window
-      // is full
-      try {
-        FileUtils.deleteDirectory(retransmissionBundleBuilder.getSource());
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
-      if (bundleIdsPresent.contains(retransmissionBundleBuilder.getBundleId())) {
+
+      generatedPayloadBuilder.setBundleId(bundleId);
+      generatedPayloadBuilder.setSource(
+          new File(
+              this.config.getBundleTransmission().getUncompressedPayloadDirectory()
+                  + File.separator
+                  + bundleId));
+      UncompressedPayload toSend = generatedPayloadBuilder.build();
+      toSendOpt = Optional.of(toSend);
+    }
+
+    if (toSendOpt.isPresent()) {
+      UncompressedPayload toSendBundlePayload = toSendOpt.get();
+      if (bundleIdsPresent.contains(toSendBundlePayload.getBundleId())) {
         deletionSet.addAll(bundleIdsPresent);
-        deletionSet.remove(retransmissionBundleBuilder.getBundleId());
+        deletionSet.remove(toSendBundlePayload.getBundleId());
+        // We dont add toSend to bundlesToSend because the bundle is already on the transport.
       } else {
-        Bundle.Builder builder = new Bundle.Builder();
-        builder.setAckRecord(retransmissionBundleBuilder.getAckRecord());
-        builder.setBundleId(retransmissionBundleBuilder.getBundleId());
-        builder.setADUs(retransmissionBundleBuilder.getADUs());
-        builder.setSource(
+        if (!isRetransmission) {
+          this.applicationDataManager.notifyBundleGenerated(clientId, toSendBundlePayload);
+          this.bundleRouting.updateClientWindow(clientId, bundleId);
+        }
+
+        BundleUtils.writeBundleToFile(
+            toSendBundlePayload,
+            new File(this.config.getBundleTransmission().getUncompressedPayloadDirectory()),
+            toSendBundlePayload.getBundleId());
+
+        Payload payload =
+            BundleUtils.compressPayload(
+                toSendBundlePayload,
+                this.config.getBundleTransmission().getCompressedPayloadDirectory());
+        UncompressedBundle uncompressedBundle =
+            this.bundleSecurity.encryptPayload(
+                payload, this.config.getBundleTransmission().getEncryptedPayloadDirectory());
+
+        File toSendTxpDir =
             new File(
-                bundleGenerationDirectory
-                    + FileSystems.getDefault().getSeparator()
-                    + retransmissionBundleBuilder.getBundleId()));
-        Bundle bundle = builder.build();
-        BundleUtils.writeBundleToFile(bundle, bundleGenerationDirectory, bundle.getBundleId());
-        bundlesToSend.add(bundle);
-      }
-      try {
-        FileUtils.deleteDirectory(retransmissionBundleBuilder.getSource());
-      } catch (IOException e) {
-        e.printStackTrace();
+                this.config.getBundleTransmission().getToSendDirectory()
+                    + File.separator
+                    + transportId);
+        toSendTxpDir.mkdirs();
+
+        Bundle toSend =
+            BundleUtils.compressBundle(uncompressedBundle, toSendTxpDir.getAbsolutePath());
+        bundlesToSend.add(new BundleDTO(bundleId, toSend));
+        deletionSet.addAll(bundleIdsPresent);
       }
     }
 
-    // TODO commit bundle id - in the exception handling phase.
     return new BundleTransferDTO(deletionSet, bundlesToSend);
   }
 
   public BundleTransferDTO generateBundlesForTransmission(
       String transportId, Set<String> bundleIdsPresent) {
-    List<String> clientIds = this.bundleRouting.getClientIdsReachableFromTransport(transportId);
+    List<String> clientIds = this.bundleRouting.getClients(transportId);
     Set<String> deletionSet = new HashSet<>();
-    List<Bundle> bundlesToSend = new ArrayList<>();
+    List<BundleDTO> bundlesToSend = new ArrayList<>();
+    Map<String, Set<String>> clientIdToBundleIds = new HashMap<>();
+
+    for (String clientId : clientIds) {
+      clientIdToBundleIds.put(clientId, new HashSet<>());
+    }
+
+    for (String bundleId : bundleIdsPresent) {
+      String clientId = this.bundleSecurity.getClientIdFromBundleId(bundleId);
+      Set<String> bundleIds = clientIdToBundleIds.getOrDefault(clientId, new HashSet<>());
+      bundleIds.add(bundleId);
+      clientIdToBundleIds.put(clientId, bundleIds);
+    }
     for (String clientId : clientIds) {
       BundleTransferDTO dtoForClient =
-          this.generateBundleForTransmission(clientId, bundleIdsPresent);
+          this.generateBundleForTransmission(
+              transportId, clientId, clientIdToBundleIds.get(clientId));
       deletionSet.addAll(dtoForClient.getDeletionSet());
       bundlesToSend.addAll(dtoForClient.getBundles());
     }
@@ -320,17 +302,9 @@ public class BundleTransmission {
     List<File> bundles = new ArrayList<>();
     File recvTransportSubDir =
         new File(
-            BUNDLE_GENERATION_DIRECTORY
-                + File.separator
-                + TO_SEND_DIRECTORY
+            this.config.getBundleTransmission().getToSendDirectory()
                 + File.separator
                 + transportId);
-    System.out.println(
-        BUNDLE_GENERATION_DIRECTORY
-            + File.separator
-            + TO_SEND_DIRECTORY
-            + File.separator
-            + transportId);
     File[] recvTransport =
         recvTransportSubDir.listFiles(
             new FileFilter() {
@@ -339,24 +313,23 @@ public class BundleTransmission {
                 return !file.isHidden();
               }
             });
+
     if (recvTransport == null) {
       return bundles;
     }
+
     for (File bundleFile : recvTransport) {
       bundles.add(bundleFile);
     }
     return bundles;
   }
 
-  public void deleteSentBundles(List<Bundle> bundles) {
-    // TODO
-    //    for (Bundle bundle : bundles) {
+  public void notifyBundleSent(Bundle bundle) {
     //      try {
     //        FileUtils.delete(bundle.getSource());
     //      } catch (IOException e) {
     //        e.printStackTrace();
     //      }
-    //    }
     // TODO: Commented out for the moment.
   }
 }

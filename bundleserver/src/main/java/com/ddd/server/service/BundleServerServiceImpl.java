@@ -13,25 +13,31 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import com.ddd.model.BundleTransferDTO;
 import com.ddd.server.bundletransmission.BundleTransmission;
 import com.google.protobuf.ByteString;
-
 import edu.sjsu.ddd.bundleserver.service.BundleDownloadRequest;
 import edu.sjsu.ddd.bundleserver.service.BundleDownloadResponse;
 import edu.sjsu.ddd.bundleserver.service.BundleList;
+import edu.sjsu.ddd.bundleserver.service.BundleMetaData;
+import edu.sjsu.ddd.bundleserver.service.BundleServiceGrpc.BundleServiceImplBase;
 import edu.sjsu.ddd.bundleserver.service.BundleUploadRequest;
 import edu.sjsu.ddd.bundleserver.service.BundleUploadResponse;
 import edu.sjsu.ddd.bundleserver.service.Status;
-import edu.sjsu.ddd.bundleserver.service.BundleServiceGrpc.BundleServiceImplBase;
 import io.grpc.stub.StreamObserver;
 
+//@Service
 public class BundleServerServiceImpl extends BundleServiceImplBase {
     
     private static final String BundleDir = "/Users/adityasinghania/Downloads/Data/Shared";
     private static final String ReceiveDir = BundleDir+java.io.File.separator+"receive";
     private static final String SendDir = BundleDir+java.io.File.separator+"send";
+    
+    @Autowired
+    private BundleTransmission bundleTransmission;
+    
     public BundleServerServiceImpl(){
         java.io.File directoryReceive = new java.io.File(ReceiveDir);
         if (! directoryReceive.exists()){
@@ -83,7 +89,6 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
                         .setStatus(status)
                         .build();
                 responseObserver.onNext(response);
-                BundleTransmission bundleTransmission = new BundleTransmission();
                 bundleTransmission.processReceivedBundles(transportID);
                 responseObserver.onCompleted();           
             }
@@ -114,7 +119,8 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
     @Override
     public void downloadBundle(BundleDownloadRequest request, StreamObserver<BundleDownloadResponse> responseObserver) {
         String transportFiles = request.getBundleList();
-        System.out.println("Transport id :"+request.getTransportId());
+        System.out.println("[BDA] bundles on transport"+transportFiles);
+        System.out.println("[BDA]Request from Transport id :"+request.getTransportId());
         String[] filesOnTransport = null;
         Set<String> filesOnTransportSet = Collections.<String>emptySet();
         if (!transportFiles.isEmpty()){
@@ -123,19 +129,23 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
             filesOnTransportSet = new HashSet<String>( filesOnTransportList );
         }
         
-        BundleTransmission bundleTransmission = new BundleTransmission();
         List<File> bundlesList = bundleTransmission.getBundlesForTransmission(request.getTransportId());
+        System.out.println(bundleTransmission);
         if ( bundlesList.isEmpty() ){
             BundleTransferDTO bundleTransferDTO = bundleTransmission.generateBundlesForTransmission(request.getTransportId(), filesOnTransportSet);
             BundleDownloadResponse response = BundleDownloadResponse.newBuilder()
                                                 .setBundleList( BundleList.newBuilder().setBundleList(String.join(", ", bundleTransferDTO.getDeletionSet())))
                                                 .build();
+            System.out.println("[BDA] Sending "+String.join(", ", bundleTransferDTO.getDeletionSet())+" to delete on Transport id :"+request.getTransportId());
             responseObserver.onNext(response);
             responseObserver.onCompleted();                      
         } else {
+
             for( File bundle : bundlesList ){
                 if( !filesOnTransportSet.contains(bundle.getName()) ) {                    
-                    System.out.println("Downloading "+bundle.getName());
+                    System.out.println("[BDA]Downloading "+bundle.getName()+" to Transport id :"+request.getTransportId());
+                    BundleMetaData bundleMetaData = BundleMetaData.newBuilder().setBid(bundle.getName()).build();
+                    responseObserver.onNext(BundleDownloadResponse.newBuilder().setMetadata(bundleMetaData).build());
                     InputStream in;                 
                     try {
                         in = new FileInputStream(bundle);
@@ -151,6 +161,7 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
                     responseObserver.onCompleted();
                 }
             }
+            System.out.println("[BDA] All bundles were transferred completing status success");
             responseObserver.onNext(BundleDownloadResponse.newBuilder().setStatus(Status.SUCCESS).build());
             responseObserver.onCompleted();
         }               

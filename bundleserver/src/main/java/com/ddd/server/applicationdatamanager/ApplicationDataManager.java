@@ -1,256 +1,42 @@
 package com.ddd.server.applicationdatamanager;
 
-import java.io.*;
-import java.lang.reflect.Type;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import com.ddd.model.ADU;
-import com.ddd.model.Bundle;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonIOException;
-import com.google.gson.JsonSyntaxException;
-import com.google.gson.reflect.TypeToken;
+import com.ddd.model.UncompressedPayload;
+import com.ddd.server.config.BundleServerConfig;
 
-class StateManager {
-
-  private static final String LARGEST_ADU_ID_RECEIVED =
-      "/Users/adityasinghania/Downloads/Data/Shared/DB/LARGEST_ADU_ID_RECEIVED.json";
-
-  private static final String SENT_BUNDLE_DETAILS =
-      "/Users/adityasinghania/Downloads/Data/Shared/DB/SENT_BUNDLE_DETAILS.json";
-
-  private static final String LARGEST_ADU_ID_DELIVERED =
-      "/Users/adityasinghania/Downloads/Data/Shared/DB/LARGEST_ADU_ID_DELIVERED.json";
-
-  private static final String LAST_SENT_BUNDLE_STRUCTURE =
-      "/Users/adityasinghania/Downloads/Data/Shared/DB/LAST_SENT_BUNDLE_STRUCTURE.json";
-
-  private DataStoreAdaptor dataStoreAdaptor;
-
-  public StateManager() {
-    this.dataStoreAdaptor =
-        new DataStoreAdaptor("/Users/adityasinghania/Downloads/Data");
-    try {
-      File sentBundleDetails = new File(SENT_BUNDLE_DETAILS);
-      sentBundleDetails.getParentFile().mkdirs();
-      sentBundleDetails.createNewFile();
-      File largestADUIdReceived = new File(LARGEST_ADU_ID_RECEIVED);
-      largestADUIdReceived.createNewFile();
-      File largestADUIdDelivered = new File(LARGEST_ADU_ID_DELIVERED);
-      largestADUIdDelivered.createNewFile();
-      File lastSentBundleStructure = new File(LAST_SENT_BUNDLE_STRUCTURE);
-      lastSentBundleStructure.createNewFile();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
-
-  /* Largest ADU ID received */
-
-  private void writeLargestADUIdReceivedDetails(
-      Map<String, Map<String, Long>> largestADUIdReceivedDetails) {
-    Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    String jsonString = gson.toJson(largestADUIdReceivedDetails);
-    try (FileWriter writer = new FileWriter(new File(LARGEST_ADU_ID_RECEIVED))) {
-      writer.write(jsonString);
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
-
-  private Map<String, Map<String, Long>> getLargestADUIdReceivedDetails() {
-    Gson gson = new Gson();
-    Map<String, Map<String, Long>> ret = new HashMap<>();
-    try {
-      Type mapType = new TypeToken<Map<String, Map<String, Long>>>() {}.getType();
-      ret = gson.fromJson(new FileReader(LARGEST_ADU_ID_RECEIVED), mapType);
-      if (ret == null){
-        ret = new HashMap<>();
-      }
-    } catch (JsonSyntaxException e) {
-      e.printStackTrace();
-    } catch (JsonIOException e) {
-      e.printStackTrace();
-    } catch (FileNotFoundException e) {
-      e.printStackTrace();
-    }
-    return ret;
-  }
-
-  public Long largestADUIdReceived(String clientId, String appId) {
-    Long ret = null;
-    Map<String, Map<String, Long>> receivedADUIds = this.getLargestADUIdReceivedDetails();
-    Map<String, Long> map = receivedADUIds.get(clientId);
-    if (map != null) {
-      ret = map.get(appId);
-    }
-    return ret;
-  }
-
-  public void updateLargestADUIdReceived(String clientId, String appId, Long aduId) {
-    Map<String, Map<String, Long>> largestADUIdReceivedDetails =
-        this.getLargestADUIdReceivedDetails();
-    Map<String, Long> clientDetails =
-        largestADUIdReceivedDetails.getOrDefault(clientId, new HashMap<>());
-    clientDetails.put(appId, aduId);
-    largestADUIdReceivedDetails.put(clientId, clientDetails);
-    this.writeLargestADUIdReceivedDetails(largestADUIdReceivedDetails);
-  }
-
-  /* Largest ADU ID Delivered Details*/
-
-  private Map<String, Map<String, Long>> getLargestADUIdDeliveredDetails() {
-    Gson gson = new Gson();
-    Map<String, Map<String, Long>> ret = new HashMap<>();
-    try {
-      Type mapType = new TypeToken<Map<String, Map<String, Long>>>() {}.getType();
-      ret = gson.fromJson(new FileReader(LARGEST_ADU_ID_DELIVERED), mapType);
-      if (ret == null){
-        ret = new HashMap<>();
-      }
-    } catch (JsonSyntaxException e) {
-      e.printStackTrace();
-    } catch (JsonIOException e) {
-      e.printStackTrace();
-    } catch (FileNotFoundException e) {
-      e.printStackTrace();
-    }
-    return ret;
-  }
-
-  private void writeLargestADUIdDeliveredDetails(
-      Map<String, Map<String, Long>> largestADUIdDeliveredDetails) {
-    Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    String jsonString = gson.toJson(largestADUIdDeliveredDetails);
-    try (FileWriter writer = new FileWriter(new File(LARGEST_ADU_ID_DELIVERED))) {
-      writer.write(jsonString);
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
-
-  public Long getLargestADUIdDeliveredByAppId(String clientId, String appId) {
-    Map<String, Map<String, Long>> largestADUIdDeliveredDetails =
-        this.getLargestADUIdDeliveredDetails();
-    Long ret = null;
-    if (largestADUIdDeliveredDetails.get(clientId) != null) {
-      ret = largestADUIdDeliveredDetails.get(clientId).get(appId);
-    }
-    return ret;
-  }
-
-  /* Sent bundle Details*/
-  private Map<String, Map<String, Long>> getSentBundleDetails() {
-    Gson gson = new Gson();
-    Map<String, Map<String, Long>> ret = new HashMap<>();
-    try {
-      Type mapType = new TypeToken<Map<String, Map<String, Long>>>() {}.getType();
-      ret = gson.fromJson(new FileReader(new File(SENT_BUNDLE_DETAILS)), mapType);
-      if (ret == null){
-        ret = new HashMap<>();
-      }
-    } catch (JsonSyntaxException e) {
-      e.printStackTrace();
-    } catch (JsonIOException e) {
-      e.printStackTrace();
-    } catch (FileNotFoundException e) {
-      e.printStackTrace();
-    }
-    return ret;
-  }
-
-  private void writeSentBundleDetails(Map<String, Map<String, Long>> sentBundleDetails) {
-    Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    String jsonString = gson.toJson(sentBundleDetails);
-    try (FileWriter writer = new FileWriter(new File(SENT_BUNDLE_DETAILS))) {
-      writer.write(jsonString);
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
-
-  public void registerSentBundleDetails(Bundle sentBundle) {
-    if (sentBundle.getADUs().isEmpty()) {
-      return;
-    }
-    Map<String, Map<String, Long>> sentBundleDetails = this.getSentBundleDetails();
-    if (sentBundleDetails.containsKey(sentBundle.getBundleId())) {
-      return;
-    }
-    Map<String, Long> bundleDetails = new HashMap<>();
-    for (ADU adu : sentBundle.getADUs()) {
-      String appId = adu.getAppId();
-      Long aduId = adu.getADUId();
-
-      if (!bundleDetails.containsKey(appId) || bundleDetails.get(appId) < aduId) {
-        bundleDetails.put(appId, aduId);
-      }
-    }
-    sentBundleDetails.put(sentBundle.getBundleId(), bundleDetails);
-    this.writeSentBundleDetails(sentBundleDetails);
-  }
-
-  public void processAcknowledgement(String clientId, String bundleId) {
-    Map<String, Map<String, Long>> sentBundleDetails = this.getSentBundleDetails();
-    Map<String, Long> sentDetails = sentBundleDetails.getOrDefault(bundleId, new HashMap<>());
-    Map<String, Map<String, Long>> largestADUIdDeliveredDetails =
-        this.getLargestADUIdDeliveredDetails();
-    Map<String, Long> largestADUDetails =
-        largestADUIdDeliveredDetails.getOrDefault(clientId, new HashMap<>());
-    for (String appId : sentDetails.keySet()) {
-      this.dataStoreAdaptor.deleteADUs(clientId, appId, sentDetails.get(appId));
-      Long aduId = sentDetails.get(appId);
-      if (!largestADUDetails.containsKey(appId) || aduId > largestADUDetails.get(appId)) {
-        largestADUDetails.put(appId, aduId);
-      }
-    }
-    if (!largestADUDetails.keySet().isEmpty()) {
-      largestADUIdDeliveredDetails.put(clientId, largestADUDetails);
-      this.writeLargestADUIdDeliveredDetails(largestADUIdDeliveredDetails);
-    }
-    System.out.println(
-        "[SM] Processed acknowledgement for sent bundle id "
-            + bundleId
-            + " corresponding to client "
-            + clientId);
-  }
-}
-
+@Service
 public class ApplicationDataManager {
 
-  private StateManager stateManager;
+  @Autowired private StateManager stateManager;
+
   private DataStoreAdaptor dataStoreAdaptor;
 
-  private Long APP_DATA_SIZE_LIMIT = 10000L;
-
-  private static final String REGISTERED_APP_IDS =
-      "/Users/adityasinghania/Downloads/Data/Shared/REGISTERED_APP_IDS.txt";
+  @Autowired private BundleServerConfig bundleServerConfig;
 
   public ApplicationDataManager() {
-    this.stateManager = new StateManager();
-    this.dataStoreAdaptor = new DataStoreAdaptor("/Users/adityasinghania/Downloads/Data");
-  }
-
-  public void registerAppId(String appId) {
-    File file = new File("/Users/adityasinghania/Downloads/Data/Shared");
-    if(!file.exists()){
-      file.mkdirs();
-    }
-    try (BufferedWriter bufferedWriter =
-                 new BufferedWriter(new FileWriter(new File(REGISTERED_APP_IDS)))) {
-      bufferedWriter.append(appId);
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
+    //    this.dataStoreAdaptor = new DataStoreAdaptor(bundleServerConfig.getBundleStoreRoot());
+    this.dataStoreAdaptor =
+        new DataStoreAdaptor("C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/");
   }
 
   public List<String> getRegisteredAppIds() {
     List<String> registeredAppIds = new ArrayList<>();
     try (BufferedReader bufferedReader =
-        new BufferedReader(new FileReader(new File(REGISTERED_APP_IDS)))) {
+        new BufferedReader(
+            new FileReader(new File(this.bundleServerConfig.getRegisteredAppIds())))) {
       String line = "";
       while ((line = bufferedReader.readLine()) != null) {
         String appId = line.trim();
@@ -262,14 +48,25 @@ public class ApplicationDataManager {
     return registeredAppIds;
   }
 
-  public void processAck(String clientId, String bundleId) {
+  public void registerAppId(String appId) {
+    try (BufferedWriter bufferedWriter =
+        new BufferedWriter(
+            new FileWriter(new File(this.bundleServerConfig.getRegisteredAppIds())))) {
+      bufferedWriter.write(appId);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
+  public void processAcknowledgement(String clientId, String bundleId) {
     if ("HB".equals(bundleId)) {
       return;
     }
     this.stateManager.processAcknowledgement(clientId, bundleId);
   }
 
-  public void storeADUs(String clientId, List<ADU> adus) {
+  public void storeADUs(String clientId, String bundleId, List<ADU> adus) {
+    this.registerRecvdBundleId(clientId, bundleId);
     Map<String, List<ADU>> appIdToADUMap = new HashMap<>();
 
     for (ADU adu : adus) {
@@ -286,7 +83,7 @@ public class ApplicationDataManager {
         appIdToADUMap.get(adu.getAppId()).add(adu);
       }
     }
-    for(String appId: appIdToADUMap.keySet()){
+    for (String appId : appIdToADUMap.keySet()) {
       this.dataStoreAdaptor.persistADUsForServer(clientId, appId, appIdToADUMap.get(appId));
     }
   }
@@ -300,7 +97,8 @@ public class ApplicationDataManager {
       List<ADU> adus = this.dataStoreAdaptor.fetchADUs(clientId, appId, aduIdStart);
       Long cumulativeSize = 0L;
       for (ADU adu : adus) {
-        if (adu.getSize() + cumulativeSize > this.APP_DATA_SIZE_LIMIT) {
+        if (adu.getSize() + cumulativeSize
+            > this.bundleServerConfig.getApplicationDataManager().getAppDataSizeLimit()) {
           break;
         }
         res.add(adu);
@@ -310,7 +108,19 @@ public class ApplicationDataManager {
     return res;
   }
 
-  public void notifyBundleGenerated(Bundle bundle) {
-    this.stateManager.registerSentBundleDetails(bundle);
+  public void notifyBundleGenerated(String clientId, UncompressedPayload bundle) {
+    this.stateManager.registerSentBundleDetails(clientId, bundle);
+  }
+
+  public Optional<UncompressedPayload.Builder> getLastSentBundlePayloadBuilder(String clientId) {
+    return this.stateManager.getLastSentBundlePayloadBuilder(clientId);
+  }
+
+  private void registerRecvdBundleId(String clientId, String bundleId) {
+    this.stateManager.registerRecvdBundleId(clientId, bundleId);
+  }
+
+  public Optional<String> getLargestRecvdBundleId(String clientId) {
+    return this.stateManager.getLargestRecvdBundleId(clientId);
   }
 }
