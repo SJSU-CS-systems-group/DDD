@@ -1,0 +1,20 @@
+bundle-server:
+  bunde-store-root: "/Users/adityasinghania/Downloads/Data/"
+  registered-app-ids: "/Users/adityasinghania/Downloads/Data/Shared/REGISTERED_APP_IDS.txt"
+  db-root: "/Users/adityasinghania/Downloads/Data/Shared/DB/" 
+  bundle-transmission:
+    bundle-size-limit: 104857600    
+    bundle-received-location: "/Users/adityasinghania/Downloads/Data/Shared/receive"
+    bundle-generation-directory: "/Users/adityasinghania/Downloads/Data/BundleTransmission/bundle-generation"
+    to-be-bundled-directory: "/Users/adityasinghania/Downloads/Data/BundleTransmission/bundle-generation/to-be-bundled"
+    to-send-directory: "/Users/adityasinghania/Downloads/Data/BundleTransmission/bundle-generation/to-send"
+  application-data-manager:
+    app-data-size-limit: 31457280
+    registered-app-ids-path:  "/Users/adityasinghania/Downloads/Data/Shared/REGISTERED_APP_IDS.txt"
+    state-manager:
+      largest-adu-id-received: "/Users/adityasinghania/Downloads/Data/Shared/DB/LARGEST_ADU_ID_RECEIVED.json"
+      sent-bundle-details: "/Users/adityasinghania/Downloads/Data/Shared/DB/SENT_BUNDLE_DETAILS.json"
+      largest-adu-id-delivered: "/Users/adityasinghania/Downloads/Data/Shared/DB/LARGEST_ADU_ID_DELIVERED.json"
+      last-sent-bundle-structure: "/Users/adityasinghania/Downloads/Data/Shared/DB/LARGEST_ADU_ID_RECEIVED.json"
+    data-store-adaptor:
+      app-data-root: "/Users/adityasinghania/Downloads/Data/Shared/"

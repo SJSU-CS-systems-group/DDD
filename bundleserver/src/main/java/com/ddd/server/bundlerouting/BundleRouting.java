@@ -2,7 +2,9 @@ package com.ddd.server.bundlerouting;
 
 import java.util.Arrays;
 import java.util.List;
+import org.springframework.stereotype.Service;
 
+@Service
 public class BundleRouting {
 
   public void registerReceiptFromTransport(String transportId) {
