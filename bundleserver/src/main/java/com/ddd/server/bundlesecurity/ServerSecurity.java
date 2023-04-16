@@ -60,7 +60,7 @@ public class ServerSecurity {
                 return;
             } catch (InvalidKeyException e) {
                 // TODO: Change to log
-//                System.out.println("[Sec]: Error Loading Keys from files, generating new keys instead");
+               System.out.println("[Sec]: Error Loading Keys from files, generating new keys instead");
             }
         }
 
@@ -74,7 +74,7 @@ public class ServerSecurity {
         ourAddress                      = new SignalProtocolAddress(name, ServerDeviceID);
         ourOneTimePreKey                = Optional.<ECKeyPair>absent();
 
-        writeKeysToFiles(serverKeyPath);
+        writeKeysToFiles(serverKeyPath, true);
     }
 
     private void loadKeysfromFiles(String serverKeyPath) throws FileNotFoundException, IOException, InvalidKeyException
@@ -115,16 +115,20 @@ public class ServerSecurity {
         }
     }
     
-    private void writeKeysToFiles(String path) throws IOException
+    private String[] writeKeysToFiles(String path, boolean writePvt) throws IOException
     {
         /* Create Directory if it does not exist */
         Files.createDirectories(Paths.get(path));
         
+        String[] serverKeypaths = { path + File.separator + "serverIdentity.pub",
+                                    path + File.separator + "serverSignedPre.pub",
+                                    path + File.separator +  "serverRatchet.pub"};
+
         writePrivateKeys(path);
-        SecurityUtils.createEncodedPublicKeyFile(ourIdentityKeyPair.getPublicKey().getPublicKey(), path + File.separator +  "serverIdentity.pub");
-        SecurityUtils.createEncodedPublicKeyFile(ourSignedPreKey.getPublicKey(), path + File.separator +  "serverSignedPre.pub");
-        SecurityUtils.createEncodedPublicKeyFile(ourRatchetKey.getPublicKey(), path + File.separator +  "serverRatchet.pub");
-        return;
+        SecurityUtils.createEncodedPublicKeyFile(ourIdentityKeyPair.getPublicKey().getPublicKey(), serverKeypaths[0]);
+        SecurityUtils.createEncodedPublicKeyFile(ourSignedPreKey.getPublicKey(), serverKeypaths[1]);
+        SecurityUtils.createEncodedPublicKeyFile(ourRatchetKey.getPublicKey(), serverKeypaths[2]);
+        return serverKeypaths;
     }
 
     private ClientSession inititalizeClientSession(String clientKeyPath, String clientID) throws IOException, InvalidKeyException, NoSuchAlgorithmException
@@ -290,47 +294,73 @@ public class ServerSecurity {
         return;
     }
 
-    public void encrypt(String toBeEncPath, String encPath, String bundleID, String clientID) throws IOException, java.security.InvalidKeyException, NoSuchAlgorithmException, SignatureException, InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, ClientSessionException
+    public String[] encrypt(String toBeEncPath, String encPath, String bundleID, String clientID) throws IOException, java.security.InvalidKeyException, NoSuchAlgorithmException, SignatureException, InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, ClientSessionException
     {
-        String bundlePath    = encPath + File.separator + bundleID;
-        String encBundlePath = bundlePath + File.separator + SecurityUtils.PAYLOAD_FILENAME;
-        String signPath      = bundlePath + File.separator + SecurityUtils.SIGN_FILENAME;
-        byte[] fileContents  =  Files.readAllBytes(Paths.get(toBeEncPath));
+        String bundlePath    = encPath + File.separator + bundleID + File.separator;
+        String payloadPath   = bundlePath + File.separator + SecurityUtils.PAYLOAD_DIR;
+        String signPath      = bundlePath + File.separator + SecurityUtils.SIGNATURE_DIR;
+        File plainTextFile   = new File(toBeEncPath);
+        List <String> returnPaths = new ArrayList<>();
+        int len = 0;
 
         /* Create Directory if it does not exist */
-        Files.createDirectories(Paths.get(bundlePath));
-
-        /* Create Signature with plaintext*/
-        createSignature(fileContents, signPath);
+        SecurityUtils.createDirectory(bundlePath);
+        SecurityUtils.createDirectory(payloadPath);
+        SecurityUtils.createDirectory(signPath);
 
         /* get Client Session */
         ClientSession client = getClientSession(clientID);
-        if ( client != null) {
-            /* Encrypt File */
-            CiphertextMessage cipherText = client.cipherSession.encrypt(fileContents);
-            FileOutputStream stream = new FileOutputStream(encBundlePath);
-            stream.write(cipherText.serialize());
-            stream.close();
-            /* Create Encryption Header */
-            createEncryptionHeader(encPath, bundleID, client);
-        } else {
+        if ( client == null) {
             // TODO: Change exception
             throw new InvalidKeyException("Failed to get client [" + clientID + "]");
         }
+
+        DataInputStream inputStream = new DataInputStream(new FileInputStream(plainTextFile));
+        byte[] chunk = new byte[SecurityUtils.CHUNKSIZE];
+        
+        for (int i = 1; (len = inputStream.read(chunk)) != -1; i++)
+        {
+            String encBundlePath    = payloadPath + File.separator + SecurityUtils.PAYLOAD_FILENAME + String.valueOf(i);
+            String signBundlePath   = signPath + File.separator + SecurityUtils.PAYLOAD_FILENAME + String.valueOf(i) + SecurityUtils.SIGNATURE_FILENAME;
+
+            if (chunk.length != len) {
+                chunk = Arrays.copyOf(chunk, len);
+            }
+
+            /* Create Signature with plaintext*/
+            createSignature(chunk, signBundlePath);
+            /* Encrypt File */
+            CiphertextMessage cipherText = client.cipherSession.encrypt(chunk);
+            FileOutputStream stream = new FileOutputStream(encBundlePath);
+            stream.write(cipherText.serialize());
+            stream.close();
+        }
+        inputStream.close();
+    
+        /* Create Encryption Headers */
+        createEncryptionHeader(encPath, bundleID, client);
+
+        returnPaths.add(payloadPath);
+        returnPaths.add(signPath);
+
+        for (String clientKeyPath: clientKeyPaths) {
+            returnPaths.add(clientKeyPath);
+        }
+
+        return returnPaths.toArray(new String[returnPaths.size()]);
     }
 
-    public void createEncryptionHeader(String encPath, String bundleID, ClientSession client) throws IOException, java.security.InvalidKeyException, NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, InvalidKeyException, ClientSessionException
+    public String[] createEncryptionHeader(String encPath, String bundleID, ClientSession client) throws IOException, java.security.InvalidKeyException, NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, InvalidKeyException, ClientSessionException
     {
         String bundlePath   = encPath + File.separator + bundleID;
 
         /* Create Directory if it does not exist */
         Files.createDirectories(Paths.get(bundlePath));
-        
-        /* Write Keys to Bundle directory */
-        writeKeysToFiles(bundlePath);
-
         /* Create Bundle ID File */
         createBundleIDFile(bundleID, client, bundlePath);
+                
+        /* Write Keys to Bundle directory */
+        return writeKeysToFiles(bundlePath, false);
     }
 
     /* Encrypts the given bundleID
@@ -372,8 +402,8 @@ public class ServerSecurity {
         String bundleIDPath = bundlePath + File.separator + SecurityUtils.BUNDLEID_FILENAME;
         byte[] encryptedBundleID = SecurityUtils.readFromFile(bundleIDPath);
         
-        System.out.println("Encrypted Bundle ID: " + new String(encryptedBundleID, StandardCharsets.UTF_8));
         byte[] bundleBytes = decryptBundleID(new String(encryptedBundleID, StandardCharsets.UTF_8), clientID);
+
         return new String(bundleBytes, StandardCharsets.UTF_8);
     }
 };
