@@ -2,6 +2,7 @@ package com.ddd.client.bundlesecurity;
 
 import org.whispersystems.libsignal.util.guava.Optional;
 
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -66,7 +67,7 @@ public class ClientSecurity {
     private String                clientID;
 
     // TODO: Handle restart, create ratchet session with existing keys
-    private ClientSecurity(int deviceID, String clientKeyPath, String serverKeyPath) throws IOException, InvalidKeyException, NoSuchAlgorithmException
+    private ClientSecurity(int deviceID, String clientKeyPath, String serverKeyPath) throws IOException, InvalidKeyException, NoSuchAlgorithmException, NoSessionException
     {
         // Create Client's Key pairs
         ECKeyPair identityKeyPair       = Curve.generateKeyPair();
@@ -159,7 +160,7 @@ public class ClientSecurity {
     {
         String encData = encryptBundleID(bundleID);
 
-        String bundleIDPath = bundlePath + SecurityUtils.BUNDLEID_FILENAME;
+        String bundleIDPath = bundlePath + File.separator + SecurityUtils.BUNDLEID_FILENAME;
         try (FileOutputStream stream = new FileOutputStream(bundleIDPath)) {
             stream.write(encData.getBytes());
         } catch (Exception e) {
@@ -181,7 +182,7 @@ public class ClientSecurity {
     /* Add Headers (Identity, Base Key & Bundle ID) to Bundle Path */
     private String[] createEncryptionHeader(String encPath, String bundleID) throws IOException, java.security.InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException, InvalidKeyException
     {
-        String bundlePath   = encPath + File.separator + bundleID + File.separator;
+        String bundlePath   = encPath + File.separator + bundleID;
 
         /* Create Directory if it does not exist */
         SecurityUtils.createDirectory(bundlePath);
@@ -194,7 +195,7 @@ public class ClientSecurity {
     }
 
     /* Initialize or get previous client Security Instance */
-    public static synchronized ClientSecurity getInstance(int deviceID, String clientKeyPath, String serverKeyPath) throws NoSuchAlgorithmException, IOException, InvalidKeyException
+    public static synchronized ClientSecurity getInstance(int deviceID, String clientKeyPath, String serverKeyPath) throws NoSuchAlgorithmException, IOException, InvalidKeyException, NoSessionException
     {
         if (singleClientInstance == null) {
             singleClientInstance = new ClientSecurity(deviceID, clientKeyPath, serverKeyPath);
@@ -202,36 +203,53 @@ public class ClientSecurity {
 
         return singleClientInstance;
     }
-
+    
     /* Encrypts File and creates signature for plain text */
-    public String[] encrypt(String toBeEncPath, String encPath, String bundleID) throws IOException, java.security.InvalidKeyException, NoSuchAlgorithmException, SignatureException, InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException
+    public String encrypt(String toBeEncPath, String encPath, String bundleID) throws IOException, java.security.InvalidKeyException, NoSuchAlgorithmException, SignatureException, InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException
     {
         String bundlePath    = encPath + File.separator + bundleID + File.separator;
-        String encBundlePath = bundlePath + SecurityUtils.PAYLOAD_FILENAME;
-        String signPath      = bundlePath + SecurityUtils.SIGN_FILENAME;
-        byte[] fileContents  = SecurityUtils.readFromFile(toBeEncPath);
+        String payloadPath   = bundlePath + File.separator + SecurityUtils.PAYLOAD_DIR;
+        String signPath      = bundlePath + File.separator + SecurityUtils.SIGNATURE_DIR;
+        File plainTextFile   = new File(toBeEncPath);
         List <String> returnPaths = new ArrayList<>();
-        returnPaths.add(encBundlePath);
-        returnPaths.add(signPath);
+        int len = 0;
 
         /* Create Directory if it does not exist */
         SecurityUtils.createDirectory(bundlePath);
+        SecurityUtils.createDirectory(payloadPath);
+        SecurityUtils.createDirectory(signPath);
 
-        /* Create Signature with plaintext*/
-        createSignature(fileContents, signPath);
+        DataInputStream inputStream = new DataInputStream(new FileInputStream(plainTextFile));
+        byte[] chunk = new byte[SecurityUtils.CHUNKSIZE];
+        
+        for (int i = 1; (len = inputStream.read(chunk)) != -1; i++)
+        {
+            String encBundlePath    = payloadPath + File.separator + SecurityUtils.PAYLOAD_FILENAME + String.valueOf(i);
+            String signBundlePath   = signPath + File.separator + SecurityUtils.PAYLOAD_FILENAME + String.valueOf(i) + SecurityUtils.SIGNATURE_FILENAME;
 
-        /* Encrypt File */
-        CiphertextMessage cipherText = cipherSession.encrypt(fileContents);
-        FileOutputStream stream = new FileOutputStream(encBundlePath);
-        stream.write(cipherText.serialize());
-        stream.close();
+            if (chunk.length != len) {
+                chunk = Arrays.copyOf(chunk, len);
+            }
 
+            /* Create Signature with plaintext*/
+            createSignature(chunk, signBundlePath);
+            /* Encrypt File */
+            CiphertextMessage cipherText = cipherSession.encrypt(chunk);
+            FileOutputStream stream = new FileOutputStream(encBundlePath);
+            stream.write(cipherText.serialize());
+            stream.close();
+        }
+        inputStream.close();
+        
         /* Create Encryption Headers */
         String[] clientKeyPaths = createEncryptionHeader(encPath, bundleID);
+        
+        returnPaths.add(encBundlePath);
+        returnPaths.add(signPath);
+        
         for (String clientKeyPath: clientKeyPaths) {
             returnPaths.add(clientKeyPath);
         }
-        
         return returnPaths.toArray(new String[returnPaths.size()]);
     }
     

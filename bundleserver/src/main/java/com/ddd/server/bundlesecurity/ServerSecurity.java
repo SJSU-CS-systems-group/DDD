@@ -244,46 +244,6 @@ public class ServerSecurity {
     public void decrypt(String bundlePath, String decryptedPath) throws NoSuchAlgorithmException, IOException, InvalidKeyException, java.security.InvalidKeyException, InvalidKeySpecException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, ClientSessionException
     {
         ClientSession client = getClientSessionFromFile(bundlePath);
-        byte[] encryptedData = Files.readAllBytes(Paths.get(bundlePath + File.separator + SecurityUtils.PAYLOAD_FILENAME));
-        String bundleID      = getBundleIDFromFile(bundlePath, client.clientID);
-        String decryptedFile = decryptedPath + File.separator + bundleID + SecurityUtils.DECRYPTED_FILE_EXT;
-        String signatureFile = bundlePath + File.separator + SecurityUtils.SIGN_FILENAME;
-
-        /* Create Directory if it does not exist */
-        Files.createDirectories(Paths.get(decryptedPath));
-        
-        System.out.println(decryptedFile);
-        try {
-            byte[] serverDecryptedMessage  = client.cipherSession.decrypt(new SignalMessage (encryptedData));
-            try (FileOutputStream stream = new FileOutputStream(decryptedFile)) {
-                stream.write(serverDecryptedMessage);
-            }
-            System.out.printf("Decrypted Size = %d\n", serverDecryptedMessage.length);
-
-            if (SecurityUtils.verifySignature(serverDecryptedMessage, client.IdentityKey.getPublicKey(), signatureFile)) {
-                System.out.println("Verified Signature!");
-            } else {
-                // Failed to verify sign, delete bundle and return
-                System.out.println("Invalid Signature, Aborting bundle "+ bundleID);
-
-                try {
-                    Files.deleteIfExists(Paths.get(decryptedFile));
-                }
-                catch (Exception e) {
-                    System.out.printf("Error: Failed to delete decrypted file [%s]", decryptedFile);
-                    System.out.println(e);
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("Failed to Decrypt Client's Message\n" + e);
-            e.printStackTrace();
-        }
-        return;
-    }
-
-    public void decryptChunks(String bundlePath, String decryptedPath) throws NoSuchAlgorithmException, IOException, InvalidKeyException, java.security.InvalidKeyException, InvalidKeySpecException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, ClientSessionException
-    {
-        ClientSession client = getClientSessionFromFile(bundlePath);
         String payloadPath   = bundlePath + File.separator + SecurityUtils.PAYLOAD_DIR;
         String signPath      = bundlePath + File.separator + SecurityUtils.SIGNATURE_DIR;
         

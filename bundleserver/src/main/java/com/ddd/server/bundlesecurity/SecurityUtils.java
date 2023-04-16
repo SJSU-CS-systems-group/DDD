@@ -152,7 +152,7 @@ public class SecurityUtils {
 
         Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
         cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
-        
+    
         byte[] encryptedData = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
         
         return Base64.getUrlEncoder().encodeToString(encryptedData);
