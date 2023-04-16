@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
+import java.security.Security;
 import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
 import java.sql.Array;
@@ -85,6 +86,7 @@ public class ClientSecurity {
     
     private String[] writeKeysToFiles(String path) throws IOException
     {
+        SecurityUtils.createDirectory(path);
         String[] clientKeypaths = { path + File.separator + "clientIdentity.pub",
                                     path + File.separator + "clientBase.pub"};
 
@@ -139,7 +141,7 @@ public class ClientSecurity {
     private void createSignature(byte[] fileContents, String signedFilePath) throws java.security.InvalidKeyException, NoSuchAlgorithmException, SignatureException, InvalidKeySpecException, InvalidKeyException
     {
         byte[] signedData = Curve.calculateSignature(ourIdentityKeyPair.getPrivateKey(), fileContents);
-        String encodedSignature = Base64.encodeToString(signedData, Base64.URL_SAFE | Base64.NO_PADDING);
+        String encodedSignature = Base64.encodeToString(signedData, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
 
         try (FileOutputStream stream = new FileOutputStream(signedFilePath)) {
             stream.write(encodedSignature.getBytes());
@@ -167,7 +169,7 @@ public class ClientSecurity {
     {
         byte[] agreement = Curve.calculateAgreement(theirIdentityKey.getPublicKey(), ourIdentityKeyPair.getPrivateKey());
 
-        String secretKey = Base64.encodeToString(agreement, Base64.URL_SAFE | Base64.NO_PADDING);
+        String secretKey = Base64.encodeToString(agreement, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
 
         return SecurityUtils.encryptAesCbcPkcs5(secretKey, bundleID);
     }
@@ -268,7 +270,7 @@ public class ClientSecurity {
     public String decryptBundleID(String encryptedBundleID) throws InvalidKeyException, java.security.InvalidKeyException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException
     {
         byte[] agreement = Curve.calculateAgreement(theirIdentityKey.getPublicKey(), ourIdentityKeyPair.getPrivateKey());
-        String secretKey = Base64.encodeToString(agreement, Base64.URL_SAFE | Base64.NO_PADDING);
+        String secretKey = Base64.encodeToString(agreement, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
         byte[] bundleIDBytes = SecurityUtils.dencryptAesCbcPkcs5(secretKey, encryptedBundleID);
         return new String(bundleIDBytes, StandardCharsets.UTF_8);
     }

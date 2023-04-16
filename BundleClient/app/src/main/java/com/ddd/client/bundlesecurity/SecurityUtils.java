@@ -77,7 +77,7 @@ public class SecurityUtils {
         byte[] publicKey = decodePublicKeyfromFile(publicKeyPath);
         MessageDigest md = MessageDigest.getInstance("SHA-1");
         byte[] hashedKey = md.digest(publicKey);
-        return Base64.encodeToString(hashedKey, Base64.URL_SAFE | Base64.NO_PADDING);
+        return Base64.encodeToString(hashedKey, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
     }
 
 
@@ -92,15 +92,15 @@ public class SecurityUtils {
     {
         MessageDigest md = MessageDigest.getInstance("SHA-1");
         byte[] hashedKey = md.digest(publicKey);
-        return Base64.encodeToString(hashedKey, Base64.URL_SAFE | Base64.NO_PADDING);
+        return Base64.encodeToString(hashedKey, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
     }
 
     public static void createEncodedPublicKeyFile(ECPublicKey publicKey, String path) throws FileNotFoundException, IOException
     {
         String encodedKey = PUBLICKEY_HEADER+"\n";
         try (FileOutputStream stream = new FileOutputStream(path)) {
-            encodedKey += Base64.encodeToString(publicKey.serialize(), Base64.URL_SAFE | Base64.NO_PADDING);
-            encodedKey += "\n"+PUBLICKEY_FOOTER;
+            encodedKey += Base64.encodeToString(publicKey.serialize(), Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
+            encodedKey += "\n" + PUBLICKEY_FOOTER;
             stream.write(encodedKey.getBytes());
         }
     }
@@ -121,7 +121,7 @@ public class SecurityUtils {
 
         if ((true == encodedKeyArr[0].equals(PUBLICKEY_HEADER)) &&
             (true == encodedKeyArr[2].equals(PUBLICKEY_FOOTER))) {
-            return Base64.decode(encodedKeyArr[1], Base64.URL_SAFE | Base64.NO_PADDING);
+            return Base64.decode(encodedKeyArr[1], Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
         }
 
         throw new InvalidKeyException("Error: Invalid Public Key Format");
@@ -140,7 +140,7 @@ public class SecurityUtils {
     public static boolean verifySignature(byte[] message, ECPublicKey publicKey, String signaturePath) throws InvalidKeyException, IOException
     {
         byte[] encodedsignature = SecurityUtils.readFromFile(signaturePath);
-        byte[] signature = Base64.decode(encodedsignature, Base64.URL_SAFE | Base64.NO_PADDING);
+        byte[] signature = Base64.decode(encodedsignature, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
         
         return Curve.verifySignature(publicKey, message, signature);
     }
@@ -167,13 +167,13 @@ public class SecurityUtils {
         
         byte[] encryptedData = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
         
-        return Base64.encodeToString(encryptedData, Base64.URL_SAFE | Base64.NO_PADDING);
+        return Base64.encodeToString(encryptedData, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
     }
 
     public static byte[] dencryptAesCbcPkcs5(String sharedSecret, String cipherText) throws NoSuchAlgorithmException, InvalidKeySpecException, java.security.InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException
     {
         byte[] iv = new byte[16];
-        byte[] encryptedData = Base64.decode(cipherText, Base64.URL_SAFE | Base64.NO_PADDING);
+        byte[] encryptedData = Base64.decode(cipherText, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
 
         /* Create SecretKeyFactory object */
         SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
