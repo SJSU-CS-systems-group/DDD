@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 public class BundleServerConfig {
   private String bundleStoreRoot;
   private String registeredAppIds;
-
+  
   public String getRegisteredAppIds() {
     return this.registeredAppIds;
   }

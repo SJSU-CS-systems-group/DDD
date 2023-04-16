@@ -1,6 +1,8 @@
 package com.ddd.server.bundlesecurity;
 
+import java.io.DataInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -11,12 +13,14 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
-import org.springframework.stereotype.Service;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -338,7 +342,7 @@ public class ServerSecurity {
         inputStream.close();
     
         /* Create Encryption Headers */
-        createEncryptionHeader(encPath, bundleID, client);
+        String[] clientKeyPaths = createEncryptionHeader(encPath, bundleID, client);
 
         returnPaths.add(payloadPath);
         returnPaths.add(signPath);

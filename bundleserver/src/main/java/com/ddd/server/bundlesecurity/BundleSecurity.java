@@ -9,6 +9,7 @@ import java.lang.reflect.Type;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -21,9 +22,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.ddd.model.EncryptedPayload;
+import com.ddd.model.EncryptionHeader;
 import com.ddd.model.Payload;
 import com.ddd.model.UncompressedBundle;
 import com.ddd.model.UncompressedPayload;
+import com.ddd.server.bundlesecurity.SecurityExceptions.ClientSessionException;
 import com.ddd.utils.Constants;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -159,7 +162,7 @@ public class BundleSecurity {
     System.out.println("mock decrypt implementation");
   }
 
-  public void encrypt(String toBeEncPath, String encPath, String bundleID, String clientID) {
+  public String[] encrypt(String toBeEncPath, String encPath, String bundleID, String clientID) {
     File bundleDir = new File(encPath + File.separator + bundleID);
     bundleDir.mkdirs();
 
@@ -178,6 +181,7 @@ public class BundleSecurity {
     }
 
     System.out.println("mock encrypt implementation");
+    return null;
   }
 
   public Payload decryptPayload(UncompressedBundle uncompressedBundle) {
@@ -221,17 +225,27 @@ public class BundleSecurity {
 
   public UncompressedBundle encryptPayload(Payload payload, String bundleGenDirPath) {
     String bundleId = payload.getBundleId();
-    this.encrypt(
-        payload.getSource().getAbsolutePath(),
-        bundleGenDirPath,
-        bundleId,
-        this.getClientIdFromBundleId(payload.getBundleId()));
+    String[] paths;
+    String clientKeyPath = "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Server\\BundleTransmission\\received-processing\\transport0\\client0-0";
+    try {
+      paths = serverSecurity.encrypt(
+          payload.getSource().getAbsolutePath(),
+          bundleGenDirPath,
+          bundleId,
+          SecurityUtils.getClientID(clientKeyPath));
+
 
     EncryptedPayload encryptedPayload =
-        new EncryptedPayload(bundleId, new File(bundleGenDirPath + File.separator + bundleId));
+        new EncryptedPayload(bundleId, new File(paths[0]));
 
     File source = new File(bundleGenDirPath + File.separator + bundleId);
+    EncryptionHeader encHeader = new EncryptionHeader(new File(paths[2]), new File(paths[3]), new File(paths[4]));
     return new UncompressedBundle( // TODO get encryption header, payload signature
-        bundleId, source, null, encryptedPayload, null);
+        bundleId, source, encHeader, encryptedPayload, new File(paths[1]));
+    
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    return null;
   }
 }
