@@ -16,6 +16,7 @@ import java.security.spec.InvalidKeySpecException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.NoSessionException;
 
 import com.ddd.bundleclient.HelloworldActivity;
 import com.ddd.model.Bundle;
@@ -110,6 +111,8 @@ public class BundleSecurity {
     } catch (IOException e) {
       e.printStackTrace();
     } catch (InvalidKeyException e) {
+      e.printStackTrace();
+    } catch (NoSessionException e) {
       e.printStackTrace();
     }
   }

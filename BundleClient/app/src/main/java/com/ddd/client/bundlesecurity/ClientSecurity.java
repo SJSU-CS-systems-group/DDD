@@ -159,12 +159,9 @@ public class ClientSecurity {
     private void createBundleIDFile(String bundleID, String bundlePath) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, java.security.InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException
     {
         String encData = encryptBundleID(bundleID);
-<<<<<<< Updated upstream
 
-=======
         String decryptedBundleID = decryptBundleID(encData);
         System.out.println("Original bundle id: [" + bundleID + "], decrypted = [" + decryptedBundleID + "]");
->>>>>>> Stashed changes
         String bundleIDPath = bundlePath + File.separator + SecurityUtils.BUNDLEID_FILENAME;
         try (FileOutputStream stream = new FileOutputStream(bundleIDPath)) {
             stream.write(encData.getBytes());
@@ -218,7 +215,7 @@ public class ClientSecurity {
     }
     
     /* Encrypts File and creates signature for plain text */
-    public String encrypt(String toBeEncPath, String encPath, String bundleID) throws IOException, java.security.InvalidKeyException, NoSuchAlgorithmException, SignatureException, InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException
+    public String[] encrypt(String toBeEncPath, String encPath, String bundleID) throws IOException, java.security.InvalidKeyException, NoSuchAlgorithmException, SignatureException, InvalidKeySpecException, InvalidKeyException, NoSuchPaddingException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException
     {
         String bundlePath    = encPath + File.separator + bundleID + File.separator;
         String payloadPath   = bundlePath + File.separator + SecurityUtils.PAYLOAD_DIR;
@@ -257,7 +254,7 @@ public class ClientSecurity {
         /* Create Encryption Headers */
         String[] clientKeyPaths = createEncryptionHeader(encPath, bundleID);
         
-        returnPaths.add(encBundlePath);
+        returnPaths.add(payloadPath);
         returnPaths.add(signPath);
         
         for (String clientKeyPath: clientKeyPaths) {
