@@ -67,7 +67,7 @@ public class ClientSecurity {
     private String                clientID;
 
     // TODO: Handle restart, create ratchet session with existing keys
-    private ClientSecurity(int deviceID, String clientKeyPath, String serverKeyPath) throws IOException, InvalidKeyException, NoSuchAlgorithmException, NoSessionException
+    private ClientSecurity(int deviceID, String clientKeyPath, String serverKeyPath) throws IOException, InvalidKeyException, NoSessionException
     {
         // Create Client's Key pairs
         ECKeyPair identityKeyPair       = Curve.generateKeyPair();
