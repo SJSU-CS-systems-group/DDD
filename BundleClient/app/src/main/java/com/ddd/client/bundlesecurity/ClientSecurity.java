@@ -27,6 +27,7 @@ import javax.crypto.NoSuchPaddingException;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.NoSessionException;
 import org.whispersystems.libsignal.SessionCipher;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.ecc.Curve;
@@ -59,8 +60,10 @@ public class ClientSecurity {
     private Optional<ECPublicKey> theirOneTimePreKey;
     private ECPublicKey           theirRatchetKey;
 
-    private SessionCipher           cipherSession;
-    private SessionRecord           clientSessionRecord;
+    private SessionCipher         cipherSession;
+    private SessionRecord         clientSessionRecord;
+
+    private String                clientID;
 
     // TODO: Handle restart, create ratchet session with existing keys
     private ClientSecurity(int deviceID, String clientKeyPath, String serverKeyPath) throws IOException, InvalidKeyException, NoSuchAlgorithmException
@@ -72,8 +75,8 @@ public class ClientSecurity {
         ourBaseKey                      = Curve.generateKeyPair();
         
         // Create Client ID
-        String ClientID                 = SecurityUtils.generateID(ourIdentityKeyPair.getPublicKey().serialize());
-        ourAddress                      = new SignalProtocolAddress(ClientID, deviceID);
+        clientID                        = SecurityUtils.generateID(ourIdentityKeyPair.getPublicKey().getPublicKey().serialize());
+        ourAddress                      = new SignalProtocolAddress(clientID, deviceID);
         theirOneTimePreKey              = Optional.<ECPublicKey>absent();
         
         // Write generated keys to files
@@ -86,6 +89,7 @@ public class ClientSecurity {
     
     private String[] writeKeysToFiles(String path) throws IOException
     {
+        /* Create Directory if it does not exist */
         SecurityUtils.createDirectory(path);
         String[] clientKeypaths = { path + File.separator + "clientIdentity.pub",
                                     path + File.separator + "clientBase.pub"};
@@ -231,7 +235,6 @@ public class ClientSecurity {
         return returnPaths.toArray(new String[returnPaths.size()]);
     }
     
-    // TODO: return decrypted file path 
     public void decrypt(String bundlePath, String decryptedPath) throws NoSuchAlgorithmException, IOException, InvalidKeyException, java.security.InvalidKeyException, InvalidKeySpecException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException
     {
         String payloadFile = bundlePath + File.separator + SecurityUtils.PAYLOAD_FILENAME;
@@ -281,5 +284,10 @@ public class ClientSecurity {
         byte[] encryptedBundleID = SecurityUtils.readFromFile(bundleIDPath);
         
         return decryptBundleID(new String(encryptedBundleID, StandardCharsets.UTF_8));
+    }
+
+    public String getClientID()
+    {
+        return this.clientID;
     }
 }

@@ -75,11 +75,8 @@ public class SecurityUtils {
     public static String generateID(String publicKeyPath) throws IOException, NoSuchAlgorithmException, InvalidKeyException, NoSessionException
     {
         byte[] publicKey = decodePublicKeyfromFile(publicKeyPath);
-        MessageDigest md = MessageDigest.getInstance("SHA-1");
-        byte[] hashedKey = md.digest(publicKey);
-        return Base64.encodeToString(hashedKey, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
+        return generateID(publicKey);
     }
-
 
     /* Creates an ID based on the given public key byte array
      * Generates a SHA-1 hash and then encodes it in Base64 (URL safe)

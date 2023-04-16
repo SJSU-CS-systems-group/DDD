@@ -48,21 +48,21 @@ public class ServerSecurity {
     private Optional<ECKeyPair>             ourOneTimePreKey;
     private ECKeyPair                       ourRatchetKey;
     private HashMap<String, ClientSession>  clientMap;
-    
+
     private ServerSecurity(String serverKeyPath) throws IOException, NoSuchAlgorithmException
     {
         clientMap  = new HashMap<>();
 
-//        if (new File(serverKeyPath).exists()) {
-//            try {
-//                loadKeysfromFiles(serverKeyPath);
-//                System.out.println("[Sec]: Using Existing Keys");
-//                return;
-//            } catch (InvalidKeyException e) {
-//                // TODO: Change to log
-//                System.out.println("[Sec]: Error Loading Keys from files, generating new keys instead");
-//            }
-//        }
+        if (new File(serverKeyPath).exists()) {
+            try {
+                loadKeysfromFiles(serverKeyPath);
+                System.out.println("[Sec]: Using Existing Keys");
+                return;
+            } catch (InvalidKeyException e) {
+                // TODO: Change to log
+                System.out.println("[Sec]: Error Loading Keys from files, generating new keys instead");
+            }
+        }
 
         ECKeyPair identityKeyPair       = Curve.generateKeyPair();
         ourIdentityKeyPair              = new IdentityKeyPair(new IdentityKey(identityKeyPair.getPublicKey()),
@@ -120,7 +120,7 @@ public class ServerSecurity {
         /* Create Directory if it does not exist */
         Files.createDirectories(Paths.get(path));
         
-//        writePrivateKeys(path);
+        writePrivateKeys(path);
         SecurityUtils.createEncodedPublicKeyFile(ourIdentityKeyPair.getPublicKey().getPublicKey(), path + File.separator +  "serverIdentity.pub");
         SecurityUtils.createEncodedPublicKeyFile(ourSignedPreKey.getPublicKey(), path + File.separator +  "serverSignedPre.pub");
         SecurityUtils.createEncodedPublicKeyFile(ourRatchetKey.getPublicKey(), path + File.separator +  "serverRatchet.pub");
@@ -248,10 +248,7 @@ public class ServerSecurity {
         String bundleID      = getBundleIDFromFile(bundlePath, client.clientID);
         String decryptedFile = decryptedPath + File.separator + bundleID + SecurityUtils.DECRYPTED_FILE_EXT;
         String signatureFile = bundlePath + File.separator + SecurityUtils.SIGN_FILENAME;
-        
-        String clientID = BundleID.getClientIDFromBundleID(bundleID, BundleID.DOWNSTREAM);
-        System.out.println("ClientID from Bundle ID: "+clientID);
-        System.out.println("Generated Client ID: "+client.clientID);
+
         /* Create Directory if it does not exist */
         Files.createDirectories(Paths.get(decryptedPath));
         

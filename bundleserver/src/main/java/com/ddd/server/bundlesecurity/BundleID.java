@@ -41,7 +41,7 @@ public class BundleID {
 
         currentCounter++;
 
-        byte[] bClientID = clientID.getBytes();
+        byte[] bClientID = Base64.getUrlDecoder().decode(clientID);
         byte[] bCounter = new byte[1];
         bCounter[0]     = (byte) currentCounter;
         byte[] bundleID = new byte[bClientID.length + counterLength];
@@ -66,7 +66,7 @@ public class BundleID {
      */
     public static String generateBundleID(String clientID, long counter, boolean direction)
     {
-        byte[] bClientID = clientID.getBytes();
+        byte[] bClientID = Base64.getUrlDecoder().decode(clientID);
         byte[] bCounter = new byte[1];
         bCounter[0]     = (byte) counter;
         byte[] bundleID = new byte[bClientID.length + counterLength];
@@ -120,9 +120,9 @@ public class BundleID {
         byte[] clientIDBytes = null;
 
         if (direction == UPSTREAM) {
-            clientIDBytes = Arrays.copyOfRange(bundleIDBytes, 0, bundleIDBytes.length - 2);
+            clientIDBytes = Arrays.copyOfRange(bundleIDBytes, 0, bundleIDBytes.length - 1);
         } else {
-            clientIDBytes = Arrays.copyOfRange(bundleIDBytes, 1, bundleIDBytes.length - 1);
+            clientIDBytes = Arrays.copyOfRange(bundleIDBytes, 1, bundleIDBytes.length);
         }
 
         return Base64.getUrlEncoder().encodeToString(clientIDBytes);
