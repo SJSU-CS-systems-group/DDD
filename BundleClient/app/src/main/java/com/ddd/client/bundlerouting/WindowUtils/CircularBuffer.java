@@ -1,14 +1,11 @@
 package com.ddd.client.bundlerouting.WindowUtils;
 
-import android.util.Log;
-
 import java.util.ArrayList;
 import java.util.List;
 
-import com.ddd.bundleclient.HelloworldActivity;
-import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
-import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions.BufferUnderflow;
-import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
+import ddd.WindowUtils.WindowExceptions.BufferOverflow;
+import ddd.WindowUtils.WindowExceptions.BufferUnderflow;
+import ddd.WindowUtils.WindowExceptions.InvalidLength;
 
 public class CircularBuffer {
     private String[] buffer = null;
@@ -24,7 +21,6 @@ public class CircularBuffer {
             throw new InvalidLength("Length ["+length+"] <= 0");
         }
         buffer      = new String[length];
-        end         = length - 1;
         this.length = length;
     }
 
@@ -66,7 +62,8 @@ public class CircularBuffer {
                 count++;
                 i = (i + 1) % length;
             } catch (BufferUnderflow e) {
-                Log.w(HelloworldActivity.TAG, "ERROR: Buffer is Empty");
+                // TODO Change to LOG Warn
+                System.out.println("ERROR: Buffer is Empty");
             }
         }
 
@@ -74,7 +71,8 @@ public class CircularBuffer {
         try {
             delete();
         } catch (BufferUnderflow e) {
-            Log.w(HelloworldActivity.TAG, "ERROR: Buffer is Empty");
+            // TODO Change to LOG Warn
+            System.out.println("ERROR: Buffer is Empty");
         }
 
         /* Return number of deleted items */
@@ -94,5 +92,20 @@ public class CircularBuffer {
         }
 
         return sList.toArray(new String[sList.size()]);
+    }
+
+    public int getLength()
+    {
+        return this.length;
+    }
+
+    public boolean isBufferFull()
+    {
+        return this.capacity == 0;
+    }
+
+    public String getValueAtEnd()
+    {
+        return buffer[end];
     }
 }

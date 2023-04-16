@@ -42,4 +42,25 @@ public class WindowExceptions {
             super(errorMessage);
         }
     }
+
+    public static class ClientNotFound extends Exception {
+        public ClientNotFound(String errorMessage)
+        {
+            super(errorMessage);
+        }
+    }
+
+    public static class ClientAlreadyExists extends Exception {
+        public ClientAlreadyExists(String errorMessage)
+        {
+            super(errorMessage);
+        }
+    }
+
+    public static class InvalidBundleID extends Exception {
+        public InvalidBundleID(String errorMessage)
+        {
+            super(errorMessage);
+        }
+    }
 }
