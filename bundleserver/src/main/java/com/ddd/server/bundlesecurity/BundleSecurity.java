@@ -6,11 +6,19 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.ddd.model.EncryptedPayload;
 import com.ddd.model.Payload;
@@ -28,8 +36,11 @@ public class BundleSecurity {
 
   private static final String BUNDLE_ID_NEXT_COUNTER =
       "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Server\\Shared\\DB\\BUNDLE_ID_NEXT_COUNTER.json";
-
-  private boolean encryptionEnabled = false;
+  
+  @Autowired
+  private ServerSecurity serverSecurity;
+  
+  private boolean encryptionEnabled = true;
 
   private Long getRecvdBundleIdCounter(String bundleId) {
     return Long.valueOf(bundleId.split("-")[1]);
@@ -178,9 +189,14 @@ public class BundleSecurity {
                 + ".jar");
 
     if (this.encryptionEnabled) {
-      this.decrypt(
-          uncompressedBundle.getSource().getAbsolutePath(),
-          uncompressedBundle.getSource().getAbsolutePath());
+      try {
+        serverSecurity.decrypt(
+            uncompressedBundle.getSource().getAbsolutePath(),
+            uncompressedBundle.getSource().getAbsolutePath());
+      } catch (Exception e) {
+        // TODO
+        e.printStackTrace();
+      }
 
       File decryptedPayload =
           new File(

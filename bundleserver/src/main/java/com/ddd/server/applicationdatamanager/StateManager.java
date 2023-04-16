@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.ddd.model.ADU;
 import com.ddd.model.UncompressedPayload;
+import com.ddd.server.bundletransmission.BundleGeneratorService;
 import com.ddd.server.repository.LargestAduIdDeliveredRepository;
 import com.ddd.server.repository.LargestAduIdReceivedRepository;
 import com.ddd.server.repository.LargestBundleIdReceivedRepository;
@@ -21,7 +22,6 @@ import com.ddd.server.repository.entity.LargestBundleIdReceived;
 import com.ddd.server.repository.entity.LastBundleIdSent;
 import com.ddd.server.repository.entity.SentAduDetails;
 import com.ddd.server.repository.entity.SentBundleDetails;
-import com.ddd.utils.BundleUtils;
 
 @Service
 class StateManager {
@@ -236,7 +236,7 @@ class StateManager {
   @Transactional(rollbackFor = Exception.class)
   public Optional<UncompressedPayload.Builder> getLastSentBundlePayloadBuilder(String clientId) {
     Map<String, Object> structure = this.getLastSentBundleStructure(clientId);
-    return BundleUtils.bundleStructureToBuilder(structure);
+    return BundleGeneratorService.bundleStructureToBuilder(structure);
   }
 
   public Optional<String> getLargestRecvdBundleId(String clientId) {

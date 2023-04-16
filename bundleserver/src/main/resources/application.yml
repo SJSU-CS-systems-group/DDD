@@ -29,3 +29,5 @@ bundle-server:
       last-sent-bundle-structure: "C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/Shared/DB/LARGEST_ADU_ID_RECEIVED.json"
     data-store-adaptor:
       app-data-root: "C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/"
+  bundle-security:
+    server-key-path: "C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/BundleSecurity/Keys/Server"

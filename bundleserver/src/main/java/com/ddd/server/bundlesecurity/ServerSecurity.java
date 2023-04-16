@@ -1,15 +1,11 @@
 package com.ddd.server.bundlesecurity;
 
-import org.whispersystems.libsignal.util.guava.Optional;
-
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
@@ -17,13 +13,10 @@ import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
 import java.util.HashMap;
-import java.util.List;
-import java.util.stream.Stream;
-
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
-
+import org.springframework.stereotype.Service;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -31,8 +24,8 @@ import org.whispersystems.libsignal.SessionCipher;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
-import org.whispersystems.libsignal.ecc.ECPublicKey;
 import org.whispersystems.libsignal.ecc.ECPrivateKey;
+import org.whispersystems.libsignal.ecc.ECPublicKey;
 import org.whispersystems.libsignal.protocol.CiphertextMessage;
 import org.whispersystems.libsignal.protocol.SignalMessage;
 import org.whispersystems.libsignal.ratchet.BobSignalProtocolParameters;
@@ -40,11 +33,9 @@ import org.whispersystems.libsignal.ratchet.RatchetingSession;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SessionState;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
-
-import com.ddd.server.bundlesecurity.SecurityUtils;
-import com.ddd.server.bundlesecurity.BundleID;
-import com.ddd.server.bundlesecurity.SecurityUtils.ClientSession;
+import org.whispersystems.libsignal.util.guava.Optional;
 import com.ddd.server.bundlesecurity.SecurityExceptions.ClientSessionException;
+import com.ddd.server.bundlesecurity.SecurityUtils.ClientSession;
 
 public class ServerSecurity {
 
@@ -57,21 +48,21 @@ public class ServerSecurity {
     private Optional<ECKeyPair>             ourOneTimePreKey;
     private ECKeyPair                       ourRatchetKey;
     private HashMap<String, ClientSession>  clientMap;
-
+    
     private ServerSecurity(String serverKeyPath) throws IOException, NoSuchAlgorithmException
     {
         clientMap  = new HashMap<>();
 
-        if (new File(serverKeyPath).exists()) {
-            try {
-                loadKeysfromFiles(serverKeyPath);
-                System.out.println("[Sec]: Using Existing Keys");
-                return;
-            } catch (InvalidKeyException e) {
-                // TODO: Change to log
-                System.out.println("[Sec]: Error Loading Keys from files, generating new keys instead");
-            }
-        }
+//        if (new File(serverKeyPath).exists()) {
+//            try {
+//                loadKeysfromFiles(serverKeyPath);
+//                System.out.println("[Sec]: Using Existing Keys");
+//                return;
+//            } catch (InvalidKeyException e) {
+//                // TODO: Change to log
+//                System.out.println("[Sec]: Error Loading Keys from files, generating new keys instead");
+//            }
+//        }
 
         ECKeyPair identityKeyPair       = Curve.generateKeyPair();
         ourIdentityKeyPair              = new IdentityKeyPair(new IdentityKey(identityKeyPair.getPublicKey()),
@@ -129,7 +120,7 @@ public class ServerSecurity {
         /* Create Directory if it does not exist */
         Files.createDirectories(Paths.get(path));
         
-        writePrivateKeys(path);
+//        writePrivateKeys(path);
         SecurityUtils.createEncodedPublicKeyFile(ourIdentityKeyPair.getPublicKey().getPublicKey(), path + File.separator +  "serverIdentity.pub");
         SecurityUtils.createEncodedPublicKeyFile(ourSignedPreKey.getPublicKey(), path + File.separator +  "serverSignedPre.pub");
         SecurityUtils.createEncodedPublicKeyFile(ourRatchetKey.getPublicKey(), path + File.separator +  "serverRatchet.pub");

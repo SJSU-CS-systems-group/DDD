@@ -23,11 +23,11 @@ import com.ddd.model.UncompressedBundle;
 import com.ddd.model.UncompressedPayload;
 import com.ddd.server.applicationdatamanager.ApplicationDataManager;
 import com.ddd.server.bundlerouting.BundleRouting;
+import com.ddd.server.bundlesecurity.BundleID;
 import com.ddd.server.bundlesecurity.BundleSecurity;
 import com.ddd.server.config.BundleServerConfig;
 import com.ddd.server.repository.LargestBundleIdReceivedRepository;
 import com.ddd.utils.AckRecordUtils;
-import com.ddd.utils.BundleUtils;
 import com.ddd.utils.Constants;
 
 @Service
@@ -41,16 +41,20 @@ public class BundleTransmission {
 
   private BundleRouting bundleRouting;
 
+  private BundleGeneratorService bundleGenServ;
+
   public BundleTransmission(
       BundleSecurity bundleSecurity,
       ApplicationDataManager applicationDataManager,
       BundleRouting bundleRouting,
       LargestBundleIdReceivedRepository largestBundleIdReceivedRepository,
-      BundleServerConfig config) {
+      BundleServerConfig config,
+      BundleGeneratorService bundleGenServ) {
     this.bundleSecurity = bundleSecurity;
     this.applicationDataManager = applicationDataManager;
     this.config = config;
     this.bundleRouting = bundleRouting;
+    this.bundleGenServ = bundleGenServ;
   }
 
   @Transactional(rollbackFor = Exception.class)
@@ -59,8 +63,7 @@ public class BundleTransmission {
     Optional<String> opt = this.applicationDataManager.getLargestRecvdBundleId(clientId);
 
     if (!opt.isEmpty()
-        && !this.bundleSecurity.isLatestReceivedBundleId( // comparator here
-            clientId, bundle.getBundleId(), opt.get())) {
+        && (BundleID.compareBundleIDs(opt.get(), bundle.getBundleId(), BundleID.UPSTREAM) < 1)) {
       return;
     }
 
@@ -118,18 +121,23 @@ public class BundleTransmission {
       bundleRecvProcDir.mkdirs();
 
       for (final File bundleFile : transportDir.listFiles()) {
-        Bundle bundle = new Bundle(bundleFile);
-        UncompressedBundle uncompressedBundle =
-            BundleUtils.extractBundle(bundle, bundleRecvProcDir.getAbsolutePath());
-        Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
-        UncompressedPayload uncompressedPayload =
-            BundleUtils.extractPayload(payload, uncompressedBundle.getSource().getAbsolutePath());
-        this.processReceivedBundle(uncompressedPayload);
         try {
-          FileUtils.deleteDirectory(uncompressedBundle.getSource());
-          FileUtils.delete(bundleFile);
-        } catch (IOException e) {
-          e.printStackTrace();
+          Bundle bundle = new Bundle(bundleFile);
+          UncompressedBundle uncompressedBundle =
+              this.bundleGenServ.extractBundle(bundle, bundleRecvProcDir.getAbsolutePath());
+          Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
+          UncompressedPayload uncompressedPayload =
+              this.bundleGenServ.extractPayload(
+                  payload, uncompressedBundle.getSource().getAbsolutePath());
+          this.processReceivedBundle(uncompressedPayload);
+        } catch (Exception e) {
+          System.out.println(e);
+        } finally {
+          try {
+            FileUtils.delete(bundleFile);
+          } catch (IOException e) {
+            System.out.println(e);
+          }
         }
       }
     }
@@ -211,7 +219,7 @@ public class BundleTransmission {
       } else {
         UncompressedPayload.Builder retxmnBundlePayloadBuilder = optional.get();
         if (optional.isPresent()
-            && BundleUtils.doContentsMatch(generatedPayloadBuilder, optional.get())) {
+            && BundleGeneratorService.doContentsMatch(generatedPayloadBuilder, optional.get())) {
           bundleId = retxmnBundlePayloadBuilder.getBundleId();
           isRetransmission = true;
         } else { // new data to send
@@ -241,13 +249,13 @@ public class BundleTransmission {
           this.bundleRouting.updateClientWindow(clientId, bundleId);
         }
 
-        BundleUtils.writeBundleToFile(
+        this.bundleGenServ.writeUncompressedPayload(
             toSendBundlePayload,
             new File(this.config.getBundleTransmission().getUncompressedPayloadDirectory()),
             toSendBundlePayload.getBundleId());
 
         Payload payload =
-            BundleUtils.compressPayload(
+            this.bundleGenServ.compressPayload(
                 toSendBundlePayload,
                 this.config.getBundleTransmission().getCompressedPayloadDirectory());
         UncompressedBundle uncompressedBundle =
@@ -262,7 +270,7 @@ public class BundleTransmission {
         toSendTxpDir.mkdirs();
 
         Bundle toSend =
-            BundleUtils.compressBundle(uncompressedBundle, toSendTxpDir.getAbsolutePath());
+            this.bundleGenServ.compressBundle(uncompressedBundle, toSendTxpDir.getAbsolutePath());
         bundlesToSend.add(new BundleDTO(bundleId, toSend));
         deletionSet.addAll(bundleIdsPresent);
       }

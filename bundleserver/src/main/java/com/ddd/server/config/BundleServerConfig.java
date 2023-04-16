@@ -19,6 +19,7 @@ public class BundleServerConfig {
 
   private BundleTransmission bundleTransmission = new BundleTransmission();
   private ApplicationDataManager applicationDataManager = new ApplicationDataManager();
+  private BundleSecurity bundleSecurity = new BundleSecurity();
 
   public BundleTransmission getBundleTransmission() {
     return this.bundleTransmission;
@@ -42,6 +43,14 @@ public class BundleServerConfig {
 
   public void setBundleStoreRoot(String bundleStoreRoot) {
     this.bundleStoreRoot = bundleStoreRoot;
+  }
+
+  public BundleSecurity getBundleSecurity() {
+    return bundleSecurity;
+  }
+
+  public void setBundleSecurity(BundleSecurity bundleSecurity) {
+    this.bundleSecurity = bundleSecurity;
   }
 
   public static class BundleTransmission {
@@ -187,5 +196,15 @@ public class BundleServerConfig {
         this.lastSentBundleStructure = lastSentBundleStructure;
       }
     }
+  }
+
+  public static class BundleSecurity {
+    private String serverKeyPath;
+
+    public String getServerKeyPath() {
+    return serverKeyPath;}
+
+    public void setServerKeyPath(String serverKeyPath) {
+    this.serverKeyPath = serverKeyPath;}
   }
 }
