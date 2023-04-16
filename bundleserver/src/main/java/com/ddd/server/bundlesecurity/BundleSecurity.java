@@ -197,12 +197,19 @@ public class BundleSecurity {
         // TODO
         e.printStackTrace();
       }
-
+      String clientId = "";
+      String bundleId = "";
+      try {
+        clientId = SecurityUtils.getClientID(uncompressedBundle.getSource().getAbsolutePath());
+        bundleId = serverSecurity.getBundleIDFromFile(uncompressedBundle.getSource().getAbsolutePath(), clientId);
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
       File decryptedPayload =
           new File(
               uncompressedBundle.getSource().getAbsolutePath()
                   + File.separator
-                  + Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME
+                  + bundleId
                   + ".decrypted");
       if (decryptedPayload.exists()) {
         decryptedPayload.renameTo(decryptedPayloadJar);

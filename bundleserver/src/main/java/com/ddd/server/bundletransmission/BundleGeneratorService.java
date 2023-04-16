@@ -17,6 +17,7 @@ import com.ddd.model.EncryptedPayload;
 import com.ddd.model.Payload;
 import com.ddd.model.UncompressedBundle;
 import com.ddd.model.UncompressedPayload;
+import com.ddd.server.bundlesecurity.SecurityUtils;
 import com.ddd.server.bundlesecurity.ServerSecurity;
 import com.ddd.utils.ADUUtils;
 import com.ddd.utils.AckRecordUtils;
@@ -29,7 +30,10 @@ import com.google.gson.reflect.TypeToken;
 @Service
 public class BundleGeneratorService {
 
-  public BundleGeneratorService(ServerSecurity serverSecurity) {}
+  private ServerSecurity serverSecurity;
+  public BundleGeneratorService(ServerSecurity serverSecurity) {
+    this.serverSecurity = serverSecurity;
+  }
 
   public UncompressedBundle extractBundle(Bundle bundle, String extractDirPath) {
     String bundleFileName = bundle.getSource().getName();
@@ -40,8 +44,14 @@ public class BundleGeneratorService {
     JarUtils.jarToDir(bundle.getSource().getAbsolutePath(), extractedBundlePath);
 
     String bundleId = "client0-0";
-    // TODO    String bundleId = serverSecurity.getBundleIDFromFile(extractedBundlePath);
-
+//    String clientId = "";
+//    try {
+//      clientId = SecurityUtils.getClientID(extractedBundlePath);
+//      bundleId = serverSecurity.getBundleIDFromFile(extractedBundlePath, clientId);
+//    } catch (Exception e) {
+//      e.printStackTrace();
+//    }
+    
     EncryptedPayload encryptedPayload =
         new EncryptedPayload(
             bundleId,
@@ -55,7 +65,7 @@ public class BundleGeneratorService {
   }
 
   public UncompressedPayload extractPayload(Payload payload, String extractDirPath) {
-    String extractedPayloadPath = extractDirPath + File.separator + "payload";
+    String extractedPayloadPath = extractDirPath + File.separator + "extracted-payload";
     JarUtils.jarToDir(payload.getSource().getAbsolutePath(), extractedPayloadPath);
 
     String ackPath =

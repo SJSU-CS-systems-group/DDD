@@ -149,8 +149,9 @@ public class BundleUtils {
     String jarFilePath = bundleFile.getAbsolutePath() + ".jar";
     try {
       JarUtils.dirToJar(bundleFile.getAbsolutePath(), jarFilePath);
-      FileUtils.deleteDirectory(bundleFile);
       System.out.println("Folder has been compressed to ZIP file.");
+      FileUtils.deleteDirectory(bundleFile);
+      System.out.println("Deleted payload directory " + bundleFile.getAbsolutePath());
     } catch (IOException e) {
       e.printStackTrace();
     }

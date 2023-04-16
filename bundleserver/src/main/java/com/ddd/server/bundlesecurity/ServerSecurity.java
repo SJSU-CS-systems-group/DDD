@@ -60,7 +60,7 @@ public class ServerSecurity {
                 return;
             } catch (InvalidKeyException e) {
                 // TODO: Change to log
-                System.out.println("[Sec]: Error Loading Keys from files, generating new keys instead");
+//                System.out.println("[Sec]: Error Loading Keys from files, generating new keys instead");
             }
         }
 
@@ -372,8 +372,8 @@ public class ServerSecurity {
         String bundleIDPath = bundlePath + File.separator + SecurityUtils.BUNDLEID_FILENAME;
         byte[] encryptedBundleID = SecurityUtils.readFromFile(bundleIDPath);
         
+        System.out.println("Encrypted Bundle ID: " + new String(encryptedBundleID, StandardCharsets.UTF_8));
         byte[] bundleBytes = decryptBundleID(new String(encryptedBundleID, StandardCharsets.UTF_8), clientID);
-
         return new String(bundleBytes, StandardCharsets.UTF_8);
     }
 };
