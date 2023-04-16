@@ -37,7 +37,12 @@ public class BundleSecurity {
 
   private int counter = 0;
 
+  private BundleIDGenerator bundleIDGenerator;
+
   private String clientId = "client0";
+
+  private String clientKeyPath = "";
+  private String serverKeyPath = "";
 
   private String getLargestBundleIdReceived() {
     String bundleId = "";
@@ -73,8 +78,8 @@ public class BundleSecurity {
   public BundleSecurity(String rootFolder) {
     RootFolder = rootFolder;
     // TODO: Add actual server key path
-    String clientKeyPath = RootFolder + "/Keys/Client/";
-    String serverKeyPath = RootFolder + "/Keys/Server/";
+    clientKeyPath = RootFolder + "/Keys/Client/";
+    serverKeyPath = RootFolder + "/Keys/Server/";
 
     File bundleIdNextCounter = new File(RootFolder+ BUNDLE_ID_NEXT_COUNTER);
 
@@ -105,6 +110,7 @@ public class BundleSecurity {
     /* Initializing Security Module*/
     try {
       client = ClientSecurity.getInstance(1, clientKeyPath, serverKeyPath);
+      bundleIDGenerator = new BundleIDGenerator();
       Log.d(HelloworldActivity.TAG,"Kuch Bhi");
     } catch (NoSuchAlgorithmException e) {
       e.printStackTrace();
@@ -132,10 +138,12 @@ public class BundleSecurity {
   }
 
   public String generateNewBundleId() {
-    String counterString = Integer.valueOf(this.counter).toString();
-    this.counter++;
-    this.writeCounterToDB();
-    return this.clientId + "-" + counterString;
+//    String counterString = Integer.valueOf(this.counter).toString();
+//    this.counter++;
+//    this.writeCounterToDB();
+//    return this.clientId + "-" + counterString;
+//
+    return bundleIDGenerator.generateBundleID(clientKeyPath, BundleIDGenerator.UPSTREAM);
   }
 
   public BundleWrapper wrapBundleContents(Bundle bundle, String bundleWrapperPath) {

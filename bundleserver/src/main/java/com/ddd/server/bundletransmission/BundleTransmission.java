@@ -60,12 +60,12 @@ public class BundleTransmission {
   @Transactional(rollbackFor = Exception.class)
   public void processReceivedBundle(UncompressedPayload bundle) {
     String clientId = this.bundleSecurity.getClientIdFromBundleId(bundle.getBundleId());
-    Optional<String> opt = this.applicationDataManager.getLargestRecvdBundleId(clientId);
+//    Optional<String> opt = this.applicationDataManager.getLargestRecvdBundleId(clientId);
 
-    if (!opt.isEmpty()
-        && (BundleID.compareBundleIDs(opt.get(), bundle.getBundleId(), BundleID.UPSTREAM) < 1)) {
-      return;
-    }
+//    if (!opt.isEmpty()
+//        && (BundleID.compareBundleIDs(opt.get(), bundle.getBundleId(), BundleID.UPSTREAM) < 1)) {
+//      return;
+//    }
 
     AckRecordUtils.writeAckRecordToFile(
         new Acknowledgement(bundle.getBundleId()), new File(this.getAckRecordLocation(clientId)));
