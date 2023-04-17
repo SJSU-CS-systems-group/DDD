@@ -227,6 +227,10 @@ public class BundleSecurity {
     String bundleId = payload.getBundleId();
     String[] paths;
     String clientKeyPath = "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Server\\BundleTransmission\\received-processing\\transport0\\client0-0";
+    if (!this.encryptionEnabled) {
+      return new UncompressedBundle( 
+          bundleId, payload.getSource(), null, null, null);
+    }
     try {
       paths = serverSecurity.encrypt(
           payload.getSource().getAbsolutePath(),

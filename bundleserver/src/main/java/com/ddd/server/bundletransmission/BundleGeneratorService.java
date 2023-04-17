@@ -17,6 +17,7 @@ import com.ddd.model.EncryptedPayload;
 import com.ddd.model.Payload;
 import com.ddd.model.UncompressedBundle;
 import com.ddd.model.UncompressedPayload;
+import com.ddd.server.bundlesecurity.BundleID;
 import com.ddd.server.bundlesecurity.SecurityUtils;
 import com.ddd.server.bundlesecurity.ServerSecurity;
 import com.ddd.utils.ADUUtils;
@@ -43,25 +44,28 @@ public class BundleGeneratorService {
             + bundleFileName.substring(0, bundleFileName.lastIndexOf('.'));
     JarUtils.jarToDir(bundle.getSource().getAbsolutePath(), extractedBundlePath);
 
-    String bundleId = "client0-0";
-//    String clientId = "";
-//    try {
-//      clientId = SecurityUtils.getClientID(extractedBundlePath);
-//      bundleId = serverSecurity.getBundleIDFromFile(extractedBundlePath, clientId);
-//    } catch (Exception e) {
-//      e.printStackTrace();
-//    }
+    String bundleId = "";
+    String clientId = "";
+    try {
+      clientId = SecurityUtils.getClientID(extractedBundlePath);
+      bundleId = serverSecurity.getBundleIDFromFile(extractedBundlePath, clientId);
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
     
+    File[] payloads = new File(
+        extractedBundlePath
+        + File.separator
+        + "payloads").listFiles();
     EncryptedPayload encryptedPayload =
         new EncryptedPayload(
             bundleId,
-            new File(
-                extractedBundlePath
-                    + File.separator
-                    + Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME));
-
+            payloads[0]);
+    File payloadSign = new File(extractedBundlePath
+        + File.separator + "signatures").listFiles()[0];
+    
     return new UncompressedBundle( // TODO get encryption header, payload signature
-        bundleId, new File(extractedBundlePath), null, encryptedPayload, null);
+        bundleId, new File(extractedBundlePath), null, encryptedPayload, payloadSign);
   }
 
   public UncompressedPayload extractPayload(Payload payload, String extractDirPath) {
@@ -77,6 +81,7 @@ public class BundleGeneratorService {
     builder.setAckRecord(AckRecordUtils.readAckRecordFromFile(new File(ackPath)));
     builder.setBundleId(payload.getBundleId());
     builder.setADUs(ADUUtils.readADUs(new File(aduPath)));
+    builder.setBundleId(payload.getBundleId());
     builder.setSource(new File(extractedPayloadPath));
 
     return builder.build();
@@ -94,7 +99,7 @@ public class BundleGeneratorService {
     String bundleId = uncompressedPayload.getBundleId();
 
     File uncompressedPath = uncompressedPayload.getSource();
-    File compressedPath = new File(payloadDirPath + File.separator + bundleId + ".jar");
+    File compressedPath = new File(payloadDirPath + File.separator + Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar");
     JarUtils.dirToJar(uncompressedPath.getAbsolutePath(), compressedPath.getAbsolutePath());
     return new Payload(bundleId, compressedPath);
   }
