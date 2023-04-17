@@ -1,4 +1,5 @@
-target/
+target/*
+!target/signal-cli.jar
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
