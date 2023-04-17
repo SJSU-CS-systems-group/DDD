@@ -114,11 +114,6 @@ public class BundleSecurity {
         || this.compareRecvdBundleIds(bundleId, largestBundleIdReceived) > 0);
   }
 
-  public String generateBundleId(String clientId) {
-    Long counter = this.getBundleIdNextCounters().getOrDefault(clientId, 0L);
-    this.writeCounterToDB(clientId, counter + 1);
-    return clientId + "#" + counter.toString();
-  }
 
   //  public String generateBundleID(String clientKeyPath, boolean direction) {
   //    return "";
