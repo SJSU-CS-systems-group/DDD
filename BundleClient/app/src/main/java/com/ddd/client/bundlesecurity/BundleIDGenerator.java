@@ -10,6 +10,8 @@ import org.whispersystems.libsignal.InvalidKeyException;
 import com.google.common.primitives.Bytes;
 
 public class BundleIDGenerator {
+    private static BundleIDGenerator singleGeneratorInstance = null;
+
     public static final boolean UPSTREAM     = true;
     public static final boolean DOWNSTREAM   = false;
     /* Length of the Counter */
@@ -18,6 +20,16 @@ public class BundleIDGenerator {
     /* Counter value used as unsigned long */
     private long currentCounter = 0;
 
+    private BundleIDGenerator() {}
+
+    public BundleIDGenerator getInstance()
+    {
+        if (singleGeneratorInstance == null) {
+            singleGeneratorInstance = new BundleIDGenerator();
+        }
+        return singleGeneratorInstance;
+    }
+    
     /* Generates bundleID
      * Used when a window is NOT involved to maintain the counter values
      * Parameters:
