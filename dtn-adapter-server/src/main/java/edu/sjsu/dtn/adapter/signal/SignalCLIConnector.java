@@ -1,4 +1,4 @@
-package edu.sjsu.dtn.adapter.communicationservice;
+package edu.sjsu.dtn.adapter.signal;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -8,14 +8,21 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Scanner;
+import java.util.prefs.Preferences;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class SignalCLIConnector {
 
-	public static byte[] performRegistration(byte[] bytes) throws IOException {
+	public static byte[] performRegistration(String dddClientId, byte[] bytes) throws IOException {
+
+		Preferences prefs = Preferences.userRoot().node(SignalCLIConnector.class.getName());
 
 		byte[] fileContent = null;
 		String jsonString = new String(bytes, StandardCharsets.UTF_8);
@@ -23,16 +30,15 @@ public class SignalCLIConnector {
 		JsonNode jsonObj = mapper.readTree(jsonString);
 		Runtime runtime = Runtime.getRuntime();
 		Scanner scanner = new Scanner(System.in);
-		
+
 		// check if its a register request
 		if (jsonObj.hasNonNull("requestType")) {
-			
+
 			if ("\"register\"".equalsIgnoreCase(jsonObj.get("requestType").toString())) {
-			
-				
-				System.out.println("Enter phone number");
+
+				System.out.println("Enter phone number in E.164 format: ");
 				String phoneNumber = scanner.nextLine();
-				System.out.println("Enter signal captcha");
+				System.out.println("Enter signal captcha: ");
 				String captcha = scanner.nextLine();
 				Path tempFile = Files.createTempFile("registrationInfo", ".json");
 				mapper.writerWithDefaultPrettyPrinter().writeValue(tempFile.toFile(), jsonObj);
@@ -74,6 +80,8 @@ public class SignalCLIConnector {
 					}
 				}
 
+				prefs.put(dddClientId, phoneNumber);
+
 				tempFile.toFile().deleteOnExit();
 				scanner.close();
 			}
@@ -81,10 +89,38 @@ public class SignalCLIConnector {
 		return fileContent;
 	}
 
+	public static List<String> receiveMessages(String clientId) {
+
+		Preferences prefs = Preferences.userRoot().node(SignalCLIConnector.class.getName());
+		List<String> messageLocations = new ArrayList<>();
+		if (prefs.get(clientId, null) != null) {
+			String phoneNumber = prefs.get(clientId, null);
+			try {
+				Runtime runtime = Runtime.getRuntime();
+				Process pc = runtime.exec("java -jar target/signal-cli.jar -a " + phoneNumber + " receive");
+				BufferedReader stdInput = new BufferedReader(new InputStreamReader(pc.getInputStream()));
+				
+				String s = null;
+				while ((s = stdInput.readLine()) != null) {
+					System.out.println(s);
+					File f = new File(s);
+					if (f.exists() && !f.isDirectory()) {
+						messageLocations.add(s);
+					}
+				}
+				
+			} catch (Exception e) {
+				System.out.println("Exception in receive");
+			}
+		}
+		return messageLocations;
+	}
+
 //	test for performRegistration
 //	public static void main(String[] args) throws IOException {
 //		Path path = Paths.get("/Users/spartan/Documents/DDD/keys/publickeys.json");
 //		byte[] data = Files.readAllBytes(path);
-//		performRegistration(data);
+//		performRegistration("1", data);
+//		receiveMessages("1");
 //	}
 }
