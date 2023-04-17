@@ -24,6 +24,7 @@ import com.ddd.client.bundledeliveryagent.BundleDeliveryAgent;
 import com.ddd.client.bundlerouting.ClientWindow;
 import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions;
 import com.ddd.client.bundletransmission.BundleTransmission;
+import com.ddd.model.BundleDTO;
 import com.ddd.model.BundleWrapper;
 import com.ddd.wifidirect.WifiDirectManager;
 import com.google.protobuf.ByteString;
@@ -57,6 +58,7 @@ public class HelloworldActivity extends AppCompatActivity {
   private Button detectTransportButton;
   private FileChooserFragment fragment;
   private TextView resultText;
+  private BundleDeliveryAgent agent;
   // context
   public static Context ApplicationContext;
 
@@ -89,6 +91,7 @@ public class HelloworldActivity extends AppCompatActivity {
     resultText.setMovementMethod(new ScrollingMovementMethod());
     FragmentManager fragmentManager = this.getSupportFragmentManager();
     this.fragment = (FileChooserFragment) fragmentManager.findFragmentById(R.id.fragment_fileChooser);
+    this.agent = new BundleDeliveryAgent(getApplicationContext().getApplicationInfo().dataDir);
 
     // set up wifi direct
     wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle());
@@ -116,7 +119,6 @@ public class HelloworldActivity extends AppCompatActivity {
     detectTransportButton.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View view) {
-        BundleDeliveryAgent agent = new BundleDeliveryAgent(getApplicationContext().getApplicationInfo().dataDir);
         agent.send();
       }
     });
@@ -296,7 +298,7 @@ public class HelloworldActivity extends AppCompatActivity {
         FileServiceGrpc.FileServiceStub stub = FileServiceGrpc.newStub(channel);
         StreamObserver<FileUploadRequest> streamObserver = stub.uploadFile(new FileUploadObserver());
         BundleTransmission bundleTransmission = new BundleTransmission(getApplicationContext().getApplicationInfo().dataDir);
-        BundleWrapper toSend = bundleTransmission.generateBundleForTransmission();
+        BundleDTO toSend = bundleTransmission.generateBundleForTransmission();
         System.out.println("[BDA] An outbound bundle generated with id: " + toSend.getBundleId());
         Date current = Calendar.getInstance().getTime();
         FileUploadRequest metadata = FileUploadRequest.newBuilder()
@@ -313,7 +315,7 @@ public class HelloworldActivity extends AppCompatActivity {
         FileInputStream inputStream = null;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 //        inputStream = getResources().openRawResource(R.raw.payload);
-          inputStream = new FileInputStream(toSend.getSource());
+          inputStream = new FileInputStream(toSend.getBundle().getSource());
         }
         int chunkSize = 1000*1000*4;
         byte[] bytes = new byte[chunkSize];

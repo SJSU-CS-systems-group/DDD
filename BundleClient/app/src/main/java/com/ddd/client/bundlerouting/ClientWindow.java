@@ -88,4 +88,9 @@ public class ClientWindow {
     {
         return window.getBuffer();
     }
+
+    public static ClientWindow getInstance() {
+      // TODO Auto-generated method stub
+      return null;
+    }
 }

@@ -10,7 +10,7 @@ import com.ddd.bundleclient.HelloworldActivity;
 import com.ddd.datastore.filestore.FileStoreHelper;
 import com.ddd.datastore.providers.MessageProvider;
 import com.ddd.model.ADU;
-import com.ddd.model.Bundle;
+import com.ddd.model.UncompressedPayload;
 import com.ddd.wifidirect.WifiDirectBroadcastReceiver;
 
 import java.io.File;

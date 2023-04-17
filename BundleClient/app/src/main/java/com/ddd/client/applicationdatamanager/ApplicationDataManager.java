@@ -25,7 +25,7 @@ import java.util.Optional;
 import com.ddd.bundleclient.HelloworldActivity;
 import com.ddd.datastore.providers.MessageProvider;
 import com.ddd.model.ADU;
-import com.ddd.model.Bundle;
+import com.ddd.model.UncompressedPayload;
 import com.ddd.utils.ADUUtils;
 import com.ddd.utils.BundleUtils;
 import com.google.gson.Gson;
@@ -181,11 +181,11 @@ class StateManager {
     }
   }
 
-  private void writeLastSentBundleStructure(Bundle lastSentBundle) {
+  private void writeLastSentBundleStructure(UncompressedPayload lastSentBundle) {
     BundleUtils.writeBundleStructureToJson(lastSentBundle, new File(ROOT_DIR+LAST_SENT_BUNDLE_STRUCTURE));
   }
 
-  public void registerSentBundleDetails(Bundle sentBundle) {
+  public void registerSentBundleDetails(UncompressedPayload sentBundle) {
     if (sentBundle.getADUs().isEmpty()) {
       return;
     }
@@ -223,7 +223,7 @@ class StateManager {
     this.writeLargestADUIdDeliveredDetails(largestADUIdDeliveredDetails);
   }
 
-  public Optional<Bundle.Builder> getLastSentBundleBuilder() {
+  public Optional<UncompressedPayload.Builder> getLastSentBundleBuilder() {
     return BundleUtils.jsonToBundleBuilder(new File(ROOT_DIR+LAST_SENT_BUNDLE_STRUCTURE));
   }
 }
@@ -321,10 +321,10 @@ public class ApplicationDataManager {
     return res;
   }
 
-  public void notifyBundleSent(Bundle bundle) {
+  public void notifyBundleSent(UncompressedPayload bundle) {
     this.stateManager.registerSentBundleDetails(bundle);
   }
-  public Optional<Bundle.Builder> getLastSentBundleBuilder() {
+  public Optional<UncompressedPayload.Builder> getLastSentBundleBuilder() {
     return this.stateManager.getLastSentBundleBuilder();
   }
 }

@@ -1,20 +1,13 @@
 package com.ddd.utils;
 
-import android.util.Log;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -22,19 +15,23 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 import org.apache.commons.io.FileUtils;
-
 import com.ddd.bundleclient.HelloworldActivity;
+import com.ddd.client.bundlesecurity.ClientSecurity;
+import com.ddd.client.bundlesecurity.SecurityUtils;
 import com.ddd.model.ADU;
 import com.ddd.model.Acknowledgement;
 import com.ddd.model.Bundle;
+import com.ddd.model.EncryptedPayload;
+import com.ddd.model.Payload;
+import com.ddd.model.UncompressedBundle;
+import com.ddd.model.UncompressedPayload;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
+import android.util.Log;
 
 public class BundleUtils {
 
@@ -72,7 +69,7 @@ public class BundleUtils {
    *            | gmail-0
    *            | gmail-1
    * */
-  public static Bundle.Builder readBundleFromFile(File bundleFile) {
+  public static UncompressedPayload.Builder readBundleFromFile(File bundleFile) {
     String bundleFileName = bundleFile.getName();
     File extractedBundleFile =
             new File(
@@ -88,7 +85,7 @@ public class BundleUtils {
     String aduPath = path + File.separator + Constants.BUNDLE_ADU_DIRECTORY_NAME;
     Log.d(HelloworldActivity.TAG, "[BU] ADU Path: "+ aduPath);
 
-    Bundle.Builder builder = new Bundle.Builder();
+    UncompressedPayload.Builder builder = new UncompressedPayload.Builder();
 
     builder.setAckRecord(AckRecordUtils.readAckRecordFromFile(new File(ackPath)));
     builder.setBundleId(readBundleIdFromFile(new File(bundleIdPath)));
@@ -98,7 +95,7 @@ public class BundleUtils {
     return builder;
   }
 
-  public static void writeBundleToFile(Bundle bundle, File targetDirectory, String bundleFileName) {
+  public static void writeBundleToFile(UncompressedPayload bundle, File targetDirectory, String bundleFileName) {
     String bundleId = bundle.getBundleId();
     String bundleFilePath =
         targetDirectory.getAbsolutePath() + "/" + bundleId;
@@ -159,7 +156,7 @@ public class BundleUtils {
         "[BundleUtils] Wrote bundle with id = " + bundleId + " to " + targetDirectory);
   }
 
-  public static void writeBundleStructureToJson(Bundle bundle, File jsonFile) {
+  public static void writeBundleStructureToJson(UncompressedPayload bundle, File jsonFile) {
     Gson gson = new GsonBuilder().setPrettyPrinting().create();
     Map<String, Object> lastSentBundleStructure = new HashMap<>();
 
@@ -191,7 +188,7 @@ public class BundleUtils {
   }
 
   @SuppressWarnings("unchecked")
-  public static Optional<Bundle.Builder> jsonToBundleBuilder(File jsonFile) {
+  public static Optional<UncompressedPayload.Builder> jsonToBundleBuilder(File jsonFile) {
     if (!jsonFile.exists() || (jsonFile.length() == 0)) {
       return Optional.empty();
     } else {
@@ -201,7 +198,7 @@ public class BundleUtils {
         Type mapType = new TypeToken<Map<String, Object>>() {}.getType();
         ret = gson.fromJson(new FileReader(jsonFile), mapType);
 
-        Bundle.Builder builder = new Bundle.Builder();
+        UncompressedPayload.Builder builder = new UncompressedPayload.Builder();
         builder.setAckRecord(new Acknowledgement((String) ret.get("acknowledgement")));
         builder.setBundleId((String) ret.get("bundle-id"));
         if (ret.containsKey("ADU")) {
@@ -233,7 +230,7 @@ public class BundleUtils {
     }
   }
 
-  public static boolean doContentsMatch(Bundle.Builder a, Bundle.Builder b) {
+  public static boolean doContentsMatch(UncompressedPayload.Builder a, UncompressedPayload.Builder b) {
 
     Acknowledgement aAckRecord = a.getAckRecord();
     Acknowledgement bAckRecord = b.getAckRecord();
@@ -274,5 +271,117 @@ public class BundleUtils {
       }
     }
     return true;
+  }
+  
+  public static void writeUncompressedPayload(
+      UncompressedPayload uncompressedPayload, File targetDirectory, String bundleFileName) {
+    String bundleId = uncompressedPayload.getBundleId();
+    String bundleFilePath =
+        targetDirectory.getAbsolutePath() + "/" + bundleId;
+
+    File bundleFile = new File(bundleFilePath);
+    if (!bundleFile.exists()) {
+      bundleFile.mkdirs();
+    }
+    String ackPath =
+        bundleFilePath
+            + File.separator
+            + Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME;
+
+    File ackRecordFile = new File(ackPath);
+    if (!ackRecordFile.exists()) {
+      try {
+        ackRecordFile.createNewFile();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    }
+    AckRecordUtils.writeAckRecordToFile(uncompressedPayload.getAckRecord(), ackRecordFile);
+
+    String aduPath =
+        bundleFilePath
+            + File.separator
+            + Constants.BUNDLE_ADU_DIRECTORY_NAME;
+
+    List<ADU> adus = uncompressedPayload.getADUs();
+
+    if (!adus.isEmpty()) {
+      File aduDirectory = new File(aduPath);
+      aduDirectory.mkdirs();
+      ADUUtils.writeADUs(uncompressedPayload.getADUs(), aduDirectory);
+    }
+
+    System.out.println(
+        "[BundleUtils] Wrote bundle payload with id = " + bundleId + " to " + targetDirectory);
+  }
+  
+  public static Payload compressPayload(UncompressedPayload uncompressedPayload, String payloadDirPath) {
+    String bundleId = uncompressedPayload.getBundleId();
+
+    File uncompressedPath = uncompressedPayload.getSource();
+    File compressedPath = new File(payloadDirPath + File.separator + Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar");
+    JarUtils.dirToJar(uncompressedPath.getAbsolutePath(), compressedPath.getAbsolutePath());
+    return new Payload(bundleId, compressedPath);
+  }
+  
+  public static Bundle compressBundle(UncompressedBundle uncompressedBundle, String bundleGenPath) {
+    String bundleId = uncompressedBundle.getBundleId();
+    File uncompressedBundlePath = uncompressedBundle.getSource();
+    File bundleFile = new File(bundleGenPath + File.separator + bundleId + ".jar");
+    JarUtils.dirToJar(uncompressedBundlePath.getAbsolutePath(), bundleFile.getAbsolutePath());
+    return new Bundle(bundleFile);
+  }
+  
+  
+  public static UncompressedBundle extractBundle(Bundle bundle, String extractDirPath) {
+    String bundleFileName = bundle.getSource().getName();
+    String extractedBundlePath =
+        extractDirPath
+            + File.separator
+            + bundleFileName.substring(0, bundleFileName.lastIndexOf('.'));
+    JarUtils.jarToDir(bundle.getSource().getAbsolutePath(), extractedBundlePath);
+
+    String bundleId = "client0-0";
+    String clientId = "";
+    try {
+      clientId = SecurityUtils.getClientID(extractedBundlePath);
+      ClientSecurity client = ClientSecurity.getInstance(0, clientId, clientId); // TODO
+      bundleId = client.getBundleIDFromFile(extractedBundlePath);
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    
+    File[] payloads = new File(
+        extractedBundlePath
+        + File.separator
+        + "payloads").listFiles();
+    EncryptedPayload encryptedPayload =
+        new EncryptedPayload(
+            bundleId,
+            payloads[0]);
+    File payloadSign = new File(extractedBundlePath
+        + File.separator + "signatures").listFiles()[0];
+    
+    return new UncompressedBundle( // TODO get encryption header, payload signature
+        bundleId, new File(extractedBundlePath), null, encryptedPayload, payloadSign);
+  }
+
+  public static UncompressedPayload extractPayload(Payload payload, String extractDirPath) {
+    String extractedPayloadPath = extractDirPath + File.separator + "extracted-payload";
+    JarUtils.jarToDir(payload.getSource().getAbsolutePath(), extractedPayloadPath);
+
+    String ackPath =
+        extractedPayloadPath + File.separator + Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME;
+    String aduPath = extractedPayloadPath + File.separator + Constants.BUNDLE_ADU_DIRECTORY_NAME;
+
+    UncompressedPayload.Builder builder = new UncompressedPayload.Builder();
+
+    builder.setAckRecord(AckRecordUtils.readAckRecordFromFile(new File(ackPath)));
+    builder.setBundleId(payload.getBundleId());
+    builder.setADUs(ADUUtils.readADUs(new File(aduPath)));
+    builder.setBundleId(payload.getBundleId());
+    builder.setSource(new File(extractedPayloadPath));
+
+    return builder.build();
   }
 }
