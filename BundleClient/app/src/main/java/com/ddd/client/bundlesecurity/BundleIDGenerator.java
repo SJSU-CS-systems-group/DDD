@@ -22,7 +22,7 @@ public class BundleIDGenerator {
 
     private BundleIDGenerator() {}
 
-    public BundleIDGenerator getInstance()
+    public static BundleIDGenerator getInstance()
     {
         if (singleGeneratorInstance == null) {
             singleGeneratorInstance = new BundleIDGenerator();
@@ -52,7 +52,7 @@ public class BundleIDGenerator {
         }
 
         currentCounter++;
-
+        System.out.println(currentCounter);
         byte[] bClientID = Base64.decode(clientID, Base64.URL_SAFE | Base64.NO_WRAP);
         byte[] bCounter = new byte[1];
         bCounter[0]     = (byte) currentCounter;

@@ -57,6 +57,7 @@ public class HelloworldActivity extends AppCompatActivity {
   private Button detectTransportButton;
   private FileChooserFragment fragment;
   private TextView resultText;
+  private BundleDeliveryAgent agent;
   // context
   public static Context ApplicationContext;
 
@@ -91,6 +92,7 @@ public class HelloworldActivity extends AppCompatActivity {
     resultText.setMovementMethod(new ScrollingMovementMethod());
     FragmentManager fragmentManager = this.getSupportFragmentManager();
     this.fragment = (FileChooserFragment) fragmentManager.findFragmentById(R.id.fragment_fileChooser);
+    this.agent = new BundleDeliveryAgent(getApplicationContext().getApplicationInfo().dataDir);
 
     // set up wifi direct
     wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle());
@@ -116,7 +118,6 @@ public class HelloworldActivity extends AppCompatActivity {
     detectTransportButton.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View view) {
-        BundleDeliveryAgent agent = new BundleDeliveryAgent(getApplicationContext().getApplicationInfo().dataDir);
         agent.send();
       }
     });
