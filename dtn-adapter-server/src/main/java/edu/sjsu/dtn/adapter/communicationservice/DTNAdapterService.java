@@ -2,9 +2,13 @@ package edu.sjsu.dtn.adapter.communicationservice;
 
 import com.google.protobuf.ByteString;
 
+import edu.sjsu.dtn.adapter.signal.SignalCLIConnector;
 import edu.sjsu.dtn.storage.FileStoreHelper;
 import io.grpc.stub.StreamObserver;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,7 +24,7 @@ public class DTNAdapterService extends DTNAdapterGrpc.DTNAdapterImplBase {
 		for (int i = 0; i < request.getDataCount(); i++) {
 			byte[] reply = null;
 			try {
-				reply = SignalCLIConnector.performRegistration(request.getData(i).toByteArray());
+				reply = SignalCLIConnector.performRegistration(request.getClientId(), request.getData(i).toByteArray());
 				sendHelper.AddFile(request.getClientId(), reply);
 
 			} catch (Exception e) {
@@ -36,7 +40,6 @@ public class DTNAdapterService extends DTNAdapterGrpc.DTNAdapterImplBase {
 			System.out.println("data: " + ByteString.copyFrom(dataList.get(i)));
 			dataListConverted.add(ByteString.copyFrom(dataList.get(i)));
 		}
-		//
 		AppData appData = AppData.newBuilder().addAllData(dataListConverted).build();
 
 		responseObserver.onNext(appData);
@@ -45,6 +48,17 @@ public class DTNAdapterService extends DTNAdapterGrpc.DTNAdapterImplBase {
 
 	@Override
 	public void prepareData(ClientData request, StreamObserver<PrepareResponse> responseObserver) {
+		
+		FileStoreHelper sendHelper = new FileStoreHelper(ROOT_DIRECTORY + "/send");
+		List<String> messageLocations = SignalCLIConnector.receiveMessages(request.getClientId());
+		
+		for (String loc : messageLocations) {
+			try {
+				sendHelper.AddFile(request.getClientId(), Files.readAllBytes(new File(loc).toPath()));
+			} catch (IOException e) {
+				System.out.println("Exception in retreiving message files");
+			}
+		}
 		responseObserver.onNext(PrepareResponse.newBuilder().setCode(StatusCode.SUCCESS).build());
 		responseObserver.onCompleted();
 	}
