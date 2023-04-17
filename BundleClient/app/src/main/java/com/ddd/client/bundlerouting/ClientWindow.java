@@ -34,9 +34,9 @@ public class ClientWindow {
 
     private static ClientWindow currentInstance;
 
-    public static ClientWindow getInstance(int length) throws InvalidLength, BufferOverflow{
+    public static ClientWindow getInstance(int length, String clientID) throws InvalidLength, BufferOverflow, org.whispersystems.libsignal.InvalidKeyException{
         if (currentInstance == null) {
-            currentInstance = new ClientWindow(length);
+            currentInstance = new ClientWindow(length, clientID);
         }
         return currentInstance;
     }
