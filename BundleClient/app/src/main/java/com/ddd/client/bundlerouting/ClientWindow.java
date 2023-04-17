@@ -20,7 +20,8 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 
 import com.ddd.client.bundlerouting.WindowUtils.CircularBuffer;
-import com.ddd.client.bundlesecurity.BundleIDGenerator.BundleID;
+import com.ddd.client.bundlesecurity.BundleIDGenerator;
+import com.ddd.client.bundlesecurity.ClientSecurity;
 
 public class ClientWindow {
     private CircularBuffer window   = null;
@@ -30,6 +31,15 @@ public class ClientWindow {
     /* Begin and End are used as Unsigned Long */
     private long begin          = 0;
     private long end            = 0;
+
+    private static ClientWindow currentInstance;
+
+    public static ClientWindow getInstance(int length) throws InvalidLength, BufferOverflow{
+        if (currentInstance == null) {
+            currentInstance = new ClientWindow(length);
+        }
+        return currentInstance;
+    }
 
     /* Generates bundleIDs for window slots
      * Parameter:
@@ -43,7 +53,7 @@ public class ClientWindow {
         long length = startCounter + count;
 
         for (long i = startCounter; i < length; ++i) {
-            window.add(BundleID.generateBundleID(this.clientID, i, BundleID.DOWNSTREAM));
+            window.add(BundleIDGenerator.generateBundleID(this.clientID, i, BundleIDGenerator.DOWNSTREAM));
         }
 
         end = begin + windowLength;
@@ -67,7 +77,7 @@ public class ClientWindow {
 
         this.clientID = clientID;
         window = new CircularBuffer(windowLength);
-        
+
         /* Initialize Slots */
         fillWindow(windowLength, begin);
     }
@@ -82,7 +92,7 @@ public class ClientWindow {
     {
 
         System.out.println("Largest Bundle ID = "+bundleID);
-        long ack = BundleID.getCounterFromBundleID(bundleID, BundleID.DOWNSTREAM);
+        long ack = BundleIDGenerator.getCounterFromBundleID(bundleID, BundleIDGenerator.DOWNSTREAM);
 
         if (Long.compareUnsigned(ack,begin) == -1) {
             throw new RecievedOldACK("Received old ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(begin) + "]" );
@@ -116,7 +126,7 @@ public class ClientWindow {
         for (int i = 0; i < bundleIDs.length; ++i) {
             bundleIDs[i] = client.encryptBundleID(bundleIDs[i]);
         }
-        
+
         return bundleIDs;
     }
 }

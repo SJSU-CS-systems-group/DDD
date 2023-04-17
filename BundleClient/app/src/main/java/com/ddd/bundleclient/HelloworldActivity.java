@@ -63,6 +63,8 @@ public class HelloworldActivity extends AppCompatActivity {
   // instantiate window for bundles
   public static ClientWindow clientWindow;
 
+  private int WINDOW_LENGTH = 3;
+
   /** check for location permissions manually, will give a prompt*/
   @Override
   public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
@@ -93,7 +95,7 @@ public class HelloworldActivity extends AppCompatActivity {
     // set up wifi direct
     wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle());
     try {
-      clientWindow = new ClientWindow(0);
+      clientWindow =  ClientWindow.getInstance(WINDOW_LENGTH);
     } catch (WindowExceptions.InvalidLength e) {
       e.printStackTrace();
     } catch (WindowExceptions.BufferOverflow e) {

@@ -8,21 +8,21 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.HashMap;
-
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
-
-import com.ddd.server.bundlesecurity.BundleID;
-import com.ddd.server.bundlesecurity.ServerSecurity;
-import com.ddd.server.bundlesecurity.SecurityExceptions.ClientSessionException;
+import org.springframework.stereotype.Service;
 import com.ddd.server.bundlerouting.WindowUtils.Window;
 import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
 import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.ClientAlreadyExists;
 import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.ClientNotFound;
 import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.InvalidBundleID;
 import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
+import com.ddd.server.bundlesecurity.BundleID;
+import com.ddd.server.bundlesecurity.SecurityExceptions.ClientSessionException;
+import com.ddd.server.bundlesecurity.ServerSecurity;
 
+@Service
 public class ServerWindow {
     private HashMap<String, Window> clientHashMap;
 
@@ -92,18 +92,21 @@ public class ServerWindow {
     /* Move window ahead based on the ACK received
      * Parameters:
      * clientID   : encoded clientID
-     * ackPath    : Path to the encoded acknowledgement (unencrypted)
+     * ackedBundleID    : Bundle ID in the acknowledgement record
      * Returns:
      * None
-     */
-    public void processACK(String clientID, String ackPath) throws ClientNotFound, InvalidLength, IOException
+     */    
+    public void processACK(String clientID, String ackedBundleID) throws ClientNotFound
     {
         Window clientWindow = getClientWindow(clientID);
-        String ackedBundleID = new String(Files.readAllBytes(Paths.get(ackPath)));
         System.out.println("Ack from file = "+ackedBundleID);
         long ack = BundleID.getCounterFromBundleID(ackedBundleID, BundleID.DOWNSTREAM);
 
-        clientWindow.moveWindowAhead(ack);
+        try {
+          clientWindow.moveWindowAhead(ack);
+        } catch (InvalidLength InvalidLengthException) {
+          InvalidLengthException.printStackTrace();
+        }
     }
 
     /* Check if window is full
