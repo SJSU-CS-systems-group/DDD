@@ -199,7 +199,7 @@ public class FileStoreHelper {
                 e.printStackTrace();
             }
         }else{
-            registerAppId(folder);
+            registerAppId(appId);
             f.mkdirs();
             File metadataFile = new File(RootFolder +"/"+folder + "/metadata.json");
             try {
