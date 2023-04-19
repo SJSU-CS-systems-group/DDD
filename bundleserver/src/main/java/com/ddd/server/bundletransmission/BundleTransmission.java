@@ -23,6 +23,8 @@ import com.ddd.model.UncompressedBundle;
 import com.ddd.model.UncompressedPayload;
 import com.ddd.server.applicationdatamanager.ApplicationDataManager;
 import com.ddd.server.bundlerouting.BundleRouting;
+import com.ddd.server.bundlerouting.ServerWindow;
+import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.ClientNotFound;
 import com.ddd.server.bundlesecurity.BundleID;
 import com.ddd.server.bundlesecurity.BundleSecurity;
 import com.ddd.server.config.BundleServerConfig;
@@ -43,18 +45,24 @@ public class BundleTransmission {
 
   private BundleGeneratorService bundleGenServ;
 
+  private ServerWindow serverWindow;
+
+  private int WINDOW_LENGTH = 3;
+
   public BundleTransmission(
       BundleSecurity bundleSecurity,
       ApplicationDataManager applicationDataManager,
       BundleRouting bundleRouting,
       LargestBundleIdReceivedRepository largestBundleIdReceivedRepository,
       BundleServerConfig config,
-      BundleGeneratorService bundleGenServ) {
+      BundleGeneratorService bundleGenServ,
+      ServerWindow serverWindow) {
     this.bundleSecurity = bundleSecurity;
     this.applicationDataManager = applicationDataManager;
     this.config = config;
     this.bundleRouting = bundleRouting;
     this.bundleGenServ = bundleGenServ;
+    this.serverWindow = serverWindow;
   }
 
   @Transactional(rollbackFor = Exception.class)
@@ -69,8 +77,6 @@ public class BundleTransmission {
 
     AckRecordUtils.writeAckRecordToFile(
         new Acknowledgement(bundle.getBundleId()), new File(this.getAckRecordLocation(clientId)));
-
-    this.bundleSecurity.decryptBundleContents(bundle);
 
     File clientAckSubDirectory =
         new File(
@@ -95,10 +101,16 @@ public class BundleTransmission {
       e.printStackTrace();
     }
 
-    //     this.bundleSecurity.processACK(clientId, bundle.getAckRecord().getBundleId());
+    if (!"HB".equals(bundle.getAckRecord().getBundleId())) {
+      try {
+        serverWindow.processACK(clientId, bundle.getAckRecord().getBundleId());
+      } catch (ClientNotFound e) {
+        // TODO throw exception : invalid bundle
+        e.printStackTrace();
+      }
+    }
     //    this.bundleRouting.addClient(clientId, 0);
     //    this.bundleRouting.processClientMetadata(transportId);
-    // if ack not a HB:
     this.applicationDataManager.processAcknowledgement(
         clientId, bundle.getAckRecord().getBundleId());
     if (!bundle.getADUs().isEmpty()) {
@@ -184,8 +196,12 @@ public class BundleTransmission {
     return builder;
   }
 
+  private String generateBundleId(String clientId) throws ClientNotFound {
+    return this.serverWindow.getCurrentbundleID(clientId);
+  }
+
   private BundleTransferDTO generateBundleForTransmission(
-      String transportId, String clientId, Set<String> bundleIdsPresent) {
+      String transportId, String clientId, Set<String> bundleIdsPresent) throws ClientNotFound {
     Set<String> deletionSet = new HashSet<>();
     List<BundleDTO> bundlesToSend = new ArrayList<>();
 
@@ -197,7 +213,14 @@ public class BundleTransmission {
     String bundleId = "";
     boolean isRetransmission = false;
 
-    if (this.bundleSecurity.isSenderWindowFull(clientId)) {
+    try {
+      this.serverWindow.addClient(clientId, this.WINDOW_LENGTH);
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    boolean isSenderWindowFull = this.serverWindow.isClientWindowFull(clientId);
+
+    if (isSenderWindowFull) {
       UncompressedPayload.Builder retxmnBundlePayloadBuilder =
           optional.get(); // there was definitely a bundle sent previously if sender window is full
 
@@ -215,7 +238,7 @@ public class BundleTransmission {
         .getADUs()
         .isEmpty()) { // to ensure we never send a pure ack bundle i.e. a bundle with no ADUs
       if (optional.isEmpty()) { // no bundle ever sent
-        bundleId = this.bundleSecurity.generateBundleId(clientId);
+        bundleId = this.generateBundleId(clientId);
       } else {
         UncompressedPayload.Builder retxmnBundlePayloadBuilder = optional.get();
         if (optional.isPresent()
@@ -223,7 +246,7 @@ public class BundleTransmission {
           bundleId = retxmnBundlePayloadBuilder.getBundleId();
           isRetransmission = true;
         } else { // new data to send
-          bundleId = this.bundleSecurity.generateBundleId(clientId);
+          bundleId = this.generateBundleId(clientId);
         }
       }
 
@@ -246,9 +269,7 @@ public class BundleTransmission {
       } else {
         if (!isRetransmission) {
           this.applicationDataManager.notifyBundleGenerated(clientId, toSendBundlePayload);
-          this.bundleRouting.updateClientWindow(clientId, bundleId);
         }
-
         this.bundleGenServ.writeUncompressedPayload(
             toSendBundlePayload,
             new File(this.config.getBundleTransmission().getUncompressedPayloadDirectory()),
@@ -297,11 +318,16 @@ public class BundleTransmission {
       clientIdToBundleIds.put(clientId, bundleIds);
     }
     for (String clientId : clientIds) {
-      BundleTransferDTO dtoForClient =
-          this.generateBundleForTransmission(
-              transportId, clientId, clientIdToBundleIds.get(clientId));
-      deletionSet.addAll(dtoForClient.getDeletionSet());
-      bundlesToSend.addAll(dtoForClient.getBundles());
+      BundleTransferDTO dtoForClient;
+      try {
+        dtoForClient =
+            this.generateBundleForTransmission(
+                transportId, clientId, clientIdToBundleIds.get(clientId));
+        deletionSet.addAll(dtoForClient.getDeletionSet());
+        bundlesToSend.addAll(dtoForClient.getBundles());
+      } catch (ClientNotFound e) {
+        e.printStackTrace();
+      }
     }
     return new BundleTransferDTO(deletionSet, bundlesToSend);
   }
@@ -332,12 +358,20 @@ public class BundleTransmission {
     return bundles;
   }
 
-  public void notifyBundleSent(Bundle bundle) {
+  public void notifyBundleSent(BundleDTO bundleDTO) {
     //      try {
     //        FileUtils.delete(bundle.getSource());
     //      } catch (IOException e) {
     //        e.printStackTrace();
     //      }
     // TODO: Commented out for the moment.
+
+    try {
+      String bundleId = bundleDTO.getBundleId();
+      String clientId = BundleID.getClientIDFromBundleID(bundleId, BundleID.DOWNSTREAM);
+      this.serverWindow.updateClientWindow(clientId, bundleId);
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
   }
 }

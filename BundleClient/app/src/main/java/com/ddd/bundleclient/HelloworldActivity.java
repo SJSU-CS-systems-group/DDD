@@ -65,6 +65,8 @@ public class HelloworldActivity extends AppCompatActivity {
   // instantiate window for bundles
   public static ClientWindow clientWindow;
 
+  private int WINDOW_LENGTH = 3;
+
   /** check for location permissions manually, will give a prompt*/
   @Override
   public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
@@ -95,13 +97,11 @@ public class HelloworldActivity extends AppCompatActivity {
 
     // set up wifi direct
     wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle());
-    try {
-      clientWindow = new ClientWindow(0);
-    } catch (WindowExceptions.InvalidLength e) {
-      e.printStackTrace();
-    } catch (WindowExceptions.BufferOverflow e) {
-      e.printStackTrace();
-    }
+//    try {
+//      clientWindow =  ClientWindow.getInstance(WINDOW_LENGTH, "");
+//    } catch (Exception e) {
+//      e.printStackTrace();
+//    }
     ApplicationContext = getApplicationContext();
 
     connectButton.setOnClickListener(new View.OnClickListener() {
@@ -202,7 +202,8 @@ public class HelloworldActivity extends AppCompatActivity {
       int port = Integer.parseInt(portStr);
       channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
       FileServiceGrpc.FileServiceStub stub = FileServiceGrpc.newStub(channel);
-      String[] bundleRequests = clientWindow.getWindow();
+      String[] bundleRequests = new String[] {"client0"};
+//      clientWindow.getWindow(null);
       for(String bundleName: bundleRequests){
 //        String testBundleName = "client0-"+bundleName+".jar";
         String testBundleName = "client0-0.jar";

@@ -254,6 +254,7 @@ public class BundleTransmission {
       String bundleId = "";
       if (BundleUtils.doContentsMatch(newBundleBuilder, lastSentBundleBuilder)) {
         bundleId = lastSentBundleBuilder.getBundleId();
+        System.out.println("Retransmitting bundle");
       } else {
         bundleId = this.bundleSecurity.generateNewBundleId();
       }
