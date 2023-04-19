@@ -42,6 +42,7 @@ import com.ddd.client.bundlesecurity.SecurityExceptions.EncodingException;
 import com.ddd.client.bundlesecurity.SecurityExceptions.IDGenerationException;
 import com.ddd.client.bundlesecurity.SecurityExceptions.SignatureVerificationException;
 import com.ddd.client.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
+import android.util.Base64;
 
 public class ClientSecurity {
 
