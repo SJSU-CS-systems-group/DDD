@@ -223,7 +223,7 @@ public class BundleTransmission {
   private BundleDTO generateNewBundle(
       UncompressedPayload.Builder builder, File targetDir, String bundleId) {
     builder.setBundleId(bundleId);
-    builder.setSource(new File(this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + UNCOMPRESSED_PAYLOAD + bundleId));
+    builder.setSource(new File(this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + UNCOMPRESSED_PAYLOAD + File.separator + bundleId));
     UncompressedPayload toSendBundlePayload = builder.build();
     BundleUtils.writeUncompressedPayload(
         toSendBundlePayload,

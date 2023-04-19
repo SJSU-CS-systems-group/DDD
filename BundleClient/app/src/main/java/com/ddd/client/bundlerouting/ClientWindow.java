@@ -9,6 +9,7 @@ import org.whispersystems.libsignal.InvalidKeyException;
 
 import com.ddd.client.bundlerouting.WindowUtils.CircularBuffer;
 import com.ddd.client.bundlesecurity.BundleIDGenerator;
+import com.ddd.client.bundlesecurity.ClientSecurity;
 import com.ddd.client.bundlesecurity.SecurityExceptions.AESAlgorithmException;
 import com.ddd.client.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
 
@@ -21,6 +22,7 @@ public class ClientWindow {
     /* Begin and End are used as Unsigned Long */
     private long begin          = 0;
     private long end            = 0;
+
 
     /* Generates bundleIDs for window slots
      * Parameter:
