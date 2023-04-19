@@ -110,7 +110,7 @@ public class BundleSecurity {
     /* Initializing Security Module*/
     try {
       client = ClientSecurity.getInstance(1, clientKeyPath, serverKeyPath);
-      bundleIDGenerator = new BundleIDGenerator();
+      bundleIDGenerator = BundleIDGenerator.getInstance();
       Log.d(HelloworldActivity.TAG,"Kuch Bhi");
     } catch (NoSuchAlgorithmException e) {
       e.printStackTrace();
