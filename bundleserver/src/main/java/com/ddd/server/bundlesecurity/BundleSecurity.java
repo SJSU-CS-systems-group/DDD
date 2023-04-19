@@ -123,6 +123,7 @@ public class BundleSecurity {
   }
 
   public Payload decryptPayload(UncompressedBundle uncompressedBundle) {
+    String bundleId = "";
     File decryptedPayloadJar =
         new File(
             uncompressedBundle.getSource().getAbsolutePath()
@@ -139,7 +140,7 @@ public class BundleSecurity {
         // TODO
         e.printStackTrace();
       }
-      String bundleId = "";
+      
       try {
         bundleId =
             this.serverSecurity.getBundleIDFromFile(
@@ -157,8 +158,7 @@ public class BundleSecurity {
         decryptedPayload.renameTo(decryptedPayloadJar);
       }
     }
-
-    return new Payload(uncompressedBundle.getBundleId(), decryptedPayloadJar);
+    return new Payload(bundleId, decryptedPayloadJar);
   }
 
   public UncompressedBundle encryptPayload(Payload payload, String bundleGenDirPath) {

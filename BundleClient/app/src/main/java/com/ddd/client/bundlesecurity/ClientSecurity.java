@@ -159,7 +159,7 @@ public class ClientSecurity {
     /* Encrypts and creates a file for the BundleID */
     private void createBundleIDFile(String bundleID, String bundlePath) throws FileNotFoundException, IOException
     {
-        String bundleIDPath = bundlePath + SecurityUtils.BUNDLEID_FILENAME;
+        String bundleIDPath = bundlePath + File.separator + SecurityUtils.BUNDLEID_FILENAME;
 
         try (FileOutputStream stream = new FileOutputStream(bundleIDPath)) {
             stream.write(bundleID.getBytes());

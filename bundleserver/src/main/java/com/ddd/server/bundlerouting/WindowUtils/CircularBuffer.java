@@ -12,7 +12,7 @@ public class CircularBuffer {
     
     private int start       = 0;
     private int end         = -1;
-    private int length      = 0;
+    private int length      = -1;
     private int capacity    = 0;
 
     public CircularBuffer(int length) throws InvalidLength
@@ -101,7 +101,7 @@ public class CircularBuffer {
 
     public boolean isBufferFull()
     {
-        return this.capacity == 0;
+        return this.capacity == this.length-1;
     }
 
     public String getValueAtEnd()

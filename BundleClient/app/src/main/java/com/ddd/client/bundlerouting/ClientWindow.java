@@ -9,6 +9,7 @@ import org.whispersystems.libsignal.InvalidKeyException;
 
 import com.ddd.client.bundlerouting.WindowUtils.CircularBuffer;
 import com.ddd.client.bundlesecurity.BundleIDGenerator;
+import com.ddd.client.bundlesecurity.ClientSecurity;
 import com.ddd.client.bundlesecurity.SecurityExceptions.AESAlgorithmException;
 import com.ddd.client.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
 
@@ -24,6 +25,7 @@ public class ClientWindow {
     private static ClientWindow currentInstance;
 
     public static ClientWindow getInstance(int length, String clientID) throws InvalidLength, BufferOverflow
+    {
         if (currentInstance == null) {
             currentInstance = new ClientWindow(length, clientID);
         }

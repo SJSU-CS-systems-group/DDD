@@ -29,7 +29,9 @@ import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
 import com.ddd.server.bundlesecurity.BundleIDGenerator;
 import com.ddd.server.bundlesecurity.BundleSecurity;
 import com.ddd.server.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
+import com.ddd.server.bundlesecurity.SecurityExceptions.IDGenerationException;
 import com.ddd.server.bundlesecurity.SecurityExceptions.InvalidClientIDException;
+import com.ddd.server.bundlesecurity.SecurityUtils;
 import com.ddd.server.config.BundleServerConfig;
 import com.ddd.server.repository.LargestBundleIdReceivedRepository;
 import com.ddd.utils.AckRecordUtils;
@@ -70,8 +72,14 @@ public class BundleTransmission {
 
   @Transactional(rollbackFor = Exception.class)
   public void processReceivedBundle(UncompressedPayload bundle) {
-    String clientId =
-        BundleIDGenerator.getClientIDFromBundleID(bundle.getBundleId(), BundleIDGenerator.UPSTREAM);
+    String clientId = "";
+    try {
+      clientId = SecurityUtils.generateID(bundle.getSource().getParentFile() + File.separator + "clientIdentity.pub");
+    } catch (IDGenerationException e2) {
+      // TODO Auto-generated catch block
+      e2.printStackTrace();
+    }
+    // BundleIDGenerator.getClientIDFromBundleID(bundle.getBundleId(), BundleIDGenerator.UPSTREAM);
     Optional<String> opt = this.applicationDataManager.getLargestRecvdBundleId(clientId);
 
     try {
@@ -85,9 +93,18 @@ public class BundleTransmission {
       // TODO Auto-generated catch block
       e1.printStackTrace();
     }
+    
+    File ackRecordFile = new File(this.getAckRecordLocation(clientId));
+    ackRecordFile.getParentFile().mkdirs();
+    try {
+      ackRecordFile.createNewFile();
+    } catch (IOException e1) {
+      // TODO Auto-generated catch block
+      e1.printStackTrace();
+    }
 
     AckRecordUtils.writeAckRecordToFile(
-        new Acknowledgement(bundle.getBundleId()), new File(this.getAckRecordLocation(clientId)));
+        new Acknowledgement(bundle.getBundleId()), ackRecordFile);
 
     File clientAckSubDirectory =
         new File(
@@ -155,7 +172,7 @@ public class BundleTransmission {
                   payload, uncompressedBundle.getSource().getAbsolutePath());
           this.processReceivedBundle(uncompressedPayload);
         } catch (Exception e) {
-          System.out.println(e);
+          e.printStackTrace();
         } finally {
           try {
             FileUtils.delete(bundleFile);
@@ -232,7 +249,8 @@ public class BundleTransmission {
     } catch (Exception e) {
       e.printStackTrace();
     }
-    boolean isSenderWindowFull = this.serverWindow.isClientWindowFull(clientId);
+    boolean isSenderWindowFull = false;
+//    this.serverWindow.isClientWindowFull(clientId);
 
     if (isSenderWindowFull) {
       UncompressedPayload.Builder retxmnBundlePayloadBuilder =
