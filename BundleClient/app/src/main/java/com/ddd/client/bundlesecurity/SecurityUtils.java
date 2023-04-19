@@ -126,17 +126,17 @@ public class SecurityUtils {
         try {
             String[] encodedKeyArr = FileStoreHelper.getStringFromFile(path.trim()).split("\n");
 
-            if (encodedKeyList.length  != 3) {
+            if (encodedKeyArr.length  != 3) {
                 throw new InvalidKeyException("Error: Invalid Public Key Length");
             }
 
-            if ((true == encodedKeyList[0].equals(PUBLICKEY_HEADER)) &&
-            (true == encodedKeyList.get[2].equals(PUBLICKEY_FOOTER))) {
+            if ((true == encodedKeyArr[0].equals(PUBLICKEY_HEADER)) &&
+            (true == encodedKeyArr[2].equals(PUBLICKEY_FOOTER))) {
                 return Base64.decode(encodedKeyArr[1], Base64.URL_SAFE | Base64.NO_WRAP);
             } else {
                 throw new InvalidKeyException("Error: Invalid Public Key Format");
             }
-        } catch (InvalidKeyException | IOException e) {
+        } catch (Exception e) {
             throw new EncodingException("Error: Invalid Public Key Format");
         }
     }
