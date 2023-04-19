@@ -6,11 +6,12 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import org.apache.commons.lang3.StringUtils;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.NoSessionException;
 import com.ddd.bundleclient.HelloworldActivity;
+import com.ddd.client.bundlerouting.ClientBundleGenerator;
 import com.ddd.model.EncryptedPayload;
 import com.ddd.model.EncryptionHeader;
 import com.ddd.model.Payload;
@@ -32,7 +33,7 @@ public class BundleSecurity {
 
   private int counter = 0;
 
-  private BundleIDGenerator bundleIDGenerator;
+  private ClientBundleGenerator clientBundleGenerator;
 
   private String clientId = "client0";
 
@@ -105,19 +106,21 @@ public class BundleSecurity {
     }
 
     /* Initializing Security Module*/
+
     try {
       client = ClientSecurity.getInstance(1, clientKeyPath, serverKeyPath);
-      bundleIDGenerator = BundleIDGenerator.getInstance();
+      clientBundleGenerator = ClientBundleGenerator.getInstance(client);
       Log.d(HelloworldActivity.TAG,"Kuch Bhi");
-    } catch (NoSuchAlgorithmException e) {
+    } catch (InvalidKeyException e) {
       e.printStackTrace();
-    } catch (IOException e) {
+    } catch (SecurityExceptions.IDGenerationException e) {
       e.printStackTrace();
-    } catch (NoSessionException e) {
-      e.printStackTrace();
-    } catch (org.whispersystems.libsignal.InvalidKeyException e) {
+    } catch (SecurityExceptions.EncodingException e) {
       e.printStackTrace();
     }
+
+
+
   }
 
   public String getClientKeyPath() {
@@ -133,8 +136,8 @@ public class BundleSecurity {
   }
 
 
-  public String generateNewBundleId() {
-    return bundleIDGenerator.generateBundleID(clientKeyPath, BundleIDGenerator.UPSTREAM);
+  public String generateNewBundleId() throws SecurityExceptions.IDGenerationException, SecurityExceptions.BundleIDCryptographyException {
+    return clientBundleGenerator.generateBundleID(clientKeyPath, BundleIDGenerator.UPSTREAM);
   }
 
   public UncompressedBundle encryptPayload(Payload payload, String bundleGenDirPath) {

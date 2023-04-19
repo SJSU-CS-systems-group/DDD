@@ -24,9 +24,12 @@ import com.ddd.model.UncompressedPayload;
 import com.ddd.server.applicationdatamanager.ApplicationDataManager;
 import com.ddd.server.bundlerouting.BundleRouting;
 import com.ddd.server.bundlerouting.ServerWindow;
-import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.ClientNotFound;
-import com.ddd.server.bundlesecurity.BundleID;
+import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.ClientWindowNotFound;
+import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
+import com.ddd.server.bundlesecurity.BundleIDGenerator;
 import com.ddd.server.bundlesecurity.BundleSecurity;
+import com.ddd.server.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
+import com.ddd.server.bundlesecurity.SecurityExceptions.InvalidClientIDException;
 import com.ddd.server.config.BundleServerConfig;
 import com.ddd.server.repository.LargestBundleIdReceivedRepository;
 import com.ddd.utils.AckRecordUtils;
@@ -67,12 +70,20 @@ public class BundleTransmission {
 
   @Transactional(rollbackFor = Exception.class)
   public void processReceivedBundle(UncompressedPayload bundle) {
-    String clientId = BundleID.getClientIDFromBundleID(bundle.getBundleId(), BundleID.UPSTREAM);
+    String clientId =
+        BundleIDGenerator.getClientIDFromBundleID(bundle.getBundleId(), BundleIDGenerator.UPSTREAM);
     Optional<String> opt = this.applicationDataManager.getLargestRecvdBundleId(clientId);
 
-    if (!opt.isEmpty()
-        && (BundleID.compareBundleIDs(opt.get(), bundle.getBundleId(), BundleID.UPSTREAM) < 1)) {
-      return;
+    try {
+      if (!opt.isEmpty()
+          && (this.serverWindow.compareBundleIDs(
+                  opt.get(), bundle.getBundleId(), clientId, BundleIDGenerator.UPSTREAM)
+              < 1)) {
+        return;
+      }
+    } catch (BundleIDCryptographyException e1) {
+      // TODO Auto-generated catch block
+      e1.printStackTrace();
     }
 
     AckRecordUtils.writeAckRecordToFile(
@@ -102,10 +113,11 @@ public class BundleTransmission {
     }
 
     if (!"HB".equals(bundle.getAckRecord().getBundleId())) {
+
       try {
-        serverWindow.processACK(clientId, bundle.getAckRecord().getBundleId());
-      } catch (ClientNotFound e) {
-        // TODO throw exception : invalid bundle
+        this.serverWindow.processACK(clientId, bundle.getAckRecord().getBundleId());
+      } catch (ClientWindowNotFound | InvalidLength | BundleIDCryptographyException e) {
+        // TODO Auto-generated catch block
         e.printStackTrace();
       }
     }
@@ -196,12 +208,14 @@ public class BundleTransmission {
     return builder;
   }
 
-  private String generateBundleId(String clientId) throws ClientNotFound {
+  private String generateBundleId(String clientId)
+      throws ClientWindowNotFound, BundleIDCryptographyException, InvalidClientIDException {
     return this.serverWindow.getCurrentbundleID(clientId);
   }
 
   private BundleTransferDTO generateBundleForTransmission(
-      String transportId, String clientId, Set<String> bundleIdsPresent) throws ClientNotFound {
+      String transportId, String clientId, Set<String> bundleIdsPresent)
+      throws ClientWindowNotFound {
     Set<String> deletionSet = new HashSet<>();
     List<BundleDTO> bundlesToSend = new ArrayList<>();
 
@@ -238,7 +252,15 @@ public class BundleTransmission {
         .getADUs()
         .isEmpty()) { // to ensure we never send a pure ack bundle i.e. a bundle with no ADUs
       if (optional.isEmpty()) { // no bundle ever sent
-        bundleId = this.generateBundleId(clientId);
+        try {
+          bundleId = this.generateBundleId(clientId);
+        } catch (ClientWindowNotFound
+            | BundleIDCryptographyException
+            | InvalidClientIDException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        }
+
       } else {
         UncompressedPayload.Builder retxmnBundlePayloadBuilder = optional.get();
         if (optional.isPresent()
@@ -246,7 +268,14 @@ public class BundleTransmission {
           bundleId = retxmnBundlePayloadBuilder.getBundleId();
           isRetransmission = true;
         } else { // new data to send
-          bundleId = this.generateBundleId(clientId);
+          try {
+            bundleId = this.generateBundleId(clientId);
+          } catch (ClientWindowNotFound
+              | BundleIDCryptographyException
+              | InvalidClientIDException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+          }
         }
       }
 
@@ -325,7 +354,7 @@ public class BundleTransmission {
                 transportId, clientId, clientIdToBundleIds.get(clientId));
         deletionSet.addAll(dtoForClient.getDeletionSet());
         bundlesToSend.addAll(dtoForClient.getBundles());
-      } catch (ClientNotFound e) {
+      } catch (ClientWindowNotFound e) {
         e.printStackTrace();
       }
     }
@@ -368,7 +397,8 @@ public class BundleTransmission {
 
     try {
       String bundleId = bundleDTO.getBundleId();
-      String clientId = BundleID.getClientIDFromBundleID(bundleId, BundleID.DOWNSTREAM);
+      String clientId =
+          BundleIDGenerator.getClientIDFromBundleID(bundleId, BundleIDGenerator.DOWNSTREAM);
       this.serverWindow.updateClientWindow(clientId, bundleId);
     } catch (Exception e) {
       e.printStackTrace();

@@ -14,8 +14,6 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Stream;
-
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -23,8 +21,8 @@ import org.whispersystems.libsignal.SessionCipher;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
-import org.whispersystems.libsignal.ecc.ECPublicKey;
 import org.whispersystems.libsignal.ecc.ECPrivateKey;
+import org.whispersystems.libsignal.ecc.ECPublicKey;
 import org.whispersystems.libsignal.protocol.CiphertextMessage;
 import org.whispersystems.libsignal.protocol.SignalMessage;
 import org.whispersystems.libsignal.ratchet.BobSignalProtocolParameters;
@@ -32,16 +30,15 @@ import org.whispersystems.libsignal.ratchet.RatchetingSession;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SessionState;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
-
-import com.ddd.server.bundlesecurity.SecurityUtils;
-import com.ddd.server.bundlesecurity.SecurityUtils.ClientSession;
-import com.ddd.server.bundlesecurity.SecurityExceptions.InvalidClientSessionException;
+import org.whispersystems.libsignal.util.guava.Optional;
 import com.ddd.server.bundlesecurity.SecurityExceptions.AESAlgorithmException;
+import com.ddd.server.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
 import com.ddd.server.bundlesecurity.SecurityExceptions.EncodingException;
 import com.ddd.server.bundlesecurity.SecurityExceptions.IDGenerationException;
 import com.ddd.server.bundlesecurity.SecurityExceptions.InvalidClientIDException;
+import com.ddd.server.bundlesecurity.SecurityExceptions.InvalidClientSessionException;
 import com.ddd.server.bundlesecurity.SecurityExceptions.ServerIntializationException;
-import com.ddd.server.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
+import com.ddd.server.bundlesecurity.SecurityUtils.ClientSession;
 
 public class ServerSecurity {
     private static final String DEFAULT_SERVER_NAME = "Bundle Server";
@@ -91,7 +88,7 @@ public class ServerSecurity {
         ourOneTimePreKey                = Optional.<ECKeyPair>absent();
 
         try {
-            writeKeysToFiles(serverKeyPath);
+            writeKeysToFiles(serverKeyPath, true);
         } catch (IOException | EncodingException e) {
             throw new ServerIntializationException("Failed to write keys to Files:"+e);
         }

@@ -1,22 +1,8 @@
 package com.ddd.server.bundlesecurity;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.lang.reflect.Type;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.SignatureException;
-import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,23 +12,16 @@ import com.ddd.model.EncryptionHeader;
 import com.ddd.model.Payload;
 import com.ddd.model.UncompressedBundle;
 import com.ddd.model.UncompressedPayload;
-import com.ddd.server.bundlesecurity.SecurityExceptions.ClientSessionException;
 import com.ddd.utils.Constants;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonIOException;
-import com.google.gson.JsonSyntaxException;
-import com.google.gson.reflect.TypeToken;
 
 @Service
 public class BundleSecurity {
 
   private static final String BUNDLE_ID_NEXT_COUNTER =
       "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Server\\Shared\\DB\\BUNDLE_ID_NEXT_COUNTER.json";
-  
-  @Autowired
-  private ServerSecurity serverSecurity;
-  
+
+  @Autowired private ServerSecurity serverSecurity;
+
   private boolean encryptionEnabled = true;
 
   private Long getRecvdBundleIdCounter(String bundleId) {
@@ -51,41 +30,6 @@ public class BundleSecurity {
 
   private int compareRecvdBundleIds(String a, String b) {
     return this.getRecvdBundleIdCounter(a).compareTo(this.getRecvdBundleIdCounter(b));
-  }
-
-  private Map<String, Long> getBundleIdNextCounters() {
-    Gson gson = new Gson();
-    Map<String, Long> ret = new HashMap<>();
-    try {
-      Type mapType = new TypeToken<Map<String, Long>>() {}.getType();
-      ret = gson.fromJson(new FileReader(BUNDLE_ID_NEXT_COUNTER), mapType);
-      if (ret == null) {
-        ret = new HashMap<>();
-      }
-    } catch (JsonSyntaxException e) {
-      e.printStackTrace();
-    } catch (JsonIOException e) {
-      e.printStackTrace();
-    } catch (FileNotFoundException e) {
-      e.printStackTrace();
-    }
-    return ret;
-  }
-
-  private void writeBundleIdNextCounters(Map<String, Long> counters) {
-    Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    String jsonString = gson.toJson(counters);
-    try (FileWriter writer = new FileWriter(new File(BUNDLE_ID_NEXT_COUNTER))) {
-      writer.write(jsonString);
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
-
-  private void writeCounterToDB(String clientId, Long counter) {
-    Map<String, Long> nextBundleIdCounters = this.getBundleIdNextCounters();
-    nextBundleIdCounters.put(clientId, counter);
-    this.writeBundleIdNextCounters(nextBundleIdCounters);
   }
 
   public BundleSecurity() {
@@ -113,7 +57,6 @@ public class BundleSecurity {
     return (StringUtils.isEmpty(largestBundleIdReceived)
         || this.compareRecvdBundleIds(bundleId, largestBundleIdReceived) > 0);
   }
-
 
   //  public String generateBundleID(String clientKeyPath, boolean direction) {
   //    return "";
@@ -189,18 +132,18 @@ public class BundleSecurity {
 
     if (this.encryptionEnabled) {
       try {
-        serverSecurity.decrypt(
+        this.serverSecurity.decrypt(
             uncompressedBundle.getSource().getAbsolutePath(),
             uncompressedBundle.getSource().getAbsolutePath());
       } catch (Exception e) {
         // TODO
         e.printStackTrace();
       }
-      String clientId = "";
       String bundleId = "";
       try {
-        clientId = SecurityUtils.getClientID(uncompressedBundle.getSource().getAbsolutePath());
-        bundleId = serverSecurity.getBundleIDFromFile(uncompressedBundle.getSource().getAbsolutePath(), clientId);
+        bundleId =
+            this.serverSecurity.getBundleIDFromFile(
+                uncompressedBundle.getSource().getAbsolutePath());
       } catch (Exception e) {
         e.printStackTrace();
       }
@@ -221,27 +164,27 @@ public class BundleSecurity {
   public UncompressedBundle encryptPayload(Payload payload, String bundleGenDirPath) {
     String bundleId = payload.getBundleId();
     String[] paths;
-    String clientKeyPath = "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Server\\BundleTransmission\\received-processing\\transport0\\client0-0";
+    String clientKeyPath =
+        "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Server\\BundleTransmission\\received-processing\\transport0\\client0-0";
     if (!this.encryptionEnabled) {
-      return new UncompressedBundle( 
-          bundleId, payload.getSource(), null, null, null);
+      return new UncompressedBundle(bundleId, payload.getSource(), null, null, null);
     }
     try {
-      paths = serverSecurity.encrypt(
-          payload.getSource().getAbsolutePath(),
-          bundleGenDirPath,
-          bundleId,
-          SecurityUtils.getClientID(clientKeyPath));
+      paths =
+          this.serverSecurity.encrypt(
+              payload.getSource().getAbsolutePath(),
+              bundleGenDirPath,
+              bundleId,
+              SecurityUtils.getClientID(clientKeyPath));
 
+      EncryptedPayload encryptedPayload = new EncryptedPayload(bundleId, new File(paths[0]));
 
-    EncryptedPayload encryptedPayload =
-        new EncryptedPayload(bundleId, new File(paths[0]));
+      File source = new File(bundleGenDirPath + File.separator + bundleId);
+      EncryptionHeader encHeader =
+          new EncryptionHeader(new File(paths[2]), new File(paths[3]), new File(paths[4]));
+      return new UncompressedBundle( // TODO get encryption header, payload signature
+          bundleId, source, encHeader, encryptedPayload, new File(paths[1]));
 
-    File source = new File(bundleGenDirPath + File.separator + bundleId);
-    EncryptionHeader encHeader = new EncryptionHeader(new File(paths[2]), new File(paths[3]), new File(paths[4]));
-    return new UncompressedBundle( // TODO get encryption header, payload signature
-        bundleId, source, encHeader, encryptedPayload, new File(paths[1]));
-    
     } catch (Exception e) {
       e.printStackTrace();
     }

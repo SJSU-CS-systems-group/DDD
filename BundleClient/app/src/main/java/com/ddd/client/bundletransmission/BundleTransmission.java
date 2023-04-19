@@ -17,6 +17,7 @@ import com.ddd.client.applicationdatamanager.ApplicationDataManager;
 import com.ddd.client.bundlerouting.ClientWindow;
 import com.ddd.client.bundlesecurity.BundleIDGenerator;
 import com.ddd.client.bundlesecurity.BundleSecurity;
+import com.ddd.client.bundlesecurity.SecurityExceptions;
 import com.ddd.model.ADU;
 import com.ddd.model.Acknowledgement;
 import com.ddd.model.Bundle;
@@ -187,7 +188,14 @@ public class BundleTransmission {
 
   private BundleDTO generateNewBundle(File targetDir) {
     UncompressedPayload.Builder builder = this.generateBundleBuilder();
-    String bundleId = this.bundleSecurity.generateNewBundleId();
+    String bundleId = null;
+    try {
+      bundleId = this.bundleSecurity.generateNewBundleId();
+    } catch (SecurityExceptions.IDGenerationException e) {
+      e.printStackTrace();
+    } catch (SecurityExceptions.BundleIDCryptographyException e) {
+      e.printStackTrace();
+    }
     builder.setBundleId(bundleId);
     builder.setSource(new File(this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + UNCOMPRESSED_PAYLOAD + File.separator + bundleId));
     UncompressedPayload toSendBundlePayload = builder.build();
@@ -256,7 +264,13 @@ public class BundleTransmission {
         bundleId = lastSentBundleBuilder.getBundleId();
         System.out.println("Retransmitting bundle");
       } else {
-        bundleId = this.bundleSecurity.generateNewBundleId();
+        try {
+          bundleId = this.bundleSecurity.generateNewBundleId();
+        } catch (SecurityExceptions.IDGenerationException e) {
+          e.printStackTrace();
+        } catch (SecurityExceptions.BundleIDCryptographyException e) {
+          e.printStackTrace();
+        }
       }
       toSend = this.generateNewBundle(newBundleBuilder, toSendDir, bundleId);
     }

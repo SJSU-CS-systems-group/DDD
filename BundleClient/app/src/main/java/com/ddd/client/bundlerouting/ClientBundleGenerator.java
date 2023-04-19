@@ -1,11 +1,12 @@
 package com.ddd.client.bundlerouting;
 
 import com.ddd.client.bundlesecurity.BundleIDGenerator;
+import com.ddd.client.bundlesecurity.ClientSecurity;
 import com.ddd.client.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
 import com.ddd.client.bundlesecurity.SecurityExceptions.IDGenerationException;
 
 public class ClientBundleGenerator {
-    ClientBundleGenerator singleGeneratorInstance = null;
+    static ClientBundleGenerator singleGeneratorInstance = null;
     BundleIDGenerator bundleIDGenerator           = null;
     ClientSecurity clientSecurity                 = null;
 
@@ -15,7 +16,7 @@ public class ClientBundleGenerator {
         bundleIDGenerator   = new BundleIDGenerator();
     }
 
-    public ClientBundleGenerator getInstance(ClientSecurity clientSecurity)
+    public static ClientBundleGenerator getInstance(ClientSecurity clientSecurity)
     {
         if (singleGeneratorInstance == null) {
             singleGeneratorInstance = new ClientBundleGenerator(clientSecurity);
@@ -23,7 +24,7 @@ public class ClientBundleGenerator {
         return singleGeneratorInstance;
     }
 
-    public String generateBundleID() throws IDGenerationException, BundleIDCryptographyException
+    public String generateBundleID(String clientKeyPath, boolean upstream) throws IDGenerationException, BundleIDCryptographyException
     {
         String plainBundleID = bundleIDGenerator.generateBundleID(clientSecurity.getClientKeyPath(), BundleIDGenerator.UPSTREAM);
         return clientSecurity.encryptBundleID(plainBundleID);

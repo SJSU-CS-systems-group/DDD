@@ -1,13 +1,7 @@
 package com.ddd.server.bundlerouting;
 
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-
-import com.ddd.server.bundlesecurity.BundleIDGenerator;
-import com.ddd.server.bundlesecurity.ServerSecurity;
-import com.ddd.server.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
-import com.ddd.server.bundlesecurity.SecurityExceptions.InvalidClientIDException;
-
+import org.springframework.stereotype.Service;
 import com.ddd.server.bundlerouting.WindowUtils.Window;
 import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
 import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.ClientAlreadyExists;
@@ -16,6 +10,10 @@ import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.InvalidBundleID
 import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
 import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.RecievedInvalidACK;
 import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.RecievedOldACK;
+import com.ddd.server.bundlesecurity.BundleIDGenerator;
+import com.ddd.server.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
+import com.ddd.server.bundlesecurity.SecurityExceptions.InvalidClientIDException;
+import com.ddd.server.bundlesecurity.ServerSecurity;
 
 @Service
 public class ServerWindow {
