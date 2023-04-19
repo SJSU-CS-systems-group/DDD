@@ -91,8 +91,8 @@ public class ClientSecurity {
     {
         /* Create Directory if it does not exist */
         SecurityUtils.createDirectory(path);
-        String[] clientKeypaths = { path + File.separator + "clientIdentity.pub",
-                                    path + File.separator + "clientBase.pub"};
+        String[] clientKeypaths = { path + File.separator + SecurityUtils.CLIENT_IDENTITY_KEY,
+                                    path + File.separator + SecurityUtils.CLIENT_BASE_KEY};
 
         SecurityUtils.createEncodedPublicKeyFile(ourIdentityKeyPair.getPublicKey().getPublicKey(), clientKeypaths[0]);
         SecurityUtils.createEncodedPublicKeyFile(ourBaseKey.getPublicKey(), clientKeypaths[1]);
@@ -102,13 +102,13 @@ public class ClientSecurity {
     private void InitializeServerKeysFromFiles(String path) throws InvalidKeyException
     {
         try {
-            byte[] serverIdentityKey = SecurityUtils.decodePublicKeyfromFile(path + File.separator + "serverIdentity.pub");
+            byte[] serverIdentityKey = SecurityUtils.decodePublicKeyfromFile(path + File.separator + SecurityUtils.SERVER_IDENTITY_KEY);
             theirIdentityKey = new IdentityKey(serverIdentityKey, 0);
 
-            byte[] serverSignedPreKey = SecurityUtils.decodePublicKeyfromFile(path + File.separator + "serverSignedPre.pub");
+            byte[] serverSignedPreKey = SecurityUtils.decodePublicKeyfromFile(path + File.separator + SecurityUtils.SERVER_SIGNEDPRE_KEY);
             theirSignedPreKey = Curve.decodePoint(serverSignedPreKey, 0);
             
-            byte[] serverRatchetKey = SecurityUtils.decodePublicKeyfromFile(path + File.separator + "serverRatchet.pub");
+            byte[] serverRatchetKey = SecurityUtils.decodePublicKeyfromFile(path + File.separator + SecurityUtils.SERVER_RATCHET_KEY);
             theirRatchetKey = Curve.decodePoint(serverRatchetKey, 0);
         } catch (EncodingException e) {
             throw new InvalidKeyException("Error Decoding Public Key: "+e);

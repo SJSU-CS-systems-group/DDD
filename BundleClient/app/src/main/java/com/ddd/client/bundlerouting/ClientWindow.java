@@ -13,6 +13,7 @@ import com.ddd.client.bundlesecurity.SecurityExceptions.AESAlgorithmException;
 import com.ddd.client.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
 
 public class ClientWindow {
+    static private ClientWindow singleClientWindowInstance = null;
     private CircularBuffer window   = null;
     private String clientID         = null;
     private int windowLength        = 10; /* Default Value */
@@ -20,15 +21,6 @@ public class ClientWindow {
     /* Begin and End are used as Unsigned Long */
     private long begin          = 0;
     private long end            = 0;
-
-    private static ClientWindow currentInstance;
-
-    public static ClientWindow getInstance(int length, String clientID) throws InvalidLength, BufferOverflow
-        if (currentInstance == null) {
-            currentInstance = new ClientWindow(length, clientID);
-        }
-        return currentInstance;
-    }
 
     /* Generates bundleIDs for window slots
      * Parameter:
@@ -55,7 +47,7 @@ public class ClientWindow {
      * Returns:
      * None
      */
-    public ClientWindow(int length, String clientID) throws InvalidLength, BufferOverflow
+    private ClientWindow(int length, String clientID) throws InvalidLength, BufferOverflow
     {
         if (length > 0) {
             windowLength = length;
@@ -69,6 +61,14 @@ public class ClientWindow {
 
         /* Initialize Slots */
         fillWindow(windowLength, begin);
+    }
+
+    static ClientWindow getInstance(int windowLength, String clientID) throws InvalidLength, BufferOverflow
+    {
+        if (singleClientWindowInstance == null) {
+            singleClientWindowInstance = new ClientWindow(windowLength, clientID);
+        }
+        return singleClientWindowInstance;
     }
 
     /* Updates the window based on the Received bundleID

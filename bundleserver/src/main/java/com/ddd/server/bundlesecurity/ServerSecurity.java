@@ -108,7 +108,7 @@ public class ServerSecurity {
         ourIdentityKeyPair = new IdentityKeyPair(identityKey);
 
         byte[] signedPreKeyPvt = SecurityUtils.readFromFile(serverKeyPath + File.separator + "serverSignedPreKey.pvt");
-        byte[] signedPreKeyPub = SecurityUtils.decodePublicKeyfromFile(serverKeyPath + File.separator + "serverSignedPre.pub");
+        byte[] signedPreKeyPub = SecurityUtils.decodePublicKeyfromFile(serverKeyPath + File.separator + SecurityUtils.SERVER_SIGNEDPRE_KEY);
 
         ECPublicKey signedPreKeyPublicKey = Curve.decodePoint(signedPreKeyPub, 0);
         ECPrivateKey signedPreKeyPrivateKey = Curve.decodePrivatePoint(signedPreKeyPvt);
@@ -116,7 +116,7 @@ public class ServerSecurity {
         ourSignedPreKey = new ECKeyPair(signedPreKeyPublicKey, signedPreKeyPrivateKey);
 
         byte[] ratchetKeyPvt = SecurityUtils.readFromFile(serverKeyPath + File.separator + "serverRatchetKey.pvt");
-        byte[] ratchetKeyPub = SecurityUtils.decodePublicKeyfromFile(serverKeyPath + File.separator + "serverRatchet.pub");
+        byte[] ratchetKeyPub = SecurityUtils.decodePublicKeyfromFile(serverKeyPath + File.separator + SecurityUtils.SERVER_RATCHET_KEY);
 
         ECPublicKey ratchetKeyPublicKey = Curve.decodePoint(ratchetKeyPub, 0);
         ECPrivateKey ratchetKeyPrivateKey = Curve.decodePrivatePoint(ratchetKeyPvt);
@@ -145,9 +145,9 @@ public class ServerSecurity {
         /* Create Directory if it does not exist */
         Files.createDirectories(Paths.get(path));
         
-        String[] serverKeypaths = { path + File.separator + "serverIdentity.pub",
-                                    path + File.separator + "serverSignedPre.pub",
-                                    path + File.separator +  "serverRatchet.pub"};
+        String[] serverKeypaths = { path + File.separator + SecurityUtils.SERVER_IDENTITY_KEY,
+                                    path + File.separator + SecurityUtils.SERVER_SIGNEDPRE_KEY,
+                                    path + File.separator + SecurityUtils.SERVER_RATCHET_KEY};
 
         writePrivateKeys(path);
         SecurityUtils.createEncodedPublicKeyFile(ourIdentityKeyPair.getPublicKey().getPublicKey(), serverKeypaths[0]);
@@ -184,10 +184,10 @@ public class ServerSecurity {
 
     private void initializeClientKeysFromFiles(String path, ClientSession clientSession) throws InvalidKeyException, EncodingException
     {
-        byte[] clientIdentityKey = SecurityUtils.decodePublicKeyfromFile(path + File.separator + "clientIdentity.pub");
+        byte[] clientIdentityKey = SecurityUtils.decodePublicKeyfromFile(path + File.separator + SecurityUtils.CLIENT_IDENTITY_KEY);
         clientSession.IdentityKey = new IdentityKey(clientIdentityKey, 0);
 
-        byte[] clientBaseKey = SecurityUtils.decodePublicKeyfromFile(path + File.separator + "clientBase.pub");
+        byte[] clientBaseKey = SecurityUtils.decodePublicKeyfromFile(path + File.separator + SecurityUtils.CLIENT_BASE_KEY);
         clientSession.BaseKey = Curve.decodePoint(clientBaseKey, 0);
         return;
     }

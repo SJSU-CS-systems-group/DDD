@@ -53,9 +53,17 @@ public class SecurityUtils {
     public static final String SIGN_FILENAME        = PAYLOAD_FILENAME + ".signature";
     public static final String BUNDLEID_FILENAME    = "bundle.id";
     public static final String DECRYPTED_FILE_EXT   = ".decrypted";
-    public static final String PUBLICKEY_HEADER    = "-----BEGIN EC PUBLIC KEY-----";
-    public static final String PUBLICKEY_FOOTER    = "-----END EC PUBLIC KEY-----";
+
+    public static final String PUBLICKEY_HEADER     = "-----BEGIN EC PUBLIC KEY-----";
+    public static final String PUBLICKEY_FOOTER     = "-----END EC PUBLIC KEY-----";
     
+    public static final String CLIENT_IDENTITY_KEY  = "clientIdentity.pub";
+    public static final String CLIENT_BASE_KEY      = "clientBase.pub";
+
+    public static final String SERVER_IDENTITY_KEY  = "serverIdentity.pub";
+    public static final String SERVER_SIGNEDPRE_KEY = "serverSignedPre.pub";
+    public static final String SERVER_RATCHET_KEY   = "serverRatchet.pub";
+
     public static final int CHUNKSIZE  = 1024 * 1024; /* 1MB */
     public static final int ITERATIONS = 65536;
     public static final int KEYLEN     = 256;
@@ -126,12 +134,12 @@ public class SecurityUtils {
         try {
             String[] encodedKeyArr = FileStoreHelper.getStringFromFile(path.trim()).split("\n");
 
-            if (encodedKeyList.length  != 3) {
+            if (encodedKeyArr.length  != 3) {
                 throw new InvalidKeyException("Error: Invalid Public Key Length");
             }
 
-            if ((true == encodedKeyList[0].equals(PUBLICKEY_HEADER)) &&
-            (true == encodedKeyList.get[2].equals(PUBLICKEY_FOOTER))) {
+            if ((true == encodedKeyArr[0].equals(PUBLICKEY_HEADER)) &&
+            (true == encodedKeyArr.get[2].equals(PUBLICKEY_FOOTER))) {
                 return Base64.decode(encodedKeyArr[1], Base64.URL_SAFE | Base64.NO_WRAP);
             } else {
                 throw new InvalidKeyException("Error: Invalid Public Key Format");
@@ -163,11 +171,11 @@ public class SecurityUtils {
         }
     }
     
-    public static String getClientID(String clientKeyPath) throws IDGenerationException
+    public static String getClientID(String bundlePath) throws IDGenerationException
     {
         byte[] clientIdentityKey;
         try {
-            clientIdentityKey = decodePublicKeyfromFile(clientKeyPath + File.separator + "clientIdentity.pub");
+            clientIdentityKey = decodePublicKeyfromFile(bundlePath + File.separator + CLIENT_IDENTITY_KEY);
         } catch (EncodingException e) {
             throw new IDGenerationException("Error decoding public key file: "+e);
         }

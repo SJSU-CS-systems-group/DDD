@@ -26,7 +26,7 @@ public class CircularBuffer {
 
     public void add(String item) throws BufferOverflow
     {
-        if (capacity + 1 > length) {
+        if (capacity + 1 >= length) {
             throw new BufferOverflow("Exceeding lenght("+length+")");
         }
 
@@ -101,7 +101,7 @@ public class CircularBuffer {
 
     public boolean isBufferFull()
     {
-        return this.capacity == 0;
+        return this.capacity == length;
     }
 
     public String getValueAtEnd()
