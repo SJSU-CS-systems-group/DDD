@@ -124,14 +124,14 @@ public class SecurityUtils {
     public static byte[] decodePublicKeyfromFile(String path) throws EncodingException
     {
         try {
-            List<String> encodedKeyList = Files.readAllLines(Paths.get(path.trim()));
+            String[] encodedKeyArr = FileStoreHelper.getStringFromFile(path.trim()).split("\n");
 
-            if (encodedKeyList.size() != 3) {
+            if (encodedKeyList.length  != 3) {
                 throw new InvalidKeyException("Error: Invalid Public Key Length");
             }
 
-            if ((true == encodedKeyList.get(0).equals(PUBLICKEY_HEADER)) &&
-            (true == encodedKeyList.get(2).equals(PUBLICKEY_FOOTER))) {
+            if ((true == encodedKeyList[0].equals(PUBLICKEY_HEADER)) &&
+            (true == encodedKeyList.get[2].equals(PUBLICKEY_FOOTER))) {
                 return Base64.decode(encodedKeyArr[1], Base64.URL_SAFE | Base64.NO_WRAP);
             } else {
                 throw new InvalidKeyException("Error: Invalid Public Key Format");
@@ -154,7 +154,7 @@ public class SecurityUtils {
     public static boolean verifySignature(byte[] message, ECPublicKey publicKey, String signaturePath) throws SignatureVerificationException
     {
         try {
-            byte[] encodedsignature = Files.readAllBytes(Paths.get(signaturePath));
+            byte[] encodedsignature = SecurityUtils.readFromFile(signaturePath);
             byte[] signature = Base64.decode(encodedsignature, Base64.URL_SAFE | Base64.NO_WRAP);
             
             return Curve.verifySignature(publicKey, message, signature);
