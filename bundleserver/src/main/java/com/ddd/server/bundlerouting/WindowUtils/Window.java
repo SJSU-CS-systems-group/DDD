@@ -1,6 +1,6 @@
 package com.ddd.server.bundlerouting.WindowUtils;
 
-import com.ddd.server.bundlesecurity.BundleID;
+import com.ddd.server.bundlesecurity.BundleIDGenerator;
 import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
 import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.InvalidBundleID;
 import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
@@ -29,7 +29,7 @@ public class Window {
 
     public void add(String bundleID) throws BufferOverflow, InvalidBundleID
     {
-        long bundleIDcounter = BundleID.getCounterFromBundleID(bundleID, BundleID.DOWNSTREAM);
+        long bundleIDcounter = BundleIDGenerator.getCounterFromBundleID(bundleID, BundleIDGenerator.DOWNSTREAM);
         
         if (endCounter != bundleIDcounter) {
             throw new InvalidBundleID("Expected: "+Long.toUnsignedString(endCounter)+", Got: "+Long.toUnsignedString(bundleIDcounter));
@@ -41,7 +41,7 @@ public class Window {
 
     public String getCurrentbundleID(String clientID)
     {
-        return BundleID.generateBundleID(clientID, endCounter, BundleID.DOWNSTREAM);
+        return BundleIDGenerator.generateBundleID(clientID, endCounter, BundleIDGenerator.DOWNSTREAM);
     }
 
     public String getLatestBundleID()
@@ -49,8 +49,10 @@ public class Window {
         return circularBuffer.getValueAtEnd();
     }
 
-    public void moveWindowAhead(long ack) throws InvalidLength
+    public void moveWindowAhead(long ack) throws InvalidLength, RecievedOldACK, RecievedInvalidACK
     {
+        compareBundleID(ack);
+        
         int index = (int) Long.remainderUnsigned(ack, circularBuffer.getLength());
         circularBuffer.deleteUntilIndex(index);
         startCounter = ack + 1;

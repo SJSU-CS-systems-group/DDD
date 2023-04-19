@@ -5,23 +5,12 @@ import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
 import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions.RecievedInvalidACK;
 import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions.RecievedOldACK;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
-
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
+import org.whispersystems.libsignal.InvalidKeyException;
 
 import com.ddd.client.bundlerouting.WindowUtils.CircularBuffer;
 import com.ddd.client.bundlesecurity.BundleIDGenerator;
-import com.ddd.client.bundlesecurity.ClientSecurity;
+import com.ddd.client.bundlesecurity.SecurityExceptions.AESAlgorithmException;
+import com.ddd.client.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
 
 public class ClientWindow {
     private CircularBuffer window   = null;
@@ -34,7 +23,7 @@ public class ClientWindow {
 
     private static ClientWindow currentInstance;
 
-    public static ClientWindow getInstance(int length, String clientID) throws InvalidLength, BufferOverflow, org.whispersystems.libsignal.InvalidKeyException{
+    public static ClientWindow getInstance(int length, String clientID) throws InvalidLength, BufferOverflow
         if (currentInstance == null) {
             currentInstance = new ClientWindow(length, clientID);
         }
@@ -48,7 +37,7 @@ public class ClientWindow {
      * Returns:
      * None
      */
-    private void fillWindow(int count, long startCounter) throws BufferOverflow, org.whispersystems.libsignal.InvalidKeyException
+    private void fillWindow(int count, long startCounter) throws BufferOverflow
     {
         long length = startCounter + count;
 
@@ -66,7 +55,7 @@ public class ClientWindow {
      * Returns:
      * None
      */
-    public ClientWindow(int length, String clientID) throws InvalidLength, BufferOverflow, org.whispersystems.libsignal.InvalidKeyException
+    public ClientWindow(int length, String clientID) throws InvalidLength, BufferOverflow
     {
         if (length > 0) {
             windowLength = length;
@@ -84,15 +73,15 @@ public class ClientWindow {
 
     /* Updates the window based on the Received bundleID
      * Parameters:
-     * bundleID    : BundleID (dencrypted)
+     * bundleID    : BundleID (encrypted)
      * Returns:
      * None
      */
-    public void processBundle(String bundleID) throws IOException, RecievedOldACK, RecievedInvalidACK, InvalidLength, BufferOverflow, org.whispersystems.libsignal.InvalidKeyException
+    public void processBundle(String bundleID, ClientSecurity clientSecurity) throws RecievedOldACK, RecievedInvalidACK, BufferOverflow, BundleIDCryptographyException
     {
-
-        System.out.println("Largest Bundle ID = "+bundleID);
-        long ack = BundleIDGenerator.getCounterFromBundleID(bundleID, BundleIDGenerator.DOWNSTREAM);
+        String decryptedBundleID = clientSecurity.decryptBundleID(bundleID);
+        System.out.println("Largest Bundle ID = "+decryptedBundleID);
+        long ack = BundleIDGenerator.getCounterFromBundleID(decryptedBundleID, BundleIDGenerator.DOWNSTREAM);
 
         if (Long.compareUnsigned(ack,begin) == -1) {
             throw new RecievedOldACK("Received old ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(begin) + "]" );
@@ -104,7 +93,12 @@ public class ClientWindow {
         int ackIndex = (int) Long.remainderUnsigned(ack, windowLength);
 
         /* Delete ACKs until ackIndex */
-        int noDeleted = window.deleteUntilIndex(ackIndex);
+        int noDeleted = 0;
+        try {
+            noDeleted = window.deleteUntilIndex(ackIndex);
+        } catch (InvalidLength e) {
+            throw new RecievedInvalidACK("Received Invalid ACK [" + Long.toUnsignedString(ack) +"]" );
+        }
 
         begin = ack + 1;
         /* Add new bundleIDs to window */
@@ -119,7 +113,7 @@ public class ClientWindow {
      * Returns:
      * None
      */
-    public String[] getWindow(ClientSecurity client) throws InvalidKeyException, NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, org.whispersystems.libsignal.InvalidKeyException
+    public String[] getWindow(ClientSecurity client) throws BundleIDCryptographyException  
     {
         String[] bundleIDs = window.getBuffer();
 

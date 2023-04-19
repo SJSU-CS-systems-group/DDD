@@ -43,8 +43,8 @@ public class WindowExceptions {
         }
     }
 
-    public static class ClientNotFound extends Exception {
-        public ClientNotFound(String errorMessage)
+    public static class ClientWindowNotFound extends Exception {
+        public ClientWindowNotFound(String errorMessage)
         {
             super(errorMessage);
         }

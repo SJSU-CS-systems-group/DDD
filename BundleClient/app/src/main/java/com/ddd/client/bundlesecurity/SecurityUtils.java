@@ -37,6 +37,10 @@ import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.impl.InMemorySignalProtocolStore;
 import org.whispersystems.libsignal.util.KeyHelper;
 
+import com.ddd.client.bundlesecurity.SecurityExceptions.IDGenerationException;
+import com.ddd.client.bundlesecurity.SecurityExceptions.EncodingException;
+import com.ddd.client.bundlesecurity.SecurityExceptions.SignatureVerificationException;
+import com.ddd.client.bundlesecurity.SecurityExceptions.AESAlgorithmException;
 import android.util.Base64;
 
 import com.ddd.datastore.filestore.FileStoreHelper;
@@ -72,10 +76,16 @@ public class SecurityUtils {
      * Returns:
      * The generated ID as a string
      */
-    public static String generateID(String publicKeyPath) throws IOException, NoSuchAlgorithmException, InvalidKeyException, NoSessionException
+    public static String generateID(String publicKeyPath) throws IDGenerationException
     {
-        byte[] publicKey = decodePublicKeyfromFile(publicKeyPath);
-        return generateID(publicKey);
+        String id = null;
+        try {
+            byte[] publicKey = decodePublicKeyfromFile(publicKeyPath);
+            id = generateID(publicKey);
+        } catch (Exception e) {
+            throw new IDGenerationException("Failed to generateID: "+e);
+        }
+        return id;
     }
 
     /* Creates an ID based on the given public key byte array
@@ -85,43 +95,50 @@ public class SecurityUtils {
      * Returns:
      * The generated ID as a string
      */
-    public static String generateID(byte[] publicKey) throws NoSuchAlgorithmException
+    public static String generateID(byte[] publicKey) throws IDGenerationException
     {
-        MessageDigest md = MessageDigest.getInstance("SHA-1");
+        MessageDigest md;
+
+        try {
+            md = MessageDigest.getInstance("SHA-1");
+        } catch (NoSuchAlgorithmException e) {
+            throw new IDGenerationException("[BS]: NoSuchAlgorithmException while generating ID");
+        }
+
         byte[] hashedKey = md.digest(publicKey);
         return Base64.encodeToString(hashedKey, Base64.URL_SAFE | Base64.NO_WRAP);
     }
 
-    public static void createEncodedPublicKeyFile(ECPublicKey publicKey, String path) throws FileNotFoundException, IOException
+    public static void createEncodedPublicKeyFile(ECPublicKey publicKey, String path) throws EncodingException 
     {
         String encodedKey = PUBLICKEY_HEADER+"\n";
         try (FileOutputStream stream = new FileOutputStream(path)) {
             encodedKey += Base64.encodeToString(publicKey.serialize(), Base64.URL_SAFE | Base64.NO_WRAP);
             encodedKey += "\n" + PUBLICKEY_FOOTER;
             stream.write(encodedKey.getBytes());
+        } catch (IOException e) {
+            throw new EncodingException("[BS]: Failed to Encode Public Key to file:"+e);
         }
     }
 
-    public static byte[] decodePublicKeyfromFile(String path) throws IOException, InvalidKeyException
+    public static byte[] decodePublicKeyfromFile(String path) throws EncodingException
     {
-        String[] encodedKeyArr = null;
-
         try {
-            encodedKeyArr = FileStoreHelper.getStringFromFile(path.trim()).split("\n");
-        } catch (Exception e) {
-            throw new IOException();
-        }
+            List<String> encodedKeyList = Files.readAllLines(Paths.get(path.trim()));
 
-        if (encodedKeyArr.length != 3) {
-            throw new InvalidKeyException("Error: Invalid Public Key Length");
-        }
+            if (encodedKeyList.size() != 3) {
+                throw new InvalidKeyException("Error: Invalid Public Key Length");
+            }
 
-        if ((true == encodedKeyArr[0].equals(PUBLICKEY_HEADER)) &&
-            (true == encodedKeyArr[2].equals(PUBLICKEY_FOOTER))) {
-            return Base64.decode(encodedKeyArr[1], Base64.URL_SAFE | Base64.NO_WRAP);
+            if ((true == encodedKeyList.get(0).equals(PUBLICKEY_HEADER)) &&
+            (true == encodedKeyList.get(2).equals(PUBLICKEY_FOOTER))) {
+                return Base64.decode(encodedKeyArr[1], Base64.URL_SAFE | Base64.NO_WRAP);
+            } else {
+                throw new InvalidKeyException("Error: Invalid Public Key Format");
+            }
+        } catch (InvalidKeyException | IOException e) {
+            throw new EncodingException("Error: Invalid Public Key Format");
         }
-
-        throw new InvalidKeyException("Error: Invalid Public Key Format");
     }
 
     public static InMemorySignalProtocolStore createInMemorySignalProtocolStore()
@@ -134,55 +151,81 @@ public class SecurityUtils {
         return new InMemorySignalProtocolStore(tIdentityKeyPair, KeyHelper.generateRegistrationId(false));
     }
 
-    public static boolean verifySignature(byte[] message, ECPublicKey publicKey, String signaturePath) throws InvalidKeyException, IOException
+    public static boolean verifySignature(byte[] message, ECPublicKey publicKey, String signaturePath) throws SignatureVerificationException
     {
-        byte[] encodedsignature = SecurityUtils.readFromFile(signaturePath);
-        byte[] signature = Base64.decode(encodedsignature, Base64.URL_SAFE | Base64.NO_WRAP);
-        
-        return Curve.verifySignature(publicKey, message, signature);
+        try {
+            byte[] encodedsignature = Files.readAllBytes(Paths.get(signaturePath));
+            byte[] signature = Base64.decode(encodedsignature, Base64.URL_SAFE | Base64.NO_WRAP);
+            
+            return Curve.verifySignature(publicKey, message, signature);
+        } catch (InvalidKeyException | IOException e) {
+            throw new SignatureVerificationException("Error Verifying Signature: "+e);
+        }
     }
     
-    public static String getClientID(String clientKeyPath) throws NoSuchAlgorithmException, IOException, InvalidKeyException
+    public static String getClientID(String clientKeyPath) throws IDGenerationException
     {
-        byte[] clientIdentityKey = decodePublicKeyfromFile(clientKeyPath + File.separator + "clientIdentity.pub");
+        byte[] clientIdentityKey;
+        try {
+            clientIdentityKey = decodePublicKeyfromFile(clientKeyPath + File.separator + "clientIdentity.pub");
+        } catch (EncodingException e) {
+            throw new IDGenerationException("Error decoding public key file: "+e);
+        }
         return generateID(clientIdentityKey);
     }
 
-    public static String encryptAesCbcPkcs5(String sharedSecret, String plainText) throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException, java.security.InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException
+    public static String encryptAesCbcPkcs5(String sharedSecret, String plainText) throws AESAlgorithmException
     {
         byte[] iv = new byte[16];
+        byte[] encryptedData = null;
         
         /* Create SecretKeyFactory object */
-        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-        /* Create KeySpec object */
-        KeySpec spec = new PBEKeySpec(sharedSecret.toCharArray(), sharedSecret.getBytes(), ITERATIONS, KEYLEN);
-        SecretKey skey = factory.generateSecret(spec);
-        SecretKeySpec secretKeySpec = new SecretKeySpec(skey.getEncoded(), "AES");
+        SecretKeyFactory factory;
+        try {
+            factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
 
-        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
-        
-        byte[] encryptedData = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
-        
+            /* Create KeySpec object */
+            KeySpec spec = new PBEKeySpec(sharedSecret.toCharArray(), sharedSecret.getBytes(), ITERATIONS, KEYLEN);
+            SecretKey skey = factory.generateSecret(spec);
+            SecretKeySpec secretKeySpec = new SecretKeySpec(skey.getEncoded(), "AES");
+
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
+            
+            encryptedData = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
+            
+        } catch ( NoSuchAlgorithmException | InvalidKeySpecException | NoSuchPaddingException |
+                    java.security.InvalidKeyException | InvalidAlgorithmParameterException |
+                    IllegalBlockSizeException | BadPaddingException e) {
+            throw new AESAlgorithmException("Error Encrypting text using AES: "+e);
+        }
         return Base64.encodeToString(encryptedData, Base64.URL_SAFE | Base64.NO_WRAP);
     }
 
-    public static byte[] dencryptAesCbcPkcs5(String sharedSecret, String cipherText) throws NoSuchAlgorithmException, InvalidKeySpecException, java.security.InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException
+    public static byte[] dencryptAesCbcPkcs5(String sharedSecret, String cipherText) throws AESAlgorithmException
     {
         byte[] iv = new byte[16];
         byte[] encryptedData = Base64.decode(cipherText, Base64.URL_SAFE | Base64.NO_WRAP);
+        byte[] decryptedData = null;
 
-        /* Create SecretKeyFactory object */
-        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-        /* Create KeySpec object */
-        KeySpec spec = new PBEKeySpec(sharedSecret.toCharArray(), sharedSecret.getBytes(), ITERATIONS, KEYLEN);
-        SecretKey skey = factory.generateSecret(spec);
-        SecretKeySpec secretKeySpec = new SecretKeySpec(skey.getEncoded(), "AES");
+        try {
+            /* Create SecretKeyFactory object */
+            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+            /* Create KeySpec object */
+            KeySpec spec = new PBEKeySpec(sharedSecret.toCharArray(), sharedSecret.getBytes(), ITERATIONS, KEYLEN);
+            SecretKey skey = factory.generateSecret(spec);
+            SecretKeySpec secretKeySpec = new SecretKeySpec(skey.getEncoded(), "AES");
 
-        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
 
-        return cipher.doFinal(encryptedData);
+            decryptedData = cipher.doFinal(encryptedData);
+        } catch(NoSuchAlgorithmException | InvalidKeySpecException | NoSuchPaddingException |
+                    java.security.InvalidKeyException | InvalidAlgorithmParameterException |
+                    IllegalBlockSizeException | BadPaddingException e) {
+            throw new AESAlgorithmException("Error Decrypting text using AES: ");
+        }
+        return decryptedData;
     }
 
     public static byte[] readFromFile(String filePath) throws FileNotFoundException, IOException
