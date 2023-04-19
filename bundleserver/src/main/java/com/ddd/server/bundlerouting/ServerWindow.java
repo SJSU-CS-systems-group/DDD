@@ -1,34 +1,31 @@
 package com.ddd.server.bundlerouting;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
-import org.springframework.stereotype.Service;
+
+import com.ddd.server.bundlesecurity.BundleIDGenerator;
+import com.ddd.server.bundlesecurity.ServerSecurity;
+import com.ddd.server.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
+import com.ddd.server.bundlesecurity.SecurityExceptions.InvalidClientIDException;
+
 import com.ddd.server.bundlerouting.WindowUtils.Window;
 import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
 import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.ClientAlreadyExists;
-import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.ClientNotFound;
+import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.ClientWindowNotFound;
 import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.InvalidBundleID;
 import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
-import com.ddd.server.bundlesecurity.BundleID;
-import com.ddd.server.bundlesecurity.SecurityExceptions.ClientSessionException;
-import com.ddd.server.bundlesecurity.ServerSecurity;
+import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.RecievedInvalidACK;
+import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.RecievedOldACK;
 
 @Service
 public class ServerWindow {
     private HashMap<String, Window> clientHashMap;
+    ServerSecurity                  serverSecurity;
 
-    public ServerWindow()
+    public ServerWindow(ServerSecurity serverSecurity)
     {
-        clientHashMap   = new HashMap<>();
+        clientHashMap       = new HashMap<>();
+        this.serverSecurity = serverSecurity;
     }
 
     /* Returns the window for the requested client
@@ -37,10 +34,10 @@ public class ServerWindow {
      * Returns:
      * Window object
      */
-    private Window getClientWindow(String clientID) throws ClientNotFound
+    private Window getClientWindow(String clientID) throws ClientWindowNotFound
     {
         if (!clientHashMap.containsKey(clientID)) {
-            throw new ClientNotFound("ClientID["+clientID+"] Not Found");
+            throw new ClientWindowNotFound("ClientID["+clientID+"] Not Found");
         }
 
         return clientHashMap.get(clientID);
@@ -68,14 +65,16 @@ public class ServerWindow {
      * Returns:
      * None
      */
-    public void updateClientWindow(String clientID, String bundleID) throws ClientNotFound, BufferOverflow, InvalidBundleID
+    public void updateClientWindow(String clientID, String bundleID) throws ClientWindowNotFound, BufferOverflow, InvalidBundleID, BundleIDCryptographyException
     {
-        getClientWindow(clientID).add(bundleID);
+        String decryptedBundleID = serverSecurity.decryptBundleID(bundleID, clientID);
+        getClientWindow(clientID).add(decryptedBundleID);
     }
 
-    public String getCurrentbundleID(String clientID) throws ClientNotFound
+    public String getCurrentbundleID(String clientID) throws ClientWindowNotFound, BundleIDCryptographyException, InvalidClientIDException
     {
-        return getClientWindow(clientID).getCurrentbundleID(clientID);
+        String plainBundleID = getClientWindow(clientID).getCurrentbundleID(clientID);
+        return serverSecurity.encryptBundleID(plainBundleID, clientID);
     }
 
     /* Return the latest bundleID in the client's window
@@ -84,7 +83,7 @@ public class ServerWindow {
      * Returns:
      * Latest bundle ID in window
      */
-    public String getLatestClientBundle(String clientID) throws ClientNotFound
+    public String getLatestClientBundle(String clientID) throws ClientWindowNotFound
     {
         return getClientWindow(clientID).getLatestBundleID();
     }
@@ -92,27 +91,29 @@ public class ServerWindow {
     /* Move window ahead based on the ACK received
      * Parameters:
      * clientID   : encoded clientID
-     * ackedBundleID    : Bundle ID in the acknowledgement record
+     * ackPath    : Path to the encoded acknowledgement (encrypted)
      * Returns:
      * None
-     */    
-    public void processACK(String clientID, String ackedBundleID) throws ClientNotFound
+     */
+    public void processACK(String clientID, String ackedBundleID) throws ClientWindowNotFound, InvalidLength, BundleIDCryptographyException
     {
         Window clientWindow = getClientWindow(clientID);
-        System.out.println("Ack from file = "+ackedBundleID);
-        long ack = BundleID.getCounterFromBundleID(ackedBundleID, BundleID.DOWNSTREAM);
+        String decryptedBundleID = serverSecurity.decryptBundleID(ackedBundleID, clientID);
+        System.out.println("Decrypted Ack from file = "+decryptedBundleID);
+        long ack = BundleIDGenerator.getCounterFromBundleID(decryptedBundleID, BundleIDGenerator.DOWNSTREAM);
 
         try {
-          clientWindow.moveWindowAhead(ack);
-        } catch (InvalidLength InvalidLengthException) {
-          InvalidLengthException.printStackTrace();
+            clientWindow.moveWindowAhead(ack);
+        } catch (RecievedOldACK | RecievedInvalidACK e) {
+            System.out.println("Received Old/Invalid ACK!");
+            e.printStackTrace();
         }
     }
 
     /* Check if window is full
      * 
      */
-    public boolean isClientWindowFull(String clientID) throws ClientNotFound
+    public boolean isClientWindowFull(String clientID) throws ClientWindowNotFound
     {
         return getClientWindow(clientID).isWindowFull();
     }
@@ -123,13 +124,27 @@ public class ServerWindow {
      * Returns:
      * Array of bundlesIDs present in the client's window
      */
-    public String[] getclientWindow(String clientID, ServerSecurity server) throws ClientNotFound, InvalidKeyException, NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, org.whispersystems.libsignal.InvalidKeyException, ClientSessionException, IOException
+    public String[] getclientWindow(String clientID) throws ClientWindowNotFound, InvalidClientIDException, BundleIDCryptographyException
     {
         String[] bundleIDs = getClientWindow(clientID).getWindow();
         for (int i=0; i < bundleIDs.length; ++i) {
-            bundleIDs[i] = server.encryptBundleID(bundleIDs[i], clientID);
+            bundleIDs[i] = serverSecurity.encryptBundleID(bundleIDs[i], clientID);
         }
 
         return bundleIDs;
+    }
+
+    public int compareBundleIDs(String id1, String id2, String clientID, boolean direction) throws BundleIDCryptographyException
+    {
+        String decryptedBundleID1 = serverSecurity.decryptBundleID(id1, clientID);
+        String decryptedBundleID2 = serverSecurity.decryptBundleID(id2, clientID);
+
+        return BundleIDGenerator.compareBundleIDs(decryptedBundleID1, decryptedBundleID2, direction);
+    }
+
+    public long getCounterFromBundleID(String bundleID, String clientID, boolean direction) throws BundleIDCryptographyException
+    {
+        String decryptedBundleID = serverSecurity.decryptBundleID(bundleID, clientID);
+        return BundleIDGenerator.getCounterFromBundleID(decryptedBundleID, direction);
     }
 }

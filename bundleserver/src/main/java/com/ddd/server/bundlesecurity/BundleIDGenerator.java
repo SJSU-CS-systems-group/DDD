@@ -1,15 +1,14 @@
 package com.ddd.server.bundlesecurity;
 
-import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Base64;
 
-import org.whispersystems.libsignal.InvalidKeyException;
-
 import com.google.common.primitives.Bytes;
 
-public class BundleID {
+import com.ddd.server.bundlesecurity.SecurityUtils;
+import com.ddd.server.bundlesecurity.SecurityExceptions.IDGenerationException;
+
+public class BundleIDGenerator {
     public static final boolean UPSTREAM     = true;
     public static final boolean DOWNSTREAM   = false;
     /* Length of the Counter */
@@ -26,18 +25,9 @@ public class BundleID {
      * Returns:
      * bundleID as a Base64 encoded String
      */
-    public String generateBundleID(String clientKeyPath, boolean direction)
+    public String generateBundleID(String clientKeyPath, boolean direction) throws IDGenerationException
     {
-        String clientID = null;
-
-        try {
-            clientID = SecurityUtils.getClientID(clientKeyPath);
-        } catch (NoSuchAlgorithmException | IOException | InvalidKeyException e) {
-            /* TODO: Change to log */
-            System.out.println("Failed to generate ClientID");
-            e.printStackTrace();
-            return null;
-        }
+        String clientID = SecurityUtils.getClientID(clientKeyPath);
 
         currentCounter++;
 
