@@ -79,7 +79,11 @@ public class SignalCLIConnector {
 						System.out.println(fileContent);
 					}
 				}
-
+				stdError = new BufferedReader(new InputStreamReader(pc.getErrorStream()));
+				System.out.println("Here is the standard error of the command (if any):\n");
+				while ((s = stdError.readLine()) != null) {
+					System.out.println(s);
+				}
 				prefs.put(dddClientId, phoneNumber);
 
 				tempFile.toFile().deleteOnExit();
