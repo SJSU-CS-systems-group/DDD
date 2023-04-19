@@ -341,15 +341,15 @@ public class BundleUtils {
             + bundleFileName.substring(0, bundleFileName.lastIndexOf('.'));
     JarUtils.jarToDir(bundle.getSource().getAbsolutePath(), extractedBundlePath);
 
-    String bundleId = "client0-0";
-    String clientId = "";
-    try {
-      clientId = SecurityUtils.getClientID(extractedBundlePath);
-      ClientSecurity client = ClientSecurity.getInstance(0, clientId, clientId); // TODO
-      bundleId = client.getBundleIDFromFile(extractedBundlePath);
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
+//    String bundleId = "client0-0";
+//    String clientId = "";
+//    try {
+//      clientId = SecurityUtils.getClientID(extractedBundlePath);
+//      ClientSecurity client = ClientSecurity.getInstance(0, clientId, clientId); // TODO
+//      bundleId = client.getBundleIDFromFile(extractedBundlePath);
+//    } catch (Exception e) {
+//      e.printStackTrace();
+//    }
     
     File[] payloads = new File(
         extractedBundlePath
@@ -357,13 +357,13 @@ public class BundleUtils {
         + "payloads").listFiles();
     EncryptedPayload encryptedPayload =
         new EncryptedPayload(
-            bundleId,
+            null,
             payloads[0]);
     File payloadSign = new File(extractedBundlePath
         + File.separator + "signatures").listFiles()[0];
     
-    return new UncompressedBundle( // TODO get encryption header, payload signature
-        bundleId, new File(extractedBundlePath), null, encryptedPayload, payloadSign);
+    return new UncompressedBundle( // TODO get encryption header, payload signature and get bundle id from BS
+        null, new File(extractedBundlePath), null, encryptedPayload, payloadSign);
   }
 
   public static UncompressedPayload extractPayload(Payload payload, String extractDirPath) {

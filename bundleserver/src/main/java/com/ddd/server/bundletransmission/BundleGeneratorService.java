@@ -44,14 +44,14 @@ public class BundleGeneratorService {
             + bundleFileName.substring(0, bundleFileName.lastIndexOf('.'));
     JarUtils.jarToDir(bundle.getSource().getAbsolutePath(), extractedBundlePath);
 
-    String bundleId = "";
-    String clientId = "";
-    try {
-      clientId = SecurityUtils.getClientID(extractedBundlePath);
-      bundleId = serverSecurity.getBundleIDFromFile(extractedBundlePath, clientId);
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
+//    String bundleId = "";
+//    String clientId = "";
+//    try {
+//      clientId = SecurityUtils.getClientID(extractedBundlePath);
+//      bundleId = serverSecurity.getBundleIDFromFile(extractedBundlePath, clientId);
+//    } catch (Exception e) {
+//      e.printStackTrace();
+//    }
     
     File[] payloads = new File(
         extractedBundlePath
@@ -59,13 +59,13 @@ public class BundleGeneratorService {
         + "payloads").listFiles();
     EncryptedPayload encryptedPayload =
         new EncryptedPayload(
-            bundleId,
+            null,
             payloads[0]);
     File payloadSign = new File(extractedBundlePath
         + File.separator + "signatures").listFiles()[0];
     
     return new UncompressedBundle( // TODO get encryption header, payload signature
-        bundleId, new File(extractedBundlePath), null, encryptedPayload, payloadSign);
+        null, new File(extractedBundlePath), null, encryptedPayload, payloadSign);
   }
 
   public UncompressedPayload extractPayload(Payload payload, String extractDirPath) {
