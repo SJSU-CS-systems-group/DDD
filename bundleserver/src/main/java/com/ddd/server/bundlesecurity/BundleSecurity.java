@@ -161,11 +161,9 @@ public class BundleSecurity {
     return new Payload(bundleId, decryptedPayloadJar);
   }
 
-  public UncompressedBundle encryptPayload(Payload payload, String bundleGenDirPath) {
+  public UncompressedBundle encryptPayload(String clientId, Payload payload, String bundleGenDirPath) {
     String bundleId = payload.getBundleId();
     String[] paths;
-    String clientKeyPath =
-        "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Server\\BundleTransmission\\received-processing\\transport0\\client0-0";
     if (!this.encryptionEnabled) {
       return new UncompressedBundle(bundleId, payload.getSource(), null, null, null);
     }
@@ -175,7 +173,7 @@ public class BundleSecurity {
               payload.getSource().getAbsolutePath(),
               bundleGenDirPath,
               bundleId,
-              SecurityUtils.getClientID(clientKeyPath));
+              clientId);
 
       EncryptedPayload encryptedPayload = new EncryptedPayload(bundleId, new File(paths[0]));
 

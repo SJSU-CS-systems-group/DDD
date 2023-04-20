@@ -129,4 +129,8 @@ public class ApplicationDataManager {
   public Optional<String> getLargestRecvdBundleId(String clientId) {
     return this.stateManager.getLargestRecvdBundleId(clientId);
   }
+
+  public String getClientIdFromSentBundleId(String bundleId) {
+    return this.stateManager.getClientIdFromSentBundleId(bundleId);
+  }
 }

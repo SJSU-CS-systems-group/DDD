@@ -7,8 +7,11 @@ public class SentBundleDetails {
   //  @Column("bundle_id")
   private String bundleId;
 
+  private String clientId;
+  
   //  @Column("acked_bundle_id")
   private String ackedBundleId;
+  
 
   public SentBundleDetails() {}
 
@@ -31,5 +34,13 @@ public class SentBundleDetails {
 
   public void setAckedBundleId(String ackedBundleId) {
     this.ackedBundleId = ackedBundleId;
+  }
+
+  public String getClientId() {
+    return clientId;
+  }
+
+  public void setClientId(String clientId) {
+    this.clientId = clientId;
   }
 }

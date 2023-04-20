@@ -181,6 +181,7 @@ class StateManager {
     }
     SentBundleDetails sentBundleDetails = new SentBundleDetails();
     sentBundleDetails.setAckedBundleId(lastSentBundle.getAckRecord().getBundleId());
+    sentBundleDetails.setClientId(clientId);
     sentBundleDetails.setBundleId(lastSentBundle.getBundleId());
     this.sentBundleDetailsRepository.save(sentBundleDetails);
 
@@ -243,5 +244,10 @@ class StateManager {
     Optional<LargestBundleIdReceived> opt =
         this.largestBundleIdReceivedRepository.findByClientId(clientId);
     return (opt.isPresent() ? Optional.of(opt.get().getBundleId()) : Optional.empty());
+  }
+
+  public String getClientIdFromSentBundleId(String bundleId) {
+    Optional<SentBundleDetails> opt = sentBundleDetailsRepository.findByBundleId(bundleId);
+    return opt.get().getClientId(); // TODO handle optional empty case
   }
 }

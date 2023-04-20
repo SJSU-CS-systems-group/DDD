@@ -149,7 +149,9 @@ public class ServerSecurity {
                                     path + File.separator + SecurityUtils.SERVER_SIGNEDPRE_KEY,
                                     path + File.separator + SecurityUtils.SERVER_RATCHET_KEY};
 
-        writePrivateKeys(path);
+        if (writePvt) {
+          writePrivateKeys(path);
+        }
         SecurityUtils.createEncodedPublicKeyFile(ourIdentityKeyPair.getPublicKey().getPublicKey(), serverKeypaths[0]);
         SecurityUtils.createEncodedPublicKeyFile(ourSignedPreKey.getPublicKey(), serverKeypaths[1]);
         SecurityUtils.createEncodedPublicKeyFile(ourRatchetKey.getPublicKey(), serverKeypaths[2]);

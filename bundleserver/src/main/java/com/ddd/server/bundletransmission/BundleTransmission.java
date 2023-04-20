@@ -249,8 +249,7 @@ public class BundleTransmission {
     } catch (Exception e) {
       e.printStackTrace();
     }
-    boolean isSenderWindowFull = false;
-//    this.serverWindow.isClientWindowFull(clientId);
+    boolean isSenderWindowFull = this.serverWindow.isClientWindowFull(clientId);
 
     if (isSenderWindowFull) {
       UncompressedPayload.Builder retxmnBundlePayloadBuilder =
@@ -327,7 +326,7 @@ public class BundleTransmission {
                 toSendBundlePayload,
                 this.config.getBundleTransmission().getCompressedPayloadDirectory());
         UncompressedBundle uncompressedBundle =
-            this.bundleSecurity.encryptPayload(
+            this.bundleSecurity.encryptPayload(clientId,
                 payload, this.config.getBundleTransmission().getEncryptedPayloadDirectory());
 
         File toSendTxpDir =
@@ -359,7 +358,7 @@ public class BundleTransmission {
     }
 
     for (String bundleId : bundleIdsPresent) {
-      String clientId = this.bundleSecurity.getClientIdFromBundleId(bundleId);
+      String clientId = this.applicationDataManager.getClientIdFromSentBundleId(bundleId);
       Set<String> bundleIds = clientIdToBundleIds.getOrDefault(clientId, new HashSet<>());
       bundleIds.add(bundleId);
       clientIdToBundleIds.put(clientId, bundleIds);

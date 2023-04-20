@@ -20,7 +20,7 @@ public class SentBundleDetailsRepositoryImpl implements SentBundleDetailsReposit
     try {
       record =
           this.jdbcTemplate.queryForObject(
-              "select bundle_id as bundleId, acked_bundle_id as ackedBundleId from sent_bundle_details where bundle_id = ?",
+              "select bundle_id as bundleId, client_id as clientId, acked_bundle_id as ackedBundleId from sent_bundle_details where bundle_id = ?",
               BeanPropertyRowMapper.newInstance(SentBundleDetails.class),
               bundleId);
     } catch (EmptyResultDataAccessException e) {
@@ -37,12 +37,14 @@ public class SentBundleDetailsRepositoryImpl implements SentBundleDetailsReposit
     Optional<SentBundleDetails> opt = this.findByBundleId(record.getBundleId());
     if (opt.isEmpty()) {
       this.jdbcTemplate.update(
-          "INSERT INTO sent_bundle_details (bundle_id, acked_bundle_id) VALUES (?, ?)",
+          "INSERT INTO sent_bundle_details (bundle_id, client_id, acked_bundle_id) VALUES (?, ?, ?)",
           record.getBundleId(),
+          record.getClientId(),
           record.getAckedBundleId());
     } else {
       this.jdbcTemplate.update(
-          "UPDATE sent_bundle_details SET acked_bundle_id = ? where bundle_id = ?",
+          "UPDATE sent_bundle_details SET client_id = ?, acked_bundle_id = ? where bundle_id = ?",
+          record.getClientId(),
           record.getAckedBundleId(),
           record.getBundleId());
     }
