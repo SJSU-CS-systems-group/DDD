@@ -202,7 +202,7 @@ public class HelloworldActivity extends AppCompatActivity {
       String[] bundleRequests = clientWindow.getWindow();
       for(String bundleName: bundleRequests){
 //        String testBundleName = "client0-"+bundleName+".jar";
-        String testBundleName = "client0-0.jar";
+        String testBundleName = "client0-1.jar";
         ReqFilePath request = ReqFilePath.newBuilder()
                 .setValue(testBundleName)
                 .build();
@@ -219,6 +219,7 @@ public class HelloworldActivity extends AppCompatActivity {
               }
               // Write the downloaded data to the file
               fileOutputStream.write(fileContent.getValue().toByteArray());
+              //give anirudh transport ID
             } catch (IOException e) {
               onError(e);
             }
@@ -227,7 +228,6 @@ public class HelloworldActivity extends AppCompatActivity {
           @Override
           public void onError(Throwable t) {
             Log.d(TAG, "Error downloading file: " + t.getMessage(), t);
-            // Notify Shashank that bundle does not exist?
             if (fileOutputStream != null) {
               try {
                 fileOutputStream.close();
