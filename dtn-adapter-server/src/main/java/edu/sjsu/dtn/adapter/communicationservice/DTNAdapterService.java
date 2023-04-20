@@ -15,6 +15,7 @@ import java.util.List;
 public class DTNAdapterService extends DTNAdapterGrpc.DTNAdapterImplBase {
 	private static final String ROOT_DIRECTORY = "/Users/adityasinghania/Downloads/Data/DTN-bundle-server-adapter/FileStore";
 
+	private boolean isMySignal = true;
 	@Override
 	public void saveData(AppData request, StreamObserver<AppData> responseObserver) {
 		FileStoreHelper sendHelper = new FileStoreHelper(ROOT_DIRECTORY + "/send");
@@ -24,9 +25,13 @@ public class DTNAdapterService extends DTNAdapterGrpc.DTNAdapterImplBase {
 		for (int i = 0; i < request.getDataCount(); i++) {
 			byte[] reply = null;
 			try {
-				reply = SignalCLIConnector.performRegistration(request.getClientId(), request.getData(i).toByteArray());
-				sendHelper.AddFile(request.getClientId(), reply);
-
+				if(isMySignal){
+					helper.AddFile(request.getClientId(), request.getData(i).toByteArray());
+					sendHelper.AddFile(request.getClientId(), (new String(request.getData(i).toByteArray())+" was processed").getBytes());
+				}else {
+					reply = SignalCLIConnector.performRegistration(request.getClientId(), request.getData(i).toByteArray());
+					sendHelper.AddFile(request.getClientId(), reply);
+				}
 			} catch (Exception e) {
 				System.out.println("exception in register");
 			}
@@ -51,8 +56,9 @@ public class DTNAdapterService extends DTNAdapterGrpc.DTNAdapterImplBase {
 		
 		FileStoreHelper sendHelper = new FileStoreHelper(ROOT_DIRECTORY + "/send");
 		List<String> messageLocations = SignalCLIConnector.receiveMessages(request.getClientId());
-		
+		System.out.println("messageLocations size-"+messageLocations.size());
 		for (String loc : messageLocations) {
+			System.out.println("messageLocations size-"+messageLocations.size());
 			try {
 				sendHelper.AddFile(request.getClientId(), Files.readAllBytes(new File(loc).toPath()));
 			} catch (IOException e) {
