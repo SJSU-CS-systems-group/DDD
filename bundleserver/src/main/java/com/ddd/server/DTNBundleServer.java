@@ -5,19 +5,31 @@ import io.grpc.ServerBuilder;
 
 import java.io.IOException;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
 import com.ddd.server.service.BundleServerServiceImpl;
 
+// @Service
 public class DTNBundleServer {
     public int port=8080;
     private final Server server;
-    public DTNBundleServer(int port) {
-        this(ServerBuilder.forPort(port), port);
+    // @Autowired
+    BundleServerServiceImpl bundleServerServiceImpl;
+    public DTNBundleServer() {
+        this(ServerBuilder.forPort(8080), 8080);
+        try {
+            this.start();
+            this.blockUntilShutdown();
+        }catch (Exception ex){
+            ex.printStackTrace();
+        }
     }
 
     public DTNBundleServer(ServerBuilder<?> serverBuilder, int port) {
         this.port = port;
         server = serverBuilder.addService(new DTNCommunicationService())
-                .addService(new BundleServerServiceImpl())
+                .addService(bundleServerServiceImpl)
                 .build();
     }
     public void start() throws IOException {
@@ -30,13 +42,13 @@ public class DTNBundleServer {
         }
     }
 
-    public static void begin(){
-        try {
-            DTNBundleServer admServer = new DTNBundleServer(8080);
-            admServer.start();
-            admServer.blockUntilShutdown();
-        }catch (Exception ex){
-            ex.printStackTrace();
-        }
-    }
+    // public static void begin(){
+    //     try {
+    //         DTNBundleServer admServer = new DTNBundleServer(8080);
+    //         admServer.start();
+    //         admServer.blockUntilShutdown();
+    //     }catch (Exception ex){
+    //         ex.printStackTrace();
+    //     }
+    // }
 }

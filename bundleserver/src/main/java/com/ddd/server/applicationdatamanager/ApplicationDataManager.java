@@ -30,9 +30,9 @@ public class ApplicationDataManager {
   
   public ApplicationDataManager() {
     //    this.dataStoreAdaptor = new DataStoreAdaptor(bundleServerConfig.getBundleStoreRoot());
-    registeredAppIdsFile = "C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/Shared/REGISTERED_APP_IDS.txt";
+    registeredAppIdsFile = "/Users/adityasinghania/Downloads/Data/Shared/REGISTERED_APP_IDS.txt";
     this.dataStoreAdaptor =
-        new DataStoreAdaptor("C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/");
+        new DataStoreAdaptor("/Users/adityasinghania/Downloads/Data/");
   }
 
   public List<String> getRegisteredAppIds() {

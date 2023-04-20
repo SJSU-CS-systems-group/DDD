@@ -28,7 +28,7 @@ import edu.sjsu.ddd.bundleserver.service.BundleUploadResponse;
 import edu.sjsu.ddd.bundleserver.service.Status;
 import io.grpc.stub.StreamObserver;
 
-//@Service
+@Service
 public class BundleServerServiceImpl extends BundleServiceImplBase {
     
     private static final String BundleDir = "/Users/adityasinghania/Downloads/Data/Shared";

@@ -25,7 +25,7 @@ public class FileStoreHelper {
 
     public FileStoreHelper(String rootFolder, String appFolder){
         RootFolder = rootFolder;
-        appFolder = appFolder;
+        this.appFolder = appFolder;
     }
 
     public static String convertStreamToString(InputStream is) throws Exception {
