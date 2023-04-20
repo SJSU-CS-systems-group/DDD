@@ -9,7 +9,6 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
@@ -29,6 +28,9 @@ import com.ddd.bundletransport.service.BundleUploadRequest;
 import com.ddd.wifidirect.WifiDirectManager;
 import com.google.protobuf.ByteString;
 
+import org.whispersystems.libsignal.ecc.Curve;
+import org.whispersystems.libsignal.ecc.ECKeyPair;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -37,13 +39,11 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.ref.WeakReference;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -59,6 +59,8 @@ public class MainActivity extends AppCompatActivity {
     private WifiDirectManager wifiDirectManager;
     private String Receive_Directory;
     private String Server_Directory;
+    private String tidPath;
+    private String transportID;
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
@@ -104,17 +106,6 @@ public class MainActivity extends AppCompatActivity {
         WorkManager.getInstance(this).cancelUniqueWork(TAG);
         Toast.makeText(this, "Stop Rpc Server", Toast.LENGTH_SHORT).show();
     }
-
-    private void deleteBundles(String directory){
-        File deleteDir = new File(directory);
-        if (deleteDir.listFiles() != null) {
-            for (File bundle : Objects.requireNonNull(deleteDir.listFiles())){
-                boolean result = bundle.delete();
-                Log.d(TAG, bundle.getName()+"deleted:"+ result);
-            }
-        }
-    }
-
 
     private class GrpcSendTask extends AsyncTask<String, Void, String> {
         private final WeakReference<Activity> activityReference;
@@ -249,13 +240,13 @@ public class MainActivity extends AppCompatActivity {
                     } else if(response.hasMetadata()){
                         try {
                             Log.d(TAG,"Downloading chunk of :"+response.getMetadata().getBid());
-                            writer = fileUtils.getFilePath(response, Receive_Directory);
+                            writer = FileUtils.getFilePath(response, Receive_Directory);
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
                     } else{
                         try {
-                            fileUtils.writeFile(writer, response.getFile().getContent());
+                            FileUtils.writeFile(writer, response.getFile().getContent());
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -277,7 +268,7 @@ public class MainActivity extends AppCompatActivity {
 
                 @Override
                 public void onCompleted() {
-                    fileUtils.closeFile(writer);
+                    FileUtils.closeFile(writer);
                     Log.d(TAG, "File download complete");
                     statusComplete = true;
                 }
@@ -286,7 +277,7 @@ public class MainActivity extends AppCompatActivity {
             while  (receiveBundles){
                 if(statusComplete){
                     Log.d(TAG, "doInBackground: receiveBundles" + receiveBundles);
-                    String existingBundles = fileUtils.getFilesList(Receive_Directory);
+                    String existingBundles = FileUtils.getFilesList(Receive_Directory);
                     BundleDownloadRequest request = BundleDownloadRequest.newBuilder()
                             .setTransportId("test_1")
                             .setBundleList(existingBundles)
@@ -324,6 +315,25 @@ public class MainActivity extends AppCompatActivity {
         Server_Directory = SERVER_BASE_PATH +"/server";
         wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle());
 
+        // set up transport Id
+        tidPath = getApplicationContext().getApplicationInfo().dataDir+"/transportIdentity.pub";
+        File tid = new File(tidPath);
+        if (!tid.exists()){
+            ECKeyPair identityKeyPair = Curve.generateKeyPair();
+            try {
+                SecurityUtils.createEncodedPublicKeyFile(identityKeyPair.getPublicKey(), tidPath);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } else{
+            try {
+                transportID = SecurityUtils.generateID(tidPath);
+                Log.d(TAG, "Transport ID : "+ transportID);
+            } catch (IOException | InvalidKeyException | NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            }
+        }
+
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                     MainActivity.PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION);
@@ -338,8 +348,8 @@ public class MainActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.btn_clear_storage).setOnClickListener(v -> {
-            deleteBundles(Receive_Directory);
-            deleteBundles(Server_Directory);
+            FileUtils.deleteBundles(Receive_Directory);
+            FileUtils.deleteBundles(Server_Directory);
         });
 
         sendBundleServerButton.setOnClickListener(view -> {

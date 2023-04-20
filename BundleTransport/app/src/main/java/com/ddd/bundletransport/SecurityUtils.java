@@ -1,26 +1,28 @@
 package com.ddd.bundletransport;
 
-import android.os.Build;
-
 import com.google.firebase.crashlytics.buildtools.reloc.org.apache.commons.io.IOUtils;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import org.whispersystems.libsignal.ecc.ECKeyPair;
+
 import org.whispersystems.libsignal.ecc.ECPublicKey;
-import org.whispersystems.libsignal.ecc.Curve;
+
 import android.util.Base64;
+import android.util.Log;
+
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class securityUtils {
+public class SecurityUtils {
 
     public static String generateID(String publicKeyPath) throws IOException, InvalidKeyException, NoSuchAlgorithmException
     {
@@ -35,15 +37,22 @@ public class securityUtils {
         String encodedKey = "-----BEGIN EC PUBLIC KEY-----\n";
         try (FileOutputStream stream = new FileOutputStream(path)) {
             encodedKey += Base64.encodeToString(publicKey.serialize(),Base64.URL_SAFE);
-            encodedKey += "\n-----END EC PUBLIC KEY-----";
+            encodedKey += "-----END EC PUBLIC KEY-----";
             stream.write(encodedKey.getBytes());
         }
     }
 
     public static byte[] decodePublicKeyfromFile(String path) throws IOException, InvalidKeyException
     {
-        InputStream in = new FileInputStream(new File(path.trim()));
-        List<String> encodedKeyList = Collections.singletonList(IOUtils.toString(in, "UTF-8"));
+        File file = new File(path.trim());
+        InputStream in = new FileInputStream(file);
+        BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+        List<String> encodedKeyList = new ArrayList<String>();
+        String line = reader.readLine();
+        while(line != null){
+            encodedKeyList.add(line);
+            line = reader.readLine();
+        }
 
         if (encodedKeyList.size() != 3) {
             throw new InvalidKeyException("Error: Invalid Public Key Length");

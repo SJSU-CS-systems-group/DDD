@@ -13,8 +13,9 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.Objects;
 
-public class fileUtils {
+public class FileUtils {
 
     public static String getFilesList(String directory){
         String fileList = "";
@@ -22,7 +23,7 @@ public class fileUtils {
         File[] Files = dir.listFiles();
         if ( Files != null && Files.length > 0 ){
             for (File file : Files){
-                fileList = fileList + "," +file.getName();
+                fileList = fileList + "," + file.getName();
             }
         }
         return fileList;
@@ -59,6 +60,16 @@ public class fileUtils {
             writer.close();
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    public static void deleteBundles(String directory){
+        File deleteDir = new File(directory);
+        if (deleteDir.listFiles() != null) {
+            for (File bundle : Objects.requireNonNull(deleteDir.listFiles())){
+                boolean result = bundle.delete();
+                Log.d(MainActivity.TAG, bundle.getName()+"deleted:"+ result);
+            }
         }
     }
 }
