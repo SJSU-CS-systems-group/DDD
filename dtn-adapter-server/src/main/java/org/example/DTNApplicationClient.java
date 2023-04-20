@@ -40,8 +40,8 @@ public class DTNApplicationClient {
 		System.out.println(target + ", " + ip + ", " + port);
 
 		DTNApplicationClient client = new DTNApplicationClient(ip, port);
-
-		ConnectionData data = ConnectionData.newBuilder().setAppName("com.example.mysignal").setUrl("localhost:8090")
+		ConnectionData data = ConnectionData.newBuilder().setAppName("org.thoughtcrime.securesms").setUrl("localhost:8090")
+		//ConnectionData data = ConnectionData.newBuilder().setAppName("com.example.mysignal").setUrl("localhost:8090")
 				.build();
 		try {
 			ResponseStatus status = client.blockingStub.registerAdapter(data);
