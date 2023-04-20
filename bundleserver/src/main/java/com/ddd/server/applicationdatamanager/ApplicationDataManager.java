@@ -69,10 +69,12 @@ public class ApplicationDataManager {
   }
 
   public void storeADUs(String clientId, String bundleId, List<ADU> adus) {
+    System.out.println("[ADM] Store ADUs");
     this.registerRecvdBundleId(clientId, bundleId);
     Map<String, List<ADU>> appIdToADUMap = new HashMap<>();
 
     for (ADU adu : adus) {
+      System.out.println("[ADM] "+adu.getADUId());
       Long largestAduIdReceived = this.stateManager.largestADUIdReceived(clientId, adu.getAppId());
       if (largestAduIdReceived != null && adu.getADUId() <= largestAduIdReceived) {
         continue;
@@ -87,6 +89,7 @@ public class ApplicationDataManager {
       }
     }
     for (String appId : appIdToADUMap.keySet()) {
+      System.out.println("[ADM] "+appId+" "+appIdToADUMap.get(appId));
       this.dataStoreAdaptor.persistADUsForServer(clientId, appId, appIdToADUMap.get(appId));
     }
   }

@@ -5,6 +5,9 @@ import io.grpc.ServerBuilder;
 
 import java.io.IOException;
 
+import edu.sjsu.dtn.adapter.signal.SignalCLIConnector;
+import edu.sjsu.dtn.storage.FileStoreHelper;
+
 public class DTNAdapterServer {
     public int port=8080;
     private final Server server;
@@ -29,11 +32,21 @@ public class DTNAdapterServer {
 
     public static void main(String[] args){
         try {
-            DTNAdapterServer admServer = new DTNAdapterServer(8090);
-            admServer.start();
-            admServer.blockUntilShutdown();
-        }catch (Exception ex){
-            ex.printStackTrace();
-        }
+			SignalCLIConnector.performRegistration("1", FileStoreHelper.getStringFromFile("/Users/adityasinghania/Downloads/Data/receive/51fWsBsYJVojVBkNPhV3fv_6i4A=/org.thoughtcrime.securesms/1.txt").getBytes());
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+//    	try {
+//            DTNAdapterServer admServer = new DTNAdapterServer(8090);
+//            admServer.start();
+//            System.out.println("Running");
+//            admServer.blockUntilShutdown();
+//        }catch (Exception ex){
+//            ex.printStackTrace();
+//        }
     }
 }

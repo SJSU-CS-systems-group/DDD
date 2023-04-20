@@ -48,6 +48,7 @@ public class FileStoreHelper {
     public void setMetadata(String folder, Metadata metadata){
         try {
             File metadataFile = new File(RootFolder + "/" + folder + "/metadata.json");
+            metadataFile.getParentFile().mkdirs();
             metadataFile.createNewFile();
             Gson gson = new Gson();
             String metadataString = gson.toJson(metadata);
@@ -88,6 +89,10 @@ public class FileStoreHelper {
         List<byte[]> appDataList = new ArrayList<>();
         String folder = clientId;
         Metadata metadata = getMetadata(folder);
+        if(metadata == null) {
+        	metadata = new Metadata(1, 0,0,0);
+            setMetadata(folder, metadata);
+        }
         for(long i=metadata.lastProcessedMessageId+1;i <= metadata.lastReceivedMessageId;i++){
             appDataList.add(readFile(RootFolder+"/"+folder+"/"+i+".txt"));
         }
