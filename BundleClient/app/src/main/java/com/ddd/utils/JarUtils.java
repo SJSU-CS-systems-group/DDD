@@ -171,8 +171,8 @@ public class JarUtils {
 
             // Close the JAR file
             jarFile.close();
-        } catch (IOException | NoSuchAlgorithmException ioe) {
-
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }

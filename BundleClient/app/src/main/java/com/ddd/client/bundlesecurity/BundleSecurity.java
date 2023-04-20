@@ -123,14 +123,10 @@ public class BundleSecurity {
 
   }
 
-  public String getClientKeyPath() {
-    return clientKeyPath;
+  public ClientBundleGenerator getClientBundleGenerator() {
+    return clientBundleGenerator;
   }
 
-
-  public String getServerKeyPath() {
-    return serverKeyPath;
-  }
   public void decryptBundleContents(UncompressedPayload bundle) {
     System.out.println("[BS] Decrypting contents of the bundle with id: " + bundle.getBundleId());
   }
@@ -174,17 +170,16 @@ public class BundleSecurity {
                 + File.separator
                 + Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME
                 + ".jar");
-
+    String bundleId = "";
     if (this.isEncryptionEnabled) {
       
       try {
-        ClientSecurity clientSecurity = ClientSecurity.getInstance(counter, clientKeyPath, serverKeyPath);
+        ClientSecurity clientSecurity = ClientSecurity.getInstance(0, null, null);
         clientSecurity.decrypt(
             uncompressedBundle.getSource().getAbsolutePath(),
             uncompressedBundle.getSource().getAbsolutePath());
 
-        String clientId = SecurityUtils.getClientID(uncompressedBundle.getSource().getAbsolutePath());
-        String bundleId = clientSecurity.getBundleIDFromFile(uncompressedBundle.getSource().getAbsolutePath());
+        bundleId = clientSecurity.getBundleIDFromFile(uncompressedBundle.getSource().getAbsolutePath());
 
         File decryptedPayload =
             new File(
@@ -201,7 +196,7 @@ public class BundleSecurity {
       }
     }
 
-    return new Payload(uncompressedBundle.getBundleId(), decryptedPayloadJar);
+    return new Payload(bundleId, decryptedPayloadJar);
   }
 
   public boolean isLatestReceivedBundleId(String bundleId) {

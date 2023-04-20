@@ -56,6 +56,7 @@ public class HelloworldActivity extends AppCompatActivity {
   // gRPC set up
   private Button connectButton;
   private Button detectTransportButton;
+  private Button receiveFromTransportButton;
   private FileChooserFragment fragment;
   private TextView resultText;
   private BundleDeliveryAgent agent;
@@ -89,6 +90,7 @@ public class HelloworldActivity extends AppCompatActivity {
     setContentView(R.layout.activity_helloworld);
     connectButton = (Button) findViewById(R.id.connect_button);
     detectTransportButton = (Button) findViewById(R.id.detect_transport_button);
+    receiveFromTransportButton = (Button) findViewById(R.id.receive_from_transport_button);
     resultText = (TextView) findViewById(R.id.grpc_response_text);
     resultText.setMovementMethod(new ScrollingMovementMethod());
     FragmentManager fragmentManager = this.getSupportFragmentManager();
@@ -120,6 +122,13 @@ public class HelloworldActivity extends AppCompatActivity {
       @Override
       public void onClick(View view) {
         agent.send();
+      }
+    });
+    receiveFromTransportButton.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View view) {
+
+        agent.receive();
       }
     });
   }

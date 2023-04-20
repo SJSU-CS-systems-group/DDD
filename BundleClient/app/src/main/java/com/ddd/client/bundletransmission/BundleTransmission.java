@@ -14,6 +14,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import com.ddd.bundleclient.HelloworldActivity;
 import com.ddd.client.applicationdatamanager.ApplicationDataManager;
+import com.ddd.client.bundlerouting.ClientBundleGenerator;
 import com.ddd.client.bundlerouting.ClientWindow;
 import com.ddd.client.bundlesecurity.BundleIDGenerator;
 import com.ddd.client.bundlesecurity.BundleSecurity;
@@ -126,11 +127,19 @@ public class BundleTransmission {
     String largestBundleIdReceived = this.getLargestBundleIdReceived();
     UncompressedBundle uncompressedBundle =
         BundleUtils.extractBundle(bundle, this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + RECEIVED_PROCESSING);
-    String bundleId = uncompressedBundle.getBundleId();
-    if (StringUtils.isBlank(largestBundleIdReceived) || BundleIDGenerator.compareBundleIDs(bundleId, largestBundleIdReceived, BundleIDGenerator.DOWNSTREAM) < 1) {
+    Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
+    String bundleId = payload.getBundleId();
+
+    ClientBundleGenerator clientBundleGenerator = this.bundleSecurity.getClientBundleGenerator();
+    boolean isLatestBundleId = false;
+    try {
+      isLatestBundleId = (!StringUtils.isBlank(largestBundleIdReceived) && clientBundleGenerator.compareBundleIDs(bundleId, largestBundleIdReceived, BundleIDGenerator.DOWNSTREAM) == 1);
+    } catch (SecurityExceptions.BundleIDCryptographyException e) {
+      e.printStackTrace();
+    }
+    if (isLatestBundleId) {
       return;
     }
-    Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
     UncompressedPayload uncompressedPayload =
         BundleUtils.extractPayload(
             payload, uncompressedBundle.getSource().getAbsolutePath());
@@ -155,13 +164,9 @@ public class BundleTransmission {
     for (final File bundleFile : bundleStorageDirectory.listFiles()) {
       Bundle bundle = new Bundle(bundleFile);
       this.processReceivedBundle(bundle);
-      try {
-        Log.d(HelloworldActivity.TAG, "Deleting Directory");
-        FileUtils.deleteDirectory(bundle.getSource());
-        Log.d(HelloworldActivity.TAG, "Deleted Directory");
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
+      Log.d(HelloworldActivity.TAG, "Deleting Directory");
+      FileUtils.deleteQuietly(bundle.getSource());
+      Log.d(HelloworldActivity.TAG, "Deleted Directory");
     }
   }
 
