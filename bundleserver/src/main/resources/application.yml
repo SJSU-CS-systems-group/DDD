@@ -3,17 +3,10 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/dtn_server_db?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
     username: root
-<<<<<<< HEAD
-    password: password
+    password: 
 
 server:
   port: 8081
-  
-=======
-    password: 
-server:
-  port: 8081
->>>>>>> e3f7de1b1c92b8b2cf9985048fac418c8f74c4b7
 bundle-server:
   bunde-store-root: "/Users/adityasinghania/Downloads/Data/"
   registered-app-ids: "/Users/adityasinghania/Downloads/Data/Shared/REGISTERED_APP_IDS.txt"
