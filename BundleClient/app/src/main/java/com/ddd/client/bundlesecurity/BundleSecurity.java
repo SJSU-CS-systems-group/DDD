@@ -12,6 +12,8 @@ import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.NoSessionException;
 import com.ddd.bundleclient.HelloworldActivity;
 import com.ddd.client.bundlerouting.ClientBundleGenerator;
+import com.ddd.client.bundlerouting.ClientWindow;
+import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions;
 import com.ddd.model.EncryptedPayload;
 import com.ddd.model.EncryptionHeader;
 import com.ddd.model.Payload;
@@ -23,7 +25,7 @@ import android.util.Log;
 
 public class BundleSecurity {
 
-  static ClientSecurity client = null;
+  private ClientSecurity client = null;
   private static String RootFolder;
   private static String LARGEST_BUNDLE_ID_RECEIVED =
       "/Shared/DB/LARGEST_BUNDLE_ID_RECEIVED.txt";
@@ -32,6 +34,8 @@ public class BundleSecurity {
       "/Shared/DB/BUNDLE_ID_NEXT_COUNTER.txt";
 
   private int counter = 0;
+
+  private ClientWindow clientWindow;
 
   private ClientBundleGenerator clientBundleGenerator;
 
@@ -110,12 +114,14 @@ public class BundleSecurity {
     try {
       client = ClientSecurity.getInstance(1, clientKeyPath, serverKeyPath);
       clientBundleGenerator = ClientBundleGenerator.getInstance(client);
+      clientWindow = ClientWindow.getInstance(5, client.getClientID());
       Log.d(HelloworldActivity.TAG,"Kuch Bhi");
     } catch (InvalidKeyException e) {
       e.printStackTrace();
     } catch (SecurityExceptions.IDGenerationException e) {
       e.printStackTrace();
-    } catch (SecurityExceptions.EncodingException e) {
+    } catch (SecurityExceptions.EncodingException | WindowExceptions.InvalidLength |
+             WindowExceptions.BufferOverflow e) {
       e.printStackTrace();
     }
   }
@@ -200,5 +206,15 @@ public class BundleSecurity {
     String largestBundleIdReceived = this.getLargestBundleIdReceived();
     return (StringUtils.isEmpty(largestBundleIdReceived)
         || this.compareReceivedBundleIds(bundleId, largestBundleIdReceived) > 0);
+  }
+
+  public ClientWindow getClientWindow()
+  {
+    return this.clientWindow;
+  }
+
+  public ClientSecurity getClientSecurity()
+  {
+    return this.client;
   }
 }

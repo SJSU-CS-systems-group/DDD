@@ -79,7 +79,7 @@ public class CircularBuffer {
         return count;
     }
 
-    public String[] getBuffer()
+    public List<String> getBuffer()
     {
         List<String> sList = new ArrayList<String>();
         int count = capacity;
@@ -91,7 +91,7 @@ public class CircularBuffer {
             count--;
         }
 
-        return sList.toArray(new String[sList.size()]);
+        return sList;
     }
 
     public int getLength()

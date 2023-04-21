@@ -23,6 +23,8 @@ import androidx.fragment.app.FragmentManager;
 import com.ddd.client.bundledeliveryagent.BundleDeliveryAgent;
 import com.ddd.client.bundlerouting.ClientWindow;
 import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions;
+import com.ddd.client.bundlesecurity.BundleSecurity;
+import com.ddd.client.bundlesecurity.SecurityExceptions;
 import com.ddd.client.bundletransmission.BundleTransmission;
 import com.ddd.model.BundleDTO;
 import com.ddd.model.BundleWrapper;
@@ -38,6 +40,7 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -101,13 +104,16 @@ public class HelloworldActivity extends AppCompatActivity {
 
     // set up wifi direct
     wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle());
-//    try {
-//      clientWindow =  ClientWindow.getInstance(WINDOW_LENGTH, "");
-//    } catch (Exception e) {
-//      e.printStackTrace();
-//    }
+
     ApplicationContext = getApplicationContext();
     bundleTransmission = new BundleTransmission(getApplicationContext().getApplicationInfo().dataDir);
+
+    try {
+      clientWindow = bundleTransmission.getBundleSecurity().getClientWindow();
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+
     connectButton.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View view) {
@@ -213,15 +219,21 @@ public class HelloworldActivity extends AppCompatActivity {
       int port = Integer.parseInt(portStr);
       channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
       FileServiceGrpc.FileServiceStub stub = FileServiceGrpc.newStub(channel);
-      String[] bundleRequests = new String[] {"client0"};
-//      clientWindow.getWindow(null);
+      List<String> bundleRequests = null;
+      try {
+        bundleRequests = clientWindow.getWindow(bundleTransmission.getBundleSecurity().getClientSecurity());
+      } catch (SecurityExceptions.BundleIDCryptographyException e) {
+        Log.d(TAG, "{BR}: Failed to get Window: " + e);
+        e.printStackTrace();
+      }
+
       for(String bundleName: bundleRequests){
 //        String testBundleName = "client0-"+bundleName+".jar";
-        String testBundleName = "client0-1.jar";
+        // String testBundleName = "client0-1.jar";
         ReqFilePath request = ReqFilePath.newBuilder()
-                .setValue(testBundleName)
+                .setValue(bundleName)
                 .build();
-        Log.d(TAG, "Downloading file: " + testBundleName);
+        Log.d(TAG, "Downloading file: " + bundleName);
 
         StreamObserver<Bytes> downloadObserver = new StreamObserver<Bytes>() {
           FileOutputStream fileOutputStream = null;
@@ -230,7 +242,7 @@ public class HelloworldActivity extends AppCompatActivity {
           public void onNext(Bytes fileContent) {
             try {
               if (fileOutputStream == null) {
-                fileOutputStream = new FileOutputStream(FILE_PATH+"/"+testBundleName);
+                fileOutputStream = new FileOutputStream(FILE_PATH+"/"+bundleName);
               }
               // Write the downloaded data to the file
               fileOutputStream.write(fileContent.getValue().toByteArray());

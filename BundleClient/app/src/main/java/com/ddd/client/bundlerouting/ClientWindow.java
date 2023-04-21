@@ -13,6 +13,8 @@ import com.ddd.client.bundlesecurity.ClientSecurity;
 import com.ddd.client.bundlesecurity.SecurityExceptions.AESAlgorithmException;
 import com.ddd.client.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
 
+import java.util.List;
+
 public class ClientWindow {
     static private ClientWindow singleClientWindowInstance = null;
     private CircularBuffer window   = null;
@@ -65,7 +67,7 @@ public class ClientWindow {
         fillWindow(windowLength, begin);
     }
 
-    static ClientWindow getInstance(int windowLength, String clientID) throws InvalidLength, BufferOverflow
+    public static ClientWindow getInstance(int windowLength, String clientID) throws InvalidLength, BufferOverflow
     {
         if (singleClientWindowInstance == null) {
             singleClientWindowInstance = new ClientWindow(windowLength, clientID);
@@ -79,16 +81,18 @@ public class ClientWindow {
      * Returns:
      * None
      */
-    public void processBundle(String bundleID, ClientSecurity clientSecurity) throws RecievedOldACK, RecievedInvalidACK, BufferOverflow, BundleIDCryptographyException
+    public void processBundle(String bundleID, ClientSecurity clientSecurity) throws BufferOverflow, BundleIDCryptographyException
     {
         String decryptedBundleID = clientSecurity.decryptBundleID(bundleID);
         System.out.println("Largest Bundle ID = "+decryptedBundleID);
         long ack = BundleIDGenerator.getCounterFromBundleID(decryptedBundleID, BundleIDGenerator.DOWNSTREAM);
 
         if (Long.compareUnsigned(ack,begin) == -1) {
-            throw new RecievedOldACK("Received old ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(begin) + "]" );
+            System.out.println("Received old [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(begin) + "]" );
+            return;
         } else if (Long.compareUnsigned(ack,end) == 1) {
-            throw new RecievedInvalidACK("Received Invalid ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(end) + "]" );
+            System.out.println("Received Invalid ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(end) + "]" );
+            return;
         }
 
         /* Index will be an int as windowLength is int */
@@ -99,7 +103,7 @@ public class ClientWindow {
         try {
             noDeleted = window.deleteUntilIndex(ackIndex);
         } catch (InvalidLength e) {
-            throw new RecievedInvalidACK("Received Invalid ACK [" + Long.toUnsignedString(ack) +"]" );
+            System.out.println("Received Invalid ACK [" + Long.toUnsignedString(ack) +"]" );
         }
 
         begin = ack + 1;
@@ -115,12 +119,12 @@ public class ClientWindow {
      * Returns:
      * None
      */
-    public String[] getWindow(ClientSecurity client) throws BundleIDCryptographyException  
+    public List<String> getWindow(ClientSecurity client) throws BundleIDCryptographyException
     {
-        String[] bundleIDs = window.getBuffer();
+        List<String> bundleIDs = window.getBuffer();
 
-        for (int i = 0; i < bundleIDs.length; ++i) {
-            bundleIDs[i] = client.encryptBundleID(bundleIDs[i]);
+        for (int i = 0; i < bundleIDs.size(); ++i) {
+            bundleIDs.add(i, client.encryptBundleID(bundleIDs.get(i)));
         }
 
         return bundleIDs;

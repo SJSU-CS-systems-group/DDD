@@ -285,4 +285,9 @@ public class BundleTransmission {
   public void notifyBundleSent(BundleDTO bundle) {
     FileUtils.deleteQuietly(bundle.getBundle().getSource());
   }
+
+  public BundleSecurity getBundleSecurity()
+  {
+    return this.bundleSecurity;
+  }
 }
