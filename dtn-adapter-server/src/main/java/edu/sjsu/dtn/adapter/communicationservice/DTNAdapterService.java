@@ -17,6 +17,7 @@ public class DTNAdapterService extends DTNAdapterGrpc.DTNAdapterImplBase {
 
 	@Override
 	public void saveData(AppData request, StreamObserver<AppData> responseObserver) {
+		 System.out.println("[DAS] Saving Data for:"+request.getClientId());
 		FileStoreHelper sendHelper = new FileStoreHelper(ROOT_DIRECTORY + "/send");
 
 		FileStoreHelper helper = new FileStoreHelper(ROOT_DIRECTORY + "/receive");

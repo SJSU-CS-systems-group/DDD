@@ -30,9 +30,9 @@ public class ApplicationDataManager {
   
   public ApplicationDataManager() {
     //    this.dataStoreAdaptor = new DataStoreAdaptor(bundleServerConfig.getBundleStoreRoot());
-    registeredAppIdsFile = "C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/Shared/REGISTERED_APP_IDS.txt";
+    registeredAppIdsFile = "/Users/adityasinghania/Downloads/Data/Shared/REGISTERED_APP_IDS.txt";
     this.dataStoreAdaptor =
-        new DataStoreAdaptor("C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/");
+        new DataStoreAdaptor("/Users/adityasinghania/Downloads/Data/");
   }
 
   public List<String> getRegisteredAppIds() {
@@ -69,10 +69,12 @@ public class ApplicationDataManager {
   }
 
   public void storeADUs(String clientId, String bundleId, List<ADU> adus) {
+    System.out.println("[ADM] Store ADUs");
     this.registerRecvdBundleId(clientId, bundleId);
     Map<String, List<ADU>> appIdToADUMap = new HashMap<>();
 
     for (ADU adu : adus) {
+      System.out.println("[ADM] "+adu.getADUId());
       Long largestAduIdReceived = this.stateManager.largestADUIdReceived(clientId, adu.getAppId());
       if (largestAduIdReceived != null && adu.getADUId() <= largestAduIdReceived) {
         continue;
@@ -87,6 +89,7 @@ public class ApplicationDataManager {
       }
     }
     for (String appId : appIdToADUMap.keySet()) {
+      System.out.println("[ADM] "+appId+" "+appIdToADUMap.get(appId));
       this.dataStoreAdaptor.persistADUsForServer(clientId, appId, appIdToADUMap.get(appId));
     }
   }

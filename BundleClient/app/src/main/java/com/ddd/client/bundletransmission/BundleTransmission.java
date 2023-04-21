@@ -282,7 +282,7 @@ public class BundleTransmission {
     return toSend;
   }
 
-  public void notifyBundleSent(Bundle bundle) {
-    FileUtils.deleteQuietly(bundle.getSource());
+  public void notifyBundleSent(BundleDTO bundle) {
+    FileUtils.deleteQuietly(bundle.getBundle().getSource());
   }
 }

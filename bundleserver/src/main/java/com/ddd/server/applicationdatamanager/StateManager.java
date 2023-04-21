@@ -48,7 +48,7 @@ class StateManager {
       SentAduDetailsRepository sentAduDetailsRepository,
       LargestBundleIdReceivedRepository largestBundleIdReceivedRepository) {
     this.dataStoreAdaptor =
-        new DataStoreAdaptor("C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/");
+        new DataStoreAdaptor("/Users/adityasinghania/Downloads/Data/");
     this.largestAduIdReceivedRepository = largestAduIdReceivedRepository;
     this.largestAduIdDeliveredRepository = largestAduIdDeliveredRepository;
     this.lastBundleIdSentRepository = lastBundleIdSentRepository;

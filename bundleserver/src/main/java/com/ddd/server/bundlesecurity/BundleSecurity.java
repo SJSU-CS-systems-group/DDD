@@ -18,7 +18,7 @@ import com.ddd.utils.Constants;
 public class BundleSecurity {
 
   private static final String BUNDLE_ID_NEXT_COUNTER =
-      "C:\\Masters\\CS 297-298\\CS 298\\Implementation\\AppStorage\\Server\\Shared\\DB\\BUNDLE_ID_NEXT_COUNTER.json";
+      "/Users/adityasinghania/Downloads/Data/Shared/DB/BUNDLE_ID_NEXT_COUNTER.json";
 
   @Autowired private ServerSecurity serverSecurity;
 

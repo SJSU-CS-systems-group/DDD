@@ -13,7 +13,7 @@ public class DataStoreAdaptorTest {
     private static void fetchADUsTest(DataStoreAdaptor adaptor, String clientId, String appId){
         List<ADU> adus = new ArrayList<>();
         adus.add(new ADU(
-                new File(ROOT_DIRECTORY+"\\DataFromTransport\\2.txt"),
+                new File("/Users/adityasinghania/Downloads/Data/Shared/REGISTERED_APP_IDS.txt"),
                 appId,
                 4,
                 0,
@@ -25,7 +25,7 @@ public class DataStoreAdaptorTest {
 
     public static void main(String[] args){
         String clientId="m.deepak";
-        String appId = "com.android.mysignal";
+        String appId = "org.thoughtcrime.securesms";
         DataStoreAdaptor adaptor = new DataStoreAdaptor(ROOT_DIRECTORY);
         fetchADUsTest(adaptor, clientId, appId);
     }

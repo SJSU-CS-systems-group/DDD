@@ -63,7 +63,7 @@ public class BundleGeneratorService {
     String ackPath =
         extractedPayloadPath + File.separator + Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME;
     String aduPath = extractedPayloadPath + File.separator + Constants.BUNDLE_ADU_DIRECTORY_NAME;
-
+    System.out.println("[BGS] ADU Path"+aduPath);
     UncompressedPayload.Builder builder = new UncompressedPayload.Builder();
 
     builder.setAckRecord(AckRecordUtils.readAckRecordFromFile(new File(ackPath)));

@@ -72,6 +72,7 @@ public class BundleTransmission {
 
   @Transactional(rollbackFor = Exception.class)
   public void processReceivedBundle(UncompressedPayload bundle) {
+    System.out.println("[BT] "+bundle.getADUs().size());
     String clientId = "";
     try {
       clientId = SecurityUtils.generateID(bundle.getSource().getParentFile() + File.separator + "clientIdentity.pub");
@@ -142,7 +143,7 @@ public class BundleTransmission {
     //    this.bundleRouting.processClientMetadata(transportId);
     this.applicationDataManager.processAcknowledgement(
         clientId, bundle.getAckRecord().getBundleId());
-    if (!bundle.getADUs().isEmpty()) {
+    if (!bundle.getADUs().isEmpty()) {      
       this.applicationDataManager.storeADUs(clientId, bundle.getBundleId(), bundle.getADUs());
     }
   }

@@ -59,7 +59,7 @@ public class HelloworldActivity extends AppCompatActivity {
   private Button receiveFromTransportButton;
   private FileChooserFragment fragment;
   private TextView resultText;
-  private BundleDeliveryAgent agent;
+//  private BundleDeliveryAgent agent;
   // context
   public static Context ApplicationContext;
 
@@ -67,6 +67,8 @@ public class HelloworldActivity extends AppCompatActivity {
   public static ClientWindow clientWindow;
 
   private int WINDOW_LENGTH = 3;
+  // bundle transmitter set up
+  BundleTransmission bundleTransmission;
 
   /** check for location permissions manually, will give a prompt*/
   @Override
@@ -95,7 +97,7 @@ public class HelloworldActivity extends AppCompatActivity {
     resultText.setMovementMethod(new ScrollingMovementMethod());
     FragmentManager fragmentManager = this.getSupportFragmentManager();
     this.fragment = (FileChooserFragment) fragmentManager.findFragmentById(R.id.fragment_fileChooser);
-    this.agent = new BundleDeliveryAgent(getApplicationContext().getApplicationInfo().dataDir);
+//    this.agent = new BundleDeliveryAgent(getApplicationContext().getApplicationInfo().dataDir);
 
     // set up wifi direct
     wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle());
@@ -105,7 +107,7 @@ public class HelloworldActivity extends AppCompatActivity {
 //      e.printStackTrace();
 //    }
     ApplicationContext = getApplicationContext();
-
+    bundleTransmission = new BundleTransmission(getApplicationContext().getApplicationInfo().dataDir);
     connectButton.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View view) {
@@ -118,19 +120,19 @@ public class HelloworldActivity extends AppCompatActivity {
       }
     });
 
-    detectTransportButton.setOnClickListener(new View.OnClickListener() {
-      @Override
-      public void onClick(View view) {
-        agent.send();
-      }
-    });
-    receiveFromTransportButton.setOnClickListener(new View.OnClickListener() {
-      @Override
-      public void onClick(View view) {
-
-        agent.receive();
-      }
-    });
+//    detectTransportButton.setOnClickListener(new View.OnClickListener() {
+//      @Override
+//      public void onClick(View view) {
+//        agent.send();
+//      }
+//    });
+//    receiveFromTransportButton.setOnClickListener(new View.OnClickListener() {
+//      @Override
+//      public void onClick(View view) {
+//
+//        agent.receive();
+//      }
+//    });
   }
 
 
@@ -145,13 +147,13 @@ public class HelloworldActivity extends AppCompatActivity {
 //      start request task
         Log.d(TAG,"Connection Successful!");
         // receive task
-        new GrpcReceiveTask(this).execute("192.168.49.1",
-                "7777");
+//        new GrpcReceiveTask(this).execute("192.168.49.1",
+//                "7777");
 //        send task
-//        new GrpcSendTask(this)
-//                .execute(
-//                        "192.168.49.1",
-//                        "7777");
+        new GrpcSendTask(this)
+                .execute(
+                        "192.168.49.1",
+                        "7777");
       }
       return group;
     });
@@ -307,24 +309,19 @@ public class HelloworldActivity extends AppCompatActivity {
         channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
         FileServiceGrpc.FileServiceStub stub = FileServiceGrpc.newStub(channel);
         StreamObserver<FileUploadRequest> streamObserver = stub.uploadFile(new FileUploadObserver());
-        BundleTransmission bundleTransmission = new BundleTransmission(getApplicationContext().getApplicationInfo().dataDir);
         BundleDTO toSend = bundleTransmission.generateBundleForTransmission();
         System.out.println("[BDA] An outbound bundle generated with id: " + toSend.getBundleId());
-        Date current = Calendar.getInstance().getTime();
         FileUploadRequest metadata = FileUploadRequest.newBuilder()
                 .setMetadata(MetaData.newBuilder()
                         .setName(toSend.getBundleId())
-//                        .setName("hello")
                         .setType("jar").build())
                 .build();
         streamObserver.onNext(metadata);
 
 //      upload file as chunk
-        current = Calendar.getInstance().getTime();
         Log.d(TAG,"Started file transfer");
         FileInputStream inputStream = null;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//        inputStream = getResources().openRawResource(R.raw.payload);
           inputStream = new FileInputStream(toSend.getBundle().getSource());
         }
         int chunkSize = 1000*1000*4;

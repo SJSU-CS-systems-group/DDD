@@ -253,6 +253,7 @@ public class ApplicationDataManager {
       String line = "";
       while ((line = bufferedReader.readLine()) != null) {
         String appId = line.trim();
+        Log.d(HelloworldActivity.TAG,appId);
         registeredAppIds.add(appId);
       }
     } catch (IOException e) {
@@ -266,9 +267,10 @@ public class ApplicationDataManager {
     if(!file.exists()){
       file.mkdirs();
     }
+    Log.d(HelloworldActivity.TAG,ROOT_DIR + REGISTERED_APP_IDS + "||"+appId);
     try (BufferedWriter bufferedWriter =
-        new BufferedWriter(new FileWriter(new File(ROOT_DIR + REGISTERED_APP_IDS), true))) {
-      bufferedWriter.append("\n" + appId);
+        new BufferedWriter(new FileWriter(new File(ROOT_DIR + REGISTERED_APP_IDS),true))) {
+      bufferedWriter.append(appId+"\n");
     } catch (IOException e) {
       e.printStackTrace();
     }
