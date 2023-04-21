@@ -7,14 +7,10 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
 import java.util.prefs.Preferences;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -46,7 +42,6 @@ public class SignalCLIConnector {
 
 				Process pc = runtime.exec("java -jar target/signal-cli.jar -a " + phoneNumber + " register --captcha "
 						+ captcha + " --ddd " + tempFile.toAbsolutePath().toString());
-
 				BufferedReader stdInput = new BufferedReader(new InputStreamReader(pc.getInputStream()));
 
 				BufferedReader stdError = new BufferedReader(new InputStreamReader(pc.getErrorStream()));
@@ -103,7 +98,7 @@ public class SignalCLIConnector {
 				Runtime runtime = Runtime.getRuntime();
 				Process pc = runtime.exec("java -jar target/signal-cli.jar -a " + phoneNumber + " receive");
 				BufferedReader stdInput = new BufferedReader(new InputStreamReader(pc.getInputStream()));
-				
+
 				String s = null;
 				while ((s = stdInput.readLine()) != null) {
 					System.out.println(s);
@@ -112,7 +107,7 @@ public class SignalCLIConnector {
 						messageLocations.add(s);
 					}
 				}
-				
+
 			} catch (Exception e) {
 				System.out.println("Exception in receive");
 			}
