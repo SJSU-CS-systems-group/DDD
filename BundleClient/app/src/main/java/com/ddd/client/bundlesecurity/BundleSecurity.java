@@ -118,9 +118,6 @@ public class BundleSecurity {
     } catch (SecurityExceptions.EncodingException e) {
       e.printStackTrace();
     }
-
-
-
   }
 
   public ClientBundleGenerator getClientBundleGenerator() {

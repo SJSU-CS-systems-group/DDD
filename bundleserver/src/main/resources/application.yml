@@ -5,6 +5,9 @@ spring:
     username: root
     password: password
 
+server:
+  port: 8081
+  
 bundle-server:
   bunde-store-root: "C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/"
   registered-app-ids: "C:/Masters/CS 297-298/CS 298/Implementation/AppStorage/Server/Shared/REGISTERED_APP_IDS.txt"

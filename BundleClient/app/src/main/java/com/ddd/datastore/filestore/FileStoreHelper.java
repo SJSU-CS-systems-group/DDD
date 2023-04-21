@@ -25,7 +25,7 @@ public class FileStoreHelper {
 
     public FileStoreHelper(String rootFolder, String appFolder){
         RootFolder = rootFolder;
-        appFolder = appFolder;
+        this.appFolder = appFolder;
     }
 
     public static String convertStreamToString(InputStream is) throws Exception {
@@ -41,6 +41,7 @@ public class FileStoreHelper {
 
     public static String getStringFromFile (String filePath) throws Exception {
         File fl = new File(filePath);
+        System.out.println(filePath);
         FileInputStream fin = new FileInputStream(fl);
         String ret = convertStreamToString(fin);
         //Make sure you close all streams.
@@ -202,7 +203,7 @@ public class FileStoreHelper {
 
     public void deleteAllFilesUpTo(String appId, long aduId){
         //check if there are enough files
-        String folder = RootFolder+"/"+appId;
+        String folder = appId;
         Metadata metadata = getMetadata(folder);
         if(metadata.lastSentMessageId >= aduId){
             System.out.println("[FileStoreHelper.deleteAllFilesUpTo] Data already deleted.");
