@@ -1,5 +1,9 @@
 package com.ddd.client.bundlerouting.WindowUtils;
 
+import static com.ddd.bundleclient.HelloworldActivity.TAG;
+
+import android.util.Log;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,7 +30,7 @@ public class CircularBuffer {
 
     public void add(String item) throws BufferOverflow
     {
-        if (capacity + 1 >= length) {
+        if (capacity + 1 > length) {
             throw new BufferOverflow("Exceeding lenght("+length+")");
         }
 

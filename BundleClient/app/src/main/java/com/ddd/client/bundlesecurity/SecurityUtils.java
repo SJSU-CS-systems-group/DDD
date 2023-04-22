@@ -41,6 +41,8 @@ import com.ddd.client.bundlesecurity.SecurityExceptions.IDGenerationException;
 import com.ddd.client.bundlesecurity.SecurityExceptions.EncodingException;
 import com.ddd.client.bundlesecurity.SecurityExceptions.SignatureVerificationException;
 import com.ddd.client.bundlesecurity.SecurityExceptions.AESAlgorithmException;
+
+import android.content.res.Resources;
 import android.util.Base64;
 
 import com.ddd.datastore.filestore.FileStoreHelper;
@@ -254,4 +256,23 @@ public class SecurityUtils {
             file.mkdirs();
         }
     }
+
+//    public static byte[] getResourceFile(String path)
+//    {
+//        String filename = path.split(".")[0];
+//        // Get a reference to the resources
+//        Resources resources = getApplicationContext() getResources();
+//
+//        // Open the file using its resource ID
+//        InputStream inputStream = resources.openRawResource(R.raw.filename);
+//
+//        // Read the file data into a byte array
+//        byte[] data = new byte[inputStream.available()];
+//        inputStream.read(data);
+//
+//        // Close the input stream
+//        inputStream.close();
+//
+//        return data;
+//    }
 }

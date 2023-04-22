@@ -357,23 +357,4 @@ public class ClientSecurity {
     public String getClientKeyPath() {
         return clientKeyPath;
     }
-
-/*    public static byte[] getResourceFile(String path)
-    {
-        String filename = path.split(".")[0];
-        // Get a reference to the resources
-        Resources resources = getResources();
-
-        // Open the file using its resource ID
-        InputStream inputStream = resources.openRawResource(R.raw.filename);
-
-        // Read the file data into a byte array
-        byte[] data = new byte[inputStream.available()];
-        inputStream.read(data);
-
-        // Close the input stream
-        inputStream.close();
-
-        return data;
-    }*/
 }

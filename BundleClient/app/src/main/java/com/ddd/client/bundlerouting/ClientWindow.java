@@ -1,5 +1,9 @@
 package com.ddd.client.bundlerouting;
 
+import static com.ddd.bundleclient.HelloworldActivity.TAG;
+
+import android.util.Log;
+
 import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
 import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
 import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions.RecievedInvalidACK;
@@ -124,9 +128,9 @@ public class ClientWindow {
         List<String> bundleIDs = window.getBuffer();
 
         for (int i = 0; i < bundleIDs.size(); ++i) {
-            bundleIDs.add(i, client.encryptBundleID(bundleIDs.get(i)));
+            String bundleID = client.encryptBundleID(bundleIDs.get(i));
+            bundleIDs.set(i, bundleID);
         }
-
         return bundleIDs;
     }
 

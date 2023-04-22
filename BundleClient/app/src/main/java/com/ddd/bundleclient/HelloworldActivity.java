@@ -5,6 +5,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.os.AsyncTask;
@@ -34,6 +35,7 @@ import com.google.protobuf.ByteString;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.ref.WeakReference;
@@ -88,6 +90,12 @@ public class HelloworldActivity extends AppCompatActivity {
     }
   }
 
+//  private void fillKeyPaths()
+//  {
+//    Resources resources = getApplicationContext().getResources();
+//    InputStream inputStream = resources.openRawResource(R.raw.)
+//
+//  }
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
@@ -153,13 +161,13 @@ public class HelloworldActivity extends AppCompatActivity {
 //      start request task
         Log.d(TAG,"Connection Successful!");
         // receive task
-//        new GrpcReceiveTask(this).execute("192.168.49.1",
-//                "7777");
+        new GrpcReceiveTask(this).execute("192.168.49.1",
+                "7777");
 //        send task
-        new GrpcSendTask(this)
-                .execute(
-                        "192.168.49.1",
-                        "7777");
+//        new GrpcSendTask(this)
+//                .execute(
+//                        "192.168.49.1",
+//                        "7777");
       }
       return group;
     });
@@ -290,6 +298,10 @@ public class HelloworldActivity extends AppCompatActivity {
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
       }
+      new GrpcSendTask(HelloworldActivity.this)
+              .execute(
+                      "192.168.49.1",
+                      "7777");
       Activity activity = activityReference.get();
       if (activity == null) {
         return;
