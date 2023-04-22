@@ -27,18 +27,30 @@ public class DataStoreAdaptor {
     System.out.println("[DSA] Deleted ADUs for application " + appId + " with id upto " + aduIdEnd);
   }
 
+  public static void prepareData(String appId, String clientId){
+    String appAdapterAddress = getAppAdapterAddress(appId);
+    System.out.println("[DataStoreAdaptor.prepareData] " + appAdapterAddress);
+    if(appAdapterAddress == null || appAdapterAddress.isEmpty()){
+      System.out.println("[DataStoreAdaptor.prepareData] appAdapterAddress not valid");
+    }
+    String ipAddress = appAdapterAddress.split(":")[0];
+    int port = Integer.parseInt(appAdapterAddress.split(":")[1]);
+    DTNAdapterClient client = new DTNAdapterClient(ipAddress, port);
+    client.PrepareData(clientId);
+  }
+
   // get IP address and port for application adaptor server from database
-  private String getAppAdapterAddress(String appId) {
+  private static String getAppAdapterAddress(String appId) {
     try {
       MySQLConnection mysql = new MySQLConnection();
       Connection con = mysql.GetConnection();
       Statement stmt = con.createStatement();
       System.out.println(
-          "select address from registered_app_adapter_table where app_id='" + appId + "';");
+              "select address from registered_app_adapter_table where app_id='" + appId + "';");
 
       ResultSet rs =
-          stmt.executeQuery(
-              "select address from registered_app_adapter_table where app_id='" + appId + "';");
+              stmt.executeQuery(
+                      "select address from registered_app_adapter_table where app_id='" + appId + "';");
       String adapterAddress = "";
       while (rs.next()) {
         System.out.println("max value for app- " + rs.getString(1));
@@ -57,9 +69,9 @@ public class DataStoreAdaptor {
     List<byte[]> dataList = new ArrayList<>();
     for (int i = 0; i < adus.size(); i++) {
       this.receiveFileStoreHelper.AddFile(
-          adus.get(i).getAppId(),
-          clientId,
-          this.receiveFileStoreHelper.getDataFromFile(adus.get(i).getSource()));
+              adus.get(i).getAppId(),
+              clientId,
+              this.receiveFileStoreHelper.getDataFromFile(adus.get(i).getSource()));
       dataList.add(this.receiveFileStoreHelper.getDataFromFile(adus.get(i).getSource()));
     }
     String appAdapterAddress = this.getAppAdapterAddress(appId);
@@ -80,7 +92,7 @@ public class DataStoreAdaptor {
       ADU adu = new ADU(file, appId, aduId, fileSize, clientId);
       return adu;
     } catch (Exception ex) {
-//      ex.printStackTrace();
+      ex.printStackTrace();
     }
     return null;
   }
