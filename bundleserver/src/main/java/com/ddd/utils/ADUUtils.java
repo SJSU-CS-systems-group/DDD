@@ -3,6 +3,7 @@ package com.ddd.utils;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -58,9 +59,19 @@ public class ADUUtils {
     if (aduFiles == null) {
       return ret;
     }
-    for (final File appSubDirectory : aduDirectory.listFiles()) {
+    for (final File appSubDirectory : aduDirectory.listFiles(new FileFilter() {
+      @Override
+      public boolean accept(File file) {
+        return !file.isHidden();
+      }
+    })) {
       String appId = appSubDirectory.getName();
-      for (final File aduFile : appSubDirectory.listFiles()) {
+      for (final File aduFile : appSubDirectory.listFiles(new FileFilter() {
+        @Override
+        public boolean accept(File file) {
+          return !file.isHidden();
+        }
+      })) {
         String aduFileName = aduFile.getName();
         long aduId = Long.valueOf(aduFileName.split("-")[1]);
         long size = aduFile.length();
