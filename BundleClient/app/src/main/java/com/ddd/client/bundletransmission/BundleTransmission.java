@@ -152,10 +152,6 @@ public class BundleTransmission {
 
     this.applicationDataManager.processAcknowledgement(ackedBundleId);
     this.applicationDataManager.storeADUs(uncompressedPayload.getADUs());
-    
-    if (!"HB".equals(ackedBundleId)) {
-      // TODO move window
-    }
   }
 
   public void processReceivedBundles(String bundlesLocation) {
