@@ -161,6 +161,7 @@ public class BundleTransmission {
   public void processReceivedBundles(String bundlesLocation) {
     File bundleStorageDirectory = new File(bundlesLocation);
     Log.d(HelloworldActivity.TAG, "inside receives" + bundlesLocation);
+
     for (final File bundleFile : bundleStorageDirectory.listFiles()) {
       Bundle bundle = new Bundle(bundleFile);
       this.processReceivedBundle(bundle);
@@ -168,6 +169,8 @@ public class BundleTransmission {
       FileUtils.deleteQuietly(bundle.getSource());
       Log.d(HelloworldActivity.TAG, "Deleted Directory");
     }
+    String largestBundleId = getLargestBundleIdReceived();
+    this.bundleSecurity.registerLargestBundleIdReceived(largestBundleId);
   }
 
   private UncompressedPayload.Builder generateBundleBuilder() {
@@ -208,6 +211,8 @@ public class BundleTransmission {
         toSendBundlePayload,
         new File(this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + UNCOMPRESSED_PAYLOAD),
         bundleId);
+
+    // TODO RoutingMetadataIntegration: clientRouting.bundleMetadata(toSendBundlePayload.getSource())
 
     Payload payload =
         BundleUtils.compressPayload(

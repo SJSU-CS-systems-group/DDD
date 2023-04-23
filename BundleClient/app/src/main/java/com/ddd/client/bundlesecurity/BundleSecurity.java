@@ -126,6 +126,21 @@ public class BundleSecurity {
     }
   }
 
+  public void registerLargestBundleIdReceived(String bundleId) {
+    Log.d(HelloworldActivity.TAG, "[BS] Inside registerLargestBundleIdReceived function " + bundleId);
+    try {
+      clientWindow.processBundle(bundleId, client);
+      Log.d(HelloworldActivity.TAG, "Receive window is:");
+      for (String windowBundleId : clientWindow.getWindow(client)) {
+        Log.d(HelloworldActivity.TAG, windowBundleId);
+      }
+    } catch (WindowExceptions.BufferOverflow e) {
+      e.printStackTrace();
+    } catch (SecurityExceptions.BundleIDCryptographyException e) {
+      e.printStackTrace();
+    }
+  }
+
   public ClientBundleGenerator getClientBundleGenerator() {
     return clientBundleGenerator;
   }

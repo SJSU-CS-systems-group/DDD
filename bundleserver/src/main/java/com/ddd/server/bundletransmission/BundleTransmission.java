@@ -71,29 +71,42 @@ public class BundleTransmission {
   }
 
   @Transactional(rollbackFor = Exception.class)
-  public void processReceivedBundle(UncompressedPayload bundle) {
-    System.out.println("[BT] "+bundle.getADUs().size());
+  public void processReceivedBundle(String transportId, Bundle bundle) {
+    File bundleRecvProcDir =
+        new File(
+            this.config.getBundleTransmission().getReceivedProcessingDirectory()
+                + File.separator
+                + transportId);
+    bundleRecvProcDir.mkdirs();
+    
+    UncompressedBundle uncompressedBundle =
+        this.bundleGenServ.extractBundle(bundle, bundleRecvProcDir.getAbsolutePath());
+    Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
     String clientId = "";
     try {
-      clientId = SecurityUtils.generateID(bundle.getSource().getParentFile() + File.separator + "clientIdentity.pub");
+      clientId = SecurityUtils.generateID(uncompressedBundle.getSource() + File.separator + "clientIdentity.pub");
     } catch (IDGenerationException e2) {
       // TODO Auto-generated catch block
       e2.printStackTrace();
     }
-    // BundleIDGenerator.getClientIDFromBundleID(bundle.getBundleId(), BundleIDGenerator.UPSTREAM);
+    
     Optional<String> opt = this.applicationDataManager.getLargestRecvdBundleId(clientId);
 
     try {
       if (!opt.isEmpty()
           && (this.serverWindow.compareBundleIDs(
-                  opt.get(), bundle.getBundleId(), clientId, BundleIDGenerator.UPSTREAM)
-              < 1)) {
+                  opt.get(), payload.getBundleId(), clientId, BundleIDGenerator.UPSTREAM)
+              == 1)) {
         return;
       }
     } catch (BundleIDCryptographyException e1) {
       // TODO Auto-generated catch block
       e1.printStackTrace();
     }
+    
+    UncompressedPayload uncompressedPayload =
+        this.bundleGenServ.extractPayload(
+            payload, uncompressedBundle.getSource().getAbsolutePath());
     
     File ackRecordFile = new File(this.getAckRecordLocation(clientId));
     ackRecordFile.getParentFile().mkdirs();
@@ -105,7 +118,7 @@ public class BundleTransmission {
     }
 
     AckRecordUtils.writeAckRecordToFile(
-        new Acknowledgement(bundle.getBundleId()), ackRecordFile);
+        new Acknowledgement(uncompressedPayload.getBundleId()), ackRecordFile);
 
     File clientAckSubDirectory =
         new File(
@@ -125,26 +138,25 @@ public class BundleTransmission {
       if (!ackFile.exists()) {
         ackFile.createNewFile();
       }
-      AckRecordUtils.writeAckRecordToFile(new Acknowledgement(bundle.getBundleId()), ackFile);
+      AckRecordUtils.writeAckRecordToFile(new Acknowledgement(uncompressedPayload.getBundleId()), ackFile);
     } catch (IOException e) {
       e.printStackTrace();
     }
 
-    if (!"HB".equals(bundle.getAckRecord().getBundleId())) {
+    if (!"HB".equals(uncompressedPayload.getAckRecord().getBundleId())) {
 
       try {
-        this.serverWindow.processACK(clientId, bundle.getAckRecord().getBundleId());
+        this.serverWindow.processACK(clientId, uncompressedPayload.getAckRecord().getBundleId());
       } catch (ClientWindowNotFound | InvalidLength | BundleIDCryptographyException e) {
         // TODO Auto-generated catch block
         e.printStackTrace();
       }
     }
-    //    this.bundleRouting.addClient(clientId, 0);
-    //    this.bundleRouting.processClientMetadata(transportId);
+    // TODO RoutingMetadataIntegration   this.bundleRouting.processClientMetadata(uncompressedPayload.getSource(), clientId);
     this.applicationDataManager.processAcknowledgement(
-        clientId, bundle.getAckRecord().getBundleId());
-    if (!bundle.getADUs().isEmpty()) {      
-      this.applicationDataManager.storeADUs(clientId, bundle.getBundleId(), bundle.getADUs());
+        clientId, uncompressedPayload.getAckRecord().getBundleId());
+    if (!uncompressedPayload.getADUs().isEmpty()) {      
+      this.applicationDataManager.storeADUs(clientId, uncompressedPayload.getBundleId(), uncompressedPayload.getADUs());
     }
   }
 
@@ -155,23 +167,12 @@ public class BundleTransmission {
       if (!transportId.equals(transportDir.getName())) {
         continue;
       }
-      File bundleRecvProcDir =
-          new File(
-              this.config.getBundleTransmission().getReceivedProcessingDirectory()
-                  + File.separator
-                  + transportId);
-      bundleRecvProcDir.mkdirs();
+
 
       for (final File bundleFile : transportDir.listFiles()) {
         try {
           Bundle bundle = new Bundle(bundleFile);
-          UncompressedBundle uncompressedBundle =
-              this.bundleGenServ.extractBundle(bundle, bundleRecvProcDir.getAbsolutePath());
-          Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
-          UncompressedPayload uncompressedPayload =
-              this.bundleGenServ.extractPayload(
-                  payload, uncompressedBundle.getSource().getAbsolutePath());
-          this.processReceivedBundle(uncompressedPayload);
+          this.processReceivedBundle(transportId, bundle);
         } catch (Exception e) {
           e.printStackTrace();
         } finally {

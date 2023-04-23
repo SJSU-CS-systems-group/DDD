@@ -96,10 +96,7 @@ public class ApplicationDataManager {
 
   public List<ADU> fetchADUs(String clientId) {
     List<ADU> res = new ArrayList<>();
-    for (String line : this.getRegisteredAppIds()) {
-      String[] clientIdAppId = line.split("/");
-      if (!clientIdAppId[0].equals(clientId)) continue;
-      String appId = clientIdAppId[1];
+    for (String appId : this.getRegisteredAppIds()) {
       Long largestAduIdDelivered =
           this.stateManager.getLargestADUIdDeliveredByAppId(clientId, appId);
       Long aduIdStart = (largestAduIdDelivered != null) ? (largestAduIdDelivered + 1) : 1;

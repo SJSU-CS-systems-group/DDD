@@ -227,7 +227,7 @@ public class FileStoreHelper {
 
     public void deleteAllFilesUpTo(String clientId, String appId, long aduId){
         //check if there are enough files
-        String folder = RootFolder+"/"+clientId+"/"+appId;
+        String folder = clientId+"/"+appId;
         Metadata metadata = getMetadata(folder);
         if(metadata.lastSentMessageId >= aduId){
             System.out.println("[FileStoreHelper.deleteAllFilesUpTo] Data already deleted.");

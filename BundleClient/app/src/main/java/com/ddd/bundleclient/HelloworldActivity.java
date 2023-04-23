@@ -42,7 +42,9 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -64,6 +66,7 @@ public class HelloworldActivity extends AppCompatActivity {
   private Button receiveFromTransportButton;
   private FileChooserFragment fragment;
   private TextView resultText;
+  private static String RECEIVE_PATH = "/Shared/received-bundles";
 //  private BundleDeliveryAgent agent;
   // context
   public static Context ApplicationContext;
@@ -134,19 +137,36 @@ public class HelloworldActivity extends AppCompatActivity {
       }
     });
 
-//    detectTransportButton.setOnClickListener(new View.OnClickListener() {
-//      @Override
-//      public void onClick(View view) {
-//        agent.send();
-//      }
-//    });
-//    receiveFromTransportButton.setOnClickListener(new View.OnClickListener() {
-//      @Override
-//      public void onClick(View view) {
-//
-//        agent.receive();
-//      }
-//    });
+    detectTransportButton.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View view) {
+        bundleTransmission.generateBundleForTransmission();
+      }
+    });
+    receiveFromTransportButton.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View view) {
+        List<String> bundleRequests = null;
+        try {
+          bundleRequests = clientWindow.getWindow(bundleTransmission.getBundleSecurity().getClientSecurity());
+        } catch (SecurityExceptions.BundleIDCryptographyException e) {
+          Log.d(TAG, "[BR]: Failed to get Window: " + e);
+          e.printStackTrace();
+        }
+        Set<String> windowBundleIds = new HashSet<>(bundleRequests);
+        java.io.File[] receivedBundles = new java.io.File(getApplicationContext().getApplicationInfo().dataDir + RECEIVE_PATH).listFiles();
+        if (receivedBundles != null) {
+          for (java.io.File bundleFile : receivedBundles) {
+            String bundleName = bundleFile.getName();
+            if (!windowBundleIds.contains(bundleName.substring(0, bundleName.lastIndexOf('.')))) {
+              Log.d(TAG, "[HWA] Skipping received bundle => " + bundleName);
+              continue;
+            }
+            bundleTransmission.processReceivedBundles(getApplicationContext().getApplicationInfo().dataDir + RECEIVE_PATH);
+          }
+        }
+      }
+    });
   }
 
 
