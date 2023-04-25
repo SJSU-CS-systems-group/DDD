@@ -26,6 +26,7 @@ import com.ddd.client.bundlerouting.ClientWindow;
 import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions;
 import com.ddd.client.bundlesecurity.BundleSecurity;
 import com.ddd.client.bundlesecurity.SecurityExceptions;
+import com.ddd.client.bundlesecurity.SecurityUtils;
 import com.ddd.client.bundletransmission.BundleTransmission;
 import com.ddd.model.BundleDTO;
 import com.ddd.model.BundleWrapper;
@@ -33,9 +34,11 @@ import com.ddd.wifidirect.WifiDirectManager;
 import com.google.protobuf.ByteString;
 
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.ref.WeakReference;
@@ -93,12 +96,6 @@ public class HelloworldActivity extends AppCompatActivity {
     }
   }
 
-//  private void fillKeyPaths()
-//  {
-//    Resources resources = getApplicationContext().getResources();
-//    InputStream inputStream = resources.openRawResource(R.raw.)
-//
-//  }
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
@@ -117,6 +114,15 @@ public class HelloworldActivity extends AppCompatActivity {
     wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle());
 
     ApplicationContext = getApplicationContext();
+
+    /* Set up Server Keys before initializing Security Module */
+    try {
+      BundleSecurity.initializeKeyPaths(ApplicationContext.getResources(), ApplicationContext.getApplicationInfo().dataDir);
+    } catch (IOException e) {
+      Log.d(TAG, "[SEC]: Failed to initialize Server Keys");
+      e.printStackTrace();
+    }
+
     bundleTransmission = new BundleTransmission(getApplicationContext().getApplicationInfo().dataDir);
 
     try {
@@ -248,11 +254,19 @@ public class HelloworldActivity extends AppCompatActivity {
       channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
       FileServiceGrpc.FileServiceStub stub = FileServiceGrpc.newStub(channel);
       List<String> bundleRequests = null;
+
+      Log.d(TAG, "Starting File Receive");
       try {
         bundleRequests = clientWindow.getWindow(bundleTransmission.getBundleSecurity().getClientSecurity());
       } catch (SecurityExceptions.BundleIDCryptographyException e) {
         Log.d(TAG, "{BR}: Failed to get Window: " + e);
         e.printStackTrace();
+      }
+
+      if (bundleRequests == null) {
+        Log.d(TAG, "BUNDLE REQuests is NUll / ");
+      } else if (bundleRequests.size() == 0) {
+        Log.d(TAG, "BUNDLE REQuests has size 0 / ");
       }
 
       for(String bundleName: bundleRequests){

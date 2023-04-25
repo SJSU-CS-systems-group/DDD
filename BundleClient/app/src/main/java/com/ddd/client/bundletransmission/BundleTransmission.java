@@ -15,7 +15,9 @@ import org.apache.commons.lang3.StringUtils;
 import com.ddd.bundleclient.HelloworldActivity;
 import com.ddd.client.applicationdatamanager.ApplicationDataManager;
 import com.ddd.client.bundlerouting.ClientBundleGenerator;
+import com.ddd.client.bundlerouting.ClientRouting;
 import com.ddd.client.bundlerouting.ClientWindow;
+import com.ddd.client.bundlerouting.RoutingExceptions;
 import com.ddd.client.bundlesecurity.BundleIDGenerator;
 import com.ddd.client.bundlesecurity.BundleSecurity;
 import com.ddd.client.bundlesecurity.SecurityExceptions;
@@ -59,11 +61,17 @@ public class BundleTransmission {
 
   private String ROOT_DIR = "";
 
+
+  private ClientRouting clientRouting = null;
+
   public BundleTransmission(String rootFolder) {
     this.ROOT_DIR = rootFolder;
     this.bundleSecurity = new BundleSecurity(this.ROOT_DIR);
     this.applicationDataManager = new ApplicationDataManager(this.ROOT_DIR);
+
     try {
+      this.clientRouting = ClientRouting.initializeInstance(rootFolder);
+
       File bundleGenerationDir = new File(this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY);
       bundleGenerationDir.mkdirs();
       File toBeBundledDir =
@@ -86,7 +94,7 @@ public class BundleTransmission {
       encryptedPayloadDir.mkdirs();
       File receivedProcDir = new File(bundleGenerationDir + File.separator + RECEIVED_PROCESSING);
       receivedProcDir.mkdirs();
-    } catch (IOException e) {
+    } catch (IOException | RoutingExceptions.ClientMetaDataFileException e) {
       e.printStackTrace();
     }
   }
@@ -195,9 +203,8 @@ public class BundleTransmission {
     String bundleId = null;
     try {
       bundleId = this.bundleSecurity.generateNewBundleId();
-    } catch (SecurityExceptions.IDGenerationException e) {
-      e.printStackTrace();
-    } catch (SecurityExceptions.BundleIDCryptographyException e) {
+    } catch (SecurityExceptions.IDGenerationException |
+             SecurityExceptions.BundleIDCryptographyException e) {
       e.printStackTrace();
     }
     builder.setBundleId(bundleId);
@@ -208,7 +215,12 @@ public class BundleTransmission {
         new File(this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + UNCOMPRESSED_PAYLOAD),
         bundleId);
 
-    // TODO RoutingMetadataIntegration: clientRouting.bundleMetadata(toSendBundlePayload.getSource())
+    try {
+      clientRouting.bundleMetaData(toSendBundlePayload.getSource().getPath());
+    } catch (RoutingExceptions.ClientMetaDataFileException e) {
+      System.out.println("[BR]: Failed to add Routing metadata to bundle!");
+      e.printStackTrace();
+    }
 
     Payload payload =
         BundleUtils.compressPayload(
@@ -291,4 +303,7 @@ public class BundleTransmission {
   {
     return this.bundleSecurity;
   }
+
+  public ClientRouting getClientRouting() { return clientRouting; }
+
 }

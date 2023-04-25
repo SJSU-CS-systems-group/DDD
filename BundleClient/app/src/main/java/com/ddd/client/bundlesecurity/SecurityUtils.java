@@ -2,18 +2,16 @@ package com.ddd.client.bundlesecurity;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
-import java.util.List;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -28,12 +26,11 @@ import javax.crypto.spec.SecretKeySpec;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.NoSessionException;
 import org.whispersystems.libsignal.SessionCipher;
+import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
-import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.impl.InMemorySignalProtocolStore;
 import org.whispersystems.libsignal.util.KeyHelper;
 
@@ -42,7 +39,6 @@ import com.ddd.client.bundlesecurity.SecurityExceptions.EncodingException;
 import com.ddd.client.bundlesecurity.SecurityExceptions.SignatureVerificationException;
 import com.ddd.client.bundlesecurity.SecurityExceptions.AESAlgorithmException;
 
-import android.content.res.Resources;
 import android.util.Base64;
 
 import com.ddd.datastore.filestore.FileStoreHelper;
@@ -59,6 +55,10 @@ public class SecurityUtils {
     public static final String PUBLICKEY_HEADER     = "-----BEGIN EC PUBLIC KEY-----";
     public static final String PUBLICKEY_FOOTER     = "-----END EC PUBLIC KEY-----";
     
+    public static final String CLIENT_KEY_PATH      = "Client_Keys";
+    public static final String SERVER_KEY_PATH      = "Server_Keys";
+    public static final String SESSION_STORE_FILE   = "Session.store";
+    
     public static final String CLIENT_IDENTITY_KEY  = "clientIdentity.pub";
     public static final String CLIENT_BASE_KEY      = "clientBase.pub";
 
@@ -71,13 +71,17 @@ public class SecurityUtils {
     public static final int KEYLEN     = 256;
 
     public static class ClientSession {
-        String          clientID;
-        IdentityKey     IdentityKey;
-        ECPublicKey     BaseKey;
+        SignalProtocolAddress   clientProtocolAddress;
+        IdentityKey             IdentityKey;
+        ECPublicKey             BaseKey;
 
-        SessionCipher   cipherSession;
-        SessionRecord   serverSessionRecord;
-    };
+        SessionCipher           cipherSession;
+
+        public String getClientID()
+        {
+            return this.clientProtocolAddress.getName();
+        }
+    }
 
     /* Creates an ID based on the given public key file
      * Generates a SHA-1 hash and then encodes it in Base64 (URL safe)
@@ -140,8 +144,8 @@ public class SecurityUtils {
                 throw new InvalidKeyException("Error: Invalid Public Key Length");
             }
 
-            if ((true == encodedKeyArr[0].equals(PUBLICKEY_HEADER)) &&
-            (true == encodedKeyArr[2].equals(PUBLICKEY_FOOTER))) {
+            if ((encodedKeyArr[0].equals(PUBLICKEY_HEADER)) &&
+            (encodedKeyArr[2].equals(PUBLICKEY_FOOTER))) {
                 return Base64.decode(encodedKeyArr[1], Base64.URL_SAFE | Base64.NO_WRAP);
             } else {
                 throw new InvalidKeyException("Error: Invalid Public Key Format");
@@ -238,7 +242,7 @@ public class SecurityUtils {
         return decryptedData;
     }
 
-    public static byte[] readFromFile(String filePath) throws FileNotFoundException, IOException
+    public static byte[] readFromFile(String filePath) throws IOException
     {
         File file = new File(filePath);
         byte[] bytes = new byte[(int) file.length()];
@@ -257,22 +261,11 @@ public class SecurityUtils {
         }
     }
 
-//    public static byte[] getResourceFile(String path)
-//    {
-//        String filename = path.split(".")[0];
-//        // Get a reference to the resources
-//        Resources resources = getApplicationContext() getResources();
-//
-//        // Open the file using its resource ID
-//        InputStream inputStream = resources.openRawResource(R.raw.filename);
-//
-//        // Read the file data into a byte array
-//        byte[] data = new byte[inputStream.available()];
-//        inputStream.read(data);
-//
-//        // Close the input stream
-//        inputStream.close();
-//
-//        return data;
-//    }
+    public static void copyContent(InputStream in, OutputStream out) throws IOException {
+        int data = -1;
+
+        while ((data = in.read()) != -1) {
+            out.write(data);
+        }
+    }
 }

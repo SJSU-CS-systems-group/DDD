@@ -32,7 +32,6 @@ public class BundleIDGenerator {
         String clientID = SecurityUtils.getClientID(clientKeyPath);
 
         currentCounter++;
-        System.out.println(currentCounter);
         byte[] bClientID = Base64.decode(clientID, Base64.URL_SAFE | Base64.NO_WRAP);
         byte[] bCounter = new byte[1];
         bCounter[0]     = (byte) currentCounter;

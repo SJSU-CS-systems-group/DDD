@@ -39,6 +39,18 @@ public class CircularBuffer {
         capacity++;
     }
 
+    // Used only to initialize window to an older state
+    public void initializeFromIndex(String item, int index) throws BufferOverflow
+    {
+        if (index >= length) {
+            throw new BufferOverflow("Exceeding lenght("+length+")");
+        }
+
+        buffer[index] = item;
+        start = end = index;
+        capacity = 1;
+    }
+
     private void delete() throws BufferUnderflow
     {
         if (capacity == 0) {
@@ -101,6 +113,16 @@ public class CircularBuffer {
     public int getLength()
     {
         return this.length;
+    }
+
+    public long getStart()
+    {
+        return this.start;
+    }
+
+    public long getEnd()
+    {
+        return this.end;
     }
 
     public boolean isBufferFull()

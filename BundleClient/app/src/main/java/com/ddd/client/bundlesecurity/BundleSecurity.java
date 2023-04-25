@@ -3,14 +3,19 @@ package com.ddd.client.bundlesecurity;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.security.NoSuchAlgorithmException;
 import org.apache.commons.lang3.StringUtils;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.NoSessionException;
 import com.ddd.bundleclient.HelloworldActivity;
+import com.ddd.bundleclient.R;
 import com.ddd.client.bundlerouting.ClientBundleGenerator;
 import com.ddd.client.bundlerouting.ClientWindow;
 import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions;
@@ -21,6 +26,8 @@ import com.ddd.model.UncompressedBundle;
 import com.ddd.model.UncompressedPayload;
 import com.ddd.utils.Constants;
 import com.ddd.utils.JarUtils;
+
+import android.content.res.Resources;
 import android.util.Log;
 
 public class BundleSecurity {
@@ -41,9 +48,7 @@ public class BundleSecurity {
 
   private String clientId = "client0";
 
-  private String clientKeyPath = "";
-  private String serverKeyPath = "";
-  
+  public static final String bundleSecurityDir = "BundleSecurity";
   private boolean isEncryptionEnabled = true;
 
   private String getLargestBundleIdReceived() {
@@ -79,9 +84,10 @@ public class BundleSecurity {
 
   public BundleSecurity(String rootFolder) {
     RootFolder = rootFolder;
-    // TODO: Add actual server key path
-    clientKeyPath = RootFolder + "/Keys/Client/";
-    serverKeyPath = RootFolder + "/Keys/Server/";
+
+    String bundleSecurityPath = rootFolder + File.separator + bundleSecurityDir;
+
+    String serverKeyPath = bundleSecurityPath + java.io.File.separator + "Server_Keys";
 
     File bundleIdNextCounter = new File(RootFolder+ BUNDLE_ID_NEXT_COUNTER);
 
@@ -112,17 +118,16 @@ public class BundleSecurity {
     /* Initializing Security Module*/
 
     try {
-      client = ClientSecurity.getInstance(1, clientKeyPath, serverKeyPath);
-      clientBundleGenerator = ClientBundleGenerator.getInstance(client);
-      clientWindow = ClientWindow.getInstance(5, client.getClientID());
+      client = ClientSecurity.initializeInstance(1, bundleSecurityPath, serverKeyPath);
+      clientBundleGenerator = ClientBundleGenerator.initializeInstance(client);
+      clientWindow = ClientWindow.initializeInstance(5, client.getClientID(), rootFolder);
       Log.d(HelloworldActivity.TAG,"Kuch Bhi");
-    } catch (InvalidKeyException e) {
-      e.printStackTrace();
-    } catch (SecurityExceptions.IDGenerationException e) {
-      e.printStackTrace();
-    } catch (SecurityExceptions.EncodingException | WindowExceptions.InvalidLength |
+    } catch (InvalidKeyException | SecurityExceptions.IDGenerationException |
+             SecurityExceptions.EncodingException | WindowExceptions.InvalidLength |
              WindowExceptions.BufferOverflow e) {
       e.printStackTrace();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
   }
 
@@ -151,7 +156,7 @@ public class BundleSecurity {
 
 
   public String generateNewBundleId() throws SecurityExceptions.IDGenerationException, SecurityExceptions.BundleIDCryptographyException {
-    return clientBundleGenerator.generateBundleID(clientKeyPath, BundleIDGenerator.UPSTREAM);
+    return clientBundleGenerator.generateBundleID();
   }
 
   public UncompressedBundle encryptPayload(Payload payload, String bundleGenDirPath) {
@@ -192,7 +197,7 @@ public class BundleSecurity {
     if (this.isEncryptionEnabled) {
       
       try {
-        ClientSecurity clientSecurity = ClientSecurity.getInstance(0, null, null);
+        ClientSecurity clientSecurity = ClientSecurity.getInstance();
         clientSecurity.decrypt(
             uncompressedBundle.getSource().getAbsolutePath(),
             uncompressedBundle.getSource().getAbsolutePath());
@@ -231,5 +236,31 @@ public class BundleSecurity {
   public ClientSecurity getClientSecurity()
   {
     return this.client;
+  }
+
+  public static void initializeKeyPaths(Resources resources, String rootDir) throws IOException {
+    String serverKeyPath = rootDir + java.io.File.separator + BundleSecurity.bundleSecurityDir + java.io.File.separator + "Server_Keys";
+
+    InputStream inServerIdentity = resources.openRawResource(R.raw.server_identity);
+    InputStream  inServerSignedPre = resources.openRawResource(R.raw.server_signed_pre);
+    InputStream  inServerRatchet = resources.openRawResource(R.raw.server_ratchet);
+
+    SecurityUtils.createDirectory(serverKeyPath);
+
+    OutputStream outServerIdentity = new FileOutputStream(serverKeyPath + java.io.File.separator + "serverIdentity.pub");
+    OutputStream outServerSignedPre = new FileOutputStream(serverKeyPath + java.io.File.separator + "serverSignedPre.pub");
+    OutputStream outServerRatchet = new FileOutputStream(serverKeyPath + java.io.File.separator + "serverRatchet.pub");
+
+    SecurityUtils.copyContent(inServerIdentity, outServerIdentity);
+    inServerIdentity.close();
+    outServerIdentity.close();
+
+    SecurityUtils.copyContent(inServerSignedPre, outServerSignedPre);
+    inServerSignedPre.close();
+    outServerSignedPre.close();
+
+    SecurityUtils.copyContent(inServerRatchet, outServerRatchet);
+    inServerRatchet.close();
+    outServerRatchet.close();
   }
 }

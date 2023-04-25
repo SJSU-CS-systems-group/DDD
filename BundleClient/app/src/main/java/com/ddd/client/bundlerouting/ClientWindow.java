@@ -1,26 +1,25 @@
 package com.ddd.client.bundlerouting;
 
-import static com.ddd.bundleclient.HelloworldActivity.TAG;
-
-import android.util.Log;
-
 import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
 import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
-import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions.RecievedInvalidACK;
-import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions.RecievedOldACK;
-
-import org.whispersystems.libsignal.InvalidKeyException;
 
 import com.ddd.client.bundlerouting.WindowUtils.CircularBuffer;
 import com.ddd.client.bundlesecurity.BundleIDGenerator;
 import com.ddd.client.bundlesecurity.ClientSecurity;
-import com.ddd.client.bundlesecurity.SecurityExceptions.AESAlgorithmException;
 import com.ddd.client.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
+import com.ddd.client.bundlesecurity.SecurityUtils;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 public class ClientWindow {
     static private ClientWindow singleClientWindowInstance = null;
+    private String clientWindowDataPath = null;
+    final private String windowFile = "clientWindow.csv";
+
     private CircularBuffer window   = null;
     private String clientID         = null;
     private int windowLength        = 10; /* Default Value */
@@ -28,7 +27,6 @@ public class ClientWindow {
     /* Begin and End are used as Unsigned Long */
     private long begin          = 0;
     private long end            = 0;
-
 
     /* Generates bundleIDs for window slots
      * Parameter:
@@ -46,6 +44,32 @@ public class ClientWindow {
         }
 
         end = begin + windowLength;
+        updateDBWindow();
+    }
+
+    private void updateDBWindow()
+    {
+        String dbFile = clientWindowDataPath + File.separator + windowFile;
+
+        try (FileOutputStream stream = new FileOutputStream(dbFile)) {
+            String metadata = Long.toUnsignedString(begin) + "," + Long.toUnsignedString(end) + "," +windowLength;
+            stream.write(metadata.getBytes());
+        } catch (IOException e) {
+            System.out.println("Error: Failed to write Window to file! "+e);
+        }
+    }
+
+    private void initializeWindow() throws IOException
+    {
+        String dbFile = clientWindowDataPath + File.separator + windowFile;
+
+        String dbData = new String(SecurityUtils.readFromFile(dbFile), StandardCharsets.UTF_8);
+
+        String[] dbCSV = dbData.split(",");
+
+        begin = Long.parseLong(dbCSV[0]);
+        end = Long.parseLong(dbCSV[1]);
+        windowLength = Integer.parseInt(dbCSV[2]);
     }
 
     /* Allocate and Initialize Window with provided size
@@ -55,13 +79,22 @@ public class ClientWindow {
      * Returns:
      * None
      */
-    private ClientWindow(int length, String clientID) throws InvalidLength, BufferOverflow
+    private ClientWindow(int length, String clientID, String rootPath) throws InvalidLength, BufferOverflow
     {
-        if (length > 0) {
-            windowLength = length;
-        } else {
-            //TODO: Change to log
-            System.out.printf("Invalid window size, using default size [%d]", windowLength);
+        clientWindowDataPath = rootPath + File.separator + "ClientWindow";
+
+        SecurityUtils.createDirectory(clientWindowDataPath);
+
+        try {
+            initializeWindow();
+        } catch (IOException e) {
+            System.out.println("Failed to initialize Window from Disk, creating new window\n"+e);
+            if (length > 0) {
+                windowLength = length;
+            } else {
+                //TODO: Change to log
+                System.out.printf("Invalid window size, using default size [%d]", windowLength);
+            }
         }
 
         this.clientID = clientID;
@@ -71,10 +104,20 @@ public class ClientWindow {
         fillWindow(windowLength, begin);
     }
 
-    public static ClientWindow getInstance(int windowLength, String clientID) throws InvalidLength, BufferOverflow
+    public static ClientWindow initializeInstance(int windowLength, String clientID, String rootPath) throws InvalidLength, BufferOverflow
     {
         if (singleClientWindowInstance == null) {
-            singleClientWindowInstance = new ClientWindow(windowLength, clientID);
+            singleClientWindowInstance = new ClientWindow(windowLength, clientID, rootPath);
+        } else {
+            System.out.println("[WIN]: Client Window Instance is already initialized!");
+        }
+        return singleClientWindowInstance;
+    }
+
+    public static ClientWindow getInstance()
+    {
+        if (singleClientWindowInstance == null) {
+            throw new IllegalStateException("[WIN]: Client Window has not been initialized!");
         }
         return singleClientWindowInstance;
     }
@@ -131,11 +174,7 @@ public class ClientWindow {
             String bundleID = client.encryptBundleID(bundleIDs.get(i));
             bundleIDs.set(i, bundleID);
         }
+        
         return bundleIDs;
-    }
-
-    public static ClientWindow getInstance() {
-      // TODO Auto-generated method stub
-      return null;
     }
 }

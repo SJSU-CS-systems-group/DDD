@@ -1,9 +1,11 @@
 package com.ddd.client.bundlerouting;
 
+import java.io.File;
 import com.ddd.client.bundlesecurity.BundleIDGenerator;
 import com.ddd.client.bundlesecurity.ClientSecurity;
 import com.ddd.client.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
 import com.ddd.client.bundlesecurity.SecurityExceptions.IDGenerationException;
+import com.ddd.client.bundlesecurity.SecurityUtils;
 
 public class ClientBundleGenerator {
     static ClientBundleGenerator singleGeneratorInstance = null;
@@ -16,7 +18,7 @@ public class ClientBundleGenerator {
         bundleIDGenerator   = new BundleIDGenerator();
     }
 
-    public static ClientBundleGenerator getInstance(ClientSecurity clientSecurity)
+    public static ClientBundleGenerator initializeInstance(ClientSecurity clientSecurity)
     {
         if (singleGeneratorInstance == null) {
             singleGeneratorInstance = new ClientBundleGenerator(clientSecurity);
@@ -24,9 +26,17 @@ public class ClientBundleGenerator {
         return singleGeneratorInstance;
     }
 
-    public String generateBundleID(String clientKeyPath, boolean upstream) throws IDGenerationException, BundleIDCryptographyException
+    public static ClientBundleGenerator getInstance() throws IllegalStateException
     {
-        String plainBundleID = bundleIDGenerator.generateBundleID(clientSecurity.getClientKeyPath(), BundleIDGenerator.UPSTREAM);
+        if (singleGeneratorInstance == null) {
+            throw new IllegalStateException("Client Bundle Generator has not been initialized!");
+        }
+        return singleGeneratorInstance;
+    }
+
+    public String generateBundleID() throws IDGenerationException, BundleIDCryptographyException
+    {
+        String plainBundleID = bundleIDGenerator.generateBundleID(clientSecurity.getClientRootPath()+File.separator+ SecurityUtils.CLIENT_KEY_PATH, BundleIDGenerator.UPSTREAM);
         return clientSecurity.encryptBundleID(plainBundleID);
     }
 
