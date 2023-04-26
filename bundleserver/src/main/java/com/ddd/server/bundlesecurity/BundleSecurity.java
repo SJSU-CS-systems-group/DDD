@@ -12,6 +12,7 @@ import com.ddd.model.EncryptionHeader;
 import com.ddd.model.Payload;
 import com.ddd.model.UncompressedBundle;
 import com.ddd.model.UncompressedPayload;
+import com.ddd.server.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
 import com.ddd.utils.Constants;
 
 @Service
@@ -188,4 +189,10 @@ public class BundleSecurity {
     }
     return null;
   }
+
+  public int isNewerBundle(String bundlePath, String lastReceivedBundleID) throws IOException, BundleIDCryptographyException
+  {
+      return this.serverSecurity.isNewerBundle(bundlePath, lastReceivedBundleID);
+  }
+
 }

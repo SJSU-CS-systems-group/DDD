@@ -82,28 +82,26 @@ public class BundleTransmission {
     
     UncompressedBundle uncompressedBundle =
         this.bundleGenServ.extractBundle(bundle, bundleRecvProcDir.getAbsolutePath());
-    Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
-    String clientId = "";
-    try {
-      clientId = SecurityUtils.generateID(uncompressedBundle.getSource() + File.separator + "clientIdentity.pub");
-    } catch (IDGenerationException e2) {
-      // TODO Auto-generated catch block
-      e2.printStackTrace();
-    }
     
-    Optional<String> opt = this.applicationDataManager.getLargestRecvdBundleId(clientId);
+    String clientId = "";
 
     try {
+      clientId = SecurityUtils.generateID(uncompressedBundle.getSource() + File.separator + SecurityUtils.CLIENT_IDENTITY_KEY);
+      Optional<String> opt = this.applicationDataManager.getLargestRecvdBundleId(clientId);
+
       if (!opt.isEmpty()
-          && (this.serverWindow.compareBundleIDs(
-                  opt.get(), payload.getBundleId(), clientId, BundleIDGenerator.UPSTREAM)
+          && (this.bundleSecurity.isNewerBundle(uncompressedBundle.getSource().getAbsolutePath(),
+                                                opt.get())
               == 1)) {
         return;
       }
-    } catch (BundleIDCryptographyException e1) {
+      
+    } catch (BundleIDCryptographyException | IOException | IDGenerationException e1) {
       // TODO Auto-generated catch block
       e1.printStackTrace();
     }
+
+    Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
     
     UncompressedPayload uncompressedPayload =
         this.bundleGenServ.extractPayload(
