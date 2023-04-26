@@ -44,7 +44,10 @@ message FileUploadResponse {
   Status status = 2;
 }
 
-message Bytes { bytes value = 1; }
+message Bytes { 
+  bytes value = 1;
+  string transportId =2;
+}
 
 service FileService {
   rpc UploadFile(stream FileUploadRequest) returns (FileUploadResponse) {}

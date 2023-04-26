@@ -60,7 +60,7 @@ public class MainActivity extends AppCompatActivity {
     private String Receive_Directory;
     private String Server_Directory;
     private String tidPath;
-    private String transportID;
+    public static String transportID;
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
@@ -133,7 +133,7 @@ public class MainActivity extends AppCompatActivity {
                             BundleUploadRequest metadata = BundleUploadRequest.newBuilder()
                                     .setMetadata(BundleMetaData.newBuilder()
                                             .setBid(bundle.getName())
-                                            .setTransportId("test_1")
+                                            .setTransportId(transportID)
                                             .build())
                                     .build();
                             streamObserver.onNext(metadata);
@@ -155,13 +155,13 @@ public class MainActivity extends AppCompatActivity {
                                 streamObserver.onNext(uploadRequest);
                             }
                             inputStream.close();
-                            bundle.delete();
                         }
                     }
                 }
                 // close the stream
                 Log.d(TAG,"Complete");
                 streamObserver.onCompleted();
+//                bundle.delete();
                 return "Complete";
             } catch (Exception e) {
                 StringWriter sw = new StringWriter();
@@ -171,6 +171,7 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG,String.valueOf(sw));
                 return String.format("Failed... : %n%s", sw);
             }
+
         }
 
         @Override
@@ -186,10 +187,10 @@ public class MainActivity extends AppCompatActivity {
             }
 //            TextView resultText = (TextView) activity.findViewById(R.id.grpc_response_text);
 //            resultText.setText(result);
-            new GrpcReceiveTask(MainActivity.this)
-                    .execute(
-                            "10.0.0.166",
-                            "8080");
+//            new GrpcReceiveTask(MainActivity.this)
+//                    .execute(
+//                            "10.0.0.166",
+//                            "8080");
         }
     }
 
@@ -279,7 +280,7 @@ public class MainActivity extends AppCompatActivity {
                     Log.d(TAG, "doInBackground: receiveBundles" + receiveBundles);
                     String existingBundles = FileUtils.getFilesList(Receive_Directory);
                     BundleDownloadRequest request = BundleDownloadRequest.newBuilder()
-                            .setTransportId("test_1")
+                            .setTransportId(transportID)
                             .setBundleList(existingBundles)
                             .build();
                     stub.downloadBundle(request, downloadObserver);
@@ -353,11 +354,17 @@ public class MainActivity extends AppCompatActivity {
         });
 
         sendBundleServerButton.setOnClickListener(view -> {
-//                send task
-            new GrpcSendTask(MainActivity.this)
+                        new GrpcReceiveTask(MainActivity.this)
                     .execute(
-                            "10.0.0.166",
+//                            "10.0.0.166",
+                            "172.20.10.6",
                             "8080");
+//                send task
+//            new GrpcSendTask(MainActivity.this)
+//                    .execute(
+////SET LOCAl ip
+//                            "172.20.10.6",
+//                            "8080");
         });
     }
 }

@@ -107,8 +107,8 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
     @Override
     public void downloadFile(ReqFilePath request, StreamObserver<Bytes> responseObserver) {
         String requestedPath = null ;if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-//            requestedPath = String.valueOf(SERVER_BASE_PATH.resolve("client").resolve(request.getValue()));
-            requestedPath = String.valueOf(SERVER_BASE_PATH.resolve("client").resolve("payload.zip"));
+            requestedPath = String.valueOf(SERVER_BASE_PATH.resolve("client").resolve(request.getValue()));
+//            requestedPath = String.valueOf(SERVER_BASE_PATH.resolve("client").resolve("payload.zip"));
         }
         Log.d(MainActivity.TAG, "Downloading "+requestedPath);
         assert requestedPath != null;
@@ -122,7 +122,7 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
         }
         StreamHandler handler = new StreamHandler(in);
         Exception ex = handler.handle(bytes -> {
-            responseObserver.onNext(Bytes.newBuilder().setValue(bytes).build());
+            responseObserver.onNext(Bytes.newBuilder().setValue(bytes).setTransportId(MainActivity.transportID).build());
         });
         if (ex != null) ex.printStackTrace();
 
