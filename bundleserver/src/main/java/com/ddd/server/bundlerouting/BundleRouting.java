@@ -1,22 +1,33 @@
 package com.ddd.server.bundlerouting;
 
-import java.util.Arrays;
+import java.sql.SQLException;
 import java.util.List;
 import org.springframework.stereotype.Service;
+
+import com.ddd.server.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
 
 @Service
 public class BundleRouting {
 
-  public List<String> getClients(String transportId) {
-    return Arrays.asList(new String[] {"0umacTen2TbHsbcfjkP1zMccS5w="});
+  ServerRouting routingTable = null;
+
+  public BundleRouting() throws SQLException
+  {
+      routingTable = new ServerRouting();
+  }
+
+  public List<String> getClients(String transportId) throws SQLException {
+      return routingTable.getClients(transportId);
   }
 
   public void addClient(String clientId, int windowLength) {}
 
   /*
-   * clientMetaDataPath: path of routing metadata file
-   * */
-  public void processClientMetaData(String clientMetaDataPath, String clientID) {}
+   * payloadPath: path of received payload where routing metadata file exists
+   */
+  public void processClientMetaData(String payloadPath, String clientID) throws ClientMetaDataFileException, SQLException {
+      routingTable.processClientMetaData(payloadPath, clientID);
+  }
 
   public void updateClientWindow(String clientID, String bundleID) {}
 }

@@ -1,4 +1,5 @@
 package com.ddd.server.bundlesecurity;
+import org.whispersystems.libsignal.util.guava.Optional;
 
 import java.io.DataInputStream;
 import java.io.File;
@@ -14,6 +15,8 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Stream;
+
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -21,8 +24,8 @@ import org.whispersystems.libsignal.SessionCipher;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
-import org.whispersystems.libsignal.ecc.ECPrivateKey;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
+import org.whispersystems.libsignal.ecc.ECPrivateKey;
 import org.whispersystems.libsignal.protocol.CiphertextMessage;
 import org.whispersystems.libsignal.protocol.SignalMessage;
 import org.whispersystems.libsignal.ratchet.BobSignalProtocolParameters;
@@ -51,6 +54,9 @@ public class ServerSecurity {
     private Optional<ECKeyPair>             ourOneTimePreKey;
     private ECKeyPair                       ourRatchetKey;
     private HashMap<String, ClientSession>  clientMap;
+    private String                          serverRootPath;
+    private String                          clientRootPath;
+    private SignalProtocolStore             serverProtocolStore;
 
     /* Initializes Security Module on the server
      * Parameters:
@@ -58,19 +64,18 @@ public class ServerSecurity {
      * Exceptions:
      *      IOException:    Thrown if keys cannot be written to provided path
      */
-    private ServerSecurity(String serverKeyPath) throws ServerIntializationException
+    private ServerSecurity(String serverRootPath) throws ServerIntializationException
     {
         clientMap  = new HashMap<>();
 
-        if (new File(serverKeyPath).exists()) {
+        String serverKeyPath = serverRootPath + File.separator + SecurityUtils.SERVER_KEY_PATH;
+
             try {
+            // TODO: Load protocol store from files(serverProtocolStore)
                 loadKeysfromFiles(serverKeyPath);
                 System.out.println("[Sec]: Using Existing Keys");
-                return;
             } catch (InvalidKeyException | IOException | EncodingException e) {
                 System.out.println("[Sec]: Error Loading Keys from files, generating new keys instead");
-            }
-        }
 
         ECKeyPair identityKeyPair       = Curve.generateKeyPair();
         ourIdentityKeyPair              = new IdentityKeyPair(new IdentityKey(identityKeyPair.getPublicKey()),
@@ -78,20 +83,27 @@ public class ServerSecurity {
         ourSignedPreKey                 = Curve.generateKeyPair();
         ourRatchetKey                   = ourSignedPreKey;
         
+            try {
+                writeKeysToFiles(serverKeyPath, true);
+            } catch (IOException | EncodingException exception) {
+                throw new ServerIntializationException("Failed to write keys to Files:"+exception);
+            }
+        }
+
+        this.serverRootPath             = serverRootPath;
+        serverProtocolStore             = SecurityUtils.createInMemorySignalProtocolStore();
+
         String name = DEFAULT_SERVER_NAME;
         try {
             name = SecurityUtils.generateID(ourIdentityKeyPair.getPublicKey().serialize());
         } catch (IDGenerationException e) {
-            System.out.println("Failed to generate ID, using default value:"+name);
+            System.out.println("[SEC]:Failed to generate ID, using default value:"+name);
         }
         ourAddress                      = new SignalProtocolAddress(name, ServerDeviceID);
         ourOneTimePreKey                = Optional.<ECKeyPair>absent();
 
-        try {
-            writeKeysToFiles(serverKeyPath, true);
-        } catch (IOException | EncodingException e) {
-            throw new ServerIntializationException("Failed to write keys to Files:"+e);
-        }
+        clientRootPath = serverRootPath+File.separator+"Clients";
+        SecurityUtils.createDirectory(clientRootPath);
     }
 
     /* load the previously used keys from the provided path
@@ -158,27 +170,64 @@ public class ServerSecurity {
         return serverKeypaths;
     }
 
-    /* Initializes Client Session on the server
+
+    private void updateSessionRecord(ClientSession clientSession)
+    {
+        String sessionStorePath = clientRootPath+File.separator+clientSession.getClientID()+File.separator+SecurityUtils.SESSION_STORE_FILE;
+        SessionRecord clientSessionRecord = null;
+
+        try (FileOutputStream stream = new FileOutputStream(sessionStorePath)) {
+            clientSessionRecord = serverProtocolStore.loadSession(clientSession.clientProtocolAddress);
+            stream.write(clientSessionRecord.serialize());
+        } catch (IOException e) {
+            System.out.println(e);
+        }
+    }
+
+    /* Retreives or Initializes Client Session on the server
      * Parameters:
      *      clientKeyPath:   Path where the client's Keys are stored
      * Exceptions:
      *      IOException:    Thrown if keys cannot be written to provided path
      */
-    private ClientSession inititalizeClientSession(String clientKeyPath, String clientID) throws InvalidKeyException, EncodingException
+    private ClientSession getClientSession(String clientKeyPath, String clientID) throws InvalidKeyException, EncodingException
     {
         ClientSession clientSession = new ClientSession();
+        String clientDataPath = clientRootPath+File.separator+clientID;
 
-        initializeClientKeysFromFiles(clientKeyPath, clientSession);
+        SecurityUtils.createDirectory(clientDataPath);
+        System.out.println("[SEC]:Client Data Path = "+clientDataPath);
+        try {
+            Files.copy(Paths.get(clientKeyPath+File.separator+SecurityUtils.CLIENT_IDENTITY_KEY),
+                        Paths.get(clientDataPath+File.separator+SecurityUtils.CLIENT_IDENTITY_KEY));
         
-        clientSession.serverSessionRecord = new SessionRecord();
+            Files.copy(Paths.get(clientKeyPath+File.separator+SecurityUtils.CLIENT_BASE_KEY),
+                        Paths.get(clientDataPath+File.separator+SecurityUtils.CLIENT_BASE_KEY));
+        } catch (IOException e) {
+            System.out.println(e + "\n[SEC] INFO: Client Keys already exist Client Data Path for client ID "+clientID);
+        }
 
-        initializeRatchet(clientSession.serverSessionRecord.getSessionState(), clientSession);
+        initializeClientKeysFromFiles(clientDataPath, clientSession);
 
-        SignalProtocolStore serverStore = SecurityUtils.createInMemorySignalProtocolStore();
-        serverStore.storeSession(ourAddress, clientSession.serverSessionRecord);
+        String sessionStorePath = clientDataPath + File.separator + SecurityUtils.SESSION_STORE_FILE;
+        SessionRecord clientSessionRecord = null;
 
-        clientSession.cipherSession = new SessionCipher(serverStore, ourAddress);
-        clientSession.clientID  = clientID;
+        try {
+            byte[] sessionStoreBytes = SecurityUtils.readFromFile(sessionStorePath);
+            clientSessionRecord   = new SessionRecord(sessionStoreBytes);
+        } catch (IOException e) {
+            System.out.println("[SEC]: Error Reading Session record from " + sessionStorePath +"\nCreating New Session Record!");
+            clientSessionRecord = new SessionRecord();        
+            initializeRatchet(clientSessionRecord.getSessionState(), clientSession);
+        }
+
+        clientSession.clientProtocolAddress  = new SignalProtocolAddress(clientID, clientID.hashCode());
+
+        serverProtocolStore.storeSession(clientSession.clientProtocolAddress, clientSessionRecord);
+
+        clientSession.cipherSession = new SessionCipher(serverProtocolStore, clientSession.clientProtocolAddress);
+        updateSessionRecord(clientSession);
+
         clientMap.put(clientID, clientSession);
 
         return clientSession;
@@ -213,7 +262,7 @@ public class ServerSecurity {
             return clientMap.get(clientID);
         } else {
             // TODO: Change to log
-            System.out.println("Key[ " + clientID + " ] NOT found!");
+            System.out.println("[SEC]:Key[ " + clientID + " ] NOT found!");
         }
         return null;
     }
@@ -223,14 +272,9 @@ public class ServerSecurity {
         ClientSession client = null;
         try {
             String clientID = SecurityUtils.getClientID(clientKeyPath);
-            
-            client = getClientSession(clientID);
-            if ( client == null) {
-                System.out.println("Creating new client session");
-                client = inititalizeClientSession(clientKeyPath, clientID);
-            }
+            client = getClientSession(clientKeyPath, clientID);
         } catch (InvalidKeyException | IDGenerationException | EncodingException e) {
-            throw new InvalidClientSessionException("Error getting client session from file: "+e);
+            throw new InvalidClientSessionException("[SEC]:Error getting client session from file: "+e);
         }
         return client;
     }
@@ -266,10 +310,10 @@ public class ServerSecurity {
     }
 
     /* Initialize or get previous server Security Instance */
-    public static synchronized ServerSecurity getInstance(String serverKeyPath) throws ServerIntializationException
+    public static synchronized ServerSecurity getInstance(String serverRootPath) throws ServerIntializationException
     {
         if (singleServerInstance == null) {
-            singleServerInstance = new ServerSecurity(serverKeyPath);
+            singleServerInstance = new ServerSecurity(serverRootPath);
         }
 
         return singleServerInstance;
@@ -297,28 +341,29 @@ public class ServerSecurity {
 
                     byte[] encryptedData = SecurityUtils.readFromFile(payloadPath + File.separator + payloadName);
                     byte[] serverDecryptedMessage  = client.cipherSession.decrypt(new SignalMessage (encryptedData));
+                    updateSessionRecord(client);
                     try (FileOutputStream stream = new FileOutputStream(decryptedFile, true)) {
                         stream.write(serverDecryptedMessage);
                     }
-                    System.out.printf("Decrypted Size = %d\n", serverDecryptedMessage.length);
+                    System.out.printf("[SEC]:Decrypted Size = %d\n", serverDecryptedMessage.length);
 
                     if (SecurityUtils.verifySignature(serverDecryptedMessage, client.IdentityKey.getPublicKey(), signatureFile)) {
-                        System.out.println("Verified Signature!");
+                        System.out.println("[SEC]:Verified Signature!");
                     } else {
                         // Failed to verify sign, delete bundle and return
-                        System.out.println("Invalid Signature ["+ payloadName +"], Aborting bundle "+ bundleID);
+                        System.out.println("[SEC]:Invalid Signature ["+ payloadName +"], Aborting bundle "+ bundleID);
 
                         try {
                             Files.deleteIfExists(Paths.get(decryptedFile));
                         }
                         catch (Exception e) {
-                            System.out.printf("Error: Failed to delete decrypted file [%s]", decryptedFile);
+                            System.out.printf("[SEC] Error: Failed to delete decrypted file [%s]", decryptedFile);
                             System.out.println(e);
                         }
                     }
                 }
         } catch (Exception e) {
-            System.out.println("Failed to Decrypt Client's Message\n" + e);
+              System.out.println("[SEC]: Failed to Decrypt Client's Message\n" + e);
             e.printStackTrace();
         }
         return;
@@ -327,7 +372,7 @@ public class ServerSecurity {
     public String[] encrypt(String toBeEncPath, String encPath, String bundleID, String clientID) throws InvalidClientSessionException, BundleIDCryptographyException, IOException, InvalidKeyException, EncodingException
     {
         /* get Client Session */
-        ClientSession client = getClientSession(clientID);
+        ClientSession client = getClientSessionFromFile(clientRootPath+File.separator+clientID);
         if ( client == null) {
             throw new InvalidClientSessionException("Failed to get client [" + clientID + "]");
         }
@@ -360,6 +405,8 @@ public class ServerSecurity {
             createSignature(chunk, signBundlePath);
             /* Encrypt File */
             CiphertextMessage cipherText = client.cipherSession.encrypt(chunk);
+            updateSessionRecord(client);
+
             FileOutputStream stream = new FileOutputStream(encBundlePath);
             stream.write(cipherText.serialize());
             stream.close();
@@ -467,4 +514,13 @@ public class ServerSecurity {
         byte[] bundleIDBytes    = SecurityUtils.readFromFile(bundlePath + File.separator + SecurityUtils.BUNDLEID_FILENAME);
         return new String(bundleIDBytes, StandardCharsets.UTF_8);
     }
+
+    public String getServerRootPath() {
+        return serverRootPath;
+    }
+
+    public String getClientRootPath() {
+        return clientRootPath;
+    }
+
 };

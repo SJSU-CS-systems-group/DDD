@@ -1,8 +1,11 @@
 package com.ddd.server.bundlerouting;
 
+import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.List;
 import org.springframework.stereotype.Service;
-import com.ddd.server.bundlerouting.WindowUtils.Window;
+
+import com.ddd.server.bundlerouting.WindowUtils.CircularBuffer;
 import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
 import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.ClientAlreadyExists;
 import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.ClientWindowNotFound;
@@ -13,32 +16,132 @@ import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.RecievedOldACK;
 import com.ddd.server.bundlesecurity.BundleIDGenerator;
 import com.ddd.server.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
 import com.ddd.server.bundlesecurity.SecurityExceptions.InvalidClientIDException;
+import com.ddd.server.storage.SNRDatabases;
 import com.ddd.server.bundlesecurity.ServerSecurity;
 
 @Service
 public class ServerWindow {
-    private HashMap<String, Window> clientHashMap;
-    ServerSecurity                  serverSecurity;
+    HashMap<String, CircularBuffer> clientWindowMap = null;
+    ServerSecurity                  serverSecurity  = null;
+    private SNRDatabases            database        = null;
+    private static final String     dbTableName     = "ServerWindow";
+    private static final String     STARTCOUNTER    = "startCounter";
+    private static final String     ENDCOUNTER      = "endCounter";
+    private static final String     WINDOW_LENGTH   = "windowLength";
 
-    public ServerWindow(ServerSecurity serverSecurity)
+    public ServerWindow(ServerSecurity serverSecurity) throws SQLException
     {
-        clientHashMap       = new HashMap<>();
         this.serverSecurity = serverSecurity;
+        clientWindowMap = new HashMap<>();
+
+        // TODO: Change to config
+        String url = "jdbc:mysql://localhost:3306";
+        String uname    = "root";
+        String password = "password";
+        String dbName = "SNRDatabase";
+
+        database = new SNRDatabases(url, uname, password, dbName);
+
+        try {
+            initializeWindow();
+        } catch (SQLException | BufferOverflow | InvalidLength e) {
+            System.out.println(e+"\n[WIN] INFO: Failed to initialize window from database");
+
+            String dbTableCreateQuery = "CREATE TABLE "+ dbTableName+ " " +
+                                        "(clientID VARCHAR(256) not NULL," +
+                                        STARTCOUNTER + " VARCHAR(256)," +
+                                        ENDCOUNTER + " VARCHAR(256)," +
+                                        WINDOW_LENGTH + " INTEGER," +
+                                        "PRIMARY KEY (clientID))";
+
+            database.createTable(dbTableCreateQuery);
     }
+    }
+
+    private void initializeWindow() throws SQLException, InvalidLength, BufferOverflow
+    {
+        String query = "SELECT clientID, " + STARTCOUNTER +
+                        ", " + ENDCOUNTER + ", " + WINDOW_LENGTH +
+                        " FROM " + dbTableName;
+
+        List<String[]> results = database.getFromTable(query);
+
+        for (String[] result : results) {
+            String clientID   = result[0];
+            long startCounter = Long.parseLong(result[1]);
+            long endCounter   = Long.parseLong(result[2]);
+            int windowLength  = Integer.parseInt(result[3]);
+            
+            CircularBuffer circularBuffer = createBuffer(clientID, startCounter, endCounter, windowLength);
+            clientWindowMap.put(clientID, circularBuffer);
+        }
+    }
+
+    private CircularBuffer createBuffer( String clientID, long startCounter, long endCounter, int windowLength) throws BufferOverflow, InvalidLength
+    {
+        CircularBuffer circularBuffer = new CircularBuffer(windowLength);
+        
+        for (long i = startCounter; i < endCounter; ++i) {
+            String bundleID = BundleIDGenerator.generateBundleID(clientID, i, BundleIDGenerator.DOWNSTREAM);
+            if (i == startCounter) {
+                circularBuffer.initializeFromIndex(bundleID, (int) Long.remainderUnsigned(i, windowLength));
+            } else {
+                circularBuffer.add(bundleID);
+            }
+        }
+        return circularBuffer;
+    }
+
 
     /* Returns the window for the requested client
      * Parameters:
      * clientID     : encoded clientID
      * Returns:
-     * Window object
+     * CircularBuffer object
      */
-    private Window getClientWindow(String clientID) throws ClientWindowNotFound
+    private CircularBuffer getClientWindow(String clientID) throws ClientWindowNotFound
     {
-        if (!clientHashMap.containsKey(clientID)) {
-            throw new ClientWindowNotFound("ClientID["+clientID+"] Not Found");
+        if (!clientWindowMap.containsKey(clientID)) {
+            throw new ClientWindowNotFound("[WIN]: ClientID["+clientID+"] Not Found");
         }
 
-        return clientHashMap.get(clientID);
+        return clientWindowMap.get(clientID);
+    }
+
+    private String getValueFromTable(String clientID, String columnName) throws SQLException
+    {
+        String query = "SELECT "+columnName+" FROM "+dbTableName+" WHERE clientID = '"+clientID+"'";
+
+        String[] result = (database.getFromTable(query)).get(0);
+
+        return result[0];
+    }
+
+    private void updateValueInTable(String clientID, String columnName, String value)
+    {
+        String updateQuery = "UPDATE "+dbTableName+
+                             " SET "+columnName+" = '"+value+"'"+
+                             " WHERE clientID = '"+clientID+"'";
+
+        try {
+            database.updateEntry(updateQuery);
+        } catch (SQLException e) {
+            System.out.println("[WIN]: Failed to update Server Window DB!");
+            e.printStackTrace();
+        }
+    }
+
+    private void initializeEntry(String clientID, int windowLength)
+    {
+        String insertQuery = "INSERT INTO " + dbTableName + " VALUES " +
+                             "('"+clientID+"', '0', '0', "+windowLength+")";
+
+        try {
+            database.insertIntoTable(insertQuery);
+        } catch (SQLException e) {
+            System.out.println("[WIN]: Failed to Initalize Client ["+clientID+"]to Server Window DB!");
+            e.printStackTrace();
+        }
     }
 
     /* Add a new client and initialize its window
@@ -50,10 +153,11 @@ public class ServerWindow {
      */
     public void addClient(String clientID, int windowLength) throws InvalidLength, ClientAlreadyExists
     {
-        if (clientHashMap.containsKey(clientID)) {
-            throw new ClientAlreadyExists("[BR]: Cannot Add to Map; client already exists");
+        if (clientWindowMap.containsKey(clientID)) {
+            throw new ClientAlreadyExists("[WIN]: Cannot Add to Map; client already exists");
         }
-        clientHashMap.put(clientID, new Window(windowLength));
+        clientWindowMap.put(clientID, new CircularBuffer(windowLength));
+        initializeEntry(clientID, windowLength);
     }
 
     /* Commits the bundleID to the client's window
@@ -63,27 +167,36 @@ public class ServerWindow {
      * Returns:
      * None
      */
-    public void updateClientWindow(String clientID, String bundleID) throws ClientWindowNotFound, BufferOverflow, InvalidBundleID, BundleIDCryptographyException
+    public void updateClientWindow(String clientID, String bundleID) throws ClientWindowNotFound, BufferOverflow, InvalidBundleID, SQLException
     {
-        String decryptedBundleID = serverSecurity.decryptBundleID(bundleID, clientID);
-        getClientWindow(clientID).add(decryptedBundleID);
+        String decryptedBundleID = null;
+        try {
+            decryptedBundleID = serverSecurity.decryptBundleID(bundleID, clientID);
+        } catch (BundleIDCryptographyException e) {
+            System.out.println(e);
+            throw new InvalidBundleID("[WIN]: Failed to Decrypt bundleID");
     }
 
-    public String getCurrentbundleID(String clientID) throws ClientWindowNotFound, BundleIDCryptographyException, InvalidClientIDException
+        CircularBuffer circularBuffer = getClientWindow(clientID);
+        
+        long bundleIDcounter = BundleIDGenerator.getCounterFromBundleID(decryptedBundleID, BundleIDGenerator.DOWNSTREAM);
+        long endCounter = Long.parseUnsignedLong(getValueFromTable(clientID, ENDCOUNTER));
+
+        if (endCounter != bundleIDcounter) {
+            throw new InvalidBundleID("[WIN]: Expected: "+Long.toUnsignedString(endCounter)+", Got: "+Long.toUnsignedString(bundleIDcounter));
+    }
+
+        circularBuffer.add(decryptedBundleID);
+        endCounter++;
+        updateValueInTable(clientID, ENDCOUNTER, Long.toUnsignedString(endCounter));
+    }
+
+    public String getCurrentbundleID(String clientID) throws BundleIDCryptographyException, InvalidClientIDException, SQLException
     {
-        String plainBundleID = getClientWindow(clientID).getCurrentbundleID(clientID);
+        long endCounter = Long.parseUnsignedLong(getValueFromTable(clientID, ENDCOUNTER));
+
+        String plainBundleID = BundleIDGenerator.generateBundleID(clientID, endCounter, BundleIDGenerator.DOWNSTREAM);
         return serverSecurity.encryptBundleID(plainBundleID, clientID);
-    }
-
-    /* Return the latest bundleID in the client's window
-     * Parameter:
-     * clientID     : encoded clientID
-     * Returns:
-     * Latest bundle ID in window
-     */
-    public String getLatestClientBundle(String clientID) throws ClientWindowNotFound
-    {
-        return getClientWindow(clientID).getLatestBundleID();
     }
 
     /* Move window ahead based on the ACK received
@@ -95,16 +208,39 @@ public class ServerWindow {
      */
     public void processACK(String clientID, String ackedBundleID) throws ClientWindowNotFound, InvalidLength, BundleIDCryptographyException
     {
-        Window clientWindow = getClientWindow(clientID);
+        CircularBuffer circularBuffer = getClientWindow(clientID);
         String decryptedBundleID = serverSecurity.decryptBundleID(ackedBundleID, clientID);
-        System.out.println("Decrypted Ack from file = "+decryptedBundleID);
+        System.out.println("[WIN]: Decrypted Ack from file = "+decryptedBundleID);
         long ack = BundleIDGenerator.getCounterFromBundleID(decryptedBundleID, BundleIDGenerator.DOWNSTREAM);
 
         try {
-            clientWindow.moveWindowAhead(ack);
+            compareBundleID(ack, clientID);
+            
+            int index = (int) Long.remainderUnsigned(ack, circularBuffer.getLength());
+            circularBuffer.deleteUntilIndex(index);
+            long startCounter = ack + 1;
+            updateValueInTable(clientID, STARTCOUNTER, Long.toUnsignedString(startCounter));
+
+            // TODO: Change to log
+            System.out.println("[WIN]: Updated start Counter: "+startCounter);
         } catch (RecievedOldACK | RecievedInvalidACK e) {
-            System.out.println("Received Old/Invalid ACK!");
+            System.out.println("[WIN]: Received Old/Invalid ACK!");
             e.printStackTrace();
+        } catch (SQLException e) {
+            System.out.println("[WIN]: Failed to update Database!");
+            e.printStackTrace();
+        }
+    }
+
+    private void compareBundleID(long ack, String clientID) throws RecievedOldACK, RecievedInvalidACK, SQLException
+    {
+        long startCounter = Long.parseUnsignedLong(getValueFromTable(clientID, STARTCOUNTER));
+        long endCounter = Long.parseUnsignedLong(getValueFromTable(clientID, ENDCOUNTER));
+
+        if (Long.compareUnsigned(ack,startCounter) == -1) {
+            throw new RecievedOldACK("Received old ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(startCounter) + "]" );
+        } else if (Long.compareUnsigned(ack,endCounter) == 1) {
+            throw new RecievedInvalidACK("Received Invalid ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(endCounter) + "]" );
         }
     }
 
@@ -113,7 +249,7 @@ public class ServerWindow {
      */
     public boolean isClientWindowFull(String clientID) throws ClientWindowNotFound
     {
-        return getClientWindow(clientID).isWindowFull();
+        return getClientWindow(clientID).isBufferFull();
     }
 
     /* Return the bundles in the client's window
@@ -124,7 +260,7 @@ public class ServerWindow {
      */
     public String[] getclientWindow(String clientID) throws ClientWindowNotFound, InvalidClientIDException, BundleIDCryptographyException
     {
-        String[] bundleIDs = getClientWindow(clientID).getWindow();
+        String[] bundleIDs = getClientWindow(clientID).getBuffer();
         for (int i=0; i < bundleIDs.length; ++i) {
             bundleIDs[i] = serverSecurity.encryptBundleID(bundleIDs[i], clientID);
         }

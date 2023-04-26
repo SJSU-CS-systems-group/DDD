@@ -3,6 +3,7 @@ package com.ddd.server.bundletransmission;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -228,7 +229,7 @@ public class BundleTransmission {
   }
 
   private String generateBundleId(String clientId)
-      throws ClientWindowNotFound, BundleIDCryptographyException, InvalidClientIDException {
+      throws ClientWindowNotFound, BundleIDCryptographyException, InvalidClientIDException, SQLException {
     return this.serverWindow.getCurrentbundleID(clientId);
   }
 
@@ -275,7 +276,7 @@ public class BundleTransmission {
           bundleId = this.generateBundleId(clientId);
         } catch (ClientWindowNotFound
             | BundleIDCryptographyException
-            | InvalidClientIDException e) {
+            | InvalidClientIDException | SQLException e) {
           // TODO Auto-generated catch block
           e.printStackTrace();
         }
@@ -291,7 +292,7 @@ public class BundleTransmission {
             bundleId = this.generateBundleId(clientId);
           } catch (ClientWindowNotFound
               | BundleIDCryptographyException
-              | InvalidClientIDException e) {
+              | InvalidClientIDException | SQLException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
           }

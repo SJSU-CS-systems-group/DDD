@@ -12,7 +12,7 @@ public class CircularBuffer {
     
     private int start       = 0;
     private int end         = -1;
-    private int length      = -1;
+    private int length      = 0;
     private int capacity    = 0;
 
     public CircularBuffer(int length) throws InvalidLength
@@ -26,13 +26,25 @@ public class CircularBuffer {
 
     public void add(String item) throws BufferOverflow
     {
-        if (capacity + 1 >= length) {
+        if (capacity + 1 > length) {
             throw new BufferOverflow("Exceeding lenght("+length+")");
         }
 
         end = (end + 1) % length;
         buffer[end] = item;
         capacity++;
+    }
+
+    // Used only to initialize window to an older state
+    public void initializeFromIndex(String item, int index) throws BufferOverflow
+    {
+        if (index >= length) {
+            throw new BufferOverflow("Exceeding lenght("+length+")");
+        }
+
+        buffer[index] = item;
+        start = end = index;
+        capacity = 1;
     }
 
     private void delete() throws BufferUnderflow
@@ -97,6 +109,16 @@ public class CircularBuffer {
     public int getLength()
     {
         return this.length;
+    }
+
+    public long getStart()
+    {
+        return this.start;
+    }
+
+    public long getEnd()
+    {
+        return this.end;
     }
 
     public boolean isBufferFull()

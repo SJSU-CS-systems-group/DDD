@@ -5,6 +5,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -29,8 +31,8 @@ import javax.crypto.spec.SecretKeySpec;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.NoSessionException;
 import org.whispersystems.libsignal.SessionCipher;
+import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
@@ -55,6 +57,10 @@ public class SecurityUtils {
     public static final String PUBLICKEY_HEADER     = "-----BEGIN EC PUBLIC KEY-----";
     public static final String PUBLICKEY_FOOTER     = "-----END EC PUBLIC KEY-----";
     
+    public static final String CLIENT_KEY_PATH      = "Client_Keys";
+    public static final String SERVER_KEY_PATH      = "Server_Keys";
+    public static final String SESSION_STORE_FILE   = "Session.store";
+    
     public static final String CLIENT_IDENTITY_KEY  = "clientIdentity.pub";
     public static final String CLIENT_BASE_KEY      = "clientBase.pub";
     
@@ -67,13 +73,17 @@ public class SecurityUtils {
     public static final int KEYLEN     = 256;
 
     public static class ClientSession {
-        String          clientID;
-        IdentityKey     IdentityKey;
-        ECPublicKey     BaseKey;
+        SignalProtocolAddress   clientProtocolAddress;
+        IdentityKey             IdentityKey;
+        ECPublicKey             BaseKey;
 
-        SessionCipher   cipherSession;
-        SessionRecord   serverSessionRecord;
-    };
+        SessionCipher           cipherSession;
+
+        public String getClientID()
+        {
+            return this.clientProtocolAddress.getName();
+        }
+    }
 
     /* Creates an ID based on the given public key file
      * Generates a SHA-1 hash and then encodes it in Base64 (URL safe)
@@ -120,7 +130,7 @@ public class SecurityUtils {
         String encodedKey = PUBLICKEY_HEADER+"\n";
         try (FileOutputStream stream = new FileOutputStream(path)) {
             encodedKey += Base64.getUrlEncoder().encodeToString(publicKey.serialize());
-            encodedKey += "\n"+PUBLICKEY_FOOTER;
+            encodedKey += "\n" + PUBLICKEY_FOOTER;
             stream.write(encodedKey.getBytes());
         } catch (IOException e) {
             throw new EncodingException("[BS]: Failed to Encode Public Key to file:"+e);
@@ -160,7 +170,7 @@ public class SecurityUtils {
     public static boolean verifySignature(byte[] message, ECPublicKey publicKey, String signaturePath) throws SignatureVerificationException
     {
         try {
-            byte[] encodedsignature = Files.readAllBytes(Paths.get(signaturePath));
+            byte[] encodedsignature = SecurityUtils.readFromFile(signaturePath);
             byte[] signature = Base64.getUrlDecoder().decode(encodedsignature);
             
             return Curve.verifySignature(publicKey, message, signature);
@@ -250,6 +260,14 @@ public class SecurityUtils {
         File file = new File(dirPath);
         if (!file.exists()) {
             file.mkdirs();
+        }
+    }
+    
+    public static void copyContent(InputStream in, OutputStream out) throws IOException {
+        int data = -1;
+
+        while ((data = in.read()) != -1) {
+            out.write(data);
         }
     }
 }
