@@ -10,7 +10,13 @@ service DTNAdapter {
 
 message AppData {
   string clientId = 1;
-  repeated bytes data = 2;
+  repeated AppDataUnit dataList = 2;
+  int64 lastADUIdReceived = 3;
+}
+
+message AppDataUnit{
+  int64 aduId = 1;
+  bytes data = 2;
 }
 
 message PrepareResponse {

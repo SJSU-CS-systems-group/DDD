@@ -13,6 +13,11 @@ import com.ddd.server.storage.MySQLConnection;
 import com.ddd.utils.FileStoreHelper;
 import edu.sjsu.dtn.adapter.communicationservice.AppData;
 
+/*
+ * SendFileStoreHelper - store data that we get from adapter servers
+ * ReceiveFileStoreHelper - store data that we get from transport
+ * */
+
 public class DataStoreAdaptor {
   private FileStoreHelper sendFileStoreHelper;
   private FileStoreHelper receiveFileStoreHelper;
@@ -66,22 +71,21 @@ public class DataStoreAdaptor {
 
   // store all data for one app received from transport and send to app adapter
   public void persistADUsForServer(String clientId, String appId, List<ADU> adus) {
-    List<byte[]> dataList = new ArrayList<>();
     for (int i = 0; i < adus.size(); i++) {
       this.receiveFileStoreHelper.AddFile(
               adus.get(i).getAppId(),
               clientId,
               this.receiveFileStoreHelper.getDataFromFile(adus.get(i).getSource()));
-      dataList.add(this.receiveFileStoreHelper.getDataFromFile(adus.get(i).getSource()));
     }
+    List<ADU> dataList = receiveFileStoreHelper.getAppData(appId, clientId);
     String appAdapterAddress = this.getAppAdapterAddress(appId);
     System.out.println("[DataStoreAdaptor.persistADUForServer] " + appAdapterAddress);
     String ipAddress = appAdapterAddress.split(":")[0];
     int port = Integer.parseInt(appAdapterAddress.split(":")[1]);
     DTNAdapterClient client = new DTNAdapterClient(ipAddress, port);
-    AppData data = client.SendData(clientId, dataList);
+    AppData data = client.SendData(clientId, dataList, this.sendFileStoreHelper.getLastADUIdReceived(clientId+"/"+appId));
     this.saveDataFromAdaptor(clientId, appId, data);
-    System.out.println("[DSA] Stored ADUs for application " + appId + " for client " + clientId);
+    System.out.println("[DSA] Stored ADUs for application " + appId + " for client " + clientId+". number of ADUs - "+data.getDataListCount());
   }
 
   public ADU fetchADU(String clientId, String appId, long aduId) {
@@ -101,8 +105,8 @@ public class DataStoreAdaptor {
   // create GRPC connection to adapter and ask for data for the client
   public void saveDataFromAdaptor(String clientId, String appId, AppData appData) {
     try {
-      for (int i = 0; i < appData.getDataCount(); i++) {
-        this.sendFileStoreHelper.AddFile(appId, clientId, appData.getData(i).toByteArray());
+      for (int i = 0; i < appData.getDataListCount(); i++) {
+        this.sendFileStoreHelper.AddFile(appId, clientId, appData.getDataList(i).getData().toByteArray());
       }
     } catch (Exception ex) {
       ex.printStackTrace();

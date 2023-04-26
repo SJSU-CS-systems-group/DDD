@@ -1,5 +1,6 @@
 package com.ddd.utils;
 
+import com.ddd.model.ADU;
 import com.ddd.model.Metadata;
 import com.ddd.server.applicationdatamanager.ApplicationDataManager;
 import com.google.gson.Gson;
@@ -80,14 +81,17 @@ public class FileStoreHelper {
             Gson gson = new Gson();
             return gson.fromJson(data, Metadata.class);
         } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println("[FileStoreHelper] metadata not found at "+folder+". create a new one.");
+            Metadata metadata = new Metadata(1, 0,0,0);
+            setMetadata(folder, metadata);
+            return metadata;
         }
-        return null;
     }
 
     public void setMetadata(String folder, Metadata metadata){
         try {
             File metadataFile = new File(RootFolder + "/" + folder + "/metadata.json");
+            metadataFile.getParentFile().mkdirs();
             metadataFile.createNewFile();
             Gson gson = new Gson();
             String metadataString = gson.toJson(metadata);
@@ -137,16 +141,21 @@ public class FileStoreHelper {
         return null;
     }
 
-    public List<byte[]> getAppData(String appId, String clientId){
-        List<byte[]> appDataList = new ArrayList<>();
+    public List<ADU> getAppData(String appId, String clientId){
+        List<ADU> appDataList = new ArrayList<>();
         String folder = clientId+"/"+appId;
         Metadata metadata = getMetadata(folder);
         for(long i=metadata.lastProcessedMessageId+1;i <= metadata.lastReceivedMessageId;i++){
-            appDataList.add(readFile(RootFolder+"/"+folder+"/"+i+".txt"));
+            appDataList.add(new ADU(new File(RootFolder+"/"+folder+"/"+i+".txt"), appId, i, 0, clientId));
         }
         //metadata.lastProcessedMessageId= metadata.lastReceivedMessageId;
         //setMetadata(folder, metadata);
         return appDataList;
+    }
+
+    public long getLastADUIdReceived(String folder){
+        Metadata metadata = getMetadata(folder);
+        return metadata.lastReceivedMessageId;
     }
 
     public byte[] getADU(String clientId, String appId, String aduId){
@@ -159,10 +168,6 @@ public class FileStoreHelper {
 
     public byte[] getNextAppData(String folder){
         Metadata metadata = getMetadata(folder);
-        if(metadata==null){
-            metadata = new Metadata(1, 0,0,0);
-            setMetadata(folder, metadata);
-        }
         long nextMessageId = metadata.lastProcessedMessageId+1;
         if(nextMessageId> metadata.lastReceivedMessageId){
             System.out.println("no data to show");
@@ -181,7 +186,7 @@ public class FileStoreHelper {
         String folder = clientId+"/"+appId;
         File f = new File(RootFolder+"/"+folder);
         if(f.isDirectory()){
-            System.out.println( RootFolder+"/"+folder+" is a directory");
+            System.out.println("[FileStoreHelper.Addfile] data being added-"+new String(data));
             int noOfMessages = f.list().length;
             System.out.println("noOfMessages-"+noOfMessages);
             File dataFile = new File(RootFolder+"/"+folder+"/"+noOfMessages+".txt");
