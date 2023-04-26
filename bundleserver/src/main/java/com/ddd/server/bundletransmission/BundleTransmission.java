@@ -250,8 +250,9 @@ public class BundleTransmission {
     try {
       this.serverWindow.addClient(clientId, this.WINDOW_LENGTH);
     } catch (Exception e) {
-      e.printStackTrace();
+      System.out.println("[WIN] INFO : Did not Add client "+clientId + " : "+e);
     }
+
     boolean isSenderWindowFull = this.serverWindow.isClientWindowFull(clientId);
 
     if (isSenderWindowFull) {
