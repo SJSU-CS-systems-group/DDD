@@ -24,6 +24,7 @@ import com.ddd.model.UncompressedBundle;
 import com.ddd.model.UncompressedPayload;
 import com.ddd.server.applicationdatamanager.ApplicationDataManager;
 import com.ddd.server.bundlerouting.BundleRouting;
+import com.ddd.server.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
 import com.ddd.server.bundlerouting.ServerWindow;
 import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.ClientWindowNotFound;
 import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
@@ -82,9 +83,7 @@ public class BundleTransmission {
     
     UncompressedBundle uncompressedBundle =
         this.bundleGenServ.extractBundle(bundle, bundleRecvProcDir.getAbsolutePath());
-    
     String clientId = "";
-
     try {
       clientId = SecurityUtils.generateID(uncompressedBundle.getSource() + File.separator + SecurityUtils.CLIENT_IDENTITY_KEY);
       Optional<String> opt = this.applicationDataManager.getLargestRecvdBundleId(clientId);
@@ -152,7 +151,12 @@ public class BundleTransmission {
       }
     }
     
-    this.bundleRouting.processClientMetadata(uncompressedPayload.getSource().getAbsolutePath(), clientId);
+    try {
+      this.bundleRouting.processClientMetaData(uncompressedPayload.getSource().getAbsolutePath(), clientId);
+    } catch (ClientMetaDataFileException | SQLException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
 
     this.applicationDataManager.processAcknowledgement(
         clientId, uncompressedPayload.getAckRecord().getBundleId());
