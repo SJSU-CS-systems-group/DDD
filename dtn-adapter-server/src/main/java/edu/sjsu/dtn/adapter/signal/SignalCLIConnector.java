@@ -40,7 +40,7 @@ public class SignalCLIConnector {
 				mapper.writerWithDefaultPrettyPrinter().writeValue(tempFile.toFile(), jsonObj);
 				System.out.println(tempFile.toAbsolutePath().toString());
 
-				Process pc = runtime.exec("java -jar target/signal-cli.jar -a " + phoneNumber + " register --captcha "
+				Process pc = runtime.exec("java -jar signal-cli.jar -a " + phoneNumber + " register --captcha "
 						+ captcha + " --ddd " + tempFile.toAbsolutePath().toString());
 				BufferedReader stdInput = new BufferedReader(new InputStreamReader(pc.getInputStream()));
 
@@ -61,7 +61,7 @@ public class SignalCLIConnector {
 				System.out.println("Enter PIN received on phone number");
 				String pin = scanner.nextLine();
 
-				pc = runtime.exec("java -jar target/signal-cli.jar -a " + phoneNumber + " verify " + pin);
+				pc = runtime.exec("java -jar signal-cli.jar -a " + phoneNumber + " verify " + pin);
 
 				stdInput = new BufferedReader(new InputStreamReader(pc.getInputStream()));
 
@@ -96,7 +96,7 @@ public class SignalCLIConnector {
 			String phoneNumber = prefs.get(clientId, null);
 			try {
 				Runtime runtime = Runtime.getRuntime();
-				Process pc = runtime.exec("java -jar target/signal-cli.jar -a " + phoneNumber + " receive");
+				Process pc = runtime.exec("java -jar signal-cli.jar -a " + phoneNumber + " receive");
 				BufferedReader stdInput = new BufferedReader(new InputStreamReader(pc.getInputStream()));
 
 				String s = null;
