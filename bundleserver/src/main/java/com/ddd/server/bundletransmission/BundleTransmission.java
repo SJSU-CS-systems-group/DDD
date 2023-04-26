@@ -153,7 +153,9 @@ public class BundleTransmission {
         e.printStackTrace();
       }
     }
-    // TODO RoutingMetadataIntegration   this.bundleRouting.processClientMetadata(uncompressedPayload.getSource(), clientId);
+    
+    this.bundleRouting.processClientMetadata(uncompressedPayload.getSource().getAbsolutePath(), clientId);
+
     this.applicationDataManager.processAcknowledgement(
         clientId, uncompressedPayload.getAckRecord().getBundleId());
     if (!uncompressedPayload.getADUs().isEmpty()) {      

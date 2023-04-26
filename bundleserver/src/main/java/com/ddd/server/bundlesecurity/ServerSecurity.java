@@ -17,6 +17,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Stream;
 
+import javax.websocket.EncodeException;
+
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -296,6 +298,13 @@ public class ServerSecurity {
         return secretKey;
     }
 
+    private String getsharedSecret(ECPublicKey clientIdentitKey) throws InvalidKeyException
+    {
+        byte[] agreement = Curve.calculateAgreement(clientIdentitKey, ourIdentityKeyPair.getPrivateKey());
+        String secretKey = Base64.getUrlEncoder().encodeToString(agreement);
+        return secretKey;
+    }
+    
     private String getsharedSecret(String clientID) throws InvalidKeyException, InvalidClientIDException
     {
         /* get Client Session */
@@ -523,4 +532,26 @@ public class ServerSecurity {
         return clientRootPath;
     }
 
+    public int isNewerBundle(String bundlePath, String lastBundleID) throws IOException, BundleIDCryptographyException
+    {
+        String bundleIDPath = bundlePath + File.separator + SecurityUtils.BUNDLEID_FILENAME;
+        byte[] encryptedBundleID = SecurityUtils.readFromFile(bundleIDPath);
+        String receivedBundleID, latestBundleID;
+
+        try {
+            byte[] clientIdentityKeyBytes = SecurityUtils.decodePublicKeyfromFile(bundlePath + File.separator + SecurityUtils.CLIENT_IDENTITY_KEY);
+            IdentityKey clientIdentityKey = new IdentityKey(clientIdentityKeyBytes, 0);
+
+            String sharedSecret = getsharedSecret(clientIdentityKey.getPublicKey());
+
+            byte[] bundleIDbytes = SecurityUtils.dencryptAesCbcPkcs5(sharedSecret, new String(encryptedBundleID, StandardCharsets.UTF_8));
+            receivedBundleID = new String(bundleIDbytes, StandardCharsets.UTF_8);
+            bundleIDbytes = SecurityUtils.dencryptAesCbcPkcs5(sharedSecret, lastBundleID);
+            latestBundleID = new String(bundleIDbytes, StandardCharsets.UTF_8);
+        } catch (AESAlgorithmException | InvalidKeyException | EncodingException e) {
+            throw new BundleIDCryptographyException("[SEC]: Failed to decrypt/decode BundleID:"+e);
+        }
+
+        return BundleIDGenerator.compareBundleIDs(receivedBundleID, latestBundleID, BundleIDGenerator.UPSTREAM);
+    }
 };
