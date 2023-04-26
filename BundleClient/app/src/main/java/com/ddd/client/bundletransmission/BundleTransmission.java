@@ -131,11 +131,17 @@ public class BundleTransmission {
     return bundleId.trim();
   }
 
-  private void processReceivedBundle(Bundle bundle) {
+  private void processReceivedBundle(String transportId, Bundle bundle) {
     String largestBundleIdReceived = this.getLargestBundleIdReceived();
     UncompressedBundle uncompressedBundle =
         BundleUtils.extractBundle(bundle, this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + RECEIVED_PROCESSING);
     Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
+    try {
+      Log.d(HelloworldActivity.TAG, "Updating client routing metadata for transport  " + transportId);
+      clientRouting.updateMetaData(transportId);
+    } catch (RoutingExceptions.ClientMetaDataFileException e) {
+      e.printStackTrace();
+    }
     String bundleId = payload.getBundleId();
 
     ClientBundleGenerator clientBundleGenerator = this.bundleSecurity.getClientBundleGenerator();
@@ -160,15 +166,16 @@ public class BundleTransmission {
 
     this.applicationDataManager.processAcknowledgement(ackedBundleId);
     this.applicationDataManager.storeADUs(uncompressedPayload.getADUs());
+
   }
 
-  public void processReceivedBundles(String bundlesLocation) {
+  public void processReceivedBundles(String transportId, String bundlesLocation) {
     File bundleStorageDirectory = new File(bundlesLocation);
     Log.d(HelloworldActivity.TAG, "inside receives" + bundlesLocation);
 
     for (final File bundleFile : bundleStorageDirectory.listFiles()) {
       Bundle bundle = new Bundle(bundleFile);
-      this.processReceivedBundle(bundle);
+      this.processReceivedBundle(transportId, bundle);
       Log.d(HelloworldActivity.TAG, "Deleting Directory");
       FileUtils.deleteQuietly(bundle.getSource());
       Log.d(HelloworldActivity.TAG, "Deleted Directory");

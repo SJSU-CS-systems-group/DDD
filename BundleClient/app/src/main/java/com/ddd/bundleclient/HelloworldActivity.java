@@ -81,6 +81,8 @@ public class HelloworldActivity extends AppCompatActivity {
   // bundle transmitter set up
   BundleTransmission bundleTransmission;
 
+  String currentTransportId;
+
   /** check for location permissions manually, will give a prompt*/
   @Override
   public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
@@ -168,7 +170,7 @@ public class HelloworldActivity extends AppCompatActivity {
               Log.d(TAG, "[HWA] Skipping received bundle => " + bundleName);
               continue;
             }
-            bundleTransmission.processReceivedBundles(getApplicationContext().getApplicationInfo().dataDir + RECEIVE_PATH);
+            bundleTransmission.processReceivedBundles(currentTransportId, getApplicationContext().getApplicationInfo().dataDir + RECEIVE_PATH);
           }
         }
       }
@@ -289,6 +291,7 @@ public class HelloworldActivity extends AppCompatActivity {
               // Write the downloaded data to the file
               fileOutputStream.write(fileContent.getValue().toByteArray());
               //give anirudh transport ID
+              currentTransportId = fileContent.getTransportId();
             } catch (IOException e) {
               onError(e);
             }
@@ -340,9 +343,9 @@ public class HelloworldActivity extends AppCompatActivity {
       if (activity == null) {
         return;
       }
-//      String FILE_PATH = getApplicationContext().getApplicationInfo().dataDir + "/Shared/received-bundles";
-//      BundleTransmission bundleTransmission = new BundleTransmission(getApplicationContext().getApplicationInfo().dataDir);
-//      bundleTransmission.processReceivedBundles(FILE_PATH);
+      String FILE_PATH = getApplicationContext().getApplicationInfo().dataDir + "/Shared/received-bundles";
+      BundleTransmission bundleTransmission = new BundleTransmission(getApplicationContext().getApplicationInfo().dataDir);
+      bundleTransmission.processReceivedBundles(currentTransportId, FILE_PATH);
       TextView resultText = (TextView) activity.findViewById(R.id.grpc_response_text);
       Button connectButton = (Button) activity.findViewById(R.id.connect_button);
       resultText.setText(result);
