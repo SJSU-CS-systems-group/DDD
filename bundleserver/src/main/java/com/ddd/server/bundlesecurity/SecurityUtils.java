@@ -238,7 +238,7 @@ public class SecurityUtils {
         } catch(NoSuchAlgorithmException | InvalidKeySpecException | NoSuchPaddingException |
                     java.security.InvalidKeyException | InvalidAlgorithmParameterException |
                     IllegalBlockSizeException | BadPaddingException e) {
-            throw new AESAlgorithmException("Error Decrypting text using AES: ");
+            throw new AESAlgorithmException("Error Decrypting text ["+ cipherText +"] using AES: ");
         }
         return decryptedData;
     }
