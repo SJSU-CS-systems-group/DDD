@@ -172,9 +172,13 @@ public class BundleTransmission {
   public void processReceivedBundles(String transportId, String bundlesLocation) {
     File bundleStorageDirectory = new File(bundlesLocation);
     Log.d(HelloworldActivity.TAG, "inside receives" + bundlesLocation);
-
+    if (bundleStorageDirectory.listFiles() == null || bundleStorageDirectory.listFiles().length == 0){
+      Log.d(HelloworldActivity.TAG,"No Bundle received");
+      return;
+    }
     for (final File bundleFile : bundleStorageDirectory.listFiles()) {
       Bundle bundle = new Bundle(bundleFile);
+      Log.d(HelloworldActivity.TAG,"Processing: "+bundle.getSource().getName());
       this.processReceivedBundle(transportId, bundle);
       Log.d(HelloworldActivity.TAG, "Deleting Directory");
       FileUtils.deleteQuietly(bundle.getSource());
@@ -223,7 +227,8 @@ public class BundleTransmission {
         bundleId);
 
     try {
-      clientRouting.bundleMetaData(toSendBundlePayload.getSource().getPath());
+      Log.d(HelloworldActivity.TAG, "Placing routing.metadata in " + toSendBundlePayload.getSource().getAbsolutePath());
+      clientRouting.bundleMetaData(toSendBundlePayload.getSource().getAbsolutePath());
     } catch (RoutingExceptions.ClientMetaDataFileException e) {
       System.out.println("[BR]: Failed to add Routing metadata to bundle!");
       e.printStackTrace();
@@ -254,6 +259,13 @@ public class BundleTransmission {
         toSendBundlePayload,
         new File(this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + UNCOMPRESSED_PAYLOAD),
         bundleId);
+    try {
+      Log.d(HelloworldActivity.TAG, "Placing routing.metadata in " + toSendBundlePayload.getSource().getAbsolutePath());
+      clientRouting.bundleMetaData(toSendBundlePayload.getSource().getAbsolutePath());
+    } catch (RoutingExceptions.ClientMetaDataFileException e) {
+      System.out.println("[BR]: Failed to add Routing metadata to bundle!");
+      e.printStackTrace();
+    }
 
     Payload payload =
         BundleUtils.compressPayload(

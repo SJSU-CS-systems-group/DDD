@@ -37,8 +37,8 @@ public class ServerWindow {
         // TODO: Change to config
         String url = "jdbc:mysql://localhost:3306";
         String uname    = "root";
-        String password = "password";
-        String dbName = "SNRDatabase";
+        String password = "";
+        String dbName = "DTN_SERVER_DB";
 
         database = new SNRDatabases(url, uname, password, dbName);
 

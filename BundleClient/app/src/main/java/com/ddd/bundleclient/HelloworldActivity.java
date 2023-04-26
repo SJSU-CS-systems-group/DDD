@@ -82,7 +82,7 @@ public class HelloworldActivity extends AppCompatActivity {
   BundleTransmission bundleTransmission;
 
   String currentTransportId;
-
+  String BundleExtension = ".jar";
   /** check for location permissions manually, will give a prompt*/
   @Override
   public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
@@ -104,12 +104,12 @@ public class HelloworldActivity extends AppCompatActivity {
     // set up view
     setContentView(R.layout.activity_helloworld);
     connectButton = (Button) findViewById(R.id.connect_button);
-    detectTransportButton = (Button) findViewById(R.id.detect_transport_button);
-    receiveFromTransportButton = (Button) findViewById(R.id.receive_from_transport_button);
+//    detectTransportButton = (Button) findViewById(R.id.detect_transport_button);
+//    receiveFromTransportButton = (Button) findViewById(R.id.receive_from_transport_button);
     resultText = (TextView) findViewById(R.id.grpc_response_text);
     resultText.setMovementMethod(new ScrollingMovementMethod());
-    FragmentManager fragmentManager = this.getSupportFragmentManager();
-    this.fragment = (FileChooserFragment) fragmentManager.findFragmentById(R.id.fragment_fileChooser);
+//    FragmentManager fragmentManager = this.getSupportFragmentManager();
+//    this.fragment = (FileChooserFragment) fragmentManager.findFragmentById(R.id.fragment_fileChooser);
 //    this.agent = new BundleDeliveryAgent(getApplicationContext().getApplicationInfo().dataDir);
 
     // set up wifi direct
@@ -145,36 +145,36 @@ public class HelloworldActivity extends AppCompatActivity {
       }
     });
 
-    detectTransportButton.setOnClickListener(new View.OnClickListener() {
-      @Override
-      public void onClick(View view) {
-        bundleTransmission.generateBundleForTransmission();
-      }
-    });
-    receiveFromTransportButton.setOnClickListener(new View.OnClickListener() {
-      @Override
-      public void onClick(View view) {
-        List<String> bundleRequests = null;
-        try {
-          bundleRequests = clientWindow.getWindow(bundleTransmission.getBundleSecurity().getClientSecurity());
-        } catch (SecurityExceptions.BundleIDCryptographyException e) {
-          Log.d(TAG, "[BR]: Failed to get Window: " + e);
-          e.printStackTrace();
-        }
-        Set<String> windowBundleIds = new HashSet<>(bundleRequests);
-        java.io.File[] receivedBundles = new java.io.File(getApplicationContext().getApplicationInfo().dataDir + RECEIVE_PATH).listFiles();
-        if (receivedBundles != null) {
-          for (java.io.File bundleFile : receivedBundles) {
-            String bundleName = bundleFile.getName();
-            if (!windowBundleIds.contains(bundleName.substring(0, bundleName.lastIndexOf('.')))) {
-              Log.d(TAG, "[HWA] Skipping received bundle => " + bundleName);
-              continue;
-            }
-            bundleTransmission.processReceivedBundles(currentTransportId, getApplicationContext().getApplicationInfo().dataDir + RECEIVE_PATH);
-          }
-        }
-      }
-    });
+//    detectTransportButton.setOnClickListener(new View.OnClickListener() {
+//      @Override
+//      public void onClick(View view) {
+//        bundleTransmission.generateBundleForTransmission();
+//      }
+//    });
+//    receiveFromTransportButton.setOnClickListener(new View.OnClickListener() {
+//      @Override
+//      public void onClick(View view) {
+//        List<String> bundleRequests = null;
+//        try {
+//          bundleRequests = clientWindow.getWindow(bundleTransmission.getBundleSecurity().getClientSecurity());
+//        } catch (SecurityExceptions.BundleIDCryptographyException e) {
+//          Log.d(TAG, "[BR]: Failed to get Window: " + e);
+//          e.printStackTrace();
+//        }
+//        Set<String> windowBundleIds = new HashSet<>(bundleRequests);
+//        java.io.File[] receivedBundles = new java.io.File(getApplicationContext().getApplicationInfo().dataDir + RECEIVE_PATH).listFiles();
+//        if (receivedBundles != null) {
+//          for (java.io.File bundleFile : receivedBundles) {
+//            String bundleName = bundleFile.getName();
+//            if (!windowBundleIds.contains(bundleName.substring(0, bundleName.lastIndexOf('.')))) {
+//              Log.d(TAG, "[HWA] Skipping received bundle => " + bundleName);
+//              continue;
+//            }
+//            bundleTransmission.processReceivedBundles(currentTransportId, getApplicationContext().getApplicationInfo().dataDir + RECEIVE_PATH);
+//          }
+//        }
+//      }
+//    });
   }
 
 
@@ -271,9 +271,10 @@ public class HelloworldActivity extends AppCompatActivity {
         Log.d(TAG, "BUNDLE REQuests has size 0 / ");
       }
 
-      for(String bundleName: bundleRequests){
+      for(String bundle: bundleRequests){
 //        String testBundleName = "client0-"+bundleName+".jar";
         // String testBundleName = "client0-1.jar";
+        String bundleName = bundle+BundleExtension;
         ReqFilePath request = ReqFilePath.newBuilder()
                 .setValue(bundleName)
                 .build();

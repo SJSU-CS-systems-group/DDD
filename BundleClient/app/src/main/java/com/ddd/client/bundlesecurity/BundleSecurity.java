@@ -247,9 +247,9 @@ public class BundleSecurity {
 
     SecurityUtils.createDirectory(serverKeyPath);
 
-    OutputStream outServerIdentity = new FileOutputStream(serverKeyPath + java.io.File.separator + "serverIdentity.pub");
-    OutputStream outServerSignedPre = new FileOutputStream(serverKeyPath + java.io.File.separator + "serverSignedPre.pub");
-    OutputStream outServerRatchet = new FileOutputStream(serverKeyPath + java.io.File.separator + "serverRatchet.pub");
+    OutputStream outServerIdentity = new FileOutputStream(serverKeyPath + java.io.File.separator + "server_identity.pub");
+    OutputStream outServerSignedPre = new FileOutputStream(serverKeyPath + java.io.File.separator + "server_signed_pre.pub");
+    OutputStream outServerRatchet = new FileOutputStream(serverKeyPath + java.io.File.separator + "server_ratchet.pub");
 
     SecurityUtils.copyContent(inServerIdentity, outServerIdentity);
     inServerIdentity.close();

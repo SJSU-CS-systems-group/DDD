@@ -150,6 +150,7 @@ public class BundleTransmission {
         e.printStackTrace();
       }
     }
+<<<<<<< HEAD
     
     try {
       this.bundleRouting.processClientMetaData(uncompressedPayload.getSource().getAbsolutePath(), clientId);
@@ -158,6 +159,14 @@ public class BundleTransmission {
       e.printStackTrace();
     }
 
+=======
+    try {
+		this.bundleRouting.processClientMetaData(uncompressedPayload.getSource().getAbsolutePath(), transportId, clientId);
+	} catch (ClientMetaDataFileException | SQLException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
+>>>>>>> be29b9d01 (added jar)
     this.applicationDataManager.processAcknowledgement(
         clientId, uncompressedPayload.getAckRecord().getBundleId());
     if (!uncompressedPayload.getADUs().isEmpty()) {      

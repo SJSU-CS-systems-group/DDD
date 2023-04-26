@@ -25,8 +25,8 @@ public class BundleRouting {
   /*
    * payloadPath: path of received payload where routing metadata file exists
    */
-  public void processClientMetaData(String payloadPath, String clientID) throws ClientMetaDataFileException, SQLException {
-      routingTable.processClientMetaData(payloadPath, clientID);
+  public void processClientMetaData(String payloadPath, String transportID, String clientID) throws ClientMetaDataFileException, SQLException {
+      routingTable.processClientMetaData(payloadPath, transportID, clientID);
   }
 
   public void updateClientWindow(String clientID, String bundleID) {}

@@ -22,9 +22,9 @@ public class SNRDatabases {
         this.uname = uname;
         this.password = password;
         this.dbName = dbName;
-        this.dbURL = url + "/" + dbName;
+        this.dbURL = url + "/" + dbName + "?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC";
 
-        createDatabase();
+//        createDatabase();
     }
 
     private void createDatabase() throws SQLException

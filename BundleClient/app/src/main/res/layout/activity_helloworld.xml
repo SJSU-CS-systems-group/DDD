@@ -5,17 +5,17 @@
     tools:context="HelloworldActivity"
     android:orientation="vertical">
 
-    <fragment
-        android:id="@+id/fragment_fileChooser"
-        android:name="com.ddd.bundleclient.FileChooserFragment"
-        android:layout_width="match_parent"
-        android:layout_height="45dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginLeft="16dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginRight="16dp"
-        tools:layout="@layout/fragment_file_chooser" />
+<!--    <fragment-->
+<!--        android:id="@+id/fragment_fileChooser"-->
+<!--        android:name="com.ddd.bundleclient.FileChooserFragment"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="45dp"-->
+<!--        android:layout_marginStart="16dp"-->
+<!--        android:layout_marginLeft="16dp"-->
+<!--        android:layout_marginTop="16dp"-->
+<!--        android:layout_marginEnd="16dp"-->
+<!--        android:layout_marginRight="16dp"-->
+<!--        tools:layout="@layout/fragment_file_chooser" />-->
 
     <Button
         android:id="@+id/connect_button"
@@ -31,17 +31,17 @@
         android:textSize="16sp"
         android:text="Response:" />
 
-    <Button
-        android:id="@+id/detect_transport_button"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Detect Transport" />
+<!--    <Button-->
+<!--        android:id="@+id/detect_transport_button"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="Detect Transport" />-->
 
-    <Button
-        android:id="@+id/receive_from_transport_button"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Receive From Transport" />
+<!--    <Button-->
+<!--        android:id="@+id/receive_from_transport_button"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="Receive From Transport" />-->
 
     <TextView
             android:id="@+id/grpc_response_text"

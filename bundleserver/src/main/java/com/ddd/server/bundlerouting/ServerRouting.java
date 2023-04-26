@@ -26,8 +26,8 @@ public class ServerRouting {
         // TODO: Change to config
         String url = "jdbc:mysql://localhost:3306";
         String uname    = "root";
-        String password = "password";
-        String dbName = "SNRDatabase";
+        String password = "";
+        String dbName = "DTN_SERVER_DB";
 
         database = new SNRDatabases(url, uname, password, dbName);
 
@@ -84,9 +84,9 @@ public class ServerRouting {
      * Returns:
      * None
     */
-    public void processClientMetaData(String payloadPath, String clientID) throws ClientMetaDataFileException, SQLException
+    public void processClientMetaData(String payloadPath, String transportID, String clientID) throws ClientMetaDataFileException, SQLException
     {
-        // TODO: Read metadata from payload instead of directly
+  
         String clientMetaDataPath = payloadPath + File.separator + METADATAFILE;
         HashMap<String, Long> clientMap = null;
         ObjectMapper mapper = new ObjectMapper();
@@ -97,8 +97,13 @@ public class ServerRouting {
             throw new ClientMetaDataFileException("Error Reading client metadata: "+e);
         }
 
-        for (Map.Entry<String,Long> entry: clientMap.entrySet()) {
-            updateEntry(entry.getKey(), clientID, entry.getValue());
+        if (clientMap == null || clientMap.keySet().isEmpty()) {
+        	System.out.println("[BR]: Client Metadata is empty, initializing transport with score 0");
+        	updateEntry(transportID, clientID, 0);
+        } else {
+	        for (Map.Entry<String,Long> entry: clientMap.entrySet()) {
+	            updateEntry(entry.getKey(), clientID, entry.getValue());
+	        }
         }
     }
 
