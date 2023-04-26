@@ -133,11 +133,16 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
         System.out.println(bundleTransmission);
         if ( bundlesList.isEmpty() ){
             BundleTransferDTO bundleTransferDTO = bundleTransmission.generateBundlesForTransmission(request.getTransportId(), filesOnTransportSet);
-            BundleDownloadResponse response = BundleDownloadResponse.newBuilder()
-                                                .setBundleList( BundleList.newBuilder().setBundleList(String.join(", ", bundleTransferDTO.getDeletionSet())))
-                                                .build();
-            System.out.println("[BDA] Sending "+String.join(", ", bundleTransferDTO.getDeletionSet())+" to delete on Transport id :"+request.getTransportId());
-            responseObserver.onNext(response);
+            if(bundleTransferDTO.getBundles().isEmpty()) {
+            	responseObserver.onNext(BundleDownloadResponse.newBuilder().setStatus(Status.SUCCESS).build());
+            }
+            else {
+            	 BundleDownloadResponse response = BundleDownloadResponse.newBuilder()
+                         .setBundleList( BundleList.newBuilder().setBundleList(String.join(", ", bundleTransferDTO.getDeletionSet())))
+                         .build();
+System.out.println("[BDA] Sending "+String.join(", ", bundleTransferDTO.getDeletionSet())+" to delete on Transport id :"+request.getTransportId());
+responseObserver.onNext(response);
+            }
             responseObserver.onCompleted();                      
         } else {
 
