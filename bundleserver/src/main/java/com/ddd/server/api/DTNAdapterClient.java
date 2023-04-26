@@ -1,10 +1,9 @@
 package com.ddd.server.api;
 
+import com.ddd.model.ADU;
+import com.ddd.utils.FileStoreHelper;
 import com.google.protobuf.ByteString;
-import edu.sjsu.dtn.adapter.communicationservice.ClientData;
-import edu.sjsu.dtn.adapter.communicationservice.DTNAdapterGrpc;
-import edu.sjsu.dtn.adapter.communicationservice.AppData;
-import edu.sjsu.dtn.adapter.communicationservice.PrepareResponse;
+import edu.sjsu.dtn.adapter.communicationservice.*;
 import io.grpc.Channel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
@@ -27,19 +26,28 @@ public class DTNAdapterClient {
         asyncStub = DTNAdapterGrpc.newStub(channel);
     }
 
-    public AppData SendData(String clientId, List<byte[]> dataList){
+    public AppData SendData(String clientId, List<ADU> dataList, long lastADUIdReceived){
         DTNAdapterClient client = new DTNAdapterClient(ipAddress, port);
         try {
-            List<ByteString> dataListConverted = new ArrayList<>();
+            List<AppDataUnit> dataListConverted = new ArrayList<>();
             for (int i=0;i<dataList.size();i++){
-                dataListConverted.add(ByteString.copyFrom(dataList.get(i)));
+                try {
+                    byte[] data = FileStoreHelper.getStringFromFile(dataList.get(i).getSource().getAbsolutePath()).getBytes();
+                    dataListConverted.add(AppDataUnit.newBuilder()
+                            .setData(ByteString.copyFrom(data))
+                            .setAduId(dataList.get(i).getADUId())
+                            .build());
+                }catch (Exception ex){
+                    ex.printStackTrace();
+                }
             }
             AppData data = AppData.newBuilder()
                     .setClientId(clientId)
-                    .addAllData(dataListConverted)
+                    .addAllDataList(dataListConverted)
+                    .setLastADUIdReceived(lastADUIdReceived)
                     .build();
             AppData appData = client.blockingStub.saveData(data);
-            System.out.println("[DTNAdapterClient.SendData] response: appData.getDataCount()- " + appData.getDataCount());
+            System.out.println("[DTNAdapterClient.SendData] response: appData.getDataCount()- " + appData.getDataListCount());
             return appData;
         } catch (StatusRuntimeException e) {
             e.printStackTrace();

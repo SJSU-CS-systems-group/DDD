@@ -353,7 +353,12 @@ public class BundleTransmission {
 
   public BundleTransferDTO generateBundlesForTransmission(
       String transportId, Set<String> bundleIdsPresent) {
-    List<String> clientIds = this.bundleRouting.getClients(transportId);
+    List<String> clientIds = null;
+    try {
+      clientIds = this.bundleRouting.getClients(transportId);
+    } catch (SQLException e) {
+      throw new RuntimeException(e);
+    }
     Set<String> deletionSet = new HashSet<>();
     List<BundleDTO> bundlesToSend = new ArrayList<>();
     Map<String, Set<String>> clientIdToBundleIds = new HashMap<>();
