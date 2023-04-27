@@ -29,15 +29,15 @@ public class SecurityUtils {
         byte[] publicKey = decodePublicKeyfromFile(publicKeyPath);
         MessageDigest md = MessageDigest.getInstance("SHA-1");
         byte[] hashedKey = md.digest(publicKey);
-        return Base64.encodeToString(hashedKey,Base64.URL_SAFE);
+        return Base64.encodeToString(hashedKey,Base64.URL_SAFE | Base64.NO_WRAP);
     }
 
     public static void createEncodedPublicKeyFile(ECPublicKey publicKey, String path) throws IOException
     {
         String encodedKey = "-----BEGIN EC PUBLIC KEY-----\n";
         try (FileOutputStream stream = new FileOutputStream(path)) {
-            encodedKey += Base64.encodeToString(publicKey.serialize(),Base64.URL_SAFE);
-            encodedKey += "-----END EC PUBLIC KEY-----";
+            encodedKey += Base64.encodeToString(publicKey.serialize(),Base64.URL_SAFE | Base64.NO_WRAP);
+            encodedKey += "\n" + "-----END EC PUBLIC KEY-----";
             stream.write(encodedKey.getBytes());
         }
     }
@@ -60,7 +60,7 @@ public class SecurityUtils {
 
         if ((encodedKeyList.get(0).equals("-----BEGIN EC PUBLIC KEY-----")) &&
                 (encodedKeyList.get(2).equals("-----END EC PUBLIC KEY-----"))) {
-            return Base64.decode(encodedKeyList.get(1),Base64.URL_SAFE);
+            return Base64.decode(encodedKeyList.get(1),Base64.URL_SAFE | Base64.NO_WRAP);
         }
 
         throw new InvalidKeyException("Error: Invalid Public Key Format");
