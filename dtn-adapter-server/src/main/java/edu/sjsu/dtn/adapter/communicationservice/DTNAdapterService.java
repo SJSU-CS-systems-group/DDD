@@ -23,6 +23,7 @@ public class DTNAdapterService extends DTNAdapterGrpc.DTNAdapterImplBase {
 
 	@Override
 	public void saveData(AppData request, StreamObserver<AppData> responseObserver) {
+		System.out.println("-----------------------------------------------------------------------------------");
 		System.out.println("[DTNAdapterService] Saving Data for:"+request.getClientId());
 		System.out.println("[DTNAdapterService] total number of ADUs in request:"+request.getDataListCount());
 		System.out.println("[DTNAdapterService] last ADU ID received by server:"+request.getLastADUIdReceived());
@@ -52,7 +53,7 @@ public class DTNAdapterService extends DTNAdapterGrpc.DTNAdapterImplBase {
 		for (int i = 0; i < dataList.size(); i++) {
 			try {
 				byte[] data = FileStoreHelper.getStringFromFile(dataList.get(i).getSource().getAbsolutePath()).getBytes();
-				System.out.println("data: " +
+				System.out.println("ADU ID "+dataList.get(i).getADUId()+": " +
 						new String(data));
 				dataListConverted.add(AppDataUnit.newBuilder()
 						.setData(ByteString.copyFrom(data))

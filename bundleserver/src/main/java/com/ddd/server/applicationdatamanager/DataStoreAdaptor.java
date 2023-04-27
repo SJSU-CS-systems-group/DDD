@@ -83,6 +83,12 @@ public class DataStoreAdaptor {
     int port = Integer.parseInt(appAdapterAddress.split(":")[1]);
     DTNAdapterClient client = new DTNAdapterClient(ipAddress, port);
     AppData data = client.SendData(clientId, dataList, this.sendFileStoreHelper.getLastADUIdReceived(clientId+"/"+appId));
+
+    if(data!=null && dataList.size()>0){
+      long lastAduIdSent = dataList.get(dataList.size()-1).getADUId();
+      receiveFileStoreHelper.deleteAllFilesUpTo(clientId, appId, lastAduIdSent);
+    }
+
     this.saveDataFromAdaptor(clientId, appId, data);
     System.out.println("[DSA] Stored ADUs for application " + appId + " for client " + clientId+". number of ADUs - "+data.getDataListCount());
   }
