@@ -5,6 +5,13 @@
     android:orientation="vertical"
     android:layout_margin="25dp">
 
+<!--    <androidx.appcompat.widget.AppCompatButton-->
+<!--        android:id="@+id/btn_create_group"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="Create Group"-->
+<!--        android:layout_marginTop="20dp"/>-->
+
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/btn_start_rpc_server"
         android:layout_width="match_parent"

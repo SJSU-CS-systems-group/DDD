@@ -187,10 +187,10 @@ public class MainActivity extends AppCompatActivity {
             }
 //            TextView resultText = (TextView) activity.findViewById(R.id.grpc_response_text);
 //            resultText.setText(result);
-//            new GrpcReceiveTask(MainActivity.this)
-//                    .execute(
-//                            "10.0.0.166",
-//                            "8080");
+            new GrpcReceiveTask(MainActivity.this)
+                    .execute(
+                            "10.0.0.166",
+                            "8080");
         }
     }
 
@@ -335,6 +335,11 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+//        findViewById(R.id.btn_create_group).setOnClickListener(view -> {
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+//                wifiDirectManager.createGroup("ddd","");
+//            }
+//        });
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                     MainActivity.PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION);
@@ -354,17 +359,17 @@ public class MainActivity extends AppCompatActivity {
         });
 
         sendBundleServerButton.setOnClickListener(view -> {
-                        new GrpcReceiveTask(MainActivity.this)
-                    .execute(
-//                            "10.0.0.166",
-                            "172.20.10.6",
-                            "8080");
-//                send task
-//            new GrpcSendTask(MainActivity.this)
+//                        new GrpcReceiveTask(MainActivity.this)
 //                    .execute(
-////SET LOCAl ip
-//                            "172.20.10.6",
+//                            "10.0.0.166",
+////                            "172.20.10.6",
 //                            "8080");
+//                send task
+            new GrpcSendTask(MainActivity.this)
+                    .execute(
+                            "10.0.0.166",
+//                            "172.20.10.6",
+                            "8080");
         });
     }
 }
