@@ -34,7 +34,7 @@ public class ApplicationDataManager {
     this.dataStoreAdaptor =
         new DataStoreAdaptor("/Users/adityasinghania/Downloads/Data/");
   }
-
+  
   public List<String> getRegisteredAppIds() {
     List<String> registeredAppIds = new ArrayList<>();
     try (BufferedReader bufferedReader =
@@ -73,6 +73,10 @@ public class ApplicationDataManager {
     this.registerRecvdBundleId(clientId, bundleId);
     Map<String, List<ADU>> appIdToADUMap = new HashMap<>();
 
+    List<String> registeredAppIds = this.getRegisteredAppIds();
+    for (String registeredAppId: registeredAppIds) {
+      appIdToADUMap.put(registeredAppId, new ArrayList<>());
+    }
     for (ADU adu : adus) {
       System.out.println("[ADM] "+adu.getADUId());
       Long largestAduIdReceived = this.stateManager.largestADUIdReceived(clientId, adu.getAppId());
@@ -132,5 +136,13 @@ public class ApplicationDataManager {
 
   public String getClientIdFromSentBundleId(String bundleId) {
     return this.stateManager.getClientIdFromSentBundleId(bundleId);
+  }
+  
+  public void collectDataForClients(String clientId) {
+    System.out.println("[ADM] Collecting data for client " + clientId);
+    List<String> appIds = this.getRegisteredAppIds();
+    for (String appId: appIds) {        
+     this.dataStoreAdaptor.prepareData(appId, clientId);
+    }
   }
 }

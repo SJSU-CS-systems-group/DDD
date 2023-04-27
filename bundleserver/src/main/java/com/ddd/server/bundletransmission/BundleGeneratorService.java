@@ -29,6 +29,8 @@ import com.google.gson.reflect.TypeToken;
 @Service
 public class BundleGeneratorService {
 
+  private static final String BUNDLE_EXTENSION = ".bundle";
+  
   public BundleGeneratorService(ServerSecurity serverSecurity) {}
 
   public UncompressedBundle extractBundle(Bundle bundle, String extractDirPath) {
@@ -38,15 +40,6 @@ public class BundleGeneratorService {
             + File.separator
             + bundleFileName.substring(0, bundleFileName.lastIndexOf('.'));
     JarUtils.jarToDir(bundle.getSource().getAbsolutePath(), extractedBundlePath);
-
-    //    String bundleId = "";
-    //    String clientId = "";
-    //    try {
-    //      clientId = SecurityUtils.getClientID(extractedBundlePath);
-    //      bundleId = serverSecurity.getBundleIDFromFile(extractedBundlePath, clientId);
-    //    } catch (Exception e) {
-    //      e.printStackTrace();
-    //    }
 
     File[] payloads = new File(extractedBundlePath + File.separator + "payloads").listFiles();
     EncryptedPayload encryptedPayload = new EncryptedPayload(null, payloads[0]);
@@ -78,7 +71,7 @@ public class BundleGeneratorService {
   public Bundle compressBundle(UncompressedBundle uncompressedBundle, String bundleGenPath) {
     String bundleId = uncompressedBundle.getBundleId();
     File uncompressedBundlePath = uncompressedBundle.getSource();
-    File bundleFile = new File(bundleGenPath + File.separator + bundleId + ".jar");
+    File bundleFile = new File(bundleGenPath + File.separator + bundleId + BUNDLE_EXTENSION);
     JarUtils.dirToJar(uncompressedBundlePath.getAbsolutePath(), bundleFile.getAbsolutePath());
     return new Bundle(bundleFile);
   }

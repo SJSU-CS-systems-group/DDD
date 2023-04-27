@@ -32,7 +32,7 @@ public class DataStoreAdaptor {
     System.out.println("[DSA] Deleted ADUs for application " + appId + " with id upto " + aduIdEnd);
   }
 
-  public static void prepareData(String appId, String clientId){
+  public void prepareData(String appId, String clientId){
     String appAdapterAddress = getAppAdapterAddress(appId);
     System.out.println("[DataStoreAdaptor.prepareData] " + appAdapterAddress);
     if(appAdapterAddress == null || appAdapterAddress.isEmpty()){
@@ -68,7 +68,6 @@ public class DataStoreAdaptor {
     }
     return "";
   }
-
   // store all data for one app received from transport and send to app adapter
   public void persistADUsForServer(String clientId, String appId, List<ADU> adus) {
     for (int i = 0; i < adus.size(); i++) {

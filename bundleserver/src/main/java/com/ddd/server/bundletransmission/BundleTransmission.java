@@ -89,9 +89,9 @@ public class BundleTransmission {
       Optional<String> opt = this.applicationDataManager.getLargestRecvdBundleId(clientId);
 
       if (!opt.isEmpty()
-          && (this.bundleSecurity.isNewerBundle(uncompressedBundle.getSource().getAbsolutePath(),
-                                                opt.get())
-              == 1)) {
+          && (this.bundleSecurity.isNewerBundle(opt.get(), uncompressedBundle.getSource().getAbsolutePath())
+              >= 0)) {
+        System.out.println("[BT] Skipping bundle " + bundle.getSource().getName() + " as it is outdated");
         return;
       }
       
@@ -150,23 +150,14 @@ public class BundleTransmission {
         e.printStackTrace();
       }
     }
-<<<<<<< HEAD
-    
-    try {
-      this.bundleRouting.processClientMetaData(uncompressedPayload.getSource().getAbsolutePath(), clientId);
-    } catch (ClientMetaDataFileException | SQLException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
 
-=======
     try {
 		this.bundleRouting.processClientMetaData(uncompressedPayload.getSource().getAbsolutePath(), transportId, clientId);
 	} catch (ClientMetaDataFileException | SQLException e) {
 		// TODO Auto-generated catch block
 		e.printStackTrace();
 	}
->>>>>>> be29b9d01 (added jar)
+    
     this.applicationDataManager.processAcknowledgement(
         clientId, uncompressedPayload.getAckRecord().getBundleId());
     if (!uncompressedPayload.getADUs().isEmpty()) {      
@@ -181,8 +172,15 @@ public class BundleTransmission {
       if (!transportId.equals(transportDir.getName())) {
         continue;
       }
-
-
+      List<String> reachableClients = new ArrayList<>();
+      try {
+        reachableClients = bundleRouting.getClients(transportId);
+      } catch (SQLException e1) {
+        e1.printStackTrace();
+      }      
+//      for (String clientId: reachableClients) {
+//        this.applicationDataManager.collectDataForClients(clientId);
+//      }
       for (final File bundleFile : transportDir.listFiles()) {
         try {
           Bundle bundle = new Bundle(bundleFile);
