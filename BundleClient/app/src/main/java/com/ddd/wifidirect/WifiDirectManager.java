@@ -61,7 +61,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
      */
     public WifiDirectManager(Context context, Lifecycle lifeCycle) {
         this.context = context;
-        this.initOwner(this.context);
+        this.initClient(this.context);
         this.registerIntents();
 
         this.lifeCycle = lifeCycle;
