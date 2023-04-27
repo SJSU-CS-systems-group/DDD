@@ -8,4 +8,6 @@ DELETE from last_bundle_id_sent;
 DELETE from sent_bundle_details;
 DELETE from sent_adu_details;
 DELETE from largest_bundle_id_received;
+DELETE FROM serverRoutingTable;
+DELETE FROM ServerWindow;
 commit;
