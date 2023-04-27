@@ -30,12 +30,4 @@ public class BundleDeliveryAgent {
     }
     return null;
   }
-
-  public void receive() {
-    try {
-      this.bundleTransmission.processReceivedBundles(ROOT_FOLDER + RelativePath);
-    } catch (Exception e) {
-      System.out.println(e);
-    }
-  }
 }

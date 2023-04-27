@@ -35,126 +35,7 @@ import android.util.Log;
 
 public class BundleUtils {
 
-  private static String readBundleIdFromFile(File bundleIdFile) {
-    String bundleId = "";
-    try (BufferedReader bufferedReader = new BufferedReader(new FileReader(bundleIdFile))){
-      String line = "";
-      while ((line = bufferedReader.readLine()) != null) {
-        bundleId = line.trim();
-      }
-      return bundleId;
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-    return bundleId;
-  }
-
-  private static void writeBundleIdToFile(String bundleId, File bundleIdFile) {
-    try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(bundleIdFile))) {
-      bufferedWriter.write(bundleId);
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
-
-  /*
-   * | bundle
-   *    | acknowledgement.txt
-   *    | bundle_identifier.txt
-   *    | ADU
-   *        | signal
-   *            | signal-0
-   *            | signal-1
-   *        | gmail
-   *            | gmail-0
-   *            | gmail-1
-   * */
-  public static UncompressedPayload.Builder readBundleFromFile(File bundleFile) {
-    String bundleFileName = bundleFile.getName();
-    File extractedBundleFile =
-            new File(
-                    bundleFile.getParent()
-                            + File.separator
-                            + bundleFileName.substring(0, bundleFileName.lastIndexOf('.')));
-    JarUtils.jarToDir(bundleFile.getAbsolutePath(), extractedBundleFile.getAbsolutePath());
-
-    String path = extractedBundleFile.getAbsolutePath();
-
-    String ackPath = path + File.separator + Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME;
-    String bundleIdPath = path + File.separator + Constants.BUNDLE_IDENTIFIER_FILE_NAME;
-    String aduPath = path + File.separator + Constants.BUNDLE_ADU_DIRECTORY_NAME;
-    Log.d(HelloworldActivity.TAG, "[BU] ADU Path: "+ aduPath);
-
-    UncompressedPayload.Builder builder = new UncompressedPayload.Builder();
-
-    builder.setAckRecord(AckRecordUtils.readAckRecordFromFile(new File(ackPath)));
-    builder.setBundleId(readBundleIdFromFile(new File(bundleIdPath)));
-    builder.setADUs(ADUUtils.readADUs(new File(aduPath)));
-    builder.setSource(extractedBundleFile);
-
-    return builder;
-  }
-
-  public static void writeBundleToFile(UncompressedPayload bundle, File targetDirectory, String bundleFileName) {
-    String bundleId = bundle.getBundleId();
-    String bundleFilePath =
-        targetDirectory.getAbsolutePath() + "/" + bundleId;
-
-    File bundleFile = new File(bundleFilePath);
-    bundleFile.mkdirs();
-
-    String ackPath =
-        bundleFilePath
-            + "/"
-            + Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME;
-
-    File ackRecordFile = new File(ackPath);
-    try {
-      ackRecordFile.createNewFile();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-    AckRecordUtils.writeAckRecordToFile(bundle.getAckRecord(), ackRecordFile);
-
-    String bundleIdPath =
-        bundleFilePath
-            + "/"
-            + Constants.BUNDLE_IDENTIFIER_FILE_NAME;
-    File bundleIdFile = new File(bundleIdPath);
-    try {
-      bundleIdFile.createNewFile();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-
-    writeBundleIdToFile(bundle.getBundleId(), bundleIdFile);
-
-    String aduPath =
-        bundleFilePath
-            + "/"
-            + Constants.BUNDLE_ADU_DIRECTORY_NAME;
-
-    List<ADU> adus = bundle.getADUs();
-
-    if (!adus.isEmpty()) {
-      File aduDirectory = new File(aduPath);
-      aduDirectory.mkdirs();
-      ADUUtils.writeADUs(bundle.getADUs(), aduDirectory);
-    }
-
-
-    String jarFilePath = bundleFile.getAbsolutePath() + ".jar";
-    try {
-      JarUtils.dirToJar(bundleFile.getAbsolutePath(), jarFilePath);
-      System.out.println("Folder has been compressed to ZIP file.");
-      FileUtils.deleteDirectory(bundleFile);
-      System.out.println("Deleted payload directory " + bundleFile.getAbsolutePath());
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-    System.out.println(
-        "[BundleUtils] Wrote bundle with id = " + bundleId + " to " + targetDirectory);
-  }
+  private static final String BUNDLE_EXTENSION = ".bundle";
 
   public static void writeBundleStructureToJson(UncompressedPayload bundle, File jsonFile) {
     Gson gson = new GsonBuilder().setPrettyPrinting().create();
@@ -327,7 +208,7 @@ public class BundleUtils {
   public static Bundle compressBundle(UncompressedBundle uncompressedBundle, String bundleGenPath) {
     String bundleId = uncompressedBundle.getBundleId();
     File uncompressedBundlePath = uncompressedBundle.getSource();
-    File bundleFile = new File(bundleGenPath + File.separator + bundleId + ".jar");
+    File bundleFile = new File(bundleGenPath + File.separator + bundleId + BUNDLE_EXTENSION);
     JarUtils.dirToJar(uncompressedBundlePath.getAbsolutePath(), bundleFile.getAbsolutePath());
     return new Bundle(bundleFile);
   }
@@ -341,16 +222,6 @@ public class BundleUtils {
             + bundleFileName.substring(0, bundleFileName.lastIndexOf('.'));
     JarUtils.jarToDir(bundle.getSource().getAbsolutePath(), extractedBundlePath);
 
-//    String bundleId = "client0-0";
-//    String clientId = "";
-//    try {
-//      clientId = SecurityUtils.getClientID(extractedBundlePath);
-//      ClientSecurity client = ClientSecurity.getInstance(0, clientId, clientId); // TODO
-//      bundleId = client.getBundleIDFromFile(extractedBundlePath);
-//    } catch (Exception e) {
-//      e.printStackTrace();
-//    }
-    
     File[] payloads = new File(
         extractedBundlePath
         + File.separator
