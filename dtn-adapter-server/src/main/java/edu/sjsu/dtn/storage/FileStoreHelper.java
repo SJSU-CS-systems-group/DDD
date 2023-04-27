@@ -185,7 +185,7 @@ public class FileStoreHelper {
             return;
         }
         for(long i = metadata.lastSentMessageId+1 ; i<=aduId;i++){
-            deleteFile(i+".txt");
+            deleteFile(clientId+"/" + i + ".txt");
             System.out.println(i+".txt deleted");
         }
 

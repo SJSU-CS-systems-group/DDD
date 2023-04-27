@@ -4,6 +4,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.util.Log;
 
 import com.ddd.bundleclient.HelloworldActivity;
@@ -42,8 +43,12 @@ public class DataStoreAdaptor {
         intent.setType("text/plain");
         Log.d(HelloworldActivity.TAG,new String(receiveFileStoreHelper.getDataFromFile(adu.getSource()))+", Source:"+adu.getSource());
         intent.putExtra(Intent.EXTRA_TEXT, receiveFileStoreHelper.getDataFromFile(adu.getSource()));
-        if(applicationContext==null) applicationContext = HelloworldActivity.ApplicationContext;
-        applicationContext.startService(intent);
+        applicationContext = HelloworldActivity.ApplicationContext;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            applicationContext.startForegroundService(intent);
+        }else{
+            Log.e(HelloworldActivity.TAG, "not sending to application. Upgrade Android SDK to 26 or greater");
+        }
     }
 
     public void persistADU(ADU adu) {

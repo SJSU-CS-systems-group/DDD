@@ -82,7 +82,7 @@ public class HelloworldActivity extends AppCompatActivity {
   BundleTransmission bundleTransmission;
 
   String currentTransportId;
-  String BundleExtension = ".jar";
+  String BundleExtension = ".bundle";
   /** check for location permissions manually, will give a prompt*/
   @Override
   public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
@@ -376,7 +376,7 @@ public class HelloworldActivity extends AppCompatActivity {
         FileUploadRequest metadata = FileUploadRequest.newBuilder()
                 .setMetadata(MetaData.newBuilder()
                         .setName(toSend.getBundleId())
-                        .setType("jar").build())
+                        .setType("bundle").build())
                 .build();
         streamObserver.onNext(metadata);
 
