@@ -119,7 +119,7 @@ public class BundleSecurity {
 
     try {
       client = ClientSecurity.initializeInstance(1, bundleSecurityPath, serverKeyPath);
-      clientBundleGenerator = ClientBundleGenerator.initializeInstance(client);
+      clientBundleGenerator = ClientBundleGenerator.initializeInstance(client, rootFolder);
       clientWindow = ClientWindow.initializeInstance(5, client.getClientID(), rootFolder);
       Log.d(HelloworldActivity.TAG,"Kuch Bhi");
     } catch (InvalidKeyException | SecurityExceptions.IDGenerationException |

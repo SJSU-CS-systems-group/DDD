@@ -1,6 +1,11 @@
 package com.ddd.client.bundlerouting;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+
 import com.ddd.client.bundlesecurity.BundleIDGenerator;
 import com.ddd.client.bundlesecurity.ClientSecurity;
 import com.ddd.client.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
@@ -9,19 +14,41 @@ import com.ddd.client.bundlesecurity.SecurityUtils;
 
 public class ClientBundleGenerator {
     static ClientBundleGenerator singleGeneratorInstance = null;
-    BundleIDGenerator bundleIDGenerator           = null;
     ClientSecurity clientSecurity                 = null;
 
-    private ClientBundleGenerator(ClientSecurity clientSecurity)
+    /* Counter value used as unsigned long */
+    private long currentCounter = 0;
+
+    private String counterFilePath = null;
+
+    private ClientBundleGenerator(ClientSecurity clientSecurity, String rootPath)
     {
         this.clientSecurity = clientSecurity;
-        bundleIDGenerator   = new BundleIDGenerator();
+        counterFilePath = rootPath + File.separator + "BundleRouting" + File.separator + "sentBundle.id";
+
+        try {
+            byte[] counterFromFile = SecurityUtils.readFromFile(counterFilePath);
+            currentCounter = Long.parseUnsignedLong(new String(counterFromFile, StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            updateBundleIDFile();
+        }
     }
 
-    public static ClientBundleGenerator initializeInstance(ClientSecurity clientSecurity)
+    private void updateBundleIDFile()
+    {
+        try (FileOutputStream stream = new FileOutputStream(counterFilePath)) {
+            stream.write(Long.toUnsignedString(currentCounter).getBytes(StandardCharsets.UTF_8));
+        } catch (IOException ex) {
+            System.out.println("[BR]: Failed to create counter backup file! "+ex);
+        }
+    }
+
+    public static ClientBundleGenerator initializeInstance(ClientSecurity clientSecurity, String rootPath)
     {
         if (singleGeneratorInstance == null) {
-            singleGeneratorInstance = new ClientBundleGenerator(clientSecurity);
+            singleGeneratorInstance = new ClientBundleGenerator(clientSecurity, rootPath);
+        } else {
+            System.out.println("[BR]: Client bundle generator instance is already created!");
         }
         return singleGeneratorInstance;
     }
@@ -36,7 +63,11 @@ public class ClientBundleGenerator {
 
     public String generateBundleID() throws IDGenerationException, BundleIDCryptographyException
     {
-        String plainBundleID = bundleIDGenerator.generateBundleID(clientSecurity.getClientRootPath()+File.separator+ SecurityUtils.CLIENT_KEY_PATH, BundleIDGenerator.UPSTREAM);
+        String clientID = clientSecurity.getClientID();
+        currentCounter++;
+
+        String plainBundleID = BundleIDGenerator.generateBundleID(clientID, currentCounter, BundleIDGenerator.UPSTREAM);
+        updateBundleIDFile();
         return clientSecurity.encryptBundleID(plainBundleID);
     }
 

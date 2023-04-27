@@ -16,36 +16,6 @@ public class BundleIDGenerator {
     /* Length of the Counter */
     private static final int counterLength = 8;
 
-    /* Counter value used as unsigned long */
-    private long currentCounter = 0;
-
-    /* Generates bundleID
-     * Used when a window is NOT involved to maintain the counter values
-     * Parameters:
-     * clientKeyPath:   Path to client Identity key (public key)
-     * direction:   UPSTREAM (Client->Server), DOWNSTREAM (Server->Client)
-     * Returns:
-     * bundleID as a Base64 encoded String
-     */
-    public String generateBundleID(String clientKeyPath, boolean direction) throws IDGenerationException
-    {
-        String clientID = SecurityUtils.getClientID(clientKeyPath);
-
-        currentCounter++;
-        byte[] bClientID = Base64.decode(clientID, Base64.URL_SAFE | Base64.NO_WRAP);
-        byte[] bCounter = new byte[1];
-        bCounter[0]     = (byte) currentCounter;
-        byte[] bundleID = new byte[bClientID.length + counterLength];
-
-        if (direction == UPSTREAM) {
-            bundleID = Bytes.concat(bClientID, bCounter);
-        } else {
-            bundleID = Bytes.concat(bCounter, bClientID);
-        }
-
-        return Base64.encodeToString(bundleID, Base64.URL_SAFE | Base64.NO_WRAP);
-    }
-
     /* Generates bundleID for the specified clientID and counter value
      * Used when a window is involved to maintain the counter values
      * Parameters:
