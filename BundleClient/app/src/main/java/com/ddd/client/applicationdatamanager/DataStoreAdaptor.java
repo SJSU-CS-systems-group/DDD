@@ -43,7 +43,7 @@ public class DataStoreAdaptor {
         intent.setType("text/plain");
         Log.d(HelloworldActivity.TAG,new String(receiveFileStoreHelper.getDataFromFile(adu.getSource()))+", Source:"+adu.getSource());
         intent.putExtra(Intent.EXTRA_TEXT, receiveFileStoreHelper.getDataFromFile(adu.getSource()));
-        if(applicationContext==null) applicationContext = HelloworldActivity.ApplicationContext;
+        applicationContext = HelloworldActivity.ApplicationContext;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             applicationContext.startForegroundService(intent);
         }else{
