@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "edu.sjsu.dtn.server.communicationservice";
+
+service DTNCommunication {
+  rpc registerAdapter (ConnectionData) returns (ResponseStatus) {}
+}
+
+message ConnectionData {
+  string appName = 1;
+  string url = 2;
+}
+
+message ResponseStatus {
+  int32 code = 1;
+  string message = 2;
+}
