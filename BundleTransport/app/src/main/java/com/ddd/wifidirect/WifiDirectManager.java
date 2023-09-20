@@ -60,7 +60,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
      */
     public WifiDirectManager(Context context, Lifecycle lifeCycle) {
         this.context = context;
-        this.initOwner(this.context);
+        this.initClient(this.context);
         this.registerIntents();
 
         this.lifeCycle = lifeCycle;
@@ -240,6 +240,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
      */
     @SuppressLint("MissingPermission")
     public Future<Boolean> connect(WifiP2pConfig config) {
+        config.groupOwnerIntent = 0;
         CompletableFuture<Boolean> cFuture = new CompletableFuture<>();
         this.manager.connect(channel, config, new WifiP2pManager.ActionListener() {
 
