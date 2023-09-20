@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:layout_margin="25dp">
+
+<!--    <androidx.appcompat.widget.AppCompatButton-->
+<!--        android:id="@+id/btn_create_group"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="Create Group"-->
+<!--        android:layout_marginTop="20dp"/>-->
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btn_start_rpc_server"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Start gRPC Server"
+        android:layout_marginTop="20dp"/>
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btn_stop_rpc_server"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Stop gRPC Server"
+        android:layout_marginTop="20dp"/>
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btn_connect_bundle_server"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="connect to bundle server"
+        android:layout_marginTop="20dp"/>
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btn_clear_storage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Free up Space"
+        android:layout_marginTop="20dp"/>
+</LinearLayout>
