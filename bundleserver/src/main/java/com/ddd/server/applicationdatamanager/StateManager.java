@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.ddd.model.ADU;
@@ -40,6 +42,9 @@ class StateManager {
 
   private SentAduDetailsRepository sentAduDetailsRepository;
 
+  @Value("${bundle-server.bunde-store-root}")
+  private String rootDataDir;
+
   public StateManager(
       LargestAduIdReceivedRepository largestAduIdReceivedRepository,
       LargestAduIdDeliveredRepository largestAduIdDeliveredRepository,
@@ -48,7 +53,7 @@ class StateManager {
       SentAduDetailsRepository sentAduDetailsRepository,
       LargestBundleIdReceivedRepository largestBundleIdReceivedRepository) {
     this.dataStoreAdaptor =
-        new DataStoreAdaptor("/Users/adityasinghania/Downloads/Data/");
+        new DataStoreAdaptor(rootDataDir);
     this.largestAduIdReceivedRepository = largestAduIdReceivedRepository;
     this.largestAduIdDeliveredRepository = largestAduIdDeliveredRepository;
     this.lastBundleIdSentRepository = lastBundleIdSentRepository;
