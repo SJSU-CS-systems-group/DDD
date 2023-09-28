@@ -32,7 +32,7 @@ import io.grpc.stub.StreamObserver;
 @Service
 public class BundleServerServiceImpl extends BundleServiceImplBase {
     @Value("${bundle-server.bundle-store-shared}")
-    private static final String BundleDir;
+    private static final String BundleDir
     private static final String ReceiveDir = BundleDir+java.io.File.separator+"receive";
     private static final String SendDir = BundleDir+java.io.File.separator+"send";
     
