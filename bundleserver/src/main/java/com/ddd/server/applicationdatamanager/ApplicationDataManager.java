@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import com.ddd.model.ADU;
 import com.ddd.model.UncompressedPayload;
@@ -26,13 +27,16 @@ public class ApplicationDataManager {
 
   @Autowired private BundleServerConfig bundleServerConfig;
 
+  @Value("${bundle-server.registered-app-ids}")
   private String registeredAppIdsFile;
+
+  @Value("${bundle-server.bunde-store-root}")
+  private String rootDataDir;
   
   public ApplicationDataManager() {
     //    this.dataStoreAdaptor = new DataStoreAdaptor(bundleServerConfig.getBundleStoreRoot());
-    registeredAppIdsFile = "/Users/adityasinghania/Downloads/Data/Shared/REGISTERED_APP_IDS.txt";
     this.dataStoreAdaptor =
-        new DataStoreAdaptor("/Users/adityasinghania/Downloads/Data/");
+        new DataStoreAdaptor(rootDataDir);
   }
   
   public List<String> getRegisteredAppIds() {

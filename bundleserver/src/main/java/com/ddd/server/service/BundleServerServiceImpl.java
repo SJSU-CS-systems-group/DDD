@@ -14,6 +14,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import com.ddd.model.BundleTransferDTO;
 import com.ddd.server.bundletransmission.BundleTransmission;
@@ -30,8 +31,8 @@ import io.grpc.stub.StreamObserver;
 
 @Service
 public class BundleServerServiceImpl extends BundleServiceImplBase {
-    
-    private static final String BundleDir = "/Users/adityasinghania/Downloads/Data/Shared";
+    @Value("${bundle-server.bundle-store-shared}")
+    private static final String BundleDir
     private static final String ReceiveDir = BundleDir+java.io.File.separator+"receive";
     private static final String SendDir = BundleDir+java.io.File.separator+"send";
     
