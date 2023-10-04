@@ -82,7 +82,7 @@ protobuf {
         grpc {
             // https://repo.maven.apache.org/maven2/io/grpc/protoc-gen-grpc-java/1.42.0/
             // for macOS M1, using 'osx-x86_64' version
-            artifact = 'io.grpc:protoc-gen-grpc-java:1.42.0:osx-x86_64'
+            artifact = 'io.grpc:protoc-gen-grpc-java:1.42.0'
         }
     }
     generateProtoTasks {
