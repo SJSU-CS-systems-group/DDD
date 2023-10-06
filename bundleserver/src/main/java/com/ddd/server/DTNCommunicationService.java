@@ -9,7 +9,8 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
 
-public class DTNCommunicationService extends DTNCommunicationGrpc.DTNCommunicationImplBase{
+public class DTNCommunicationService extends DTNCommunicationGrpc.DTNCommunicationImplBase {
+    
     @Override
     public void registerAdapter(ConnectionData connectionData,
                                 StreamObserver<ResponseStatus> responseObserver){

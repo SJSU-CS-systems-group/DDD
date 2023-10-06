@@ -6,6 +6,7 @@ import java.util.Arrays;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import com.ddd.model.EncryptedPayload;
 import com.ddd.model.EncryptionHeader;
@@ -17,9 +18,8 @@ import com.ddd.utils.Constants;
 
 @Service
 public class BundleSecurity {
-
-  private static final String BUNDLE_ID_NEXT_COUNTER =
-      "/Users/adityasinghania/Downloads/Data/Shared/DB/BUNDLE_ID_NEXT_COUNTER.json";
+  @Value("${bundle-server.application-data-manager.state-manager.bundle-id-next-counter}")
+  private String BUNDLE_ID_NEXT_COUNTER;
 
   @Autowired private ServerSecurity serverSecurity;
 
@@ -34,6 +34,8 @@ public class BundleSecurity {
   }
 
   public BundleSecurity() {
+    System.out.println("*********** in /server/bundlesecurity/BundleSecurity, BUNDLE_ID_NEXT_COUNTER: " + BUNDLE_ID_NEXT_COUNTER);
+    
     File bundleIdNextCounter = new File(BUNDLE_ID_NEXT_COUNTER);
 
     try {

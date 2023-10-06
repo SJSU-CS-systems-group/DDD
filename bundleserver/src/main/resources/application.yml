@@ -3,32 +3,33 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/dtn_server_db?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
     username: root
-    password: 
+    password:
 
 server:
   port: 8081
 bundle-server:
-  bunde-store-root: "/Users/adityasinghania/Downloads/Data/"
-  registered-app-ids: "/Users/adityasinghania/Downloads/Data/Shared/REGISTERED_APP_IDS.txt"
+  bundle-store-root: "/Users/manaschougule/College/SJSU/DDD-server-storage/Data/"
+  registered-app-ids: "${bundle-server.bundle-store-root}Shared/REGISTERED_APP_IDS.txt"
   bundle-transmission:
-    bundle-size-limit: 104857600    
-    bundle-received-location: "/Users/adityasinghania/Downloads/Data/Shared/receive"
-    bundle-generation-directory: "/Users/adityasinghania/Downloads/Data/BundleTransmission/bundle-generation"
-    to-be-bundled-directory: "/Users/adityasinghania/Downloads/Data/BundleTransmission/bundle-generation/to-be-bundled"
-    to-send-directory: "/Users/adityasinghania/Downloads/Data/BundleTransmission/bundle-generation/to-send"
-    received-processing-directory: "/Users/adityasinghania/Downloads/Data/BundleTransmission/received-processing"
-    uncompressed-payload-directory: "/Users/adityasinghania/Downloads/Data/BundleTransmission/bundle-generation/uncompressed-payload"
-    compressed-payload-directory: "/Users/adityasinghania/Downloads/Data/BundleTransmission/bundle-generation/compressed-payload"
-    encrypted-payload-directory: "/Users/adityasinghania/Downloads/Data/BundleTransmission/bundle-generation/encrypted-payload"
+    bundle-size-limit: 104857600
+    bundle-received-location: "${bundle-server.bundle-store-root}Shared/receive"
+    bundle-generation-directory: "${bundle-server.bundle-store-root}BundleTransmission/bundle-generation"
+    to-be-bundled-directory: "${bundle-server.bundle-store-root}BundleTransmission/bundle-generation/to-be-bundled"
+    to-send-directory: "${bundle-server.bundle-store-root}BundleTransmission/bundle-generation/to-send"
+    received-processing-directory: "${bundle-server.bundle-store-root}BundleTransmission/received-processing"
+    uncompressed-payload-directory: "${bundle-server.bundle-store-root}BundleTransmission/bundle-generation/uncompressed-payload"
+    compressed-payload-directory: "${bundle-server.bundle-store-root}BundleTransmission/bundle-generation/compressed-payload"
+    encrypted-payload-directory: "${bundle-server.bundle-store-root}BundleTransmission/bundle-generation/encrypted-payload"
   application-data-manager:
     app-data-size-limit: 31457280
-    registered-app-ids-path:  "/Users/adityasinghania/Downloads/Data/Shared/REGISTERED_APP_IDS.txt"
+    registered-app-ids-path: "${bundle-server.bundle-store-root}Shared/REGISTERED_APP_IDS.txt"
     state-manager:
-      largest-adu-id-received: "/Users/adityasinghania/Downloads/Data/Shared/DB/LARGEST_ADU_ID_RECEIVED.json"
-      sent-bundle-details: "/Users/adityasinghania/Downloads/Data/Shared/DB/SENT_BUNDLE_DETAILS.json"
-      largest-adu-id-delivered: "/Users/adityasinghania/Downloads/Data/Shared/DB/LARGEST_ADU_ID_DELIVERED.json"
-      last-sent-bundle-structure: "/Users/adityasinghania/Downloads/Data/Shared/DB/LARGEST_ADU_ID_RECEIVED.json"
+      largest-adu-id-received: "${bundle-server.bundle-store-root}Shared/DB/LARGEST_ADU_ID_RECEIVED.json"
+      sent-bundle-details: "${bundle-server.bundle-store-root}Shared/DB/SENT_BUNDLE_DETAILS.json"
+      largest-adu-id-delivered: "${bundle-server.bundle-store-root}Shared/DB/LARGEST_ADU_ID_DELIVERED.json"
+      last-sent-bundle-structure: "${bundle-server.bundle-store-root}Shared/DB/LARGEST_ADU_ID_RECEIVED.json"
+      bundle-id-next-counter: "${bundle-server.bundle-store-root}Shared/DB/BUNDLE_ID_NEXT_COUNTER.json"
     data-store-adaptor:
-      app-data-root: "/Users/adityasinghania/Downloads/Data/"
+      app-data-root: "${bundle-server.bundle-store-root}"
   bundle-security:
-    server-key-path: "/Users/adityasinghania/Downloads/Data/BundleSecurity/Keys/Server"
+    server-key-path: "${bundle-server.bundle-store-root}BundleSecurity/Keys/Server"
