@@ -3,6 +3,9 @@ package com.ddd.server.bundlesecurity;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+
+import javax.annotation.PostConstruct;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,8 +21,7 @@ import com.ddd.utils.Constants;
 
 @Service
 public class BundleSecurity {
-
-  @Value("${bundle-server.bundle-id-next-counter}")
+  @Value("${bundle-server.application-data-manager.state-manager.bundle-id-next-counter}")
   private String BUNDLE_ID_NEXT_COUNTER;
 
   @Autowired private ServerSecurity serverSecurity;
@@ -34,7 +36,21 @@ public class BundleSecurity {
     return this.getRecvdBundleIdCounter(a).compareTo(this.getRecvdBundleIdCounter(b));
   }
 
-  public BundleSecurity() {
+  // @Autowired
+  // public BundleSecurity(
+  //     @Value("${bundle-server.application-data-manager.state-manager.bundle-id-next-counter}") String BUNDLE_ID_NEXT_COUNTER) {
+  //   File bundleIdNextCounter = new File(BUNDLE_ID_NEXT_COUNTER);
+
+  //   try {
+  //     bundleIdNextCounter.getParentFile().mkdirs();
+  //     bundleIdNextCounter.createNewFile();
+  //   } catch (IOException e) {
+  //     e.printStackTrace();
+  //   }
+  // }
+
+  @PostConstruct
+  private void init() {
     File bundleIdNextCounter = new File(BUNDLE_ID_NEXT_COUNTER);
 
     try {

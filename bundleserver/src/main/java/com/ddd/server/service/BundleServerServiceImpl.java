@@ -13,6 +13,9 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import javax.annotation.PostConstruct;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -31,25 +34,41 @@ import io.grpc.stub.StreamObserver;
 
 @Service
 public class BundleServerServiceImpl extends BundleServiceImplBase {
-    @Value("${bundle-server.bundle-store-shared}")
-    private static final String BundleDir
-    private static final String ReceiveDir = BundleDir+java.io.File.separator+"receive";
-    private static final String SendDir = BundleDir+java.io.File.separator+"send";
+    private String ReceiveDir;
+    private String SendDir;
     
     @Autowired
     private BundleTransmission bundleTransmission;
     
-    public BundleServerServiceImpl(){
+    // public BundleServerServiceImpl() {
+    //     java.io.File directoryReceive = new java.io.File(ReceiveDir);
+    //     if (!directoryReceive.exists()) {
+    //         directoryReceive.mkdirs();
+    //     }
+
+    //     java.io.File directorySend = new java.io.File(SendDir);
+    //     if (!directorySend.exists()) {
+    //         directorySend.mkdirs();
+    //     }
+    // }
+    
+    @PostConstruct
+    private void init() {
         java.io.File directoryReceive = new java.io.File(ReceiveDir);
-        if (! directoryReceive.exists()){
+        if (!directoryReceive.exists()) {
             directoryReceive.mkdirs();
         }
 
         java.io.File directorySend = new java.io.File(SendDir);
-        if (! directorySend.exists()){
+        if (!directorySend.exists()) {
             directorySend.mkdirs();
         }
+    }
 
+    @Value("${bundle-server.bundle-store-shared}")
+    public void setDir(String bundleDir) {
+        ReceiveDir = bundleDir + java.io.File.separator + "receive";
+        SendDir = bundleDir+java.io.File.separator+"send";
     }
 
     @Override

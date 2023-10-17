@@ -11,6 +11,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import javax.annotation.PostConstruct;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -21,29 +24,34 @@ import com.ddd.server.config.BundleServerConfig;
 @Service
 public class ApplicationDataManager {
 
-  @Autowired private StateManager stateManager;
+  @Autowired
+  private StateManager stateManager;
 
   private DataStoreAdaptor dataStoreAdaptor;
 
-  @Autowired private BundleServerConfig bundleServerConfig;
+  @Autowired
+  private BundleServerConfig bundleServerConfig;
 
   @Value("${bundle-server.registered-app-ids}")
   private String registeredAppIdsFile;
 
-  @Value("${bundle-server.bunde-store-root}")
+  @Value("${bundle-server.bundle-store-root}")
   private String rootDataDir;
-  
-  public ApplicationDataManager() {
-    //    this.dataStoreAdaptor = new DataStoreAdaptor(bundleServerConfig.getBundleStoreRoot());
-    this.dataStoreAdaptor =
-        new DataStoreAdaptor(rootDataDir);
+
+  // public ApplicationDataManager() {
+  //   //    this.dataStoreAdaptor = new DataStoreAdaptor(bundleServerConfig.getBundleStoreRoot());
+  //   this.dataStoreAdaptor = new DataStoreAdaptor(rootDataDir);
+  // }
+
+  @PostConstruct
+  private void init() {
+    this.dataStoreAdaptor = new DataStoreAdaptor(rootDataDir);
   }
-  
+
   public List<String> getRegisteredAppIds() {
     List<String> registeredAppIds = new ArrayList<>();
-    try (BufferedReader bufferedReader =
-        new BufferedReader(
-            new FileReader(new File(registeredAppIdsFile)))) {
+    try (BufferedReader bufferedReader = new BufferedReader(
+        new FileReader(new File(registeredAppIdsFile)))) {
       String line = "";
       while ((line = bufferedReader.readLine()) != null) {
         String appId = line.trim();
@@ -56,9 +64,8 @@ public class ApplicationDataManager {
   }
 
   public void registerAppId(String appId) {
-    try (BufferedWriter bufferedWriter =
-        new BufferedWriter(
-            new FileWriter(new File(registeredAppIdsFile)))) {
+    try (BufferedWriter bufferedWriter = new BufferedWriter(
+        new FileWriter(new File(registeredAppIdsFile)))) {
       bufferedWriter.write(appId);
     } catch (IOException e) {
       e.printStackTrace();
@@ -78,11 +85,11 @@ public class ApplicationDataManager {
     Map<String, List<ADU>> appIdToADUMap = new HashMap<>();
 
     List<String> registeredAppIds = this.getRegisteredAppIds();
-    for (String registeredAppId: registeredAppIds) {
+    for (String registeredAppId : registeredAppIds) {
       appIdToADUMap.put(registeredAppId, new ArrayList<>());
     }
     for (ADU adu : adus) {
-      System.out.println("[ADM] "+adu.getADUId());
+      System.out.println("[ADM] " + adu.getADUId());
       Long largestAduIdReceived = this.stateManager.largestADUIdReceived(clientId, adu.getAppId());
       if (largestAduIdReceived != null && adu.getADUId() <= largestAduIdReceived) {
         continue;
@@ -97,7 +104,7 @@ public class ApplicationDataManager {
       }
     }
     for (String appId : appIdToADUMap.keySet()) {
-      System.out.println("[ADM] "+appId+" "+appIdToADUMap.get(appId));
+      System.out.println("[ADM] " + appId + " " + appIdToADUMap.get(appId));
       this.dataStoreAdaptor.persistADUsForServer(clientId, appId, appIdToADUMap.get(appId));
     }
   }
@@ -105,14 +112,13 @@ public class ApplicationDataManager {
   public List<ADU> fetchADUs(String clientId) {
     List<ADU> res = new ArrayList<>();
     for (String appId : this.getRegisteredAppIds()) {
-      Long largestAduIdDelivered =
-          this.stateManager.getLargestADUIdDeliveredByAppId(clientId, appId);
+      Long largestAduIdDelivered = this.stateManager.getLargestADUIdDeliveredByAppId(clientId, appId);
       Long aduIdStart = (largestAduIdDelivered != null) ? (largestAduIdDelivered + 1) : 1;
       List<ADU> adus = this.dataStoreAdaptor.fetchADUs(clientId, appId, aduIdStart);
       Long cumulativeSize = 0L;
       for (ADU adu : adus) {
-        if (adu.getSize() + cumulativeSize
-            > this.bundleServerConfig.getApplicationDataManager().getAppDataSizeLimit()) {
+        if (adu.getSize() + cumulativeSize > this.bundleServerConfig.getApplicationDataManager()
+            .getAppDataSizeLimit()) {
           break;
         }
         res.add(adu);
@@ -141,12 +147,12 @@ public class ApplicationDataManager {
   public String getClientIdFromSentBundleId(String bundleId) {
     return this.stateManager.getClientIdFromSentBundleId(bundleId);
   }
-  
+
   public void collectDataForClients(String clientId) {
     System.out.println("[ADM] Collecting data for client " + clientId);
     List<String> appIds = this.getRegisteredAppIds();
-    for (String appId: appIds) {        
-     this.dataStoreAdaptor.prepareData(appId, clientId);
+    for (String appId : appIds) {
+      this.dataStoreAdaptor.prepareData(appId, clientId);
     }
   }
 }

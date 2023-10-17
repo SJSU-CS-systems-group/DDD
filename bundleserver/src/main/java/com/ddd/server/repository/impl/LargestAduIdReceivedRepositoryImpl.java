@@ -13,10 +13,12 @@ import com.ddd.server.repository.entity.LargestAduIdReceived;
 @Repository
 public class LargestAduIdReceivedRepositoryImpl implements LargestAduIdReceivedRepository {
 
-  @Autowired private JdbcTemplate jdbcTemplate;
+  @Autowired
+  private JdbcTemplate jdbcTemplate;
 
   @Override
   public Optional<LargestAduIdReceived> findByClientIdAndAppId(String clientId, String appId) {
+
     LargestAduIdReceived record = null;
     try {
       record =

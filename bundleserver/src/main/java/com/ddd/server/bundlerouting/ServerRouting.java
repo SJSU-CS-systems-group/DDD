@@ -8,34 +8,63 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import javax.annotation.PostConstruct;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
+import org.springframework.stereotype.Repository;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.ddd.server.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
 import com.ddd.server.storage.SNRDatabases;
 
+@Repository
 public class ServerRouting {
 
     SNRDatabases                database     = null;
     private static final String dbTableName  = "ServerRoutingTable";
-    private final String        METADATAFILE = "routing.metadata";
+    private final String METADATAFILE = "routing.metadata";
+
+    @Autowired
+    private Environment env;
 
 
-    public ServerRouting() throws SQLException
-    {
-        // TODO: Change to config
-        String url = "jdbc:mysql://localhost:3306";
-        String uname    = "root";
-        String password = "";
-        String dbName = "DTN_SERVER_DB";
+
+    // public ServerRouting() throws SQLException
+    // {
+    //     // TODO: Change to config
+    //     String url = "jdbc:mysql://localhost:3306";
+    //     String uname = "root";
+    //     String password = "mchougule478";
+    //     String dbName = "DTN_SERVER_DB";
+
+    //     database = new SNRDatabases(url, uname, password, dbName);
+
+    //     String dbTableCreateQuery = "CREATE TABLE " + dbTableName + " " +
+    //             "(transportID VARCHAR(256) not NULL," +
+    //             "clientID VARCHAR(256) not NULL," +
+    //             "score VARCHAR(256)," +
+    //             "PRIMARY KEY (transportID, clientID))";
+
+    //     database.createTable(dbTableCreateQuery);
+    // }
+    
+    @PostConstruct
+    public void init() throws SQLException{
+        String url = env.getProperty("spring.datasource.url");
+        String uname = env.getProperty("spring.datasource.username");
+        String password = env.getProperty("spring.datasource.password");
+        String dbName = env.getProperty("spring.datasource.db-name");
 
         database = new SNRDatabases(url, uname, password, dbName);
 
-        String dbTableCreateQuery = "CREATE TABLE "+ dbTableName+ " " +
-                                    "(transportID VARCHAR(256) not NULL," +
-                                    "clientID VARCHAR(256) not NULL," +
-                                    "score VARCHAR(256)," +
-                                    "PRIMARY KEY (transportID, clientID))";
+        String dbTableCreateQuery = "CREATE TABLE " + dbTableName + " " +
+                "(transportID VARCHAR(256) not NULL," +
+                "clientID VARCHAR(256) not NULL," +
+                "score VARCHAR(256)," +
+                "PRIMARY KEY (transportID, clientID))";
 
         database.createTable(dbTableCreateQuery);
     }
