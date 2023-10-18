@@ -42,9 +42,6 @@ class StateManager {
 
   private SentAduDetailsRepository sentAduDetailsRepository;
 
-  @Value("${bundle-server.bunde-store-root}")
-  private String rootDataDir;
-
   public StateManager(
       LargestAduIdReceivedRepository largestAduIdReceivedRepository,
       LargestAduIdDeliveredRepository largestAduIdDeliveredRepository,
@@ -52,14 +49,17 @@ class StateManager {
       SentBundleDetailsRepository sentBundleDetailsRepository,
       SentAduDetailsRepository sentAduDetailsRepository,
       LargestBundleIdReceivedRepository largestBundleIdReceivedRepository) {
-    this.dataStoreAdaptor =
-        new DataStoreAdaptor(rootDataDir);
     this.largestAduIdReceivedRepository = largestAduIdReceivedRepository;
     this.largestAduIdDeliveredRepository = largestAduIdDeliveredRepository;
     this.lastBundleIdSentRepository = lastBundleIdSentRepository;
     this.sentBundleDetailsRepository = sentBundleDetailsRepository;
     this.sentAduDetailsRepository = sentAduDetailsRepository;
     this.largestBundleIdReceivedRepository = largestBundleIdReceivedRepository;
+  }
+  
+  @Value("${bundle-server.bundle-store-root}")
+  public void setDataStoreAdaptor(String rootDataDir) {
+    this.dataStoreAdaptor = new DataStoreAdaptor(rootDataDir);
   }
 
   @Transactional(rollbackFor = Exception.class)

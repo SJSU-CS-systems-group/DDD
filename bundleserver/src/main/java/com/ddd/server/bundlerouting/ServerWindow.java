@@ -3,7 +3,12 @@ package com.ddd.server.bundlerouting;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
+
+import javax.annotation.PostConstruct;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.core.env.Environment;
 
 import com.ddd.server.bundlerouting.WindowUtils.CircularBuffer;
 import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
@@ -27,36 +32,67 @@ public class ServerWindow {
     private static final String     dbTableName     = "ServerWindow";
     private static final String     STARTCOUNTER    = "startCounter";
     private static final String     ENDCOUNTER      = "endCounter";
-    private static final String     WINDOW_LENGTH   = "windowLength";
+    private static final String WINDOW_LENGTH = "windowLength";
 
-    public ServerWindow(ServerSecurity serverSecurity) throws SQLException
-    {
-        this.serverSecurity = serverSecurity;
-        clientWindowMap = new HashMap<>();
+    @Autowired
+    private Environment env;
 
+    // @Autowired
+    // public ServerWindow(ServerSecurity serverSecurity) throws SQLException
+    // {
+    //     this.serverSecurity = serverSecurity;
+    //     clientWindowMap = new HashMap<>();
+
+    //     // TODO: Change to config
+    //     String url = "jdbc:mysql://localhost:3306";
+    //     String uname = "root";
+    //     String password = "mchougule478";
+    //     String dbName = "DTN_SERVER_DB";
+
+    //     database = new SNRDatabases(url, uname, password, dbName);
+
+    //     try {
+    //         initializeWindow();
+    //     } catch (SQLException | BufferOverflow | InvalidLength e) {
+    //         System.out.println(e + "\n[WIN] INFO: Failed to initialize window from database");
+
+    //         String dbTableCreateQuery = "CREATE TABLE " + dbTableName + " " +
+    //                 "(clientID VARCHAR(256) not NULL," +
+    //                 STARTCOUNTER + " VARCHAR(256)," +
+    //                 ENDCOUNTER + " VARCHAR(256)," +
+    //                 WINDOW_LENGTH + " INTEGER," +
+    //                 "PRIMARY KEY (clientID))";
+
+    //         database.createTable(dbTableCreateQuery);
+    //     }
+    // }
+    
+    @PostConstruct
+    public void init() throws SQLException {
         // TODO: Change to config
-        String url = "jdbc:mysql://localhost:3306";
-        String uname    = "root";
-        String password = "";
-        String dbName = "DTN_SERVER_DB";
+        String url = env.getProperty("spring.datasource.url");
+        String uname = env.getProperty("spring.datasource.username");
+        String password = env.getProperty("spring.datasource.password");
+        String dbName = env.getProperty("spring.datasource.db-name");
 
         database = new SNRDatabases(url, uname, password, dbName);
 
         try {
             initializeWindow();
         } catch (SQLException | BufferOverflow | InvalidLength e) {
-            System.out.println(e+"\n[WIN] INFO: Failed to initialize window from database");
+            System.out.println(e + "\n[WIN] INFO: Failed to initialize window from database");
 
-            String dbTableCreateQuery = "CREATE TABLE "+ dbTableName+ " " +
-                                        "(clientID VARCHAR(256) not NULL," +
-                                        STARTCOUNTER + " VARCHAR(256)," +
-                                        ENDCOUNTER + " VARCHAR(256)," +
-                                        WINDOW_LENGTH + " INTEGER," +
-                                        "PRIMARY KEY (clientID))";
+            String dbTableCreateQuery = "CREATE TABLE " + dbTableName + " " +
+                    "(clientID VARCHAR(256) not NULL," +
+                    STARTCOUNTER + " VARCHAR(256)," +
+                    ENDCOUNTER + " VARCHAR(256)," +
+                    WINDOW_LENGTH + " INTEGER," +
+                    "PRIMARY KEY (clientID))";
 
             database.createTable(dbTableCreateQuery);
+        }
     }
-    }
+    
 
     private void initializeWindow() throws SQLException, InvalidLength, BufferOverflow
     {
