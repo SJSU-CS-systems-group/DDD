@@ -98,8 +98,15 @@ public class MainActivity extends AppCompatActivity {
         values.put("data", message.getBytes());
         values.put("appName", getApplicationContext().getPackageName());
 
-        resolver.insert(CONTENT_URL, values);
+        try{
+            resolver.insert(CONTENT_URL, values);
+            getMessages();
+        } catch (IllegalArgumentException e){
+            Toast.makeText(this, "Cannot connect to bundleclient", Toast.LENGTH_SHORT).show();
+        }
+        catch(SecurityException e){
+            Toast.makeText(this, "Cannot send", Toast.LENGTH_SHORT).show();
+        }
 
-        getMessages();
     }
 }
