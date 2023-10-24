@@ -29,3 +29,5 @@ create table client_data_changed_table (
     client_id varchar(100) not null,
     has_new_data bool not null
 );
+
+in the resources/application.yml file change the spring.datasource.password attribute to your mysql db password
