@@ -112,11 +112,13 @@ public class MainActivity extends AppCompatActivity {
         private ManagedChannel channel;
 
         private GrpcSendTask(Activity activity) {
+            Log.d(MainActivity.TAG, "initializing grpcsendtask...");
             this.activityReference = new WeakReference<Activity>(activity);
         }
 
         @Override
         protected String doInBackground(String... params) {
+            Log.d(MainActivity.TAG, "executing grpcsendtask...");
             String host = params[0];
             String portStr = params[1];
             int port =Integer.parseInt(portStr);
@@ -290,6 +292,8 @@ public class MainActivity extends AppCompatActivity {
             return "Complete";
         }
 
+
+
         @Override
         protected void onPostExecute(String result) {
             try {
@@ -315,6 +319,7 @@ public class MainActivity extends AppCompatActivity {
         Receive_Directory = SERVER_BASE_PATH +"/client";
         Server_Directory = SERVER_BASE_PATH +"/server";
         wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle());
+        wifiDirectManager.initialize();
 
         // set up transport Id
         tidPath = getApplicationContext().getApplicationInfo().dataDir+"/transportIdentity.pub";

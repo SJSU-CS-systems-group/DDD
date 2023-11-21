@@ -35,6 +35,8 @@ import java.util.concurrent.Future;
  */
 public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener, WifiP2pManager.PeerListListener {
 
+
+
     public static final String TAG = HelloworldActivity.TAG;
     private final IntentFilter intentFilter = new IntentFilter();
 
@@ -110,6 +112,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
      * Discovers WifiDirect peers for this device.
      * @return Completable Future true if discovery is successful false if not
      */
+
     @SuppressLint("MissingPermission")
     public CompletableFuture<Boolean> discoverPeers() {
         CompletableFuture<Boolean> cFuture = new CompletableFuture<>();
@@ -137,6 +140,12 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
      *
      * @param deviceList
      */
+
+    @SuppressLint("MissingPermission")
+    public void requestPeers(){
+        manager.requestPeers(channel, this);
+    }
+
     @Override
     public void onPeersAvailable(WifiP2pDeviceList deviceList) {
         List<WifiP2pDevice> devices = new ArrayList<>();
@@ -363,6 +372,8 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
      * @return the app context
      */
     public Context getContext() { return this.context; }
+
+
 
     /**
      * Inner Class to hook into activity Lifecycle functions
