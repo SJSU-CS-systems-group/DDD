@@ -33,7 +33,7 @@ import java.util.concurrent.Future;
  * Main WifiDirect class
  * Contains wrapper methods around common WifiDirect tasks
  */
-public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener, WifiP2pManager.PeerListListener {
+public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener {
 
     private final IntentFilter intentFilter = new IntentFilter();
 
@@ -60,18 +60,28 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
      */
     public WifiDirectManager(Context context, Lifecycle lifeCycle) {
         this.context = context;
+        this.lifeCycle = lifeCycle;
+    }
+
+    public void initialize(){
+        Log.d(MainActivity.TAG, "Initializing wifidirectmanager...");
         this.initClient(this.context);
         this.registerIntents();
 
-        this.lifeCycle = lifeCycle;
         this.receiver = new WifiDirectBroadcastReceiver(this);
 
         this.lifeCycleObserver = new WifiDirectLifeCycleObserver(this);
         this.lifeCycle.addObserver(lifeCycleObserver);
 
-        this.discoveredPeers = new ArrayList<WifiP2pDevice>();
+        //this.discoverPeers();
+        // this.discoveredPeers = new ArrayList<WifiP2pDevice>();
+
+
         this.wifiDirectGroupHostIP = "";
         this.groupHostInfo ="";
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            this.createGroup("ddd_wifidirect", "password");
+        }
         this.isConnected = false;
     }
 
@@ -112,19 +122,37 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
     @SuppressLint("MissingPermission")
     public CompletableFuture<Boolean> discoverPeers() {
         CompletableFuture<Boolean> cFuture = new CompletableFuture<>();
+
         this.manager.discoverPeers(this.channel, new WifiP2pManager.ActionListener() {
 
             @Override
             public void onSuccess() {
+                Log.d(MainActivity.TAG, "discovering...");
                 cFuture.complete(true);
             }
 
             @Override
             public void onFailure(int reasonCode) {
+                Log.d(MainActivity.TAG, "Failed Discovery...");
                 cFuture.complete(false);
             }
         });
         return cFuture;
+    }
+
+    @SuppressLint("MissingPermission")
+    public void requestPeers(){
+        manager.requestPeers(channel, new WifiP2pManager.PeerListListener() {
+
+            @Override
+            public void onPeersAvailable(WifiP2pDeviceList peers) {
+                // Handle the list of available peers
+                for (WifiP2pDevice device : peers.getDeviceList()) {
+                    discoveredPeers.add(device);
+                    Log.d(MainActivity.TAG, device.toString());
+                }
+            }
+        });
     }
 
     /**
@@ -136,14 +164,16 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
      *
      * @param deviceList
      */
-    @Override
+    /*@Override
     public void onPeersAvailable(WifiP2pDeviceList deviceList) {
+        Log.d(MainActivity.TAG, "Peers available...");
         List<WifiP2pDevice> devices = new ArrayList<>();
         Collection<WifiP2pDevice> foundDevices = deviceList.getDeviceList();
         devices.addAll(foundDevices);
+        this.discoveredPeers = (ArrayList<WifiP2pDevice>) deviceList.getDeviceList();
 
         this.discoveredPeers = (ArrayList<WifiP2pDevice>) devices;
-    }
+    }*/
 
     /**
      * Create a WifiDirect group for other WifiDirect devices can connect to.
@@ -151,25 +181,25 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
      */
     @RequiresApi(api = Build.VERSION_CODES.Q)
     @SuppressLint("MissingPermission")
-    public CompletableFuture<Boolean> createGroup(String networkName, String password) {
-        WifiP2pConfig config = this.buildGroupConfig(networkName,
-                password);
-        CompletableFuture<Boolean> cFuture = new CompletableFuture<>();
+    public void createGroup(String networkName, String password) {
+        WifiP2pConfig config = this.buildGroupConfig(networkName, password);
+        //CompletableFuture<Boolean> cFuture = new CompletableFuture<>();
         this.manager.createGroup(this.channel, config, new WifiP2pManager.ActionListener() {
 
             @Override
             public void onSuccess() {
-                cFuture.complete(true);
+                Log.d("wDebug","Created a group");
+                //cFuture.complete(true);
             }
 
             @Override
             public void onFailure(int reasonCode) {
 
                 Log.d("wDebug","Failed to create a group with reasonCode: " + reasonCode);
-                cFuture.complete(false);
+                //cFuture.complete(false);
             }
         });
-        return cFuture;
+        //return cFuture;
     }
 
     /**

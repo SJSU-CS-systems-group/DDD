@@ -16,6 +16,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -129,6 +130,7 @@ public class HelloworldActivity extends AppCompatActivity {
 
     try {
       clientWindow = bundleTransmission.getBundleSecurity().getClientWindow();
+      Log.d(TAG, "{MC} - got clientwindow "+clientWindow);
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -188,14 +190,15 @@ public class HelloworldActivity extends AppCompatActivity {
       if (!group.isGroupOwner()){
 //      start request task
         Log.d(TAG,"Connection Successful!");
+        resultText.append("Connection Successful!\n");
         // receive task
-        new GrpcReceiveTask(this).execute("192.168.49.1",
-                "7777");
+        new GrpcReceiveTask(this).execute("192.168.49.1", "1778");
+
 //        send task
 //        new GrpcSendTask(this)
 //                .execute(
 //                        "192.168.49.1",
-//                        "7777");
+//                        "1778");
       }
       return group;
     });
@@ -240,8 +243,11 @@ public class HelloworldActivity extends AppCompatActivity {
     private final WeakReference<Activity> activityReference;
     private ManagedChannel channel;
 
+    private final TextView resultText;
+
     private GrpcReceiveTask(Activity activity) {
       this.activityReference = new WeakReference<Activity>(activity);
+      this.resultText = (TextView) activity.findViewById(R.id.grpc_response_text);
     }
 
     @Override
@@ -257,16 +263,23 @@ public class HelloworldActivity extends AppCompatActivity {
       FileServiceGrpc.FileServiceStub stub = FileServiceGrpc.newStub(channel);
       List<String> bundleRequests = null;
 
+
       Log.d(TAG, "Starting File Receive");
+      resultText.append("Starting File Receive...\n");
+
       try {
         bundleRequests = clientWindow.getWindow(bundleTransmission.getBundleSecurity().getClientSecurity());
       } catch (SecurityExceptions.BundleIDCryptographyException e) {
+        Log.d(TAG, "{BR}: Failed to get Window: " + e);
+        e.printStackTrace();
+      }catch(Exception e){
         Log.d(TAG, "{BR}: Failed to get Window: " + e);
         e.printStackTrace();
       }
 
       if (bundleRequests == null) {
         Log.d(TAG, "BUNDLE REQuests is NUll / ");
+        return "Incomplete";
       } else if (bundleRequests.size() == 0) {
         Log.d(TAG, "BUNDLE REQuests has size 0 / ");
       }
@@ -331,6 +344,11 @@ public class HelloworldActivity extends AppCompatActivity {
 
     @Override
     protected void onPostExecute(String result) {
+      if(result.equals("Incomplete")){
+        resultText.append(result+"\n");
+        return;
+      }
+
       try {
         channel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
       } catch (InterruptedException e) {
@@ -339,15 +357,18 @@ public class HelloworldActivity extends AppCompatActivity {
       new GrpcSendTask(HelloworldActivity.this)
               .execute(
                       "192.168.49.1",
-                      "7777");
+                      "1778");
+
+      String FILE_PATH = getApplicationContext().getApplicationInfo().dataDir + "/Shared/received-bundles";
+      BundleTransmission bundleTransmission = new BundleTransmission(getApplicationContext().getApplicationInfo().dataDir);
+      bundleTransmission.processReceivedBundles(currentTransportId, FILE_PATH);
+
+
       Activity activity = activityReference.get();
       if (activity == null) {
         return;
       }
-      String FILE_PATH = getApplicationContext().getApplicationInfo().dataDir + "/Shared/received-bundles";
-      BundleTransmission bundleTransmission = new BundleTransmission(getApplicationContext().getApplicationInfo().dataDir);
-      bundleTransmission.processReceivedBundles(currentTransportId, FILE_PATH);
-      TextView resultText = (TextView) activity.findViewById(R.id.grpc_response_text);
+
       Button connectButton = (Button) activity.findViewById(R.id.connect_button);
       resultText.setText(result);
       connectButton.setEnabled(true);

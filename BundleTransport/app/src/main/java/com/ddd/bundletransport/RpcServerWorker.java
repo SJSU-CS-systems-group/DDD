@@ -23,7 +23,7 @@ public class RpcServerWorker extends Worker {
 
     public RpcServerWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
         super(context, workerParams);
-        port = workerParams.getInputData().getInt("PORT", 7777);
+        port = workerParams.getInputData().getInt("PORT", 1778);
         address = new InetSocketAddress("192.168.49.1", port);
     }
 
