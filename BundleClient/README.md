@@ -3,29 +3,16 @@ gRPC Bundle Client (Android Java)
 
 PREREQUISITES
 -------------
-- [Java gRPC](https://github.com/grpc/grpc-java)
-
 - [Android Tutorial](https://developer.android.com/training/basics/firstapp/index.html) if you're new to Android development
-
-- [gRPC Java Android Quick Start Guide](https://grpc.io/docs/quickstart/android.html)
-
-- We only have Android gRPC client in this example. Please follow examples in other languages to build and run a gRPC server.
 
 INSTALL
 -------
+1. Download [Android Studio](https://developer.android.com/studio)
+2. Git clone DDD repo(using SSH) and open “bundleClient” directory into Android Studio
+3. Connect your Android to your computer using a USB-C cable and “run”
 
-1. Install and build gRPC Java, the packages will be required to run the application. Follow the steps listed in the [gRPC Java Android Quick Start Guide](https://grpc.io/docs/quickstart/android.html) 
-
-2. Once you have the packages you need to build the Bundle Client Android Application in Android Studio
-If the cradle build option does not exist - 
-app -> edit configurations -> '+' -> Gradle -> Run options: build --debug --stacktrace -> Apply -> OK
-
-3. Clean and build the project this will generate necessary client and stub implementation using proto file.
-
-Note the gRPC version are different for M1 Macs, in case you are trying to build on MAC OSX, your gRPC version in the build.gradle(Module) should like io.grpc:protoc-gen-grpc-java:1.42.0:osx-x86_64
-In stead of io.grpc:protoc-gen-grpc-java:1.42.0
- 
-
-Please refer to the
-[tutorial](https://grpc.io/docs/tutorials/basic/android.html) on
-how to use gRPC in Android programs.
+ADDITIONAL NOTES
+----------------
+- While cloning, if you receive a Permission denied (publickey) error, make sure you have and authentication key for the computer you are using by navigating to “Settings” → “SSH and GPG keys” → “Authentication keys”
+- If your code isn’t compiling, make sure you have at least v. 7.x.x for Gradle
+- Java gRPC should already be installed in this process but if it is not you have to use the [Quick Start guide](https://grpc.io/docs/platforms/android/java/quickstart/). You can check if this is an issue by looking into your build.gradle file and checking for at least the following dependencies: okhttp, protobuf, and stub. Here is the documentation for [Java gRPC](https://github.com/grpc/grpc-java).
