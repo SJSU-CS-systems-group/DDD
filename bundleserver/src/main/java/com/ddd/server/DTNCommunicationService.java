@@ -10,9 +10,17 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 
 public class DTNCommunicationService extends DTNCommunicationGrpc.DTNCommunicationImplBase{
+//
+//    @Override
+//    public void registerAdapter(ConnectionData connectionData) {
+//        System.out.println("Testing python client");
+//    }
+
     @Override
     public void registerAdapter(ConnectionData connectionData,
                                 StreamObserver<ResponseStatus> responseObserver){
+
+        System.out.println("Testing server from Python client");
         try {
             MySQLConnection mysql = new MySQLConnection();
             Connection con = mysql.GetConnection();

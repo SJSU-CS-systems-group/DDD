@@ -189,7 +189,7 @@ public class MainActivity extends AppCompatActivity {
 //            resultText.setText(result);
             new GrpcReceiveTask(MainActivity.this)
                     .execute(
-                            "10.0.0.166",
+                            getString(R.string.bundle_server_host),
                             "8080");
         }
     }
@@ -367,7 +367,7 @@ public class MainActivity extends AppCompatActivity {
 //                send task
             new GrpcSendTask(MainActivity.this)
                     .execute(
-                            "10.0.0.166",
+                            getString(R.string.bundle_server_host),
 //                            "172.20.10.6",
                             "8080");
         });

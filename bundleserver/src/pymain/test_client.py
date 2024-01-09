@@ -8,10 +8,9 @@ import DTNCommunication_pb2_grpc
 @click.option('--url', prompt='URL of the DTN adapter to connect to')
 
 def testConnection(url):
-  print("Test client started")
 
   with grpc.insecure_channel(url) as channel:
-    print(channel)
+    print("Test client started")
 
     stub = DTNCommunication_pb2_grpc.DTNCommunicationStub(channel)
 
