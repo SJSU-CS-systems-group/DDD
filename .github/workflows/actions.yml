@@ -1,0 +1,19 @@
+name: Compile Bundle Transport
+on:
+  pull_request:
+    branches: main
+
+jobs:
+  build-bundle-transport:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup gradle
+      uses: gradle/gradle-build-action@v2
+
+    - name: Run gradle build on BundleTransport
+      run: ./BundleTransport/gradlew build
+
+        
