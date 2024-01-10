@@ -30,33 +30,34 @@ public class GrpcSendTask implements Runnable {
     private ManagedChannel channel;
 
     private Function<Exception, Void> callback;
-    public GrpcSendTask(Context context, String host, String port, String transportId, Function<Exception, Void> callback){
+
+    public GrpcSendTask(Context context, String host, String port, String transportId, Function<Exception, Void> callback) {
         Log.d(TAG, "initializing grpcsendtask...");
         this.context = context;
         this.host = host;
         this.port = Integer.parseInt(port);
         this.transportId = transportId;
-        this.serverDir = this.context.getExternalFilesDir(null)+"/BundleTransmission/server";
+        this.serverDir = this.context.getExternalFilesDir(null) + "/BundleTransmission/server";
         this.callback = callback;
     }
 
     @Override
-    public void run(){
+    public void run() {
         Exception thrown = null;
-        try{
+        try {
             executeTask();
-        }catch(Exception e){
+        } catch (Exception e) {
             thrown = e;
         }
         callback.apply(thrown);
         try {
             postExecuteTask();
         } catch (InterruptedException e) {
-            Log.e(TAG, "Failed to shutdown GrpcSendTask channel: "+e.getMessage());
+            Log.e(TAG, "Failed to shutdown GrpcSendTask channel: " + e.getMessage());
         }
     }
 
-    private void executeTask() throws IOException{
+    private void executeTask() throws IOException {
         Log.d(TAG, "executing grpcsendtask...");
 
         channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
@@ -65,10 +66,10 @@ public class GrpcSendTask implements Runnable {
         File sendDir = new File(serverDir);
 
         //get transport ID
-        if(sendDir.exists()){
+        if (sendDir.exists()) {
             File[] bundles = sendDir.listFiles();
-            if(bundles != null){
-                for(File bundle: bundles){
+            if (bundles != null) {
+                for (File bundle : bundles) {
                     BundleUploadRequest metadata = BundleUploadRequest
                             .newBuilder()
                             .setMetadata(BundleMetaData
@@ -81,17 +82,18 @@ public class GrpcSendTask implements Runnable {
 
                     // upload file as chunk
                     Log.d(TAG, "Started file transfer");
-                    FileInputStream inputStream = new FileInputStream(bundle.getAbsolutePath());;
+                    FileInputStream inputStream = new FileInputStream(bundle.getAbsolutePath());
+                    ;
                     /*if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
                         inputStream = new FileInputStream(bundle.getAbsolutePath());
                     }
 
                      */
-                    int chunkSize = 1000*1000*4;
+                    int chunkSize = 1000 * 1000 * 4;
                     byte[] bytes = new byte[chunkSize];
                     int size = 0;
-                    while((size = inputStream.read(bytes)) != -1){
-                        Log.d(TAG, "Sending chunk size: "+size);
+                    while ((size = inputStream.read(bytes)) != -1) {
+                        Log.d(TAG, "Sending chunk size: " + size);
                         BundleUploadRequest uploadRequest = BundleUploadRequest
                                 .newBuilder()
                                 .setFile(com.ddd.bundletransport.service.File
@@ -112,7 +114,7 @@ public class GrpcSendTask implements Runnable {
         streamObserver.onCompleted();
     }
 
-    private void postExecuteTask() throws  InterruptedException{
+    private void postExecuteTask() throws InterruptedException {
         channel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
     }
 }

@@ -140,21 +140,6 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
         return cFuture;
     }
 
-    /*@SuppressLint("MissingPermission")
-    public void requestPeers(){
-        manager.requestPeers(channel, new WifiP2pManager.PeerListListener() {
-
-            @Override
-            public void onPeersAvailable(WifiP2pDeviceList peers) {
-                // Handle the list of available peers
-                for (WifiP2pDevice device : peers.getDeviceList()) {
-                    discoveredPeers.add(device);
-                    Log.d(MainActivity.TAG, device.toString());
-                }
-            }
-        });
-    }*/
-
     /**
      * PeersListListener interface override function
      * Activation function is this.manager.discoverPeers();

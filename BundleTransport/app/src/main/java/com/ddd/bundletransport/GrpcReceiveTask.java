@@ -21,7 +21,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
-public class GrpcReceiveTask  implements Runnable {
+public class GrpcReceiveTask implements Runnable {
     private final static String TAG = "dddTransport";
     private Context context;
     private String host, receiveDir, transportId;
@@ -30,29 +30,29 @@ public class GrpcReceiveTask  implements Runnable {
     private ManagedChannel channel;
     private Function<Exception, Void> callback;
 
-    public GrpcReceiveTask(Context context, String host, String port, String transportId, Function<Exception, Void> callback){
+    public GrpcReceiveTask(Context context, String host, String port, String transportId, Function<Exception, Void> callback) {
         Log.d(TAG, "initializing grpcreceivetask...");
         this.context = context;
         this.host = host;
         this.port = Integer.parseInt(port);
         this.transportId = transportId;
-        this.receiveDir = this.context.getExternalFilesDir(null)+"/BundleTransmission/client";
+        this.receiveDir = this.context.getExternalFilesDir(null) + "/BundleTransmission/client";
         this.callback = callback;
     }
 
     @Override
-    public void run(){
+    public void run() {
         Exception thrown = null;
-        try{
+        try {
             executeTask();
-        }catch (Exception e){
+        } catch (Exception e) {
             thrown = e;
         }
         callback.apply(thrown);
         try {
             postExecuteTask();
         } catch (InterruptedException e) {
-            Log.e(TAG, "Failed to shutdown GrpcReceiveTask channel: "+e.getMessage());
+            Log.e(TAG, "Failed to shutdown GrpcReceiveTask channel: " + e.getMessage());
         }
     }
 
@@ -68,55 +68,56 @@ public class GrpcReceiveTask  implements Runnable {
         StreamObserver<BundleDownloadResponse> downloadObserver = new StreamObserver<BundleDownloadResponse>() {
             FileOutputStream fileOutputStream = null;
             OutputStream writer;
+
             @Override
             public void onNext(BundleDownloadResponse response) {
-                Log.d(TAG, "onNext: called with "+ response.toString());
-                if(response.hasBundleList()){
+                Log.d(TAG, "onNext: called with " + response.toString());
+                if (response.hasBundleList()) {
                     Log.d(TAG, "Got list for deletion");
                     List<String> toDelete = Arrays.asList(response
                             .getBundleList()
                             .getBundleList()
                             .split(","));
-                    if(!toDelete.isEmpty()){
+                    if (!toDelete.isEmpty()) {
                         File clientDir = new File(receiveDir);
-                        for(File bundle: clientDir.listFiles()){
-                            if(toDelete.contains(bundle.getName())){
-                                Log.d(TAG, "Deleteing file: "+bundle.getName());
+                        for (File bundle : clientDir.listFiles()) {
+                            if (toDelete.contains(bundle.getName())) {
+                                Log.d(TAG, "Deleteing file: " + bundle.getName());
                                 bundle.delete();
                             }
                         }
-                    }else{
+                    } else {
                         Log.d(TAG, "No bundles to delete");
                     }
-                }else if(response.hasStatus()){
+                } else if (response.hasStatus()) {
                     Log.d(TAG, "Status found: terminating loop");
                     receiveBundles = false;
-                }else if(response.hasMetadata()){
-                    try{
-                        Log.d(TAG, "Downloading chunk of: "+response.getMetadata().getBid());
+                } else if (response.hasMetadata()) {
+                    try {
+                        Log.d(TAG, "Downloading chunk of: " + response.getMetadata().getBid());
                         writer = FileUtils.getFilePath(response, receiveDir);
-                    }catch(IOException e){
-                        Log.e(TAG, "/GrpcReceiveTask.java -> executeTask() -> onNext() IOException: "+e.getMessage());
+                    } catch (IOException e) {
+                        Log.e(TAG, "/GrpcReceiveTask.java -> executeTask() -> onNext() IOException: " + e.getMessage());
                     }
-                }else{
-                    try{
+                } else {
+                    try {
                         FileUtils.writeFile(writer, response.getFile().getContent());
-                    }catch(IOException e){
-                        Log.e(TAG, "/GrpcReceiveTask.java -> executeTask() -> onNext() IOException: "+e.getMessage());
+                    } catch (IOException e) {
+                        Log.e(TAG, "/GrpcReceiveTask.java -> executeTask() -> onNext() IOException: " + e.getMessage());
                     }
                 }
             }
 
             @Override
             public void onError(Throwable t) {
-                Log.e(TAG, "Error downloading file: "+t.getMessage(), t);
-                if(fileOutputStream != null){
-                    try{
+                Log.e(TAG, "Error downloading file: " + t.getMessage(), t);
+                if (fileOutputStream != null) {
+                    try {
                         fileOutputStream.close();
-                    }catch (IOException e){
-                        Log.e(TAG, "/GrpcReceiveTask.java -> executeTask() -> onError() IOException: "+e.getMessage());
-                    }catch (Exception e){
-                        Log.e(TAG, "/GrpcReceiveTask.java -> executeTask() -> onError() Exception: "+e.getMessage());
+                    } catch (IOException e) {
+                        Log.e(TAG, "/GrpcReceiveTask.java -> executeTask() -> onError() IOException: " + e.getMessage());
+                    } catch (Exception e) {
+                        Log.e(TAG, "/GrpcReceiveTask.java -> executeTask() -> onError() Exception: " + e.getMessage());
                     }
                 }
             }
@@ -129,9 +130,9 @@ public class GrpcReceiveTask  implements Runnable {
             }
         };
 
-        while(receiveBundles){
-            if(statusComplete){
-                Log.d(TAG, "/GrpcReceiveTask.java -> executeTask() receiveBundles = "+receiveBundles);
+        while (receiveBundles) {
+            if (statusComplete) {
+                Log.d(TAG, "/GrpcReceiveTask.java -> executeTask() receiveBundles = " + receiveBundles);
 
                 try {
                     String existingBundles = FileUtils.getFilesList(receiveDir);
@@ -143,14 +144,14 @@ public class GrpcReceiveTask  implements Runnable {
                     stub.downloadBundle(request, downloadObserver);
                     Log.d(TAG, "Receive task complete");
                     statusComplete = false;
-                }catch (Exception e){
-                    Log.e(TAG, "/GrpcReceiveTask.java -> executeTask() Exception: "+e.getMessage());
+                } catch (Exception e) {
+                    Log.e(TAG, "/GrpcReceiveTask.java -> executeTask() Exception: " + e.getMessage());
                 }
             }
         }
     }
 
-    private void postExecuteTask() throws InterruptedException{
+    private void postExecuteTask() throws InterruptedException {
         channel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
     }
 }
