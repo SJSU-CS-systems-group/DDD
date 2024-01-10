@@ -21,10 +21,13 @@ public class RpcServerWorker extends Worker {
     private final int port;
     private final SocketAddress address;
 
+    // the ip that wifi direct always uses and that bundle client connects to
+    private final String inetSocketAddressIP = "192.168.49.1";
+
     public RpcServerWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
         super(context, workerParams);
         port = workerParams.getInputData().getInt("PORT", 1778);
-        address = new InetSocketAddress("192.168.49.1", port);
+        address = new InetSocketAddress(inetSocketAddressIP, port);
     }
 
     private void startRpcServer() {

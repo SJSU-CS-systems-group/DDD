@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">BundleTransport</string>
+    <string name="bundle_server_host">manashomeofcode.com</string>
+    <string name="select">Select Item</string>
 </resources>

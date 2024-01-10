@@ -33,7 +33,7 @@ import java.util.concurrent.Future;
  * Main WifiDirect class
  * Contains wrapper methods around common WifiDirect tasks
  */
-public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener {
+public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener, WifiP2pManager.PeerListListener {
 
     private final IntentFilter intentFilter = new IntentFilter();
 
@@ -140,7 +140,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener 
         return cFuture;
     }
 
-    @SuppressLint("MissingPermission")
+    /*@SuppressLint("MissingPermission")
     public void requestPeers(){
         manager.requestPeers(channel, new WifiP2pManager.PeerListListener() {
 
@@ -153,7 +153,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener 
                 }
             }
         });
-    }
+    }*/
 
     /**
      * PeersListListener interface override function
@@ -164,16 +164,16 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener 
      *
      * @param deviceList
      */
-    /*@Override
+    @Override
     public void onPeersAvailable(WifiP2pDeviceList deviceList) {
         Log.d(MainActivity.TAG, "Peers available...");
         List<WifiP2pDevice> devices = new ArrayList<>();
         Collection<WifiP2pDevice> foundDevices = deviceList.getDeviceList();
         devices.addAll(foundDevices);
-        this.discoveredPeers = (ArrayList<WifiP2pDevice>) deviceList.getDeviceList();
+        //this.discoveredPeers = (ArrayList<WifiP2pDevice>) deviceList.getDeviceList();
 
         this.discoveredPeers = (ArrayList<WifiP2pDevice>) devices;
-    }*/
+    }
 
     /**
      * Create a WifiDirect group for other WifiDirect devices can connect to.
