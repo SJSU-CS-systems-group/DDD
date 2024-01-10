@@ -1,4 +1,4 @@
-name: Compile Bundle Transport
+name: Build Modules
 on:
   pull_request:
     branches: main
