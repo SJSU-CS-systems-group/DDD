@@ -1,6 +1,8 @@
 package com.ddd.server;
 
 import java.io.File;
+
+import com.ddd.server.storage.MySQLConnection;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
@@ -17,11 +19,15 @@ public class StartupRunner implements CommandLineRunner {
   public int port=8080;
   @Autowired
   BundleServerServiceImpl bundleServerServiceImpl;
+
+  @Autowired
+  DTNCommunicationService dtnCommService;
+
   @Override
   public void run(String... args) throws Exception {
     this.setUpFileStore();
-    ServerBuilder serverBuilder = ServerBuilder.forPort(8080);
-    Server server = serverBuilder.addService(new DTNCommunicationService())
+    ServerBuilder<?> serverBuilder = ServerBuilder.forPort(8080);
+    Server server = serverBuilder.addService(dtnCommService)
                 .addService(bundleServerServiceImpl)
                 .build();
     server.start();

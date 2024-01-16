@@ -11,3 +11,4 @@ public class BundleServerApplication {
       //  DTNBundleServer.begin();
   }
 }
+// Find who instantiate the DTNCommGrpc -> should have mysql object

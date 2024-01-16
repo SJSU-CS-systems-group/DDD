@@ -167,6 +167,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
                 startGRPCServerBtn.setEnabled(true);
                 stopGRPCServerBtn.setEnabled(false);
             }
+
         });
     }
 
@@ -175,6 +176,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         runOnUiThread(() -> {
             btn.setEnabled(enable);
         });
+
     }
 
     // methods for managing bundle server requests
@@ -338,7 +340,6 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
             FileUtils.deleteBundles(Server_Directory);
         });
 
-
         // connect to server
         connectServerBtn.setOnClickListener(view -> {
             connectToServer();
@@ -353,6 +354,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         // set saved domain and port to inputs
         findViewById(R.id.restore_domain_port).setOnClickListener(view -> {
             restoreDomainPort();
+
         });
     }
 
