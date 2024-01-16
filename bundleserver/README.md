@@ -10,8 +10,8 @@ INSTALLATION
 
 MSQL installation:
 
-download mysql zip
-run "mysqld --initialize --console" (only for the first time)
+download mysql zip  
+run "mysqld --initialize --console" (only for the first time)  
 run "mysqld --console"  (in admin mode)
 
 root@localhost: password
@@ -19,7 +19,7 @@ root@localhost: password
 to connect to DB -
 run "mysql -u root -p"
 
-
+```
 CREATE DATABASE dtn_server_db;
 
 use dtn_server_db;
@@ -39,7 +39,26 @@ create table client_data_changed_table (
     client_id varchar(100) not null,
     has_new_data bool not null
 );
-
+```
 in the resources/application.yml file change the spring.datasource.password attribute to your mysql db password
 
+Additional Notes
+----------------
 
+For M1 and M2 Mac models please change protobuf-maven-plugin (found in pom.xml file) from
+```
+<configuration>
+    <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
+    <pluginId>grpc-java</pluginId>
+    <pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
+</configuration>
+```
+to:
+```
+<configuration>
+    <protocArtifact>com.google.protobuf:protoc:3.5.1:exe:osx-x86_64</protocArtifact>
+    <pluginId>grpc-java</pluginId>
+    <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.50.2:exe:osx-x86_64</pluginArtifact>
+</configuration>
+```
+AND: Use IntelliJ IDEA for IDE
