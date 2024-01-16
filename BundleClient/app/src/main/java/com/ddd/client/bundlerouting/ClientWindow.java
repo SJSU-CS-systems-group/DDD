@@ -3,6 +3,7 @@ package com.ddd.client.bundlerouting;
 import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
 import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
 
+import android.util.Log;
 import com.ddd.client.bundlerouting.WindowUtils.CircularBuffer;
 import com.ddd.client.bundlesecurity.BundleIDGenerator;
 import com.ddd.client.bundlesecurity.ClientSecurity;
@@ -19,6 +20,8 @@ public class ClientWindow {
     static private ClientWindow singleClientWindowInstance = null;
     private String clientWindowDataPath = null;
     final private String windowFile = "clientWindow.csv";
+
+    public static final String TAG = "dddDebug";
 
     private CircularBuffer window   = null;
     private String clientID         = null;
@@ -88,12 +91,12 @@ public class ClientWindow {
         try {
             initializeWindow();
         } catch (IOException e) {
-            System.out.println("Failed to initialize Window from Disk, creating new window\n"+e);
+            Log.e(TAG, "Failed to initialize Window from Disk, creating new window\n"+e);
             if (length > 0) {
                 windowLength = length;
             } else {
                 //TODO: Change to log
-                System.out.printf("Invalid window size, using default size [%d]", windowLength);
+                Log.e(TAG, "Invalid window size, using default size: "+ windowLength);
             }
         }
 

@@ -2,22 +2,38 @@ package com.ddd.bundletransport;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkInfo;
+import android.net.NetworkRequest;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
+
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.work.Data;
 import androidx.work.ExistingPeriodicWorkPolicy;
+import androidx.work.OneTimeWorkRequest;
 import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkManager;
+import androidx.work.impl.model.Preference;
 
 import com.ddd.bundletransport.service.BundleDownloadRequest;
 import com.ddd.bundletransport.service.BundleDownloadResponse;
@@ -45,22 +61,44 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.prefs.Preferences;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements RpcServerStateListener{
 
     private static final int PORT = 7777;
     public static final int PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION = 1001;
     public static final String TAG = "dddTransport";
+
+    private Button startGRPCServerBtn, stopGRPCServerBtn;
     private WifiDirectManager wifiDirectManager;
     private String Receive_Directory;
     private String Server_Directory;
     private String tidPath;
     public static String transportID;
+
+    private String serverDomain;
+    private String serverPort;
+
+    private SharedPreferences sharedPref;
+
+    private EditText domainInput;
+    private EditText portInput;
+    private RpcServer grpcServer;
+    private ExecutorService executor = Executors.newFixedThreadPool(1);;
+    private TextView serverConnectStatus;
+    private Button connectServerBtn;
+    private ConnectivityManager connectivityManager;
+    private ConnectivityManager.NetworkCallback serverConnectNetworkCallback;
+
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
@@ -74,7 +112,8 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void startRpcWorkerService() {
+    // methods for managing grpc server
+    private void manageRequestedWifiDirectGroup(){
         CompletableFuture<WifiP2pGroup> completedFuture = wifiDirectManager.requestGroupInfo();
         completedFuture.thenApply((b) -> {
             Toast.makeText(this,
@@ -87,234 +126,179 @@ public class MainActivity extends AppCompatActivity {
             }
             return b;
         });
+    }
 
-        Data data = new Data.Builder().putInt("PORT", PORT).build();
-        PeriodicWorkRequest request = new PeriodicWorkRequest.Builder(
-                RpcServerWorker.class,
-                15, TimeUnit.MINUTES,
-                15, TimeUnit.MINUTES)
-                .setInputData(data)
+    private void startRpcServer() {
+        executor.execute(() -> {
+            synchronized (grpcServer){
+                if(grpcServer.isShutdown()){
+                    manageRequestedWifiDirectGroup();
+                    grpcServer.startServer(this, PORT);
+                }
+            }
+        });
+    }
+
+    private void stopRpcServer() {
+        executor.execute(() -> {
+            synchronized (grpcServer){
+                if(!grpcServer.isShutdown()){
+                    grpcServer.shutdownServer();
+                }
+            }
+        });
+    }
+
+
+    @Override
+    public void onStateChanged(RpcServer.ServerState newState){
+        runOnUiThread(() -> {
+            TextView grpcServerState = findViewById(R.id.grpc_server_state);
+            if(newState == RpcServer.ServerState.RUNNING){
+                grpcServerState.setText("GRPC Server State: RUNNING");
+                startGRPCServerBtn.setEnabled(false);
+                stopGRPCServerBtn.setEnabled(true);
+            }else if(newState == RpcServer.ServerState.PENDING){
+                grpcServerState.setText("GRPC Server State: PENDING");
+                startGRPCServerBtn.setEnabled(false);
+                stopGRPCServerBtn.setEnabled(false);
+            }else{
+                grpcServerState.setText("GRPC Server State: SHUTDOWN");
+                startGRPCServerBtn.setEnabled(true);
+                stopGRPCServerBtn.setEnabled(false);
+            }
+
+        });
+    }
+
+    // utils
+    private void toggleBtnEnabled(Button btn, boolean enable){
+        runOnUiThread(() -> {
+            btn.setEnabled(enable);
+        });
+
+    }
+
+    // methods for managing bundle server requests
+    private Void connectToServerComplete(Void x){
+        toggleBtnEnabled(connectServerBtn, true);
+        return null;
+    }
+
+    private void connectToServer(){
+        toggleBtnEnabled(connectServerBtn, false);
+
+        serverDomain = domainInput.getText().toString();
+        serverPort = portInput.getText().toString();
+        if(!serverDomain.isEmpty() && !serverPort.isEmpty()){
+            Log.d(TAG, "Sending to "+serverDomain+":"+serverPort);
+
+            runOnUiThread(() -> {
+                serverConnectStatus.setText("Initiating server exchange to "+serverDomain+":"+serverPort+"...\n");
+            });
+
+            // run async using multi threading
+            executor.execute(new ServerManager(this.getExternalFilesDir(null), serverDomain, serverPort, transportID, this::sendTask, this::receiveTask, this::connectToServerComplete));
+
+        }else{
+            Toast.makeText(MainActivity.this, "Enter the domain and port", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void createAndRegisterConnectivityManager(){
+        connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkRequest networkRequest = new NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
                 .build();
-        WorkManager.getInstance(this)
-                .enqueueUniquePeriodicWork(TAG,
-                        ExistingPeriodicWorkPolicy.REPLACE, request);
 
-        Toast.makeText(this, "Start Rpc Server", Toast.LENGTH_SHORT).show();
-    }
-
-    private void stopRpcWorkerService() {
-        WorkManager.getInstance(this).cancelUniqueWork(TAG);
-        Toast.makeText(this, "Stop Rpc Server", Toast.LENGTH_SHORT).show();
-    }
-
-    private class GrpcSendTask extends AsyncTask<String, Void, String> {
-        private final WeakReference<Activity> activityReference;
-        private ManagedChannel channel;
-
-        private GrpcSendTask(Activity activity) {
-            this.activityReference = new WeakReference<Activity>(activity);
-        }
-
-        @Override
-        protected String doInBackground(String... params) {
-            String host = params[0];
-            String portStr = params[1];
-            int port =Integer.parseInt(portStr);
-            try {
-                channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
-                BundleServiceGrpc.BundleServiceStub stub = BundleServiceGrpc.newStub(channel);
-                StreamObserver<BundleUploadRequest> streamObserver = stub.uploadBundle(new BundleUploadObserver());
-                File send_dir = new File(Server_Directory);
-                //get transport ID
-                if(send_dir.exists()){
-                    File[] bundles = send_dir.listFiles();
-                    if (bundles != null){
-                        for(File bundle: bundles){
-                            BundleUploadRequest metadata = BundleUploadRequest.newBuilder()
-                                    .setMetadata(BundleMetaData.newBuilder()
-                                            .setBid(bundle.getName())
-                                            .setTransportId(transportID)
-                                            .build())
-                                    .build();
-                            streamObserver.onNext(metadata);
-
-                            //                upload file as chunk
-                            Log.d(TAG,"Started file transfer");
-                            FileInputStream inputStream = null;
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                inputStream = new FileInputStream(bundle.getAbsolutePath());
-                            }
-                            int chunkSize = 1000*1000*4;
-                            byte[] bytes = new byte[chunkSize];
-                            int size = 0;
-                            while ((size = inputStream.read(bytes)) != -1){
-                                Log.d(TAG,"Sending chunk"+size);
-                                BundleUploadRequest uploadRequest = BundleUploadRequest.newBuilder()
-                                        .setFile(com.ddd.bundletransport.service.File.newBuilder().setContent(ByteString.copyFrom(bytes, 0 , size)).build())
-                                        .build();
-                                streamObserver.onNext(uploadRequest);
-                            }
-                            inputStream.close();
-                        }
-                    }
-                }
-                // close the stream
-                Log.d(TAG,"Complete");
-                streamObserver.onCompleted();
-//                bundle.delete();
-                return "Complete";
-            } catch (Exception e) {
-                StringWriter sw = new StringWriter();
-                PrintWriter pw = new PrintWriter(sw);
-                e.printStackTrace(pw);
-                pw.flush();
-                Log.d(TAG,String.valueOf(sw));
-                return String.format("Failed... : %n%s", sw);
+        serverConnectNetworkCallback = new ConnectivityManager.NetworkCallback(){
+            @Override
+            public void onAvailable(Network network){
+                Log.d(TAG, "Available network: "+network.toString());
+                Log.d(TAG, "Initiating automatic connection to server");
+                connectToServer();
             }
 
-        }
+            @Override
+            public void onLost(Network network){
+                Log.d(TAG, "Lost network connectivity");
+                toggleBtnEnabled(connectServerBtn, false);
+            }
 
-        @Override
-        protected void onPostExecute(String result) {
-            try {
-                channel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+            @Override
+            public void onUnavailable(){
+                Log.d(TAG, "Unavailable network connectivity");
+                toggleBtnEnabled(connectServerBtn, false);
             }
-            Activity activity = activityReference.get();
-            if (activity == null) {
-                return;
+
+            @Override
+            public void onBlockedStatusChanged(Network network, boolean blocked){
+                Log.d(TAG, "Blocked network connectivity");
+                toggleBtnEnabled(connectServerBtn, false);
             }
-//            TextView resultText = (TextView) activity.findViewById(R.id.grpc_response_text);
-//            resultText.setText(result);
-            new GrpcReceiveTask(MainActivity.this)
-                    .execute(
-                            getString(R.string.bundle_server_host),
-                            "8080");
+        };
+
+        connectivityManager.registerNetworkCallback(networkRequest, serverConnectNetworkCallback);
+
+        NetworkInfo activeNetwork = connectivityManager.getActiveNetworkInfo();
+        if (activeNetwork == null || !activeNetwork.isConnectedOrConnecting()){
+            toggleBtnEnabled(connectServerBtn, false);
         }
     }
 
-    private class GrpcReceiveTask extends AsyncTask<String, Void, String> {
-        private final WeakReference<Activity> activityReference;
-        private ManagedChannel channel;
-        boolean receiveBundles;
-        boolean statusComplete;
-
-        private GrpcReceiveTask(Activity activity) {
-            this.activityReference = new WeakReference<Activity>(activity);
-        }
-
-        @Override
-        protected String doInBackground(String... params) {
-            String host = params[0];
-            String portStr = params[1];
-            int port = Integer.parseInt(portStr);
-            channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
-            BundleServiceGrpc.BundleServiceStub stub = BundleServiceGrpc.newStub(channel);
-
-            receiveBundles = true;
-            statusComplete = true;
-            StreamObserver<BundleDownloadResponse> downloadObserver = new StreamObserver<BundleDownloadResponse>() {
-                FileOutputStream fileOutputStream = null;
-                OutputStream writer;
-
-                @Override
-                public void onNext(BundleDownloadResponse response) {
-                    Log.d(TAG, "onNext: called with "+ response.toString());
-                    if (response.hasBundleList()){
-                        Log.d(TAG, "Got List for deletion");
-                        List<String> toDelete = Arrays.asList(response.getBundleList().getBundleList().split(","));
-                        if ( !toDelete.isEmpty() ){
-                            File clientDir = new File(Receive_Directory);
-                            for (File bundle : clientDir.listFiles()){
-                                if (toDelete.contains(bundle.getName())){
-                                    Log.d(TAG, "Deleting file"+bundle.getName());
-                                    bundle.delete();
-                                }
-                            }
-                        } else {
-                            Log.d(TAG, "No Bundle to delete");
-                        }
-                    } else if (response.hasStatus()){
-                        Log.d(TAG, "Status found: terminating loop");
-                        receiveBundles = false;
-                    } else if(response.hasMetadata()){
-                        try {
-                            Log.d(TAG,"Downloading chunk of :"+response.getMetadata().getBid());
-                            writer = FileUtils.getFilePath(response, Receive_Directory);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    } else{
-                        try {
-                            FileUtils.writeFile(writer, response.getFile().getContent());
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-
-                }
-
-                @Override
-                public void onError(Throwable t) {
-                    Log.d(TAG, "Error downloading file: " + t.getMessage(), t);
-                    if (fileOutputStream != null) {
-                        try {
-                            fileOutputStream.close();
-                        } catch (IOException e) {
-                            Log.d(TAG, "Error closing output stream", e);
-                        }
-                    }
-                }
-
-                @Override
-                public void onCompleted() {
-                    FileUtils.closeFile(writer);
-                    Log.d(TAG, "File download complete");
-                    statusComplete = true;
-                }
-            };
-
-            while  (receiveBundles){
-                if(statusComplete){
-                    Log.d(TAG, "doInBackground: receiveBundles" + receiveBundles);
-                    String existingBundles = FileUtils.getFilesList(Receive_Directory);
-                    BundleDownloadRequest request = BundleDownloadRequest.newBuilder()
-                            .setTransportId(transportID)
-                            .setBundleList(existingBundles)
-                            .build();
-                    stub.downloadBundle(request, downloadObserver);
-                    statusComplete = false;
-                }
+    private Void sendTask(Exception thrown){
+        runOnUiThread(() ->{
+            if(thrown != null){
+                serverConnectStatus.append("Bundles upload failed.\n");
+                Log.e(TAG, "Failed bundle upload, exception: "+thrown.getMessage());
+            }else{
+                serverConnectStatus.append("Bundles uploaded successfully.\n");
             }
-            return "Complete";
-        }
+        });
 
-        @Override
-        protected void onPostExecute(String result) {
-            try {
-                channel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+        return null;
+    }
+
+    private Void receiveTask(Exception thrown){
+        runOnUiThread(() -> {
+            if(thrown != null){
+                serverConnectStatus.append("Bundles download failed.\n");
+                Log.e(TAG, "Failed bundle d, exception: "+thrown.getMessage());
+            }else{
+                serverConnectStatus.append("Bundles downloaded successfully.\n");
             }
-            Activity activity = activityReference.get();
-            if (activity == null) {
-                return;
-            }
-//            TextView resultText = (TextView) activity.findViewById(R.id.grpc_response_text);
-//            resultText.setText(result);
-        }
+        });
+
+        return null;
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Button sendBundleServerButton = findViewById(R.id.btn_connect_bundle_server);
+        startGRPCServerBtn = findViewById(R.id.btn_start_rpc_server);
+        stopGRPCServerBtn = findViewById(R.id.btn_stop_rpc_server);
+        domainInput = findViewById(R.id.domain_input);
+        portInput = findViewById(R.id.port_input);
+        serverConnectStatus = findViewById(R.id.server_connection_status);
+        connectServerBtn = findViewById(R.id.btn_connect_bundle_server);
+
+        // retrieve domain and port from shared preferences
+        // populate text inputs if data is retrieved
+        sharedPref = getSharedPreferences("server_endpoint", MODE_PRIVATE);
+        restoreDomainPort();
+
+
         String SERVER_BASE_PATH = this.getExternalFilesDir(null) + "/BundleTransmission";
         Receive_Directory = SERVER_BASE_PATH +"/client";
         Server_Directory = SERVER_BASE_PATH +"/server";
         wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle());
+        wifiDirectManager.initialize();
+
+        grpcServer = new RpcServer(this);
+        startRpcServer();
 
         // set up transport Id
         tidPath = getApplicationContext().getApplicationInfo().dataDir+"/transportIdentity.pub";
@@ -335,22 +319,20 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-//        findViewById(R.id.btn_create_group).setOnClickListener(view -> {
-//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-//                wifiDirectManager.createGroup("ddd","");
-//            }
-//        });
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                     MainActivity.PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION);
         }
 
-        findViewById(R.id.btn_start_rpc_server).setOnClickListener(v -> {
-            startRpcWorkerService();
+        // register network listeners
+        createAndRegisterConnectivityManager();
+
+        startGRPCServerBtn.setOnClickListener(v -> {
+            startRpcServer();
         });
 
-        findViewById(R.id.btn_stop_rpc_server).setOnClickListener(v -> {
-            stopRpcWorkerService();
+        stopGRPCServerBtn.setOnClickListener(v -> {
+            stopRpcServer();
         });
 
         findViewById(R.id.btn_clear_storage).setOnClickListener(v -> {
@@ -358,18 +340,42 @@ public class MainActivity extends AppCompatActivity {
             FileUtils.deleteBundles(Server_Directory);
         });
 
-        sendBundleServerButton.setOnClickListener(view -> {
-//                        new GrpcReceiveTask(MainActivity.this)
-//                    .execute(
-//                            "10.0.0.166",
-////                            "172.20.10.6",
-//                            "8080");
-//                send task
-            new GrpcSendTask(MainActivity.this)
-                    .execute(
-                            getString(R.string.bundle_server_host),
-//                            "172.20.10.6",
-                            "8080");
+        // connect to server
+        connectServerBtn.setOnClickListener(view -> {
+            connectToServer();
         });
+
+        // save the domain and port inputs
+        findViewById(R.id.save_domain_port).setOnClickListener(view -> {
+            saveDomainPort();
+            Toast.makeText(MainActivity.this, "Saved", Toast.LENGTH_SHORT).show();
+        });
+
+        // set saved domain and port to inputs
+        findViewById(R.id.restore_domain_port).setOnClickListener(view -> {
+            restoreDomainPort();
+
+        });
+    }
+
+    private void restoreDomainPort(){
+        domainInput.setText(sharedPref.getString("domain", ""));
+        portInput.setText(sharedPref.getString("port", ""));
+    }
+
+    private void saveDomainPort(){
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putString("domain", domainInput.getText().toString());
+        editor.putString("port", portInput.getText().toString());
+        editor.apply();
+    }
+
+    @Override
+    protected void onDestroy(){
+        super.onDestroy();
+
+        stopRpcServer();
+        //connectivityManager.unregisterNetworkCallback(serverConnectNetworkCallback);
+        executor.shutdown();
     }
 }

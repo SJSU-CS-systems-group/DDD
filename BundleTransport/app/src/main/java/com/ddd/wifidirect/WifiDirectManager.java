@@ -60,18 +60,28 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
      */
     public WifiDirectManager(Context context, Lifecycle lifeCycle) {
         this.context = context;
+        this.lifeCycle = lifeCycle;
+    }
+
+    public void initialize(){
+        Log.d(MainActivity.TAG, "Initializing wifidirectmanager...");
         this.initClient(this.context);
         this.registerIntents();
 
-        this.lifeCycle = lifeCycle;
         this.receiver = new WifiDirectBroadcastReceiver(this);
 
         this.lifeCycleObserver = new WifiDirectLifeCycleObserver(this);
         this.lifeCycle.addObserver(lifeCycleObserver);
 
-        this.discoveredPeers = new ArrayList<WifiP2pDevice>();
+        //this.discoverPeers();
+        // this.discoveredPeers = new ArrayList<WifiP2pDevice>();
+
+
         this.wifiDirectGroupHostIP = "";
         this.groupHostInfo ="";
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            this.createGroup("ddd_wifidirect", "password");
+        }
         this.isConnected = false;
     }
 
@@ -112,15 +122,18 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
     @SuppressLint("MissingPermission")
     public CompletableFuture<Boolean> discoverPeers() {
         CompletableFuture<Boolean> cFuture = new CompletableFuture<>();
+
         this.manager.discoverPeers(this.channel, new WifiP2pManager.ActionListener() {
 
             @Override
             public void onSuccess() {
+                Log.d(MainActivity.TAG, "discovering...");
                 cFuture.complete(true);
             }
 
             @Override
             public void onFailure(int reasonCode) {
+                Log.d(MainActivity.TAG, "Failed Discovery...");
                 cFuture.complete(false);
             }
         });
@@ -138,9 +151,11 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
      */
     @Override
     public void onPeersAvailable(WifiP2pDeviceList deviceList) {
+        Log.d(MainActivity.TAG, "Peers available...");
         List<WifiP2pDevice> devices = new ArrayList<>();
         Collection<WifiP2pDevice> foundDevices = deviceList.getDeviceList();
         devices.addAll(foundDevices);
+        //this.discoveredPeers = (ArrayList<WifiP2pDevice>) deviceList.getDeviceList();
 
         this.discoveredPeers = (ArrayList<WifiP2pDevice>) devices;
     }
@@ -151,25 +166,25 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
      */
     @RequiresApi(api = Build.VERSION_CODES.Q)
     @SuppressLint("MissingPermission")
-    public CompletableFuture<Boolean> createGroup(String networkName, String password) {
-        WifiP2pConfig config = this.buildGroupConfig(networkName,
-                password);
-        CompletableFuture<Boolean> cFuture = new CompletableFuture<>();
+    public void createGroup(String networkName, String password) {
+        WifiP2pConfig config = this.buildGroupConfig(networkName, password);
+        //CompletableFuture<Boolean> cFuture = new CompletableFuture<>();
         this.manager.createGroup(this.channel, config, new WifiP2pManager.ActionListener() {
 
             @Override
             public void onSuccess() {
-                cFuture.complete(true);
+                Log.d("wDebug","Created a group");
+                //cFuture.complete(true);
             }
 
             @Override
             public void onFailure(int reasonCode) {
 
                 Log.d("wDebug","Failed to create a group with reasonCode: " + reasonCode);
-                cFuture.complete(false);
+                //cFuture.complete(false);
             }
         });
-        return cFuture;
+        //return cFuture;
     }
 
     /**
