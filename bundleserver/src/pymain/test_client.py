@@ -15,7 +15,7 @@ def testConnection(url):
     stub = DTNCommunication_pb2_grpc.DTNCommunicationStub(channel)
 
     connection_data = DTNCommunication_pb2.ConnectionData(
-      appName="test",
+      appName="test4",
       url=url
     )
   
