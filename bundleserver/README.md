@@ -1,4 +1,14 @@
-mysql installation-
+Bundle Server (Java Spring)
+===========================
+
+Project Description
+-------------------
+Bundle Server is a Java Spring application that processes, stores, and distributes the uploaded bundles. Bundle Server is the component of the DDD system that runs entirely within a connected environment.
+
+INSTALLATION
+------------
+
+MSQL installation:
 
 download mysql zip
 run "mysqld --initialize --console" (only for the first time)
@@ -31,3 +41,5 @@ create table client_data_changed_table (
 );
 
 in the resources/application.yml file change the spring.datasource.password attribute to your mysql db password
+
+

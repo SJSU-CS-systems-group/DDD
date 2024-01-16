@@ -22,39 +22,36 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
-public class GrpcSendTask implements Runnable {
+public class GrpcSendTask {
     private final static String TAG = "dddTransport";
-    private Context context;
     private String host, serverDir, transportId;
     private int port;
     private ManagedChannel channel;
 
-    private Function<Exception, Void> callback;
 
-    public GrpcSendTask(Context context, String host, String port, String transportId, Function<Exception, Void> callback) {
+    public GrpcSendTask(String host, int port, String transportId, String serverDir) {
         Log.d(TAG, "initializing grpcsendtask...");
-        this.context = context;
         this.host = host;
-        this.port = Integer.parseInt(port);
+        this.port = port;
         this.transportId = transportId;
-        this.serverDir = this.context.getExternalFilesDir(null) + "/BundleTransmission/server";
-        this.callback = callback;
+        this.serverDir = serverDir;
     }
 
-    @Override
-    public void run() {
+    public Exception run(){
         Exception thrown = null;
         try {
             executeTask();
         } catch (Exception e) {
             thrown = e;
         }
-        callback.apply(thrown);
+
         try {
             postExecuteTask();
         } catch (InterruptedException e) {
             Log.e(TAG, "Failed to shutdown GrpcSendTask channel: " + e.getMessage());
         }
+
+        return thrown;
     }
 
     private void executeTask() throws IOException {
@@ -64,7 +61,7 @@ public class GrpcSendTask implements Runnable {
         BundleServiceGrpc.BundleServiceStub stub = BundleServiceGrpc.newStub(channel);
         StreamObserver<BundleUploadRequest> streamObserver = stub.uploadBundle(new BundleUploadObserver());
         File sendDir = new File(serverDir);
-
+        Log.d(TAG, "received the stream observer: "+streamObserver);
         //get transport ID
         if (sendDir.exists()) {
             File[] bundles = sendDir.listFiles();
