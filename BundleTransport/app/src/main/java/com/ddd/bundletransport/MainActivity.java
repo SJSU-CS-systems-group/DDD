@@ -2,8 +2,14 @@ package com.ddd.bundletransport;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkInfo;
+import android.net.NetworkRequest;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.os.AsyncTask;
@@ -87,8 +93,11 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
     private EditText domainInput;
     private EditText portInput;
     private RpcServer grpcServer;
-    private ExecutorService executor = Executors.newFixedThreadPool(2);;
+    private ExecutorService executor = Executors.newFixedThreadPool(1);;
     private TextView serverConnectStatus;
+    private Button connectServerBtn;
+    private ConnectivityManager connectivityManager;
+    private ConnectivityManager.NetworkCallback serverConnectNetworkCallback;
 
 
     @Override
@@ -103,7 +112,8 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         }
     }
 
-    private void startRpcWorkerService() {
+    // methods for managing grpc server
+    private void manageRequestedWifiDirectGroup(){
         CompletableFuture<WifiP2pGroup> completedFuture = wifiDirectManager.requestGroupInfo();
         completedFuture.thenApply((b) -> {
             Toast.makeText(this,
@@ -118,9 +128,25 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         });
     }
 
-    private void stopRpcWorkerService() {
-        WorkManager.getInstance(this).cancelUniqueWork(TAG);
-        Toast.makeText(this, "Stop Rpc Server", Toast.LENGTH_SHORT).show();
+    private void startRpcServer() {
+        executor.execute(() -> {
+            synchronized (grpcServer){
+                if(grpcServer.isShutdown()){
+                    manageRequestedWifiDirectGroup();
+                    grpcServer.startServer(this, PORT);
+                }
+            }
+        });
+    }
+
+    private void stopRpcServer() {
+        executor.execute(() -> {
+            synchronized (grpcServer){
+                if(!grpcServer.isShutdown()){
+                    grpcServer.shutdownServer();
+                }
+            }
+        });
     }
 
 
@@ -142,6 +168,82 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
                 stopGRPCServerBtn.setEnabled(false);
             }
         });
+    }
+
+    // utils
+    private void toggleBtnEnabled(Button btn, boolean enable){
+        runOnUiThread(() -> {
+            btn.setEnabled(enable);
+        });
+    }
+
+    // methods for managing bundle server requests
+    private Void connectToServerComplete(Void x){
+        toggleBtnEnabled(connectServerBtn, true);
+        return null;
+    }
+
+    private void connectToServer(){
+        toggleBtnEnabled(connectServerBtn, false);
+
+        serverDomain = domainInput.getText().toString();
+        serverPort = portInput.getText().toString();
+        if(!serverDomain.isEmpty() && !serverPort.isEmpty()){
+            Log.d(TAG, "Sending to "+serverDomain+":"+serverPort);
+
+            runOnUiThread(() -> {
+                serverConnectStatus.setText("Initiating server exchange to "+serverDomain+":"+serverPort+"...\n");
+            });
+
+            // run async using multi threading
+            executor.execute(new ServerManager(this.getExternalFilesDir(null), serverDomain, serverPort, transportID, this::sendTask, this::receiveTask, this::connectToServerComplete));
+
+        }else{
+            Toast.makeText(MainActivity.this, "Enter the domain and port", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void createAndRegisterConnectivityManager(){
+        connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkRequest networkRequest = new NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+                .build();
+
+        serverConnectNetworkCallback = new ConnectivityManager.NetworkCallback(){
+            @Override
+            public void onAvailable(Network network){
+                Log.d(TAG, "Available network: "+network.toString());
+                Log.d(TAG, "Initiating automatic connection to server");
+                connectToServer();
+            }
+
+            @Override
+            public void onLost(Network network){
+                Log.d(TAG, "Lost network connectivity");
+                toggleBtnEnabled(connectServerBtn, false);
+            }
+
+            @Override
+            public void onUnavailable(){
+                Log.d(TAG, "Unavailable network connectivity");
+                toggleBtnEnabled(connectServerBtn, false);
+            }
+
+            @Override
+            public void onBlockedStatusChanged(Network network, boolean blocked){
+                Log.d(TAG, "Blocked network connectivity");
+                toggleBtnEnabled(connectServerBtn, false);
+            }
+        };
+
+        connectivityManager.registerNetworkCallback(networkRequest, serverConnectNetworkCallback);
+
+        NetworkInfo activeNetwork = connectivityManager.getActiveNetworkInfo();
+        if (activeNetwork == null || !activeNetwork.isConnectedOrConnecting()){
+            toggleBtnEnabled(connectServerBtn, false);
+        }
     }
 
     private Void sendTask(Exception thrown){
@@ -176,10 +278,10 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         setContentView(R.layout.activity_main);
         startGRPCServerBtn = findViewById(R.id.btn_start_rpc_server);
         stopGRPCServerBtn = findViewById(R.id.btn_stop_rpc_server);
-        grpcServer = new RpcServer(this);
-
         domainInput = findViewById(R.id.domain_input);
         portInput = findViewById(R.id.port_input);
+        serverConnectStatus = findViewById(R.id.server_connection_status);
+        connectServerBtn = findViewById(R.id.btn_connect_bundle_server);
 
         // retrieve domain and port from shared preferences
         // populate text inputs if data is retrieved
@@ -192,6 +294,9 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         Server_Directory = SERVER_BASE_PATH +"/server";
         wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle());
         wifiDirectManager.initialize();
+
+        grpcServer = new RpcServer(this);
+        startRpcServer();
 
         // set up transport Id
         tidPath = getApplicationContext().getApplicationInfo().dataDir+"/transportIdentity.pub";
@@ -217,29 +322,15 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
                     MainActivity.PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION);
         }
 
-        startGRPCServerBtn.setOnClickListener(v -> {
-            executor.execute(() -> {
-                synchronized (grpcServer){
-                    if(grpcServer.isShutdown()){
-                        startRpcWorkerService();
-                        grpcServer.startServer(this, PORT);
-                    }
-                }
-            });
+        // register network listeners
+        createAndRegisterConnectivityManager();
 
-            //startRpcWorkerService();
+        startGRPCServerBtn.setOnClickListener(v -> {
+            startRpcServer();
         });
 
         stopGRPCServerBtn.setOnClickListener(v -> {
-
-            executor.execute(() -> {
-                synchronized (grpcServer){
-                    if(!grpcServer.isShutdown()){
-                        grpcServer.shutdownServer();
-                    }
-                }
-            });
-            //stopRpcWorkerService();
+            stopRpcServer();
         });
 
         findViewById(R.id.btn_clear_storage).setOnClickListener(v -> {
@@ -249,27 +340,8 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
 
 
         // connect to server
-        serverConnectStatus = findViewById(R.id.server_connection_status);
-        Button connectServerBtn = findViewById(R.id.btn_connect_bundle_server);
         connectServerBtn.setOnClickListener(view -> {
-            connectServerBtn.setEnabled(false);
-            serverDomain = domainInput.getText().toString();
-            serverPort = portInput.getText().toString();
-            if(!serverDomain.isEmpty() && !serverPort.isEmpty()){
-                Log.d(TAG, "Sending to "+serverDomain+":"+serverPort);
-
-                Toast.makeText(MainActivity.this, "Sending to "+serverDomain+":"+serverPort, Toast.LENGTH_SHORT).show();
-
-                serverConnectStatus.setText("Initiating server exchange...\n");
-
-                // run async using multi threading
-                executor.execute(new GrpcSendTask(this, serverDomain, serverPort, transportID, this::sendTask));
-                executor.execute(new GrpcReceiveTask(this, serverDomain, serverPort, transportID, this::receiveTask));
-
-            }else{
-                Toast.makeText(MainActivity.this, "Enter the domain and port", Toast.LENGTH_SHORT).show();
-            }
-            connectServerBtn.setEnabled(true);
+            connectToServer();
         });
 
         // save the domain and port inputs
@@ -299,18 +371,9 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
     @Override
     protected void onDestroy(){
         super.onDestroy();
-        ExecutorService executor = Executors.newFixedThreadPool(1);
 
-        executor.submit(() -> {
-            synchronized (grpcServer){
-                grpcServer.shutdownServer();
-            }
-        });
-        try {
-            executor.awaitTermination(5, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            Log.e(TAG, "Stop rpc server interrupedexception: "+e.getMessage());
-        }
+        stopRpcServer();
+        //connectivityManager.unregisterNetworkCallback(serverConnectNetworkCallback);
         executor.shutdown();
     }
 }
