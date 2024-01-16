@@ -59,7 +59,8 @@ public class GrpcReceiveTask {
 
         channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
         BundleServiceGrpc.BundleServiceStub stub = BundleServiceGrpc.newStub(channel);
-        Throwable[] thrown = new Throwable[1];
+        // using an array because it is set in the anonymous class below
+	Throwable[] thrown = new Throwable[1];
         receiveBundles = true;
         statusComplete = true;
 
