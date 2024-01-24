@@ -1,15 +1,52 @@
 package com.ddd.server.repository.entity;
 
-// @Table("sent_bundle_details")
+
+import java.util.UUID;
+
+import org.hibernate.annotations.GenericGenerator;
+
+import javax.persistence.*;
+import javax.validation.constraints.NotBlank;
+
+@Entity(name="SentBundleDetails")
+@Table(name = "sent_bundle_details")
 public class SentBundleDetails {
 
-  //  @Id
-  //  @Column("bundle_id")
+  @Id
+  @GeneratedValue(generator = "UUID")
+  @GenericGenerator(
+        name = "UUID",
+        strategy = "org.hibernate.id.UUIDGenerator"
+  ) 
+  @Column(
+    name="id",
+    updatable = false,
+    nullable = false
+  )
+  private UUID id;
+
+  @Column(
+    name = "bundle_id",
+    nullable = false,
+    columnDefinition = "TEXT"
+  )
+  @NotBlank
   private String bundleId;
 
+  @Column(
+    name = "client_id",
+    nullable = false,
+    columnDefinition = "TEXT"
+  )
+  @NotBlank
   private String clientId;
   
-  //  @Column("acked_bundle_id")
+  @Column(
+    name = "acked_bundle_id",
+    nullable = false,
+    columnDefinition = "TEXT"
+  )
+  @NotBlank
   private String ackedBundleId;
   
 
@@ -18,6 +55,14 @@ public class SentBundleDetails {
   public SentBundleDetails(String bundleId, String ackedBundleId) {
     this.bundleId = bundleId;
     this.ackedBundleId = ackedBundleId;
+  }
+
+  public String getId() {
+    return this.id.toString();
+  }
+
+  public void setId(String id) {
+    this.id = UUID.fromString(id);
   }
 
   public String getBundleId() {

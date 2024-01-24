@@ -1,15 +1,25 @@
 spring:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+    generate-ddl: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQL8Dialect
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306
+    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/dtn_server_db?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
     username: root
-    password: Triquenguyen@2702
+    password: mchougule478
     db-name: dtn_server_db
 
 server:
   port: 8081
 bundle-server:
-  bundle-store-root: "/Users/ngngo/OneDrive/Desktop/Data/"
+  bundle-store-root: "/Users/manaschougule/College/SJSU/DDD-server-storage/"
   bundle-store-shared: "${bundle-server.bundle-store-root}Shared"
   registered-app-ids: "${bundle-server.bundle-store-root}Shared/REGISTERED_APP_IDS.txt"
   bundle-transmission:

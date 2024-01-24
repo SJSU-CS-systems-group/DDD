@@ -1,20 +1,61 @@
 package com.ddd.server.repository.entity;
 
-// @Table("sent_adu_details")
+
+import java.util.UUID;
+
+import org.hibernate.annotations.GenericGenerator;
+
+import javax.persistence.*;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+
+@Entity(name="SentAduDetails")
+@Table(name="sent_adu_details")
 public class SentAduDetails {
 
-  private String id;
+  @Id
+  @GeneratedValue(generator = "UUID")
+  @GenericGenerator(
+        name = "UUID",
+        strategy = "org.hibernate.id.UUIDGenerator"
+  )  
+  @Column(
+    name="id",
+    updatable = false,
+    nullable = false
+  )
+  private UUID id;
 
-  //  @Column("bundle_id")
+  @Column(
+    name = "bundle_id",
+    nullable = false,
+    columnDefinition = "TEXT"
+  )
+  @NotBlank
   private String bundleId;
 
-  //  @Column("app_id")
+  @Column(
+    name = "app_id",
+    nullable = false,
+    columnDefinition = "TEXT"
+  )
+  @NotBlank
   private String appId;
 
-  //  @Column("adu_id_range_start")
+  @Column(
+    name = "adu_id_range_start",
+    nullable = false,
+    columnDefinition = "BIGINT"
+  )
+  @NotNull
   private Long aduIdRangeStart;
 
-  //  @Column("adu_id_range_end")
+  @Column(
+    name = "adu_id_range_end",
+    nullable = false,
+    columnDefinition = "BIGINT"
+  )
+  @NotNull
   private Long aduIdRangeEnd;
 
   public SentAduDetails() {}
@@ -27,11 +68,11 @@ public class SentAduDetails {
   }
 
   public String getId() {
-    return this.id;
+    return this.id.toString();
   }
 
   public void setId(String id) {
-    this.id = id;
+    this.id = UUID.fromString(id);
   }
 
   public String getBundleId() {
