@@ -1,17 +1,20 @@
 package com.ddd.server.repository;
 
 import java.util.List;
-import java.util.Optional;
+
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.stereotype.Repository;
+
 import com.ddd.server.repository.entity.SentAduDetails;
 
-public interface SentAduDetailsRepository
-// extends CrudRepository<SentAduDetails, String>
+@Repository
+public interface SentAduDetailsRepository extends CrudRepository<SentAduDetails, String>
 {
-  public Optional<SentAduDetails> findById(String id);
+  // public Optional<SentAduDetails> findById(String id);
 
-  public List<SentAduDetails> findByBundleId(String bundleId);
+  List<SentAduDetails> findByBundleId(String bundleId);
 
-  public void save(SentAduDetails record);
+  // public void save(SentAduDetails record);
 
-  public void deleteByBundleId(String bundleId);
+  void deleteByBundleId(String bundleId);
 }

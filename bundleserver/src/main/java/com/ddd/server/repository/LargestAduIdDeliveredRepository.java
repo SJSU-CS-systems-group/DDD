@@ -1,10 +1,12 @@
 package com.ddd.server.repository;
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 import com.ddd.server.repository.entity.LargestAduIdDelivered;
 
-public interface LargestAduIdDeliveredRepository
-//    extends CrudRepository<LargestAduIdDelivered, String>
+@Repository
+public interface LargestAduIdDeliveredRepository extends CrudRepository<LargestAduIdDelivered, String>
 {
 
   //  @Query(
@@ -13,7 +15,5 @@ public interface LargestAduIdDeliveredRepository
   //  public Optional<LargestAduIdDelivered> findByClientIdAndAppId(
   //      @Param("clientId") String clientId, @Param("appId") String appId);
 
-  public Optional<LargestAduIdDelivered> findByClientIdAndAppId(String clientId, String appId);
-
-  public void save(LargestAduIdDelivered record);
+  Optional<LargestAduIdDelivered> findByClientIdAndAppId(String clientId, String appId);
 }

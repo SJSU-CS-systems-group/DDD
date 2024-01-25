@@ -1,19 +1,51 @@
 package com.ddd.server.repository.entity;
 
-// @Table("largest_adu_id_delivered")
+import java.util.UUID;
+
+import org.hibernate.annotations.UuidGenerator;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
+@Entity(name="LargestAduIdDelivered")
+@Table(name="largest_adu_id_delivered")
 public class LargestAduIdDelivered {
 
-  //  @Id
-  //  @Column("id")
-  private String id;
+  @Id
+  @UuidGenerator
+  @Column(
+    name="id",
+    updatable = false,
+    nullable = false
+   )
+  private UUID id;
 
-  //  @Column("client_id")
+  @Column(
+    name = "client_id",
+    nullable = false,
+    columnDefinition = "TEXT"
+  )
+  @NotBlank
   private String clientId;
 
-  //  @Column("app_id")
+  @Column(
+    name = "app_id",
+    nullable = false,
+    columnDefinition = "TEXT"
+  )
+  @NotBlank
   private String appId;
 
-  //  @Column("adu_id")
+  @Column(
+    name = "adu_id",
+    nullable = false,
+    columnDefinition = "BIGINT"
+  )
+  @NotNull
   private Long aduId;
 
   public LargestAduIdDelivered() {}
@@ -25,11 +57,11 @@ public class LargestAduIdDelivered {
   }
 
   public String getId() {
-    return this.id;
+    return this.id.toString();
   }
 
   public void setId(String id) {
-    this.id = id;
+    this.id = UUID.fromString(id);
   }
 
   public String getClientId() {

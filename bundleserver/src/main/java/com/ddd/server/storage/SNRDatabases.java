@@ -18,11 +18,11 @@ public class SNRDatabases {
 
     public SNRDatabases(String url, String uname, String password, String dbName) throws SQLException
     {
-        this.url = url;
+        // this.url = url;
         this.uname = uname;
         this.password = password;
         this.dbName = dbName;
-        this.dbURL = url + "/" + dbName + "?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC";
+        this.dbURL = url;
 
 //        createDatabase();
     }
