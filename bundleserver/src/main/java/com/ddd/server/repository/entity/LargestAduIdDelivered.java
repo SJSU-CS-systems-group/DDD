@@ -2,22 +2,21 @@ package com.ddd.server.repository.entity;
 
 import java.util.UUID;
 
-import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.UuidGenerator;
 
-import javax.persistence.*;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 @Entity(name="LargestAduIdDelivered")
 @Table(name="largest_adu_id_delivered")
 public class LargestAduIdDelivered {
 
   @Id
-  @GeneratedValue(generator = "UUID")
-  @GenericGenerator(
-        name = "UUID",
-        strategy = "org.hibernate.id.UUIDGenerator"
-  ) 
+  @UuidGenerator
   @Column(
     name="id",
     updatable = false,

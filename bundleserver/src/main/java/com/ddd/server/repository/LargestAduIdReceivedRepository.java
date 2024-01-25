@@ -14,7 +14,7 @@ public interface LargestAduIdReceivedRepository extends CrudRepository<LargestAd
   //  @Query("select client_id, app_id, adu_id from largest_adu_id_received")
   //  public Optional<LargestAduIdReceived> findByClientIdAndAppId(String clientId, String appId);
 
-  public Optional<LargestAduIdReceived> findByClientIdAndAppId(String clientId, String appId);
+  Optional<LargestAduIdReceived> findByClientIdAndAppId(String clientId, String appId);
 
   // public void save(LargestAduIdReceived record);
 }

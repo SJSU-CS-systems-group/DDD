@@ -10,7 +10,7 @@ import com.ddd.server.repository.entity.LastBundleIdSent;
 @Repository
 public interface LastBundleIdSentRepository extends CrudRepository<LastBundleIdSent, String>
 {
-  public Optional<LastBundleIdSent> findByClientId(String clientId);
+  Optional<LastBundleIdSent> findByClientId(String clientId);
 
   // public void save(LastBundleIdSent record);
 }

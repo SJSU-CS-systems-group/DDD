@@ -16,7 +16,7 @@ public interface SentBundleDetailsRepository extends CrudRepository<SentBundleDe
   //
   //  public void deleteByBundleId(String bundleId);
 
-  public Optional<SentBundleDetails> findByBundleId(String bundleId);
+  Optional<SentBundleDetails> findByBundleId(String bundleId);
 
   // public void save(SentBundleDetails sentBundleDetails);
 }

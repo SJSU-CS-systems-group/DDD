@@ -10,7 +10,7 @@ import com.ddd.server.repository.entity.LargestBundleIdReceived;
 @Repository
 public interface LargestBundleIdReceivedRepository extends CrudRepository<LargestBundleIdReceived, String>
 {
-  public Optional<LargestBundleIdReceived> findByClientId(String clientId);
+  Optional<LargestBundleIdReceived> findByClientId(String clientId);
 
   // public void save(LargestBundleIdReceived record);
 }

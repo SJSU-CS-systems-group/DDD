@@ -3,21 +3,20 @@ package com.ddd.server.repository.entity;
 
 import java.util.UUID;
 
-import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.UuidGenerator;
 
-import javax.persistence.*;
-import javax.validation.constraints.NotBlank;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
 
 @Entity(name="SentBundleDetails")
 @Table(name = "sent_bundle_details")
 public class SentBundleDetails {
 
   @Id
-  @GeneratedValue(generator = "UUID")
-  @GenericGenerator(
-        name = "UUID",
-        strategy = "org.hibernate.id.UUIDGenerator"
-  ) 
+  @UuidGenerator
   @Column(
     name="id",
     updatable = false,

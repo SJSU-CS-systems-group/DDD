@@ -44,4 +44,4 @@ bundle-server:
     data-store-adaptor:
       app-data-root: "${bundle-server.bundle-store-root}"
   bundle-security:
-    server-key-path: "${bundle-server.bundle-store-root}BundleSecurity/Keys/Server"
+    server-key-path: "${bundle-server.bundle-store-root}BundleSecurity/Keys/Server/Server_Keys"
