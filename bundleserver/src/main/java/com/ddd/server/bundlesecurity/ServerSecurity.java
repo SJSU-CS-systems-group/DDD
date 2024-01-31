@@ -17,8 +17,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Stream;
 
-import javax.websocket.EncodeException;
-
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
