@@ -60,6 +60,8 @@ public class ServerRouting {
 
         database = new SNRDatabases(url, uname, password, dbName);
 
+        System.out.println("Create ServerRoutingTable");
+
         String dbTableCreateQuery = "CREATE TABLE " + dbTableName + " " +
                 "(transportID VARCHAR(256) not NULL," +
                 "clientID VARCHAR(256) not NULL," +

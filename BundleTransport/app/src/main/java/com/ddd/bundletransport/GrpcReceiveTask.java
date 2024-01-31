@@ -21,47 +21,46 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
-public class GrpcReceiveTask implements Runnable {
+public class GrpcReceiveTask {
     private final static String TAG = "dddTransport";
-    private Context context;
     private String host, receiveDir, transportId;
     private int port;
     private boolean receiveBundles, statusComplete;
     private ManagedChannel channel;
-    private Function<Exception, Void> callback;
 
-    public GrpcReceiveTask(Context context, String host, String port, String transportId, Function<Exception, Void> callback) {
+    public GrpcReceiveTask(String host, int port, String transportId, String receiveDir) {
         Log.d(TAG, "initializing grpcreceivetask...");
-        this.context = context;
         this.host = host;
-        this.port = Integer.parseInt(port);
+        this.port = port;
         this.transportId = transportId;
-        this.receiveDir = this.context.getExternalFilesDir(null) + "/BundleTransmission/client";
-        this.callback = callback;
+        this.receiveDir = receiveDir;
     }
 
-    @Override
-    public void run() {
+    public Exception run() {
         Exception thrown = null;
         try {
             executeTask();
+            Log.d(TAG, "Executed receive task");
         } catch (Exception e) {
             thrown = e;
         }
-        callback.apply(thrown);
+
         try {
             postExecuteTask();
         } catch (InterruptedException e) {
             Log.e(TAG, "Failed to shutdown GrpcReceiveTask channel: " + e.getMessage());
         }
+
+        return thrown;
     }
 
-    private void executeTask() {
+    private void executeTask() throws Exception {
         Log.d(TAG, "executing grpcreceivetask...");
 
         channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
         BundleServiceGrpc.BundleServiceStub stub = BundleServiceGrpc.newStub(channel);
-
+        // using an array because it is set in the anonymous class below
+	Throwable[] thrown = new Throwable[1];
         receiveBundles = true;
         statusComplete = true;
 
@@ -111,13 +110,14 @@ public class GrpcReceiveTask implements Runnable {
             @Override
             public void onError(Throwable t) {
                 Log.e(TAG, "Error downloading file: " + t.getMessage(), t);
+                receiveBundles = false;
+                thrown[0] = t;
                 if (fileOutputStream != null) {
                     try {
                         fileOutputStream.close();
                     } catch (IOException e) {
                         Log.e(TAG, "/GrpcReceiveTask.java -> executeTask() -> onError() IOException: " + e.getMessage());
-                    } catch (Exception e) {
-                        Log.e(TAG, "/GrpcReceiveTask.java -> executeTask() -> onError() Exception: " + e.getMessage());
+
                     }
                 }
             }
@@ -134,20 +134,22 @@ public class GrpcReceiveTask implements Runnable {
             if (statusComplete) {
                 Log.d(TAG, "/GrpcReceiveTask.java -> executeTask() receiveBundles = " + receiveBundles);
 
-                try {
                     String existingBundles = FileUtils.getFilesList(receiveDir);
                     BundleDownloadRequest request = BundleDownloadRequest
                             .newBuilder()
                             .setTransportId(transportId)
                             .setBundleList(existingBundles)
                             .build();
+
                     stub.downloadBundle(request, downloadObserver);
+
                     Log.d(TAG, "Receive task complete");
                     statusComplete = false;
-                } catch (Exception e) {
-                    Log.e(TAG, "/GrpcReceiveTask.java -> executeTask() Exception: " + e.getMessage());
-                }
             }
+        }
+        Log.d(TAG, "Error thrown: "+thrown[0]);
+        if(thrown[0] != null){
+            throw new Exception(thrown[0].getMessage());
         }
     }
 

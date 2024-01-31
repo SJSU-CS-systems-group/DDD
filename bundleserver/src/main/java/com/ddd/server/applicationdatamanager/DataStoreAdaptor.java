@@ -12,6 +12,8 @@ import com.ddd.server.api.DTNAdapterClient;
 import com.ddd.server.storage.MySQLConnection;
 import com.ddd.utils.FileStoreHelper;
 import edu.sjsu.dtn.adapter.communicationservice.AppData;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 /*
  * SendFileStoreHelper - store data that we get from adapter servers
@@ -44,8 +46,11 @@ public class DataStoreAdaptor {
     client.PrepareData(clientId);
   }
 
+//  @Autowired
+//  MySQLConnection mysql;
+
   // get IP address and port for application adaptor server from database
-  private static String getAppAdapterAddress(String appId) {
+  private String getAppAdapterAddress(String appId) {
     try {
       MySQLConnection mysql = new MySQLConnection();
       Connection con = mysql.GetConnection();
