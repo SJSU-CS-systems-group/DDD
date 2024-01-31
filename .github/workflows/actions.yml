@@ -4,26 +4,7 @@ on:
     branches: main
 
 jobs:
-  build-bundle-client:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Setup gradle
-      uses: gradle/gradle-build-action@v2
-
-    - name: Setup JDK 17
-      uses: actions/setup-java@v3
-      with: 
-        java-version: '17'
-        distribution: 'temurin'
-
-    - name: Run gradle build on BundleClient
-      working-directory: ./BundleClient
-      run: ./gradlew build
-
-  # build-bundle-transport:
+  # build-bundle-client:
   #   runs-on: ubuntu-latest
   #   steps:
   #   - name: Checkout repository
@@ -38,9 +19,28 @@ jobs:
   #       java-version: '17'
   #       distribution: 'temurin'
 
-  #   - name: Run gradle build on BundleTransport
-  #     working-directory: ./BundleTransport
+  #   - name: Run gradle build on BundleClient
+  #     working-directory: ./BundleClient
   #     run: ./gradlew build
+
+  build-bundle-transport:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup gradle
+      uses: gradle/gradle-build-action@v2
+
+    - name: Setup JDK 17
+      uses: actions/setup-java@v3
+      with: 
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Run gradle build on BundleTransport
+      working-directory: ./BundleTransport
+      run: ./gradlew build
 
   build-bundle-server:
     runs-on: ubuntu-latest
