@@ -4,24 +4,24 @@ on:
     branches: main
 
 jobs:
-  # build-bundle-client:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #   - name: Checkout repository
-  #     uses: actions/checkout@v4
+  build-bundle-client:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
       
-  #   - name: Setup gradle
-  #     uses: gradle/gradle-build-action@v2
+    - name: Setup gradle
+      uses: gradle/gradle-build-action@v2
 
-  #   - name: Setup JDK 17
-  #     uses: actions/setup-java@v3
-  #     with: 
-  #       java-version: '17'
-  #       distribution: 'temurin'
+    - name: Setup JDK 17
+      uses: actions/setup-java@v3
+      with: 
+        java-version: '17'
+        distribution: 'temurin'
 
-  #   - name: Run gradle build on BundleClient
-  #     working-directory: ./BundleClient
-  #     run: ./gradlew build
+    - name: Run gradle build on BundleClient
+      working-directory: ./BundleClient
+      run: ./gradlew build
 
   build-bundle-transport:
     runs-on: ubuntu-latest
