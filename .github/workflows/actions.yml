@@ -4,7 +4,30 @@ on:
     branches: main
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    # permissions:
+    #   pull-requests: read
+    outputs:
+      client: ${{ steps.filter.outputs.client }}
+      transport: ${{ steps.filter.outputs.transport }}
+      server: ${{ steps.filter.outputs.server }}
+    steps:
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with: 
+          filters: |
+            client:
+              - 'BundleClient/**'
+            transport:
+              - 'BundleTransport/**'
+            server:
+              - 'bundleserver/**'
+
+  # Github Action to Compile BundleClient
   build-bundle-client:
+    needs: changes
+    if: ${{ needs.changes.outputs.client == 'true' }}
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
@@ -23,7 +46,10 @@ jobs:
       working-directory: ./BundleClient
       run: ./gradlew build
 
+  # Github Action to Compile BundleTransport
   build-bundle-transport:
+    needs: changes
+    if: ${{ needs.changes.outputs.transport == 'true' }}
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
@@ -42,7 +68,10 @@ jobs:
       working-directory: ./BundleTransport
       run: ./gradlew build
 
+  # Github Action to Compile bundleserver
   build-bundle-server:
+    needs: changes
+    if: ${{ needs.changes.outputs.server == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
