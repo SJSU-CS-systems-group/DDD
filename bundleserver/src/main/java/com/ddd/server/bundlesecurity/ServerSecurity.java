@@ -15,13 +15,14 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Stream;
 
-import javax.websocket.EncodeException;
-
+import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.InvalidMessageException;
+import org.whispersystems.libsignal.LegacyMessageException;
+import org.whispersystems.libsignal.NoSessionException;
 import org.whispersystems.libsignal.SessionCipher;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.ecc.Curve;
@@ -35,7 +36,6 @@ import org.whispersystems.libsignal.ratchet.RatchetingSession;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SessionState;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
-import org.whispersystems.libsignal.util.guava.Optional;
 import com.ddd.server.bundlesecurity.SecurityExceptions.AESAlgorithmException;
 import com.ddd.server.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
 import com.ddd.server.bundlesecurity.SecurityExceptions.EncodingException;
@@ -43,6 +43,7 @@ import com.ddd.server.bundlesecurity.SecurityExceptions.IDGenerationException;
 import com.ddd.server.bundlesecurity.SecurityExceptions.InvalidClientIDException;
 import com.ddd.server.bundlesecurity.SecurityExceptions.InvalidClientSessionException;
 import com.ddd.server.bundlesecurity.SecurityExceptions.ServerIntializationException;
+import com.ddd.server.bundlesecurity.SecurityExceptions.SignatureVerificationException;
 import com.ddd.server.bundlesecurity.SecurityUtils.ClientSession;
 
 public class ServerSecurity {
@@ -69,7 +70,6 @@ public class ServerSecurity {
     private ServerSecurity(String serverRootPath) throws ServerIntializationException
     {
         clientMap  = new HashMap<>();
-
         String serverKeyPath = serverRootPath + File.separator + SecurityUtils.SERVER_KEY_PATH;
 
             try {
@@ -118,10 +118,10 @@ public class ServerSecurity {
      */
     private void loadKeysfromFiles(String serverKeyPath) throws FileNotFoundException, IOException, InvalidKeyException, EncodingException
     {
-        byte[] identityKey = SecurityUtils.readFromFile(serverKeyPath + File.separator + "serverIdentity.pvt");
+        byte[] identityKey = SecurityUtils.readFromFile(serverKeyPath + File.separator + SecurityUtils.SERVER_IDENTITY_PRIVATE_KEY);
         ourIdentityKeyPair = new IdentityKeyPair(identityKey);
 
-        byte[] signedPreKeyPvt = SecurityUtils.readFromFile(serverKeyPath + File.separator + "serverSignedPreKey.pvt");
+        byte[] signedPreKeyPvt = SecurityUtils.readFromFile(serverKeyPath + File.separator + SecurityUtils.SERVER_SIGNEDPRE_PRIVATE_KEY);
         byte[] signedPreKeyPub = SecurityUtils.decodePublicKeyfromFile(serverKeyPath + File.separator + SecurityUtils.SERVER_SIGNEDPRE_KEY);
 
         ECPublicKey signedPreKeyPublicKey = Curve.decodePoint(signedPreKeyPub, 0);
@@ -129,7 +129,7 @@ public class ServerSecurity {
 
         ourSignedPreKey = new ECKeyPair(signedPreKeyPublicKey, signedPreKeyPrivateKey);
 
-        byte[] ratchetKeyPvt = SecurityUtils.readFromFile(serverKeyPath + File.separator + "serverRatchetKey.pvt");
+        byte[] ratchetKeyPvt = SecurityUtils.readFromFile(serverKeyPath + File.separator + SecurityUtils.SERVER_RATCHET_PRIVATE_KEY);
         byte[] ratchetKeyPub = SecurityUtils.decodePublicKeyfromFile(serverKeyPath + File.separator + SecurityUtils.SERVER_RATCHET_KEY);
 
         ECPublicKey ratchetKeyPublicKey = Curve.decodePoint(ratchetKeyPub, 0);
@@ -141,15 +141,15 @@ public class ServerSecurity {
     /* TODO: Change to keystore */
     private void writePrivateKeys(String path) throws FileNotFoundException, IOException
     {
-        try (FileOutputStream stream = new FileOutputStream(path + File.separator + "serverIdentity.pvt")) {
+        try (FileOutputStream stream = new FileOutputStream(path + File.separator + SecurityUtils.SERVER_IDENTITY_PRIVATE_KEY)) {
             stream.write(ourIdentityKeyPair.serialize());
         }
 
-        try (FileOutputStream stream = new FileOutputStream(path + File.separator + "serverSignedPreKey.pvt")) {
+        try (FileOutputStream stream = new FileOutputStream(path + File.separator + SecurityUtils.SERVER_SIGNEDPRE_PRIVATE_KEY)) {
             stream.write(ourSignedPreKey.getPrivateKey().serialize());
         }
 
-        try (FileOutputStream stream = new FileOutputStream(path + File.separator + "serverRatchetKey.pvt")) {
+        try (FileOutputStream stream = new FileOutputStream(path + File.separator + SecurityUtils.SERVER_RATCHET_PRIVATE_KEY)) {
             stream.write(ourRatchetKey.getPrivateKey().serialize());
         }
     }
@@ -328,7 +328,7 @@ public class ServerSecurity {
         return singleServerInstance;
     }
 
-    public void decrypt(String bundlePath, String decryptedPath) throws IOException, InvalidClientSessionException
+    public void decrypt(String bundlePath, String decryptedPath) throws IOException, InvalidClientSessionException, InvalidMessageException, DuplicateMessageException, LegacyMessageException, NoSessionException, SignatureVerificationException
     {
         ClientSession client = getClientSessionFromFile(bundlePath);
         String payloadPath   = bundlePath + File.separator + SecurityUtils.PAYLOAD_DIR;
@@ -343,39 +343,33 @@ public class ServerSecurity {
         System.out.println(decryptedFile);
         int fileCount = new File(payloadPath).list().length;
 
-        try {
-                for (int i = 1; i <= fileCount; ++i) {
-                    String payloadName      = SecurityUtils.PAYLOAD_FILENAME + String.valueOf(i);
-                    String signatureFile    = signPath + File.separator + payloadName + SecurityUtils.SIGNATURE_FILENAME;
+        for (int i = 1; i <= fileCount; ++i) {
+            String payloadName      = SecurityUtils.PAYLOAD_FILENAME + String.valueOf(i);
+            String signatureFile    = signPath + File.separator + payloadName + SecurityUtils.SIGNATURE_FILENAME;
 
-                    byte[] encryptedData = SecurityUtils.readFromFile(payloadPath + File.separator + payloadName);
-                    byte[] serverDecryptedMessage  = client.cipherSession.decrypt(new SignalMessage (encryptedData));
-                    updateSessionRecord(client);
-                    try (FileOutputStream stream = new FileOutputStream(decryptedFile, true)) {
-                        stream.write(serverDecryptedMessage);
-                    }
-                    System.out.printf("[SEC]:Decrypted Size = %d\n", serverDecryptedMessage.length);
+            byte[] encryptedData = SecurityUtils.readFromFile(payloadPath + File.separator + payloadName);
+            byte[] serverDecryptedMessage  = client.cipherSession.decrypt(new SignalMessage (encryptedData));
+            updateSessionRecord(client);
+            try (FileOutputStream stream = new FileOutputStream(decryptedFile, true)) {
+                stream.write(serverDecryptedMessage);
+            }
+            System.out.printf("[SEC]:Decrypted Size = %d\n", serverDecryptedMessage.length);
 
-                    if (SecurityUtils.verifySignature(serverDecryptedMessage, client.IdentityKey.getPublicKey(), signatureFile)) {
-                        System.out.println("[SEC]:Verified Signature!");
-                    } else {
-                        // Failed to verify sign, delete bundle and return
-                        System.out.println("[SEC]:Invalid Signature ["+ payloadName +"], Aborting bundle "+ bundleID);
+            if (SecurityUtils.verifySignature(serverDecryptedMessage, client.IdentityKey.getPublicKey(), signatureFile)) {
+                System.out.println("[SEC]:Verified Signature!");
+            } else {
+                // Failed to verify sign, delete bundle and return
+                System.out.println("[SEC]:Invalid Signature ["+ payloadName +"], Aborting bundle "+ bundleID);
 
-                        try {
-                            Files.deleteIfExists(Paths.get(decryptedFile));
-                        }
-                        catch (Exception e) {
-                            System.out.printf("[SEC] Error: Failed to delete decrypted file [%s]", decryptedFile);
-                            System.out.println(e);
-                        }
-                    }
+                try {
+                    Files.deleteIfExists(Paths.get(decryptedFile));
                 }
-        } catch (Exception e) {
-              System.out.println("[SEC]: Failed to Decrypt Client's Message\n" + e);
-            e.printStackTrace();
+                catch (Exception e) {
+                    System.out.printf("[SEC] Error: Failed to delete decrypted file [%s]", decryptedFile);
+                    System.out.println(e);
+                }
+            }
         }
-        return;
     }
 
     public String[] encrypt(String toBeEncPath, String encPath, String bundleID, String clientID) throws InvalidClientSessionException, BundleIDCryptographyException, IOException, InvalidKeyException, EncodingException

@@ -65,7 +65,10 @@ public class SecurityUtils {
     
     public static final String SERVER_IDENTITY_KEY  = "server_identity.pub";
     public static final String SERVER_SIGNEDPRE_KEY = "server_signed_pre.pub";
-    public static final String SERVER_RATCHET_KEY   = "server_ratchet.pub";
+    public static final String SERVER_RATCHET_KEY = "server_ratchet.pub";
+    public static final String SERVER_IDENTITY_PRIVATE_KEY = "serverIdentity.pvt";
+    public static final String SERVER_SIGNEDPRE_PRIVATE_KEY = "serverSignedPreKey.pvt";
+    public static final String SERVER_RATCHET_PRIVATE_KEY = "serverRatchetKey.pvt";
 
     public static final int CHUNKSIZE  = 1024 * 1024; /* 1MB */
     public static final int ITERATIONS = 65536;

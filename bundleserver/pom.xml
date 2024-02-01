@@ -31,6 +31,7 @@
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
+			<version>1.18.30</version>
 			<optional>true</optional>
 		</dependency>
 		<dependency>
@@ -125,6 +126,11 @@
             <artifactId>mysql-connector-j</artifactId>
 			<version>8.3.0</version>
         </dependency>
+		<dependency>
+				<groupId>info.picocli</groupId>
+				<artifactId>picocli-spring-boot-starter</artifactId>
+				<version>4.7.5</version>
+		</dependency>
 	</dependencies>
 	<dependencyManagement>
 		<dependencies>
