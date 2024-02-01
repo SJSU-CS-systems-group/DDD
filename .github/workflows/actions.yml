@@ -24,6 +24,7 @@ jobs:
               - 'BundleTransport/**'
             server:
               - 'bundleserver/**'
+          initial-fetch-depth: 1
 
   # Github Action to Compile BundleClient
   build-bundle-client:
