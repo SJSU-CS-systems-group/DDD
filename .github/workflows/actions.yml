@@ -1,14 +1,15 @@
 name: Build Modules
+# Runs workflow only when pull requests are made to 
+# the 'main' branch
 on:
   pull_request:
     branches: main
 
-# test comment <-- REMOVE LATER
 jobs:
+  # Github Action to detect file changes between 
+  # main branch and pull request branch
   changes:
     runs-on: ubuntu-latest
-    # permissions:
-    #   pull-requests: read
     outputs:
       client: ${{ steps.filter.outputs.client }}
       transport: ${{ steps.filter.outputs.transport }}
@@ -17,6 +18,7 @@ jobs:
       - uses: dorny/paths-filter@v3
         id: filter
         with: 
+          # Detect any changes to the following folders
           filters: |
             client:
               - 'BundleClient/**'
@@ -24,11 +26,12 @@ jobs:
               - 'BundleTransport/**'
             server:
               - 'bundleserver/**'
-          initial-fetch-depth: 1
+
 
   # Github Action to Compile BundleClient
   build-bundle-client:
     needs: changes
+    # Compile BundleClient only if files were changed here
     if: ${{ needs.changes.outputs.client == 'true' }}
     runs-on: ubuntu-latest
     steps:
@@ -48,9 +51,11 @@ jobs:
       working-directory: ./BundleClient
       run: ./gradlew build
 
+
   # Github Action to Compile BundleTransport
   build-bundle-transport:
     needs: changes
+    # Compile BundleTransport only if files were changed here
     if: ${{ needs.changes.outputs.transport == 'true' }}
     runs-on: ubuntu-latest
     steps:
@@ -70,9 +75,11 @@ jobs:
       working-directory: ./BundleTransport
       run: ./gradlew build
 
+
   # Github Action to Compile bundleserver
   build-bundle-server:
     needs: changes
+    # Compile bundleserver only if files were changed here
     if: ${{ needs.changes.outputs.server == 'true' }}
     runs-on: ubuntu-latest
     steps:
