@@ -14,7 +14,7 @@ public class RegisteredAppAdapter {
             nullable = false,
             columnDefinition = "VARCHAR(100)"
     )
-    private int appId;
+    private String appId;
 
     @Column(
             name = "address",
@@ -23,18 +23,18 @@ public class RegisteredAppAdapter {
     )
     private String address;
 
-    public RegisteredAppAdapter(int appId, String address) {
+    public RegisteredAppAdapter(String appId, String address) {
         this.appId = appId;
         this.address = address;
     }
 
     public RegisteredAppAdapter() {}
 
-    public int getAppId() {
+    public String getAppId() {
         return appId;
     }
 
-    public void setAppId(int appId) {
+    public void setAppId(String appId) {
         this.appId = appId;
     }
 
