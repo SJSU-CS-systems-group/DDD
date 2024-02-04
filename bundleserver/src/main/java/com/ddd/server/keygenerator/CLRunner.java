@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+import com.ddd.server.keygenerator.commands.DecodePublicKey;
 import com.ddd.server.keygenerator.commands.GenerateKeys;
 
 import picocli.CommandLine;
@@ -17,6 +18,9 @@ public class CLRunner implements CommandLineRunner {
     @Autowired
     GenerateKeys generateKeys;
 
+    @Autowired
+    DecodePublicKey decodePublicKey;
+
     @Override
     public void run(String... args) throws Exception {
         // run picocli impl
@@ -28,6 +32,8 @@ public class CLRunner implements CommandLineRunner {
         
         if (command.equals("generate-keys")) {
             new CommandLine(generateKeys, factory).execute(args);
+        } else if (command.equals("decode-pub-key")) {
+            new CommandLine(decodePublicKey, factory).execute(args);
         }
     }
 }

@@ -19,7 +19,7 @@ import picocli.CommandLine.Parameters;
 
 @Component
 @CommandLine.Command(name = "generate-keys", description = "Generate pair of EC keys")
-public class GenerateKeys implements Callable<Integer> {
+public class GenerateKeys implements Callable<Void> {
     private final String PUB_KEY_HEADER = "-----BEGIN EC PUBLIC KEY-----";
     private final String PUB_KEY_FOOTER = "-----END EC PUBLIC KEY-----";
     private final String PVT_KEY_HEADER = "-----BEGIN EC PRIVATE KEY-----";
@@ -28,26 +28,36 @@ public class GenerateKeys implements Callable<Integer> {
     @Value("${bundle-server.bundle-security.server-serverkeys-path}")
     private String storePath;
 
-    private IdentityKeyPair keyPair;
     private String base64PrivateKey;
     private String base64PublicKey;
 
     @Parameters(arity = "1", index = "0")
     String command;
 
+    @Option(names = "-type", defaultValue="identity", description = "Type of key pair: identity, ratchet, signedpre")
+    private String type;
+
     @Option(names = "-pvtout", description = "Private key file name")
     private String privateKeyOutputFileName;
 
-    @Option(names = "-pubout", description = "Private key file name")
+    @Option(names = "-pubout", description = "Public key file name")
     private String publicKeyOutputFileName;
 
-    private void createIdentityKeyPair() {
-        System.out.println("Generating keys...");
-        ECKeyPair identityKeyPair = Curve.generateKeyPair();
-        keyPair = new IdentityKeyPair(new IdentityKey(identityKeyPair.getPublicKey()),
-                identityKeyPair.getPrivateKey());
-        base64PrivateKey = Base64.getUrlEncoder().encodeToString(keyPair.serialize());
-        base64PublicKey = Base64.getUrlEncoder().encodeToString(keyPair.getPublicKey().getPublicKey().serialize());
+    private void createKeyPair() {
+        System.out.println("Generating "+type+" keys...");
+        ECKeyPair keyPair = Curve.generateKeyPair();
+
+
+        if (type.toLowerCase().equals("identity")) {
+            IdentityKeyPair identityKeyPair = new IdentityKeyPair(new IdentityKey(keyPair.getPublicKey()),
+                    keyPair.getPrivateKey());
+    
+            base64PrivateKey = Base64.getUrlEncoder().encodeToString(identityKeyPair.serialize());
+            base64PublicKey = Base64.getUrlEncoder().encodeToString(identityKeyPair.getPublicKey().getPublicKey().serialize());
+        } else {
+            base64PrivateKey = Base64.getUrlEncoder().encodeToString(keyPair.getPrivateKey().serialize());
+            base64PublicKey = Base64.getUrlEncoder().encodeToString(keyPair.getPublicKey().serialize());
+        }
     }
 
     private void writeToFile(boolean isPrivate, File file) {
@@ -97,22 +107,34 @@ public class GenerateKeys implements Callable<Integer> {
         System.out.println("Public key: " + base64PublicKey);
     }
 
-    @Override
-    public Integer call() {
-        createIdentityKeyPair();
-        if (privateKeyOutputFileName == null) {
-            printPrivateKey();
-        } else {
-            verifyWrite(true, privateKeyOutputFileName);
+    private void validInputs() throws IllegalArgumentException {
+        if (!type.toLowerCase().equals("identity") && !type.toLowerCase().equals("ratchet")
+                && !type.toLowerCase().equals("signedpre")) {
+            throw new IllegalArgumentException("Type must be one of the following: identity, ratchet, signedpre");
         }
-        
-        if (publicKeyOutputFileName == null) {
-            printPublicKey();
-        } else {
-            verifyWrite(false, publicKeyOutputFileName);
+    }
+
+    @Override
+    public Void call() {
+        try {
+            validInputs();
+            createKeyPair();
+            if (privateKeyOutputFileName == null) {
+                printPrivateKey();
+            } else {
+                verifyWrite(true, privateKeyOutputFileName);
+            }
+            
+            if (publicKeyOutputFileName == null) {
+                printPublicKey();
+            } else {
+                verifyWrite(false, publicKeyOutputFileName);
+            }
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
         }
 
-        return 0;
+        return null;
     }
 
 }

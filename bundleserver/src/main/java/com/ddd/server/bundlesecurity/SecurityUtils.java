@@ -53,8 +53,10 @@ public class SecurityUtils {
     public static final String BUNDLEID_FILENAME    = "bundle.id";
     public static final String DECRYPTED_FILE_EXT   = ".decrypted";
 
-    public static final String PUBLICKEY_HEADER     = "-----BEGIN EC PUBLIC KEY-----";
-    public static final String PUBLICKEY_FOOTER     = "-----END EC PUBLIC KEY-----";
+    public static final String PUB_KEY_HEADER = "-----BEGIN EC PUBLIC KEY-----";
+    public static final String PUB_KEY_FOOTER = "-----END EC PUBLIC KEY-----";
+    public static final String PVT_KEY_HEADER = "-----BEGIN EC PRIVATE KEY-----";
+    public static final String PVT_KEY_FOOTER = "-----END EC PRIVATE KEY-----";
     
     public static final String CLIENT_KEY_PATH      = "Client_Keys";
     public static final String SERVER_KEY_PATH      = "Server_Keys";
@@ -129,10 +131,10 @@ public class SecurityUtils {
 
     public static void createEncodedPublicKeyFile(ECPublicKey publicKey, String path) throws EncodingException 
     {
-        String encodedKey = PUBLICKEY_HEADER+"\n";
-        try (FileOutputStream stream = new FileOutputStream(path)) {
+        String encodedKey = PUB_KEY_HEADER+"\n";
+        try (FileOutputStream stream = new FileOutputStream(path, false)) {
             encodedKey += Base64.getUrlEncoder().encodeToString(publicKey.serialize());
-            encodedKey += "\n" + PUBLICKEY_FOOTER;
+            encodedKey += "\n" + PUB_KEY_FOOTER;
             stream.write(encodedKey.getBytes());
         } catch (IOException e) {
             throw new EncodingException("[BS]: Failed to Encode Public Key to file:"+e);
@@ -148,8 +150,8 @@ public class SecurityUtils {
                 throw new InvalidKeyException("Error: Invalid Public Key Length");
             }
 
-            if ((true == encodedKeyList.get(0).equals(PUBLICKEY_HEADER)) &&
-            (true == encodedKeyList.get(2).equals(PUBLICKEY_FOOTER))) {
+            if (encodedKeyList.get(0).equals(PUB_KEY_HEADER) &&
+                    encodedKeyList.get(2).equals(PUB_KEY_FOOTER)) {
                 return Base64.getUrlDecoder().decode(encodedKeyList.get(1));
             } else {
                 throw new InvalidKeyException("Error: Invalid Public Key Format");
@@ -157,6 +159,26 @@ public class SecurityUtils {
         } catch (InvalidKeyException | IOException e) {
             throw new EncodingException("Error: Invalid Public Key Format");
         }
+    }
+    
+    public static byte[] decodePrivateKeyFromFile(String path) throws EncodingException {
+        try {
+            List<String> encodedKeyList = Files.readAllLines(Paths.get(path.trim()));
+    
+            if (encodedKeyList.size() != 3) {
+                throw new InvalidKeyException("Error: Invalid Public Key Length");
+            }
+    
+            if (encodedKeyList.get(0).equals(PVT_KEY_HEADER) &&
+                    encodedKeyList.get(2).equals(PVT_KEY_FOOTER)) {
+                return Base64.getUrlDecoder().decode(encodedKeyList.get(1));
+            } else {
+                throw new InvalidKeyException("Error: Invalid Public Key Format");
+            }
+        } catch (InvalidKeyException | IOException e) {
+            throw new EncodingException("Error: Invalid Public Key Format");
+        }
+
     }
 
     public static InMemorySignalProtocolStore createInMemorySignalProtocolStore()

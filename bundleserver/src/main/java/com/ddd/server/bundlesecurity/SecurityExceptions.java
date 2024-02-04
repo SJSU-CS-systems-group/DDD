@@ -58,8 +58,7 @@ public class SecurityExceptions {
     }
 
     public static class BundleDecryptionException extends Exception {
-        public BundleDecryptionException(String errorMessage)
-        {
+        public BundleDecryptionException(String errorMessage) {
             super(errorMessage);
         }
     }

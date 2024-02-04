@@ -17,6 +17,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Stream;
 
+import org.springframework.boot.ExitCodeGenerator;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.WebApplicationType;
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.data.domain.Example;
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
@@ -37,6 +43,8 @@ import org.whispersystems.libsignal.ratchet.RatchetingSession;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SessionState;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
+
+import com.ddd.server.BundleServerApplication;
 import com.ddd.server.bundlesecurity.SecurityExceptions.AESAlgorithmException;
 import com.ddd.server.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
 import com.ddd.server.bundlesecurity.SecurityExceptions.EncodingException;
@@ -68,45 +76,58 @@ public class ServerSecurity {
      * Exceptions:
      *      IOException:    Thrown if keys cannot be written to provided path
      */
-    private ServerSecurity(String serverRootPath) throws ServerIntializationException
+    private ServerSecurity(String serverRootPath) throws ServerIntializationException 
     {
         clientMap  = new HashMap<>();
         String serverKeyPath = serverRootPath + File.separator + SecurityUtils.SERVER_KEY_PATH;
 
-            try {
-            // TODO: Load protocol store from files(serverProtocolStore)
-                loadKeysfromFiles(serverKeyPath);
-                System.out.println("[Sec]: Using Existing Keys");
-            } catch (InvalidKeyException | IOException | EncodingException e) {
-                System.out.println("[Sec]: Error Loading Keys from files, generating new keys instead");
-
-        ECKeyPair identityKeyPair       = Curve.generateKeyPair();
-        ourIdentityKeyPair              = new IdentityKeyPair(new IdentityKey(identityKeyPair.getPublicKey()),
-                                                                    identityKeyPair.getPrivateKey());
-        ourSignedPreKey                 = Curve.generateKeyPair();
-        ourRatchetKey                   = ourSignedPreKey;
-        
-            try {
-                writeKeysToFiles(serverKeyPath, true);
-            } catch (IOException | EncodingException exception) {
-                throw new ServerIntializationException("Failed to write keys to Files:"+exception);
-            }
-        }
-
-        this.serverRootPath             = serverRootPath;
-        serverProtocolStore             = SecurityUtils.createInMemorySignalProtocolStore();
-
-        String name = DEFAULT_SERVER_NAME;
         try {
-            name = SecurityUtils.generateID(ourIdentityKeyPair.getPublicKey().serialize());
-        } catch (IDGenerationException e) {
-            System.out.println("[SEC]:Failed to generate ID, using default value:"+name);
+            loadKeysfromFiles(serverKeyPath);
+            this.serverRootPath             = serverRootPath;
+            serverProtocolStore             = SecurityUtils.createInMemorySignalProtocolStore();
+    
+            String name = DEFAULT_SERVER_NAME;
+            try {
+                name = SecurityUtils.generateID(ourIdentityKeyPair.getPublicKey().serialize());
+            } catch (IDGenerationException e) {
+                System.out.println("[SEC]:Failed to generate ID, using default value:"+name);
+            }
+            ourAddress                      = new SignalProtocolAddress(name, ServerDeviceID);
+            ourOneTimePreKey                = Optional.<ECKeyPair>absent();
+    
+            clientRootPath = serverRootPath+File.separator+"Clients";
+            SecurityUtils.createDirectory(clientRootPath);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            System.out.println("Error loading server keys. Ensure the following key files exist in your application.yml's {bundle-server.bundle-security.server-serverkeys-path} path:\n"+ 
+                            "server_identity.pub\n"+
+                            "serverIdentity.pvt\n"+
+                            "server_signed_pre.pub\n"+
+                            "serverSignedPreKey.pvt\n"+
+                            "server_ratchet.pub\n"+
+                    "serverRatchetKey.pvt");
+            // BundleServerApplication.exit();
         }
-        ourAddress                      = new SignalProtocolAddress(name, ServerDeviceID);
-        ourOneTimePreKey                = Optional.<ECKeyPair>absent();
+        //     try {
+        //     // TODO: Load protocol store from files(serverProtocolStore)
+        //         loadKeysfromFiles(serverKeyPath);
+        //         System.out.println("[Sec]: Using Existing Keys");
+        //     } catch (InvalidKeyException | IOException | EncodingException e) {
+        //         System.out.println("[Sec]: Error Loading Keys from files, generating new keys instead");
 
-        clientRootPath = serverRootPath+File.separator+"Clients";
-        SecurityUtils.createDirectory(clientRootPath);
+        // ECKeyPair identityKeyPair       = Curve.generateKeyPair();
+        // ourIdentityKeyPair              = new IdentityKeyPair(new IdentityKey(identityKeyPair.getPublicKey()),
+        //                                                             identityKeyPair.getPrivateKey());
+        // ourSignedPreKey                 = Curve.generateKeyPair();
+        // ourRatchetKey                   = ourSignedPreKey;
+        
+        //     try {
+        //         writeKeysToFiles(serverKeyPath, true);
+        //     } catch (IOException | EncodingException exception) {
+        //         throw new ServerIntializationException("Failed to write keys to Files:"+exception);
+        //     }
+        // }
+
     }
 
     /* load the previously used keys from the provided path
@@ -117,12 +138,11 @@ public class ServerSecurity {
      *      IOException:            Thrown if keys cannot be written to provided path
      *      InvalidKeyException:    Thrown if the file has an invalid key
      */
-    private void loadKeysfromFiles(String serverKeyPath) throws FileNotFoundException, IOException, InvalidKeyException, EncodingException
-    {
-        byte[] identityKey = SecurityUtils.readFromFile(serverKeyPath + File.separator + SecurityUtils.SERVER_IDENTITY_PRIVATE_KEY);
+    private void loadKeysfromFiles(String serverKeyPath) throws EncodingException, InvalidKeyException {
+        byte[] identityKey = SecurityUtils.decodePrivateKeyFromFile(serverKeyPath + File.separator + SecurityUtils.SERVER_IDENTITY_PRIVATE_KEY);
         ourIdentityKeyPair = new IdentityKeyPair(identityKey);
 
-        byte[] signedPreKeyPvt = SecurityUtils.readFromFile(serverKeyPath + File.separator + SecurityUtils.SERVER_SIGNEDPRE_PRIVATE_KEY);
+        byte[] signedPreKeyPvt = SecurityUtils.decodePrivateKeyFromFile(serverKeyPath + File.separator + SecurityUtils.SERVER_SIGNEDPRE_PRIVATE_KEY);
         byte[] signedPreKeyPub = SecurityUtils.decodePublicKeyfromFile(serverKeyPath + File.separator + SecurityUtils.SERVER_SIGNEDPRE_KEY);
 
         ECPublicKey signedPreKeyPublicKey = Curve.decodePoint(signedPreKeyPub, 0);
@@ -130,7 +150,7 @@ public class ServerSecurity {
 
         ourSignedPreKey = new ECKeyPair(signedPreKeyPublicKey, signedPreKeyPrivateKey);
 
-        byte[] ratchetKeyPvt = SecurityUtils.readFromFile(serverKeyPath + File.separator + SecurityUtils.SERVER_RATCHET_PRIVATE_KEY);
+        byte[] ratchetKeyPvt = SecurityUtils.decodePrivateKeyFromFile(serverKeyPath + File.separator + SecurityUtils.SERVER_RATCHET_PRIVATE_KEY);
         byte[] ratchetKeyPub = SecurityUtils.decodePublicKeyfromFile(serverKeyPath + File.separator + SecurityUtils.SERVER_RATCHET_KEY);
 
         ECPublicKey ratchetKeyPublicKey = Curve.decodePoint(ratchetKeyPub, 0);
