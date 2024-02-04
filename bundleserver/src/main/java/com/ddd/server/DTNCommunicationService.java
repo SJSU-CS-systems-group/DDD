@@ -1,5 +1,7 @@
 package com.ddd.server;
 
+import com.ddd.server.repository.RegisteredAppAdapterRepository;
+import com.ddd.server.repository.entity.RegisteredAppAdapter;
 import com.ddd.server.storage.MySQLConnection;
 import edu.sjsu.dtn.server.communicationservice.*;
 import io.grpc.stub.StreamObserver;
@@ -18,6 +20,9 @@ public class DTNCommunicationService extends DTNCommunicationGrpc.DTNCommunicati
     private static Environment env;
 
     @Autowired
+    private RegisteredAppAdapterRepository registeredAppAdapterRepository;
+
+    @Autowired
     MySQLConnection mysql;
 
     public DTNCommunicationService (MySQLConnection mysql) {
@@ -29,24 +34,10 @@ public class DTNCommunicationService extends DTNCommunicationGrpc.DTNCommunicati
                                 StreamObserver<ResponseStatus> responseObserver){
         System.out.println("Testing server from Python client");
 
-        try {
-            System.out.println("Test DB connection");
+        RegisteredAppAdapter newAppAdapter = new RegisteredAppAdapter(connectionData.getAppName(), connectionData.getUrl());
 
-            Connection con = mysql.GetConnection();
-            Statement stmt = con.createStatement();
+        registeredAppAdapterRepository.save(newAppAdapter);
 
-            System.out.println("Test DB query");
-
-            stmt.executeUpdate("insert into registered_app_adapter_table (app_id, address) values (" +
-                    "'"+connectionData.getAppName()+"', '"+connectionData.getUrl()+"');");
-
-            System.out.println("Query done");
-
-            con.close();
-            responseObserver.onNext(ResponseStatus.newBuilder().setCode(0).build());
-        } catch (Exception ex){
-            ex.printStackTrace();
-        }
         responseObserver.onCompleted();
     }
 }
