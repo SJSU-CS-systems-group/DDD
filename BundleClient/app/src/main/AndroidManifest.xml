@@ -38,7 +38,8 @@
             android:multiprocess="true"
             android:grantUriPermissions="true"
             android:writePermission="android.permission.messagingproviderwriteperm"
-            android:readPermission="android.permission.messagingproviderreadperm"></provider>
+            android:readPermission="android.permission.messagingproviderreadperm">
+        </provider>
     </application>
 
 </manifest>

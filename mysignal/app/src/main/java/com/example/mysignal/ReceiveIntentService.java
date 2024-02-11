@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.Context;
 import android.util.Log;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -49,13 +50,17 @@ public class ReceiveIntentService extends IntentService {
      */
     private void saveData(String message) {
 
-        Log.d("deepak","data received in service: "+message);
+        Log.d(MainActivity.TAG,"data received in service: "+message);
 
         ContentValues values=new ContentValues();
         values.put("data", message.getBytes());
         values.put("appName", getApplicationContext().getPackageName());
 
-        FileStoreHelper fileStoreHelper = new FileStoreHelper(getApplicationContext().getApplicationInfo().dataDir+"/ReceivedData");
-        fileStoreHelper.AddFile("", message.getBytes(StandardCharsets.UTF_8));
+        FileStoreHelper fileStoreHelper = new FileStoreHelper(getApplicationContext().getApplicationInfo().dataDir);
+        try {
+            fileStoreHelper.AddFile("ReceivedData", message.getBytes(StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            Log.e(MainActivity.TAG, e.getMessage());
+        }
     }
 }

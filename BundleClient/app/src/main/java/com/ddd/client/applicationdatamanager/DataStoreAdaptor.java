@@ -51,9 +51,9 @@ public class DataStoreAdaptor {
         }
     }
 
-    public void persistADU(ADU adu) {
+    public void persistADU(ADU adu) throws IOException {
         Log.d(HelloworldActivity.TAG,"Persisting ADUs: " + adu.getADUId() +","+ adu.getSource());
-        receiveFileStoreHelper.AddFile(adu.getAppId(), receiveFileStoreHelper.getDataFromFile(adu.getSource()));
+        receiveFileStoreHelper.addFile(adu.getAppId(), receiveFileStoreHelper.getDataFromFile(adu.getSource()));
         sendDataToApp(adu);
         System.out.println(
                 "[ADM-DSA] Persisting inbound ADU "
@@ -69,7 +69,7 @@ public class DataStoreAdaptor {
         receiveFileStoreHelper.deleteFile(aduId+"");
     }*/
 
-    public void deleteADUs(String appId, long aduIdEnd) {
+    public void deleteADUs(String appId, long aduIdEnd) throws IOException {
 
         sendFileStoreHelper.deleteAllFilesUpTo(appId, aduIdEnd);
         System.out.println("[DSA] Deleted ADUs for application " + appId + " with id upto " + aduIdEnd);

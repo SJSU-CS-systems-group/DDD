@@ -17,12 +17,13 @@ import androidx.annotation.Nullable;
 import com.ddd.datastore.filestore.FileStoreHelper;
 import com.example.contentprovidertest.sqlite.DBHelper;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
 public class MessageProvider extends ContentProvider {
-    public static final String PROVIDER_NAME="com.example.contentprovidertest.providers";
+    public static final String PROVIDER_NAME="com.ddd.datastore.providers";
 
     public static final String URL="content://"+PROVIDER_NAME+"/messages";
 
@@ -63,8 +64,8 @@ public class MessageProvider extends ContentProvider {
     public Cursor query(@NonNull Uri uri, @Nullable String[] projection, @Nullable String selection, @Nullable String[] selectionArgs, @Nullable String sortOrder) {
         MatrixCursor cursor = null;
         try {
-            Log.d("deepak", "selection-" + selection);
-            Log.d("deepak", "selectionArgs-" + selectionArgs[0]);
+            //Log.d("bundleclient", "selection-" + selection);
+            //Log.d("bundleclient", "selectionArgs-" + selectionArgs[0]);
             //selection = app name
             //selectionsArgs[0] = app name value
             byte[] res = sendFileStoreHelper.getNextAppData(selectionArgs[0]);
@@ -77,6 +78,7 @@ public class MessageProvider extends ContentProvider {
             cursor.addRow(arr);
         }catch (Exception ex){
             ex.printStackTrace();
+            Log.e("bundleclient", ex.getMessage());
         }
         return cursor;
         /*SQLiteQueryBuilder queryBuilder=new SQLiteQueryBuilder();
@@ -107,15 +109,22 @@ public class MessageProvider extends ContentProvider {
     @Nullable
     @Override
     public Uri insert(@NonNull Uri uri, @Nullable ContentValues contentValues) {
-        String appName = (String) contentValues.get("appName");
+        String appName = contentValues.get("appName").toString();
+        Log.d("bundleclient", "cv appName: "+appName);
         int receiverId = Binder.getCallingUid();
         appName = getContext().getPackageManager().getNameForUid(receiverId);
-        String destination = (String) contentValues.get("destination");
-        destination = "APP";
-        byte[] data = (byte[]) contentValues.get("data");
-        sendFileStoreHelper.AddFile(appName, data);
+        Log.d("bundleclient", "getNameforUid appName: "+appName);
+        //String destination = contentValues.get("destination").toString();
 
-        return null;
+        //destination = "APP";
+        String data = contentValues.get("data").toString();
+        Log.d("bundleclient", "cv data: "+data);
+        try{
+            return sendFileStoreHelper.addFile(appName, data.getBytes());
+        } catch (IOException e) {
+            Log.e("bundleclient", "Unable to add file, error: " + e.getMessage());
+            return null;
+        }
     }
 
     @Override
