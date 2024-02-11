@@ -156,7 +156,9 @@ public class BundleSecurity {
             uncompressedBundle.getSource().getAbsolutePath());
       } catch (Exception e) {
         // TODO
-        e.printStackTrace();
+        System.out.println("[BS] Failed to decrypt payload");
+        // e.printStackTrace();
+        return null;
       }
       
       try {

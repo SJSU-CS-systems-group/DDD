@@ -15,8 +15,8 @@
 	<description>Bundle Server</description>
 	<properties>
 		<java.version>17</java.version>
-		<maven.compiler.source>11</maven.compiler.source>
-		<maven.compiler.target>11</maven.compiler.target>
+		<maven.compiler.source>17</maven.compiler.source>
+		<maven.compiler.target>17</maven.compiler.target>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<protobuf.version>3.5.1</protobuf.version>
 		<grpc.version>1.50.2</grpc.version>
@@ -31,6 +31,7 @@
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
+			<version>1.18.30</version>
 			<optional>true</optional>
 		</dependency>
 		<dependency>
@@ -125,6 +126,11 @@
             <artifactId>mysql-connector-j</artifactId>
 			<version>8.3.0</version>
         </dependency>
+		<dependency>
+				<groupId>info.picocli</groupId>
+				<artifactId>picocli-spring-boot-starter</artifactId>
+				<version>4.7.5</version>
+		</dependency>
 	</dependencies>
 	<dependencyManagement>
 		<dependencies>

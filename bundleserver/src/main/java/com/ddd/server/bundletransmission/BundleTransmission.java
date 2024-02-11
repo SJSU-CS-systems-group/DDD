@@ -73,7 +73,7 @@ public class BundleTransmission {
   }
 
   @Transactional(rollbackFor = Exception.class)
-  public void processReceivedBundle(String transportId, Bundle bundle) {
+  public void processReceivedBundle(String transportId, Bundle bundle) throws Exception {
     File bundleRecvProcDir =
         new File(
             this.config.getBundleTransmission().getReceivedProcessingDirectory()
@@ -101,6 +101,9 @@ public class BundleTransmission {
     }
 
     Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
+    if (payload == null) {
+      throw new Exception("Payload is null");
+    }
     
     UncompressedPayload uncompressedPayload =
         this.bundleGenServ.extractPayload(
@@ -182,11 +185,12 @@ public class BundleTransmission {
 //        this.applicationDataManager.collectDataForClients(clientId);
 //      }
       for (final File bundleFile : transportDir.listFiles()) {
+        Bundle bundle = new Bundle(bundleFile);
         try {
-          Bundle bundle = new Bundle(bundleFile);
           this.processReceivedBundle(transportId, bundle);
         } catch (Exception e) {
-          e.printStackTrace();
+          System.out.println(
+              "[BT] Failed to process received bundle from transportId: " + transportId + ", error: " + e.getMessage());
         } finally {
           try {
             FileUtils.delete(bundleFile);
