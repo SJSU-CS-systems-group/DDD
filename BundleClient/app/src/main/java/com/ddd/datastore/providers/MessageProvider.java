@@ -76,7 +76,8 @@ public class MessageProvider extends ContentProvider {
             List<byte[]> datalist = sendFileStoreHelper.getAllAppData(appId);
             cursor = new MatrixCursor(new String[]{"data"});
             for (byte[] data: datalist) {
-                cursor.newRow().add("data", data.toString());
+
+                cursor.newRow().add("data", new String(data));
             }
         }catch (Exception ex){
             ex.printStackTrace();
@@ -115,8 +116,9 @@ public class MessageProvider extends ContentProvider {
     public Uri insert(@NonNull Uri uri, @Nullable ContentValues contentValues) {
         try{
             String appName = getCallerAppId();
-            String data = contentValues.get("data").toString();
-            return sendFileStoreHelper.addFile(appName, data.getBytes());
+            byte[] data = contentValues.getAsByteArray("data");
+            Log.d("bundleclient", "inserting: "+new String(data));
+            return sendFileStoreHelper.addFile(appName, data);
         } catch (IOException e) {
             Log.e("bundleclient", "Unable to add file, error: " + e.getMessage());
             return null;

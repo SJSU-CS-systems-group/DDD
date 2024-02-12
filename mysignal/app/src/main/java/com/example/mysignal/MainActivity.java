@@ -171,6 +171,7 @@ public class MainActivity extends AppCompatActivity {
             if (uri == null) {
                 throw new Exception("Message not inserted");
             }
+            messageText.setText("");
             getMessages();
         } catch (IllegalArgumentException e){
             Log.e(TAG, e.getMessage());

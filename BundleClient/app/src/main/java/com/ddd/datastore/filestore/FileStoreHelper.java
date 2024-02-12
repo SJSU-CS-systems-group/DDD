@@ -129,6 +129,7 @@ public class FileStoreHelper {
         String folder = RootFolder+File.separator+appId;
         for(long i=1; i <= metadata.lastReceivedMessageId;i++){
             byte[] data = readFile(folder+File.separator+i+".txt");
+            Log.d("bundleclient", data.toString());
             dataList.add(data);
         }
 
