@@ -36,13 +36,14 @@ public class DataStoreAdaptor {
         receiveFileStoreHelper = new FileStoreHelper(appRootDataDirectory + "/receive");
     }
 
-    private void sendDataToApp(ADU adu){
+    private void sendDataToApp(ADU adu) throws IOException {
         //notify app that someone sent data for the app
         Intent intent = new Intent("android.intent.dtn.SEND_DATA");
         intent.setPackage(adu.getAppId());
         intent.setType("text/plain");
-        Log.d(HelloworldActivity.TAG,new String(receiveFileStoreHelper.getDataFromFile(adu.getSource()))+", Source:"+adu.getSource());
-        intent.putExtra(Intent.EXTRA_TEXT, receiveFileStoreHelper.getDataFromFile(adu.getSource()));
+        byte[] data = receiveFileStoreHelper.getDataFromFile(adu.getSource());
+        Log.d(HelloworldActivity.TAG,new String(data)+", Source:"+adu.getSource());
+        intent.putExtra(Intent.EXTRA_TEXT, data);
         applicationContext = HelloworldActivity.ApplicationContext;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             applicationContext.startForegroundService(intent);

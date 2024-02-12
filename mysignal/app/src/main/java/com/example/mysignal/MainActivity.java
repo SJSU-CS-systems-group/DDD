@@ -11,8 +11,10 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -29,36 +31,42 @@ public class MainActivity extends AppCompatActivity {
     TextView messageListLabel;
     ContentResolver resolver;
 
-    private static final String[] RESOLVER_COLUMNS = {"data", "appName"};
+    ListView messageList;
+
+    private static final String[] RESOLVER_COLUMNS = {"data"};
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         resolver=getContentResolver();
 
-        receiver=findViewById(R.id.receiver);
+        //receiver=findViewById(R.id.receiver);
         messageText=findViewById(R.id.message);
-        appName=findViewById(R.id.app_name);
+        //appName=findViewById(R.id.app_name);
 
         insert=findViewById(R.id.btn_insert);
-        view=findViewById(R.id.btn_view_messages);
+        //view=findViewById(R.id.btn_view_messages);
+        messageList = findViewById(R.id.message_list);
         update=findViewById(R.id.btn_update_status);
         delete=findViewById(R.id.btn_delete);
         startServiceBtn=findViewById(R.id.btn_start_service);
         //grantUriPermission();
-        //getMessages();
+        getMessages();
         insert.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 addMessage();
             }
         });
+
+        /*
         view.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 getMessages();
             }
         });
+         */
         startServiceBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -84,10 +92,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private ArrayList<String> queryResolver() throws NullPointerException, IllegalArgumentException {
-        Log.d(TAG, "cr query: "+resolver);
         Cursor cursor = resolver.query(CONTENT_URL, RESOLVER_COLUMNS, null, null, null);
 
-        Log.d(TAG, "Cursor: "+cursor);
         if (cursor == null) {
             throw new NullPointerException("Cursor is null");
         }
@@ -117,7 +123,7 @@ public class MainActivity extends AppCompatActivity {
         //String messageList="";
 
 
-
+        /*
         List<byte[]> arr;
         try {
             arr = fileStoreHelper.getAppData();
@@ -126,23 +132,29 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Internal error", Toast.LENGTH_SHORT).show();
             return;
         }
+         */
 
 
-        ArrayList<String> messageList;
+        ArrayList<String> messages;
         try {
-            messageList = queryResolver();
+            messages = queryResolver();
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
             createDialog("Error", "Error loading messages", true);
             return;
         }
 
+        ArrayAdapter<String> messagesAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, messages);
+        messageList.setAdapter(messagesAdapter);
+        /*
         StringBuilder messages = new StringBuilder();
         for(int i = 0; i < messageList.size(); i++) {
             messages.append((i+1)+". "+messageList.get(i)+"\n");
         }
 
         createDialog("Message List", messages, true);
+
+         */
     }
     public void addMessage(){
         String message=messageText.getText().toString();
@@ -153,18 +165,19 @@ public class MainActivity extends AppCompatActivity {
 
         ContentValues values=new ContentValues();
         values.put(RESOLVER_COLUMNS[0], message.getBytes());
-        values.put(RESOLVER_COLUMNS[1], getApplicationContext().getPackageName().getBytes());
 
         try{
-            Log.d(TAG, "cr insert: "+resolver);
-            resolver.insert(CONTENT_URL, values);
+            Uri uri = resolver.insert(CONTENT_URL, values);
+            if (uri == null) {
+                throw new Exception("Message not inserted");
+            }
             getMessages();
         } catch (IllegalArgumentException e){
             Log.e(TAG, e.getMessage());
             Toast.makeText(this, "Cannot connect to bundleclient", Toast.LENGTH_SHORT).show();
-        } catch(SecurityException e){
+        } catch(Exception e){
             Log.e(TAG, e.getMessage());
-            Toast.makeText(this, "Cannot send", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Internal error, cannot send", Toast.LENGTH_SHORT).show();
         }
 
     }

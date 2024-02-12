@@ -49,6 +49,13 @@ public class MessageProvider extends ContentProvider {
     static final int DATABASE_VERSION=1;
     static final String CREATE_DB_TABLE="CREATE TABLE "+TABLE_NAME+" (messageID INT, receiver TEXT, messageBody TEXT, messageHeader TEXT, appName TEXT, status TEXT)";
 
+    private String getCallerAppId() throws IOException {
+        int receiverId = Binder.getCallingUid();
+        String appId = getContext().getPackageManager().getNameForUid(receiverId);
+        sendFileStoreHelper.createAppIdDirIfNotExists(appId);
+        return appId;
+    }
+
     @Override
     public boolean onCreate() {
         DBHelper dbHelper=new DBHelper(getContext());
@@ -62,25 +69,22 @@ public class MessageProvider extends ContentProvider {
     @Nullable
     @Override
     public Cursor query(@NonNull Uri uri, @Nullable String[] projection, @Nullable String selection, @Nullable String[] selectionArgs, @Nullable String sortOrder) {
-        MatrixCursor cursor = null;
+        MatrixCursor cursor;
+
         try {
-            //Log.d("bundleclient", "selection-" + selection);
-            //Log.d("bundleclient", "selectionArgs-" + selectionArgs[0]);
-            //selection = app name
-            //selectionsArgs[0] = app name value
-            byte[] res = sendFileStoreHelper.getNextAppData(selectionArgs[0]);
+            String appId = getCallerAppId();
+            List<byte[]> datalist = sendFileStoreHelper.getAllAppData(appId);
             cursor = new MatrixCursor(new String[]{"data"});
-            List<byte[]> arr = new ArrayList<>();
-            if (res == null) {
-                return cursor;
+            for (byte[] data: datalist) {
+                cursor.newRow().add("data", data.toString());
             }
-            arr.add(res);
-            cursor.addRow(arr);
         }catch (Exception ex){
             ex.printStackTrace();
             Log.e("bundleclient", ex.getMessage());
+            cursor = null;
         }
         return cursor;
+
         /*SQLiteQueryBuilder queryBuilder=new SQLiteQueryBuilder();
         queryBuilder.setTables(TABLE_NAME);
         switch ((uriMatcher.match(uri))){
@@ -109,17 +113,9 @@ public class MessageProvider extends ContentProvider {
     @Nullable
     @Override
     public Uri insert(@NonNull Uri uri, @Nullable ContentValues contentValues) {
-        String appName = contentValues.get("appName").toString();
-        Log.d("bundleclient", "cv appName: "+appName);
-        int receiverId = Binder.getCallingUid();
-        appName = getContext().getPackageManager().getNameForUid(receiverId);
-        Log.d("bundleclient", "getNameforUid appName: "+appName);
-        //String destination = contentValues.get("destination").toString();
-
-        //destination = "APP";
-        String data = contentValues.get("data").toString();
-        Log.d("bundleclient", "cv data: "+data);
         try{
+            String appName = getCallerAppId();
+            String data = contentValues.get("data").toString();
             return sendFileStoreHelper.addFile(appName, data.getBytes());
         } catch (IOException e) {
             Log.e("bundleclient", "Unable to add file, error: " + e.getMessage());

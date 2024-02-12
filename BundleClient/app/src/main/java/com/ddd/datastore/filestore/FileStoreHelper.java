@@ -51,6 +51,19 @@ public class FileStoreHelper {
         return ret;
     }
 
+    public void createAppIdDirIfNotExists(String appId) throws IOException {
+        File f = new File(RootFolder + File.separator + appId);
+        if (f.isFile()) {
+            f.delete();
+        }
+        if (!f.exists()) {
+            f.mkdirs();
+            registerAppId(appId);
+        }
+
+        getIfNotCreateMetadata(appId);
+    }
+
     private Metadata getMetadata(String folder) throws IOException{
         String data = getStringFromFile(RootFolder + File.separator + folder + File.separator + "metadata.json");
         Gson gson = new Gson();
@@ -72,27 +85,17 @@ public class FileStoreHelper {
         writeFile(RootFolder + File.separator + folder + File.separator + "metadata.json", metadataString.getBytes());
     }
 
-    public byte[] getDataFromFile(File file){
-        try {
-            FileInputStream fis = new FileInputStream(file);
-            byte[] res = new byte[fis.available()];
-            fis.read(res);
-            fis.close();
-            return res;
-        }catch (Exception ex){
-            ex.printStackTrace();
-        }
-        return null;
+    public byte[] getDataFromFile(File file) throws IOException{
+        FileInputStream fis = new FileInputStream(file);
+        byte[] res = new byte[fis.available()];
+        fis.read(res);
+        fis.close();
+        return res;
     }
 
-    private byte[] readFile(String file){
-        try {
-            File f = new File(file);
-            return getDataFromFile(f);
-        }catch (Exception ex){
-            ex.printStackTrace();
-        }
-        return null;
+    private byte[] readFile(String file) throws IOException {
+        File f = new File(file);
+        return getDataFromFile(f);
     }
 
     private void writeFile(File file, byte[] data) throws IOException {
@@ -107,10 +110,11 @@ public class FileStoreHelper {
         writeFile(file, data);
     }
 
-    public List<byte[]> getAllAppData(String appId) throws IOException{
+    public List<byte[]> getAppData(String appId) throws IOException{
         List<byte[]> appDataList = new ArrayList<>();
+        Metadata metadata = getIfNotCreateMetadata(appId);
         String folder = RootFolder+File.separator+appId;
-        Metadata metadata = getIfNotCreateMetadata(folder);
+
         for(long i=metadata.lastProcessedMessageId+1;i <= metadata.lastReceivedMessageId;i++){
             appDataList.add(readFile(folder+File.separator+i+".txt"));
         }
@@ -119,7 +123,19 @@ public class FileStoreHelper {
         return appDataList;
     }
 
-    public byte[] getADU(String appId, String aduId){
+    public List<byte[]> getAllAppData(String appId) throws IOException {
+        List<byte[]> dataList = new ArrayList<>();
+        Metadata metadata = getIfNotCreateMetadata(appId);
+        String folder = RootFolder+File.separator+appId;
+        for(long i=1; i <= metadata.lastReceivedMessageId;i++){
+            byte[] data = readFile(folder+File.separator+i+".txt");
+            dataList.add(data);
+        }
+
+        return dataList;
+    }
+
+    public byte[] getADU(String appId, String aduId) throws IOException{
         return readFile(RootFolder+File.separator+ appId+File.separator+aduId+".txt");
     }
 
@@ -158,24 +174,17 @@ public class FileStoreHelper {
     }
 
     public Uri addFile(String folder, byte data[]) throws IOException {
-        File f = new File(RootFolder+File.separator+folder);
-
-        String messagePath;
-        if(f.isDirectory()){
-            Log.d("bundleclient", RootFolder+File.separator+folder+" is a directory");
-            int noOfMessages = f.list().length;
-            Log.d("bundleclient", "noOfMessages-"+noOfMessages);
-            messagePath = f.getPath()+File.separator+(noOfMessages+1)+".txt";
-        }else{
-            //first ADU for an application
-            registerAppId(folder);
-            f.mkdirs();
-            messagePath = f.getPath() +File.separator+ "1.txt";
-        }
-
         Metadata metadata = getIfNotCreateMetadata(folder);
         metadata.lastReceivedMessageId++;
         setMetadata(folder, metadata);
+
+        File f = new File(RootFolder+File.separator+folder);
+        String messagePath;
+
+        int numFile = f.list().length;
+        messagePath = f.getPath()+File.separator+numFile+".txt";
+
+
         writeFile(messagePath, data);
         return Uri.parse(messagePath);
     }
