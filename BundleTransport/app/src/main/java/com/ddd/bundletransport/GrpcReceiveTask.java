@@ -124,7 +124,10 @@ public class GrpcReceiveTask {
 
             @Override
             public void onCompleted() {
-                FileUtils.closeFile(writer);
+                if (writer != null) {
+                    FileUtils.closeFile(writer);
+                }
+
                 Log.d(TAG, "File download complete");
                 statusComplete = true;
             }
