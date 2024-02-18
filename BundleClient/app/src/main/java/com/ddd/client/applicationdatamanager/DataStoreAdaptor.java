@@ -36,13 +36,14 @@ public class DataStoreAdaptor {
         receiveFileStoreHelper = new FileStoreHelper(appRootDataDirectory + "/receive");
     }
 
-    private void sendDataToApp(ADU adu){
+    private void sendDataToApp(ADU adu) throws IOException {
         //notify app that someone sent data for the app
         Intent intent = new Intent("android.intent.dtn.SEND_DATA");
         intent.setPackage(adu.getAppId());
         intent.setType("text/plain");
-        Log.d(HelloworldActivity.TAG,new String(receiveFileStoreHelper.getDataFromFile(adu.getSource()))+", Source:"+adu.getSource());
-        intent.putExtra(Intent.EXTRA_TEXT, receiveFileStoreHelper.getDataFromFile(adu.getSource()));
+        byte[] data = receiveFileStoreHelper.getDataFromFile(adu.getSource());
+        Log.d(HelloworldActivity.TAG,new String(data)+", Source:"+adu.getSource());
+        intent.putExtra(Intent.EXTRA_TEXT, data);
         applicationContext = HelloworldActivity.ApplicationContext;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             applicationContext.startForegroundService(intent);
@@ -51,9 +52,9 @@ public class DataStoreAdaptor {
         }
     }
 
-    public void persistADU(ADU adu) {
+    public void persistADU(ADU adu) throws IOException {
         Log.d(HelloworldActivity.TAG,"Persisting ADUs: " + adu.getADUId() +","+ adu.getSource());
-        receiveFileStoreHelper.AddFile(adu.getAppId(), receiveFileStoreHelper.getDataFromFile(adu.getSource()));
+        receiveFileStoreHelper.addFile(adu.getAppId(), receiveFileStoreHelper.getDataFromFile(adu.getSource()));
         sendDataToApp(adu);
         System.out.println(
                 "[ADM-DSA] Persisting inbound ADU "
@@ -69,7 +70,7 @@ public class DataStoreAdaptor {
         receiveFileStoreHelper.deleteFile(aduId+"");
     }*/
 
-    public void deleteADUs(String appId, long aduIdEnd) {
+    public void deleteADUs(String appId, long aduIdEnd) throws IOException {
 
         sendFileStoreHelper.deleteAllFilesUpTo(appId, aduIdEnd);
         System.out.println("[DSA] Deleted ADUs for application " + appId + " with id upto " + aduIdEnd);

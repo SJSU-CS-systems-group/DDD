@@ -214,7 +214,13 @@ class StateManager {
     Map<String, Long> largestADUIdDeliveredDetails = this.getLargestADUIdDeliveredDetails();
     for (String appId : details.keySet()) {
       Long aduId = details.get(appId);
-      this.dataStoreAdaptor.deleteADUs(appId, aduId);
+      try {
+        this.dataStoreAdaptor.deleteADUs(appId, aduId);
+      } catch (IOException e){
+        Log.e("bundleclient", "Could not delete ADUs up to adu: "+aduId+", error: "+e.getMessage());
+        continue;
+      }
+
       if (!largestADUIdDeliveredDetails.containsKey(appId)
           || aduId > largestADUIdDeliveredDetails.get(appId)) {
         largestADUIdDeliveredDetails.put(appId, aduId);
@@ -298,10 +304,16 @@ public class ApplicationDataManager {
       if (largestAduIdReceived != null && adu.getADUId() <= largestAduIdReceived) {
         continue;
       }
-      Log.d(HelloworldActivity.TAG, "[ADM] Updating Largest ADU id: "+adu.getADUId()+","+adu.getSource());
-      this.stateManager.updateLargestADUIdReceived(adu.getAppId(), adu.getADUId());
-      Log.d(HelloworldActivity.TAG, "[ADM] Updated Largest ADU id: "+adu.getADUId()+","+adu.getSource());
-      this.dataStoreAdaptor.persistADU(adu);
+
+
+      try {
+        this.dataStoreAdaptor.persistADU(adu);
+        Log.d(HelloworldActivity.TAG, "[ADM] Updating Largest ADU id: "+adu.getADUId()+","+adu.getSource());
+        this.stateManager.updateLargestADUIdReceived(adu.getAppId(), adu.getADUId());
+        Log.d(HelloworldActivity.TAG, "[ADM] Updated Largest ADU id: "+adu.getADUId()+","+adu.getSource());
+      } catch (IOException e) {
+        Log.e("bundleclient", "Could not persist adu: "+adu.getADUId()+", error: " + e.getMessage());
+      }
     }
   }
 

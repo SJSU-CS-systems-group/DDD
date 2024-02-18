@@ -1,6 +1,7 @@
 package com.ddd.bundletransport;
 
 import android.content.Context;
+import android.util.Log;
 
 import java.io.File;
 import java.util.concurrent.ExecutorService;
@@ -28,7 +29,7 @@ public class ServerManager implements Runnable {
     public void run(){
         sendCallback.apply(sendTask.run());
         receiveCallback.apply(receiveTask.run());
-
+        Log.d(TAG, "Connect server completed");
         connectComplete.apply(null);
     }
 }

@@ -17,12 +17,13 @@ import androidx.annotation.Nullable;
 import com.ddd.datastore.filestore.FileStoreHelper;
 import com.example.contentprovidertest.sqlite.DBHelper;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
 public class MessageProvider extends ContentProvider {
-    public static final String PROVIDER_NAME="com.example.contentprovidertest.providers";
+    public static final String PROVIDER_NAME="com.ddd.datastore.providers";
 
     public static final String URL="content://"+PROVIDER_NAME+"/messages";
 
@@ -48,6 +49,13 @@ public class MessageProvider extends ContentProvider {
     static final int DATABASE_VERSION=1;
     static final String CREATE_DB_TABLE="CREATE TABLE "+TABLE_NAME+" (messageID INT, receiver TEXT, messageBody TEXT, messageHeader TEXT, appName TEXT, status TEXT)";
 
+    private String getCallerAppId() throws IOException {
+        int receiverId = Binder.getCallingUid();
+        String appId = getContext().getPackageManager().getNameForUid(receiverId);
+        sendFileStoreHelper.createAppIdDirIfNotExists(appId);
+        return appId;
+    }
+
     @Override
     public boolean onCreate() {
         DBHelper dbHelper=new DBHelper(getContext());
@@ -61,24 +69,23 @@ public class MessageProvider extends ContentProvider {
     @Nullable
     @Override
     public Cursor query(@NonNull Uri uri, @Nullable String[] projection, @Nullable String selection, @Nullable String[] selectionArgs, @Nullable String sortOrder) {
-        MatrixCursor cursor = null;
+        MatrixCursor cursor;
+
         try {
-            Log.d("deepak", "selection-" + selection);
-            Log.d("deepak", "selectionArgs-" + selectionArgs[0]);
-            //selection = app name
-            //selectionsArgs[0] = app name value
-            byte[] res = sendFileStoreHelper.getNextAppData(selectionArgs[0]);
+            String appId = getCallerAppId();
+            List<byte[]> datalist = sendFileStoreHelper.getAllAppData(appId);
             cursor = new MatrixCursor(new String[]{"data"});
-            List<byte[]> arr = new ArrayList<>();
-            if (res == null) {
-                return cursor;
+            for (byte[] data: datalist) {
+
+                cursor.newRow().add("data", new String(data));
             }
-            arr.add(res);
-            cursor.addRow(arr);
         }catch (Exception ex){
             ex.printStackTrace();
+            Log.e("bundleclient", ex.getMessage());
+            cursor = null;
         }
         return cursor;
+
         /*SQLiteQueryBuilder queryBuilder=new SQLiteQueryBuilder();
         queryBuilder.setTables(TABLE_NAME);
         switch ((uriMatcher.match(uri))){
@@ -107,15 +114,15 @@ public class MessageProvider extends ContentProvider {
     @Nullable
     @Override
     public Uri insert(@NonNull Uri uri, @Nullable ContentValues contentValues) {
-        String appName = (String) contentValues.get("appName");
-        int receiverId = Binder.getCallingUid();
-        appName = getContext().getPackageManager().getNameForUid(receiverId);
-        String destination = (String) contentValues.get("destination");
-        destination = "APP";
-        byte[] data = (byte[]) contentValues.get("data");
-        sendFileStoreHelper.AddFile(appName, data);
-
-        return null;
+        try{
+            String appName = getCallerAppId();
+            byte[] data = contentValues.getAsByteArray("data");
+            Log.d("bundleclient", "inserting: "+new String(data));
+            return sendFileStoreHelper.addFile(appName, data);
+        } catch (IOException e) {
+            Log.e("bundleclient", "Unable to add file, error: " + e.getMessage());
+            return null;
+        }
     }
 
     @Override

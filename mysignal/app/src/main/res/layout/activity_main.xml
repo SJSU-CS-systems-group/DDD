@@ -1,62 +1,62 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity">
-
+    android:paddingLeft="16dp"
+    android:paddingRight="16dp"
+    android:orientation="vertical">
     <TextView
         android:id="@+id/heading"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="MySignal app"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:text="MySignal app" />
+    <!--
     <EditText
         android:id="@+id/receiver"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="message receiver"
-        android:layout_below="@+id/heading"></EditText>
+        android:layout_below="@+id/heading" />
+       -->
     <EditText
         android:id="@+id/message"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="message"
-        android:layout_below="@+id/receiver"></EditText>
+        android:layout_below="@+id/receiver" />
+    <!--
     <EditText
         android:id="@+id/app_name"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="app name"
         android:layout_below="@+id/message"></EditText>
+        -->
     <Button
         android:id="@+id/btn_file_select"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Select File"
-        android:layout_below="@id/message"></Button>
+        android:layout_below="@id/message" />
     <Button
         android:id="@+id/btn_insert"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Send"
-        android:layout_below="@id/btn_file_select"></Button>
+        android:layout_below="@id/btn_file_select" />
+    <!--
     <Button
         android:id="@+id/btn_view_messages"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="View Messages"
-        android:layout_below="@id/btn_insert"></Button>
+        android:layout_below="@id/btn_insert" />
+        -->
     <Button
         android:id="@+id/btn_delete"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Delete Message"
-        android:layout_below="@id/btn_view_messages"></Button>
+        android:text="Delete Message" />
 
     <Button
         android:id="@+id/btn_update_status"
@@ -71,4 +71,9 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/btn_update_status"
         android:text="Start" />
-</RelativeLayout>
+
+    <ListView
+        android:id="@+id/message_list"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+</LinearLayout>
