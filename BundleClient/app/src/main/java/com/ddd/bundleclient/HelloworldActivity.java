@@ -140,6 +140,8 @@ public class HelloworldActivity extends AppCompatActivity {
       public void onClick(View view) {
         try {
           connectButton.setEnabled(true);
+
+          resultText.append("Starting connection...\n");
           exchangeMessage(wifiDirectManager);
         } catch (ExecutionException | InterruptedException e) {
           e.printStackTrace();
@@ -190,7 +192,7 @@ public class HelloworldActivity extends AppCompatActivity {
       if (!group.isGroupOwner()){
 //      start request task
         Log.d(TAG,"Connection Successful!");
-        resultText.append("Connection Successful!\n");
+        resultText.append("Connection Successful!\n\n");
         // receive task
         new GrpcReceiveTask(this).execute("192.168.49.1", "1778");
 
@@ -199,6 +201,8 @@ public class HelloworldActivity extends AppCompatActivity {
 //                .execute(
 //                        "192.168.49.1",
 //                        "1778");
+      } else {
+        resultText.append("Connection Failed\n\n");
       }
       return group;
     });
@@ -220,19 +224,26 @@ public class HelloworldActivity extends AppCompatActivity {
     completedFuture.thenApply((b) -> {
       Log.d(TAG,  "Did DiscoverPeers succeed?: " + b);
       if( b ){
+        resultText.append("Discovering Peers...\n");
         ArrayList<WifiP2pDevice> devices = wifiDirectManager.getPeerList();
         Log.d(TAG, "Logging Devices: \n");
         if(devices.isEmpty()) {
+          resultText.append("Failed to find any Wi-Fi direct compatible devices\n\n");
           Log.d(TAG,"No devices found yet");
+        } else {
+          resultText.append("Found Wi-Fi direct compatible devices\n");
         }
         for(WifiP2pDevice d: devices) {
 //          Log.d(TAG, d.toString());
-          if(d.deviceName.contains(SJSUHostDeviceName))
-            Log.d(TAG,"Trying to make connection with "+d.toString());
+          if(d.deviceName.contains(SJSUHostDeviceName)) {
+            Log.d(TAG, "Trying to make connection with " + d.toString());
+            resultText.append("Trying to make connection with " + d.toString());
+          }
           wifiDirectManager.connect(wifiDirectManager.makeConfig(
                   d, false));
         }
       }
+      if( !b ) resultText.append("Failed to discover any peers...\n\n");
       return b;
     });
     String message = "I tried to find some peers!: ";
