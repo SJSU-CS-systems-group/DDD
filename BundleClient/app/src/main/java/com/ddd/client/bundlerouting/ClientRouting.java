@@ -32,10 +32,10 @@ public class ClientRouting {
      */
     private ClientRouting(String rootPath) throws IOException, ClientMetaDataFileException
     {
-        this.metaDataPath = rootPath + File.separator + "BundleRouting" + File.separator;
+        this.metaDataPath = rootPath + File.separator + "BundleRouting";
         SecurityUtils.createDirectory(metaDataPath);
 
-        metaDataPath += METADATAFILE;
+        metaDataPath = File.separator + METADATAFILE;
 
         File metadataFile = new File(metaDataPath);
         ObjectMapper objectMapper = new ObjectMapper();

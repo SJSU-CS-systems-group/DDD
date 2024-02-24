@@ -80,6 +80,7 @@ public class BundleUtils {
         ret = gson.fromJson(new FileReader(jsonFile), mapType);
 
         UncompressedPayload.Builder builder = new UncompressedPayload.Builder();
+        Log.d("bundleclient", "Acknowledgement of LAST_SENT_BUNDLE_STRUCTURE.JSON: "+(String) ret.get("acknowledgement"));
         builder.setAckRecord(new Acknowledgement((String) ret.get("acknowledgement")));
         builder.setBundleId((String) ret.get("bundle-id"));
         if (ret.containsKey("ADU")) {
@@ -158,7 +159,7 @@ public class BundleUtils {
       UncompressedPayload uncompressedPayload, File targetDirectory, String bundleFileName) {
     String bundleId = uncompressedPayload.getBundleId();
     String bundleFilePath =
-        targetDirectory.getAbsolutePath() + "/" + bundleId;
+        targetDirectory.getAbsolutePath() + File.separator + bundleId;
 
     File bundleFile = new File(bundleFilePath);
     if (!bundleFile.exists()) {
@@ -199,10 +200,10 @@ public class BundleUtils {
   public static Payload compressPayload(UncompressedPayload uncompressedPayload, String payloadDirPath) {
     String bundleId = uncompressedPayload.getBundleId();
 
-    File uncompressedPath = uncompressedPayload.getSource();
-    File compressedPath = new File(payloadDirPath + File.separator + Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar");
-    JarUtils.dirToJar(uncompressedPath.getAbsolutePath(), compressedPath.getAbsolutePath());
-    return new Payload(bundleId, compressedPath);
+    File uncompressedFile = uncompressedPayload.getSource();
+    File compressedFile = new File(payloadDirPath + File.separator + Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar");
+    JarUtils.dirToJar(uncompressedFile.getAbsolutePath(), compressedFile.getAbsolutePath());
+    return new Payload(bundleId, compressedFile);
   }
   
   public static Bundle compressBundle(UncompressedBundle uncompressedBundle, String bundleGenPath) {

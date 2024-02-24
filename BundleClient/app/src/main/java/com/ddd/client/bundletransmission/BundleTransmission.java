@@ -211,43 +211,21 @@ public class BundleTransmission {
 
   private BundleDTO generateNewBundle(File targetDir) {
     UncompressedPayload.Builder builder = this.generateBundleBuilder();
+    return generateNewBundle(builder, targetDir);
+  }
+
+  private BundleDTO generateNewBundle(UncompressedPayload.Builder builder, File targetDir) {
     String bundleId = null;
     try {
       bundleId = this.bundleSecurity.generateNewBundleId();
     } catch (SecurityExceptions.IDGenerationException |
              SecurityExceptions.BundleIDCryptographyException e) {
+      Log.e("bundleclient", "unable to generate new bundle id");
       e.printStackTrace();
-    }
-    builder.setBundleId(bundleId);
-    builder.setSource(new File(this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + UNCOMPRESSED_PAYLOAD + File.separator + bundleId));
-    UncompressedPayload toSendBundlePayload = builder.build();
-    BundleUtils.writeUncompressedPayload(
-        toSendBundlePayload,
-        new File(this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + UNCOMPRESSED_PAYLOAD),
-        bundleId);
-
-    try {
-      Log.d(HelloworldActivity.TAG, "Placing routing.metadata in " + toSendBundlePayload.getSource().getAbsolutePath());
-      clientRouting.bundleMetaData(toSendBundlePayload.getSource().getAbsolutePath());
-    } catch (RoutingExceptions.ClientMetaDataFileException e) {
-      System.out.println("[BR]: Failed to add Routing metadata to bundle!");
-      e.printStackTrace();
+      return null;
     }
 
-    Payload payload =
-        BundleUtils.compressPayload(
-            toSendBundlePayload,
-            this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + COMPRESSED_PAYLOAD);
-    UncompressedBundle uncompressedBundle =
-        this.bundleSecurity.encryptPayload(
-            payload, this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + ENCRYPTED_PAYLOAD);
-
-
-    Bundle toSend =
-        BundleUtils.compressBundle(uncompressedBundle, targetDir.getAbsolutePath());
-    this.applicationDataManager.notifyBundleSent(toSendBundlePayload);
-    System.out.println("[BT] Generated new bundle for transmission with bundle id: " + bundleId);
-    return new BundleDTO(bundleId, toSend);
+    return generateNewBundle(builder, targetDir, bundleId);
   }
 
   private BundleDTO generateNewBundle(
@@ -275,7 +253,6 @@ public class BundleTransmission {
         this.bundleSecurity.encryptPayload(
             payload, this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + ENCRYPTED_PAYLOAD);
 
-
     Bundle toSend =
         BundleUtils.compressBundle(uncompressedBundle, targetDir.getAbsolutePath());
     this.applicationDataManager.notifyBundleSent(toSendBundlePayload);
@@ -291,27 +268,18 @@ public class BundleTransmission {
     Optional<UncompressedPayload.Builder> optional =
         this.applicationDataManager.getLastSentBundleBuilder();
     if (!optional.isPresent()) {
-      toSend = this.generateNewBundle(toSendDir);
-    } else {
-      UncompressedPayload.Builder lastSentBundleBuilder = optional.get();
-      UncompressedPayload.Builder newBundleBuilder = this.generateBundleBuilder();
-
-      String bundleId = "";
-      if (BundleUtils.doContentsMatch(newBundleBuilder, lastSentBundleBuilder)) {
-        bundleId = lastSentBundleBuilder.getBundleId();
-        System.out.println("Retransmitting bundle");
-      } else {
-        try {
-          bundleId = this.bundleSecurity.generateNewBundleId();
-        } catch (SecurityExceptions.IDGenerationException e) {
-          e.printStackTrace();
-        } catch (SecurityExceptions.BundleIDCryptographyException e) {
-          e.printStackTrace();
-        }
-      }
-      toSend = this.generateNewBundle(newBundleBuilder, toSendDir, bundleId);
+      return generateNewBundle(toSendDir);
     }
-    return toSend;
+
+    UncompressedPayload.Builder lastSentBundleBuilder = optional.get();
+    UncompressedPayload.Builder newBundleBuilder = this.generateBundleBuilder();
+
+    if (BundleUtils.doContentsMatch(newBundleBuilder, lastSentBundleBuilder)) {
+      System.out.println("Retransmitting bundle");
+      return generateNewBundle(newBundleBuilder, toSendDir, lastSentBundleBuilder.getBundleId());
+    } else {
+      return generateNewBundle(newBundleBuilder, toSendDir);
+    }
   }
 
   public void notifyBundleSent(BundleDTO bundle) {
