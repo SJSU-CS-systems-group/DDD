@@ -1,4 +1,4 @@
-package com.ddd.server.keygenerator.commands;
+package com.ddd.server.commands.keygenerator;
 
 import java.io.File;
 import java.util.Base64;
