@@ -57,10 +57,9 @@ public class BundleTransmission {
   private static String LARGEST_BUNDLE_ID_RECEIVED =
       "/Shared/DB/LARGEST_BUNDLE_ID_RECEIVED.txt";
 
-  private long BUNDLE_SIZE_LIMIT = 1000000000;
+  private long BUNDLE_SIZE_LIMIT = 1000000000L;
 
   private String ROOT_DIR = "";
-
 
   private ClientRouting clientRouting = null;
 
@@ -189,22 +188,15 @@ public class BundleTransmission {
   }
 
   private UncompressedPayload.Builder generateBundleBuilder() {
-    List<ADU> ADUs = this.applicationDataManager.fetchADUs();
+
     UncompressedPayload.Builder builder = new UncompressedPayload.Builder();
     Acknowledgement ackRecord =
         AckRecordUtils.readAckRecordFromFile(new File(this.getAckRecordLocation()));
     builder.setAckRecord(ackRecord);
 
-    long totalSize = ackRecord.getSize();
-    List<ADU> adusToPack = new ArrayList<>();
-    for (ADU adu : ADUs) {
-      if (adu.getSize() + totalSize > this.BUNDLE_SIZE_LIMIT) {
-        break;
-      }
-      totalSize += adu.getSize();
-      adusToPack.add(adu);
-    }
-    builder.setADUs(adusToPack);
+    List<ADU> ADUs = this.applicationDataManager.fetchADUs(ackRecord.getSize());
+
+    builder.setADUs(ADUs);
 
     return builder;
   }
@@ -218,36 +210,8 @@ public class BundleTransmission {
              SecurityExceptions.BundleIDCryptographyException e) {
       e.printStackTrace();
     }
-    builder.setBundleId(bundleId);
-    builder.setSource(new File(this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + UNCOMPRESSED_PAYLOAD + File.separator + bundleId));
-    UncompressedPayload toSendBundlePayload = builder.build();
-    BundleUtils.writeUncompressedPayload(
-        toSendBundlePayload,
-        new File(this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + UNCOMPRESSED_PAYLOAD),
-        bundleId);
 
-    try {
-      Log.d(HelloworldActivity.TAG, "Placing routing.metadata in " + toSendBundlePayload.getSource().getAbsolutePath());
-      clientRouting.bundleMetaData(toSendBundlePayload.getSource().getAbsolutePath());
-    } catch (RoutingExceptions.ClientMetaDataFileException e) {
-      System.out.println("[BR]: Failed to add Routing metadata to bundle!");
-      e.printStackTrace();
-    }
-
-    Payload payload =
-        BundleUtils.compressPayload(
-            toSendBundlePayload,
-            this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + COMPRESSED_PAYLOAD);
-    UncompressedBundle uncompressedBundle =
-        this.bundleSecurity.encryptPayload(
-            payload, this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + ENCRYPTED_PAYLOAD);
-
-
-    Bundle toSend =
-        BundleUtils.compressBundle(uncompressedBundle, targetDir.getAbsolutePath());
-    this.applicationDataManager.notifyBundleSent(toSendBundlePayload);
-    System.out.println("[BT] Generated new bundle for transmission with bundle id: " + bundleId);
-    return new BundleDTO(bundleId, toSend);
+    return generateNewBundle(builder, targetDir, bundleId);
   }
 
   private BundleDTO generateNewBundle(
@@ -275,7 +239,6 @@ public class BundleTransmission {
         this.bundleSecurity.encryptPayload(
             payload, this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + ENCRYPTED_PAYLOAD);
 
-
     Bundle toSend =
         BundleUtils.compressBundle(uncompressedBundle, targetDir.getAbsolutePath());
     this.applicationDataManager.notifyBundleSent(toSendBundlePayload);
@@ -284,20 +247,24 @@ public class BundleTransmission {
   }
 
   public BundleDTO generateBundleForTransmission() {
+    Log.d(HelloworldActivity.TAG, "Started process of generating bundle");
     File toSendDir =
         new File(this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + TO_SEND_DIRECTORY);
 
     BundleDTO toSend = null;
     Optional<UncompressedPayload.Builder> optional =
         this.applicationDataManager.getLastSentBundleBuilder();
+
+    // check if it's first bundle generation
     if (!optional.isPresent()) {
       toSend = this.generateNewBundle(toSendDir);
     } else {
       UncompressedPayload.Builder lastSentBundleBuilder = optional.get();
-      UncompressedPayload.Builder newBundleBuilder = this.generateBundleBuilder();
+      UncompressedPayload.Builder unprocessedPayloadBuilder = this.generateBundleBuilder();
 
       String bundleId = "";
-      if (BundleUtils.doContentsMatch(newBundleBuilder, lastSentBundleBuilder)) {
+      // compare if last sent bundle is same as bundle generated now
+      if (BundleUtils.doContentsMatch(unprocessedPayloadBuilder, lastSentBundleBuilder)) {
         bundleId = lastSentBundleBuilder.getBundleId();
         System.out.println("Retransmitting bundle");
       } else {
@@ -309,7 +276,7 @@ public class BundleTransmission {
           e.printStackTrace();
         }
       }
-      toSend = this.generateNewBundle(newBundleBuilder, toSendDir, bundleId);
+      toSend = this.generateNewBundle(unprocessedPayloadBuilder, toSendDir, bundleId);
     }
     return toSend;
   }

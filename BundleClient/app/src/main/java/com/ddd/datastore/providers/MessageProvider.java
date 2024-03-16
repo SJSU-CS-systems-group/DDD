@@ -23,7 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 
 public class MessageProvider extends ContentProvider {
-    public static final String PROVIDER_NAME="com.ddd.datastore.providers";
+    public static final String PROVIDER_NAME="com.ddd.provider.datastoreprovider";
 
     public static final String URL="content://"+PROVIDER_NAME+"/messages";
 
@@ -35,8 +35,7 @@ public class MessageProvider extends ContentProvider {
 
     private static HashMap<String, String> values;
     static final UriMatcher uriMatcher;
-    private FileStoreHelper sendFileStoreHelper;
-    private FileStoreHelper receiveFileStoreHelper;
+    private FileStoreHelper fileStoreHelper;
 
     static{
         uriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
@@ -52,7 +51,7 @@ public class MessageProvider extends ContentProvider {
     private String getCallerAppId() throws IOException {
         int receiverId = Binder.getCallingUid();
         String appId = getContext().getPackageManager().getNameForUid(receiverId);
-        sendFileStoreHelper.createAppIdDirIfNotExists(appId);
+        fileStoreHelper.createAppIdDirIfNotExists(appId);
         return appId;
     }
 
@@ -60,8 +59,7 @@ public class MessageProvider extends ContentProvider {
     public boolean onCreate() {
         DBHelper dbHelper=new DBHelper(getContext());
         sqlDB=dbHelper.getWritableDatabase();
-        sendFileStoreHelper = new FileStoreHelper(getContext().getApplicationInfo().dataDir+"/send", getContext().getApplicationInfo().dataDir);
-        receiveFileStoreHelper = new FileStoreHelper(getContext().getApplicationInfo().dataDir+"/receive", getContext().getApplicationInfo().dataDir);
+        fileStoreHelper = new FileStoreHelper(getContext().getApplicationInfo().dataDir+"/send", getContext().getApplicationInfo().dataDir);
         if(sqlDB!=null) return true;
         return false;
     }
@@ -73,7 +71,7 @@ public class MessageProvider extends ContentProvider {
 
         try {
             String appId = getCallerAppId();
-            List<byte[]> datalist = sendFileStoreHelper.getAllAppData(appId);
+            List<byte[]> datalist = fileStoreHelper.getAllAppData(appId);
             cursor = new MatrixCursor(new String[]{"data"});
             for (byte[] data: datalist) {
 
@@ -118,7 +116,7 @@ public class MessageProvider extends ContentProvider {
             String appName = getCallerAppId();
             byte[] data = contentValues.getAsByteArray("data");
             Log.d("bundleclient", "inserting: "+new String(data));
-            return sendFileStoreHelper.addFile(appName, data);
+            return fileStoreHelper.addFile(appName, data);
         } catch (IOException e) {
             Log.e("bundleclient", "Unable to add file, error: " + e.getMessage());
             return null;

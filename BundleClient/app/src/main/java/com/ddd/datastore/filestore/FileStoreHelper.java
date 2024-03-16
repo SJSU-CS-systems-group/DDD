@@ -22,6 +22,7 @@ public class FileStoreHelper {
     private String RootFolder="";
     private String appFolder="";
     public FileStoreHelper(String rootFolder){
+        Log.d("bundelclient", "rootFolder: "+rootFolder);
         RootFolder = rootFolder;
     }
 
