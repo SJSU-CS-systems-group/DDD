@@ -278,6 +278,8 @@ public class BundleTransmission {
       }
       toSend = this.generateNewBundle(unprocessedPayloadBuilder, toSendDir, bundleId);
     }
+
+    Log.d(HelloworldActivity.TAG, "sending bundle with id: " + toSend.getBundleId());
     return toSend;
   }
 

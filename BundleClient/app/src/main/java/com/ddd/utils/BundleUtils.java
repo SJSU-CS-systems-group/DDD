@@ -112,40 +112,32 @@ public class BundleUtils {
   }
 
   public static boolean doContentsMatch(UncompressedPayload.Builder a, UncompressedPayload.Builder b) {
-
+    Log.d(HelloworldActivity.TAG, "comparing payload builders");
     Acknowledgement aAckRecord = a.getAckRecord();
     Acknowledgement bAckRecord = b.getAckRecord();
 
-    if ((aAckRecord == null) ^ (bAckRecord == null)) {
+    Log.d(HelloworldActivity.TAG, "comparing acknowledgements");
+    if (aAckRecord == null || bAckRecord == null) {
       return false;
     }
     if (!aAckRecord.equals(bAckRecord)) {
       return false;
     }
 
+    Log.d(HelloworldActivity.TAG, "comparing ADUs");
     List<ADU> aADUs = a.getADUs();
     List<ADU> bADUs = b.getADUs();
 
-    if ((aADUs == null) ^ (bADUs == null)) {
+    if (aADUs == null || bADUs == null) {
       return false;
     }
     if (aADUs.size() != bADUs.size()) {
       return false;
     }
 
-    Comparator<ADU> comp =
-        new Comparator<ADU>() {
-          @Override
-          public int compare(ADU a, ADU b) {
-            int ret = a.getAppId().compareTo(b.getAppId());
-            if (ret == 0) {
-              ret = (int) (a.getADUId() - b.getADUId());
-            }
-            return ret;
-          }
-        };
-    Collections.sort(aADUs, comp);
-    Collections.sort(bADUs, comp);
+    Log.d(HelloworldActivity.TAG, "sorting ADUs");
+    Collections.sort(aADUs);
+    Collections.sort(bADUs);
     for (int i = 0; i < aADUs.size(); i++) {
       if (!aADUs.get(i).equals(bADUs.get(i))) {
         return false;
