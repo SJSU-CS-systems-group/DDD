@@ -93,7 +93,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
     private EditText domainInput;
     private EditText portInput;
     private RpcServer grpcServer;
-    private ExecutorService executor = Executors.newFixedThreadPool(1);;
+    private ExecutorService executor = Executors.newFixedThreadPool(2);;
     private TextView serverConnectStatus;
     private Button connectServerBtn;
     private ConnectivityManager connectivityManager;
@@ -133,6 +133,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
             synchronized (grpcServer){
                 if(grpcServer.isShutdown()){
                     manageRequestedWifiDirectGroup();
+                    Log.d(TAG, "starting grpc server!!!!!!!");
                     grpcServer.startServer(this, PORT);
                 }
             }
@@ -176,7 +177,6 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         runOnUiThread(() -> {
             btn.setEnabled(enable);
         });
-
     }
 
     // methods for managing bundle server requests
