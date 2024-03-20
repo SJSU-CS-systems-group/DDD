@@ -1,5 +1,6 @@
 package com.ddd.server;
 
+import com.ddd.server.commands.bundleuploader.BundleUploader;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
@@ -14,6 +15,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 public class BundleServerApplication {
 
   public static void main(String[] args) {
+    new BundleUploader().run(args);
     SpringApplication.run(BundleServerApplication.class, args);
       //  DTNBundleServer.begin();
   }
