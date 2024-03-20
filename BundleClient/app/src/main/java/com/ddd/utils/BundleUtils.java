@@ -112,40 +112,32 @@ public class BundleUtils {
   }
 
   public static boolean doContentsMatch(UncompressedPayload.Builder a, UncompressedPayload.Builder b) {
-
+    Log.d(HelloworldActivity.TAG, "comparing payload builders");
     Acknowledgement aAckRecord = a.getAckRecord();
     Acknowledgement bAckRecord = b.getAckRecord();
 
-    if ((aAckRecord == null) ^ (bAckRecord == null)) {
+    Log.d(HelloworldActivity.TAG, "comparing acknowledgements");
+    if (aAckRecord == null || bAckRecord == null) {
       return false;
     }
     if (!aAckRecord.equals(bAckRecord)) {
       return false;
     }
 
+    Log.d(HelloworldActivity.TAG, "comparing ADUs");
     List<ADU> aADUs = a.getADUs();
     List<ADU> bADUs = b.getADUs();
 
-    if ((aADUs == null) ^ (bADUs == null)) {
+    if (aADUs == null || bADUs == null) {
       return false;
     }
     if (aADUs.size() != bADUs.size()) {
       return false;
     }
 
-    Comparator<ADU> comp =
-        new Comparator<ADU>() {
-          @Override
-          public int compare(ADU a, ADU b) {
-            int ret = a.getAppId().compareTo(b.getAppId());
-            if (ret == 0) {
-              ret = (int) (a.getADUId() - b.getADUId());
-            }
-            return ret;
-          }
-        };
-    Collections.sort(aADUs, comp);
-    Collections.sort(bADUs, comp);
+    Log.d(HelloworldActivity.TAG, "sorting ADUs");
+    Collections.sort(aADUs);
+    Collections.sort(bADUs);
     for (int i = 0; i < aADUs.size(); i++) {
       if (!aADUs.get(i).equals(bADUs.get(i))) {
         return false;
@@ -159,6 +151,7 @@ public class BundleUtils {
     String bundleId = uncompressedPayload.getBundleId();
     String bundleFilePath =
         targetDirectory.getAbsolutePath() + "/" + bundleId;
+    Log.d(HelloworldActivity.TAG, "writing uncompressed payload to path: "+bundleFilePath);
 
     File bundleFile = new File(bundleFilePath);
     if (!bundleFile.exists()) {
@@ -198,6 +191,7 @@ public class BundleUtils {
   
   public static Payload compressPayload(UncompressedPayload uncompressedPayload, String payloadDirPath) {
     String bundleId = uncompressedPayload.getBundleId();
+    Log.d(HelloworldActivity.TAG, "compressing payload for bundleId: "+bundleId);
 
     File uncompressedPath = uncompressedPayload.getSource();
     File compressedPath = new File(payloadDirPath + File.separator + Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar");
@@ -207,6 +201,7 @@ public class BundleUtils {
   
   public static Bundle compressBundle(UncompressedBundle uncompressedBundle, String bundleGenPath) {
     String bundleId = uncompressedBundle.getBundleId();
+    Log.d(HelloworldActivity.TAG, "compressing bundle for bundleId: "+bundleId);
     File uncompressedBundlePath = uncompressedBundle.getSource();
     File bundleFile = new File(bundleGenPath + File.separator + bundleId + BUNDLE_EXTENSION);
     JarUtils.dirToJar(uncompressedBundlePath.getAbsolutePath(), bundleFile.getAbsolutePath());
@@ -216,6 +211,7 @@ public class BundleUtils {
   
   public static UncompressedBundle extractBundle(Bundle bundle, String extractDirPath) {
     String bundleFileName = bundle.getSource().getName();
+    Log.d(HelloworldActivity.TAG, "extracting bundle for bundle name: "+bundleFileName);
     String extractedBundlePath =
         extractDirPath
             + File.separator
@@ -239,6 +235,7 @@ public class BundleUtils {
 
   public static UncompressedPayload extractPayload(Payload payload, String extractDirPath) {
     String extractedPayloadPath = extractDirPath + File.separator + "extracted-payload";
+    Log.d(HelloworldActivity.TAG, "extracting payload for payload path: "+extractedPayloadPath);
     JarUtils.jarToDir(payload.getSource().getAbsolutePath(), extractedPayloadPath);
 
     String ackPath =

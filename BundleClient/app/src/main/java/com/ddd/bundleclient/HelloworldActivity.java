@@ -59,7 +59,7 @@ import io.grpc.stub.StreamObserver;
 
 public class HelloworldActivity extends AppCompatActivity {
   // tag used for testing in logcat
-  public static final String TAG = "dddDebug";
+  public static final String TAG = "bundleclient";
   // Wifi Direct set up
   private com.ddd.wifidirect.WifiDirectManager wifiDirectManager;
   public static final int PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION = 1001;
@@ -139,8 +139,6 @@ public class HelloworldActivity extends AppCompatActivity {
       @Override
       public void onClick(View view) {
         try {
-          connectButton.setEnabled(true);
-
           resultText.append("Starting connection...\n");
           exchangeMessage(wifiDirectManager);
         } catch (ExecutionException | InterruptedException e) {

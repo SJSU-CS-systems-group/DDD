@@ -15,8 +15,8 @@
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"/>
-    <permission android:name="android.permission.messagingproviderwriteperm" android:protectionLevel="normal" />
-    <permission android:name="android.permission.messagingproviderreadperm" android:protectionLevel="normal" />
+    <permission android:name="com.ddd.bundleclient.permission.MESSAGE_PROVIDER_WRITE" android:protectionLevel="normal" />
+    <permission android:name="com.ddd.bundleclient.permission.MESSAGE_PROVIDER_READ" android:protectionLevel="normal" />
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
@@ -33,12 +33,12 @@
         </activity>
         <provider
             android:name="com.ddd.datastore.providers.MessageProvider"
-            android:authorities="com.ddd.datastore.providers"
+            android:authorities="com.ddd.provider.datastoreprovider"
             android:exported="true"
             android:multiprocess="true"
             android:grantUriPermissions="true"
-            android:writePermission="android.permission.messagingproviderwriteperm"
-            android:readPermission="android.permission.messagingproviderreadperm">
+            android:writePermission="com.ddd.bundleclient.permission.MESSAGE_PROVIDER_WRITE"
+            android:readPermission="com.ddd.bundleclient.permission.MESSAGE_PROVIDER_READ">
         </provider>
     </application>
 
