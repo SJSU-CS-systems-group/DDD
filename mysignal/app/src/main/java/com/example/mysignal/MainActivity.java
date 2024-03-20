@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-    static final Uri CONTENT_URL=Uri.parse("content://com.ddd.datastore.providers/messages");
+    static final Uri CONTENT_URL=Uri.parse("content://com.ddd.provider.datastoreprovider/messages");
     static final String TAG = "ddd_signal";
     EditText receiver, messageText, appName;
     Button insert, delete, view, update, startServiceBtn;
@@ -119,22 +119,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void getMessages(){
-        FileStoreHelper fileStoreHelper = new FileStoreHelper(getApplicationContext().getApplicationInfo().dataDir);
-        //String messageList="";
-
-
-        /*
-        List<byte[]> arr;
-        try {
-            arr = fileStoreHelper.getAppData();
-        } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
-            Toast.makeText(this, "Internal error", Toast.LENGTH_SHORT).show();
-            return;
-        }
-         */
-
-
         ArrayList<String> messages;
         try {
             messages = queryResolver();
@@ -146,15 +130,6 @@ public class MainActivity extends AppCompatActivity {
 
         ArrayAdapter<String> messagesAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, messages);
         messageList.setAdapter(messagesAdapter);
-        /*
-        StringBuilder messages = new StringBuilder();
-        for(int i = 0; i < messageList.size(); i++) {
-            messages.append((i+1)+". "+messageList.get(i)+"\n");
-        }
-
-        createDialog("Message List", messages, true);
-
-         */
     }
     public void addMessage(){
         String message=messageText.getText().toString();
@@ -174,10 +149,10 @@ public class MainActivity extends AppCompatActivity {
             messageText.setText("");
             getMessages();
         } catch (IllegalArgumentException e){
-            Log.e(TAG, e.getMessage());
+            e.printStackTrace();
             Toast.makeText(this, "Cannot connect to bundleclient", Toast.LENGTH_SHORT).show();
         } catch(Exception e){
-            Log.e(TAG, e.getMessage());
+            e.printStackTrace();
             Toast.makeText(this, "Internal error, cannot send", Toast.LENGTH_SHORT).show();
         }
 

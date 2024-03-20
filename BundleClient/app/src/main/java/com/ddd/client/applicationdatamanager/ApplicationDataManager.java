@@ -312,25 +312,32 @@ public class ApplicationDataManager {
         this.stateManager.updateLargestADUIdReceived(adu.getAppId(), adu.getADUId());
         Log.d(HelloworldActivity.TAG, "[ADM] Updated Largest ADU id: "+adu.getADUId()+","+adu.getSource());
       } catch (IOException e) {
-        Log.e("bundleclient", "Could not persist adu: "+adu.getADUId()+", error: " + e.getMessage());
+        Log.e(HelloworldActivity.TAG, "Could not persist adu: "+adu.getADUId()+", error: " + e.getMessage());
       }
     }
   }
 
-  public List<ADU> fetchADUs() {
+  public List<ADU> fetchADUs(long initialSize) {
+    long cumulativeSize = initialSize;
     List<ADU> res = new ArrayList<>();
+    boolean exceededSize = false;
     for (String appId : this.getRegisteredAppIds()) {
       Long largestAduIdDelivered = this.stateManager.getLargestADUIdDeliveredByAppId(appId);
       Long aduIdStart = (largestAduIdDelivered != null) ? (largestAduIdDelivered + 1) : 1;
       List<ADU> adus = this.dataStoreAdaptor.fetchADUs(appId, aduIdStart);
-      Long cumulativeSize = 0L;
       for (ADU adu : adus) {
         if (adu.getSize() + cumulativeSize > this.APP_DATA_SIZE_LIMIT) {
+          Log.d(HelloworldActivity.TAG, "max data size exceeded");
+          Log.d(HelloworldActivity.TAG, "not able to add ADUs with id: "+adu.getAppId() +File.separator+adu.getADUId()+" and after into the bundle");
+          exceededSize = true;
           break;
         }
         res.add(adu);
+        Log.d(HelloworldActivity.TAG, "Added adu: "+ adu.getAppId() +File.separator+ adu.getADUId() + " to the bundle");
         cumulativeSize += adu.getSize();
       }
+
+      if (exceededSize) break;
     }
     return res;
   }

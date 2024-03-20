@@ -161,6 +161,7 @@ public class BundleSecurity {
 
   public UncompressedBundle encryptPayload(Payload payload, String bundleGenDirPath) {
     String bundleId = payload.getBundleId();
+    Log.d(HelloworldActivity.TAG, "encrypting payload in bundleId: "+bundleId);
     System.out.println("[BS] Payload source:" + payload.getSource() + " bundle id " + bundleId);
     String[] paths;
     if (!this.isEncryptionEnabled) {

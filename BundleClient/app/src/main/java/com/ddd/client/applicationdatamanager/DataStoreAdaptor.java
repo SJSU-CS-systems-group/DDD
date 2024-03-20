@@ -86,10 +86,9 @@ public class DataStoreAdaptor {
             Log.d(HelloworldActivity.TAG, "size:"+fileSize);
             ADU adu = new ADU(file, appId, aduId, fileSize);
             return adu;
-        }catch (Exception ex){
-            ex.printStackTrace();
+        }catch (Exception ex) {
+            return null;
         }
-        return null;
     }
 
     public List<ADU> fetchADUs(String appId, long aduIdStart) {
@@ -101,6 +100,7 @@ public class DataStoreAdaptor {
             ret.add(adu);
             aduId++;
         }
+        Log.d(HelloworldActivity.TAG, "completed fetching ADUs");
         return ret;
     }
 }
