@@ -144,9 +144,7 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
     }
 
     connectButton.setOnClickListener(v -> {
-      connectButton.setEnabled(false);
-      wifiDirectResponseText.setText("Starting connection...\n");
-      connectTransport(wifiDirectManager);
+      connectTransport();
     });
 
     exchangeButton.setOnClickListener(v -> {
@@ -162,12 +160,14 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
 
   public void exchangeMessage() {
     // connect to transport
-
+    exchangeButton.setEnabled(false);
     Log.d(TAG,"connection complete");
     new GrpcReceiveTask(this).execute("192.168.49.1", "1778");
   }
 
-  public void connectTransport(WifiDirectManager wifiDirectManager){
+  public void connectTransport(){
+    connectButton.setEnabled(false);
+    wifiDirectResponseText.setText("Starting connection...\n");
     Log.d(TAG, "connecting to transport");
     // we need to check and request for necessary permissions
     if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -198,6 +198,9 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
       if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_INITIALIZATION_FAILED == action) {
         wifiDirectResponseText.append("Manager initialization failed\n");
         Log.d(TAG, "Manager initialization failed\n");
+      } else if(WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL == action) {
+        Log.d(TAG, "Manager initialization successful\n");
+        connectTransport();
       } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_DISCOVERY_SUCCESSFUL == action){
         wifiDirectResponseText.append("Discovery initiation successful\n");
         Log.d(TAG, "Discovery initiation successful\n");
@@ -220,6 +223,7 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
         Log.d(TAG,"Device connected to transport\n");
         updateConnectedDevices();
         connectButton.setEnabled(true);
+        exchangeMessage();
       }else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_FAILED == action ){
         wifiDirectResponseText.append("Device failed to connect to transport\n");
         Log.d(TAG,"Device failed to connect to transport\n");
