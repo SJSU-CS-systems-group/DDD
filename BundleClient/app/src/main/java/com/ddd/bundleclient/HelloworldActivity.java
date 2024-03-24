@@ -52,6 +52,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import io.grpc.ManagedChannel;
@@ -78,6 +80,9 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
 
   // instantiate window for bundles
   public static ClientWindow clientWindow;
+
+  private ExecutorService wifiDirectExecutor = Executors.newFixedThreadPool(1);
+
 
   private int WINDOW_LENGTH = 3;
   // bundle transmitter set up
@@ -107,13 +112,8 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
     // set up view
     setContentView(R.layout.activity_helloworld);
     connectButton = (Button) findViewById(R.id.connect_button);
-//    detectTransportButton = (Button) findViewById(R.id.detect_transport_button);
-//    receiveFromTransportButton = (Button) findViewById(R.id.receive_from_transport_button);
     resultText = (TextView) findViewById(R.id.grpc_response_text);
     resultText.setMovementMethod(new ScrollingMovementMethod());
-//    FragmentManager fragmentManager = this.getSupportFragmentManager();
-//    this.fragment = (FileChooserFragment) fragmentManager.findFragmentById(R.id.fragment_fileChooser);
-//    this.agent = new BundleDeliveryAgent(getApplicationContext().getApplicationInfo().dataDir);
 
     // set up wifi direct
     wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle(), this, this.getString(R.string.tansport_host));
@@ -140,75 +140,19 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
     connectButton.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View view) {
-        try {
           connectButton.setEnabled(false);
           resultText.append("Starting connection...\n");
-          exchangeMessage(wifiDirectManager);
-        } catch (ExecutionException | InterruptedException e) {
-          e.printStackTrace();
-        }
+          connectTransport(wifiDirectManager);
       }
     });
-
-//    detectTransportButton.setOnClickListener(new View.OnClickListener() {
-//      @Override
-//      public void onClick(View view) {
-//        bundleTransmission.generateBundleForTransmission();
-//      }
-//    });
-//    receiveFromTransportButton.setOnClickListener(new View.OnClickListener() {
-//      @Override
-//      public void onClick(View view) {
-//        List<String> bundleRequests = null;
-//        try {
-//          bundleRequests = clientWindow.getWindow(bundleTransmission.getBundleSecurity().getClientSecurity());
-//        } catch (SecurityExceptions.BundleIDCryptographyException e) {
-//          Log.d(TAG, "[BR]: Failed to get Window: " + e);
-//          e.printStackTrace();
-//        }
-//        Set<String> windowBundleIds = new HashSet<>(bundleRequests);
-//        java.io.File[] receivedBundles = new java.io.File(getApplicationContext().getApplicationInfo().dataDir + RECEIVE_PATH).listFiles();
-//        if (receivedBundles != null) {
-//          for (java.io.File bundleFile : receivedBundles) {
-//            String bundleName = bundleFile.getName();
-//            if (!windowBundleIds.contains(bundleName.substring(0, bundleName.lastIndexOf('.')))) {
-//              Log.d(TAG, "[HWA] Skipping received bundle => " + bundleName);
-//              continue;
-//            }
-//            bundleTransmission.processReceivedBundles(currentTransportId, getApplicationContext().getApplicationInfo().dataDir + RECEIVE_PATH);
-//          }
-//        }
-//      }
-//    });
   }
 
 
-  public void exchangeMessage(WifiDirectManager wifiDirectManager) throws ExecutionException, InterruptedException {
+  public void exchangeMessage() {
     // connect to transport
-    connectTransport(wifiDirectManager);
+
     Log.d(TAG,"connection complete");
-    // check if connection successful by getting group info and checking group owner
-    CompletableFuture<WifiP2pGroup> getGroup = wifiDirectManager.requestGroupInfo();
-    getGroup.thenApply((group) -> {
-      Log.d(TAG,group.toString());
-      if (!group.isGroupOwner()){
-//      start request task
-        Log.d(TAG,"Connection Successful!");
-        resultText.append("Connection Successful!\n\n");
-        // receive task
-        new GrpcReceiveTask(this).execute("192.168.49.1", "1778");
-
-//        send task
-//        new GrpcSendTask(this)
-//                .execute(
-//                        "192.168.49.1",
-//                        "1778");
-      } else {
-        resultText.append("Connection Failed\n\n");
-      }
-      return group;
-    });
-
+    new GrpcReceiveTask(this).execute("192.168.49.1", "1778");
   }
 
   public void connectTransport(WifiDirectManager wifiDirectManager){
@@ -226,26 +170,43 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
               HelloworldActivity.WRITE_EXTERNAL_STORAGE);
     }
 
-    wifiDirectManager.discoverPeers();
+    wifiDirectExecutor.execute(wifiDirectManager);
   }
 
   @Override
   public void onReceiveAction(WifiDirectManager.WIFI_DIRECT_ACTIONS action) {
-    if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_DISCOVERY_SUCCESSFUL == action){
-      resultText.append("Discovery initiation successful\n");
-    } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_DISCOVERY_FAILED == action) {
-      resultText.append("Discovery initiation failed\n");
-    } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_PEERS_CHANGED == action ){
-      resultText.append("Peers changed");
-    } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_FAILED == action ){
-      resultText.append("Device connection initiation failed");
-    }else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_SUCCESSFUL == action ){
-      resultText.append("Device connection initiation successful");
-    }else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL == action ){
-      resultText.append("Device connected to transport");
-    }else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_FAILED == action ){
-      resultText.append("Device failed to connect to transport");
-    }
+    runOnUiThread(() -> {
+      if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_INITIALIZATION_FAILED == action) {
+        resultText.append("Manager initialization failed\n");
+        Log.d(TAG, "Manager initialization failed\n");
+      } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_DISCOVERY_SUCCESSFUL == action){
+        resultText.append("Discovery initiation successful\n");
+        Log.d(TAG, "Discovery initiation successful\n");
+      } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_DISCOVERY_FAILED == action) {
+        resultText.append("Discovery initiation failed\n");
+        Log.d(TAG,"Discovery initiation failed\n");
+        connectButton.setEnabled(true);
+      } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_PEERS_CHANGED == action ){
+        resultText.append("Peers changed\n");
+        Log.d(TAG,"Peers changed\n");
+      } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_FAILED == action ){
+        resultText.append("Device connection initiation failed\n");
+        Log.d(TAG,"Device connection initiation failed\n");
+        connectButton.setEnabled(true);
+      }else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_SUCCESSFUL == action ){
+        resultText.append("Device connection initiation successful\n");
+        Log.d(TAG,"Device connection initiation successful\n");
+      }else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL == action ){
+        resultText.append("Device connected to transport\n");
+        Log.d(TAG,"Device connected to transport\n");
+        exchangeMessage();
+        connectButton.setEnabled(true);
+      }else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_FAILED == action ){
+        resultText.append("Device failed to connect to transport\n");
+        Log.d(TAG,"Device failed to connect to transport\n");
+        connectButton.setEnabled(true);
+      }
+    });
   }
 
   private class GrpcReceiveTask extends AsyncTask<String, Void, String> {
@@ -471,4 +432,9 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
     unregisterReceiver(wifiDirectManager.getReceiver());
   }
 
+  @Override
+  public void onDestroy() {
+    super.onDestroy();
+    wifiDirectExecutor.shutdown();
+  }
 }
