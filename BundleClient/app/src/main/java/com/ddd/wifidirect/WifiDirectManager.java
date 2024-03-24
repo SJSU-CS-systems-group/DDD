@@ -316,6 +316,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
 
             @Override
             public void onFailure(int reasonCode) {
+                devicesFound.remove(config.deviceAddress);
                 notifyActionToListeners(WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_FAILED);
             }
         });
@@ -407,7 +408,9 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
      */
     public Context getContext() { return this.context; }
 
-
+    public HashSet<String> getDevicesFound(){
+        return devicesFound;
+    }
 
     /**
      * Inner Class to hook into activity Lifecycle functions
