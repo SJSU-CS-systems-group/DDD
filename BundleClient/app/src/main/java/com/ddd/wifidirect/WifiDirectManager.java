@@ -39,6 +39,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
 
     public enum WIFI_DIRECT_ACTIONS {
         WIFI_DIRECT_MANAGER_INITIALIZATION_FAILED,
+        WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL,
         WIFI_DIRECT_MANAGER_DISCOVERY_SUCCESSFUL,
         WIFI_DIRECT_MANAGER_DISCOVERY_FAILED,
         WIFI_DIRECT_MANAGER_PEERS_CHANGED,
@@ -78,9 +79,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
      */
     public WifiDirectManager(Context context, Lifecycle lifeCycle, WifiDirectStateListener listener, String deviceName) {
         this.context = context;
-        if (!this.initClient(this.context)) {
-            notifyActionToListeners(WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_INITIALIZATION_FAILED);
-        }
+        this.initClient(this.context);
         listeners.add(listener);
         this.registerIntents();
 
@@ -151,6 +150,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
     @SuppressLint("MissingPermission")
     private void discoverPeers() {
         if (!wifiDirectEnabled) {
+            Log.d(HelloworldActivity.TAG, "Wifidirect not enabled");
             return;
         }
         this.manager.discoverPeers(this.channel, new WifiP2pManager.ActionListener() {
@@ -316,6 +316,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
 
             @Override
             public void onFailure(int reasonCode) {
+                devicesFound.remove(config.deviceAddress);
                 notifyActionToListeners(WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_FAILED);
             }
         });
@@ -407,7 +408,9 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
      */
     public Context getContext() { return this.context; }
 
-
+    public HashSet<String> getDevicesFound(){
+        return devicesFound;
+    }
 
     /**
      * Inner Class to hook into activity Lifecycle functions
@@ -455,6 +458,11 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
     }
 
     public void setWifiDirectEnabled(boolean enabled) {
+        if (enabled) {
+            notifyActionToListeners(WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL);
+        } else {
+            notifyActionToListeners(WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_INITIALIZATION_FAILED);
+        }
         wifiDirectEnabled = enabled;
     }
 }

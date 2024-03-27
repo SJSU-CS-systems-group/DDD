@@ -69,10 +69,13 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
   private static final int WRITE_EXTERNAL_STORAGE = 1002;
   // gRPC set up
   private Button connectButton;
+  private Button exchangeButton;
   private Button detectTransportButton;
   private Button receiveFromTransportButton;
   private FileChooserFragment fragment;
   private TextView resultText;
+  private TextView connectedDevicesText;
+  private TextView wifiDirectResponseText;
   private static String RECEIVE_PATH = "/Shared/received-bundles";
 //  private BundleDeliveryAgent agent;
   // context
@@ -111,8 +114,11 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
     super.onCreate(savedInstanceState);
     // set up view
     setContentView(R.layout.activity_helloworld);
-    connectButton = (Button) findViewById(R.id.connect_button);
-    resultText = (TextView) findViewById(R.id.grpc_response_text);
+    connectButton = findViewById(R.id.connect_button);
+    exchangeButton = findViewById(R.id.exchange_button);
+    resultText = findViewById(R.id.grpc_response_text);
+    connectedDevicesText = findViewById(R.id.connected_device_address);
+    wifiDirectResponseText = findViewById(R.id.wifidirect_response_text);
     resultText.setMovementMethod(new ScrollingMovementMethod());
 
     // set up wifi direct
@@ -137,25 +143,31 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
       e.printStackTrace();
     }
 
-    connectButton.setOnClickListener(new View.OnClickListener() {
-      @Override
-      public void onClick(View view) {
-          connectButton.setEnabled(false);
-          resultText.append("Starting connection...\n");
-          connectTransport(wifiDirectManager);
+    connectButton.setOnClickListener(v -> {
+      connectTransport();
+    });
+
+    exchangeButton.setOnClickListener(v -> {
+      if (wifiDirectManager.getDevicesFound().isEmpty()){
+        resultText.append("Not connected to any devices\n");
+        return;
       }
+
+      exchangeMessage();
     });
   }
 
 
   public void exchangeMessage() {
     // connect to transport
-
+    exchangeButton.setEnabled(false);
     Log.d(TAG,"connection complete");
     new GrpcReceiveTask(this).execute("192.168.49.1", "1778");
   }
 
-  public void connectTransport(WifiDirectManager wifiDirectManager){
+  public void connectTransport(){
+    connectButton.setEnabled(false);
+    wifiDirectResponseText.setText("Starting connection...\n");
     Log.d(TAG, "connecting to transport");
     // we need to check and request for necessary permissions
     if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -173,36 +185,47 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
     wifiDirectExecutor.execute(wifiDirectManager);
   }
 
+  private void updateConnectedDevices() {
+    connectedDevicesText.setText("");
+    wifiDirectManager.getDevicesFound().stream().forEach(device -> {
+      connectedDevicesText.append(device+"\n");
+    });
+  }
+
   @Override
   public void onReceiveAction(WifiDirectManager.WIFI_DIRECT_ACTIONS action) {
     runOnUiThread(() -> {
       if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_INITIALIZATION_FAILED == action) {
-        resultText.append("Manager initialization failed\n");
+        wifiDirectResponseText.append("Manager initialization failed\n");
         Log.d(TAG, "Manager initialization failed\n");
+      } else if(WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL == action) {
+        Log.d(TAG, "Manager initialization successful\n");
+        connectTransport();
       } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_DISCOVERY_SUCCESSFUL == action){
-        resultText.append("Discovery initiation successful\n");
+        wifiDirectResponseText.append("Discovery initiation successful\n");
         Log.d(TAG, "Discovery initiation successful\n");
       } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_DISCOVERY_FAILED == action) {
-        resultText.append("Discovery initiation failed\n");
+        wifiDirectResponseText.append("Discovery initiation failed\n");
         Log.d(TAG,"Discovery initiation failed\n");
         connectButton.setEnabled(true);
       } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_PEERS_CHANGED == action ){
-        resultText.append("Peers changed\n");
+        wifiDirectResponseText.append("Peers changed\n");
         Log.d(TAG,"Peers changed\n");
       } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_FAILED == action ){
-        resultText.append("Device connection initiation failed\n");
+        wifiDirectResponseText.append("Device connection initiation failed\n");
         Log.d(TAG,"Device connection initiation failed\n");
         connectButton.setEnabled(true);
       }else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_SUCCESSFUL == action ){
-        resultText.append("Device connection initiation successful\n");
+        wifiDirectResponseText.append("Device connection initiation successful\n");
         Log.d(TAG,"Device connection initiation successful\n");
       }else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL == action ){
-        resultText.append("Device connected to transport\n");
+        wifiDirectResponseText.append("Device connected to transport\n");
         Log.d(TAG,"Device connected to transport\n");
-        exchangeMessage();
+        updateConnectedDevices();
         connectButton.setEnabled(true);
+        exchangeMessage();
       }else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_FAILED == action ){
-        resultText.append("Device failed to connect to transport\n");
+        wifiDirectResponseText.append("Device failed to connect to transport\n");
         Log.d(TAG,"Device failed to connect to transport\n");
         connectButton.setEnabled(true);
       }
@@ -338,10 +361,6 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
       if (activity == null) {
         return;
       }
-
-      Button connectButton = (Button) activity.findViewById(R.id.connect_button);
-      resultText.setText(result);
-      connectButton.setEnabled(true);
     }
   }
 
@@ -413,10 +432,10 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
       if (activity == null) {
         return;
       }
-      TextView resultText = (TextView) activity.findViewById(R.id.grpc_response_text);
-      Button connectButton = (Button) activity.findViewById(R.id.connect_button);
+      TextView resultText = activity.findViewById(R.id.grpc_response_text);
+      Button exchangeButton = activity.findViewById(R.id.exchange_button);
       resultText.setText(result);
-      connectButton.setEnabled(true);
+      exchangeButton.setEnabled(true);
     }
   }
 
