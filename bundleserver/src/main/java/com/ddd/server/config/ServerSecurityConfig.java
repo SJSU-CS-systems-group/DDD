@@ -13,9 +13,12 @@ public class ServerSecurityConfig {
   
   @Bean ServerSecurity createServerSecurityInstance() {
     try {
+      System.out.println("Try " + bundleStoreConfig.getBundleSecurity().getServerKeyPath());
+
       return ServerSecurity.getInstance(bundleStoreConfig.getBundleSecurity().getServerKeyPath());
-    } catch (ServerIntializationException e) {
+    } catch (Exception e) {
       // TODO Auto-generated catch block
+      System.out.println("Catch " + bundleStoreConfig.getBundleSecurity().getServerKeyPath());
       e.printStackTrace();
     }
     return null;

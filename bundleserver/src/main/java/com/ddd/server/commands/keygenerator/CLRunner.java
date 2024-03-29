@@ -20,6 +20,9 @@ public class CLRunner implements CommandLineRunner {
     @Autowired
     DecodePublicKey decodePublicKey;
 
+    @Autowired
+    DecryptBundle decryptBundle;
+
     @Override
     public void run(String... args) throws Exception {
         // run picocli impl
@@ -33,6 +36,8 @@ public class CLRunner implements CommandLineRunner {
             System.exit(new CommandLine(generateKeys, factory).execute(args));
         } else if (command.equals("decode-pub-key")) {
             System.exit(new CommandLine(decodePublicKey, factory).execute(args));
+        } else if (command.equals("decrypt-bundle")) {
+            System.exit(new CommandLine(decryptBundle, factory).execute(args));
         }
     }
 }
