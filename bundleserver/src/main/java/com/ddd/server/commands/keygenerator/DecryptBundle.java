@@ -1,5 +1,6 @@
 package com.ddd.server.commands.keygenerator;
 
+import com.ddd.server.bundlesecurity.SecurityUtils;
 import com.ddd.server.bundlesecurity.ServerSecurity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -26,6 +27,8 @@ public class DecryptBundle implements Callable<Void> {
     public Void call() {
         try {
             System.out.println("Decrypting bundle" + bundlePath);
+
+            bundlePath = SecurityUtils.unzip(bundlePath);
 
             serverSecurity.decrypt(bundlePath, bundlePath);
 

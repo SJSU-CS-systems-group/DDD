@@ -15,7 +15,6 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Stream;
 
 import org.springframework.boot.ExitCodeGenerator;
 import org.springframework.boot.SpringApplication;
@@ -98,7 +97,9 @@ public class ServerSecurity {
             clientRootPath = serverRootPath+File.separator+"Clients";
             SecurityUtils.createDirectory(clientRootPath);
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+//            System.out.println(e.getMessage());
+
+            e.printStackTrace();
             System.out.printf("Error loading server keys. Ensure the following key files exist in your application.yml's {bundle-server.bundle-security.server-serverkeys-path} path:\n"+
                             "%s\n" +
                             "server_identity.pub\n"+
@@ -208,7 +209,7 @@ public class ServerSecurity {
         }
     }
 
-    /* Retreives or Initializes Client Session on the server
+    /* Retrieves or Initializes Client Session on the server
      * Parameters:
      *      clientKeyPath:   Path where the client's Keys are stored
      * Exceptions:
@@ -298,6 +299,7 @@ public class ServerSecurity {
             String clientID = SecurityUtils.getClientID(clientKeyPath);
             client = getClientSession(clientKeyPath, clientID);
         } catch (InvalidKeyException | IDGenerationException | EncodingException e) {
+            e.printStackTrace();
             throw new InvalidClientSessionException("[SEC]:Error getting client session from file: "+e);
         }
         return client;
@@ -332,7 +334,7 @@ public class ServerSecurity {
         /* get Client Session */
         ClientSession client = getClientSession(clientID);
         if ( client == null) {
-            throw new InvalidClientIDException("Failed to get client [" + clientID + "]");
+            throw new InvalidClientIDException("Failed to get client [" + clientID + "] ", new Throwable("Client not found"));
         }
 
         byte[] agreement = Curve.calculateAgreement(client.IdentityKey.getPublicKey(), ourIdentityKeyPair.getPrivateKey());
@@ -360,8 +362,10 @@ public class ServerSecurity {
         String decryptedFile = decryptedPath + File.separator + bundleID + SecurityUtils.DECRYPTED_FILE_EXT;
         
         /* Create Directory if it does not exist */
-        Files.createDirectories(Paths.get(decryptedPath));
-        
+        if (!Files.exists(Paths.get(decryptedPath))) {
+            Files.createDirectories(Paths.get(decryptedPath));
+        }
+
         System.out.println(decryptedFile);
         int fileCount = new File(payloadPath).list().length;
 
@@ -472,13 +476,12 @@ public class ServerSecurity {
         try {
             sharedSecret = getsharedSecret(client);
         } catch (InvalidKeyException e) {
-            throw new BundleIDCryptographyException("Failed to calculate shared secret for bundle ID: "+e);
+            throw new BundleIDCryptographyException("Failed to calculate shared secret for bundle ID: ", e);
         }
-
         try {
             return SecurityUtils.encryptAesCbcPkcs5(sharedSecret, bundleID);
         } catch (AESAlgorithmException e) {
-            throw new BundleIDCryptographyException("Failed to encrypt bundle ID: "+e);
+            throw new BundleIDCryptographyException("Failed to encrypt bundle ID: ", e);
         }
     }
 
@@ -488,13 +491,13 @@ public class ServerSecurity {
         try {
             sharedSecret = getsharedSecret(clientID);
         } catch (InvalidKeyException e) {
-            throw new BundleIDCryptographyException("Failed to calculate shared secret for bundle ID: "+e);
+            throw new BundleIDCryptographyException("Failed to calculate shared secret for bundle ID: ", e);
         }
 
         try {
             return SecurityUtils.encryptAesCbcPkcs5(sharedSecret, bundleID);
         } catch (AESAlgorithmException e) {
-            throw new BundleIDCryptographyException("Failed to encrypt bundle ID: "+e);
+            throw new BundleIDCryptographyException("Failed to encrypt bundle ID: ", e);
         }
     }
 
@@ -514,13 +517,13 @@ public class ServerSecurity {
         try {
             sharedSecret = getsharedSecret(clientID);
         } catch (InvalidKeyException | InvalidClientIDException e) {
-            throw new BundleIDCryptographyException("Error generating shared secret for bundle ID: "+e);
+            throw new BundleIDCryptographyException("Error generating shared secret for bundle ID: ", e);
         }
 
         try {
-            bundleBytes = SecurityUtils.dencryptAesCbcPkcs5(sharedSecret, encryptedBundleID);
+            bundleBytes = SecurityUtils.decryptAesCbcPkcs5(sharedSecret, encryptedBundleID);
         } catch (AESAlgorithmException e) {
-            throw new BundleIDCryptographyException("Error in AES decryption for bundle ID: "+e);
+            throw new BundleIDCryptographyException("Error in AES decryption for bundle ID: ", e);
         }
 
         return new String(bundleBytes, StandardCharsets.UTF_8);
@@ -560,14 +563,16 @@ public class ServerSecurity {
 
             String sharedSecret = getsharedSecret(clientIdentityKey.getPublicKey());
 
-            byte[] bundleIDbytes = SecurityUtils.dencryptAesCbcPkcs5(sharedSecret, new String(encryptedBundleID, StandardCharsets.UTF_8));
+            byte[] bundleIDbytes = SecurityUtils.decryptAesCbcPkcs5(sharedSecret, new String(encryptedBundleID, StandardCharsets.UTF_8));
             receivedBundleID = new String(bundleIDbytes, StandardCharsets.UTF_8);
-            bundleIDbytes = SecurityUtils.dencryptAesCbcPkcs5(sharedSecret, lastBundleID);
+            bundleIDbytes = SecurityUtils.decryptAesCbcPkcs5(sharedSecret, lastBundleID);
             latestBundleID = new String(bundleIDbytes, StandardCharsets.UTF_8);
         } catch (AESAlgorithmException | InvalidKeyException | EncodingException e) {
-            throw new BundleIDCryptographyException("[SEC]: Failed to decrypt/decode BundleID:"+e);
+            throw new BundleIDCryptographyException("[SEC]: Failed to decrypt/decode BundleID:", e);
         }
 
         return BundleIDGenerator.compareBundleIDs(receivedBundleID, latestBundleID, BundleIDGenerator.UPSTREAM);
     }
+
+
 };

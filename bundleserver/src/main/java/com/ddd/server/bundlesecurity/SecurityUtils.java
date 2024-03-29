@@ -99,7 +99,7 @@ public class SecurityUtils {
             byte[] publicKey = decodePublicKeyfromFile(publicKeyPath);
             id = generateID(publicKey);
         } catch (Exception e) {
-            throw new IDGenerationException("Failed to generateID: "+e);
+            throw new IDGenerationException("Failed to generateID: ", e);
         }
         return id;
     }
@@ -118,7 +118,7 @@ public class SecurityUtils {
         try {
             md = MessageDigest.getInstance("SHA-1");
         } catch (NoSuchAlgorithmException e) {
-            throw new IDGenerationException("[BS]: NoSuchAlgorithmException while generating ID");
+            throw new IDGenerationException("[BS]: NoSuchAlgorithmException while generating ID ", e);
         }
 
         byte[] hashedKey = md.digest(publicKey);
@@ -133,7 +133,7 @@ public class SecurityUtils {
             encodedKey += "\n" + PUB_KEY_FOOTER;
             stream.write(encodedKey.getBytes());
         } catch (IOException e) {
-            throw new EncodingException("[BS]: Failed to Encode Public Key to file:"+e);
+            throw new EncodingException("[BS]: Failed to Encode Public Key to file: ", e);
         }
     }
 
@@ -154,7 +154,7 @@ public class SecurityUtils {
             }
         } catch (InvalidKeyException | IOException e) {
             e.printStackTrace();
-            throw new EncodingException("Error: Invalid Public Key Format");
+            throw new EncodingException("Error: Invalid Public Key Format ", e);
         }
     }
     
@@ -175,7 +175,7 @@ public class SecurityUtils {
             }
         } catch (InvalidKeyException | IOException e) {
             e.printStackTrace();
-            throw new EncodingException("Error: Invalid Public Key Format");
+            throw new EncodingException("Error: Invalid Public Key Format ", e);
         }
 
     }
@@ -199,7 +199,7 @@ public class SecurityUtils {
             return Curve.verifySignature(publicKey, message, signature);
         } catch (InvalidKeyException | IOException e) {
 
-            throw new SignatureVerificationException("Error Verifying Signature: "+e);
+            throw new SignatureVerificationException("Error Verifying Signature: ", e);
         }
     }
     
@@ -210,7 +210,7 @@ public class SecurityUtils {
             clientIdentityKey = decodePublicKeyfromFile(bundlePath + File.separator + CLIENT_IDENTITY_KEY);
         } catch (EncodingException e) {
             e.printStackTrace();
-            throw new IDGenerationException("Error decoding public key file: "+e);
+            throw new IDGenerationException("Error getting Client ID: ", e);
         }
         return generateID(clientIdentityKey);
     }
@@ -238,7 +238,7 @@ public class SecurityUtils {
         } catch ( NoSuchAlgorithmException | InvalidKeySpecException | NoSuchPaddingException |
                     java.security.InvalidKeyException | InvalidAlgorithmParameterException |
                     IllegalBlockSizeException | BadPaddingException e) {
-            throw new AESAlgorithmException("Error Encrypting text using AES: "+e);
+            throw new AESAlgorithmException("Error Encrypting text using AES: ", e);
         }
         return Base64.getUrlEncoder().encodeToString(encryptedData);
     }
@@ -264,7 +264,7 @@ public class SecurityUtils {
         } catch(NoSuchAlgorithmException | InvalidKeySpecException | NoSuchPaddingException |
                     java.security.InvalidKeyException | InvalidAlgorithmParameterException |
                     IllegalBlockSizeException | BadPaddingException e) {
-            throw new AESAlgorithmException("Error Decrypting text ["+ cipherText +"] using AES: ");
+            throw new AESAlgorithmException("Error Decrypting text ["+ cipherText +"] using AES: ", e);
         }
         return decryptedData;
     }
@@ -299,11 +299,11 @@ public class SecurityUtils {
     public static String unzip(String zipFilePath) throws IOException {
 
         // Check if the file is a zip file
-        RandomAccessFile raf = new RandomAccessFile(zipFilePath, "r");
-        long n = raf.readInt();
-        raf.close();
-        if (n != 1347093252)
-            return zipFilePath;
+//        RandomAccessFile raf = new RandomAccessFile(zipFilePath, "r");
+//        long n = raf.readInt();
+//        raf.close();
+//        if (n != 1347093252)
+//            return zipFilePath;
 
         File zipFile = new File(zipFilePath);
         String destDirPath = zipFile.getParent() + File.separator + zipFile.getName().replaceFirst("[.][^.]+$", "");
@@ -314,7 +314,7 @@ public class SecurityUtils {
         }
 
         try (FileInputStream fis = new FileInputStream(zipFilePath);
-             ZipInputStream zis = new ZipInputStream(fis)) {
+            ZipInputStream zis = new ZipInputStream(fis)) {
             ZipEntry entry = zis.getNextEntry();
             while (entry != null) {
                 File newFile = new File(destDir, entry.getName());
