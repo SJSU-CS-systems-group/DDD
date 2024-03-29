@@ -202,9 +202,11 @@ public class BundleServerConfig {
     private String serverKeyPath;
 
     public String getServerKeyPath() {
-    return serverKeyPath;}
+      return serverKeyPath;
+    }
 
     public void setServerKeyPath(String serverKeyPath) {
-    this.serverKeyPath = serverKeyPath;}
+      this.serverKeyPath = serverKeyPath;
+    }
   }
 }
