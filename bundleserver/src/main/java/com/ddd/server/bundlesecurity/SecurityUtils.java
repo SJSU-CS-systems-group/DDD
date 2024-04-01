@@ -48,6 +48,7 @@ public class SecurityUtils {
     public static final String SIGN_FILENAME        = PAYLOAD_FILENAME + ".signature";
     public static final String BUNDLEID_FILENAME    = "bundle.id";
     public static final String DECRYPTED_FILE_EXT   = ".decrypted";
+    public static final String BUNDLE_FILE_EXT      = ".bundle";
 
     public static final String PUB_KEY_HEADER = "-----BEGIN EC PUBLIC KEY-----";
     public static final String PUB_KEY_FOOTER = "-----END EC PUBLIC KEY-----";
@@ -297,21 +298,13 @@ public class SecurityUtils {
     }
 
     public static String unzip(String zipFilePath) throws IOException {
-
-        // Check if the file is a zip file
-//        RandomAccessFile raf = new RandomAccessFile(zipFilePath, "r");
-//        long n = raf.readInt();
-//        raf.close();
-//        if (n != 1347093252)
-//            return zipFilePath;
+        if (!zipFilePath.endsWith(".bundle")) {
+            return zipFilePath;
+        }
 
         File zipFile = new File(zipFilePath);
         String destDirPath = zipFile.getParent() + File.separator + zipFile.getName().replaceFirst("[.][^.]+$", "");
         File destDir = new File(destDirPath);
-
-        if (!destDir.exists()) {
-            destDir.mkdirs();
-        }
 
         try (FileInputStream fis = new FileInputStream(zipFilePath);
             ZipInputStream zis = new ZipInputStream(fis)) {
