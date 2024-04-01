@@ -21,13 +21,13 @@ public class EncryptBundle implements Callable<Void> {
     @CommandLine.Parameters(arity = "1", index = "0")
     String command;
 
-    @CommandLine.Option(names = "-bundle", required = true, description = "Bundle file path")
+    @CommandLine.Option(names = "--bundle", required = true, description = "Bundle file path")
     private String bundlePath;
 
-    @CommandLine.Option(names = "-encrypted-path", description = "Encrypted bundle file path")
+    @CommandLine.Option(names = "--encrypted-path", description = "Encrypted bundle file path")
     private String encPath;
 
-    @CommandLine.Option(names = "-clientId", required = true, description = "Client ID")
+    @CommandLine.Option(names = "--clientId", required = true, description = "Client ID")
     private String clientId;
 
     @Autowired

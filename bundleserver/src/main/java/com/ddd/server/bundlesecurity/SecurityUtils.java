@@ -100,7 +100,7 @@ public class SecurityUtils {
             byte[] publicKey = decodePublicKeyfromFile(publicKeyPath);
             id = generateID(publicKey);
         } catch (Exception e) {
-            throw new IDGenerationException("Failed to generateID: ", e);
+            throw new IDGenerationException("Failed to generateID ", e);
         }
         return id;
     }

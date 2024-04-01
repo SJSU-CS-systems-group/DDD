@@ -55,15 +55,5 @@ public class CLRunner implements CommandLineRunner {
             default:
                 break;
         }
-        
-//        if (command.equals("generate-keys")) {
-//            System.exit(new CommandLine(generateKeys, factory).execute(args));
-//        } else if (command.equals("decode-pub-key")) {
-//            System.exit(new CommandLine(decodePublicKey, factory).execute(args));
-//        } else if (command.equals("decrypt-bundle")) {
-//            System.exit(new CommandLine(decryptBundle, factory).execute(args));
-//        } else if (command.equals("encrypt-bundle")) {
-//            System.exit(new CommandLine(encryptBundle, factory).execute(args));
-//        }
     }
 }

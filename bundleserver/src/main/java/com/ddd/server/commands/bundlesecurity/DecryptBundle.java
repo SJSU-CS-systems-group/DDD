@@ -19,10 +19,10 @@ public class DecryptBundle implements Callable<Void> {
     @CommandLine.Parameters(arity = "1", index = "0")
     String command;
 
-    @CommandLine.Option(names = "-bundle", required = true, description = "Bundle file path")
+    @CommandLine.Option(names = "--bundle", required = true, description = "Bundle file path")
     private String bundlePath;
 
-    @CommandLine.Option(names = "-decrypted-path", description = "Decrypted bundle file path")
+    @CommandLine.Option(names = "--decrypted-path", description = "Decrypted bundle file path")
     private String decryptedPath;
 
     @Autowired

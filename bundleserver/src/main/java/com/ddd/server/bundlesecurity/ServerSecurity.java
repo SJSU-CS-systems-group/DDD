@@ -98,8 +98,6 @@ public class ServerSecurity {
             clientRootPath = serverRootPath+File.separator+"Clients";
             SecurityUtils.createDirectory(clientRootPath);
         } catch (Exception e) {
-//            System.out.println(e.getMessage());
-
             e.printStackTrace();
             System.out.printf("Error loading server keys. Ensure the following key files exist in your application.yml's {bundle-server.bundle-security.server-serverkeys-path} path:\n"+
                             "%s\n" +
