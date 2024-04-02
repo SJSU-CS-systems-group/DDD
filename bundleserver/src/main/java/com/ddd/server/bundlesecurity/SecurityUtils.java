@@ -1,6 +1,36 @@
 package com.ddd.server.bundlesecurity;
 
-import java.io.*;
+import com.ddd.server.bundlesecurity.SecurityExceptions.AESAlgorithmException;
+import com.ddd.server.bundlesecurity.SecurityExceptions.EncodingException;
+import com.ddd.server.bundlesecurity.SecurityExceptions.IDGenerationException;
+import com.ddd.server.bundlesecurity.SecurityExceptions.SignatureVerificationException;
+import org.whispersystems.libsignal.IdentityKey;
+import org.whispersystems.libsignal.IdentityKeyPair;
+import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.SessionCipher;
+import org.whispersystems.libsignal.SignalProtocolAddress;
+import org.whispersystems.libsignal.ecc.Curve;
+import org.whispersystems.libsignal.ecc.ECKeyPair;
+import org.whispersystems.libsignal.ecc.ECPublicKey;
+import org.whispersystems.libsignal.state.impl.InMemorySignalProtocolStore;
+import org.whispersystems.libsignal.util.KeyHelper;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -13,32 +43,6 @@ import java.util.Base64;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
-
-import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.PBEKeySpec;
-import javax.crypto.spec.SecretKeySpec;
-
-import org.whispersystems.libsignal.IdentityKey;
-import org.whispersystems.libsignal.IdentityKeyPair;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.SessionCipher;
-import org.whispersystems.libsignal.SignalProtocolAddress;
-import org.whispersystems.libsignal.ecc.Curve;
-import org.whispersystems.libsignal.ecc.ECKeyPair;
-import org.whispersystems.libsignal.ecc.ECPublicKey;
-import org.whispersystems.libsignal.state.impl.InMemorySignalProtocolStore;
-import org.whispersystems.libsignal.util.KeyHelper;
-
-import com.ddd.server.bundlesecurity.SecurityExceptions.IDGenerationException;
-import com.ddd.server.bundlesecurity.SecurityExceptions.EncodingException;
-import com.ddd.server.bundlesecurity.SecurityExceptions.SignatureVerificationException;
-import com.ddd.server.bundlesecurity.SecurityExceptions.AESAlgorithmException;
 
 public class SecurityUtils {
     public static final String PAYLOAD_FILENAME     = "payload";
@@ -54,14 +58,14 @@ public class SecurityUtils {
     public static final String PUB_KEY_FOOTER = "-----END EC PUBLIC KEY-----";
     public static final String PVT_KEY_HEADER = "-----BEGIN EC PRIVATE KEY-----";
     public static final String PVT_KEY_FOOTER = "-----END EC PRIVATE KEY-----";
-    
+
     public static final String CLIENT_KEY_PATH      = "Client_Keys";
     public static final String SERVER_KEY_PATH      = "Server_Keys";
     public static final String SESSION_STORE_FILE   = "Session.store";
-    
+
     public static final String CLIENT_IDENTITY_KEY  = "clientIdentity.pub";
     public static final String CLIENT_BASE_KEY      = "clientBase.pub";
-    
+
     public static final String SERVER_IDENTITY_KEY  = "server_identity.pub";
     public static final String SERVER_SIGNEDPRE_KEY = "server_signed_pre.pub";
     public static final String SERVER_RATCHET_KEY = "server_ratchet.pub";
@@ -126,7 +130,7 @@ public class SecurityUtils {
         return Base64.getUrlEncoder().encodeToString(hashedKey);
     }
 
-    public static void createEncodedPublicKeyFile(ECPublicKey publicKey, String path) throws EncodingException 
+    public static void createEncodedPublicKeyFile(ECPublicKey publicKey, String path) throws EncodingException
     {
         String encodedKey = PUB_KEY_HEADER+"\n";
         try (FileOutputStream stream = new FileOutputStream(path, false)) {
@@ -158,15 +162,15 @@ public class SecurityUtils {
             throw new EncodingException("Error: Invalid Public Key Format ", e);
         }
     }
-    
+
     public static byte[] decodePrivateKeyFromFile(String path) throws EncodingException {
         try {
             List<String> encodedKeyList = Files.readAllLines(Paths.get(path.trim()));
-    
+
             if (encodedKeyList.size() != 3) {
                 throw new InvalidKeyException("Error: Invalid Public Key Length");
             }
-    
+
             if (encodedKeyList.get(0).equals(PVT_KEY_HEADER) &&
                     encodedKeyList.get(2).equals(PVT_KEY_FOOTER)) {
                 return Base64.getUrlDecoder().decode(encodedKeyList.get(1));
@@ -184,10 +188,10 @@ public class SecurityUtils {
     public static InMemorySignalProtocolStore createInMemorySignalProtocolStore()
     {
         ECKeyPair tIdentityKeyPairKeys = Curve.generateKeyPair();
-        
+
         IdentityKeyPair tIdentityKeyPair = new IdentityKeyPair(new IdentityKey(tIdentityKeyPairKeys.getPublicKey()),
                                                        tIdentityKeyPairKeys.getPrivateKey());
-        
+
         return new InMemorySignalProtocolStore(tIdentityKeyPair, KeyHelper.generateRegistrationId(false));
     }
 
@@ -196,14 +200,14 @@ public class SecurityUtils {
         try {
             byte[] encodedsignature = SecurityUtils.readFromFile(signaturePath);
             byte[] signature = Base64.getUrlDecoder().decode(encodedsignature);
-            
+
             return Curve.verifySignature(publicKey, message, signature);
         } catch (InvalidKeyException | IOException e) {
 
             throw new SignatureVerificationException("Error Verifying Signature: ", e);
         }
     }
-    
+
     public static String getClientID(String bundlePath) throws IDGenerationException
     {
         byte[] clientIdentityKey;
@@ -220,7 +224,7 @@ public class SecurityUtils {
     {
         byte[] iv = new byte[16];
         byte[] encryptedData = null;
-        
+
         /* Create SecretKeyFactory object */
         SecretKeyFactory factory;
         try {
@@ -233,9 +237,9 @@ public class SecurityUtils {
 
             Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
             cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
-            
+
             encryptedData = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
-            
+
         } catch ( NoSuchAlgorithmException | InvalidKeySpecException | NoSuchPaddingException |
                     java.security.InvalidKeyException | InvalidAlgorithmParameterException |
                     IllegalBlockSizeException | BadPaddingException e) {
@@ -288,7 +292,7 @@ public class SecurityUtils {
             file.mkdirs();
         }
     }
-    
+
     public static void copyContent(InputStream in, OutputStream out) throws IOException {
         int data = -1;
 
