@@ -3,7 +3,6 @@ package com.ddd.wifidirect;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.IntentFilter;
-import android.net.wifi.WifiManager;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
@@ -25,7 +24,6 @@ import com.ddd.bundleclient.HelloworldActivity;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
@@ -35,20 +33,11 @@ import java.util.concurrent.Future;
  * Main WifiDirect class
  * Contains wrapper methods around common WifiDirect tasks
  */
-public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener, WifiP2pManager.PeerListListener, Runnable {
+public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener, WifiP2pManager.PeerListListener {
 
-    public enum WIFI_DIRECT_ACTIONS {
-        WIFI_DIRECT_MANAGER_INITIALIZATION_FAILED,
-        WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL,
-        WIFI_DIRECT_MANAGER_DISCOVERY_SUCCESSFUL,
-        WIFI_DIRECT_MANAGER_DISCOVERY_FAILED,
-        WIFI_DIRECT_MANAGER_PEERS_CHANGED,
-        WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_FAILED,
-        WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_SUCCESSFUL,
-        WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL,
-        WIFI_DIRECT_MANAGER_FORMED_CONNECTION_FAILED
-    }
 
+
+    public static final String TAG = HelloworldActivity.TAG;
     private final IntentFilter intentFilter = new IntentFilter();
 
     private WifiP2pManager manager;
@@ -57,15 +46,10 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
     private Lifecycle lifeCycle;
     private WifiDirectLifeCycleObserver lifeCycleObserver;
     private WifiDirectBroadcastReceiver receiver;
+    private ArrayList<WifiP2pDevice> discoveredPeers;
     private String wifiDirectGroupHostIP;
     private String groupHostInfo;
-
-    private HashSet<String> devicesFound;
-    private String deviceName;
     private boolean isConnected;
-    private boolean wifiDirectEnabled;
-
-    private List<WifiDirectStateListener> listeners = new ArrayList<>();
 
     /**
      * Ctor
@@ -77,27 +61,30 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
      *                  AppCompatActivity.getLifeCycle() call in
      *                  your main activity
      */
-    public WifiDirectManager(Context context, Lifecycle lifeCycle, WifiDirectStateListener listener, String deviceName) {
+    public WifiDirectManager(Context context, Lifecycle lifeCycle) {
         this.context = context;
         this.initClient(this.context);
-        listeners.add(listener);
         this.registerIntents();
 
         this.lifeCycle = lifeCycle;
-        this.receiver = createReceiver();
+        this.receiver = new WifiDirectBroadcastReceiver(this);
 
         this.lifeCycleObserver = new WifiDirectLifeCycleObserver(this);
         this.lifeCycle.addObserver(lifeCycleObserver);
 
-        this.devicesFound = new HashSet<>();
+        this.discoveredPeers = new ArrayList<WifiP2pDevice>();
         this.wifiDirectGroupHostIP = "";
         this.groupHostInfo ="";
-        this.deviceName = deviceName;
         this.isConnected = false;
     }
 
-    public void run() {
-        discoverPeers();
+    /**
+     * Initialize this WifiDirect device as the owner
+     * @param context AppcompatActivity Context
+     */
+    private void initOwner(Context context) {
+        this.manager = (WifiP2pManager) context.getSystemService(Context.WIFI_P2P_SERVICE);
+        this.channel = this.manager.initialize(context, Looper.getMainLooper(), null);
     }
 
     /**
@@ -105,30 +92,9 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
      * Right now no difference between owner and peer
      * @param context AppcompatActivity Context
      */
-    private boolean initClient(Context context) {
-        WifiManager wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
-        if (wifiManager == null) {
-            Log.d(HelloworldActivity.TAG,  "Cannot get Wi-Fi system service");
-            return false;
-        }
-        if (!wifiManager.isP2pSupported()) {
-            Log.d(HelloworldActivity.TAG,  "Wi-Fi Direct is not supported by the hardware or Wi-Fi is off");
-            return false;
-        }
-
+    private void initClient(Context context) {
         this.manager = (WifiP2pManager) context.getSystemService(Context.WIFI_P2P_SERVICE);
-        if (manager == null) {
-            Log.e(HelloworldActivity.TAG, "Cannot get Wi-Fi Direct system service");
-            return false;
-        }
-
         this.channel = this.manager.initialize(context, Looper.getMainLooper(), null);
-        if (channel == null) {
-            Log.e(HelloworldActivity.TAG, "Cannot initialize Wi-Fi Direct");
-            return false;
-        }
-
-        return true;
     }
 
     /**
@@ -148,23 +114,21 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
      */
 
     @SuppressLint("MissingPermission")
-    private void discoverPeers() {
-        if (!wifiDirectEnabled) {
-            Log.d(HelloworldActivity.TAG, "Wifidirect not enabled");
-            return;
-        }
+    public CompletableFuture<Boolean> discoverPeers() {
+        CompletableFuture<Boolean> cFuture = new CompletableFuture<>();
         this.manager.discoverPeers(this.channel, new WifiP2pManager.ActionListener() {
 
             @Override
             public void onSuccess() {
-                notifyActionToListeners(WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_DISCOVERY_SUCCESSFUL);
+                cFuture.complete(true);
             }
 
             @Override
             public void onFailure(int reasonCode) {
-                notifyActionToListeners(WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_DISCOVERY_FAILED);;
+                cFuture.complete(false);
             }
         });
+        return cFuture;
     }
 
     /**
@@ -183,29 +147,13 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
     }
 
     @Override
-    public void onPeersAvailable(WifiP2pDeviceList peers) {
-        Collection<WifiP2pDevice> newList = peers.getDeviceList();
-        HashSet<String>  newDevicesFound = new HashSet<>();
+    public void onPeersAvailable(WifiP2pDeviceList deviceList) {
+        List<WifiP2pDevice> devices = new ArrayList<>();
+        Collection<WifiP2pDevice> foundDevices = deviceList.getDeviceList();
+        devices.addAll(foundDevices);
 
-        boolean newDeviceFound = false;
-        for (WifiP2pDevice peer: newList) {
-            if (peer.deviceName.contains(deviceName)) {
-                newDevicesFound.add(peer.deviceAddress);
-                if (!devicesFound.contains(peer.deviceAddress)) {
-                    System.out.println(peer);
-                    newDeviceFound = true;
-                    makeConfigAndConnect(peer);
-                }
-            }
-        }
-        devicesFound = newDevicesFound;
-
-        if (newDeviceFound) {
-            notifyActionToListeners(WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_PEERS_CHANGED);
-        }
+        this.discoveredPeers = (ArrayList<WifiP2pDevice>) devices;
     }
-
-
 
     /**
      * Create a WifiDirect group for other WifiDirect devices can connect to.
@@ -227,7 +175,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
             @Override
             public void onFailure(int reasonCode) {
 
-                Log.d(HelloworldActivity.TAG,"Failed to create a group with reasonCode: " + reasonCode);
+                Log.d(TAG,"Failed to create a group with reasonCode: " + reasonCode);
                 cFuture.complete(false);
             }
         });
@@ -251,7 +199,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
             return cBuilder.build();
         }
         catch(Exception e) {
-            Log.d(HelloworldActivity.TAG, "BuildGroupConfigexception " + e) ;
+            Log.d(TAG, "BuildGroupConfigexception " + e) ;
         }
         return null;
     }
@@ -271,7 +219,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
 
             @Override
             public void onFailure(int reasonCode) {
-                Log.d(HelloworldActivity.TAG,"Failed to remove a group with reasonCode: " +
+                Log.d(TAG,"Failed to remove a group with reasonCode: " +
                         reasonCode + " Note: this could mean device was never part of a group");
                 cFuture.complete(false);
             }
@@ -295,31 +243,28 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
         return cFuture;
     }
 
-    private void makeConfigAndConnect(WifiP2pDevice peer){
-        connect(makeConfig(peer, false));
-    }
-
     /**
      * Directly connect to a device with this WifiP2pConfig
      * @param config Config of device to connect to
      * @return Future containing true if WifiDirect connection successful false if not
      */
     @SuppressLint("MissingPermission")
-    private void connect(WifiP2pConfig config) {
+    public Future<Boolean> connect(WifiP2pConfig config) {
         config.groupOwnerIntent = 0;
+        CompletableFuture<Boolean> cFuture = new CompletableFuture<>();
         this.manager.connect(channel, config, new WifiP2pManager.ActionListener() {
 
             @Override
             public void onSuccess() {
-                notifyActionToListeners(WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_SUCCESSFUL);
+                cFuture.complete(true);
             }
 
             @Override
             public void onFailure(int reasonCode) {
-                devicesFound.remove(config.deviceAddress);
-                notifyActionToListeners(WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_FAILED);
+                cFuture.complete(false);
             }
         });
+        return cFuture;
     }
 
 
@@ -330,17 +275,31 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
      *                the device we are connecting to is going to be the host
      * @return WifiP2PConfig ready to be called by manager.connect()
      */
-    private WifiP2pConfig makeConfig(WifiP2pDevice device, boolean isOwner) {
-        WifiP2pConfig config =  new WifiP2pConfig();
-        config.deviceAddress = device.deviceAddress;
-        config.wps.setup = WpsInfo.PBC;
+    public WifiP2pConfig makeConfig(WifiP2pDevice device, boolean isOwner) {
+        try {
+            WifiP2pConfig config =  new WifiP2pConfig();
+            config.deviceAddress = device.deviceAddress;
+            config.wps.setup = WpsInfo.PBC;
 //            if(isOwner) {
 //                config.groupOwnerIntent = WifiP2pConfig.GROUP_OWNER_INTENT_MAX;
 //            }
 //            else {
 //                config.groupOwnerIntent = WifiP2pConfig.GROUP_OWNER_INTENT_MIN;
 //            }
-        return config;
+            return config;
+        }
+        catch(Exception e) {
+            Log.d(TAG, "makeConfigException " + e) ;
+        }
+        return null;
+    }
+
+    /**
+     * Getter for the list of discoveredPeers
+     * @return return ArrayList of discovered Wi-Fi Direct compatible devices
+     */
+    public ArrayList<WifiP2pDevice> getPeerList() {
+        return this.discoveredPeers;
     }
 
     /**
@@ -348,25 +307,10 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
      * @param info
      */
     @Override
-    public void onConnectionInfoAvailable(final WifiP2pInfo info) {
+    public void onConnectionInfoAvailable(WifiP2pInfo info) {
         String hostIP = info.groupOwnerAddress.getHostAddress();
         this.groupHostInfo = info.toString();
         this.wifiDirectGroupHostIP = hostIP;
-
-        if (info.groupFormed && info.isGroupOwner) {
-            // Do whatever tasks are specific to the group owner.
-            // One common case is creating a group owner thread and accepting
-            // incoming connections.
-            notifyActionToListeners(WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL);
-        } else if (info.groupFormed) {
-            // The other device acts as the peer (client). In this case,
-            // you'll want to create a peer thread that connects
-            // to the group owner.
-            notifyActionToListeners(WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL);
-        } else {
-            notifyActionToListeners(WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_FAILED);
-        }
-
     }
 
 
@@ -392,15 +336,36 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
      */
     public IntentFilter getIntentFilter() { return this.intentFilter; }
 
+    public String getGroupHostIP() {
+        if(this.isConnected) {
+            Log.d(TAG,"Group Host Info: "+ this.groupHostInfo);
+            return this.wifiDirectGroupHostIP;
+        }
+        else {
+            this.wifiDirectGroupHostIP = "";
+            this.groupHostInfo = "";
+            Log.d(TAG, "This device is currently not connected");
+            return "";
+        }
+    }
+
+    /**
+     * Set if this device is connected to a Wi-Fi Direct Group
+     * @param b true if connected false otherwise
+     */
+    public void setConnected(boolean b) { this.isConnected = b; }
+
+    /**
+     * Check if this device is connected to a Wi-Fi Direct group
+     * @return true if connected to a group false otherwise
+     */
+    public boolean isConnected() { return this.isConnected; }
+
     /**
      * Get the BroadCastReceiver
      * @return the WifiDirectBroadcastReceiver
      */
     public WifiDirectBroadcastReceiver getReceiver() { return this.receiver; }
-
-    public WifiDirectBroadcastReceiver createReceiver() {
-        return new WifiDirectBroadcastReceiver(this);
-    }
 
     /**
      * Get the App context associated with this WifiDirectManager
@@ -408,9 +373,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
      */
     public Context getContext() { return this.context; }
 
-    public HashSet<String> getDevicesFound(){
-        return devicesFound;
-    }
+
 
     /**
      * Inner Class to hook into activity Lifecycle functions
@@ -445,25 +408,6 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
         public void onPause(@NonNull LifecycleOwner owner) {
             this.manager.getContext().unregisterReceiver(receiver);
         }
-    }
-
-    public void addListener(WifiDirectStateListener listener) {
-        listeners.add(listener);
-    }
-
-    private void notifyActionToListeners(WIFI_DIRECT_ACTIONS action) {
-        for (WifiDirectStateListener listener: listeners) {
-            listener.onReceiveAction(action);
-        }
-    }
-
-    public void setWifiDirectEnabled(boolean enabled) {
-        if (enabled) {
-            notifyActionToListeners(WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL);
-        } else {
-            notifyActionToListeners(WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_INITIALIZATION_FAILED);
-        }
-        wifiDirectEnabled = enabled;
     }
 }
 

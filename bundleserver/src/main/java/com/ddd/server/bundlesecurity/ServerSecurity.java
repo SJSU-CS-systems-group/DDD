@@ -9,6 +9,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -97,8 +98,6 @@ public class ServerSecurity {
             clientRootPath = serverRootPath+File.separator+"Clients";
             SecurityUtils.createDirectory(clientRootPath);
         } catch (Exception e) {
-//            System.out.println(e.getMessage());
-
             e.printStackTrace();
             System.out.printf("Error loading server keys. Ensure the following key files exist in your application.yml's {bundle-server.bundle-security.server-serverkeys-path} path:\n"+
                             "%s\n" +
@@ -354,6 +353,8 @@ public class ServerSecurity {
 
     public void decrypt(String bundlePath, String decryptedPath) throws IOException, InvalidClientSessionException, InvalidMessageException, DuplicateMessageException, LegacyMessageException, NoSessionException, SignatureVerificationException
     {
+        bundlePath = SecurityUtils.unzip(bundlePath);
+
         ClientSession client = getClientSessionFromFile(bundlePath);
         String payloadPath   = bundlePath + File.separator + SecurityUtils.PAYLOAD_DIR;
         String signPath      = bundlePath + File.separator + SecurityUtils.SIGNATURE_DIR;
@@ -362,9 +363,7 @@ public class ServerSecurity {
         String decryptedFile = decryptedPath + File.separator + bundleID + SecurityUtils.DECRYPTED_FILE_EXT;
         
         /* Create Directory if it does not exist */
-        if (!Files.exists(Paths.get(decryptedPath))) {
-            Files.createDirectories(Paths.get(decryptedPath));
-        }
+        SecurityUtils.createDirectory(decryptedPath);
 
         System.out.println(decryptedFile);
         int fileCount = new File(payloadPath).list().length;
@@ -407,8 +406,8 @@ public class ServerSecurity {
         }
         
         String bundlePath    = encPath + File.separator + bundleID + File.separator;
-        String payloadPath   = bundlePath + File.separator + SecurityUtils.PAYLOAD_DIR;
-        String signPath      = bundlePath + File.separator + SecurityUtils.SIGNATURE_DIR;
+        String payloadPath   = bundlePath + SecurityUtils.PAYLOAD_DIR;
+        String signPath      = bundlePath + SecurityUtils.SIGNATURE_DIR;
         File plainTextFile   = new File(toBeEncPath);
         List <String> returnPaths = new ArrayList<>();
         int len = 0;
@@ -537,7 +536,7 @@ public class ServerSecurity {
         return decryptBundleID(new String(encryptedBundleID, StandardCharsets.UTF_8), clientID);
     }
 
-    public String getBundleIDFromFile(String bundlePath) throws FileNotFoundException, IOException
+    public static String getBundleIDFromFile(String bundlePath) throws FileNotFoundException, IOException
     {
         byte[] bundleIDBytes    = SecurityUtils.readFromFile(bundlePath + File.separator + SecurityUtils.BUNDLEID_FILENAME);
         return new String(bundleIDBytes, StandardCharsets.UTF_8);

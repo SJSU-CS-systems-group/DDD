@@ -169,9 +169,6 @@ public class BundleTransmission {
   }
 
   public void processReceivedBundles(String transportId) {
-    if (transportId == null) {
-      return;
-    }
     File receivedBundlesDirectory =
         new File(this.config.getBundleTransmission().getBundleReceivedLocation());
     for (final File transportDir : receivedBundlesDirectory.listFiles()) {

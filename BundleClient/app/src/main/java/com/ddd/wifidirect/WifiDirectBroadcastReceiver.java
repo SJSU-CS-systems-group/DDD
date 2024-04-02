@@ -1,18 +1,11 @@
 package com.ddd.wifidirect;
 
-import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.net.NetworkInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.util.Log;
-
-import androidx.core.app.ActivityCompat;
-
-import com.ddd.bundleclient.HelloworldActivity;
-import com.ddd.client.bundlesecurity.SecurityExceptions;
 
 /**
  * A BroadcastReceiver that notifies of important wifi p2p events.
@@ -23,7 +16,7 @@ import com.ddd.client.bundlesecurity.SecurityExceptions;
 public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
 
     private WifiDirectManager manager;
-
+    public static final String TAG = "wDebug";
     public static Context ApplicationContext;
 
     /**
@@ -52,23 +45,19 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
             // Check if WifiDirect on this device is turned on.
             int state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1);
             if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
-                Log.d(HelloworldActivity.TAG, "WifiDirect enabled");
-                manager.setWifiDirectEnabled(true);
+                Log.d(TAG, "P2P state changed Wifi Direct is enabled - " + state);
             } else {
-                Log.d(HelloworldActivity.TAG, "WifiDirect not enabled");
-                manager.setWifiDirectEnabled(false);
+                Log.d(TAG, "P2P state changed Wifi Direct is not enabled - " + state);
             }
 
         }
         // Broadcast intent action indicating that the available peer list has changed.
         // This can be sent as a result of peers being found, lost or updated.
         else if (WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)) {
+            Log.d(TAG, "WifiDirectBroadcastReceiver INTENT PEERS_CHANGED");
             if (manager != null) {
-                try {
-                    manager.getManager().requestPeers(manager.getChannel(), manager);
-                } catch (SecurityException e) {
-                    e.printStackTrace();
-                }
+                Log.d(TAG, "Requesting peers...");
+                manager.getManager().requestPeers(manager.getChannel(), this.manager);
             }
 
         }
@@ -78,6 +67,7 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
 //         Another extra EXTRA_NETWORK_INFO provides the network info in the form of a NetworkInfo.
 //         A third extra provides the details of the EXTRA_WIFI_P2P_GROUP and may contain a null
         else if (WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {
+            Log.d(TAG, "WifiDirect group connection CHANGED!");
             if (manager == null) {
                 return;
             }
@@ -93,16 +83,15 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
             if (networkInfo.isConnected()) {
                 // we are connected, request connection
                 // info to find group owner IP
-                //this.manager.setConnected(true);
+                this.manager.setConnected(true);
                 this.manager.getManager().requestConnectionInfo(this.manager.getChannel(), this.manager);
             }
-            /*else {
+            else {
                 // It's a disconnect
                 this.manager.setConnected(false);
-                Log.d(HelloworldActivity.TAG,
+                Log.d(this.manager.TAG,
                         "WIFI_P2P_CONNECTION_CHANGED_ACTION disconnected");
             }
-             */
         }
         else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
             // unneeded

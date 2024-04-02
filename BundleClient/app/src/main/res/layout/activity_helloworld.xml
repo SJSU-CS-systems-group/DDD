@@ -22,33 +22,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Connect" />
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingTop="12dp"
-        android:paddingBottom="12dp"
-        android:textSize="16sp"
-        android:text="Connected Device Addresses:" />
-    <TextView
-        android:id="@+id/connected_device_address"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingTop="12dp"
-        android:paddingBottom="12dp"
-        android:textSize="16sp" />
-    <TextView
-        android:id="@+id/wifidirect_response_text"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingTop="12dp"
-        android:paddingBottom="12dp"
-        android:textSize="16sp" />
 
-    <Button
-        android:id="@+id/exchange_button"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Exchange Data" />
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
