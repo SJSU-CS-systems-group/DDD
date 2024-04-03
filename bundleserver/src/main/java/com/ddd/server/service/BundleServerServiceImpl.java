@@ -103,7 +103,11 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
             @Override
             public void onCompleted() {
                 System.out.println("Complete");
-                closeFile(writer);
+                try {
+                    closeFile(writer);
+                } catch (IOException e) {
+                    System.out.println("BundleServerServiceImpl.uploadBundle error: "+e.getMessage());
+                }
                 status = Status.IN_PROGRESS.equals(status) ? Status.SUCCESS : status;
                 BundleUploadResponse response = BundleUploadResponse.newBuilder()
                         .setStatus(status)
@@ -128,11 +132,9 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
         writer.flush();
     }
 
-    private void closeFile(OutputStream writer){
-        try {
+    private void closeFile(OutputStream writer) throws IOException {
+        if (writer != null) {
             writer.close();
-        } catch (Exception e) {
-            e.printStackTrace();
         }
     }
 
