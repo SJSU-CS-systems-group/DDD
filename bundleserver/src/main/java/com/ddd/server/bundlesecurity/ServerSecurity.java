@@ -1,27 +1,14 @@
 package com.ddd.server.bundlesecurity;
-import org.whispersystems.libsignal.util.guava.Optional;
 
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.List;
-
-import org.springframework.boot.ExitCodeGenerator;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.WebApplicationType;
-import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.data.domain.Example;
+import com.ddd.server.bundlesecurity.SecurityExceptions.AESAlgorithmException;
+import com.ddd.server.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
+import com.ddd.server.bundlesecurity.SecurityExceptions.EncodingException;
+import com.ddd.server.bundlesecurity.SecurityExceptions.IDGenerationException;
+import com.ddd.server.bundlesecurity.SecurityExceptions.InvalidClientIDException;
+import com.ddd.server.bundlesecurity.SecurityExceptions.InvalidClientSessionException;
+import com.ddd.server.bundlesecurity.SecurityExceptions.ServerIntializationException;
+import com.ddd.server.bundlesecurity.SecurityExceptions.SignatureVerificationException;
+import com.ddd.server.bundlesecurity.SecurityUtils.ClientSession;
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
@@ -33,8 +20,8 @@ import org.whispersystems.libsignal.SessionCipher;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
-import org.whispersystems.libsignal.ecc.ECPublicKey;
 import org.whispersystems.libsignal.ecc.ECPrivateKey;
+import org.whispersystems.libsignal.ecc.ECPublicKey;
 import org.whispersystems.libsignal.protocol.CiphertextMessage;
 import org.whispersystems.libsignal.protocol.SignalMessage;
 import org.whispersystems.libsignal.ratchet.BobSignalProtocolParameters;
@@ -42,17 +29,17 @@ import org.whispersystems.libsignal.ratchet.RatchetingSession;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SessionState;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
+import org.whispersystems.libsignal.util.guava.Optional;
 
-import com.ddd.server.BundleServerApplication;
-import com.ddd.server.bundlesecurity.SecurityExceptions.AESAlgorithmException;
-import com.ddd.server.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
-import com.ddd.server.bundlesecurity.SecurityExceptions.EncodingException;
-import com.ddd.server.bundlesecurity.SecurityExceptions.IDGenerationException;
-import com.ddd.server.bundlesecurity.SecurityExceptions.InvalidClientIDException;
-import com.ddd.server.bundlesecurity.SecurityExceptions.InvalidClientSessionException;
-import com.ddd.server.bundlesecurity.SecurityExceptions.ServerIntializationException;
-import com.ddd.server.bundlesecurity.SecurityExceptions.SignatureVerificationException;
-import com.ddd.server.bundlesecurity.SecurityUtils.ClientSession;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
 
 public class ServerSecurity {
     private static final String DEFAULT_SERVER_NAME = "Bundle Server";
@@ -354,6 +341,8 @@ public class ServerSecurity {
 
     public void decrypt(String bundlePath, String decryptedPath) throws IOException, InvalidClientSessionException, InvalidMessageException, DuplicateMessageException, LegacyMessageException, NoSessionException, SignatureVerificationException
     {
+        bundlePath = SecurityUtils.unzip(bundlePath);
+
         ClientSession client = getClientSessionFromFile(bundlePath);
         String payloadPath   = bundlePath + File.separator + SecurityUtils.PAYLOAD_DIR;
         String signPath      = bundlePath + File.separator + SecurityUtils.SIGNATURE_DIR;
