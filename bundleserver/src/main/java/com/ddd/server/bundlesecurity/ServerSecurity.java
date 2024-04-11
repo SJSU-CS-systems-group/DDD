@@ -341,8 +341,6 @@ public class ServerSecurity {
 
     public void decrypt(String bundlePath, String decryptedPath) throws IOException, InvalidClientSessionException, InvalidMessageException, DuplicateMessageException, LegacyMessageException, NoSessionException, SignatureVerificationException
     {
-        bundlePath = SecurityUtils.unzip(bundlePath);
-
         ClientSession client = getClientSessionFromFile(bundlePath);
         String payloadPath   = bundlePath + File.separator + SecurityUtils.PAYLOAD_DIR;
         String signPath      = bundlePath + File.separator + SecurityUtils.SIGNATURE_DIR;
