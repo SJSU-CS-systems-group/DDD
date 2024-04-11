@@ -293,9 +293,6 @@ public class SecurityUtils {
     }
 
     public static String unzip(String zipFilePath) throws IOException {
-        if (!zipFilePath.endsWith(".bundle")) {
-            return zipFilePath;
-        }
 
         File zipFile = new File(zipFilePath);
         String destDirPath = zipFile.getParent() + File.separator + zipFile.getName().replaceFirst("[.][^.]+$", "");

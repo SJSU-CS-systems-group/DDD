@@ -1,5 +1,6 @@
 package com.ddd.server.commands.bundlesecurity;
 
+import com.ddd.server.bundlesecurity.SecurityUtils;
 import com.ddd.server.bundlesecurity.ServerSecurity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,13 +33,24 @@ public class DecryptBundle implements Callable<Void> {
         try {
             System.out.println("Decrypting bundle" + bundlePath);
 
+            bundlePath = SecurityUtils.unzip(bundlePath);
+
             if (decryptedPath == null) {
                 decryptedPath = receivedProcessingDir + File.separator + "decrypted" + File.separator;
             }
 
             serverSecurity.decrypt(bundlePath, decryptedPath);
 
-            System.out.println("Finished decrypting " + bundlePath);
+            int startIndex = bundlePath.lastIndexOf("\\") + 1;
+
+            // Extract the file name using substring
+            String fileName = bundlePath.substring(startIndex);
+
+            String decryptedBundlePath = decryptedPath + fileName + ".decrypted";
+
+            decryptedBundlePath = SecurityUtils.unzip(decryptedBundlePath);
+
+            System.out.println("Finished decrypting " + decryptedBundlePath);
         } catch (Exception e) {
             e.printStackTrace();
         }
