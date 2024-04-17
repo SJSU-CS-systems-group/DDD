@@ -1,0 +1,167 @@
+package com.ddd.bundleclient;
+
+import android.app.Activity;
+import android.content.Context;
+import android.util.Log;
+import android.widget.TextView;
+
+import com.ddd.client.bundlesecurity.SecurityExceptions;
+import com.ddd.client.bundletransmission.BundleTransmission;
+
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.lang.ref.WeakReference;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
+import io.grpc.stub.StreamObserver;
+
+//  private class GrpcReceiveTask extends AsyncTask<String, Void, String> {
+class GrpcReceiveTask {
+    private Context applicationContext;
+    private final WeakReference<Activity> activityReference;
+    private ManagedChannel channel;
+    private final TextView resultText;
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    String currentTransportId;
+    private final Activity activity;
+
+
+    GrpcReceiveTask(Activity activity) {
+        this.activityReference = new WeakReference<Activity>(activity);
+        this.resultText = (TextView) activity.findViewById(R.id.grpc_response_text);
+        this.applicationContext = activity.getApplicationContext();
+        this.activity = activity;
+    }
+
+    public void executeInBackground(String port, String host) {
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    inBackground(port, host);
+                } catch (Exception e) {
+                    // Handle any exceptions
+                    Log.d(HelloworldActivity.TAG, "executeInBackground failed");
+                }
+            }
+        });
+    }
+
+    private void inBackground(String... params) throws Exception {
+        String host = params[0];
+        String portStr = params[1];
+        String FILE_PATH = applicationContext.getApplicationInfo().dataDir + "/Shared/received-bundles";
+        java.io.File file = new java.io.File(FILE_PATH);
+        file.mkdirs();
+        int port = Integer.parseInt(portStr);
+        channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
+        FileServiceGrpc.FileServiceStub stub = FileServiceGrpc.newStub(channel);
+        List<String> bundleRequests = null;
+        Log.d(HelloworldActivity.TAG, "Starting File Receive");
+        resultText.append("Starting File Receive...\n");
+        try {
+            BundleTransmission bundleTransmission;
+            bundleTransmission = new BundleTransmission(applicationContext.getApplicationInfo().dataDir);
+            bundleRequests = HelloworldActivity.clientWindow.getWindow(bundleTransmission.getBundleSecurity().getClientSecurity());
+        } catch (SecurityExceptions.BundleIDCryptographyException e) {
+            Log.d(HelloworldActivity.TAG, "{BR}: Failed to get Window: " + e);
+            e.printStackTrace();
+        } catch (Exception e) {
+            Log.d(HelloworldActivity.TAG, "{BR}: Failed to get Window: " + e);
+            e.printStackTrace();
+        }
+        if (bundleRequests == null) {
+            Log.d(HelloworldActivity.TAG, "BUNDLE REQuests is NUll / ");
+///        throw new Exception("bundle request is null");
+            postExecute("Incomplete");
+        } else if (bundleRequests.size() == 0) {
+            Log.d(HelloworldActivity.TAG, "BUNDLE REQuests has size 0 / ");
+        }
+        for (String bundle : bundleRequests) {
+            String bundleName = bundle + ".bundle";
+            ReqFilePath request = ReqFilePath.newBuilder()
+                    .setValue(bundleName)
+                    .build();
+            Log.d(HelloworldActivity.TAG, "Downloading file: " + bundleName);
+            StreamObserver<Bytes> downloadObserver = new StreamObserver<Bytes>() {
+                FileOutputStream fileOutputStream = null;
+
+                @Override
+                public void onNext(Bytes fileContent) {
+                    try {
+                        if (fileOutputStream == null) {
+                            fileOutputStream = new FileOutputStream(FILE_PATH + "/" + bundleName);
+                        }
+                        fileOutputStream.write(fileContent.getValue().toByteArray());
+                        currentTransportId = fileContent.getTransportId();
+                    } catch (IOException e) {
+                        onError(e);
+                    }
+                }
+                @Override
+                public void onError(Throwable t) {
+                    Log.d(HelloworldActivity.TAG, "Error downloading file: " + t.getMessage(), t);
+                    if (fileOutputStream != null) {
+                        try {
+                            fileOutputStream.close();
+                        } catch (IOException e) {
+                            Log.d(HelloworldActivity.TAG, "Error closing output stream", e);
+                        }
+                    }
+                }
+                @Override
+                public void onCompleted() {
+                    try {
+                        fileOutputStream.flush();
+                        fileOutputStream.close();
+                    } catch (IOException e) {
+                        Log.d(HelloworldActivity.TAG, "Error closing output stream", e);
+                    }
+                    Log.d(HelloworldActivity.TAG, "File download complete");
+                }
+            };
+            stub.downloadFile(request, downloadObserver);
+            break;
+        }
+        postExecute("Complete");
+    }
+    public void shutdownExecutor() {
+        executor.shutdown();
+    }
+
+    //    @Override
+//    protected String doInBackground(String... params) {
+//      //code has been moved
+//    }
+    protected void postExecute(String result) {
+        if (result.equals("Incomplete")) {
+            resultText.append(result + "\n");
+            return;
+        }
+        try {
+            channel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+//        new HelloworldActivity.GrpcSendTask(HelloworldActivity.this)
+//        new GrpcSendTask.executeInBackground("192.168.49.1", "1778");
+        GrpcSendTask sendTask = new GrpcSendTask(activity);
+        sendTask.executeInBackground("192.168.49.1", "1778");
+
+
+        String FILE_PATH = applicationContext.getApplicationInfo().dataDir + "/Shared/received-bundles";
+        BundleTransmission bundleTransmission = new BundleTransmission(applicationContext.getApplicationInfo().dataDir);
+        bundleTransmission.processReceivedBundles(currentTransportId, FILE_PATH);
+
+
+        Activity activity = activityReference.get();
+        if (activity == null) {
+            return;
+        }
+    }
+}
