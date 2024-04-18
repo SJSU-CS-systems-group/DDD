@@ -6,6 +6,7 @@ import com.ddd.server.commands.bundlesecurity.DecryptBundle;
 import com.ddd.server.commands.keygenerator.GenerateKeys;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
@@ -19,41 +20,19 @@ public class CLRunner implements CommandLineRunner {
     IFactory factory;
 
     @Autowired
-    GenerateKeys generateKeys;
-
-    @Autowired
-    DecodePublicKey decodePublicKey;
-
-    @Autowired
-    DecryptBundle decryptBundle;
-
-    @Autowired
-    EncryptBundle encryptBundle;
+    ApplicationContext context;
 
     @Override
     public void run(String... args) throws Exception {
         // run picocli impl
         String command = args.length > 0 ? args[0] : null;
 
-        if (command == null) {
-            return;
-        }
+        if (command == null) return;
 
-        switch (command) {
-            case "generate-keys":
-                System.exit(new CommandLine(generateKeys, factory).execute(args));
-                break;
-            case "decode-pub-key":
-                System.exit(new CommandLine(decodePublicKey, factory).execute(args));
-                break;
-            case "decrypt-bundle":
-                System.exit(new CommandLine(decryptBundle, factory).execute(args));
-                break;
-            case "encrypt-bundle":
-                System.exit(new CommandLine(encryptBundle, factory).execute(args));
-                break;
-            default:
-                break;
-        }
+        var clazz = CommandProcessor.commands.get(command);
+        if (clazz == null) return;
+
+        var bean = context.getBean(clazz);
+        System.exit(new CommandLine(bean, factory).execute(args));
     }
 }

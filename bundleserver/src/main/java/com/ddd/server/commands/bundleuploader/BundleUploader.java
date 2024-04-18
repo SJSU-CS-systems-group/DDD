@@ -19,7 +19,7 @@ import java.io.FileInputStream;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 
-@CommandLine.Command
+@CommandLine.Command(name = "upload-bundle", description = "Upload a bundle to the server")
 public class BundleUploader implements CommandLineRunner, Callable<Integer> {
     @CommandLine.Parameters (description = "upload-bundle")
     String ignore;
