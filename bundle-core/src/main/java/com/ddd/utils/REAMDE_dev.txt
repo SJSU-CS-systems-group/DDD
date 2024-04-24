@@ -1,1 +1,9 @@
 for now, all the files in here are copied from the bundleserver 
+
+ADUUtils.java is different from client and server
+AckRecordUtils.java is different
+JarUtils.java is different
+
+BundleUtils.java is only in bundleClient
+FileStoreHelper is only in bundleserver
+
