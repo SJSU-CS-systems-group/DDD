@@ -1,8 +1,8 @@
-package com.ddd.utils;
+package com.ddd.downstream.utils;
 
-import com.ddd.model.ADU;
-import com.ddd.model.Metadata;
-import com.ddd.server.applicationdatamanager.ApplicationDataManager;
+import com.ddd.downstream.model.ADU;
+import com.ddd.downstream.model.Metadata;
+import com.ddd.downstream.server.applicationdatamanager.ApplicationDataManager;
 import com.google.gson.Gson;
 
 import java.io.BufferedReader;

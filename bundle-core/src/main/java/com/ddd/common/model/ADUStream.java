@@ -1,4 +1,4 @@
-package com.ddd.model;
+package com.ddd.common.model;
 
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;

@@ -1,4 +1,4 @@
-package com.ddd.model;
+package com.ddd.downstream.model;
 
 public class Metadata {
     //last messageId added by the app

@@ -1,4 +1,4 @@
-package com.ddd.utils;
+package com.ddd.downstream.utils;
 
 public class Constants {
   /* Bundle contents */

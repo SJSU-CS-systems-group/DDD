@@ -1,7 +1,7 @@
-package com.ddd.utils;
+package com.ddd.common.utils;
 
-import com.ddd.model.ADU;
-import com.ddd.model.Metadata;
+import com.ddd.common.model.ADU;
+import com.ddd.common.model.Metadata;
 import com.ddd.server.applicationdatamanager.ApplicationDataManager;
 import com.google.gson.Gson;
 

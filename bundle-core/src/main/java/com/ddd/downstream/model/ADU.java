@@ -1,4 +1,4 @@
-package com.ddd.model;
+package com.ddd.downstream.model;
 
 import java.io.File;
 import java.util.Objects;

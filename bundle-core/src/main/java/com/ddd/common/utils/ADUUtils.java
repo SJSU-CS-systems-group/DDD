@@ -1,4 +1,4 @@
-package com.ddd.utils;
+package com.ddd.common.utils;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.util.ArrayList;
 import java.util.List;
-import com.ddd.model.ADU;
+import com.ddd.common.model.ADU;
 
 public class ADUUtils {
 

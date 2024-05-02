@@ -1,4 +1,4 @@
-package com.ddd.utils;
+package com.ddd.common.utils;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -19,13 +19,13 @@ import org.apache.commons.io.FileUtils;
 import com.ddd.bundleclient.HelloworldActivity;
 import com.ddd.client.bundlesecurity.ClientSecurity;
 import com.ddd.client.bundlesecurity.SecurityUtils;
-import com.ddd.model.ADU;
-import com.ddd.model.Acknowledgement;
-import com.ddd.model.Bundle;
-import com.ddd.model.EncryptedPayload;
-import com.ddd.model.Payload;
-import com.ddd.model.UncompressedBundle;
-import com.ddd.model.UncompressedPayload;
+import com.ddd.common.model.ADU;
+import com.ddd.common.model.Acknowledgement;
+import com.ddd.common.model.Bundle;
+import com.ddd.common.model.EncryptedPayload;
+import com.ddd.common.model.Payload;
+import com.ddd.common.model.UncompressedBundle;
+import com.ddd.common.model.UncompressedPayload;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonIOException;

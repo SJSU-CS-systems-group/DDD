@@ -1,4 +1,4 @@
-package com.ddd.utils;
+package com.ddd.downstream.utils;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -6,7 +6,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import com.ddd.model.Acknowledgement;
+import com.ddd.downstream.model.Acknowledgement;
 
 public class AckRecordUtils {
 

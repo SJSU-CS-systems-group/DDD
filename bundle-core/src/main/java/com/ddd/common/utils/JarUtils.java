@@ -1,4 +1,4 @@
-package com.ddd.utils;
+package com.ddd.common.utils;
 
 import java.io.File;
 import java.io.FileInputStream;
