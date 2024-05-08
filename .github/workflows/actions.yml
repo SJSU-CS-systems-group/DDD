@@ -115,6 +115,10 @@ jobs:
         with: 
           java-version: '17'
           distribution: 'temurin'
+
+      - name: Run maven package on server dependency > bundle-core
+        working-directory: ./bundle-core
+        run: mvn package
       
       - name: Run maven package on BundleServer
         working-directory: ./bundleserver
