@@ -11,6 +11,7 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     outputs:
+      core: ${{ steps.filter.outputs.core }}
       client: ${{ steps.filter.outputs.client }}
       transport: ${{ steps.filter.outputs.transport }}
       server: ${{ steps.filter.outputs.server }}
@@ -20,12 +21,35 @@ jobs:
         with: 
           # Detect any changes to the following folders
           filters: |
+            core:
+              - 'bundle-core/**'
             client:
               - 'BundleClient/**'
             transport:
               - 'BundleTransport/**'
             server:
               - 'bundleserver/**'
+
+
+  # Github Action to Compile bundle-core
+  build-bundle-core:
+    needs: changes
+    #Compile bundle-core only if files were changed here
+    if: ${{ needs.changes.outputs.core == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v3
+        with: 
+          java-version: '17'
+          distribution: 'temurin'
+      
+      - name: Run maven package on bundle-core
+        working-directory: ./bundle-core
+        run: mvn package
 
 
   # Github Action to Compile BundleClient
@@ -46,6 +70,10 @@ jobs:
       with: 
         java-version: '17'
         distribution: 'temurin'
+
+    - name: Run maven package on server dependency > bundle-core
+      working-directory: ./bundle-core
+      run: mvn install
 
     - name: Run gradle build on BundleClient
       working-directory: ./BundleClient
@@ -91,6 +119,10 @@ jobs:
         with: 
           java-version: '17'
           distribution: 'temurin'
+
+      - name: Run maven package on server dependency > bundle-core
+        working-directory: ./bundle-core
+        run: mvn install
       
       - name: Run maven package on BundleServer
         working-directory: ./bundleserver

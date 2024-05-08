@@ -76,6 +76,8 @@ dependencies {
             {
         exclude group: 'com.google.protobuf', module:'protobuf-java'
     }
+    // DDD common core
+    implementation 'com.ddd:bundle-core:0.0.1'
 }
 
 task prepareKotlinBuildScriptModel {
