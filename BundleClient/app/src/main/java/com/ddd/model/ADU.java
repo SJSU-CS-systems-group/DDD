@@ -57,6 +57,7 @@ public class ADU implements Comparable<ADU> {
     return this.aduId == other.aduId && Objects.equals(this.appId, other.appId);
   }
 
+
   @Override
   public int compareTo(ADU o) {
     int ret = appId.compareTo(o.getAppId());

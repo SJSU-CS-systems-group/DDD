@@ -44,14 +44,16 @@ public class ADU {
   public long getADUId() {
     return this.aduId;
   }
+
+  //no uses: can i delete?
   public String getClientId() {
     return this.clientId;
   }
-
+  //no uses: can i delete?
   public void setSource(File source) {
     this.source = source;
   }
-
+  //no uses: can i delete?
   public void setSize(long size) {
     this.size = size;
   }

@@ -19,7 +19,8 @@ public class ADUUtils {
     File aduFile =
         new File(
             targetDirectory.getAbsolutePath()
-                + FileSystems.getDefault().getSeparator()
+//                + FileSystems.getDefault().getSeparator()
+                + "/"
                 + aduFileName);
 
     try (BufferedInputStream bufferedInputStream =

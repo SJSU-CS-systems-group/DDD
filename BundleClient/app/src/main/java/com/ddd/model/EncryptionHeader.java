@@ -3,6 +3,8 @@ package com.ddd.model;
 import java.io.File;
 
 public class EncryptionHeader {
+
+    //basically the identity key
     private File clientBaseKey;
     private File clientIdentityKey;
 
