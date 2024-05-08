@@ -118,7 +118,7 @@ jobs:
 
       - name: Run maven package on server dependency > bundle-core
         working-directory: ./bundle-core
-        run: mvn package
+        run: mvn install
       
       - name: Run maven package on BundleServer
         working-directory: ./bundleserver
