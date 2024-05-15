@@ -12,18 +12,18 @@ class FileUploadObserver implements StreamObserver<FileUploadResponse> {
 
     @Override
     public void onNext(FileUploadResponse fileUploadResponse) {
-        Log.d("grpcDebug","File upload status :: " + fileUploadResponse.getStatus());
+        Log.d("grpcDebug", "File upload status :: " + fileUploadResponse.getStatus());
     }
 
     @Override
     public void onError(Throwable throwable) {
-        Log.d("grpcDebug","ERROR :: " + throwable.toString());
+        Log.d("grpcDebug", "ERROR :: " + throwable.toString());
     }
 
     @Override
     public void onCompleted() {
         Date current = Calendar.getInstance().getTime();
-        Log.d("grpcDebug","Started file transfer ended at: "+ current.toString());
+        Log.d("grpcDebug", "Started file transfer ended at: " + current.toString());
     }
 
 }

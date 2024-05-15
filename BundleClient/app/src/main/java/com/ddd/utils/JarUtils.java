@@ -18,6 +18,7 @@ import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import java.util.zip.CRC32;
 import java.util.zip.CheckedInputStream;
+
 import android.util.Base64;
 
 import com.ddd.datastore.filestore.FileStoreHelper;
@@ -25,8 +26,7 @@ import com.ddd.datastore.filestore.FileStoreHelper;
 public class JarUtils {
     private static long getChecksum(File file) throws IOException {
         long checkSum = 0L;
-        try (CheckedInputStream checkedInputStream =
-                     new CheckedInputStream(new FileInputStream(file), new CRC32())) {
+        try (CheckedInputStream checkedInputStream = new CheckedInputStream(new FileInputStream(file), new CRC32())) {
             byte[] buffer = new byte[1024];
             while (checkedInputStream.read(buffer) != -1) {}
             checkSum = checkedInputStream.getChecksum().getValue();
@@ -34,9 +34,7 @@ public class JarUtils {
         return checkSum;
     }
 
-    private static void addFilesToJar(
-            File file, JarOutputStream jarOutputStream, String path, Manifest manifest)
-            throws IOException {
+    private static void addFilesToJar(File file, JarOutputStream jarOutputStream, String path, Manifest manifest) throws IOException {
         // If the file is a directory, recursively add its contents to the JAR output stream
         if (file.isDirectory()) {
             File[] files = file.listFiles();
@@ -72,8 +70,7 @@ public class JarUtils {
                     attributes = new Attributes();
                     manifest.getEntries().put(path + file.getName(), attributes);
                 }
-                attributes.putValue(
-                        "SHA-256-Digest",Base64.encodeToString(messageDigest.digest(), Base64.DEFAULT));
+                attributes.putValue("SHA-256-Digest", Base64.encodeToString(messageDigest.digest(), Base64.DEFAULT));
 
                 // Close the JAR entry
                 jarOutputStream.closeEntry();
@@ -162,8 +159,7 @@ public class JarUtils {
 //                String fileChecksum = Base64.getEncoder().encodeToString(messageDigest.digest(fileBytes));
                 String fileChecksum = Base64.encodeToString(messageDigest.digest(fileBytes), Base64.DEFAULT);
                 fileChecksum = fileChecksum.trim().replaceAll("\n$", "");
-                String manifestChecksum =
-                        manifest.getEntries().get(entry.getName()).getValue("SHA-256-Digest");
+                String manifestChecksum = manifest.getEntries().get(entry.getName()).getValue("SHA-256-Digest");
                 if (!fileChecksum.equals(manifestChecksum)) {
                     throw new SecurityException("Checksum verification failed for " + entry.getName());
                 }

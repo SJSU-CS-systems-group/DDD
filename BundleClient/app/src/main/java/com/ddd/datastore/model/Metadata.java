@@ -13,7 +13,8 @@ public class Metadata {
     //latest messageId processed by the application
     public long lastProcessedMessageId;
 
-    public Metadata(long lastAddedMessageId, long lastSentMessageId, long lastReceivedMessageId, long lastProcessedMessageId){
+    public Metadata(long lastAddedMessageId, long lastSentMessageId, long lastReceivedMessageId,
+                    long lastProcessedMessageId) {
         this.lastAddedMessageId = lastAddedMessageId;
         this.lastSentMessageId = lastSentMessageId;
         this.lastReceivedMessageId = lastReceivedMessageId;

@@ -28,231 +28,221 @@ import com.ddd.server.repository.entity.SentBundleDetails;
 @Service
 class StateManager {
 
-  private DataStoreAdaptor dataStoreAdaptor;
+    private DataStoreAdaptor dataStoreAdaptor;
 
-  private LargestAduIdReceivedRepository largestAduIdReceivedRepository;
+    private LargestAduIdReceivedRepository largestAduIdReceivedRepository;
 
-  private LargestAduIdDeliveredRepository largestAduIdDeliveredRepository;
+    private LargestAduIdDeliveredRepository largestAduIdDeliveredRepository;
 
-  private LastBundleIdSentRepository lastBundleIdSentRepository;
+    private LastBundleIdSentRepository lastBundleIdSentRepository;
 
-  private LargestBundleIdReceivedRepository largestBundleIdReceivedRepository;
+    private LargestBundleIdReceivedRepository largestBundleIdReceivedRepository;
 
-  private SentBundleDetailsRepository sentBundleDetailsRepository;
+    private SentBundleDetailsRepository sentBundleDetailsRepository;
 
-  private SentAduDetailsRepository sentAduDetailsRepository;
+    private SentAduDetailsRepository sentAduDetailsRepository;
 
-  public StateManager(
-      LargestAduIdReceivedRepository largestAduIdReceivedRepository,
-      LargestAduIdDeliveredRepository largestAduIdDeliveredRepository,
-      LastBundleIdSentRepository lastBundleIdSentRepository,
-      SentBundleDetailsRepository sentBundleDetailsRepository,
-      SentAduDetailsRepository sentAduDetailsRepository,
-      LargestBundleIdReceivedRepository largestBundleIdReceivedRepository) {
-    this.largestAduIdReceivedRepository = largestAduIdReceivedRepository;
-    this.largestAduIdDeliveredRepository = largestAduIdDeliveredRepository;
-    this.lastBundleIdSentRepository = lastBundleIdSentRepository;
-    this.sentBundleDetailsRepository = sentBundleDetailsRepository;
-    this.sentAduDetailsRepository = sentAduDetailsRepository;
-    this.largestBundleIdReceivedRepository = largestBundleIdReceivedRepository;
-  }
-  
-  @Value("${bundle-server.bundle-store-root}")
-  public void setDataStoreAdaptor(String rootDataDir) {
-    this.dataStoreAdaptor = new DataStoreAdaptor(rootDataDir);
-  }
-
-  @Transactional(rollbackFor = Exception.class)
-  public void registerRecvdBundleId(String clientId, String bundleId) {
-    LargestBundleIdReceived largestBundleIdReceived =
-        new LargestBundleIdReceived(clientId, bundleId);
-    this.largestBundleIdReceivedRepository.save(largestBundleIdReceived);
-    System.out.println("[SM] Registered bundle identifier: " + bundleId + " of client " + clientId);
-  }
-
-  @Transactional(rollbackFor = Exception.class)
-  public Long largestADUIdReceived(String clientId, String appId) {
-    Long ret = null;
-    Optional<LargestAduIdReceived> opt =
-        this.largestAduIdReceivedRepository.findByClientIdAndAppId(clientId, appId);
-    if (opt.isPresent()) {
-      LargestAduIdReceived record = opt.get();
-      ret = record.getAduId();
-    }
-    return ret;
-  }
-
-  @Transactional(rollbackFor = Exception.class)
-  public void updateLargestADUIdReceived(String clientId, String appId, Long aduId) {
-    Optional<LargestAduIdReceived> opt =
-        this.largestAduIdReceivedRepository.findByClientIdAndAppId(clientId, appId);
-    LargestAduIdReceived record = null;
-    if (opt.isPresent()) {
-      record = opt.get();
-      record.setAduId(aduId);
-    } else {
-      record = new LargestAduIdReceived(clientId, appId, aduId);
-    }
-    this.largestAduIdReceivedRepository.save(record);
-  }
-
-  @Transactional(rollbackFor = Exception.class)
-  public Long getLargestADUIdDeliveredByAppId(String clientId, String appId) {
-    Long ret = null;
-    Optional<LargestAduIdDelivered> opt =
-        this.largestAduIdDeliveredRepository.findByClientIdAndAppId(clientId, appId);
-    if (opt.isPresent()) {
-      LargestAduIdDelivered record = opt.get();
-      ret = record.getAduId();
-    }
-    return ret;
-  }
-
-  /* Sent bundle Details*/
-  private Map<String, Long> getSentBundleAduRangeDetails(String bundleId) {
-    Map<String, Long> ret = new HashMap<>();
-    List<SentAduDetails> sentAduDetailsList =
-        this.sentAduDetailsRepository.findByBundleId(bundleId);
-
-    for (SentAduDetails sentAduDetails : sentAduDetailsList) {
-      ret.put(sentAduDetails.getAppId(), sentAduDetails.getAduIdRangeEnd());
+    public StateManager(LargestAduIdReceivedRepository largestAduIdReceivedRepository,
+                        LargestAduIdDeliveredRepository largestAduIdDeliveredRepository,
+                        LastBundleIdSentRepository lastBundleIdSentRepository,
+                        SentBundleDetailsRepository sentBundleDetailsRepository,
+                        SentAduDetailsRepository sentAduDetailsRepository,
+                        LargestBundleIdReceivedRepository largestBundleIdReceivedRepository) {
+        this.largestAduIdReceivedRepository = largestAduIdReceivedRepository;
+        this.largestAduIdDeliveredRepository = largestAduIdDeliveredRepository;
+        this.lastBundleIdSentRepository = lastBundleIdSentRepository;
+        this.sentBundleDetailsRepository = sentBundleDetailsRepository;
+        this.sentAduDetailsRepository = sentAduDetailsRepository;
+        this.largestBundleIdReceivedRepository = largestBundleIdReceivedRepository;
     }
 
-    return ret;
-  }
+    @Value("${bundle-server.bundle-store-root}")
+    public void setDataStoreAdaptor(String rootDataDir) {
+        this.dataStoreAdaptor = new DataStoreAdaptor(rootDataDir);
+    }
 
-  @Transactional(rollbackFor = Exception.class)
-  public void registerSentBundleDetails(String clientId, UncompressedPayload sentBundle) {
-    LastBundleIdSent lastBundleIdSent = new LastBundleIdSent(clientId, sentBundle.getBundleId());
-    this.lastBundleIdSentRepository.save(lastBundleIdSent);
-    this.writeLastSentBundleStructure(clientId, sentBundle);
-  }
+    @Transactional(rollbackFor = Exception.class)
+    public void registerRecvdBundleId(String clientId, String bundleId) {
+        LargestBundleIdReceived largestBundleIdReceived = new LargestBundleIdReceived(clientId, bundleId);
+        this.largestBundleIdReceivedRepository.save(largestBundleIdReceived);
+        System.out.println("[SM] Registered bundle identifier: " + bundleId + " of client " + clientId);
+    }
 
-  private Map<String, Object> getLastSentBundleStructure(String clientId) {
-    Map<String, Object> ret = new HashMap<>();
-    Optional<LastBundleIdSent> opt = this.lastBundleIdSentRepository.findByClientId(clientId);
-    if (opt.isPresent()) {
-      String bundleId = opt.get().getBundleId();
-      Optional<SentBundleDetails> bundleDetailsOpt =
-          this.sentBundleDetailsRepository.findByBundleId(bundleId);
-
-      SentBundleDetails bundleDetails =
-          bundleDetailsOpt
-              .get(); // assume this is guaranteed to be present. TODO: add FK on LastBundleIdSent
-      // to SentBundleDetails
-      ret.put("bundle-id", bundleId);
-      ret.put("acknowledgement", bundleDetails.getAckedBundleId());
-
-      List<SentAduDetails> bundleAduDetailsList =
-          this.sentAduDetailsRepository.findByBundleId(bundleId);
-
-      //      Map<String, List<Object>> aduRangeMap = new HashMap<>();
-      //      for (SentAduDetails bundleAduDetails : bundleAduDetailsList) {
-      //        aduRangeMap.put(
-      //            bundleAduDetails.getAppId(),
-      //            Arrays.asList(
-      //                new Object[] {
-      //                  bundleAduDetails.getAduIdRangeStart(), bundleAduDetails.getAduIdRangeEnd()
-      //                }));
-      //      }
-
-      Map<String, List<ADU>> aduMap = new HashMap<>();
-      for (SentAduDetails bundleAduDetails : bundleAduDetailsList) {
-        Long rangeStart = bundleAduDetails.getAduIdRangeStart();
-        Long rangeEnd = bundleAduDetails.getAduIdRangeEnd();
-        String appId = bundleAduDetails.getAppId();
-        List<ADU> aduList = new ArrayList<>();
-        for (Long aduId = rangeStart; aduId <= rangeEnd; aduId++) {
-          ADU adu = this.dataStoreAdaptor.fetchADU(clientId, appId, aduId);
-          aduList.add(adu);
+    @Transactional(rollbackFor = Exception.class)
+    public Long largestADUIdReceived(String clientId, String appId) {
+        Long ret = null;
+        Optional<LargestAduIdReceived> opt =
+                this.largestAduIdReceivedRepository.findByClientIdAndAppId(clientId, appId);
+        if (opt.isPresent()) {
+            LargestAduIdReceived record = opt.get();
+            ret = record.getAduId();
         }
-        aduMap.put(appId, aduList);
-      }
-      if (!aduMap.isEmpty()) {
-        ret.put("ADU", aduMap);
-      }
-      //      if (!aduRangeMap.isEmpty()) {
-      //        ret.put("ADU", aduRangeMap);
-      //      }
-    }
-    return ret;
-  }
-
-  private void writeLastSentBundleStructure(String clientId, UncompressedPayload lastSentBundle) {
-    Optional<SentBundleDetails> opt =
-        this.sentBundleDetailsRepository.findByBundleId(lastSentBundle.getBundleId());
-    if (!opt.isEmpty()) {
-      return;
-    }
-    SentBundleDetails sentBundleDetails = new SentBundleDetails();
-    sentBundleDetails.setAckedBundleId(lastSentBundle.getAckRecord().getBundleId());
-    sentBundleDetails.setClientId(clientId);
-    sentBundleDetails.setBundleId(lastSentBundle.getBundleId());
-    this.sentBundleDetailsRepository.save(sentBundleDetails);
-
-    Map<String, Long[]> aduRangeMap = new HashMap<>();
-    for (ADU adu : lastSentBundle.getADUs()) {
-      Long[] entry = null;
-      if (aduRangeMap.containsKey(adu.getAppId())) {
-        Long[] minmax = aduRangeMap.get(adu.getAppId());
-        minmax[0] = Math.min(minmax[0], adu.getADUId());
-        minmax[1] = Math.max(minmax[1], adu.getADUId());
-        entry = minmax;
-      } else {
-        entry = new Long[] {adu.getADUId(), adu.getADUId()};
-      }
-      aduRangeMap.put(adu.getAppId(), entry);
+        return ret;
     }
 
-    for (String appId : aduRangeMap.keySet()) {
-      Long[] minmax = aduRangeMap.get(appId);
-      SentAduDetails sentAduDetails =
-          new SentAduDetails(lastSentBundle.getBundleId(), appId, minmax[0], minmax[1]);
-      this.sentAduDetailsRepository.save(sentAduDetails);
-    }
-  }
-
-  @Transactional(rollbackFor = Exception.class)
-  public void processAcknowledgement(String clientId, String bundleId) {
-    Map<String, Long> sentDetails = this.getSentBundleAduRangeDetails(bundleId);
-    for (String appId : sentDetails.keySet()) {
-      this.dataStoreAdaptor.deleteADUs(clientId, appId, sentDetails.get(appId));
-      Optional<LargestAduIdDelivered> opt =
-          this.largestAduIdDeliveredRepository.findByClientIdAndAppId(clientId, appId);
-      LargestAduIdDelivered record = null;
-      Long deliveredAduId = sentDetails.get(appId);
-      if (opt.isPresent()) {
-        record = opt.get();
-        if (record.getAduId() < deliveredAduId) {
-          record.setAduId(deliveredAduId);
+    @Transactional(rollbackFor = Exception.class)
+    public void updateLargestADUIdReceived(String clientId, String appId, Long aduId) {
+        Optional<LargestAduIdReceived> opt =
+                this.largestAduIdReceivedRepository.findByClientIdAndAppId(clientId, appId);
+        LargestAduIdReceived record = null;
+        if (opt.isPresent()) {
+            record = opt.get();
+            record.setAduId(aduId);
+        } else {
+            record = new LargestAduIdReceived(clientId, appId, aduId);
         }
-      } else {
-        record = new LargestAduIdDelivered(clientId, appId, deliveredAduId);
-      }
-      this.largestAduIdDeliveredRepository.save(record);
+        this.largestAduIdReceivedRepository.save(record);
     }
 
-    System.out.println(
-        "[SM] Processed acknowledgement for sent bundle id "
-            + bundleId
-            + " corresponding to client "
-            + clientId);
-  }
+    @Transactional(rollbackFor = Exception.class)
+    public Long getLargestADUIdDeliveredByAppId(String clientId, String appId) {
+        Long ret = null;
+        Optional<LargestAduIdDelivered> opt =
+                this.largestAduIdDeliveredRepository.findByClientIdAndAppId(clientId, appId);
+        if (opt.isPresent()) {
+            LargestAduIdDelivered record = opt.get();
+            ret = record.getAduId();
+        }
+        return ret;
+    }
 
-  @Transactional(rollbackFor = Exception.class)
-  public Optional<UncompressedPayload.Builder> getLastSentBundlePayloadBuilder(String clientId) {
-    Map<String, Object> structure = this.getLastSentBundleStructure(clientId);
-    return BundleGeneratorService.bundleStructureToBuilder(structure);
-  }
+    /* Sent bundle Details*/
+    private Map<String, Long> getSentBundleAduRangeDetails(String bundleId) {
+        Map<String, Long> ret = new HashMap<>();
+        List<SentAduDetails> sentAduDetailsList = this.sentAduDetailsRepository.findByBundleId(bundleId);
 
-  public Optional<String> getLargestRecvdBundleId(String clientId) {
-    Optional<LargestBundleIdReceived> opt =
-        this.largestBundleIdReceivedRepository.findByClientId(clientId);
-    return (opt.isPresent() ? Optional.of(opt.get().getBundleId()) : Optional.empty());
-  }
+        for (SentAduDetails sentAduDetails : sentAduDetailsList) {
+            ret.put(sentAduDetails.getAppId(), sentAduDetails.getAduIdRangeEnd());
+        }
 
-  public String getClientIdFromSentBundleId(String bundleId) {
-    Optional<SentBundleDetails> opt = sentBundleDetailsRepository.findByBundleId(bundleId);
-    return opt.get().getClientId(); // TODO handle optional empty case
-  }
+        return ret;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void registerSentBundleDetails(String clientId, UncompressedPayload sentBundle) {
+        LastBundleIdSent lastBundleIdSent = new LastBundleIdSent(clientId, sentBundle.getBundleId());
+        this.lastBundleIdSentRepository.save(lastBundleIdSent);
+        this.writeLastSentBundleStructure(clientId, sentBundle);
+    }
+
+    private Map<String, Object> getLastSentBundleStructure(String clientId) {
+        Map<String, Object> ret = new HashMap<>();
+        Optional<LastBundleIdSent> opt = this.lastBundleIdSentRepository.findByClientId(clientId);
+        if (opt.isPresent()) {
+            String bundleId = opt.get().getBundleId();
+            Optional<SentBundleDetails> bundleDetailsOpt = this.sentBundleDetailsRepository.findByBundleId(bundleId);
+
+            SentBundleDetails bundleDetails =
+                    bundleDetailsOpt.get(); // assume this is guaranteed to be present. TODO: add FK on LastBundleIdSent
+            // to SentBundleDetails
+            ret.put("bundle-id", bundleId);
+            ret.put("acknowledgement", bundleDetails.getAckedBundleId());
+
+            List<SentAduDetails> bundleAduDetailsList = this.sentAduDetailsRepository.findByBundleId(bundleId);
+
+            //      Map<String, List<Object>> aduRangeMap = new HashMap<>();
+            //      for (SentAduDetails bundleAduDetails : bundleAduDetailsList) {
+            //        aduRangeMap.put(
+            //            bundleAduDetails.getAppId(),
+            //            Arrays.asList(
+            //                new Object[] {
+            //                  bundleAduDetails.getAduIdRangeStart(), bundleAduDetails.getAduIdRangeEnd()
+            //                }));
+            //      }
+
+            Map<String, List<ADU>> aduMap = new HashMap<>();
+            for (SentAduDetails bundleAduDetails : bundleAduDetailsList) {
+                Long rangeStart = bundleAduDetails.getAduIdRangeStart();
+                Long rangeEnd = bundleAduDetails.getAduIdRangeEnd();
+                String appId = bundleAduDetails.getAppId();
+                List<ADU> aduList = new ArrayList<>();
+                for (Long aduId = rangeStart; aduId <= rangeEnd; aduId++) {
+                    ADU adu = this.dataStoreAdaptor.fetchADU(clientId, appId, aduId);
+                    aduList.add(adu);
+                }
+                aduMap.put(appId, aduList);
+            }
+            if (!aduMap.isEmpty()) {
+                ret.put("ADU", aduMap);
+            }
+            //      if (!aduRangeMap.isEmpty()) {
+            //        ret.put("ADU", aduRangeMap);
+            //      }
+        }
+        return ret;
+    }
+
+    private void writeLastSentBundleStructure(String clientId, UncompressedPayload lastSentBundle) {
+        Optional<SentBundleDetails> opt = this.sentBundleDetailsRepository.findByBundleId(lastSentBundle.getBundleId());
+        if (!opt.isEmpty()) {
+            return;
+        }
+        SentBundleDetails sentBundleDetails = new SentBundleDetails();
+        sentBundleDetails.setAckedBundleId(lastSentBundle.getAckRecord().getBundleId());
+        sentBundleDetails.setClientId(clientId);
+        sentBundleDetails.setBundleId(lastSentBundle.getBundleId());
+        this.sentBundleDetailsRepository.save(sentBundleDetails);
+
+        Map<String, Long[]> aduRangeMap = new HashMap<>();
+        for (ADU adu : lastSentBundle.getADUs()) {
+            Long[] entry = null;
+            if (aduRangeMap.containsKey(adu.getAppId())) {
+                Long[] minmax = aduRangeMap.get(adu.getAppId());
+                minmax[0] = Math.min(minmax[0], adu.getADUId());
+                minmax[1] = Math.max(minmax[1], adu.getADUId());
+                entry = minmax;
+            } else {
+                entry = new Long[] { adu.getADUId(), adu.getADUId() };
+            }
+            aduRangeMap.put(adu.getAppId(), entry);
+        }
+
+        for (String appId : aduRangeMap.keySet()) {
+            Long[] minmax = aduRangeMap.get(appId);
+            SentAduDetails sentAduDetails =
+                    new SentAduDetails(lastSentBundle.getBundleId(), appId, minmax[0], minmax[1]);
+            this.sentAduDetailsRepository.save(sentAduDetails);
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void processAcknowledgement(String clientId, String bundleId) {
+        Map<String, Long> sentDetails = this.getSentBundleAduRangeDetails(bundleId);
+        for (String appId : sentDetails.keySet()) {
+            this.dataStoreAdaptor.deleteADUs(clientId, appId, sentDetails.get(appId));
+            Optional<LargestAduIdDelivered> opt =
+                    this.largestAduIdDeliveredRepository.findByClientIdAndAppId(clientId, appId);
+            LargestAduIdDelivered record = null;
+            Long deliveredAduId = sentDetails.get(appId);
+            if (opt.isPresent()) {
+                record = opt.get();
+                if (record.getAduId() < deliveredAduId) {
+                    record.setAduId(deliveredAduId);
+                }
+            } else {
+                record = new LargestAduIdDelivered(clientId, appId, deliveredAduId);
+            }
+            this.largestAduIdDeliveredRepository.save(record);
+        }
+
+        System.out.println(
+                "[SM] Processed acknowledgement for sent bundle id " + bundleId + " corresponding to client " +
+                        clientId);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Optional<UncompressedPayload.Builder> getLastSentBundlePayloadBuilder(String clientId) {
+        Map<String, Object> structure = this.getLastSentBundleStructure(clientId);
+        return BundleGeneratorService.bundleStructureToBuilder(structure);
+    }
+
+    public Optional<String> getLargestRecvdBundleId(String clientId) {
+        Optional<LargestBundleIdReceived> opt = this.largestBundleIdReceivedRepository.findByClientId(clientId);
+        return (opt.isPresent() ? Optional.of(opt.get().getBundleId()) : Optional.empty());
+    }
+
+    public String getClientIdFromSentBundleId(String bundleId) {
+        Optional<SentBundleDetails> opt = sentBundleDetailsRepository.findByBundleId(bundleId);
+        return opt.get().getClientId(); // TODO handle optional empty case
+    }
 }

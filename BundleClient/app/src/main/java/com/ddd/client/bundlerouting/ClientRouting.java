@@ -19,8 +19,8 @@ import com.ddd.client.bundlerouting.RoutingExceptions.ClientMetaDataFileExceptio
 
 public class ClientRouting {
     private static ClientRouting singleClientRoutingInstance = null;
-    HashMap <String, Long> metadata   = null;
-    String metaDataPath               = null;
+    HashMap<String, Long> metadata = null;
+    String metaDataPath = null;
     private final String METADATAFILE = "routing.metadata";
 
     /* Initialize client routing score table
@@ -30,8 +30,7 @@ public class ClientRouting {
      * Return:
      * None
      */
-    private ClientRouting(String rootPath) throws IOException, ClientMetaDataFileException
-    {
+    private ClientRouting(String rootPath) throws IOException, ClientMetaDataFileException {
         this.metaDataPath = rootPath + File.separator + "BundleRouting" + File.separator;
         SecurityUtils.createDirectory(metaDataPath);
 
@@ -46,14 +45,15 @@ public class ClientRouting {
             try {
                 metadata = objectMapper.readValue(metadataFile, new TypeReference<HashMap<String, Long>>() {});
             } catch (JsonParseException | JsonMappingException e) {
-                throw new ClientMetaDataFileException("Corrupted JSON File:"+e);
+                throw new ClientMetaDataFileException("Corrupted JSON File:" + e);
             }
         } else {
             objectMapper.writeValue(metadataFile, metadata);
         }
     }
 
-    public static ClientRouting initializeInstance(String metaDataPath) throws ClientMetaDataFileException, IOException {
+    public static ClientRouting initializeInstance(String metaDataPath) throws ClientMetaDataFileException,
+            IOException {
         if (singleClientRoutingInstance == null) {
             singleClientRoutingInstance = new ClientRouting(metaDataPath);
         } else {
@@ -62,8 +62,7 @@ public class ClientRouting {
         return singleClientRoutingInstance;
     }
 
-    public static ClientRouting getInstance()
-    {
+    public static ClientRouting getInstance() {
         if (singleClientRoutingInstance == null) {
             throw new IllegalStateException("Client Routing instance has not been initialized!");
         }
@@ -76,8 +75,7 @@ public class ClientRouting {
      * Returns:
      * None
      */
-    public void updateMetaData(String transportID) throws ClientMetaDataFileException
-    {
+    public void updateMetaData(String transportID) throws ClientMetaDataFileException {
         long count = 1;
 
         if (metadata.containsKey(transportID)) {
@@ -94,7 +92,7 @@ public class ClientRouting {
             ((ObjectNode) rootNode).put(transportID, count);
             mapper.writeValue(metadataFile, rootNode);
         } catch (Exception e) {
-            throw new ClientMetaDataFileException("Error updating Routing Meta Data:"+e);
+            throw new ClientMetaDataFileException("Error updating Routing Meta Data:" + e);
         }
     }
 
@@ -104,14 +102,13 @@ public class ClientRouting {
      * Returns:
      * None
      */
-    public void bundleMetaData(String bundlePath) throws ClientMetaDataFileException
-    {
+    public void bundleMetaData(String bundlePath) throws ClientMetaDataFileException {
         String bundleMetaDataPath = bundlePath + File.separator + METADATAFILE;
 
         try {
             SecurityUtils.copyContent(new FileInputStream(metaDataPath), new FileOutputStream(bundleMetaDataPath));
         } catch (IOException e) {
-            throw new ClientMetaDataFileException("Error copying Routing Meta Data to Bundle Path:"+e);
+            throw new ClientMetaDataFileException("Error copying Routing Meta Data to Bundle Path:" + e);
         }
     }
 }

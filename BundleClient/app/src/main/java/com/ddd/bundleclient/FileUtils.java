@@ -13,6 +13,7 @@ import android.provider.MediaStore;
 import android.provider.OpenableColumns;
 import android.text.TextUtils;
 import android.util.Log;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -62,10 +63,12 @@ public class FileUtils {
                     final String id;
                     Cursor cursor = null;
                     try {
-                        cursor = context.getContentResolver().query(uri, new String[]{MediaStore.MediaColumns.DISPLAY_NAME}, null, null, null);
+                        cursor = context.getContentResolver()
+                                .query(uri, new String[] { MediaStore.MediaColumns.DISPLAY_NAME }, null, null, null);
                         if (cursor != null && cursor.moveToFirst()) {
                             String fileName = cursor.getString(0);
-                            String path = Environment.getExternalStorageDirectory().toString() + "/Download/" + fileName;
+                            String path =
+                                    Environment.getExternalStorageDirectory().toString() + "/Download/" + fileName;
                             if (!TextUtils.isEmpty(path)) {
                                 return path;
                             }
@@ -80,13 +83,12 @@ public class FileUtils {
                         if (id.startsWith("raw:")) {
                             return id.replaceFirst("raw:", "");
                         }
-                        String[] contentUriPrefixesToTry = new String[] {
-                                "content://downloads/public_downloads",
-                                "content://downloads/my_downloads"
-                        };
+                        String[] contentUriPrefixesToTry = new String[] { "content://downloads/public_downloads",
+                                "content://downloads/my_downloads" };
                         for (String contentUriPrefix : contentUriPrefixesToTry) {
                             try {
-                                final Uri contentUri = ContentUris.withAppendedId(Uri.parse(contentUriPrefix), Long.valueOf(id));
+                                final Uri contentUri =
+                                        ContentUris.withAppendedId(Uri.parse(contentUriPrefix), Long.valueOf(id));
 
                                 // final Uri contentUri = ContentUris.withAppendedId(
                                 //        Uri.parse("content://downloads/public_downloads"), Long.valueOf(id));
@@ -105,8 +107,8 @@ public class FileUtils {
                         return id.replaceFirst("raw:", "");
                     }
                     try {
-                        contentUri = ContentUris.withAppendedId(
-                                Uri.parse("content://downloads/public_downloads"), Long.valueOf(id));
+                        contentUri = ContentUris.withAppendedId(Uri.parse("content://downloads/public_downloads"),
+                                                                Long.valueOf(id));
 
                     } catch (NumberFormatException e) {
                         e.printStackTrace();
@@ -132,15 +134,13 @@ public class FileUtils {
                     contentUri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
                 }
                 selection = "_id=?";
-                selectionArgs = new String[]{split[1]};
+                selectionArgs = new String[] { split[1] };
 
-                return getDataColumn(context, contentUri, selection,
-                        selectionArgs);
+                return getDataColumn(context, contentUri, selection, selectionArgs);
             } else if (isGoogleDriveUri(uri)) {
                 return getDriveFilePath(uri, context);
             }
         }
-
 
         // MediaStore (and general)
         else if ("content".equalsIgnoreCase(uri.getScheme())) {
@@ -152,7 +152,7 @@ public class FileUtils {
             if (isGoogleDriveUri(uri)) {
                 return getDriveFilePath(uri, context);
             }
-            if( Build.VERSION.SDK_INT == Build.VERSION_CODES.N) {
+            if (Build.VERSION.SDK_INT == Build.VERSION_CODES.N) {
                 // return getFilePathFromURI(context,uri);
                 return getMediaFilePathForN(uri, context);
                 // return getRealPathFromURI(context,uri);
@@ -177,7 +177,6 @@ public class FileUtils {
 
         return file.exists();
     }
-
 
     /**
      * Get full file path from external storage
@@ -298,16 +297,13 @@ public class FileUtils {
         return file.getPath();
     }
 
-
-    private static String getDataColumn(Context context, Uri uri,
-                                        String selection, String[] selectionArgs) {
+    private static String getDataColumn(Context context, Uri uri, String selection, String[] selectionArgs) {
         Cursor cursor = null;
         final String column = "_data";
-        final String[] projection = {column};
+        final String[] projection = { column };
 
         try {
-            cursor = context.getContentResolver().query(uri, projection,
-                    selection, selectionArgs, null);
+            cursor = context.getContentResolver().query(uri, projection, selection, selectionArgs, null);
 
             if (cursor != null && cursor.moveToFirst()) {
                 final int index = cursor.getColumnIndexOrThrow(column);
@@ -353,7 +349,6 @@ public class FileUtils {
         return "com.google.android.apps.photos.content".equals(uri.getAuthority());
     }
 
-
     /**
      * @param uri The Uri to check.
      * @return Whether the Uri authority is Google Drive.
@@ -362,6 +357,5 @@ public class FileUtils {
         return "com.google.android.apps.docs.storage".equals(uri.getAuthority()) //
                 || "com.google.android.apps.docs.storage.legacy".equals(uri.getAuthority());
     }
-
 
 }

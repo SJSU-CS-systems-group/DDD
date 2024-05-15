@@ -19,86 +19,85 @@ import java.util.List;
  * */
 
 public class DTNAdapterService extends DTNAdapterGrpc.DTNAdapterImplBase {
-	private static final String ROOT_DIRECTORY = "C:\\Users\\dmuna\\Documents\\GitHub\\DDD-Security\\dtn-adapter-server/FileStore";
+    private static final String ROOT_DIRECTORY =
+            "C:\\Users\\dmuna\\Documents\\GitHub\\DDD-Security\\dtn-adapter-server/FileStore";
 
-	@Override
-	public void saveData(AppData request, StreamObserver<AppData> responseObserver) {
-		System.out.println("-----------------------------------------------------------------------------------");
-		System.out.println("[DTNAdapterService] Saving Data for:"+request.getClientId());
-		System.out.println("[DTNAdapterService] total number of ADUs in request:"+request.getDataListCount());
-		System.out.println("[DTNAdapterService] last ADU ID received by server:"+request.getLastADUIdReceived());
-		FileStoreHelper sendHelper = new FileStoreHelper(ROOT_DIRECTORY + "/send");
+    @Override
+    public void saveData(AppData request, StreamObserver<AppData> responseObserver) {
+        System.out.println("-----------------------------------------------------------------------------------");
+        System.out.println("[DTNAdapterService] Saving Data for:" + request.getClientId());
+        System.out.println("[DTNAdapterService] total number of ADUs in request:" + request.getDataListCount());
+        System.out.println("[DTNAdapterService] last ADU ID received by server:" + request.getLastADUIdReceived());
+        FileStoreHelper sendHelper = new FileStoreHelper(ROOT_DIRECTORY + "/send");
 
-		FileStoreHelper receiveHelper = new FileStoreHelper(ROOT_DIRECTORY + "/receive");
+        FileStoreHelper receiveHelper = new FileStoreHelper(ROOT_DIRECTORY + "/receive");
 
-		for (int i = 0; i < request.getDataListCount(); i++) {
-			byte[] reply = null;
-			try {
-				receiveHelper.AddFile(request.getClientId(), request.getDataList(i).getData().toByteArray());
-				reply = SignalCLIConnector.performRegistration(request.getClientId(), request.getDataList(i).getData().toByteArray());
-				//(new String(request.getDataList(i).getData().toByteArray())+" was processed").getBytes();
-				sendHelper.AddFile(request.getClientId(), reply);
+        for (int i = 0; i < request.getDataListCount(); i++) {
+            byte[] reply = null;
+            try {
+                receiveHelper.AddFile(request.getClientId(), request.getDataList(i).getData().toByteArray());
+                reply = SignalCLIConnector.performRegistration(request.getClientId(),
+                                                               request.getDataList(i).getData().toByteArray());
+                //(new String(request.getDataList(i).getData().toByteArray())+" was processed").getBytes();
+                sendHelper.AddFile(request.getClientId(), reply);
 
-			} catch (Exception e) {
-				System.out.println("exception in register");
-			}
+            } catch (Exception e) {
+                System.out.println("exception in register");
+            }
 
-		}
+        }
 
-		removeAcknowledgedADUs(request.getClientId(), request.getLastADUIdReceived());
+        removeAcknowledgedADUs(request.getClientId(), request.getLastADUIdReceived());
 
-		List<ADU> dataList = sendHelper.getAppData(request.getClientId());
-		List<AppDataUnit> dataListConverted = new ArrayList<>();
-		System.out.println("[DTNAdapterService.saveData] data to send to bundle server: ");
-		for (int i = 0; i < dataList.size(); i++) {
-			try {
-				byte[] data = FileStoreHelper.getStringFromFile(dataList.get(i).getSource().getAbsolutePath()).getBytes();
-				System.out.println("ADU ID "+dataList.get(i).getADUId()+": " +
-						new String(data));
-				dataListConverted.add(AppDataUnit.newBuilder()
-						.setData(ByteString.copyFrom(data))
-						.setAduId(dataList.get(i).getADUId()).build()
-				);
-			}catch (Exception ex){
-				ex.printStackTrace();
-			}
-		}
-		AppData appData = AppData.newBuilder()
-				.addAllDataList(dataListConverted)
-				.setLastADUIdReceived(receiveHelper.getLastADUIdReceived(request.getClientId()))
-				.build();
+        List<ADU> dataList = sendHelper.getAppData(request.getClientId());
+        List<AppDataUnit> dataListConverted = new ArrayList<>();
+        System.out.println("[DTNAdapterService.saveData] data to send to bundle server: ");
+        for (int i = 0; i < dataList.size(); i++) {
+            try {
+                byte[] data =
+                        FileStoreHelper.getStringFromFile(dataList.get(i).getSource().getAbsolutePath()).getBytes();
+                System.out.println("ADU ID " + dataList.get(i).getADUId() + ": " + new String(data));
+                dataListConverted.add(
+                        AppDataUnit.newBuilder().setData(ByteString.copyFrom(data)).setAduId(dataList.get(i).getADUId())
+                                .build());
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+        AppData appData = AppData.newBuilder().addAllDataList(dataListConverted)
+                .setLastADUIdReceived(receiveHelper.getLastADUIdReceived(request.getClientId())).build();
 
-		responseObserver.onNext(appData);
-		responseObserver.onCompleted();
-	}
+        responseObserver.onNext(appData);
+        responseObserver.onCompleted();
+    }
 
-	private boolean removeAcknowledgedADUs(String clientId, long lastADUIdSent){
-		FileStoreHelper sendHelper = new FileStoreHelper(ROOT_DIRECTORY + "/send");
-		sendHelper.deleteAllFilesUpTo(clientId, lastADUIdSent);
-		return true;
-	}
+    private boolean removeAcknowledgedADUs(String clientId, long lastADUIdSent) {
+        FileStoreHelper sendHelper = new FileStoreHelper(ROOT_DIRECTORY + "/send");
+        sendHelper.deleteAllFilesUpTo(clientId, lastADUIdSent);
+        return true;
+    }
 
-	private void generateAdus(String clientId, int k){
-		FileStoreHelper sendHelper = new FileStoreHelper(ROOT_DIRECTORY + "/send");
-		for(int i=0;i<k;i++){
-			sendHelper.AddFile(clientId, ("adding adu "+i+" of "+k+"").getBytes());
-		}
-	}
+    private void generateAdus(String clientId, int k) {
+        FileStoreHelper sendHelper = new FileStoreHelper(ROOT_DIRECTORY + "/send");
+        for (int i = 0; i < k; i++) {
+            sendHelper.AddFile(clientId, ("adding adu " + i + " of " + k + "").getBytes());
+        }
+    }
 
-	@Override
-	public void prepareData(ClientData request, StreamObserver<PrepareResponse> responseObserver) {
-		
-		FileStoreHelper sendHelper = new FileStoreHelper(ROOT_DIRECTORY + "/send");
-		List<String> messageLocations = SignalCLIConnector.receiveMessages(request.getClientId());
-		
-		for (String loc : messageLocations) {
-			try {
-				sendHelper.AddFile(request.getClientId(), Files.readAllBytes(new File(loc).toPath()));
-			} catch (IOException e) {
-				System.out.println("Exception in retreiving message files");
-			}
-		}
-		responseObserver.onNext(PrepareResponse.newBuilder().setCode(StatusCode.SUCCESS).build());
-		responseObserver.onCompleted();
-	}
+    @Override
+    public void prepareData(ClientData request, StreamObserver<PrepareResponse> responseObserver) {
+
+        FileStoreHelper sendHelper = new FileStoreHelper(ROOT_DIRECTORY + "/send");
+        List<String> messageLocations = SignalCLIConnector.receiveMessages(request.getClientId());
+
+        for (String loc : messageLocations) {
+            try {
+                sendHelper.AddFile(request.getClientId(), Files.readAllBytes(new File(loc).toPath()));
+            } catch (IOException e) {
+                System.out.println("Exception in retreiving message files");
+            }
+        }
+        responseObserver.onNext(PrepareResponse.newBuilder().setCode(StatusCode.SUCCESS).build());
+        responseObserver.onCompleted();
+    }
 }

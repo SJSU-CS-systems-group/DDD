@@ -6,63 +6,63 @@ import java.lang.Comparable;
 
 public class ADU implements Comparable<ADU> {
 
-  private final File source;
+    private final File source;
 
-  private final String appId;
+    private final String appId;
 
-  private final long aduId;
+    private final long aduId;
 
-  private final long size;
+    private final long size;
 
-  public ADU(File source, String appId, long aduId, long size) {
-    this.source = source;
-    this.appId = appId;
-    this.aduId = aduId;
-    this.size = size;
-  }
-
-  public File getSource() {
-    return this.source;
-  }
-
-  public long getSize() {
-    return this.size;
-  }
-
-  public String getAppId() {
-    return this.appId;
-  }
-
-  public long getADUId() {
-    return this.aduId;
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(this.aduId, this.appId);
-  }
-
-  @Override
-  public boolean equals(Object obj) {
-    if (this == obj) {
-      return true;
+    public ADU(File source, String appId, long aduId, long size) {
+        this.source = source;
+        this.appId = appId;
+        this.aduId = aduId;
+        this.size = size;
     }
-    if (obj == null) {
-      return false;
-    }
-    if (this.getClass() != obj.getClass()) {
-      return false;
-    }
-    ADU other = (ADU) obj;
-    return this.aduId == other.aduId && Objects.equals(this.appId, other.appId);
-  }
 
-  @Override
-  public int compareTo(ADU o) {
-    int ret = appId.compareTo(o.getAppId());
-    if (ret == 0) {
-      ret = (int) (aduId - o.getADUId());
+    public File getSource() {
+        return this.source;
     }
-    return ret;
-  }
+
+    public long getSize() {
+        return this.size;
+    }
+
+    public String getAppId() {
+        return this.appId;
+    }
+
+    public long getADUId() {
+        return this.aduId;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(this.aduId, this.appId);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (this.getClass() != obj.getClass()) {
+            return false;
+        }
+        ADU other = (ADU) obj;
+        return this.aduId == other.aduId && Objects.equals(this.appId, other.appId);
+    }
+
+    @Override
+    public int compareTo(ADU o) {
+        int ret = appId.compareTo(o.getAppId());
+        if (ret == 0) {
+            ret = (int) (aduId - o.getADUId());
+        }
+        return ret;
+    }
 }

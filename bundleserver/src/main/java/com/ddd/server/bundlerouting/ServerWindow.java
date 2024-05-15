@@ -27,11 +27,11 @@ import com.ddd.server.bundlesecurity.ServerSecurity;
 @Service
 public class ServerWindow {
     HashMap<String, CircularBuffer> clientWindowMap = null;
-    ServerSecurity                  serverSecurity  = null;
-    private SNRDatabases            database        = null;
-    private static final String     dbTableName     = "ServerWindow";
-    private static final String     STARTCOUNTER    = "startCounter";
-    private static final String     ENDCOUNTER      = "endCounter";
+    ServerSecurity serverSecurity = null;
+    private SNRDatabases database = null;
+    private static final String dbTableName = "ServerWindow";
+    private static final String STARTCOUNTER = "startCounter";
+    private static final String ENDCOUNTER = "endCounter";
     private static final String WINDOW_LENGTH = "windowLength";
 
     @Autowired
@@ -66,7 +66,7 @@ public class ServerWindow {
     //         database.createTable(dbTableCreateQuery);
     //     }
     // }
-    
+
     @PostConstruct
     public void init() throws SQLException {
         // TODO: Change to config
@@ -82,41 +82,35 @@ public class ServerWindow {
         } catch (SQLException | BufferOverflow | InvalidLength e) {
             System.out.println(e + "\n[WIN] INFO: Failed to initialize window from database");
 
-            String dbTableCreateQuery = "CREATE TABLE " + dbTableName + " " +
-                    "(clientID VARCHAR(256) not NULL," +
-                    STARTCOUNTER + " VARCHAR(256)," +
-                    ENDCOUNTER + " VARCHAR(256)," +
-                    WINDOW_LENGTH + " INTEGER," +
-                    "PRIMARY KEY (clientID))";
+            String dbTableCreateQuery =
+                    "CREATE TABLE " + dbTableName + " " + "(clientID VARCHAR(256) not NULL," + STARTCOUNTER +
+                            " VARCHAR(256)," + ENDCOUNTER + " VARCHAR(256)," + WINDOW_LENGTH + " INTEGER," +
+                            "PRIMARY KEY (clientID))";
 
             database.createTable(dbTableCreateQuery);
         }
     }
-    
 
-    private void initializeWindow() throws SQLException, InvalidLength, BufferOverflow
-    {
-        String query = "SELECT clientID, " + STARTCOUNTER +
-                        ", " + ENDCOUNTER + ", " + WINDOW_LENGTH +
-                        " FROM " + dbTableName;
+    private void initializeWindow() throws SQLException, InvalidLength, BufferOverflow {
+        String query =
+                "SELECT clientID, " + STARTCOUNTER + ", " + ENDCOUNTER + ", " + WINDOW_LENGTH + " FROM " + dbTableName;
 
         List<String[]> results = database.getFromTable(query);
 
         for (String[] result : results) {
-            String clientID   = result[0];
+            String clientID = result[0];
             long startCounter = Long.parseLong(result[1]);
-            long endCounter   = Long.parseLong(result[2]);
-            int windowLength  = Integer.parseInt(result[3]);
-            
+            long endCounter = Long.parseLong(result[2]);
+            int windowLength = Integer.parseInt(result[3]);
+
             CircularBuffer circularBuffer = createBuffer(clientID, startCounter, endCounter, windowLength);
             clientWindowMap.put(clientID, circularBuffer);
         }
     }
 
-    private CircularBuffer createBuffer( String clientID, long startCounter, long endCounter, int windowLength) throws BufferOverflow, InvalidLength
-    {
+    private CircularBuffer createBuffer(String clientID, long startCounter, long endCounter, int windowLength) throws BufferOverflow, InvalidLength {
         CircularBuffer circularBuffer = new CircularBuffer(windowLength);
-        
+
         for (long i = startCounter; i < endCounter; ++i) {
             String bundleID = BundleIDGenerator.generateBundleID(clientID, i, BundleIDGenerator.DOWNSTREAM);
             if (i == startCounter) {
@@ -128,36 +122,32 @@ public class ServerWindow {
         return circularBuffer;
     }
 
-
     /* Returns the window for the requested client
      * Parameters:
      * clientID     : encoded clientID
      * Returns:
      * CircularBuffer object
      */
-    private CircularBuffer getClientWindow(String clientID) throws ClientWindowNotFound
-    {
+    private CircularBuffer getClientWindow(String clientID) throws ClientWindowNotFound {
         if (!clientWindowMap.containsKey(clientID)) {
-            throw new ClientWindowNotFound("[WIN]: ClientID["+clientID+"] Not Found");
+            throw new ClientWindowNotFound("[WIN]: ClientID[" + clientID + "] Not Found");
         }
 
         return clientWindowMap.get(clientID);
     }
 
-    private String getValueFromTable(String clientID, String columnName) throws SQLException
-    {
-        String query = "SELECT "+columnName+" FROM "+dbTableName+" WHERE clientID = '"+clientID+"'";
+    private String getValueFromTable(String clientID, String columnName) throws SQLException {
+        String query = "SELECT " + columnName + " FROM " + dbTableName + " WHERE clientID = '" + clientID + "'";
 
         String[] result = (database.getFromTable(query)).get(0);
 
         return result[0];
     }
 
-    private void updateValueInTable(String clientID, String columnName, String value)
-    {
-        String updateQuery = "UPDATE "+dbTableName+
-                             " SET "+columnName+" = '"+value+"'"+
-                             " WHERE clientID = '"+clientID+"'";
+    private void updateValueInTable(String clientID, String columnName, String value) {
+        String updateQuery =
+                "UPDATE " + dbTableName + " SET " + columnName + " = '" + value + "'" + " WHERE clientID = '" +
+                        clientID + "'";
 
         try {
             database.updateEntry(updateQuery);
@@ -167,15 +157,14 @@ public class ServerWindow {
         }
     }
 
-    private void initializeEntry(String clientID, int windowLength)
-    {
-        String insertQuery = "INSERT INTO " + dbTableName + " VALUES " +
-                             "('"+clientID+"', '0', '0', "+windowLength+")";
+    private void initializeEntry(String clientID, int windowLength) {
+        String insertQuery =
+                "INSERT INTO " + dbTableName + " VALUES " + "('" + clientID + "', '0', '0', " + windowLength + ")";
 
         try {
             database.insertIntoTable(insertQuery);
         } catch (SQLException e) {
-            System.out.println("[WIN]: Failed to Initalize Client ["+clientID+"]to Server Window DB!");
+            System.out.println("[WIN]: Failed to Initalize Client [" + clientID + "]to Server Window DB!");
             e.printStackTrace();
         }
     }
@@ -187,8 +176,7 @@ public class ServerWindow {
      * Returns:
      * None
      */
-    public void addClient(String clientID, int windowLength) throws InvalidLength, ClientAlreadyExists
-    {
+    public void addClient(String clientID, int windowLength) throws InvalidLength, ClientAlreadyExists {
         if (clientWindowMap.containsKey(clientID)) {
             throw new ClientAlreadyExists("[WIN]: Cannot Add to Map; client already exists");
         }
@@ -203,32 +191,34 @@ public class ServerWindow {
      * Returns:
      * None
      */
-    public void updateClientWindow(String clientID, String bundleID) throws ClientWindowNotFound, BufferOverflow, InvalidBundleID, SQLException
-    {
+    public void updateClientWindow(String clientID, String bundleID) throws ClientWindowNotFound, BufferOverflow,
+            InvalidBundleID, SQLException {
         String decryptedBundleID = null;
         try {
             decryptedBundleID = serverSecurity.decryptBundleID(bundleID, clientID);
         } catch (BundleIDCryptographyException e) {
             System.out.println(e);
             throw new InvalidBundleID("[WIN]: Failed to Decrypt bundleID");
-    }
+        }
 
         CircularBuffer circularBuffer = getClientWindow(clientID);
-        
-        long bundleIDcounter = BundleIDGenerator.getCounterFromBundleID(decryptedBundleID, BundleIDGenerator.DOWNSTREAM);
+
+        long bundleIDcounter =
+                BundleIDGenerator.getCounterFromBundleID(decryptedBundleID, BundleIDGenerator.DOWNSTREAM);
         long endCounter = Long.parseUnsignedLong(getValueFromTable(clientID, ENDCOUNTER));
 
         if (endCounter != bundleIDcounter) {
-            throw new InvalidBundleID("[WIN]: Expected: "+Long.toUnsignedString(endCounter)+", Got: "+Long.toUnsignedString(bundleIDcounter));
-    }
+            throw new InvalidBundleID("[WIN]: Expected: " + Long.toUnsignedString(endCounter) + ", Got: " +
+                                              Long.toUnsignedString(bundleIDcounter));
+        }
 
         circularBuffer.add(decryptedBundleID);
         endCounter++;
         updateValueInTable(clientID, ENDCOUNTER, Long.toUnsignedString(endCounter));
     }
 
-    public String getCurrentbundleID(String clientID) throws BundleIDCryptographyException, InvalidClientIDException, SQLException
-    {
+    public String getCurrentbundleID(String clientID) throws BundleIDCryptographyException, InvalidClientIDException,
+            SQLException {
         long endCounter = Long.parseUnsignedLong(getValueFromTable(clientID, ENDCOUNTER));
 
         String plainBundleID = BundleIDGenerator.generateBundleID(clientID, endCounter, BundleIDGenerator.DOWNSTREAM);
@@ -242,23 +232,23 @@ public class ServerWindow {
      * Returns:
      * None
      */
-    public void processACK(String clientID, String ackedBundleID) throws ClientWindowNotFound, InvalidLength, BundleIDCryptographyException
-    {
+    public void processACK(String clientID, String ackedBundleID) throws ClientWindowNotFound, InvalidLength,
+            BundleIDCryptographyException {
         CircularBuffer circularBuffer = getClientWindow(clientID);
         String decryptedBundleID = serverSecurity.decryptBundleID(ackedBundleID, clientID);
-        System.out.println("[WIN]: Decrypted Ack from file = "+decryptedBundleID);
+        System.out.println("[WIN]: Decrypted Ack from file = " + decryptedBundleID);
         long ack = BundleIDGenerator.getCounterFromBundleID(decryptedBundleID, BundleIDGenerator.DOWNSTREAM);
 
         try {
             compareBundleID(ack, clientID);
-            
+
             int index = (int) Long.remainderUnsigned(ack, circularBuffer.getLength());
             circularBuffer.deleteUntilIndex(index);
             long startCounter = ack + 1;
             updateValueInTable(clientID, STARTCOUNTER, Long.toUnsignedString(startCounter));
 
             // TODO: Change to log
-            System.out.println("[WIN]: Updated start Counter: "+startCounter);
+            System.out.println("[WIN]: Updated start Counter: " + startCounter);
         } catch (RecievedOldACK | RecievedInvalidACK e) {
             System.out.println("[WIN]: Received Old/Invalid ACK!");
             e.printStackTrace();
@@ -268,23 +258,25 @@ public class ServerWindow {
         }
     }
 
-    private void compareBundleID(long ack, String clientID) throws RecievedOldACK, RecievedInvalidACK, SQLException
-    {
+    private void compareBundleID(long ack, String clientID) throws RecievedOldACK, RecievedInvalidACK, SQLException {
         long startCounter = Long.parseUnsignedLong(getValueFromTable(clientID, STARTCOUNTER));
         long endCounter = Long.parseUnsignedLong(getValueFromTable(clientID, ENDCOUNTER));
 
-        if (Long.compareUnsigned(ack,startCounter) == -1) {
-            throw new RecievedOldACK("Received old ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(startCounter) + "]" );
-        } else if (Long.compareUnsigned(ack,endCounter) == 1) {
-            throw new RecievedInvalidACK("Received Invalid ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(endCounter) + "]" );
+        if (Long.compareUnsigned(ack, startCounter) == -1) {
+            throw new RecievedOldACK(
+                    "Received old ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(startCounter) +
+                            "]");
+        } else if (Long.compareUnsigned(ack, endCounter) == 1) {
+            throw new RecievedInvalidACK(
+                    "Received Invalid ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(endCounter) +
+                            "]");
         }
     }
 
     /* Check if window is full
-     * 
+     *
      */
-    public boolean isClientWindowFull(String clientID) throws ClientWindowNotFound
-    {
+    public boolean isClientWindowFull(String clientID) throws ClientWindowNotFound {
         return getClientWindow(clientID).isBufferFull();
     }
 
@@ -294,26 +286,24 @@ public class ServerWindow {
      * Returns:
      * Array of bundlesIDs present in the client's window
      */
-    public String[] getclientWindow(String clientID) throws ClientWindowNotFound, InvalidClientIDException, BundleIDCryptographyException
-    {
+    public String[] getclientWindow(String clientID) throws ClientWindowNotFound, InvalidClientIDException,
+            BundleIDCryptographyException {
         String[] bundleIDs = getClientWindow(clientID).getBuffer();
-        for (int i=0; i < bundleIDs.length; ++i) {
+        for (int i = 0; i < bundleIDs.length; ++i) {
             bundleIDs[i] = serverSecurity.encryptBundleID(bundleIDs[i], clientID);
         }
 
         return bundleIDs;
     }
 
-    public int compareBundleIDs(String id1, String id2, String clientID, boolean direction) throws BundleIDCryptographyException
-    {
+    public int compareBundleIDs(String id1, String id2, String clientID, boolean direction) throws BundleIDCryptographyException {
         String decryptedBundleID1 = serverSecurity.decryptBundleID(id1, clientID);
         String decryptedBundleID2 = serverSecurity.decryptBundleID(id2, clientID);
 
         return BundleIDGenerator.compareBundleIDs(decryptedBundleID1, decryptedBundleID2, direction);
     }
 
-    public long getCounterFromBundleID(String bundleID, String clientID, boolean direction) throws BundleIDCryptographyException
-    {
+    public long getCounterFromBundleID(String bundleID, String clientID, boolean direction) throws BundleIDCryptographyException {
         String decryptedBundleID = serverSecurity.decryptBundleID(bundleID, clientID);
         return BundleIDGenerator.getCounterFromBundleID(decryptedBundleID, direction);
     }

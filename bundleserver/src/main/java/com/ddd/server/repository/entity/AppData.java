@@ -9,31 +9,16 @@ import jakarta.persistence.Table;
 @Table(name = "app_data")
 public class AppData {
     @Id
-    @Column(
-            name = "app_name",
-            nullable = false,
-            columnDefinition = "VARCHAR(100)"
-    )
+    @Column(name = "app_name", nullable = false, columnDefinition = "VARCHAR(100)")
     private String appName;
 
-    @Column(
-            name = "client_id",
-            nullable = false,
-            columnDefinition = "VARCHAR(256)"
-    )
+    @Column(name = "client_id", nullable = false, columnDefinition = "VARCHAR(256)")
     private String clientId;
 
-    @Column(
-            name = "adu_id",
-            nullable = false,
-            columnDefinition = "INT UNSIGNED"
-    )
+    @Column(name = "adu_id", nullable = false, columnDefinition = "INT UNSIGNED")
     private int aduId;
 
-    @Column(
-            name = "direction",
-            columnDefinition = "VARCHAR(4)"
-    )
+    @Column(name = "direction", columnDefinition = "VARCHAR(4)")
     private String direction;
 
     public AppData(String appName, String clientId, int aduId, String direction) {
@@ -79,11 +64,7 @@ public class AppData {
 
     @Override
     public String toString() {
-        return "AppDataTable{" +
-                "appName='" + appName + '\'' +
-                ", clientId='" + clientId + '\'' +
-                ", aduId=" + aduId +
-                ", direction='" + direction + '\'' +
-                '}';
+        return "AppDataTable{" + "appName='" + appName + '\'' + ", clientId='" + clientId + '\'' + ", aduId=" + aduId +
+                ", direction='" + direction + '\'' + '}';
     }
 }

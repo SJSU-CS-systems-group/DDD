@@ -60,7 +60,7 @@ public class GrpcReceiveTask {
         channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
         BundleServiceGrpc.BundleServiceStub stub = BundleServiceGrpc.newStub(channel);
         // using an array because it is set in the anonymous class below
-	Throwable[] thrown = new Throwable[1];
+        Throwable[] thrown = new Throwable[1];
         receiveBundles = true;
         statusComplete = true;
 
@@ -73,10 +73,7 @@ public class GrpcReceiveTask {
                 Log.d(TAG, "onNext: called with " + response.toString());
                 if (response.hasBundleList()) {
                     Log.d(TAG, "Got list for deletion");
-                    List<String> toDelete = Arrays.asList(response
-                            .getBundleList()
-                            .getBundleList()
-                            .split(","));
+                    List<String> toDelete = Arrays.asList(response.getBundleList().getBundleList().split(","));
                     if (!toDelete.isEmpty()) {
                         File clientDir = new File(receiveDir);
                         for (File bundle : clientDir.listFiles()) {
@@ -116,7 +113,8 @@ public class GrpcReceiveTask {
                     try {
                         fileOutputStream.close();
                     } catch (IOException e) {
-                        Log.e(TAG, "/GrpcReceiveTask.java -> executeTask() -> onError() IOException: " + e.getMessage());
+                        Log.e(TAG,
+                              "/GrpcReceiveTask.java -> executeTask() -> onError() IOException: " + e.getMessage());
 
                     }
                 }
@@ -137,21 +135,19 @@ public class GrpcReceiveTask {
             if (statusComplete) {
                 Log.d(TAG, "/GrpcReceiveTask.java -> executeTask() receiveBundles = " + receiveBundles);
 
-                    String existingBundles = FileUtils.getFilesList(receiveDir);
-                    BundleDownloadRequest request = BundleDownloadRequest
-                            .newBuilder()
-                            .setTransportId(transportId)
-                            .setBundleList(existingBundles)
-                            .build();
+                String existingBundles = FileUtils.getFilesList(receiveDir);
+                BundleDownloadRequest request =
+                        BundleDownloadRequest.newBuilder().setTransportId(transportId).setBundleList(existingBundles)
+                                .build();
 
-                    stub.downloadBundle(request, downloadObserver);
+                stub.downloadBundle(request, downloadObserver);
 
-                    Log.d(TAG, "Receive task complete");
-                    statusComplete = false;
+                Log.d(TAG, "Receive task complete");
+                statusComplete = false;
             }
         }
-        Log.d(TAG, "Error thrown: "+thrown[0]);
-        if(thrown[0] != null){
+        Log.d(TAG, "Error thrown: " + thrown[0]);
+        if (thrown[0] != null) {
             throw new Exception(thrown[0].getMessage());
         }
     }

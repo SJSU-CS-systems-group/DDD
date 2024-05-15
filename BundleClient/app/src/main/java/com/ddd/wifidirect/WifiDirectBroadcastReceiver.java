@@ -28,6 +28,7 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
 
     /**
      * ctor
+     *
      * @param manager WifiDirectManager
      */
     public WifiDirectBroadcastReceiver(WifiDirectManager manager) {
@@ -38,8 +39,9 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
     /**
      * Listener callback whenever one of the registered WifiDirect Intents
      * that were registered WifiDirectManager are triggered
+     *
      * @param context Context/MainActivity where the intent is triggered
-     * @param intent Intent object containing triggered action.
+     * @param intent  Intent object containing triggered action.
      */
 
     @Override
@@ -87,8 +89,7 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
             // WifiP2pGroup group = (WifiP2pGroup)  intent.
             //getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP);
 
-            NetworkInfo networkInfo = (NetworkInfo) intent
-                    .getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
+            NetworkInfo networkInfo = (NetworkInfo) intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
 
             if (networkInfo.isConnected()) {
                 // we are connected, request connection
@@ -103,8 +104,7 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
                         "WIFI_P2P_CONNECTION_CHANGED_ACTION disconnected");
             }
              */
-        }
-        else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
+        } else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
             // unneeded
             // was a UI update in the orginal WifiDirect example
         }

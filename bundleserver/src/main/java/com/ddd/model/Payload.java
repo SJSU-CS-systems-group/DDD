@@ -3,19 +3,19 @@ package com.ddd.model;
 import java.io.File;
 
 public class Payload {
-  private final String bundleId;
-  private final File source;
+    private final String bundleId;
+    private final File source;
 
-  public Payload(String bundleId, File source) {
-    this.bundleId = bundleId;
-    this.source = source;
-  }
+    public Payload(String bundleId, File source) {
+        this.bundleId = bundleId;
+        this.source = source;
+    }
 
-  public String getBundleId() {
-    return this.bundleId;
-  }
+    public String getBundleId() {
+        return this.bundleId;
+    }
 
-  public File getSource() {
-    return this.source;
-  }
+    public File getSource() {
+        return this.source;
+    }
 }

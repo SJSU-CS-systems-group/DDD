@@ -21,7 +21,6 @@ public class ReceiveIntentService extends IntentService {
 
     private static final String ACTION_RECV = "android.intent.dtn.SEND_DATA";
 
-
     public ReceiveIntentService() {
         super("ReceiveIntentService");
     }
@@ -50,9 +49,9 @@ public class ReceiveIntentService extends IntentService {
      */
     private void saveData(String message) {
 
-        Log.d(MainActivity.TAG,"data received in service: "+message);
+        Log.d(MainActivity.TAG, "data received in service: " + message);
 
-        ContentValues values=new ContentValues();
+        ContentValues values = new ContentValues();
         values.put("data", message.getBytes());
         values.put("appName", getApplicationContext().getPackageName());
 

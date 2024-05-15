@@ -21,7 +21,8 @@
 //     try {
 //       record =
 //           this.jdbcTemplate.queryForObject(
-//               "select id, client_id as clientId, app_id as appId, adu_id as aduId from largest_adu_id_delivered where client_id = ? and app_id = ?",
+//               "select id, client_id as clientId, app_id as appId, adu_id as aduId from largest_adu_id_delivered
+//               where client_id = ? and app_id = ?",
 //               BeanPropertyRowMapper.newInstance(LargestAduIdDelivered.class),
 //               clientId,
 //               appId);

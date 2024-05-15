@@ -16,8 +16,7 @@ public class SNRDatabases {
     private String dbName;
     private String dbURL;
 
-    public SNRDatabases(String url, String uname, String password, String dbName) throws SQLException
-    {
+    public SNRDatabases(String url, String uname, String password, String dbName) throws SQLException {
         // this.url = url;
         this.uname = uname;
         this.password = password;
@@ -27,12 +26,11 @@ public class SNRDatabases {
 //        createDatabase();
     }
 
-    private void createDatabase() throws SQLException
-    {
-        String createQuery = "create database "+dbName;
+    private void createDatabase() throws SQLException {
+        String createQuery = "create database " + dbName;
 
         DriverManager.registerDriver(new com.mysql.cj.jdbc.Driver());
-        Connection conn = DriverManager.getConnection(url, uname,password);
+        Connection conn = DriverManager.getConnection(url, uname, password);
         Statement statement = conn.createStatement();
 
         try {
@@ -45,8 +43,7 @@ public class SNRDatabases {
         conn.close();
     }
 
-    public boolean createTable(String createQuery) throws SQLException
-    {
+    public boolean createTable(String createQuery) throws SQLException {
         Connection conn = DriverManager.getConnection(dbURL, uname, password);
         Statement statement = conn.createStatement();
         boolean exists = false;
@@ -62,33 +59,28 @@ public class SNRDatabases {
         return exists;
     }
 
-    public void insertIntoTable(String insertQuery) throws SQLException
-    {
+    public void insertIntoTable(String insertQuery) throws SQLException {
         executeUpdate(insertQuery);
     }
 
-    public void updateEntry(String updateQuery) throws SQLException
-    {
+    public void updateEntry(String updateQuery) throws SQLException {
         executeUpdate(updateQuery);
     }
 
-    public List<String[]> getFromTable(String query) throws SQLException
-    {
+    public List<String[]> getFromTable(String query) throws SQLException {
         return executeQuery(query);
     }
 
-    private void executeUpdate(String query) throws SQLException
-    {
+    private void executeUpdate(String query) throws SQLException {
         Connection conn = DriverManager.getConnection(dbURL, uname, password);
         Statement statement = conn.createStatement();
 
         statement.executeUpdate(query);
         conn.close();
-        System.out.println("[SNRDB]: Executed "+query);
+        System.out.println("[SNRDB]: Executed " + query);
     }
 
-    private List<String[]> executeQuery(String query) throws SQLException
-    {
+    private List<String[]> executeQuery(String query) throws SQLException {
         Connection conn = DriverManager.getConnection(dbURL, uname, password);
         Statement statement = conn.createStatement();
 
@@ -99,13 +91,13 @@ public class SNRDatabases {
         while (rs.next()) {
             String[] result = new String[numCols];
             for (int i = 1; i <= numCols; ++i) {
-                result[i-1] = rs.getString(i);
+                result[i - 1] = rs.getString(i);
             }
             results.add(result);
         }
 
         conn.close();
-        System.out.println("[SNRDB]: Executed "+query);
+        System.out.println("[SNRDB]: Executed " + query);
 
         return results;
     }

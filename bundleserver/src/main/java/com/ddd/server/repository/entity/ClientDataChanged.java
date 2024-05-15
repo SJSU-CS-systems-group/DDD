@@ -9,18 +9,10 @@ import jakarta.persistence.Table;
 @Table(name = "client_data_changed")
 public class ClientDataChanged {
     @Id
-    @Column(
-            name = "client_id",
-            nullable = false,
-            columnDefinition = "VARCHAR(256)"
-    )
+    @Column(name = "client_id", nullable = false, columnDefinition = "VARCHAR(256)")
     private String clientId;
 
-    @Column(
-            name = "has_new_data",
-            nullable = false,
-            columnDefinition = "TINYINT(1)"
-    )
+    @Column(name = "has_new_data", nullable = false, columnDefinition = "TINYINT(1)")
     private int hasNewData;
 
     public ClientDataChanged(String clientId, int hasNewData) {
@@ -48,9 +40,6 @@ public class ClientDataChanged {
 
     @Override
     public String toString() {
-        return "ClientDataChangedTable{" +
-                "clientId='" + clientId + '\'' +
-                ", hasNewData=" + hasNewData +
-                '}';
+        return "ClientDataChangedTable{" + "clientId='" + clientId + '\'' + ", hasNewData=" + hasNewData + '}';
     }
 }

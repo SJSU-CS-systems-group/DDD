@@ -25,16 +25,16 @@ public class DTNCommunicationService extends DTNCommunicationGrpc.DTNCommunicati
     @Autowired
     MySQLConnection mysql;
 
-    public DTNCommunicationService (MySQLConnection mysql) {
+    public DTNCommunicationService(MySQLConnection mysql) {
         this.mysql = mysql;
     }
 
     @Override
-    public void registerAdapter(ConnectionData connectionData,
-                                StreamObserver<ResponseStatus> responseObserver){
+    public void registerAdapter(ConnectionData connectionData, StreamObserver<ResponseStatus> responseObserver) {
         System.out.println("Testing server from Python client");
 
-        RegisteredAppAdapter newAppAdapter = new RegisteredAppAdapter(connectionData.getAppName(), connectionData.getUrl());
+        RegisteredAppAdapter newAppAdapter =
+                new RegisteredAppAdapter(connectionData.getAppName(), connectionData.getUrl());
 
         registeredAppAdapterRepository.save(newAppAdapter);
 

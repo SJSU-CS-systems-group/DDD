@@ -2,8 +2,7 @@ package com.ddd.server.bundlesecurity;
 
 public class SecurityExceptions {
     public static class InvalidClientSessionException extends Exception {
-        public InvalidClientSessionException(String errorMessage)
-        {
+        public InvalidClientSessionException(String errorMessage) {
             super(errorMessage);
         }
     }
@@ -15,43 +14,37 @@ public class SecurityExceptions {
     }
 
     public static class EncodingException extends Exception {
-        public EncodingException(String errorMessage, Throwable throwable)
-        {
+        public EncodingException(String errorMessage, Throwable throwable) {
             super(errorMessage, throwable);
         }
     }
 
     public static class InvalidClientIDException extends Exception {
-        public InvalidClientIDException(String errorMessage, Throwable throwable)
-        {
+        public InvalidClientIDException(String errorMessage, Throwable throwable) {
             super(errorMessage, throwable);
         }
     }
 
     public static class SignatureVerificationException extends Exception {
-        public SignatureVerificationException(String errorMessage, Throwable throwable)
-        {
+        public SignatureVerificationException(String errorMessage, Throwable throwable) {
             super(errorMessage, throwable);
         }
     }
 
     public static class AESAlgorithmException extends Exception {
-        public AESAlgorithmException(String errorMessage, Throwable throwable)
-        {
+        public AESAlgorithmException(String errorMessage, Throwable throwable) {
             super(errorMessage, throwable);
         }
     }
 
     public static class ServerIntializationException extends Exception {
-        public ServerIntializationException(String errorMessage, Throwable throwable)
-        {
+        public ServerIntializationException(String errorMessage, Throwable throwable) {
             super(errorMessage, throwable);
         }
     }
 
     public static class BundleIDCryptographyException extends Exception {
-        public BundleIDCryptographyException(String errorMessage, Throwable throwable)
-        {
+        public BundleIDCryptographyException(String errorMessage, Throwable throwable) {
             super(errorMessage, throwable);
         }
     }
