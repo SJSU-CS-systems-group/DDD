@@ -26,8 +26,7 @@
 			<id>mac-m2</id>
 			<activation>
 				<os>
-					<name>mac os x</name>
-					<arch>!aarch64</arch>
+					<arch>aarch64</arch>
 				</os>
 			</activation>
 			<properties>
@@ -38,7 +37,7 @@
 			<id>others</id>
 			<activation>
 				<os>
-					<arch>aarch64</arch>
+					<arch>!aarch64</arch>
 				</os>
 			</activation>
 			<properties>
