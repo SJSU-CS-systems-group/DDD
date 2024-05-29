@@ -5,20 +5,20 @@ import java.util.Set;
 
 public class BundleTransferDTO {
 
-  private Set<String> deletionSet;
+    private Set<String> deletionSet;
 
-  private List<BundleDTO> bundles;
+    private List<BundleDTO> bundles;
 
-  public BundleTransferDTO(Set<String> deletionSet, List<BundleDTO> bundles) {
-    this.deletionSet = deletionSet;
-    this.bundles = bundles;
-  }
+    public BundleTransferDTO(Set<String> deletionSet, List<BundleDTO> bundles) {
+        this.deletionSet = deletionSet;
+        this.bundles = bundles;
+    }
 
-  public Set<String> getDeletionSet() {
-    return this.deletionSet;
-  }
+    public Set<String> getDeletionSet() {
+        return this.deletionSet;
+    }
 
-  public List<BundleDTO> getBundles() {
-    return this.bundles;
-  }
+    public List<BundleDTO> getBundles() {
+        return this.bundles;
+    }
 }
