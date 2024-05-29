@@ -20,7 +20,6 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -38,9 +37,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-
-
-public class MainActivity extends AppCompatActivity implements RpcServerStateListener{
+public class MainActivity extends AppCompatActivity implements RpcServerStateListener {
 
     private static final int PORT = 7777;
     public static final int PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION = 1001;
@@ -61,16 +58,16 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
     private EditText domainInput;
     private EditText portInput;
     private RpcServer grpcServer;
-    private ExecutorService executor = Executors.newFixedThreadPool(2);;
+    private ExecutorService executor = Executors.newFixedThreadPool(2);
+    ;
     private TextView serverConnectStatus;
     private Button connectServerBtn;
     private ConnectivityManager connectivityManager;
     private ConnectivityManager.NetworkCallback serverConnectNetworkCallback;
 
-
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode,
+                                           @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION) {
             if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
@@ -81,15 +78,14 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
     }
 
     // methods for managing grpc server
-    private void manageRequestedWifiDirectGroup(){
+    private void manageRequestedWifiDirectGroup() {
         CompletableFuture<WifiP2pGroup> completedFuture = wifiDirectManager.requestGroupInfo();
         completedFuture.thenApply((b) -> {
-            Toast.makeText(this,
-                    "I request groupInfo: ", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "I request groupInfo: ", Toast.LENGTH_SHORT).show();
             WifiP2pGroup group = b;
             Collection<WifiP2pDevice> devices = group.getClientList();
             Log.d(TAG, "Looping through group devices");
-            for(WifiP2pDevice d: devices) {
+            for (WifiP2pDevice d : devices) {
                 Log.d(TAG, d.toString());
             }
             return b;
@@ -98,8 +94,8 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
 
     private void startRpcServer() {
         executor.execute(() -> {
-            synchronized (grpcServer){
-                if(grpcServer.isShutdown()){
+            synchronized (grpcServer) {
+                if (grpcServer.isShutdown()) {
                     manageRequestedWifiDirectGroup();
                     Log.d(TAG, "starting grpc server!!!!!!!");
                     grpcServer.startServer(this, PORT);
@@ -110,8 +106,8 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
 
     private void stopRpcServer() {
         executor.execute(() -> {
-            synchronized (grpcServer){
-                if(!grpcServer.isShutdown()){
+            synchronized (grpcServer) {
+                if (!grpcServer.isShutdown()) {
                     grpcServer.shutdownServer();
                 }
             }
@@ -119,18 +115,18 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
     }
 
     @Override
-    public void onStateChanged(RpcServer.ServerState newState){
+    public void onStateChanged(RpcServer.ServerState newState) {
         runOnUiThread(() -> {
             TextView grpcServerState = findViewById(R.id.grpc_server_state);
-            if(newState == RpcServer.ServerState.RUNNING){
+            if (newState == RpcServer.ServerState.RUNNING) {
                 grpcServerState.setText("GRPC Server State: RUNNING");
                 startGRPCServerBtn.setEnabled(false);
                 stopGRPCServerBtn.setEnabled(true);
-            }else if(newState == RpcServer.ServerState.PENDING){
+            } else if (newState == RpcServer.ServerState.PENDING) {
                 grpcServerState.setText("GRPC Server State: PENDING");
                 startGRPCServerBtn.setEnabled(false);
                 stopGRPCServerBtn.setEnabled(false);
-            }else{
+            } else {
                 grpcServerState.setText("GRPC Server State: SHUTDOWN");
                 startGRPCServerBtn.setEnabled(true);
                 stopGRPCServerBtn.setEnabled(false);
@@ -139,74 +135,70 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
     }
 
     // utils
-    private void toggleBtnEnabled(Button btn, boolean enable){
+    private void toggleBtnEnabled(Button btn, boolean enable) {
         runOnUiThread(() -> {
             btn.setEnabled(enable);
         });
     }
 
     // methods for managing bundle server requests
-    private Void connectToServerComplete(Void x){
+    private Void connectToServerComplete(Void x) {
         toggleBtnEnabled(connectServerBtn, true);
         return null;
     }
 
-    private void connectToServer(){
+    private void connectToServer() {
 
         serverDomain = domainInput.getText().toString();
         serverPort = portInput.getText().toString();
-        if(!serverDomain.isEmpty() && !serverPort.isEmpty()){
-            Log.d(TAG, "Sending to "+serverDomain+":"+serverPort);
+        if (!serverDomain.isEmpty() && !serverPort.isEmpty()) {
+            Log.d(TAG, "Sending to " + serverDomain + ":" + serverPort);
 
             runOnUiThread(() -> {
-                serverConnectStatus.setText("Initiating server exchange to "+serverDomain+":"+serverPort+"...\n");
+                serverConnectStatus.setText(
+                        "Initiating server exchange to " + serverDomain + ":" + serverPort + "...\n");
             });
 
-            ServerManager serverManager = new ServerManager(this.getExternalFilesDir(null),
-                    serverDomain,
-                    serverPort,
-                    transportID,
-                    this::sendTask,
-                    this::receiveTask,
-                    this::connectToServerComplete);
+            ServerManager serverManager =
+                    new ServerManager(this.getExternalFilesDir(null), serverDomain, serverPort, transportID,
+                                      this::sendTask, this::receiveTask, this::connectToServerComplete);
             executor.execute(serverManager);
-        }else{
+        } else {
             Toast.makeText(MainActivity.this, "Enter the domain and port", Toast.LENGTH_SHORT).show();
         }
     }
 
-    private void createAndRegisterConnectivityManager(){
+    private void createAndRegisterConnectivityManager() {
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkRequest networkRequest = new NetworkRequest.Builder()
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-                .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
-                .build();
+        NetworkRequest networkRequest =
+                new NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                        .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR).build();
 
-        serverConnectNetworkCallback = new ConnectivityManager.NetworkCallback(){
+        serverConnectNetworkCallback = new ConnectivityManager.NetworkCallback() {
             @Override
-            public void onAvailable(Network network){
-                Log.d(TAG, "Available network: "+network.toString());
+            public void onAvailable(Network network) {
+                Log.d(TAG, "Available network: " + network.toString());
                 Log.d(TAG, "Initiating automatic connection to server");
                 connectToServer();
             }
 
             @Override
-            public void onLost(Network network){
+            public void onLost(Network network) {
                 Log.d(TAG, "Lost network connectivity");
 //                toggleBtnEnabled(connectServerBtn, false);
                 connectServerBtn.setEnabled(false);
             }
 
             @Override
-            public void onUnavailable(){
+            public void onUnavailable() {
                 Log.e(TAG, "Unavailable network connectivity");
 //                toggleBtnEnabled(connectServerBtn, false);
                 connectServerBtn.setEnabled(false);
             }
 
             @Override
-            public void onBlockedStatusChanged(Network network, boolean blocked){
+            public void onBlockedStatusChanged(Network network, boolean blocked) {
                 Log.d(TAG, "Blocked network connectivity");
 //                toggleBtnEnabled(connectServerBtn, false);
                 connectServerBtn.setEnabled(false);
@@ -217,19 +209,19 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         connectivityManager.registerNetworkCallback(networkRequest, serverConnectNetworkCallback);
 
         NetworkInfo activeNetwork = connectivityManager.getActiveNetworkInfo();
-        if (activeNetwork == null || !activeNetwork.isConnectedOrConnecting()){
+        if (activeNetwork == null || !activeNetwork.isConnectedOrConnecting()) {
 //            toggleBtnEnabled(connectServerBtn, false);
             connectServerBtn.setEnabled(false);
 
         }
     }
 
-    private Void sendTask(Exception thrown){
-        runOnUiThread(() ->{
-            if(thrown != null){
+    private Void sendTask(Exception thrown) {
+        runOnUiThread(() -> {
+            if (thrown != null) {
                 serverConnectStatus.append("Bundles upload failed.\n");
-                Log.e(TAG, "Failed bundle upload, exception: "+thrown.getMessage());
-            }else{
+                Log.e(TAG, "Failed bundle upload, exception: " + thrown.getMessage());
+            } else {
                 serverConnectStatus.append("Bundles uploaded successfully.\n");
             }
         });
@@ -237,12 +229,12 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         return null;
     }
 
-    private Void receiveTask(Exception thrown){
+    private Void receiveTask(Exception thrown) {
         runOnUiThread(() -> {
-            if(thrown != null){
+            if (thrown != null) {
                 serverConnectStatus.append("Bundles download failed.\n");
-                Log.e(TAG, "Failed bundle d, exception: "+thrown.getMessage());
-            }else{
+                Log.e(TAG, "Failed bundle d, exception: " + thrown.getMessage());
+            } else {
                 serverConnectStatus.append("Bundles downloaded successfully.\n");
             }
         });
@@ -267,8 +259,8 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         restoreDomainPort();
 
         String SERVER_BASE_PATH = this.getExternalFilesDir(null) + "/BundleTransmission";
-        Receive_Directory = SERVER_BASE_PATH +"/client";
-        Server_Directory = SERVER_BASE_PATH +"/server";
+        Receive_Directory = SERVER_BASE_PATH + "/client";
+        Server_Directory = SERVER_BASE_PATH + "/server";
         wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle());
         wifiDirectManager.initialize();
 
@@ -308,6 +300,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
                     connectServerBtn.setEnabled(false);
                 }
             }
+
             @Override
             public void afterTextChanged(Editable s) {
 
@@ -315,27 +308,27 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         });
 
         // set up transport Id
-        tidPath = getApplicationContext().getApplicationInfo().dataDir+"/transportIdentity.pub";
+        tidPath = getApplicationContext().getApplicationInfo().dataDir + "/transportIdentity.pub";
         File tid = new File(tidPath);
-        if (!tid.exists()){
+        if (!tid.exists()) {
             ECKeyPair identityKeyPair = Curve.generateKeyPair();
             try {
                 SecurityUtils.createEncodedPublicKeyFile(identityKeyPair.getPublicKey(), tidPath);
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        } else{
+        } else {
             try {
                 transportID = SecurityUtils.generateID(tidPath);
-                Log.d(TAG, "Transport ID : "+ transportID);
+                Log.d(TAG, "Transport ID : " + transportID);
             } catch (IOException | InvalidKeyException | NoSuchAlgorithmException e) {
                 e.printStackTrace();
             }
         }
 
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                    MainActivity.PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION);
+            requestPermissions(new String[] { Manifest.permission.ACCESS_FINE_LOCATION },
+                               MainActivity.PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION);
         }
 
         // register network listeners
@@ -371,12 +364,12 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         });
     }
 
-    private void restoreDomainPort(){
+    private void restoreDomainPort() {
         domainInput.setText(sharedPref.getString("domain", ""));
         portInput.setText(sharedPref.getString("port", ""));
     }
 
-    private void saveDomainPort(){
+    private void saveDomainPort() {
         SharedPreferences.Editor editor = sharedPref.edit();
         String domain = domainInput.getText().toString();
         String port = portInput.getText().toString();
@@ -387,7 +380,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
     }
 
     @Override
-    protected void onDestroy(){
+    protected void onDestroy() {
         Log.i("onDestroy Receiver", "Called");
 
         super.onDestroy();

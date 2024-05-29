@@ -9,9 +9,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FileStoreHelper {
-    String RootFolder="";
+    String RootFolder = "";
 
-    public FileStoreHelper(String rootFolder){
+    public FileStoreHelper(String rootFolder) {
         RootFolder = rootFolder;
     }
 
@@ -26,7 +26,7 @@ public class FileStoreHelper {
         return sb.toString();
     }
 
-    public static String getStringFromFile (String filePath) throws Exception {
+    public static String getStringFromFile(String filePath) throws Exception {
         File fl = new File(filePath);
         FileInputStream fin = new FileInputStream(fl);
         String ret = convertStreamToString(fin);
@@ -35,25 +35,25 @@ public class FileStoreHelper {
         return ret;
     }
 
-    public Metadata getMetadata(String folder){
+    public Metadata getMetadata(String folder) {
         try {
             String data = getStringFromFile(RootFolder + "/" + folder + "/metadata.json");
             Gson gson = new Gson();
             return gson.fromJson(data, Metadata.class);
         } catch (Exception e) {
-            System.out.println("[FileStoreHelper] metadata not found at "+folder+". create a new one.");
-            Metadata metadata = new Metadata(1, 0,0,0);
+            System.out.println("[FileStoreHelper] metadata not found at " + folder + ". create a new one.");
+            Metadata metadata = new Metadata(1, 0, 0, 0);
             setMetadata(folder, metadata);
             return metadata;
             //e.printStackTrace();
         }
     }
 
-    public long getLastADUIdReceived(String folder){
+    public long getLastADUIdReceived(String folder) {
         return getMetadata(folder).lastReceivedMessageId;
     }
 
-    public void setMetadata(String folder, Metadata metadata){
+    public void setMetadata(String folder, Metadata metadata) {
         try {
             File metadataFile = new File(RootFolder + "/" + folder + "/metadata.json");
             metadataFile.getParentFile().mkdirs();
@@ -68,75 +68,74 @@ public class FileStoreHelper {
         }
     }
 
-    public byte[] getDataFromFile(File file){
+    public byte[] getDataFromFile(File file) {
         try {
             FileInputStream fis = new FileInputStream(file);
             byte[] res = new byte[fis.available()];
             fis.read(res);
             return res;
-        }catch (Exception ex){
+        } catch (Exception ex) {
             ex.printStackTrace();
         }
         return null;
     }
 
-    private byte[] readFile(String file){
+    private byte[] readFile(String file) {
         try {
             File f = new File(file);
             FileInputStream fis = new FileInputStream(f);
             byte[] res = new byte[fis.available()];
             fis.read(res);
             return res;
-        }catch (Exception ex){
+        } catch (Exception ex) {
             ex.printStackTrace();
         }
         return null;
     }
 
-    public List<ADU> getAppData(String clientId){
+    public List<ADU> getAppData(String clientId) {
         List<ADU> appDataList = new ArrayList<>();
         String folder = clientId;
         Metadata metadata = getMetadata(folder);
-        for(long i=metadata.lastProcessedMessageId+1;i <= metadata.lastReceivedMessageId;i++){
-            appDataList.add(new ADU(new File(RootFolder+"/"+folder+"/"+i+".txt"), "", i, 0, ""));
+        for (long i = metadata.lastProcessedMessageId + 1; i <= metadata.lastReceivedMessageId; i++) {
+            appDataList.add(new ADU(new File(RootFolder + "/" + folder + "/" + i + ".txt"), "", i, 0, ""));
         }
         //metadata.lastProcessedMessageId= metadata.lastReceivedMessageId;
         //setMetadata(folder, metadata);
         return appDataList;
     }
 
-    public byte[] getADU(String clientId, String aduId){
-        return readFile(RootFolder+"/"+ clientId+"/"+aduId+".txt");
+    public byte[] getADU(String clientId, String aduId) {
+        return readFile(RootFolder + "/" + clientId + "/" + aduId + ".txt");
     }
 
-    public File getADUFile(String clientId, String aduId){
-        return new File(RootFolder+"/"+ clientId+"/"+aduId+".txt");
+    public File getADUFile(String clientId, String aduId) {
+        return new File(RootFolder + "/" + clientId + "/" + aduId + ".txt");
     }
 
-    public byte[] getNextAppData(String folder){
+    public byte[] getNextAppData(String folder) {
         Metadata metadata = getMetadata(folder);
-        long nextMessageId = metadata.lastProcessedMessageId+1;
-        if(nextMessageId> metadata.lastReceivedMessageId){
+        long nextMessageId = metadata.lastProcessedMessageId + 1;
+        if (nextMessageId > metadata.lastReceivedMessageId) {
             System.out.println("no data to show");
-            if(nextMessageId>1){
+            if (nextMessageId > 1) {
                 nextMessageId--;
-            }else
-                return null;
+            } else return null;
         }
-        byte[] appData = readFile(RootFolder + "/" + folder+"/"+nextMessageId+".txt");
+        byte[] appData = readFile(RootFolder + "/" + folder + "/" + nextMessageId + ".txt");
         metadata.lastProcessedMessageId = nextMessageId;
         setMetadata(folder, metadata);
         return appData;
     }
 
-    public void AddFile(String clientId, byte data[]){
+    public void AddFile(String clientId, byte data[]) {
         String folder = clientId;
-        File f = new File(RootFolder+"/"+folder);
-        if(f.isDirectory()){
+        File f = new File(RootFolder + "/" + folder);
+        if (f.isDirectory()) {
             //System.out.println( RootFolder+"/"+clientId+" is a directory");
             int noOfMessages = f.list().length;
-            System.out.println("[FileStoreHelper.Addfile] data being added-"+new String(data));
-            File dataFile = new File(RootFolder+"/"+folder+"/"+noOfMessages+".txt");
+            System.out.println("[FileStoreHelper.Addfile] data being added-" + new String(data));
+            File dataFile = new File(RootFolder + "/" + folder + "/" + noOfMessages + ".txt");
             FileOutputStream oFile;
             try {
                 dataFile.createNewFile();
@@ -150,50 +149,50 @@ public class FileStoreHelper {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        }else{
+        } else {
             f.mkdirs();
-            File metadataFile = new File(RootFolder +"/"+folder + "/metadata.json");
+            File metadataFile = new File(RootFolder + "/" + folder + "/metadata.json");
             try {
-                new File(RootFolder +"/"+ folder).mkdirs();
+                new File(RootFolder + "/" + folder).mkdirs();
                 metadataFile.createNewFile();
                 Gson gson = new Gson();
-                Metadata metadata = new Metadata(0, 0,1,0);
+                Metadata metadata = new Metadata(0, 0, 1, 0);
                 String metadataString = gson.toJson(metadata);
                 FileOutputStream oFile = new FileOutputStream(metadataFile, false);
                 oFile.write(metadataString.getBytes());
                 oFile.close();
 
-                File dataFile = new File(RootFolder +"/"+ folder +"/1.txt");
+                File dataFile = new File(RootFolder + "/" + folder + "/1.txt");
                 dataFile.createNewFile();
                 oFile = new FileOutputStream(dataFile, false);
                 oFile.write(data);
                 oFile.close();
-            }catch(Exception ex){
-                System.out.println("error"+ex.getMessage());
+            } catch (Exception ex) {
+                System.out.println("error" + ex.getMessage());
                 ex.printStackTrace();
             }
 
         }
     }
 
-    public void deleteAllFilesUpTo(String clientId, long aduId){
+    public void deleteAllFilesUpTo(String clientId, long aduId) {
         //check if there are enough files
         String folder = clientId;
         Metadata metadata = getMetadata(folder);
-        if(metadata.lastSentMessageId >= aduId){
+        if (metadata.lastSentMessageId >= aduId) {
             System.out.println("[FileStoreHelper.deleteAllFilesUpTo] Data already deleted.");
             return;
         }
-        for(long i = metadata.lastSentMessageId+1 ; i<=aduId;i++){
-            deleteFile(clientId+"/" + i + ".txt");
-            System.out.println(i+".txt deleted");
+        for (long i = metadata.lastSentMessageId + 1; i <= aduId; i++) {
+            deleteFile(clientId + "/" + i + ".txt");
+            System.out.println(i + ".txt deleted");
         }
 
         metadata.lastSentMessageId = aduId;
     }
 
-    public void deleteFile(String fileName){
-        File file = new File(RootFolder+"/"+fileName);
+    public void deleteFile(String fileName) {
+        File file = new File(RootFolder + "/" + fileName);
         file.delete();
     }
 }

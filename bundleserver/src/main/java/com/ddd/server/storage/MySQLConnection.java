@@ -8,7 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-
 @Component
 public class MySQLConnection {
     @Value("${spring.datasource.driver-class-name}")
@@ -22,15 +21,17 @@ public class MySQLConnection {
 
     @Value("${spring.datasource.password}")
     private String password;
-    public MySQLConnection(){}
 
-    public Connection GetConnection(){
-        try{
+    public MySQLConnection() {}
+
+    public Connection GetConnection() {
+        try {
             System.out.println("DB connection begins");
             Class.forName(driver);
 
 //            Connection con= DriverManager.getConnection(
-//                   "jdbc:mysql://localhost:3306/dtn_server_db?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC","root","Triquenguyen@2702");
+//                   "jdbc:mysql://localhost:3306/dtn_server_db?useUnicode=true&useJDBCCompliantTimezoneShift=true
+//                   &useLegacyDatetimeCode=false&serverTimezone=UTC","root","Triquenguyen@2702");
 
             Connection con = DriverManager.getConnection(url, uname, password);
             System.out.println("DB connected" + url + uname + password);
@@ -41,7 +42,7 @@ public class MySQLConnection {
             while(rs.next())
                 System.out.println(rs.getInt(1)+"  "+rs.getString(2)+"  "+rs.getString(3));
             con.close();*/
-        }catch(Exception e){
+        } catch (Exception e) {
             System.out.println(e);
         }
         return null;

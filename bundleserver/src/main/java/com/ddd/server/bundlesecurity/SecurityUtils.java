@@ -148,8 +148,7 @@ public class SecurityUtils {
                 throw new InvalidKeyException("Error: Invalid Public Key Length");
             }
 
-            if (encodedKeyList.get(0).equals(PUB_KEY_HEADER) &&
-                    encodedKeyList.get(2).equals(PUB_KEY_FOOTER)) {
+            if (encodedKeyList.get(0).equals(PUB_KEY_HEADER) && encodedKeyList.get(2).equals(PUB_KEY_FOOTER)) {
                 return Base64.getUrlDecoder().decode(encodedKeyList.get(1));
             } else {
                 throw new InvalidKeyException("Error: Invalid Public Key Format");
@@ -168,8 +167,7 @@ public class SecurityUtils {
                 throw new InvalidKeyException("Error: Invalid Public Key Length");
             }
 
-            if (encodedKeyList.get(0).equals(PVT_KEY_HEADER) &&
-                    encodedKeyList.get(2).equals(PVT_KEY_FOOTER)) {
+            if (encodedKeyList.get(0).equals(PVT_KEY_HEADER) && encodedKeyList.get(2).equals(PVT_KEY_FOOTER)) {
                 return Base64.getUrlDecoder().decode(encodedKeyList.get(1));
             } else {
 
@@ -186,13 +184,12 @@ public class SecurityUtils {
         ECKeyPair tIdentityKeyPairKeys = Curve.generateKeyPair();
 
         IdentityKeyPair tIdentityKeyPair = new IdentityKeyPair(new IdentityKey(tIdentityKeyPairKeys.getPublicKey()),
-                tIdentityKeyPairKeys.getPrivateKey());
+                                                               tIdentityKeyPairKeys.getPrivateKey());
 
         return new InMemorySignalProtocolStore(tIdentityKeyPair, KeyHelper.generateRegistrationId(false));
     }
 
-    public static boolean verifySignature(byte[] message, ECPublicKey publicKey, String signaturePath)
-            throws SignatureVerificationException {
+    public static boolean verifySignature(byte[] message, ECPublicKey publicKey, String signaturePath) throws SignatureVerificationException {
         try {
             byte[] encodedsignature = SecurityUtils.readFromFile(signaturePath);
             byte[] signature = Base64.getUrlDecoder().decode(encodedsignature);
@@ -234,9 +231,9 @@ public class SecurityUtils {
 
             encryptedData = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
 
-        } catch (NoSuchAlgorithmException | InvalidKeySpecException | NoSuchPaddingException
-                 | java.security.InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException
-                 | BadPaddingException e) {
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException | NoSuchPaddingException |
+                 java.security.InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException |
+                 BadPaddingException e) {
             throw new AESAlgorithmException("Error Encrypting text using AES: ", e);
         }
         return Base64.getUrlEncoder().encodeToString(encryptedData);
@@ -259,9 +256,9 @@ public class SecurityUtils {
             cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
 
             decryptedData = cipher.doFinal(encryptedData);
-        } catch (NoSuchAlgorithmException | InvalidKeySpecException | NoSuchPaddingException
-                 | java.security.InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException
-                 | BadPaddingException e) {
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException | NoSuchPaddingException |
+                 java.security.InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException |
+                 BadPaddingException e) {
             throw new AESAlgorithmException("Error Decrypting text [" + cipherText + "] using AES: ", e);
         }
         return decryptedData;
@@ -298,8 +295,7 @@ public class SecurityUtils {
         String destDirPath = zipFile.getParent() + File.separator + zipFile.getName().replaceFirst("[.][^.]+$", "");
         File destDir = new File(destDirPath);
 
-        try (FileInputStream fis = new FileInputStream(zipFilePath);
-             ZipInputStream zis = new ZipInputStream(fis)) {
+        try (FileInputStream fis = new FileInputStream(zipFilePath); ZipInputStream zis = new ZipInputStream(fis)) {
             ZipEntry entry = zis.getNextEntry();
             while (entry != null) {
                 File newFile = new File(destDir, entry.getName());

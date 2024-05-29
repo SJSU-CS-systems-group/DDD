@@ -1,6 +1,5 @@
 package com.ddd.server.repository.entity;
 
-
 import java.util.UUID;
 
 import org.hibernate.annotations.UuidGenerator;
@@ -11,80 +10,63 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 
-@Entity(name="SentBundleDetails")
+@Entity(name = "SentBundleDetails")
 @Table(name = "sent_bundle_details")
 public class SentBundleDetails {
 
-  @Id
-  @UuidGenerator
-  @Column(
-    name="id",
-    updatable = false,
-    nullable = false
-  )
-  private UUID id;
+    @Id
+    @UuidGenerator
+    @Column(name = "id", updatable = false, nullable = false)
+    private UUID id;
 
-  @Column(
-    name = "bundle_id",
-    nullable = false,
-    columnDefinition = "TEXT"
-  )
-  @NotBlank
-  private String bundleId;
+    @Column(name = "bundle_id", nullable = false, columnDefinition = "TEXT")
+    @NotBlank
+    private String bundleId;
 
-  @Column(
-    name = "client_id",
-    nullable = false,
-    columnDefinition = "TEXT"
-  )
-  @NotBlank
-  private String clientId;
-  
-  @Column(
-    name = "acked_bundle_id",
-    nullable = false,
-    columnDefinition = "TEXT"
-  )
-  @NotBlank
-  private String ackedBundleId;
-  
+    @Column(name = "client_id", nullable = false, columnDefinition = "TEXT")
+    @NotBlank
+    private String clientId;
 
-  public SentBundleDetails() {}
+    @Column(name = "acked_bundle_id", nullable = false, columnDefinition = "TEXT")
+    @NotBlank
+    private String ackedBundleId;
 
-  public SentBundleDetails(String bundleId, String ackedBundleId) {
-    this.bundleId = bundleId;
-    this.ackedBundleId = ackedBundleId;
-  }
+    public SentBundleDetails() {}
 
-  public String getId() {
-    return this.id.toString();
-  }
+    public SentBundleDetails(String bundleId, String ackedBundleId) {
+        this.bundleId = bundleId;
+        this.ackedBundleId = ackedBundleId;
+    }
 
-  public void setId(String id) {
-    this.id = UUID.fromString(id);
-  }
+    public String getId() {
+        return this.id.toString();
+    }
 
-  public String getBundleId() {
-    return this.bundleId;
-  }
+    public void setId(String id) {
+        this.id = UUID.fromString(id);
+    }
 
-  public void setBundleId(String bundleId) {
-    this.bundleId = bundleId;
-  }
+    public String getBundleId() {
+        return this.bundleId;
+    }
 
-  public String getAckedBundleId() {
-    return this.ackedBundleId;
-  }
+    public void setBundleId(String bundleId) {
+        this.bundleId = bundleId;
+    }
 
-  public void setAckedBundleId(String ackedBundleId) {
-    this.ackedBundleId = ackedBundleId;
-  }
+    public String getAckedBundleId() {
+        return this.ackedBundleId;
+    }
 
-  public String getClientId() {
-    return clientId;
-  }
+    public void setAckedBundleId(String ackedBundleId) {
+        this.ackedBundleId = ackedBundleId;
+    }
 
-  public void setClientId(String clientId) {
-    this.clientId = clientId;
-  }
+    public String getClientId() {
+        return clientId;
+    }
+
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
+    }
 }

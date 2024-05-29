@@ -1,9 +1,9 @@
 package org.example;
 
 /*
-* To get data from application and send to DTN bundle server using DTNApplicationClient.java
-*
-* */
+ * To get data from application and send to DTN bundle server using DTNApplicationClient.java
+ *
+ * */
 public class DTNApplicationAdapter {
     public static void main(String[] args) {
         String target = "localhost:8980";

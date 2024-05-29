@@ -8,19 +8,21 @@ import com.ddd.server.bundlesecurity.ServerSecurity;
 
 @Configuration
 public class ServerSecurityConfig {
-  
-  @Autowired private BundleServerConfig bundleStoreConfig;
-  
-  @Bean ServerSecurity createServerSecurityInstance() {
-    try {
-      System.out.println("Try " + bundleStoreConfig.getBundleSecurity().getServerKeyPath());
 
-      return ServerSecurity.getInstance(bundleStoreConfig.getBundleSecurity().getServerKeyPath());
-    } catch (Exception e) {
-      // TODO Auto-generated catch block
-      System.out.println("Catch " + bundleStoreConfig.getBundleSecurity().getServerKeyPath());
-      e.printStackTrace();
+    @Autowired
+    private BundleServerConfig bundleStoreConfig;
+
+    @Bean
+    ServerSecurity createServerSecurityInstance() {
+        try {
+            System.out.println("Try " + bundleStoreConfig.getBundleSecurity().getServerKeyPath());
+
+            return ServerSecurity.getInstance(bundleStoreConfig.getBundleSecurity().getServerKeyPath());
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            System.out.println("Catch " + bundleStoreConfig.getBundleSecurity().getServerKeyPath());
+            e.printStackTrace();
+        }
+        return null;
     }
-    return null;
-  }
 }

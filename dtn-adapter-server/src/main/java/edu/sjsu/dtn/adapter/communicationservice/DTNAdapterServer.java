@@ -11,17 +11,18 @@ import edu.sjsu.dtn.adapter.signal.SignalCLIConnector;
 import edu.sjsu.dtn.storage.FileStoreHelper;
 
 public class DTNAdapterServer {
-    public int port=8080;
+    public int port = 8080;
     private final Server server;
+
     public DTNAdapterServer(int port) {
         this(ServerBuilder.forPort(port), port);
     }
 
     public DTNAdapterServer(ServerBuilder<?> serverBuilder, int port) {
         this.port = port;
-        server = serverBuilder.addService(new DTNAdapterService())
-                .build();
+        server = serverBuilder.addService(new DTNAdapterService()).build();
     }
+
     public void start() throws IOException {
         server.start();
     }
@@ -32,9 +33,10 @@ public class DTNAdapterServer {
         }
     }
 
-    public static void main(String[] args){
+    public static void main(String[] args) {
 //        try {
-//    		SignalCLIConnector.performRegistration("1", FileStoreHelper.getStringFromFile("/Users/adityasinghania/Downloads/1.txt").getBytes());
+//    		SignalCLIConnector.performRegistration("1", FileStoreHelper.getStringFromFile
+//    		("/Users/adityasinghania/Downloads/1.txt").getBytes());
 //		} catch (IOException e) {
 //			// TODO Auto-generated catch block
 //			e.printStackTrace();
@@ -42,12 +44,12 @@ public class DTNAdapterServer {
 //			// TODO Auto-generated catch block
 //			e.printStackTrace();
 //		}
-    	try {
+        try {
             DTNAdapterServer admServer = new DTNAdapterServer(8090);
             admServer.start();
             System.out.println("Running");
             admServer.blockUntilShutdown();
-        }catch (Exception ex){
+        } catch (Exception ex) {
             ex.printStackTrace();
         }
     }

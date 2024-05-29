@@ -8,9 +8,8 @@ import org.springframework.stereotype.Repository;
 import com.ddd.server.repository.entity.LastBundleIdSent;
 
 @Repository
-public interface LastBundleIdSentRepository extends CrudRepository<LastBundleIdSent, String>
-{
-  Optional<LastBundleIdSent> findByClientId(String clientId);
+public interface LastBundleIdSentRepository extends CrudRepository<LastBundleIdSent, String> {
+    Optional<LastBundleIdSent> findByClientId(String clientId);
 
-  // public void save(LastBundleIdSent record);
+    // public void save(LastBundleIdSent record);
 }

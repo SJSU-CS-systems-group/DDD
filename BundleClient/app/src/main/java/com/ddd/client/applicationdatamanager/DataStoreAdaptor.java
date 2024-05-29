@@ -31,7 +31,7 @@ public class DataStoreAdaptor {
         this.contentResolver = contentResolver;
     }*/
 
-    public DataStoreAdaptor(String appRootDataDirectory){
+    public DataStoreAdaptor(String appRootDataDirectory) {
         sendFileStoreHelper = new FileStoreHelper(appRootDataDirectory + "/send");
         receiveFileStoreHelper = new FileStoreHelper(appRootDataDirectory + "/receive");
     }
@@ -42,27 +42,22 @@ public class DataStoreAdaptor {
         intent.setPackage(adu.getAppId());
         intent.setType("text/plain");
         byte[] data = receiveFileStoreHelper.getDataFromFile(adu.getSource());
-        Log.d(HelloworldActivity.TAG,new String(data)+", Source:"+adu.getSource());
+        Log.d(HelloworldActivity.TAG, new String(data) + ", Source:" + adu.getSource());
         intent.putExtra(Intent.EXTRA_TEXT, data);
         applicationContext = HelloworldActivity.ApplicationContext;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             applicationContext.startForegroundService(intent);
-        }else{
+        } else {
             Log.e(HelloworldActivity.TAG, "not sending to application. Upgrade Android SDK to 26 or greater");
         }
     }
 
     public void persistADU(ADU adu) throws IOException {
-        Log.d(HelloworldActivity.TAG,"Persisting ADUs: " + adu.getADUId() +","+ adu.getSource());
+        Log.d(HelloworldActivity.TAG, "Persisting ADUs: " + adu.getADUId() + "," + adu.getSource());
         receiveFileStoreHelper.addFile(adu.getAppId(), receiveFileStoreHelper.getDataFromFile(adu.getSource()));
         sendDataToApp(adu);
         System.out.println(
-                "[ADM-DSA] Persisting inbound ADU "
-                        + adu.getAppId()
-                        + "-"
-                        + adu.getADUId()
-                        + " to the Data Store");
-
+                "[ADM-DSA] Persisting inbound ADU " + adu.getAppId() + "-" + adu.getADUId() + " to the Data Store");
 
     }
 
@@ -74,8 +69,7 @@ public class DataStoreAdaptor {
 
         sendFileStoreHelper.deleteAllFilesUpTo(appId, aduIdEnd);
         System.out.println("[DSA] Deleted ADUs for application " + appId + " with id upto " + aduIdEnd);
-        System.out.println(
-                "[ADM-DSA] Deleting outbound ADUs of application " + appId + " upto id " + aduIdEnd);
+        System.out.println("[ADM-DSA] Deleting outbound ADUs of application " + appId + " upto id " + aduIdEnd);
     }
 
     private ADU fetchADU(String appId, long aduId) {
@@ -83,10 +77,10 @@ public class DataStoreAdaptor {
             File file = sendFileStoreHelper.getADUFile(appId, aduId + "");
             FileInputStream fis = new FileInputStream(file);
             int fileSize = fis.available();
-            Log.d(HelloworldActivity.TAG, "size:"+fileSize);
+            Log.d(HelloworldActivity.TAG, "size:" + fileSize);
             ADU adu = new ADU(file, appId, aduId, fileSize);
             return adu;
-        }catch (Exception ex) {
+        } catch (Exception ex) {
             return null;
         }
     }
@@ -96,7 +90,7 @@ public class DataStoreAdaptor {
         List<ADU> ret = new ArrayList<>();
         long aduId = aduIdStart;
         while ((adu = this.fetchADU(appId, aduId)) != null) {
-            Log.d(HelloworldActivity.TAG,adu.getADUId() + adu.getAppId());
+            Log.d(HelloworldActivity.TAG, adu.getADUId() + adu.getAppId());
             ret.add(adu);
             aduId++;
         }

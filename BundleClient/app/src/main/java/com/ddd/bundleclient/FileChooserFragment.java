@@ -17,7 +17,6 @@ import android.widget.Toast;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 
-
 /**
  * A simple {@link Fragment} subclass.
  * Use the {@link FileChooserFragment #newInstance} factory method to
@@ -32,7 +31,8 @@ public class FileChooserFragment extends Fragment {
     private EditText editTextPath;
 
     @Override
-    public View onCreateView(final LayoutInflater inflater, final ViewGroup container, final Bundle savedInstanceState) {
+    public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
+                             final Bundle savedInstanceState) {
 
         View rootView = inflater.inflate(R.layout.fragment_file_chooser, container, false);
 
@@ -56,15 +56,13 @@ public class FileChooserFragment extends Fragment {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) { // Level 23
 
             // Check if we have Call permission
-            int permisson = ActivityCompat.checkSelfPermission(this.getContext(),
-                    Manifest.permission.READ_EXTERNAL_STORAGE);
+            int permisson =
+                    ActivityCompat.checkSelfPermission(this.getContext(), Manifest.permission.READ_EXTERNAL_STORAGE);
 
             if (permisson != PackageManager.PERMISSION_GRANTED) {
                 // If don't have permission so prompt the user.
-                this.requestPermissions(
-                        new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
-                        MY_REQUEST_CODE_PERMISSION
-                );
+                this.requestPermissions(new String[] { Manifest.permission.READ_EXTERNAL_STORAGE },
+                                        MY_REQUEST_CODE_PERMISSION);
                 return;
             }
         }
@@ -83,8 +81,7 @@ public class FileChooserFragment extends Fragment {
 
     // When you have the request results
     @Override
-    public void onRequestPermissionsResult(int requestCode,
-                                           String[] permissions, int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
 
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         //
@@ -93,8 +90,7 @@ public class FileChooserFragment extends Fragment {
 
                 // Note: If request is cancelled, the result arrays are empty.
                 // Permissions granted (CALL_PHONE).
-                if (grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 
                     Log.i(LOG_TAG, "Permission granted!");
                     Toast.makeText(this.getContext(), "Permission granted!", Toast.LENGTH_SHORT).show();
@@ -110,7 +106,6 @@ public class FileChooserFragment extends Fragment {
             }
         }
     }
-
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {

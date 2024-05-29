@@ -28,7 +28,6 @@ public class GrpcSendTask {
     private int port;
     private ManagedChannel channel;
 
-
     public GrpcSendTask(String host, int port, String transportId, String serverDir) {
         Log.d(TAG, "initializing grpcsendtask...");
         this.host = host;
@@ -37,7 +36,7 @@ public class GrpcSendTask {
         this.serverDir = serverDir;
     }
 
-    public Exception run(){
+    public Exception run() {
         Exception thrown = null;
         try {
             executeTask();
@@ -61,19 +60,14 @@ public class GrpcSendTask {
         BundleServiceGrpc.BundleServiceStub stub = BundleServiceGrpc.newStub(channel);
         StreamObserver<BundleUploadRequest> streamObserver = stub.uploadBundle(new BundleUploadObserver());
         File sendDir = new File(serverDir);
-        Log.d(TAG, "received the stream observer: "+streamObserver);
+        Log.d(TAG, "received the stream observer: " + streamObserver);
         //get transport ID
         if (sendDir.exists()) {
             File[] bundles = sendDir.listFiles();
             if (bundles != null) {
                 for (File bundle : bundles) {
-                    BundleUploadRequest metadata = BundleUploadRequest
-                            .newBuilder()
-                            .setMetadata(BundleMetaData
-                                    .newBuilder()
-                                    .setBid(bundle.getName())
-                                    .setTransportId(transportId)
-                                    .build())
+                    BundleUploadRequest metadata = BundleUploadRequest.newBuilder().setMetadata(
+                                    BundleMetaData.newBuilder().setBid(bundle.getName()).setTransportId(transportId).build())
                             .build();
                     streamObserver.onNext(metadata);
 
@@ -91,14 +85,9 @@ public class GrpcSendTask {
                     int size = 0;
                     while ((size = inputStream.read(bytes)) != -1) {
                         Log.d(TAG, "Sending chunk size: " + size);
-                        BundleUploadRequest uploadRequest = BundleUploadRequest
-                                .newBuilder()
-                                .setFile(com.ddd.bundletransport.service.File
-                                        .newBuilder()
-                                        .setContent(ByteString
-                                                .copyFrom(bytes, 0, size))
-                                        .build())
-                                .build();
+                        BundleUploadRequest uploadRequest = BundleUploadRequest.newBuilder().setFile(
+                                com.ddd.bundletransport.service.File.newBuilder()
+                                        .setContent(ByteString.copyFrom(bytes, 0, size)).build()).build();
 
                         streamObserver.onNext(uploadRequest);
                     }

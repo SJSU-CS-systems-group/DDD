@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-    static final Uri CONTENT_URL=Uri.parse("content://com.ddd.provider.datastoreprovider/messages");
+    static final Uri CONTENT_URL = Uri.parse("content://com.ddd.provider.datastoreprovider/messages");
     static final String TAG = "ddd_signal";
     EditText receiver, messageText, appName;
     Button insert, delete, view, update, startServiceBtn;
@@ -33,23 +33,24 @@ public class MainActivity extends AppCompatActivity {
 
     ListView messageList;
 
-    private static final String[] RESOLVER_COLUMNS = {"data"};
+    private static final String[] RESOLVER_COLUMNS = { "data" };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        resolver=getContentResolver();
+        resolver = getContentResolver();
 
         //receiver=findViewById(R.id.receiver);
-        messageText=findViewById(R.id.message);
+        messageText = findViewById(R.id.message);
         //appName=findViewById(R.id.app_name);
 
-        insert=findViewById(R.id.btn_insert);
+        insert = findViewById(R.id.btn_insert);
         //view=findViewById(R.id.btn_view_messages);
         messageList = findViewById(R.id.message_list);
-        update=findViewById(R.id.btn_update_status);
-        delete=findViewById(R.id.btn_delete);
-        startServiceBtn=findViewById(R.id.btn_start_service);
+        update = findViewById(R.id.btn_update_status);
+        delete = findViewById(R.id.btn_delete);
+        startServiceBtn = findViewById(R.id.btn_start_service);
         //grantUriPermission();
         getMessages();
         insert.setOnClickListener(new View.OnClickListener() {
@@ -110,7 +111,7 @@ public class MainActivity extends AppCompatActivity {
         return messageList;
     }
 
-    private void createDialog(String title, CharSequence message, boolean cancelable){
+    private void createDialog(String title, CharSequence message, boolean cancelable) {
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
         builder.setCancelable(cancelable);
         builder.setTitle(title);
@@ -118,7 +119,7 @@ public class MainActivity extends AppCompatActivity {
         builder.show();
     }
 
-    public void getMessages(){
+    public void getMessages() {
         ArrayList<String> messages;
         try {
             messages = queryResolver();
@@ -131,27 +132,28 @@ public class MainActivity extends AppCompatActivity {
         ArrayAdapter<String> messagesAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, messages);
         messageList.setAdapter(messagesAdapter);
     }
-    public void addMessage(){
-        String message=messageText.getText().toString();
+
+    public void addMessage() {
+        String message = messageText.getText().toString();
 
         if (message.isEmpty()) {
             return;
         }
 
-        ContentValues values=new ContentValues();
+        ContentValues values = new ContentValues();
         values.put(RESOLVER_COLUMNS[0], message.getBytes());
 
-        try{
+        try {
             Uri uri = resolver.insert(CONTENT_URL, values);
             if (uri == null) {
                 throw new Exception("Message not inserted");
             }
             messageText.setText("");
             getMessages();
-        } catch (IllegalArgumentException e){
+        } catch (IllegalArgumentException e) {
             e.printStackTrace();
             Toast.makeText(this, "Cannot connect to bundleclient", Toast.LENGTH_SHORT).show();
-        } catch(Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(this, "Internal error, cannot send", Toast.LENGTH_SHORT).show();
         }

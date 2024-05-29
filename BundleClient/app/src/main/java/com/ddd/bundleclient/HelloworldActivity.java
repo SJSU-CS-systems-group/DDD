@@ -1,4 +1,3 @@
-
 package com.ddd.bundleclient;
 
 import android.Manifest;
@@ -37,195 +36,200 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
 public class HelloworldActivity extends AppCompatActivity implements WifiDirectStateListener {
-  // tag used for testing in logcat
-  public static final String TAG = "bundleclient";
-  // Wifi Direct set up
-  private com.ddd.wifidirect.WifiDirectManager wifiDirectManager;
-  public static final int PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION = 1001;
-  private static final int WRITE_EXTERNAL_STORAGE = 1002;
-  // gRPC set up
-  private Button connectButton;
-  private Button exchangeButton;
-  private Button detectTransportButton;
-  private Button receiveFromTransportButton;
-  private FileChooserFragment fragment;
-  private TextView resultText;
-  private TextView connectedDevicesText;
-  private TextView wifiDirectResponseText;
-  private static String RECEIVE_PATH = "/Shared/received-bundles";
-  //  private BundleDeliveryAgent agent;
-  // context
-  public static Context ApplicationContext;
+    // tag used for testing in logcat
+    public static final String TAG = "bundleclient";
+    // Wifi Direct set up
+    private com.ddd.wifidirect.WifiDirectManager wifiDirectManager;
+    public static final int PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION = 1001;
+    private static final int WRITE_EXTERNAL_STORAGE = 1002;
+    // gRPC set up
+    private Button connectButton;
+    private Button exchangeButton;
+    private Button detectTransportButton;
+    private Button receiveFromTransportButton;
+    private FileChooserFragment fragment;
+    private TextView resultText;
+    private TextView connectedDevicesText;
+    private TextView wifiDirectResponseText;
+    private static String RECEIVE_PATH = "/Shared/received-bundles";
+    //  private BundleDeliveryAgent agent;
+    // context
+    public static Context ApplicationContext;
 
-  // instantiate window for bundles
-  public static ClientWindow clientWindow;
+    // instantiate window for bundles
+    public static ClientWindow clientWindow;
 
-  private ExecutorService wifiDirectExecutor = Executors.newFixedThreadPool(1);
+    private ExecutorService wifiDirectExecutor = Executors.newFixedThreadPool(1);
 
+    private int WINDOW_LENGTH = 3;
+    // bundle transmitter set up
+    BundleTransmission bundleTransmission;
 
-  private int WINDOW_LENGTH = 3;
-  // bundle transmitter set up
-  BundleTransmission bundleTransmission;
+    String currentTransportId;
+    String BundleExtension = ".bundle";
 
-  String currentTransportId;
-  String BundleExtension = ".bundle";
-  /** check for location permissions manually, will give a prompt*/
-  @Override
-  public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-                                         @NonNull int[] grantResults) {
-    super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-    Log.d(TAG, "checking permissions " + grantResults.length);
-    switch (requestCode) {
-      case PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION:
-        if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-          Log.e(TAG, "Fine location permission is not granted!");
-          finish();
+    /**
+     * check for location permissions manually, will give a prompt
+     */
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        Log.d(TAG, "checking permissions " + grantResults.length);
+        switch (requestCode) {
+            case PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION:
+                if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                    Log.e(TAG, "Fine location permission is not granted!");
+                    finish();
+                }
+                break;
         }
-        break;
-    }
-  }
-
-  @Override
-  protected void onCreate(Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
-    // set up view
-    setContentView(R.layout.activity_helloworld);
-    connectButton = findViewById(R.id.connect_button);
-    exchangeButton = findViewById(R.id.exchange_button);
-    resultText = findViewById(R.id.grpc_response_text);
-    connectedDevicesText = findViewById(R.id.connected_device_address);
-    wifiDirectResponseText = findViewById(R.id.wifidirect_response_text);
-    resultText.setMovementMethod(new ScrollingMovementMethod());
-
-    // set up wifi direct
-    wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle(), this, this.getString(R.string.tansport_host));
-
-    ApplicationContext = getApplicationContext();
-
-    /* Set up Server Keys before initializing Security Module */
-    try {
-      BundleSecurity.initializeKeyPaths(ApplicationContext.getResources(), ApplicationContext.getApplicationInfo().dataDir);
-    } catch (IOException e) {
-      Log.d(TAG, "[SEC]: Failed to initialize Server Keys");
-      e.printStackTrace();
     }
 
-    bundleTransmission = new BundleTransmission(getApplicationContext().getApplicationInfo().dataDir);
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        // set up view
+        setContentView(R.layout.activity_helloworld);
+        connectButton = findViewById(R.id.connect_button);
+        exchangeButton = findViewById(R.id.exchange_button);
+        resultText = findViewById(R.id.grpc_response_text);
+        connectedDevicesText = findViewById(R.id.connected_device_address);
+        wifiDirectResponseText = findViewById(R.id.wifidirect_response_text);
+        resultText.setMovementMethod(new ScrollingMovementMethod());
 
-    try {
-      clientWindow = bundleTransmission.getBundleSecurity().getClientWindow();
-      Log.d(TAG, "{MC} - got clientwindow "+clientWindow);
-    } catch (Exception e) {
-      e.printStackTrace();
+        // set up wifi direct
+        wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle(), this,
+                                                  this.getString(R.string.tansport_host));
+
+        ApplicationContext = getApplicationContext();
+
+        /* Set up Server Keys before initializing Security Module */
+        try {
+            BundleSecurity.initializeKeyPaths(ApplicationContext.getResources(),
+                                              ApplicationContext.getApplicationInfo().dataDir);
+        } catch (IOException e) {
+            Log.d(TAG, "[SEC]: Failed to initialize Server Keys");
+            e.printStackTrace();
+        }
+
+        bundleTransmission = new BundleTransmission(getApplicationContext().getApplicationInfo().dataDir);
+
+        try {
+            clientWindow = bundleTransmission.getBundleSecurity().getClientWindow();
+            Log.d(TAG, "{MC} - got clientwindow " + clientWindow);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        connectButton.setOnClickListener(v -> {
+            connectTransport();
+        });
+
+        exchangeButton.setOnClickListener(v -> {
+            if (wifiDirectManager.getDevicesFound().isEmpty()) {
+                resultText.append("Not connected to any devices\n");
+                return;
+            }
+
+            exchangeMessage();
+        });
     }
 
-    connectButton.setOnClickListener(v -> {
-      connectTransport();
-    });
-
-    exchangeButton.setOnClickListener(v -> {
-      if (wifiDirectManager.getDevicesFound().isEmpty()){
-        resultText.append("Not connected to any devices\n");
-        return;
-      }
-
-      exchangeMessage();
-    });
-  }
-
-
-  public void exchangeMessage() {
-    // connect to transport
-    exchangeButton.setEnabled(false);
-    Log.d(TAG,"connection complete");
-    new GrpcReceiveTask(this).executeInBackground("192.168.49.1", "1778");
-    //changed from execute to executeInBackground
-  }
-
-  public void connectTransport(){
-    connectButton.setEnabled(false);
-    wifiDirectResponseText.setText("Starting connection...\n");
-    Log.d(TAG, "connecting to transport");
-    // we need to check and request for necessary permissions
-    if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-      Log.d(TAG, "requesting permission");
-      requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-              HelloworldActivity.PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION);
-      Log.d(TAG, "Permission granted");
-    }
-    if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-      Log.d(TAG, "requesting permission");
-      requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
-              HelloworldActivity.WRITE_EXTERNAL_STORAGE);
+    public void exchangeMessage() {
+        // connect to transport
+        exchangeButton.setEnabled(false);
+        Log.d(TAG, "connection complete");
+        new GrpcReceiveTask(this).executeInBackground("192.168.49.1", "1778");
+        //changed from execute to executeInBackground
     }
 
-    wifiDirectExecutor.execute(wifiDirectManager);
-  }
+    public void connectTransport() {
+        connectButton.setEnabled(false);
+        wifiDirectResponseText.setText("Starting connection...\n");
+        Log.d(TAG, "connecting to transport");
+        // we need to check and request for necessary permissions
+        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            Log.d(TAG, "requesting permission");
+            requestPermissions(new String[] { Manifest.permission.ACCESS_FINE_LOCATION },
+                               HelloworldActivity.PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION);
+            Log.d(TAG, "Permission granted");
+        }
+        if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            Log.d(TAG, "requesting permission");
+            requestPermissions(new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE },
+                               HelloworldActivity.WRITE_EXTERNAL_STORAGE);
+        }
 
-  private void updateConnectedDevices() {
-    connectedDevicesText.setText("");
-    wifiDirectManager.getDevicesFound().stream().forEach(device -> {
-      connectedDevicesText.append(device+"\n");
-    });
-  }
+        wifiDirectExecutor.execute(wifiDirectManager);
+    }
 
-  @Override
-  public void onReceiveAction(WifiDirectManager.WIFI_DIRECT_ACTIONS action) {
-    runOnUiThread(() -> {
-      if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_INITIALIZATION_FAILED == action) {
-        wifiDirectResponseText.append("Manager initialization failed\n");
-        Log.d(TAG, "Manager initialization failed\n");
-      } else if(WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL == action) {
-        Log.d(TAG, "Manager initialization successful\n");
-        connectTransport();
-      } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_DISCOVERY_SUCCESSFUL == action){
-        wifiDirectResponseText.append("Discovery initiation successful\n");
-        Log.d(TAG, "Discovery initiation successful\n");
-      } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_DISCOVERY_FAILED == action) {
-        wifiDirectResponseText.append("Discovery initiation failed\n");
-        Log.d(TAG,"Discovery initiation failed\n");
-        connectButton.setEnabled(true);
-      } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_PEERS_CHANGED == action ){
-        wifiDirectResponseText.append("Peers changed\n");
-        Log.d(TAG,"Peers changed\n");
-      } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_FAILED == action ){
-        wifiDirectResponseText.append("Device connection initiation failed\n");
-        Log.d(TAG,"Device connection initiation failed\n");
-        connectButton.setEnabled(true);
-      }else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_SUCCESSFUL == action ){
-        wifiDirectResponseText.append("Device connection initiation successful\n");
-        Log.d(TAG,"Device connection initiation successful\n");
-      }else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL == action ){
-        wifiDirectResponseText.append("Device connected to transport\n");
-        Log.d(TAG,"Device connected to transport\n");
-        updateConnectedDevices();
-        connectButton.setEnabled(true);
-        exchangeMessage();
-      }else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_FAILED == action ){
-        wifiDirectResponseText.append("Device failed to connect to transport\n");
-        Log.d(TAG,"Device failed to connect to transport\n");
-        connectButton.setEnabled(true);
-      }
-    });
-  }
+    private void updateConnectedDevices() {
+        connectedDevicesText.setText("");
+        wifiDirectManager.getDevicesFound().stream().forEach(device -> {
+            connectedDevicesText.append(device + "\n");
+        });
+    }
 
+    @Override
+    public void onReceiveAction(WifiDirectManager.WIFI_DIRECT_ACTIONS action) {
+        runOnUiThread(() -> {
+            if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_INITIALIZATION_FAILED == action) {
+                wifiDirectResponseText.append("Manager initialization failed\n");
+                Log.d(TAG, "Manager initialization failed\n");
+            } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL == action) {
+                Log.d(TAG, "Manager initialization successful\n");
+                connectTransport();
+            } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_DISCOVERY_SUCCESSFUL == action) {
+                wifiDirectResponseText.append("Discovery initiation successful\n");
+                Log.d(TAG, "Discovery initiation successful\n");
+            } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_DISCOVERY_FAILED == action) {
+                wifiDirectResponseText.append("Discovery initiation failed\n");
+                Log.d(TAG, "Discovery initiation failed\n");
+                connectButton.setEnabled(true);
+            } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_PEERS_CHANGED == action) {
+                wifiDirectResponseText.append("Peers changed\n");
+                Log.d(TAG, "Peers changed\n");
+            } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_FAILED ==
+                    action) {
+                wifiDirectResponseText.append("Device connection initiation failed\n");
+                Log.d(TAG, "Device connection initiation failed\n");
+                connectButton.setEnabled(true);
+            } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_SUCCESSFUL ==
+                    action) {
+                wifiDirectResponseText.append("Device connection initiation successful\n");
+                Log.d(TAG, "Device connection initiation successful\n");
+            } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL ==
+                    action) {
+                wifiDirectResponseText.append("Device connected to transport\n");
+                Log.d(TAG, "Device connected to transport\n");
+                updateConnectedDevices();
+                connectButton.setEnabled(true);
+                exchangeMessage();
+            } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_FAILED == action) {
+                wifiDirectResponseText.append("Device failed to connect to transport\n");
+                Log.d(TAG, "Device failed to connect to transport\n");
+                connectButton.setEnabled(true);
+            }
+        });
+    }
 
-  @Override
-  public void onResume(){
-    super.onResume();
-    registerReceiver(wifiDirectManager.createReceiver(), wifiDirectManager.getIntentFilter());
-  }
+    @Override
+    public void onResume() {
+        super.onResume();
+        registerReceiver(wifiDirectManager.createReceiver(), wifiDirectManager.getIntentFilter());
+    }
 
-  @Override
-  public void onPause(){
-    super.onPause();
-    unregisterReceiver(wifiDirectManager.getReceiver());
-  }
+    @Override
+    public void onPause() {
+        super.onPause();
+        unregisterReceiver(wifiDirectManager.getReceiver());
+    }
 
-  @Override
-  public void onDestroy() {
-    super.onDestroy();
-    wifiDirectExecutor.shutdown();
-  }
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        wifiDirectExecutor.shutdown();
+    }
 }
 
