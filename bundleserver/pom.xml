@@ -21,6 +21,31 @@
 		<protobuf.version>3.5.1</protobuf.version>
 		<grpc.version>1.50.2</grpc.version>
 	</properties>
+	<profiles>
+		<profile>
+			<id>mac-m2</id>
+			<activation>
+				<os>
+					<name>mac os x</name>
+					<arch>!aarch64</arch>
+				</os>
+			</activation>
+			<properties>
+				<custom.os.classifier>osx-x86_64</custom.os.classifier>
+			</properties>
+		</profile>
+		<profile>
+			<id>others</id>
+			<activation>
+				<os>
+					<arch>aarch64</arch>
+				</os>
+			</activation>
+			<properties>
+				<custom.os.classifier>${os.detected.classifier}</custom.os.classifier>
+			</properties>
+		</profile>
+	</profiles>
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -166,6 +191,29 @@
 				<version>1.6.2</version>
 			</extension>
 		</extensions>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.xolstice.maven.plugins</groupId>
+					<artifactId>protobuf-maven-plugin</artifactId>
+					<version>0.6.1</version>
+					<extensions>true</extensions>
+					<configuration>
+						<protocArtifact>com.google.protobuf:protoc:3.5.1:exe:${custom.os.classifier}</protocArtifact>
+						<pluginId>grpc-java</pluginId>
+						<pluginArtifact>io.grpc:protoc-gen-grpc-java:1.50.2:exe:${custom.os.classifier}</pluginArtifact>
+					</configuration>
+					<executions>
+						<execution>
+							<goals>
+								<goal>compile</goal>
+								<goal>compile-custom</goal>
+							</goals>
+						</execution>
+					</executions>
+				</plugin>
+			</plugins>
+		</pluginManagement>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
@@ -192,22 +240,7 @@
 			<plugin>
 				<groupId>org.xolstice.maven.plugins</groupId>
 				<artifactId>protobuf-maven-plugin</artifactId>
-				<version>0.6.1</version>
-				<configuration>
-					<protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
-					<pluginId>grpc-java</pluginId>
-					<pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
-				</configuration>
-				<executions>
-					<execution>
-						<goals>
-							<goal>compile</goal>
-							<goal>compile-custom</goal>
-						</goals>
-					</execution>
-				</executions>
 			</plugin>
 		</plugins>
 	</build>
-
 </project>
