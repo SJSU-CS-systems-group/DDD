@@ -1,7 +1,17 @@
 package com.ddd.model;
 
 public class BundleDTO {
-    private String bundleId;
+
+
+
+
+
+
+
+
+
+
+    private String                             bundleId;
     private Bundle bundle;
 
     public String getBundleId() {
