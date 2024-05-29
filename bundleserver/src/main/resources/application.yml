@@ -13,13 +13,13 @@ spring:
     driver-class-name: com.mysql.jdbc.Driver
     url: jdbc:mysql://localhost:3306/dtn_server_db?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
     username: root
-    password: ddd2024
+#    password: <add in external properties file>
     db-name: dtn_server_db
 
 server:
   port: 8081
 bundle-server:
-  bundle-store-root: "/Users/manaschougule/College/SJSU/DDD-server-storage/"
+#  bundle-store-root: <add directory path containing key files in external properties file>
   bundle-store-shared: "${bundle-server.bundle-store-root}Shared"
   registered-app-ids: "${bundle-server.bundle-store-root}Shared/REGISTERED_APP_IDS.txt"
   bundle-transmission:
