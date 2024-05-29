@@ -17,12 +17,12 @@ import java.util.Objects;
 
 public class FileUtils {
 
-    public static String getFilesList(String directory){
+    public static String getFilesList(String directory) {
         String fileList = "";
         File dir = new File(directory);
         File[] Files = dir.listFiles();
-        if ( Files != null && Files.length > 0 ){
-            for (File file : Files){
+        if (Files != null && Files.length > 0) {
+            for (File file : Files) {
                 fileList = fileList + "," + file.getName();
             }
         }
@@ -31,15 +31,19 @@ public class FileUtils {
 
     public static OutputStream getFilePath(BundleDownloadResponse response, String Receive_Directory) throws IOException {
         String fileName = response.getMetadata().getBid();
-        File directoryReceive = new File(Receive_Directory + File.separator+response.getMetadata().getTransportId());
-        if (! directoryReceive.exists()){
+        File directoryReceive = new File(Receive_Directory + File.separator + response.getMetadata().getTransportId());
+        if (!directoryReceive.exists()) {
             directoryReceive.mkdirs();
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            return Files.newOutputStream(Paths.get(Receive_Directory +File.separator+response.getMetadata().getTransportId()+File.separator+fileName), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            return Files.newOutputStream(Paths.get(
+                    Receive_Directory + File.separator + response.getMetadata().getTransportId() + File.separator +
+                            fileName), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
         } else {
-            File file = new File(Receive_Directory +File.separator+response.getMetadata().getTransportId()+File.separator+fileName);
+            File file = new File(
+                    Receive_Directory + File.separator + response.getMetadata().getTransportId() + File.separator +
+                            fileName);
             FileOutputStream outputStream = new FileOutputStream(file);
             return outputStream;
         }
@@ -49,13 +53,13 @@ public class FileUtils {
         try {
             writer.write(content.toByteArray());
             writer.flush();
-        } catch (Exception  e){
-            Log.d(MainActivity.TAG, "writeFile: "+ e.getMessage());
+        } catch (Exception e) {
+            Log.d(MainActivity.TAG, "writeFile: " + e.getMessage());
         }
 
     }
 
-    public static void closeFile(OutputStream writer){
+    public static void closeFile(OutputStream writer) {
         try {
             writer.close();
         } catch (Exception e) {
@@ -63,12 +67,12 @@ public class FileUtils {
         }
     }
 
-    public static void deleteBundles(String directory){
+    public static void deleteBundles(String directory) {
         File deleteDir = new File(directory);
         if (deleteDir.listFiles() != null) {
-            for (File bundle : Objects.requireNonNull(deleteDir.listFiles())){
+            for (File bundle : Objects.requireNonNull(deleteDir.listFiles())) {
                 boolean result = bundle.delete();
-                Log.d(MainActivity.TAG, bundle.getName()+"deleted:"+ result);
+                Log.d(MainActivity.TAG, bundle.getName() + "deleted:" + result);
             }
         }
     }

@@ -23,14 +23,12 @@ import com.ddd.server.storage.SNRDatabases;
 @Repository
 public class ServerRouting {
 
-    SNRDatabases                database     = null;
-    private static final String dbTableName  = "ServerRoutingTable";
+    SNRDatabases database = null;
+    private static final String dbTableName = "ServerRoutingTable";
     private final String METADATAFILE = "routing.metadata";
 
     @Autowired
     private Environment env;
-
-
 
     // public ServerRouting() throws SQLException
     // {
@@ -50,9 +48,9 @@ public class ServerRouting {
 
     //     database.createTable(dbTableCreateQuery);
     // }
-    
+
     @PostConstruct
-    public void init() throws SQLException{
+    public void init() throws SQLException {
         String url = env.getProperty("spring.datasource.url");
         String uname = env.getProperty("spring.datasource.username");
         String password = env.getProperty("spring.datasource.password");
@@ -62,11 +60,8 @@ public class ServerRouting {
 
         System.out.println("Create ServerRoutingTable");
 
-        String dbTableCreateQuery = "CREATE TABLE " + dbTableName + " " +
-                "(transportID VARCHAR(256) not NULL," +
-                "clientID VARCHAR(256) not NULL," +
-                "score VARCHAR(256)," +
-                "PRIMARY KEY (transportID, clientID))";
+        String dbTableCreateQuery = "CREATE TABLE " + dbTableName + " " + "(transportID VARCHAR(256) not NULL," +
+                "clientID VARCHAR(256) not NULL," + "score VARCHAR(256)," + "PRIMARY KEY (transportID, clientID))";
 
         database.createTable(dbTableCreateQuery);
     }
@@ -77,11 +72,10 @@ public class ServerRouting {
      * clientID     : encoded client ID
      * score        : score received for the transport from the client
      */
-    private void updateEntry(String transportID, String clientID, long score) throws SQLException
-    {
-        String query = "INSERT INTO " + dbTableName + " VALUES "+
-                             "('"+transportID+"', '"+clientID+"', '"+Long.toUnsignedString(score)+"')"+
-                             " ON DUPLICATE KEY UPDATE score = '"+Long.toUnsignedString(score)+"'";
+    private void updateEntry(String transportID, String clientID, long score) throws SQLException {
+        String query = "INSERT INTO " + dbTableName + " VALUES " + "('" + transportID + "', '" + clientID + "', '" +
+                Long.toUnsignedString(score) + "')" + " ON DUPLICATE KEY UPDATE score = '" +
+                Long.toUnsignedString(score) + "'";
 
         database.updateEntry(query);
     }
@@ -92,16 +86,15 @@ public class ServerRouting {
      * Returns:
      * List of client IDs sorted based on score
      */
-    public List<String> getClients(String transportID) throws SQLException
-    {
-        String query =  "SELECT clientID from "+dbTableName+
-                        " WHERE transportID = '"+transportID+"' ORDER BY score DESC";
+    public List<String> getClients(String transportID) throws SQLException {
+        String query = "SELECT clientID from " + dbTableName + " WHERE transportID = '" + transportID +
+                "' ORDER BY score DESC";
 
         List<String[]> results = database.getFromTable(query);
 
         List<String> clients = new ArrayList<>();
 
-        for (String[] result: results) {
+        for (String[] result : results) {
             clients.add(result[0]);
         }
 
@@ -114,36 +107,34 @@ public class ServerRouting {
      * clientID             : encoded clientID
      * Returns:
      * None
-    */
-    public void processClientMetaData(String payloadPath, String transportID, String clientID) throws ClientMetaDataFileException, SQLException
-    {
-  
+     */
+    public void processClientMetaData(String payloadPath, String transportID, String clientID) throws ClientMetaDataFileException, SQLException {
+
         String clientMetaDataPath = payloadPath + File.separator + METADATAFILE;
         HashMap<String, Long> clientMap = null;
         ObjectMapper mapper = new ObjectMapper();
-        
+
         try {
             clientMap = mapper.readValue(new File(clientMetaDataPath), new TypeReference<HashMap<String, Long>>() {});
         } catch (Exception e) {
-            throw new ClientMetaDataFileException("Error Reading client metadata: "+e);
+            throw new ClientMetaDataFileException("Error Reading client metadata: " + e);
         }
 
         if (clientMap == null || clientMap.keySet().isEmpty()) {
-        	System.out.println("[BR]: Client Metadata is empty, initializing transport with score 0");
-        	updateEntry(transportID, clientID, 0);
+            System.out.println("[BR]: Client Metadata is empty, initializing transport with score 0");
+            updateEntry(transportID, clientID, 0);
         } else {
-	        for (Map.Entry<String,Long> entry: clientMap.entrySet()) {
-	            updateEntry(entry.getKey(), clientID, entry.getValue());
-	        }
+            for (Map.Entry<String, Long> entry : clientMap.entrySet()) {
+                updateEntry(entry.getKey(), clientID, entry.getValue());
+            }
         }
     }
 
-    public List<String> getTransports(Optional<String> clientID) throws SQLException
-    {
+    public List<String> getTransports(Optional<String> clientID) throws SQLException {
         String query = "SELECT DISTINCT transportID from " + dbTableName;
 
         if (clientID != null) {
-            query += " WHERE clientID = '"+clientID+"'";
+            query += " WHERE clientID = '" + clientID + "'";
         }
 
         List<String[]> results = database.getFromTable(query);

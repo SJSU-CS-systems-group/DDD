@@ -9,18 +9,10 @@ import jakarta.persistence.Table;
 @Table(name = "registered_app_adapter")
 public class RegisteredAppAdapter {
     @Id
-    @Column(
-            name = "app_id",
-            nullable = false,
-            columnDefinition = "VARCHAR(100)"
-    )
+    @Column(name = "app_id", nullable = false, columnDefinition = "VARCHAR(100)")
     private String appId;
 
-    @Column(
-            name = "address",
-            nullable = false,
-            columnDefinition = "VARCHAR(200)"
-    )
+    @Column(name = "address", nullable = false, columnDefinition = "VARCHAR(200)")
     private String address;
 
     public RegisteredAppAdapter(String appId, String address) {
@@ -48,9 +40,6 @@ public class RegisteredAppAdapter {
 
     @Override
     public String toString() {
-        return "RegisteredAppAdapter{" +
-                "appId=" + appId +
-                ", address='" + address + '\'' +
-                '}';
+        return "RegisteredAppAdapter{" + "appId=" + appId + ", address='" + address + '\'' + '}';
     }
 }

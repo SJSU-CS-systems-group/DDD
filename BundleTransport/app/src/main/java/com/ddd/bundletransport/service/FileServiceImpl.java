@@ -51,32 +51,30 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
             @Override
             public void onNext(FileUploadRequest fileUploadRequest) {
-                try{
-                    if(fileUploadRequest.hasMetadata()){
+                try {
+                    if (fileUploadRequest.hasMetadata()) {
                         writer = getFilePath(fileUploadRequest);
-                    }else{
+                    } else {
                         writeFile(writer, fileUploadRequest.getFile().getContent());
                     }
-                }catch (IOException e){
+                } catch (IOException e) {
                     this.onError(e);
                 }
             }
 
             @Override
             public void onError(Throwable throwable) {
-                Log.d(MainActivity.TAG,"Error"+throwable.toString());
+                Log.d(MainActivity.TAG, "Error" + throwable.toString());
                 status = Status.FAILED;
                 this.onCompleted();
             }
 
             @Override
             public void onCompleted() {
-                Log.d(MainActivity.TAG,"Complete");
+                Log.d(MainActivity.TAG, "Complete");
                 closeFile(writer);
                 status = Status.IN_PROGRESS.equals(status) ? Status.SUCCESS : status;
-                FileUploadResponse response = FileUploadResponse.newBuilder()
-                        .setStatus(status)
-                        .build();
+                FileUploadResponse response = FileUploadResponse.newBuilder().setStatus(status).build();
                 responseObserver.onNext(response);
                 responseObserver.onCompleted();
             }
@@ -86,7 +84,8 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
     private OutputStream getFilePath(FileUploadRequest request) throws IOException {
         String fileName = request.getMetadata().getName() + "." + request.getMetadata().getType();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            return Files.newOutputStream(SERVER_BASE_PATH.resolve("server").resolve(fileName), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            return Files.newOutputStream(SERVER_BASE_PATH.resolve("server").resolve(fileName),
+                                         StandardOpenOption.CREATE, StandardOpenOption.APPEND);
         }
         return null;
     }
@@ -96,7 +95,7 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
         writer.flush();
     }
 
-    private void closeFile(OutputStream writer){
+    private void closeFile(OutputStream writer) {
         try {
             writer.close();
         } catch (Exception e) {
@@ -106,11 +105,12 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
     @Override
     public void downloadFile(ReqFilePath request, StreamObserver<Bytes> responseObserver) {
-        String requestedPath = null ;if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+        String requestedPath = null;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             requestedPath = String.valueOf(SERVER_BASE_PATH.resolve("client").resolve(request.getValue()));
 //            requestedPath = String.valueOf(SERVER_BASE_PATH.resolve("client").resolve("payload.zip"));
         }
-        Log.d(MainActivity.TAG, "Downloading "+requestedPath);
+        Log.d(MainActivity.TAG, "Downloading " + requestedPath);
         assert requestedPath != null;
         File file = new File(requestedPath);
         InputStream in;
@@ -122,11 +122,12 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
         }
         StreamHandler handler = new StreamHandler(in);
         Exception ex = handler.handle(bytes -> {
-            responseObserver.onNext(Bytes.newBuilder().setValue(bytes).setTransportId(MainActivity.transportID).build());
+            responseObserver.onNext(
+                    Bytes.newBuilder().setValue(bytes).setTransportId(MainActivity.transportID).build());
         });
         if (ex != null) ex.printStackTrace();
 
         responseObserver.onCompleted();
-        Log.d(MainActivity.TAG, "Complete "+requestedPath);
+        Log.d(MainActivity.TAG, "Complete " + requestedPath);
     }
 }

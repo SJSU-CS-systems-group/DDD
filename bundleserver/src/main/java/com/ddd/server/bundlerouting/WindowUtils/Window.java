@@ -35,7 +35,8 @@
 
 //     public Window(int length, String clientID) throws InvalidLength
 //     {
-//         // serverWindowDataPath = "E:\\SJSU\\Fall 22\\CS 297\\Workspace\\DDD\\app\\src\\test\\resources\\Server\\Clients"+File.separator+clientID;
+//         // serverWindowDataPath = "E:\\SJSU\\Fall 22\\CS
+//         297\\Workspace\\DDD\\app\\src\\test\\resources\\Server\\Clients"+File.separator+clientID;
 //         // SecurityUtils.createDirectory(serverWindowDataPath);
 
 //         // TODO: Change to config
@@ -43,7 +44,7 @@
 //         String uname    = "root";
 //         String password = "password";
 //         String dbName = "SNRDatabase";
-        
+
 //         String dbTableCreateQuery = "CREATE TABLE "+ dbTableName+ " " +
 //                                     "(clientID VARCHAR(256) not NULL," +
 //                                     "startCounter VARCHAR(256)," +
@@ -89,11 +90,12 @@
 //             System.out.println("[WIN]: Failed to update Server Window DB!");
 //             e.printStackTrace();
 //         }
-        
+
 //         // String dbFile = serverWindowDataPath + File.separator + windowFile;
 
 //         // try (FileOutputStream stream = new FileOutputStream(dbFile)) {
-//         //     String metadata = Long.toUnsignedString(startCounter) + "," + Long.toUnsignedString(endCounter) + "," +circularBuffer.getLength();
+//         //     String metadata = Long.toUnsignedString(startCounter) + "," + Long.toUnsignedString(endCounter) +
+//         "," +circularBuffer.getLength();
 //         //     stream.write(metadata.getBytes());
 //         // } catch (IOException e) {
 //         //     System.out.println("Error: Failed to write Window to file! "+e);
@@ -140,9 +142,10 @@
 //     public void add(String bundleID) throws BufferOverflow, InvalidBundleID
 //     {
 //         long bundleIDcounter = BundleIDGenerator.getCounterFromBundleID(bundleID, BundleIDGenerator.DOWNSTREAM);
-        
+
 //         if (endCounter != bundleIDcounter) {
-//             throw new InvalidBundleID("Expected: "+Long.toUnsignedString(endCounter)+", Got: "+Long.toUnsignedString(bundleIDcounter));
+//             throw new InvalidBundleID("Expected: "+Long.toUnsignedString(endCounter)+", Got: "+Long
+//             .toUnsignedString(bundleIDcounter));
 //         }
 
 //         circularBuffer.add(bundleID);
@@ -163,7 +166,7 @@
 //     public void moveWindowAhead(long ack) throws InvalidLength, RecievedOldACK, RecievedInvalidACK
 //     {
 //         compareBundleID(ack);
-        
+
 //         int index = (int) Long.remainderUnsigned(ack, circularBuffer.getLength());
 //         circularBuffer.deleteUntilIndex(index);
 //         startCounter = ack + 1;
@@ -175,9 +178,11 @@
 //     public void compareBundleID(long ack) throws RecievedOldACK, RecievedInvalidACK
 //     {
 //         if (Long.compareUnsigned(ack,startCounter) == -1) {
-//             throw new RecievedOldACK("Received old ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(startCounter) + "]" );
+//             throw new RecievedOldACK("Received old ACK [" + Long.toUnsignedString(ack) + " < " + Long
+//             .toUnsignedString(startCounter) + "]" );
 //         } else if (Long.compareUnsigned(ack,endCounter) == 1) {
-//             throw new RecievedInvalidACK("Received Invalid ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(endCounter) + "]" );
+//             throw new RecievedInvalidACK("Received Invalid ACK [" + Long.toUnsignedString(ack) + " < " + Long
+//             .toUnsignedString(endCounter) + "]" );
 //         }
 //     }
 

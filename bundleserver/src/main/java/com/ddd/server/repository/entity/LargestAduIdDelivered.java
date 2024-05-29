@@ -11,80 +11,64 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
-@Entity(name="LargestAduIdDelivered")
-@Table(name="largest_adu_id_delivered")
+@Entity(name = "LargestAduIdDelivered")
+@Table(name = "largest_adu_id_delivered")
 public class LargestAduIdDelivered {
 
-  @Id
-  @UuidGenerator
-  @Column(
-    name="id",
-    updatable = false,
-    nullable = false
-   )
-  private UUID id;
+    @Id
+    @UuidGenerator
+    @Column(name = "id", updatable = false, nullable = false)
+    private UUID id;
 
-  @Column(
-    name = "client_id",
-    nullable = false,
-    columnDefinition = "TEXT"
-  )
-  @NotBlank
-  private String clientId;
+    @Column(name = "client_id", nullable = false, columnDefinition = "TEXT")
+    @NotBlank
+    private String clientId;
 
-  @Column(
-    name = "app_id",
-    nullable = false,
-    columnDefinition = "TEXT"
-  )
-  @NotBlank
-  private String appId;
+    @Column(name = "app_id", nullable = false, columnDefinition = "TEXT")
+    @NotBlank
+    private String appId;
 
-  @Column(
-    name = "adu_id",
-    nullable = false,
-    columnDefinition = "BIGINT"
-  )
-  @NotNull
-  private Long aduId;
+    @Column(name = "adu_id", nullable = false, columnDefinition = "BIGINT")
+    @NotNull
+    private Long aduId;
 
-  public LargestAduIdDelivered() {}
+    public LargestAduIdDelivered() {}
 
-  public LargestAduIdDelivered(String clientId, String appId, Long aduId) {
-    this.clientId = clientId;
-    this.appId = appId;
-    this.aduId = aduId;
-  }
+    public LargestAduIdDelivered(String clientId, String appId, Long aduId) {
+        this.clientId = clientId;
+        this.appId = appId;
+        this.aduId = aduId;
+    }
 
-  public String getId() {
-    return this.id.toString();
-  }
+    public String getId() {
+        return this.id.toString();
+    }
 
-  public void setId(String id) {
-    this.id = UUID.fromString(id);
-  }
+    public void setId(String id) {
+        this.id = UUID.fromString(id);
+    }
 
-  public String getClientId() {
-    return this.clientId;
-  }
+    public String getClientId() {
+        return this.clientId;
+    }
 
-  public void setClientId(String clientId) {
-    this.clientId = clientId;
-  }
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
+    }
 
-  public String getAppId() {
-    return this.appId;
-  }
+    public String getAppId() {
+        return this.appId;
+    }
 
-  public void setAppId(String appId) {
-    this.appId = appId;
-  }
+    public void setAppId(String appId) {
+        this.appId = appId;
+    }
 
-  public Long getAduId() {
-    return this.aduId;
-  }
+    public Long getAduId() {
+        return this.aduId;
+    }
 
-  public void setAduId(Long aduId) {
-    this.aduId = aduId;
-  }
+    public void setAduId(Long aduId) {
+        this.aduId = aduId;
+    }
 }

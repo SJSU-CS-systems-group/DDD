@@ -20,7 +20,8 @@
 //     try {
 //       record =
 //           this.jdbcTemplate.queryForObject(
-//               "select bundle_id as bundleId, client_id as clientId, acked_bundle_id as ackedBundleId from sent_bundle_details where bundle_id = ?",
+//               "select bundle_id as bundleId, client_id as clientId, acked_bundle_id as ackedBundleId from
+//               sent_bundle_details where bundle_id = ?",
 //               BeanPropertyRowMapper.newInstance(SentBundleDetails.class),
 //               bundleId);
 //     } catch (EmptyResultDataAccessException e) {

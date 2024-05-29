@@ -10,82 +10,78 @@ import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.util.ArrayList;
 import java.util.List;
+
 import com.ddd.model.ADU;
 
 public class ADUUtils {
 
-  public static void writeADU(ADU adu, File targetDirectory) {
-    String aduFileName = adu.getAppId() + "-" + adu.getADUId();
-    File aduFile =
-        new File(
-            targetDirectory.getAbsolutePath()
-                + FileSystems.getDefault().getSeparator()
-                + aduFileName);
+    public static void writeADU(ADU adu, File targetDirectory) {
+        String aduFileName = adu.getAppId() + "-" + adu.getADUId();
+        File aduFile =
+                new File(targetDirectory.getAbsolutePath() + FileSystems.getDefault().getSeparator() + aduFileName);
 
-    try (BufferedInputStream bufferedInputStream =
-            new BufferedInputStream(new FileInputStream(adu.getSource()));
-        BufferedOutputStream bufferedOutputStream =
-            new BufferedOutputStream(new FileOutputStream(aduFile)); ) {
+        try (BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(
+                adu.getSource())); BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(
+                new FileOutputStream(aduFile));) {
 
-      int nbytes = 0;
-      byte[] buffer = new byte[1024];
-      while ((nbytes = bufferedInputStream.read(buffer)) > 0) {
-        bufferedOutputStream.write(buffer, 0, nbytes);
-      }
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
-
-  public static void writeADUs(List<ADU> adus, File targetDirectory) {
-    if (adus.isEmpty()) {
-      return;
-    }
-
-    for (final ADU adu : adus) {
-      String appId = adu.getAppId();
-      File appDirectory =
-          new File(targetDirectory + FileSystems.getDefault().getSeparator() + appId);
-      if (!appDirectory.exists()) {
-        appDirectory.mkdirs();
-      }
-      writeADU(adu, appDirectory);
-    }
-  }
-
-  public static List<ADU> readADUs(File aduDirectory) {
-    List<ADU> ret = new ArrayList<>();
-    File[] aduFiles = aduDirectory.listFiles();
-    if (aduFiles == null) {
-      return ret;
-    }
-    for (final File appSubDirectory : aduDirectory.listFiles(new FileFilter() {
-      @Override
-      public boolean accept(File file) {
-        return !file.isHidden();
-      }
-    })) {
-      String appId = appSubDirectory.getName();
-      for (final File aduFile : appSubDirectory.listFiles(new FileFilter() {
-        @Override
-        public boolean accept(File file) {
-          return !file.isHidden();
+            int nbytes = 0;
+            byte[] buffer = new byte[1024];
+            while ((nbytes = bufferedInputStream.read(buffer)) > 0) {
+                bufferedOutputStream.write(buffer, 0, nbytes);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-      })) {
-        String aduFileName = aduFile.getName();
-        long aduId = Long.valueOf(aduFileName.split("-")[1]);
-        long size = aduFile.length();
-        ret.add(new ADU(aduFile, appId, aduId, size));
-      }
     }
-    return ret;
-  }
 
-  private static Long getADUId(String aduFileName) {
-    return Long.valueOf(aduFileName.split("-")[1]);
-  }
+    public static void writeADUs(List<ADU> adus, File targetDirectory) {
+        if (adus.isEmpty()) {
+            return;
+        }
 
-  public static ADU readADUFromFile(File aduFile, String appId) {
-    return new ADU(aduFile, appId, getADUId(aduFile.getName()), aduFile.getTotalSpace());
-  }
+        for (final ADU adu : adus) {
+            String appId = adu.getAppId();
+            File appDirectory = new File(targetDirectory + FileSystems.getDefault().getSeparator() + appId);
+            if (!appDirectory.exists()) {
+                appDirectory.mkdirs();
+            }
+            writeADU(adu, appDirectory);
+        }
+    }
+
+    public static List<ADU> readADUs(File aduDirectory) {
+        List<ADU> ret = new ArrayList<>();
+        File[] aduFiles = aduDirectory.listFiles();
+        if (aduFiles == null) {
+            return ret;
+        }
+        for (final File appSubDirectory : aduDirectory.listFiles(new FileFilter() {
+            @Override
+            public boolean accept(File file) {
+                return !file.isHidden();
+            }
+        })) {
+            String appId = appSubDirectory.getName();
+            for (final File aduFile : appSubDirectory.listFiles(new FileFilter() {
+                @Override
+                public boolean accept(File file) {
+                    return !file.isHidden();
+                }
+            })) {
+                String aduFileName = aduFile.getName();
+                long aduId = Long.valueOf(aduFileName.split("-")[1]);
+                long size = aduFile.length();
+                ret.add(new ADU(aduFile, appId, aduId, size));
+            }
+        }
+        return ret;
+    }
+
+    private static Long getADUId(String aduFileName) {
+        return Long.valueOf(aduFileName.split("-")[1]);
+    }
+
+    public static ADU readADUFromFile(File aduFile, String appId) {
+        return new ADU(aduFile, appId, getADUId(aduFile.getName()), aduFile.getTotalSpace());
+    }
 }

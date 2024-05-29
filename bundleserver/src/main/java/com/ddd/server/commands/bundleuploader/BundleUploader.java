@@ -21,15 +21,14 @@ import java.util.concurrent.CountDownLatch;
 
 @CommandLine.Command(name = "upload-bundle", description = "Upload a bundle to the server")
 public class BundleUploader implements CommandLineRunner, Callable<Integer> {
-    @CommandLine.Parameters (description = "upload-bundle")
+    @CommandLine.Parameters(description = "upload-bundle")
     String ignore;
-    @CommandLine.Parameters (description = "Bundle file to upload", arity = "1")
+    @CommandLine.Parameters(description = "Bundle file to upload", arity = "1")
     File bundle;
-    @CommandLine.Parameters (description = "BundleServer host")
+    @CommandLine.Parameters(description = "BundleServer host")
     String bundleServerHost;
-    @CommandLine.Parameters (description = "BundleServer post")
+    @CommandLine.Parameters(description = "BundleServer post")
     int bundleServerPort;
-
 
     public void run(String[] args) {
         String command = args.length > 0 ? args[0] : null;
@@ -48,32 +47,28 @@ public class BundleUploader implements CommandLineRunner, Callable<Integer> {
         var channel = ManagedChannelBuilder.forAddress(bundleServerHost, bundleServerPort).usePlaintext().build();
         BundleServiceGrpc.BundleServiceStub stub = BundleServiceGrpc.newStub(channel);
         CountDownLatch latch = new CountDownLatch(1);
-        StreamObserver<BundleUploadRequest> streamObserver = stub.uploadBundle(new StreamObserver<BundleUploadResponse>() {
+        StreamObserver<BundleUploadRequest> streamObserver =
+                stub.uploadBundle(new StreamObserver<BundleUploadResponse>() {
 
-            @Override
-            public void onNext(BundleUploadResponse bundleUploadResponse) {
-                System.out.println(bundleUploadResponse);
-            }
+                    @Override
+                    public void onNext(BundleUploadResponse bundleUploadResponse) {
+                        System.out.println(bundleUploadResponse);
+                    }
 
-            @Override
-            public void onError(Throwable throwable) {
-                System.out.println(throwable);
-                System.exit(3);
-            }
+                    @Override
+                    public void onError(Throwable throwable) {
+                        System.out.println(throwable);
+                        System.exit(3);
+                    }
 
-            @Override
-            public void onCompleted() {
-                System.out.println("Complete");
-                latch.countDown();
-            }
-        });
-        BundleUploadRequest metadata = BundleUploadRequest
-                .newBuilder()
-                .setMetadata(BundleMetaData
-                        .newBuilder()
-                        .setBid(bundle.getName())
-                        .setTransportId("CLI")
-                        .build())
+                    @Override
+                    public void onCompleted() {
+                        System.out.println("Complete");
+                        latch.countDown();
+                    }
+                });
+        BundleUploadRequest metadata = BundleUploadRequest.newBuilder()
+                .setMetadata(BundleMetaData.newBuilder().setBid(bundle.getName()).setTransportId("CLI").build())
                 .build();
         streamObserver.onNext(metadata);
 
@@ -85,14 +80,9 @@ public class BundleUploader implements CommandLineRunner, Callable<Integer> {
         int size = 0;
         while ((size = inputStream.read(bytes)) != -1) {
             System.out.println("Sending chunk size: " + size);
-            BundleUploadRequest uploadRequest = BundleUploadRequest
-                    .newBuilder()
-                    .setFile(edu.sjsu.ddd.bundleserver.service.File
-                    .newBuilder()
-                    .setContent(ByteString
-                    .copyFrom(bytes, 0, size))
-                    .build())
-                    .build();
+            BundleUploadRequest uploadRequest = BundleUploadRequest.newBuilder().setFile(
+                    edu.sjsu.ddd.bundleserver.service.File.newBuilder().setContent(ByteString.copyFrom(bytes, 0, size))
+                            .build()).build();
             streamObserver.onNext(uploadRequest);
         }
         inputStream.close();

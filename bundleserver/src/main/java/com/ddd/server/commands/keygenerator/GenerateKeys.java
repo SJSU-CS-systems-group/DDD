@@ -34,7 +34,7 @@ public class GenerateKeys implements Callable<Void> {
     @Parameters(arity = "1", index = "0")
     String command;
 
-    @Option(names = "-type", defaultValue="identity", description = "Type of key pair: identity, ratchet, signedpre")
+    @Option(names = "-type", defaultValue = "identity", description = "Type of key pair: identity, ratchet, signedpre")
     private String type;
 
     @Option(names = "-pvtout", description = "Private key file name")
@@ -44,16 +44,16 @@ public class GenerateKeys implements Callable<Void> {
     private String publicKeyOutputFileName;
 
     private void createKeyPair() {
-        System.out.println("Generating "+type+" keys...");
+        System.out.println("Generating " + type + " keys...");
         ECKeyPair keyPair = Curve.generateKeyPair();
 
-
         if (type.toLowerCase().equals("identity")) {
-            IdentityKeyPair identityKeyPair = new IdentityKeyPair(new IdentityKey(keyPair.getPublicKey()),
-                    keyPair.getPrivateKey());
-    
+            IdentityKeyPair identityKeyPair =
+                    new IdentityKeyPair(new IdentityKey(keyPair.getPublicKey()), keyPair.getPrivateKey());
+
             base64PrivateKey = Base64.getUrlEncoder().encodeToString(identityKeyPair.serialize());
-            base64PublicKey = Base64.getUrlEncoder().encodeToString(identityKeyPair.getPublicKey().getPublicKey().serialize());
+            base64PublicKey =
+                    Base64.getUrlEncoder().encodeToString(identityKeyPair.getPublicKey().getPublicKey().serialize());
         } else {
             base64PrivateKey = Base64.getUrlEncoder().encodeToString(keyPair.getPrivateKey().serialize());
             base64PublicKey = Base64.getUrlEncoder().encodeToString(keyPair.getPublicKey().serialize());
@@ -67,8 +67,9 @@ public class GenerateKeys implements Callable<Void> {
             encodedKey += "\n" + (isPrivate ? PVT_KEY_FOOTER : PUB_KEY_FOOTER);
             stream.write(encodedKey.getBytes());
             System.out.println("Written to file");
-        }  catch (Exception e) {
-            System.out.println("com.ddd.server.keygenerator.commands.GenerateKeys.writeToFile error: " + e.getMessage());
+        } catch (Exception e) {
+            System.out.println(
+                    "com.ddd.server.keygenerator.commands.GenerateKeys.writeToFile error: " + e.getMessage());
         }
     }
 
@@ -92,13 +93,14 @@ public class GenerateKeys implements Callable<Void> {
             try {
                 file.createNewFile();
             } catch (IOException e) {
-                System.out.println("com.ddd.server.keygenerator.commands.GenerateKeys.verifyWrite error: " + e.getMessage());
+                System.out.println(
+                        "com.ddd.server.keygenerator.commands.GenerateKeys.verifyWrite error: " + e.getMessage());
             }
             System.out.println("Writing to " + file.getPath() + "...");
             writeToFile(isPrivate, file);
         }
     }
-    
+
     private void printPrivateKey() {
         System.out.println("Private key: " + base64PrivateKey);
     }
@@ -108,8 +110,8 @@ public class GenerateKeys implements Callable<Void> {
     }
 
     private void validInputs() throws IllegalArgumentException {
-        if (!type.toLowerCase().equals("identity") && !type.toLowerCase().equals("ratchet")
-                && !type.toLowerCase().equals("signedpre")) {
+        if (!type.toLowerCase().equals("identity") && !type.toLowerCase().equals("ratchet") &&
+                !type.toLowerCase().equals("signedpre")) {
             throw new IllegalArgumentException("Type must be one of the following: identity, ratchet, signedpre");
         }
     }
@@ -124,7 +126,7 @@ public class GenerateKeys implements Callable<Void> {
             } else {
                 verifyWrite(true, privateKeyOutputFileName);
             }
-            
+
             if (publicKeyOutputFileName == null) {
                 printPublicKey();
             } else {

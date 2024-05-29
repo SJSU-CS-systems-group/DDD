@@ -20,7 +20,8 @@
 //     try {
 //       record =
 //           this.jdbcTemplate.queryForObject(
-//               "select client_id as clientId, bundle_id as bundleId from largest_bundle_id_received where client_id = ?",
+//               "select client_id as clientId, bundle_id as bundleId from largest_bundle_id_received where client_id
+//               = ?",
 //               BeanPropertyRowMapper.newInstance(LargestBundleIdReceived.class),
 //               clientId);
 //     } catch (EmptyResultDataAccessException e) {

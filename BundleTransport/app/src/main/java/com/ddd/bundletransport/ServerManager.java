@@ -17,16 +17,20 @@ public class ServerManager implements Runnable {
     private GrpcSendTask sendTask;
     private GrpcReceiveTask receiveTask;
 
-    public ServerManager(File fileDir, String host, String port, String transportId, Function<Exception, Void> sendCallback, Function<Exception, Void> receiveCallback, Function<Void, Void> connectComplete) {
+    public ServerManager(File fileDir, String host, String port, String transportId,
+                         Function<Exception, Void> sendCallback, Function<Exception, Void> receiveCallback,
+                         Function<Void, Void> connectComplete) {
         this.sendCallback = sendCallback;
         this.receiveCallback = receiveCallback;
         this.connectComplete = connectComplete;
-        this.sendTask = new GrpcSendTask(host, Integer.parseInt(port), transportId, fileDir + "/BundleTransmission/server");
-        this.receiveTask = new GrpcReceiveTask(host, Integer.parseInt(port), transportId, fileDir + "/BundleTransmission/client");
+        this.sendTask =
+                new GrpcSendTask(host, Integer.parseInt(port), transportId, fileDir + "/BundleTransmission/server");
+        this.receiveTask =
+                new GrpcReceiveTask(host, Integer.parseInt(port), transportId, fileDir + "/BundleTransmission/client");
     }
 
     @Override
-    public void run(){
+    public void run() {
         sendCallback.apply(sendTask.run());
         receiveCallback.apply(receiveTask.run());
         Log.d(TAG, "Connect server completed");

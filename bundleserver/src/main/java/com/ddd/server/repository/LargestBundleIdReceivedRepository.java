@@ -8,9 +8,8 @@ import org.springframework.stereotype.Repository;
 import com.ddd.server.repository.entity.LargestBundleIdReceived;
 
 @Repository
-public interface LargestBundleIdReceivedRepository extends CrudRepository<LargestBundleIdReceived, String>
-{
-  Optional<LargestBundleIdReceived> findByClientId(String clientId);
+public interface LargestBundleIdReceivedRepository extends CrudRepository<LargestBundleIdReceived, String> {
+    Optional<LargestBundleIdReceived> findByClientId(String clientId);
 
-  // public void save(LargestBundleIdReceived record);
+    // public void save(LargestBundleIdReceived record);
 }

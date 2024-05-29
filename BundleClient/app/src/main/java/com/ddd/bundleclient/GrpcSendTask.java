@@ -24,7 +24,7 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
 class GrpcSendTask {
-//    private final HelloworldActivity helloworldActivity;
+    //    private final HelloworldActivity helloworldActivity;
     private final WeakReference<Activity> activityReference;
     private ManagedChannel channel;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -64,10 +64,7 @@ class GrpcSendTask {
             BundleDTO toSend = bundleTransmission.generateBundleForTransmission();
             System.out.println("[BDA] An outbound bundle generated with id: " + toSend.getBundleId());
             FileUploadRequest metadata = FileUploadRequest.newBuilder()
-                    .setMetadata(MetaData.newBuilder()
-                            .setName(toSend.getBundleId())
-                            .setType("bundle").build())
-                    .build();
+                    .setMetadata(MetaData.newBuilder().setName(toSend.getBundleId()).setType("bundle").build()).build();
             streamObserver.onNext(metadata);
 
 //      upload file as chunk
@@ -81,8 +78,7 @@ class GrpcSendTask {
             int size = 0;
             while ((size = inputStream.read(bytes)) != -1) {
                 FileUploadRequest uploadRequest = FileUploadRequest.newBuilder()
-                        .setFile(File.newBuilder().setContent(ByteString.copyFrom(bytes, 0, size)).build())
-                        .build();
+                        .setFile(File.newBuilder().setContent(ByteString.copyFrom(bytes, 0, size)).build()).build();
                 streamObserver.onNext(uploadRequest);
             }
             inputStream.close();

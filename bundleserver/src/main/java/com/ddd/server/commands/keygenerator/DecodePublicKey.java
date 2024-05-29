@@ -47,7 +47,7 @@ public class DecodePublicKey implements Callable<Void> {
     private byte[] decodeFile() throws EncodingException {
         return SecurityUtils.decodePrivateKeyFromFile(storePath + File.separator + pvtFilename);
     }
-    
+
     private byte[] decodeBase64() {
         return Base64.getUrlDecoder().decode(pvtbase64);
     }
@@ -60,9 +60,9 @@ public class DecodePublicKey implements Callable<Void> {
         SecurityUtils.createEncodedPublicKeyFile(pubKey, storePath + File.separator + pubFilename);
         System.out.println("Written to file");
     }
-    
+
     private void print(ECPublicKey pubKey) {
-        System.out.println("Extracted public key: "+Base64.getUrlEncoder().encodeToString(pubKey.serialize()));
+        System.out.println("Extracted public key: " + Base64.getUrlEncoder().encodeToString(pubKey.serialize()));
     }
 
     @Override
@@ -79,7 +79,7 @@ public class DecodePublicKey implements Callable<Void> {
         } else if (pvtraw != null) {
             serializedPrivateKey = decodeRaw();
         }
-        
+
         if (serializedPrivateKey != null) {
             ECPublicKey pubKey;
             try {

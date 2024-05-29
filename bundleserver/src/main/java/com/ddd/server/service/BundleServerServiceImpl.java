@@ -36,10 +36,10 @@ import io.grpc.stub.StreamObserver;
 public class BundleServerServiceImpl extends BundleServiceImplBase {
     private String ReceiveDir;
     private String SendDir;
-    
+
     @Autowired
     private BundleTransmission bundleTransmission;
-    
+
     // public BundleServerServiceImpl() {
     //     java.io.File directoryReceive = new java.io.File(ReceiveDir);
     //     if (!directoryReceive.exists()) {
@@ -51,7 +51,7 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
     //         directorySend.mkdirs();
     //     }
     // }
-    
+
     @PostConstruct
     private void init() {
         java.io.File directoryReceive = new java.io.File(ReceiveDir);
@@ -68,11 +68,11 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
     @Value("${bundle-server.bundle-store-shared}")
     public void setDir(String bundleDir) {
         ReceiveDir = bundleDir + java.io.File.separator + "receive";
-        SendDir = bundleDir+java.io.File.separator+"send";
+        SendDir = bundleDir + java.io.File.separator + "send";
     }
 
     @Override
-    public StreamObserver<BundleUploadRequest> uploadBundle(StreamObserver<BundleUploadResponse> responseObserver){
+    public StreamObserver<BundleUploadRequest> uploadBundle(StreamObserver<BundleUploadResponse> responseObserver) {
         return new StreamObserver<BundleUploadRequest>() {
             // upload context variables
             OutputStream writer;
@@ -81,21 +81,21 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
 
             @Override
             public void onNext(BundleUploadRequest BundleUploadRequest) {
-                try{
-                    if(BundleUploadRequest.hasMetadata()){
+                try {
+                    if (BundleUploadRequest.hasMetadata()) {
                         transportID = BundleUploadRequest.getMetadata().getTransportId();
                         writer = getFilePath(BundleUploadRequest);
                     } else {
                         writeFile(writer, BundleUploadRequest.getFile().getContent());
                     }
-                }catch (IOException e){
+                } catch (IOException e) {
                     this.onError(e);
                 }
             }
 
             @Override
             public void onError(Throwable throwable) {
-                System.out.println("Error"+throwable.toString());
+                System.out.println("Error" + throwable.toString());
                 status = Status.FAILED;
                 this.onCompleted();
             }
@@ -106,25 +106,27 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
                 try {
                     closeFile(writer);
                 } catch (IOException e) {
-                    System.out.println("BundleServerServiceImpl.uploadBundle error: "+e.getMessage());
+                    System.out.println("BundleServerServiceImpl.uploadBundle error: " + e.getMessage());
                 }
                 status = Status.IN_PROGRESS.equals(status) ? Status.SUCCESS : status;
-                BundleUploadResponse response = BundleUploadResponse.newBuilder()
-                        .setStatus(status)
-                        .build();
+                BundleUploadResponse response = BundleUploadResponse.newBuilder().setStatus(status).build();
                 responseObserver.onNext(response);
                 bundleTransmission.processReceivedBundles(transportID);
-                responseObserver.onCompleted();           
+                responseObserver.onCompleted();
             }
         };
     }
+
     private OutputStream getFilePath(BundleUploadRequest request) throws IOException {
-        String fileName = request.getMetadata().getBid();        
-        java.io.File directoryReceive = new java.io.File(ReceiveDir+java.io.File.separator+request.getMetadata().getTransportId());
-        if (! directoryReceive.exists()){
+        String fileName = request.getMetadata().getBid();
+        java.io.File directoryReceive =
+                new java.io.File(ReceiveDir + java.io.File.separator + request.getMetadata().getTransportId());
+        if (!directoryReceive.exists()) {
             directoryReceive.mkdirs();
         }
-        return Files.newOutputStream(Paths.get(ReceiveDir).resolve(request.getMetadata().getTransportId()).resolve(fileName), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        return Files.newOutputStream(
+                Paths.get(ReceiveDir).resolve(request.getMetadata().getTransportId()).resolve(fileName),
+                StandardOpenOption.CREATE, StandardOpenOption.APPEND);
     }
 
     private void writeFile(OutputStream writer, ByteString content) throws IOException {
@@ -141,39 +143,42 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
     @Override
     public void downloadBundle(BundleDownloadRequest request, StreamObserver<BundleDownloadResponse> responseObserver) {
         String transportFiles = request.getBundleList();
-        System.out.println("[BDA] bundles on transport"+transportFiles);
-        System.out.println("[BDA]Request from Transport id :"+request.getTransportId());
+        System.out.println("[BDA] bundles on transport" + transportFiles);
+        System.out.println("[BDA]Request from Transport id :" + request.getTransportId());
         String[] filesOnTransport = null;
         Set<String> filesOnTransportSet = Collections.<String>emptySet();
-        if (!transportFiles.isEmpty()){
+        if (!transportFiles.isEmpty()) {
             filesOnTransport = transportFiles.split(",");
             List<String> filesOnTransportList = Arrays.asList(filesOnTransport);
-            filesOnTransportSet = new HashSet<String>( filesOnTransportList );
+            filesOnTransportSet = new HashSet<String>(filesOnTransportList);
         }
-        
+
         List<File> bundlesList = bundleTransmission.getBundlesForTransmission(request.getTransportId());
         System.out.println(bundleTransmission);
-        if ( bundlesList.isEmpty() ){
-            BundleTransferDTO bundleTransferDTO = bundleTransmission.generateBundlesForTransmission(request.getTransportId(), filesOnTransportSet);
-            if(bundleTransferDTO.getBundles().isEmpty()) {
-            	responseObserver.onNext(BundleDownloadResponse.newBuilder().setStatus(Status.SUCCESS).build());
+        if (bundlesList.isEmpty()) {
+            BundleTransferDTO bundleTransferDTO =
+                    bundleTransmission.generateBundlesForTransmission(request.getTransportId(), filesOnTransportSet);
+            if (bundleTransferDTO.getBundles().isEmpty()) {
+                responseObserver.onNext(BundleDownloadResponse.newBuilder().setStatus(Status.SUCCESS).build());
+            } else {
+                BundleDownloadResponse response = BundleDownloadResponse.newBuilder().setBundleList(
+                                BundleList.newBuilder().setBundleList(String.join(", ",
+                                                                                  bundleTransferDTO.getDeletionSet())))
+                        .build();
+                System.out.println("[BDA] Sending " + String.join(", ", bundleTransferDTO.getDeletionSet()) +
+                                           " to delete on Transport id :" + request.getTransportId());
+                responseObserver.onNext(response);
             }
-            else {
-            	 BundleDownloadResponse response = BundleDownloadResponse.newBuilder()
-                         .setBundleList( BundleList.newBuilder().setBundleList(String.join(", ", bundleTransferDTO.getDeletionSet())))
-                         .build();
-System.out.println("[BDA] Sending "+String.join(", ", bundleTransferDTO.getDeletionSet())+" to delete on Transport id :"+request.getTransportId());
-responseObserver.onNext(response);
-            }
-            responseObserver.onCompleted();                      
+            responseObserver.onCompleted();
         } else {
 
-            for( File bundle : bundlesList ){
-                if( !filesOnTransportSet.contains(bundle.getName()) ) {                    
-                    System.out.println("[BDA]Downloading "+bundle.getName()+" to Transport id :"+request.getTransportId());
+            for (File bundle : bundlesList) {
+                if (!filesOnTransportSet.contains(bundle.getName())) {
+                    System.out.println(
+                            "[BDA]Downloading " + bundle.getName() + " to Transport id :" + request.getTransportId());
                     BundleMetaData bundleMetaData = BundleMetaData.newBuilder().setBid(bundle.getName()).build();
                     responseObserver.onNext(BundleDownloadResponse.newBuilder().setMetadata(bundleMetaData).build());
-                    InputStream in;                 
+                    InputStream in;
                     try {
                         in = new FileInputStream(bundle);
                     } catch (Exception ex) {
@@ -182,7 +187,8 @@ responseObserver.onNext(response);
                     }
                     StreamHandler handler = new StreamHandler(in);
                     Exception ex = handler.handle(bytes -> {
-                        responseObserver.onNext(BundleDownloadResponse.newBuilder().setFile(edu.sjsu.ddd.bundleserver.service.File.newBuilder().setContent(bytes)).build());
+                        responseObserver.onNext(BundleDownloadResponse.newBuilder().setFile(
+                                edu.sjsu.ddd.bundleserver.service.File.newBuilder().setContent(bytes)).build());
                     });
                     if (ex != null) ex.printStackTrace();
                     responseObserver.onCompleted();
@@ -191,6 +197,6 @@ responseObserver.onNext(response);
             System.out.println("[BDA] All bundles were transferred completing status success");
             responseObserver.onNext(BundleDownloadResponse.newBuilder().setStatus(Status.SUCCESS).build());
             responseObserver.onCompleted();
-        }               
+        }
     }
-  }
+}

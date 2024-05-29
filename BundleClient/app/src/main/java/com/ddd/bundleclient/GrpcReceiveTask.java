@@ -30,7 +30,6 @@ class GrpcReceiveTask {
     String currentTransportId;
     private final Activity activity;
 
-
     GrpcReceiveTask(Activity activity) {
         this.activityReference = new WeakReference<Activity>(activity);
         this.resultText = (TextView) activity.findViewById(R.id.grpc_response_text);
@@ -67,7 +66,8 @@ class GrpcReceiveTask {
         try {
             BundleTransmission bundleTransmission;
             bundleTransmission = new BundleTransmission(applicationContext.getApplicationInfo().dataDir);
-            bundleRequests = HelloworldActivity.clientWindow.getWindow(bundleTransmission.getBundleSecurity().getClientSecurity());
+            bundleRequests = HelloworldActivity.clientWindow.getWindow(
+                    bundleTransmission.getBundleSecurity().getClientSecurity());
         } catch (SecurityExceptions.BundleIDCryptographyException e) {
             Log.d(HelloworldActivity.TAG, "{BR}: Failed to get Window: " + e);
             e.printStackTrace();
@@ -84,9 +84,7 @@ class GrpcReceiveTask {
         }
         for (String bundle : bundleRequests) {
             String bundleName = bundle + ".bundle";
-            ReqFilePath request = ReqFilePath.newBuilder()
-                    .setValue(bundleName)
-                    .build();
+            ReqFilePath request = ReqFilePath.newBuilder().setValue(bundleName).build();
             Log.d(HelloworldActivity.TAG, "Downloading file: " + bundleName);
             StreamObserver<Bytes> downloadObserver = new StreamObserver<Bytes>() {
                 FileOutputStream fileOutputStream = null;
@@ -103,6 +101,7 @@ class GrpcReceiveTask {
                         onError(e);
                     }
                 }
+
                 @Override
                 public void onError(Throwable t) {
                     Log.d(HelloworldActivity.TAG, "Error downloading file: " + t.getMessage(), t);
@@ -114,6 +113,7 @@ class GrpcReceiveTask {
                         }
                     }
                 }
+
                 @Override
                 public void onCompleted() {
                     try {
@@ -130,6 +130,7 @@ class GrpcReceiveTask {
         }
         postExecute("Complete");
     }
+
     public void shutdownExecutor() {
         executor.shutdown();
     }
@@ -153,11 +154,9 @@ class GrpcReceiveTask {
         GrpcSendTask sendTask = new GrpcSendTask(activity);
         sendTask.executeInBackground("192.168.49.1", "1778");
 
-
         String FILE_PATH = applicationContext.getApplicationInfo().dataDir + "/Shared/received-bundles";
         BundleTransmission bundleTransmission = new BundleTransmission(applicationContext.getApplicationInfo().dataDir);
         bundleTransmission.processReceivedBundles(currentTransportId, FILE_PATH);
-
 
         Activity activity = activityReference.get();
         if (activity == null) {

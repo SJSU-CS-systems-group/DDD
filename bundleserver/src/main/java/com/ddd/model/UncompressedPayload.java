@@ -5,85 +5,85 @@ import java.util.List;
 
 public class UncompressedPayload {
 
-  private final File source;
+    private final File source;
 
-  public File getSource() {
-    return this.source;
-  }
+    public File getSource() {
+        return this.source;
+    }
 
-  private final String bundleId;
+    private final String bundleId;
 
-  private final Acknowledgement ackRecord;
+    private final Acknowledgement ackRecord;
 
-  private final List<ADU> ADUs;
+    private final List<ADU> ADUs;
 
-  public UncompressedPayload(String bundleId, Acknowledgement ackRecord, List<ADU> ADUs, File source) {
-    this.bundleId = bundleId;
-    this.ackRecord = ackRecord;
-    this.ADUs = ADUs;
-    this.source = source;
-  }
-
-  public String getBundleId() {
-    return this.bundleId;
-  }
-
-  public Acknowledgement getAckRecord() {
-    return this.ackRecord;
-  }
-
-  public List<ADU> getADUs() {
-    return this.ADUs;
-  }
-
-  public static class Builder {
-
-    private File source;
-
-    private String bundleId;
-
-    private Acknowledgement ackRecord;
-
-    private List<ADU> ADUs;
+    public UncompressedPayload(String bundleId, Acknowledgement ackRecord, List<ADU> ADUs, File source) {
+        this.bundleId = bundleId;
+        this.ackRecord = ackRecord;
+        this.ADUs = ADUs;
+        this.source = source;
+    }
 
     public String getBundleId() {
-      return this.bundleId;
+        return this.bundleId;
     }
 
     public Acknowledgement getAckRecord() {
-      return this.ackRecord;
+        return this.ackRecord;
     }
 
     public List<ADU> getADUs() {
-      return this.ADUs;
+        return this.ADUs;
     }
 
-    public File getSource() {
-      return this.source;
-    }
+    public static class Builder {
 
-    public Builder setAckRecord(Acknowledgement ackRecord) {
-      this.ackRecord = ackRecord;
-      return this;
-    }
+        private File source;
 
-    public Builder setADUs(List<ADU> ADUs) {
-      this.ADUs = ADUs;
-      return this;
-    }
+        private String bundleId;
 
-    public Builder setBundleId(String bundleId) {
-      this.bundleId = bundleId;
-      return this;
-    }
+        private Acknowledgement ackRecord;
 
-    public Builder setSource(File source) {
-      this.source = source;
-      return this;
-    }
+        private List<ADU> ADUs;
 
-    public UncompressedPayload build() {
-      return new UncompressedPayload(this.bundleId, this.ackRecord, this.ADUs, this.source);
+        public String getBundleId() {
+            return this.bundleId;
+        }
+
+        public Acknowledgement getAckRecord() {
+            return this.ackRecord;
+        }
+
+        public List<ADU> getADUs() {
+            return this.ADUs;
+        }
+
+        public File getSource() {
+            return this.source;
+        }
+
+        public Builder setAckRecord(Acknowledgement ackRecord) {
+            this.ackRecord = ackRecord;
+            return this;
+        }
+
+        public Builder setADUs(List<ADU> ADUs) {
+            this.ADUs = ADUs;
+            return this;
+        }
+
+        public Builder setBundleId(String bundleId) {
+            this.bundleId = bundleId;
+            return this;
+        }
+
+        public Builder setSource(File source) {
+            this.source = source;
+            return this;
+        }
+
+        public UncompressedPayload build() {
+            return new UncompressedPayload(this.bundleId, this.ackRecord, this.ADUs, this.source);
+        }
     }
-  }
 }

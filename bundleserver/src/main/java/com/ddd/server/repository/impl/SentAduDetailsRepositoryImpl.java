@@ -59,7 +59,8 @@
 
 //     if (opt.isEmpty()) {
 //       this.jdbcTemplate.update(
-//           "INSERT INTO sent_adu_details (id, bundle_id, app_id, adu_id_range_start, adu_id_range_end) VALUES (?, ?, ?, ?, ?)",
+//           "INSERT INTO sent_adu_details (id, bundle_id, app_id, adu_id_range_start, adu_id_range_end) VALUES (?,
+//           ?, ?, ?, ?)",
 //           UUID.randomUUID().toString(),
 //           record.getBundleId(),
 //           record.getAppId(),
@@ -67,7 +68,8 @@
 //           record.getAduIdRangeEnd());
 //     } else {
 //       this.jdbcTemplate.update(
-//           "UPDATE sent_adu_details SET bundle_id = ?, app_id = ?, adu_id_range_start = ?, adu_id_range_end = ? where id = ?",
+//           "UPDATE sent_adu_details SET bundle_id = ?, app_id = ?, adu_id_range_start = ?, adu_id_range_end = ?
+//           where id = ?",
 //           record.getBundleId(),
 //           record.getAppId(),
 //           record.getAduIdRangeStart(),

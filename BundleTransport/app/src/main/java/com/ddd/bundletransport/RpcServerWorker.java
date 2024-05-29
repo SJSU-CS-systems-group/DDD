@@ -31,11 +31,10 @@ public class RpcServerWorker extends Worker {
     }
 
     private void startRpcServer() {
-        server = NettyServerBuilder.forAddress(address)
-                .addService(new FileServiceImpl(getApplicationContext()))
-                .build();
+        server =
+                NettyServerBuilder.forAddress(address).addService(new FileServiceImpl(getApplicationContext())).build();
 
-        Log.d(MainActivity.TAG, "start rpc server at:"+server.toString());
+        Log.d(MainActivity.TAG, "start rpc server at:" + server.toString());
         try {
             server.start().awaitTermination();
 

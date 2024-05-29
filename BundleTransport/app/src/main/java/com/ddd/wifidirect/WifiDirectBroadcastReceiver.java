@@ -31,6 +31,7 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
 
     /**
      * ctor
+     *
      * @param manager WifiDirectManager
      */
     public WifiDirectBroadcastReceiver(WifiDirectManager manager) {
@@ -41,8 +42,9 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
     /**
      * Listener callback whenever one of the registered WifiDirect Intents
      * that were registered WifiDirectManager are triggered
+     *
      * @param context Context/MainActivity where the intent is triggered
-     * @param intent Intent object containing triggered action.
+     * @param intent  Intent object containing triggered action.
      */
 
     @Override
@@ -56,17 +58,13 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
             if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
                 Log.d(MainActivity.TAG, "P2P state changed Wifi Direct is enabled - " + state);
                 // auto start gRPC server when app is opened
-                    Log.d(MainActivity.TAG, "Starting server, at least one device is connected to group");
-                    Data data = new Data.Builder().putInt("PORT", 1778).build();
-                    PeriodicWorkRequest request = new PeriodicWorkRequest.Builder(
-                            RpcServerWorker.class,
-                            15, TimeUnit.MINUTES,
-                            15, TimeUnit.MINUTES)
-                            .setInputData(data)
-                            .build();
-                    WorkManager.getInstance(context)
-                            .enqueueUniquePeriodicWork(MainActivity.TAG,
-                                    ExistingPeriodicWorkPolicy.REPLACE, request);
+                Log.d(MainActivity.TAG, "Starting server, at least one device is connected to group");
+                Data data = new Data.Builder().putInt("PORT", 1778).build();
+                PeriodicWorkRequest request =
+                        new PeriodicWorkRequest.Builder(RpcServerWorker.class, 15, TimeUnit.MINUTES, 15,
+                                                        TimeUnit.MINUTES).setInputData(data).build();
+                WorkManager.getInstance(context)
+                        .enqueueUniquePeriodicWork(MainActivity.TAG, ExistingPeriodicWorkPolicy.REPLACE, request);
             } else {
                 Log.d(MainActivity.TAG, "P2P state changed Wifi Direct is not enabled - " + state);
             }
@@ -92,26 +90,22 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
             // Gets the wifiP2pGroup
             // Not needed at this time
             // WifiP2pGroup group = (WifiP2pGroup)  intent.
-                    //getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP);
+            //getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP);
 
-            NetworkInfo networkInfo = (NetworkInfo) intent
-                    .getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
+            NetworkInfo networkInfo = (NetworkInfo) intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
 
             if (networkInfo.isConnected()) {
                 // we are connected, request connection
                 // info to find group owner IP
                 this.manager.setConnected(true);
-               this.manager.getManager().requestConnectionInfo(this.manager.getChannel(), this.manager);
-                Log.d(MainActivity.TAG,"WIFI_P2P_CONNECTION_CHANGED_ACTION connected");
-            }
-        else {
+                this.manager.getManager().requestConnectionInfo(this.manager.getChannel(), this.manager);
+                Log.d(MainActivity.TAG, "WIFI_P2P_CONNECTION_CHANGED_ACTION connected");
+            } else {
                 // It's a disconnect
                 this.manager.setConnected(false);
-                Log.d(MainActivity.TAG,
-                        "WIFI_P2P_CONNECTION_CHANGED_ACTION disconnected");
+                Log.d(MainActivity.TAG, "WIFI_P2P_CONNECTION_CHANGED_ACTION disconnected");
             }
-        }
-        else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
+        } else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
             // unneeded
             // was a UI update in the orginal WifiDirect example
         }
