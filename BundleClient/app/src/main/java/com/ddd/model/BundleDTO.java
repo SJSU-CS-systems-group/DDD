@@ -5,6 +5,27 @@ public class BundleDTO {
     private String bundleId;
     private Bundle bundle;
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
     public String getBundleId() {
         return this.bundleId;
     }
