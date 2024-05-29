@@ -190,29 +190,6 @@
 				<version>1.6.2</version>
 			</extension>
 		</extensions>
-		<pluginManagement>
-			<plugins>
-				<plugin>
-					<groupId>org.xolstice.maven.plugins</groupId>
-					<artifactId>protobuf-maven-plugin</artifactId>
-					<version>0.6.1</version>
-					<extensions>true</extensions>
-					<configuration>
-						<protocArtifact>com.google.protobuf:protoc:3.5.1:exe:${custom.os.classifier}</protocArtifact>
-						<pluginId>grpc-java</pluginId>
-						<pluginArtifact>io.grpc:protoc-gen-grpc-java:1.50.2:exe:${custom.os.classifier}</pluginArtifact>
-					</configuration>
-					<executions>
-						<execution>
-							<goals>
-								<goal>compile</goal>
-								<goal>compile-custom</goal>
-							</goals>
-						</execution>
-					</executions>
-				</plugin>
-			</plugins>
-		</pluginManagement>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
@@ -239,6 +216,21 @@
 			<plugin>
 				<groupId>org.xolstice.maven.plugins</groupId>
 				<artifactId>protobuf-maven-plugin</artifactId>
+				<version>0.6.1</version>
+				<extensions>true</extensions>
+				<configuration>
+					<protocArtifact>com.google.protobuf:protoc:3.5.1:exe:${custom.os.classifier}</protocArtifact>
+					<pluginId>grpc-java</pluginId>
+					<pluginArtifact>io.grpc:protoc-gen-grpc-java:1.50.2:exe:${custom.os.classifier}</pluginArtifact>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>compile</goal>
+							<goal>compile-custom</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>
