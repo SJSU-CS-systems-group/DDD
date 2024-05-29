@@ -88,8 +88,8 @@ public class ServerSecurity {
             e.printStackTrace();
             System.out.printf(
                     "Error loading server keys. Ensure the following key files exist in your application.yml's " +
-                            "{bundle-server.bundle-security.server-serverkeys-path} path:\n" +
-                            "%s\n" + "server_identity.pub\n" + "serverIdentity.pvt\n" + "server_signed_pre.pub\n" +
+                            "{bundle-server.bundle-security.server-serverkeys-path} path:\n" + "%s\n" +
+                            "server_identity.pub\n" + "serverIdentity.pvt\n" + "server_signed_pre.pub\n" +
                             "serverSignedPreKey.pvt\n" + "server_ratchet.pub\n" + "serverRatchetKey.pvt\n",
                     serverKeyPath);
             // BundleServerApplication.exit();
