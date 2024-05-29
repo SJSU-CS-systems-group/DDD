@@ -52,20 +52,20 @@ public class BundleServerApplication {
 
         if (args.length > 0) {
             Resource resource = new FileSystemResource(args[0]);
-            if (resource.exists()){
+            if (resource.exists()) {
                 try {
                     Properties properties = PropertiesLoaderUtils.loadProperties(resource);
                     app.setDefaultProperties(properties);
                     args = Arrays.copyOfRange(args, 1, args.length);
-                } catch (Exception e){
+                } catch (Exception e) {
                     log.error("Please enter valid properties file path!");
                     System.exit(1);
                 }
-            }else {
+            } else {
                 log.error("Entered properties file path does not exist!");
                 System.exit(1);
             }
-        }else {
+        } else {
             log.error("Please enter properties file path as argument!");
             System.exit(1);
         }
