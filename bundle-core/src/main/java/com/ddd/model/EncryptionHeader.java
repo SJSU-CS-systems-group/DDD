@@ -24,4 +24,23 @@ public class EncryptionHeader {
         this.serverIdentityKey = serverIdentityKey;
         this.serverRatchetKey = serverRatchetKey;
     }
+
+    private File clientBaseKey;
+    private File clientIdentityKey;
+
+    public EncryptionHeader(File clientBaseKey, File clientIdentityKey) {
+        this.clientBaseKey = clientBaseKey;
+        this.clientIdentityKey = clientIdentityKey;
+        this.serverSignedPreKey = null;
+        this.serverIdentityKey = null;
+        this.serverRatchetKey = null;
+    }
+
+    public File getClientBaseKey() {
+        return clientBaseKey;
+    }
+
+    public File getClientIdentityKey() {
+        return clientIdentityKey;
+    }
 }
