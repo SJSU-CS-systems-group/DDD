@@ -35,7 +35,7 @@ jobs:
   # Github Action to detect file changes between
   # main branch and pull request branch
   changes:
-    # needs: format
+    needs: format
     runs-on: ubuntu-latest
     outputs:
       core: ${{ steps.filter.outputs.core }}
