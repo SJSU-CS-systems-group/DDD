@@ -9,7 +9,8 @@ public class BundleWrapper {
     private File payloadSignature;
     private File source;
 
-    public BundleWrapper(String bundleId, EncryptionHeader encHeader, EncryptedBundle encbundle, File source, File payloadSignature) {
+    public BundleWrapper(String bundleId, EncryptionHeader encHeader, EncryptedBundle encbundle, File source,
+                         File payloadSignature) {
         this.bundleId = bundleId;
         this.encHeader = encHeader;
         this.encbundle = encbundle;
