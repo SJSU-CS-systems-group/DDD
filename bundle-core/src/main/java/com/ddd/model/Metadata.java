@@ -1,2 +1,3 @@
-package com.ddd.model;public class metadata {
-}
+package com.ddd.model;
+
+public class metadata {}

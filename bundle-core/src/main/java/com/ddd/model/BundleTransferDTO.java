@@ -1,2 +1,3 @@
-package com.ddd.model;public class BundleTransferDTO {
-}
+package com.ddd.model;
+
+public class BundleTransferDTO {}
