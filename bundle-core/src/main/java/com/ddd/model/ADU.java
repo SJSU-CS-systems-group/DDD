@@ -2,8 +2,10 @@ package com.ddd.model;
 
 import java.io.File;
 import java.util.Objects;
+import java.lang.Comparable;
 
-public class ADU {
+public class ADU implements Comparable<ADU> {
+
     private File source;
 
     private final String appId;
@@ -75,5 +77,14 @@ public class ADU {
         }
         ADU other = (ADU) obj;
         return this.aduId == other.aduId && Objects.equals(this.appId, other.appId);
+    }
+
+    @Override
+    public int compareTo(ADU o) {
+        int ret = appId.compareTo(o.getAppId());
+        if (ret == 0) {
+            ret = (int) (aduId - o.getADUId());
+        }
+        return ret;
     }
 }
