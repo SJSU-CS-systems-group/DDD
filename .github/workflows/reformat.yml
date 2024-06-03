@@ -1,8 +1,7 @@
 name: Re-format Code
 
 on:
-  pull_request:
-    branches: main
+  workflow_call:
 
 jobs:
   format:

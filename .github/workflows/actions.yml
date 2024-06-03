@@ -1,14 +1,14 @@
 name: Build Modules
 
 on:
-  push:
+  pull_request:
+    branches: main
 
 jobs:
   # Github Action to detect file changes between
   # main branch and pull request branch
   changes:
     runs-on: ubuntu-latest
-    if: ${{ github.actor == 'github-actions[bot]'}}
     outputs:
       core: ${{ steps.filter.outputs.core }}
       client: ${{ steps.filter.outputs.client }}
@@ -123,14 +123,14 @@ jobs:
         working-directory: ./bundleserver
         run: mvn package
 
-  # call-auto-formatter:
-  #   needs:
-  #     [
-  #       changes,
-  #       build-bundle-core,
-  #       build-bundle-client,
-  #       build-bundle-transport,
-  #       build-bundle-server,
-  #     ]
-  #   if: ${{ always() && (needs.*.result == 'success' || needs.*.result == 'skipped')}}
-  #   uses: SJSU-CS-systems-group/DDD/.github/workflows/reformat.yml@e1a5b5d545257636739b62cfd69eac17c63e24d3
+  call-auto-formatter:
+    needs:
+      [
+        changes,
+        build-bundle-core,
+        build-bundle-client,
+        build-bundle-transport,
+        build-bundle-server,
+      ]
+    if: ${{ always() }}
+    uses: SJSU-CS-systems-group/DDD/.github/workflows/reformat.yml@e1a5b5d545257636739b62cfd69eac17c63e24d3
