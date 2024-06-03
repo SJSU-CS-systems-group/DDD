@@ -3,9 +3,6 @@ name: Re-format Code
 on:
   workflow_call:
 
-env:
-  finished: false
-
 jobs:
   format:
     runs-on: ubuntu-latest
