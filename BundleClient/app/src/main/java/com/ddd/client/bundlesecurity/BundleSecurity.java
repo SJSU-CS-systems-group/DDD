@@ -158,7 +158,7 @@ public class BundleSecurity {
         return clientBundleGenerator.generateBundleID();
     }
 
-    public String getClientId(){
+    public String getClientId() {
         return client.getClientID();
     }
 

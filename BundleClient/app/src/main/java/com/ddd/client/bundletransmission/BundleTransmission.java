@@ -235,8 +235,10 @@ public class BundleTransmission {
         Bundle toSend = BundleUtils.compressBundle(uncompressedBundle, targetDir.getAbsolutePath());
         this.applicationDataManager.notifyBundleSent(toSendBundlePayload);
 
-        String clientId =  bundleSecurity.getClientId();
-        System.out.println("[BT] Generated new bundle for transmission with bundle id: " + bundleId + ", and clientId: " + clientId);
+        String clientId = bundleSecurity.getClientId();
+        System.out.println(
+                "[BT] Generated new bundle for transmission with bundle id: " + bundleId + ", and clientId: " +
+                        clientId);
         return new BundleDTO(clientId, bundleId, toSend);
     }
 
