@@ -1,12 +1,11 @@
 name: Build Modules
-# Runs workflow only when pull requests are made to 
-# the 'main' branch
+
 on:
   pull_request:
     branches: main
 
 jobs:
-  # Github Action to detect file changes between 
+  # Github Action to detect file changes between
   # main branch and pull request branch
   changes:
     runs-on: ubuntu-latest
@@ -18,7 +17,7 @@ jobs:
     steps:
       - uses: dorny/paths-filter@v3
         id: filter
-        with: 
+        with:
           # Detect any changes to the following folders
           filters: |
             core:
@@ -29,7 +28,6 @@ jobs:
               - 'BundleTransport/**'
             server:
               - 'bundleserver/**'
-
 
   # Github Action to Compile bundle-core
   build-bundle-core:
@@ -43,14 +41,13 @@ jobs:
 
       - name: Setup JDK 17
         uses: actions/setup-java@v3
-        with: 
-          java-version: '17'
-          distribution: 'temurin'
-      
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
       - name: Run maven package on bundle-core
         working-directory: ./bundle-core
         run: mvn package
-
 
   # Github Action to Compile BundleClient
   build-bundle-client:
@@ -59,26 +56,25 @@ jobs:
     if: ${{ needs.changes.outputs.client == 'true' }}
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Setup gradle
-      uses: gradle/gradle-build-action@v2
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Setup JDK 17
-      uses: actions/setup-java@v3
-      with: 
-        java-version: '17'
-        distribution: 'temurin'
+      - name: Setup gradle
+        uses: gradle/gradle-build-action@v2
 
-    - name: Run maven package on server dependency > bundle-core
-      working-directory: ./bundle-core
-      run: mvn install
+      - name: Setup JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: "17"
+          distribution: "temurin"
 
-    - name: Run gradle build on BundleClient
-      working-directory: ./BundleClient
-      run: ./gradlew build
+      - name: Run maven package on server dependency > bundle-core
+        working-directory: ./bundle-core
+        run: mvn install
 
+      - name: Run gradle build on BundleClient
+        working-directory: ./BundleClient
+        run: ./gradlew build
 
   # Github Action to Compile BundleTransport
   build-bundle-transport:
@@ -87,22 +83,21 @@ jobs:
     if: ${{ needs.changes.outputs.transport == 'true' }}
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Setup gradle
-      uses: gradle/gradle-build-action@v2
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Setup JDK 17
-      uses: actions/setup-java@v3
-      with: 
-        java-version: '17'
-        distribution: 'temurin'
+      - name: Setup gradle
+        uses: gradle/gradle-build-action@v2
 
-    - name: Run gradle build on BundleTransport
-      working-directory: ./BundleTransport
-      run: ./gradlew build
+      - name: Setup JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: "17"
+          distribution: "temurin"
 
+      - name: Run gradle build on BundleTransport
+        working-directory: ./BundleTransport
+        run: ./gradlew build
 
   # Github Action to Compile bundleserver
   build-bundle-server:
@@ -113,17 +108,29 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        
+
       - name: Setup JDK 17
         uses: actions/setup-java@v3
-        with: 
-          java-version: '17'
-          distribution: 'temurin'
+        with:
+          java-version: "17"
+          distribution: "temurin"
 
       - name: Run maven package on server dependency > bundle-core
         working-directory: ./bundle-core
         run: mvn install
-      
+
       - name: Run maven package on BundleServer
         working-directory: ./bundleserver
         run: mvn package
+
+  call-auto-formatter:
+    needs:
+      [
+        changes,
+        build-bundle-core,
+        build-bundle-client,
+        build-bundle-transport,
+        build-bundle-server,
+      ]
+    if: ${{ always() }}
+    uses: SJSU-CS-systems-group/DDD/.github/workflows/reformat.yml@e1a5b5d545257636739b62cfd69eac17c63e24d3
