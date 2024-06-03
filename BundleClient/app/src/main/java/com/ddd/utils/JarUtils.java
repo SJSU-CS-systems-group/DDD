@@ -10,20 +10,15 @@ import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 //import java.util.Base64;
-
 import java.util.Enumeration;
-
 import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import java.util.zip.CRC32;
 import java.util.zip.CheckedInputStream;
-
 import android.util.Base64;
-
 import com.ddd.datastore.filestore.FileStoreHelper;
 
 public class JarUtils {

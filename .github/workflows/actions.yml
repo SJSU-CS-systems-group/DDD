@@ -2,6 +2,7 @@ name: Build Modules
 
 on:
   push:
+    branches: main
 
 jobs:
   # Github Action to detect file changes between
