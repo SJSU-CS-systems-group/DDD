@@ -2,13 +2,13 @@ name: Build Modules
 
 on:
   push:
-    branches: main
 
 jobs:
   # Github Action to detect file changes between
   # main branch and pull request branch
   changes:
     runs-on: ubuntu-latest
+    if: ${{ github.actor == 'github-actions[bot]'}}
     outputs:
       core: ${{ steps.filter.outputs.core }}
       client: ${{ steps.filter.outputs.client }}
