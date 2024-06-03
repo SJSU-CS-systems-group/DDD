@@ -1,9 +1,7 @@
 name: Build Modules
 
 on:
-  workflow_run:
-    workflows: [Re-format Code]
-    types: [completed]
+  workflow_call:
 
 jobs:
   # Github Action to detect file changes between
