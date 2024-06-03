@@ -133,4 +133,4 @@ jobs:
         build-bundle-server,
       ]
     if: ${{ always() }}
-    uses: SJSU-CS-systems-group/DDD/.github/workflows/reformat.yml@e1a5b5d545257636739b62cfd69eac17c63e24d3
+    uses: SJSU-CS-systems-group/DDD/.github/workflows/reformat.yml@main
