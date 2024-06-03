@@ -5,12 +5,7 @@ import java.io.File;
 public class Bundle {
     private final File source;
 
-
-
-
     // hello
-
-
 
     public Bundle(File source) {
         this.source = source;
