@@ -1,9 +1,7 @@
 name: Re-format Code
 
 on:
-  pull_request:
-    branches:
-      - main
+  workflow_call:
 
 env:
   finished: false
@@ -33,7 +31,3 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git commit -a -m "Auto-format code"
           git push
-
-  call-workflow:
-    needs: format
-    uses: SJSU-CS-systems-group/DDD/.github/workflows/actions.yml@ba7f3913332bf7be1ce857ca16491e19ae0fa67f

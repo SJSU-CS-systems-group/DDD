@@ -1,7 +1,8 @@
 name: Build Modules
 
 on:
-  workflow_call:
+  pull_request:
+    branches: main
 
 jobs:
   # Github Action to detect file changes between
@@ -121,3 +122,14 @@ jobs:
       - name: Run maven package on BundleServer
         working-directory: ./bundleserver
         run: mvn package
+
+  call-auto-formatter:
+    needs:
+      [
+        changes,
+        build-bundle-core,
+        build-bundle-client,
+        build-bundle-transport,
+        build-bundle-server,
+      ]
+    uses: ./.github/workflows/reformat.yml
