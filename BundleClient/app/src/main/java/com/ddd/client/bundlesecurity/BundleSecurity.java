@@ -158,6 +158,10 @@ public class BundleSecurity {
         return clientBundleGenerator.generateBundleID();
     }
 
+    public String getClientId(){
+        return client.getClientID();
+    }
+
     public UncompressedBundle encryptPayload(Payload payload, String bundleGenDirPath) {
         String bundleId = payload.getBundleId();
         Log.d(HelloworldActivity.TAG, "encrypting payload in bundleId: " + bundleId);
