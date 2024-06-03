@@ -40,6 +40,8 @@ public class MessageProvider extends ContentProvider {
 
     private static HashMap<String, String> values;
     static final UriMatcher uriMatcher;
+
+    private StoreADUs storeADUsManager;
     private FileStoreHelper fileStoreHelper;
 
     static {
@@ -65,8 +67,10 @@ public class MessageProvider extends ContentProvider {
     public boolean onCreate() {
         DBHelper dbHelper = new DBHelper(getContext());
         sqlDB = dbHelper.getWritableDatabase();
-        fileStoreHelper = new FileStoreHelper(getContext().getApplicationInfo().dataDir + "/send",
-                                              getContext().getApplicationInfo().dataDir);
+//        fileStoreHelper = new FileStoreHelper(getContext().getApplicationInfo().dataDir + "/send",
+//                                              getContext().getApplicationInfo().dataDir);
+        storeADUsManager = new StoreADUs(getContext().getApplicationInfo().dataDir + "/send",
+                getContext().getApplicationInfo().dataDir);
         if (sqlDB != null) return true;
         return false;
     }
@@ -81,7 +85,8 @@ public class MessageProvider extends ContentProvider {
 
         try {
             String appId = getCallerAppId();
-            List<byte[]> datalist = fileStoreHelper.getAllAppData(appId);
+//            List<byte[]> datalist = fileStoreHelper.getAllAppData(appId);
+            List<byte[]> datalist = storeADUsManager.getAllAppData(appId);
             cursor = new MatrixCursor(new String[] { "data" });
             for (byte[] data : datalist) {
 
@@ -126,7 +131,8 @@ public class MessageProvider extends ContentProvider {
             String appName = getCallerAppId();
             byte[] data = contentValues.getAsByteArray("data");
             logger.log(INFO, "bundleclient", "inserting: " + new String(data));
-            return fileStoreHelper.addFile(appName, data);
+//            return fileStoreHelper.addFile(appName, data);
+            return storeADUsManager.addFile(appName, data, true);
         } catch (IOException e) {
             logger.log(WARNING, "bundleclient", "Unable to add file, error: " + e.getMessage());
             return null;

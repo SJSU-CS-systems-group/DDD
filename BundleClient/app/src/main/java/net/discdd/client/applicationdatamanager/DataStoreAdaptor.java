@@ -25,13 +25,15 @@ public class DataStoreAdaptor {
 
     private static final Logger logger = Logger.getLogger(DataStoreAdaptor.class.getName());
 
-    private FileStoreHelper sendFileStoreHelper;
-    private FileStoreHelper receiveFileStoreHelper;
+//    private FileStoreHelper sendFileStoreHelper;
+//    private FileStoreHelper receiveFileStoreHelper;
+    private StoreADUs sendADUsStorage;
+    private StoreADUs receiveADUsStorage;
     private Context applicationContext;
 
     public DataStoreAdaptor(Path appRootDataDirectory) {
-        sendFileStoreHelper = new FileStoreHelper(appRootDataDirectory + "/send");
-        receiveFileStoreHelper = new FileStoreHelper(appRootDataDirectory + "/receive");
+        sendADUsStorage = new StoreADUs(appRootDataDirectory + "/send");
+        receiveADUsStorage = new StoreADUs(appRootDataDirectory + "/receive");
     }
 
     private void sendDataToApp(ADU adu) throws IOException {
@@ -39,7 +41,7 @@ public class DataStoreAdaptor {
         Intent intent = new Intent("android.intent.dtn.SEND_DATA");
         intent.setPackage(adu.getAppId());
         intent.setType("text/plain");
-        byte[] data = receiveFileStoreHelper.getDataFromFile(adu.getSource());
+        byte[] data = receiveADUsStorage.getDataFromFile(adu.getSource());
         logger.log(FINE, new String(data) + ", Source:" + adu.getSource());
         intent.putExtra(Intent.EXTRA_TEXT, data);
         applicationContext = HelloworldActivity.ApplicationContext;
@@ -52,7 +54,7 @@ public class DataStoreAdaptor {
 
     public void persistADU(ADU adu) throws IOException {
         logger.log(INFO, "Persisting ADUs: " + adu.getADUId() + "," + adu.getSource());
-        receiveFileStoreHelper.addFile(adu.getAppId(), receiveFileStoreHelper.getDataFromFile(adu.getSource()));
+        receiveADUsStorage.addFile(adu.getAppId(), receiveADUsStorage.getDataFromFile(adu.getSource()), true);
         sendDataToApp(adu);
         logger.log(INFO,
                    "[ADM-DSA] Persisting inbound ADU " + adu.getAppId() + "-" + adu.getADUId() + " to the Data Store");
@@ -65,14 +67,14 @@ public class DataStoreAdaptor {
 
     public void deleteADUs(String appId, long aduIdEnd) throws IOException {
 
-        sendFileStoreHelper.deleteAllFilesUpTo(appId, aduIdEnd);
+        sendADUsStorage.deleteAllFilesUpTo(null, appId, aduIdEnd);
         logger.log(INFO, "[DSA] Deleted ADUs for application " + appId + " with id upto " + aduIdEnd);
         logger.log(INFO, "[ADM-DSA] Deleting outbound ADUs of application " + appId + " upto id " + aduIdEnd);
     }
 
     private ADU fetchADU(String appId, long aduId) {
         try {
-            File file = sendFileStoreHelper.getADUFile(appId, aduId + "");
+            File file = sendADUsStorage.getADUFile(null, appId, aduId + "");
             FileInputStream fis = new FileInputStream(file);
             int fileSize = fis.available();
             logger.log(FINER, "Size:" + fileSize);

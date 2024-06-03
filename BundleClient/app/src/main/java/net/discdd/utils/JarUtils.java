@@ -5,9 +5,10 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-//import java.util.Base64;
+import java.util.Base64;
 import java.util.Enumeration;
 import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
@@ -67,7 +68,7 @@ public class JarUtils {
                     attributes = new Attributes();
                     manifest.getEntries().put(path + file.getName(), attributes);
                 }
-                attributes.putValue("SHA-256-Digest", Base64.encodeToString(messageDigest.digest(), Base64.DEFAULT));
+                attributes.putValue("SHA-256-Digest", Base64.getEncoder().encodeToString(messageDigest.digest()));
 
                 // Close the JAR entry
                 jarOutputStream.closeEntry();
@@ -150,11 +151,8 @@ public class JarUtils {
 
                 // Verify the checksum of the extracted file
                 MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
-//                byte[] fileBytes = Files.readAllBytes(destinationFile.toPath());
-                FileStoreHelper helper = new FileStoreHelper(destinationFile.getParent());
-                byte[] fileBytes = helper.getDataFromFile(destinationFile);
-//                String fileChecksum = Base64.getEncoder().encodeToString(messageDigest.digest(fileBytes));
-                String fileChecksum = Base64.encodeToString(messageDigest.digest(fileBytes), Base64.DEFAULT);
+                var fileBytes = Files.readAllBytes(destinationFile.toPath());
+                String fileChecksum = Base64.getEncoder().encodeToString(messageDigest.digest(fileBytes));
                 fileChecksum = fileChecksum.trim().replaceAll("\n$", "");
                 String manifestChecksum = manifest.getEntries().get(entry.getName()).getValue("SHA-256-Digest");
                 if (!fileChecksum.equals(manifestChecksum)) {

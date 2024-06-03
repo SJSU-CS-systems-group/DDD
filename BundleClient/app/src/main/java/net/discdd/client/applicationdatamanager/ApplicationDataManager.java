@@ -287,7 +287,7 @@ public class ApplicationDataManager {
         this.stateManager.processAcknowledgement(bundleId);
     }
 
-    public void storeADUs(List<ADU> adus) {
+    public void storeADUs(String clientId, String bundleId, List<ADU> adus) {
         System.out.println("[ADM] Storing ADUs in the Data Store, Size:" + adus.size());
 
         for (final ADU adu : adus) {
@@ -309,7 +309,7 @@ public class ApplicationDataManager {
         }
     }
 
-    public List<ADU> fetchADUs(long initialSize) {
+    public List<ADU> fetchADUs(long initialSize, String clientId) {
         long cumulativeSize = initialSize;
         List<ADU> res = new ArrayList<>();
         boolean exceededSize = false;
