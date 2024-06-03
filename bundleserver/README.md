@@ -45,20 +45,19 @@ in the resources/application.yml file change the spring.datasource.password attr
 Additional Notes
 ----------------
 
-For M1 and M2 Mac models please change protobuf-maven-plugin (found in pom.xml file) from
+For running server (in server mode), add custom properties in an application.properties file, outside of your git repository
+and add its path as program argument on run command.
+java -jar {jar file} {custom application.properties file}
+
+Sample application.properties file:
 ```
-<configuration>
-    <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
-    <pluginId>grpc-java</pluginId>
-    <pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
-</configuration>
+spring.datasource.password = tripti
+bundle-server.bundle-store-root = C:/Users/tript/IdeaProjects/DDD/bundleserver
 ```
-to:
+Sample server run command:
 ```
-<configuration>
-    <protocArtifact>com.google.protobuf:protoc:3.5.1:exe:osx-x86_64</protocArtifact>
-    <pluginId>grpc-java</pluginId>
-    <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.50.2:exe:osx-x86_64</pluginArtifact>
-</configuration>
+java -jar \target\bundleserver-0.0.1-SNAPSHOT.jar C:/Users/tripti/Downloads/application.properties   
 ```
+Do not add your custom application.properties in git
+
 AND: Use IntelliJ IDEA for IDE
