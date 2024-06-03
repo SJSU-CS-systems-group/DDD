@@ -132,5 +132,5 @@ jobs:
         build-bundle-transport,
         build-bundle-server,
       ]
-    if: ${{ always() }}
-    uses: SJSU-CS-systems-group/DDD/.github/workflows/reformat.yml@e1a5b5d545257636739b62cfd69eac17c63e24d3
+    if: ${{ always() && (needs.*.result == 'success' || needs.*.result == 'skipped')}}
+    uses: SJSU-CS-systems-group/DDD/.github/workflows/reformat.yml
