@@ -2,7 +2,7 @@ name: Build Modules
 
 on:
   workflow_run:
-    workflows: ["Re-format Code"]
+    workflows: [Re-format Code]
     types: [completed]
 
 jobs:
