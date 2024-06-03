@@ -35,4 +35,5 @@ jobs:
           git push
 
   call-workflow:
+    needs: format
     uses: SJSU-CS-systems-group/DDD/.github/workflows/actions.yml@ba7f3913332bf7be1ce857ca16491e19ae0fa67f
