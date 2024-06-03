@@ -132,4 +132,4 @@ jobs:
         build-bundle-transport,
         build-bundle-server,
       ]
-    uses: ./.github/workflows/reformat.yml
+    uses: ./.github/workflows/reformat.yml@e1a5b5d545257636739b62cfd69eac17c63e24d3
