@@ -182,10 +182,8 @@ public class BundleSecurity {
             EncryptedPayload encryptedPayload = new EncryptedPayload(bundleId, new File(paths[0]));
 
             File source = new File(bundleGenDirPath + File.separator + bundleId);
-            EncryptionHeader encHeader = EncryptionHeader.builder()
-                    .serverSignedPreKey(new File(paths[2]))
-                    .serverIdentityKey(new File(paths[3]))
-                    .serverRatchetKey(new File(paths[4])).build();
+            EncryptionHeader encHeader = EncryptionHeader.builder().serverSignedPreKey(new File(paths[2]))
+                    .serverIdentityKey(new File(paths[3])).serverRatchetKey(new File(paths[4])).build();
             return new UncompressedBundle( // TODO get encryption header, payload signature
                                            bundleId, source, encHeader, encryptedPayload, new File(paths[1]));
 
