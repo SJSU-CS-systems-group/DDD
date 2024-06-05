@@ -1,6 +1,7 @@
 package com.ddd.model;
 
 public class BundleDTO {
+
     private String bundleId;
     private Bundle bundle;
 
