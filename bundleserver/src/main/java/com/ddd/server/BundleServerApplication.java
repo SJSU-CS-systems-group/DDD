@@ -42,14 +42,6 @@ public class BundleServerApplication {
             }
         }
         var app = new MySpringApplication(BundleServerApplication.class);
-        if (CommandProcessor.checkForCommand(args)) {
-            // we are doing a CLI command, so don't start up like a server
-            app.setWebApplicationType(WebApplicationType.NONE);
-            app.setBannerMode(Banner.Mode.OFF);
-            app.setLogStartupInfo(false);
-        }
-        new BundleUploader().run(args);
-
         if (args.length > 0) {
             Resource resource = new FileSystemResource(args[0]);
             if (resource.exists()) {
@@ -69,6 +61,14 @@ public class BundleServerApplication {
             log.error("Please enter properties file path as argument!");
             System.exit(1);
         }
+
+        if (CommandProcessor.checkForCommand(args)) {
+            // we are doing a CLI command, so don't start up like a server
+            app.setWebApplicationType(WebApplicationType.NONE);
+            app.setBannerMode(Banner.Mode.OFF);
+            app.setLogStartupInfo(false);
+        }
+        new BundleUploader().run(args);
 
         app.run(args);
     }
