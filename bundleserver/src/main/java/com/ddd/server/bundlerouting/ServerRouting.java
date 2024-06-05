@@ -17,7 +17,7 @@ import org.springframework.stereotype.Repository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.ddd.server.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
+import com.ddd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
 import com.ddd.server.storage.SNRDatabases;
 
 @Repository
