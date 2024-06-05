@@ -86,7 +86,7 @@ public class BundleTransmission {
 
             String serverIdReceived = SecurityUtils.generateID(
                     uncompressedBundle.getSource() + File.separator + SecurityUtils.SERVER_IDENTITY_KEY);
-            if (!bundleSecurity.bundleServerIdMatchesCurrentServer(serverIdReceived)){
+            if (!bundleSecurity.bundleServerIdMatchesCurrentServer(serverIdReceived)) {
                 logger.log(Level.WARNING, "Received bundle's serverIdentity didn't match with current server, " +
                         "ignoring bundle with bundleId: " + uncompressedBundle.getBundleId());
                 return;
