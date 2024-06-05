@@ -280,22 +280,6 @@ public class ServerWindow {
         return getClientWindow(clientID).isBufferFull();
     }
 
-    /* Return the bundles in the client's window
-     * Parameter:
-     * clientID     : encoded clientID
-     * Returns:
-     * Array of bundlesIDs present in the client's window
-     */
-    public String[] getclientWindow(String clientID) throws ClientWindowNotFound, InvalidClientIDException,
-            BundleIDCryptographyException {
-        String[] bundleIDs = getClientWindow(clientID).getBuffer();
-        for (int i = 0; i < bundleIDs.length; ++i) {
-            bundleIDs[i] = serverSecurity.encryptBundleID(bundleIDs[i], clientID);
-        }
-
-        return bundleIDs;
-    }
-
     public int compareBundleIDs(String id1, String id2, String clientID, boolean direction) throws BundleIDCryptographyException {
         String decryptedBundleID1 = serverSecurity.decryptBundleID(id1, clientID);
         String decryptedBundleID2 = serverSecurity.decryptBundleID(id2, clientID);
