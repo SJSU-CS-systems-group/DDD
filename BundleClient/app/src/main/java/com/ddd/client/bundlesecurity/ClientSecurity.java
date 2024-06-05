@@ -101,16 +101,18 @@ public class ClientSecurity {
     private String[] writeKeysToFiles(String path, boolean writePvt) throws EncodingException, IOException {
         /* Create Directory if it does not exist */
         SecurityUtils.createDirectory(path);
-        String[] clientKeypaths = { path + File.separator + SecurityUtils.CLIENT_IDENTITY_KEY,
-                path + File.separator + SecurityUtils.CLIENT_BASE_KEY };
+        String[] identityKeyPaths = { path + File.separator + SecurityUtils.CLIENT_IDENTITY_KEY,
+                path + File.separator + SecurityUtils.CLIENT_BASE_KEY,
+                path + File.separator + SecurityUtils.SERVER_IDENTITY_KEY};
 
         if (writePvt) {
             writePrivateKeys(path);
         }
 
-        SecurityUtils.createEncodedPublicKeyFile(ourIdentityKeyPair.getPublicKey().getPublicKey(), clientKeypaths[0]);
-        SecurityUtils.createEncodedPublicKeyFile(ourBaseKey.getPublicKey(), clientKeypaths[1]);
-        return clientKeypaths;
+        SecurityUtils.createEncodedPublicKeyFile(ourIdentityKeyPair.getPublicKey().getPublicKey(), identityKeyPaths[0]);
+        SecurityUtils.createEncodedPublicKeyFile(ourBaseKey.getPublicKey(), identityKeyPaths[1]);
+        SecurityUtils.createEncodedPublicKeyFile(theirIdentityKey.getPublicKey(), identityKeyPaths[2]);
+        return identityKeyPaths;
     }
 
     private void writePrivateKeys(String path) throws IOException {
@@ -308,14 +310,12 @@ public class ClientSecurity {
         inputStream.close();
 
         /* Create Encryption Headers */
-        String[] clientKeyPaths = createEncryptionHeader(encPath, bundleID);
+        String[] identityKeyPaths = createEncryptionHeader(encPath, bundleID);
 
         returnPaths.add(payloadPath);
         returnPaths.add(signPath);
 
-        for (String clientKeyPath : clientKeyPaths) {
-            returnPaths.add(clientKeyPath);
-        }
+        returnPaths.addAll(Arrays.asList(identityKeyPaths));
         return returnPaths.toArray(new String[returnPaths.size()]);
     }
 
