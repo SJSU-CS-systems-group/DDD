@@ -10,14 +10,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.core.env.Environment;
 
-import com.ddd.server.bundlerouting.WindowUtils.CircularBuffer;
-import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
-import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.ClientAlreadyExists;
-import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.ClientWindowNotFound;
-import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.InvalidBundleID;
-import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
-import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.RecievedInvalidACK;
-import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.RecievedOldACK;
+import com.ddd.bundlerouting.WindowUtils.CircularBuffer;
+import com.ddd.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
+import com.ddd.bundlerouting.WindowUtils.WindowExceptions.ClientAlreadyExists;
+import com.ddd.bundlerouting.WindowUtils.WindowExceptions.ClientWindowNotFound;
+import com.ddd.bundlerouting.WindowUtils.WindowExceptions.InvalidBundleID;
+import com.ddd.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
+import com.ddd.bundlerouting.WindowUtils.WindowExceptions.RecievedInvalidACK;
+import com.ddd.bundlerouting.WindowUtils.WindowExceptions.RecievedOldACK;
 import com.ddd.server.bundlesecurity.BundleIDGenerator;
 import com.ddd.server.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
 import com.ddd.server.bundlesecurity.SecurityExceptions.InvalidClientIDException;
@@ -278,22 +278,6 @@ public class ServerWindow {
      */
     public boolean isClientWindowFull(String clientID) throws ClientWindowNotFound {
         return getClientWindow(clientID).isBufferFull();
-    }
-
-    /* Return the bundles in the client's window
-     * Parameter:
-     * clientID     : encoded clientID
-     * Returns:
-     * Array of bundlesIDs present in the client's window
-     */
-    public String[] getclientWindow(String clientID) throws ClientWindowNotFound, InvalidClientIDException,
-            BundleIDCryptographyException {
-        String[] bundleIDs = getClientWindow(clientID).getBuffer();
-        for (int i = 0; i < bundleIDs.length; ++i) {
-            bundleIDs[i] = serverSecurity.encryptBundleID(bundleIDs[i], clientID);
-        }
-
-        return bundleIDs;
     }
 
     public int compareBundleIDs(String id1, String id2, String clientID, boolean direction) throws BundleIDCryptographyException {

@@ -19,7 +19,7 @@ import com.ddd.bundleclient.HelloworldActivity;
 import com.ddd.bundleclient.R;
 import com.ddd.client.bundlerouting.ClientBundleGenerator;
 import com.ddd.client.bundlerouting.ClientWindow;
-import com.ddd.client.bundlerouting.WindowUtils.WindowExceptions;
+import com.ddd.bundlerouting.WindowUtils.WindowExceptions;
 import com.ddd.model.EncryptedPayload;
 import com.ddd.model.EncryptionHeader;
 import com.ddd.model.Payload;
