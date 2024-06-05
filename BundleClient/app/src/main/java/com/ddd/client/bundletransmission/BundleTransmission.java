@@ -18,7 +18,7 @@ import com.ddd.client.applicationdatamanager.ApplicationDataManager;
 import com.ddd.client.bundlerouting.ClientBundleGenerator;
 import com.ddd.client.bundlerouting.ClientRouting;
 import com.ddd.client.bundlerouting.ClientWindow;
-import com.ddd.client.bundlerouting.RoutingExceptions;
+import com.ddd.bundlerouting.RoutingExceptions;
 import com.ddd.client.bundlesecurity.BundleIDGenerator;
 import com.ddd.client.bundlesecurity.BundleSecurity;
 import com.ddd.client.bundlesecurity.SecurityExceptions;
