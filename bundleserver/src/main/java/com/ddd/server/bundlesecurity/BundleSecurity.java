@@ -198,4 +198,12 @@ public class BundleSecurity {
         return this.serverSecurity.isNewerBundle(bundlePath, lastReceivedBundleID);
     }
 
+    public String getServerId() throws SecurityExceptions.IDGenerationException {
+        return serverSecurity.getServerId();
+    }
+
+    public boolean bundleServerIdMatchesCurrentServer(String receivedServerId) throws SecurityExceptions.IDGenerationException {
+        return receivedServerId.equals(getServerId());
+    }
+
 }
