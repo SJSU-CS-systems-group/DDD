@@ -103,7 +103,7 @@ public class ClientSecurity {
         SecurityUtils.createDirectory(path);
         String[] identityKeyPaths = { path + File.separator + SecurityUtils.CLIENT_IDENTITY_KEY,
                 path + File.separator + SecurityUtils.CLIENT_BASE_KEY,
-                path + File.separator + SecurityUtils.SERVER_IDENTITY_KEY};
+                path + File.separator + SecurityUtils.SERVER_IDENTITY_KEY };
 
         if (writePvt) {
             writePrivateKeys(path);
