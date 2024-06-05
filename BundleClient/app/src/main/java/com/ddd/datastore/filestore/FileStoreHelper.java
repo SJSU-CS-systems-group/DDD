@@ -4,7 +4,7 @@ import android.net.Uri;
 import android.util.Log;
 
 import com.ddd.client.applicationdatamanager.ApplicationDataManager;
-import com.ddd.datastore.model.Metadata;
+import com.ddd.model.Metadata;
 import com.google.gson.Gson;
 
 import java.io.BufferedReader;
