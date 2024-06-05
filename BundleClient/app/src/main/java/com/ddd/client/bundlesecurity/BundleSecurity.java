@@ -174,7 +174,7 @@ public class BundleSecurity {
             EncryptionHeader encHeader = EncryptionHeader.builder()
                     .clientBaseKey(new File(paths[2]))
                     .clientIdentityKey(new File(paths[3]))
-                    .serverIdentityKey(new File(""))
+                    .serverIdentityKey(new File(paths[4]))
                     .build();
             return new UncompressedBundle(bundleId, source, encHeader, encryptedPayload, new File(paths[1]));
         } catch (Exception e) {
