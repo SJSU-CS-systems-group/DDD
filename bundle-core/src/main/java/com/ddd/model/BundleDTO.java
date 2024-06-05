@@ -1,7 +1,7 @@
 package com.ddd.model;
 
 public class BundleDTO {
-    private String senderClientId;
+
     private String bundleId;
     private Bundle bundle;
 
@@ -13,8 +13,7 @@ public class BundleDTO {
         return this.bundle;
     }
 
-    public BundleDTO(String senderClientId, String bundleId, Bundle bundle) {
-        this.senderClientId = senderClientId;
+    public BundleDTO(String bundleId, Bundle bundle) {
         this.bundleId = bundleId;
         this.bundle = bundle;
     }
