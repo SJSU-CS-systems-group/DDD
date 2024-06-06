@@ -287,7 +287,7 @@ public class ServerSecurity {
             client = getClientSession(clientKeyPath, clientID);
         } catch (InvalidKeyException | IDGenerationException | EncodingException e) {
             e.printStackTrace();
-            throw new InvalidClientSessionException("[SEC]:Error getting client session from file: " + e);
+            throw new InvalidClientSessionException("[SEC]:Error getting client session from file: ", e);
         }
         return client;
     }
@@ -389,7 +389,7 @@ public class ServerSecurity {
         /* get Client Session */
         ClientSession client = getClientSessionFromFile(clientRootPath + File.separator + clientID);
         if (client == null) {
-            throw new InvalidClientSessionException("Failed to get client [" + clientID + "]");
+            throw new InvalidClientSessionException("Failed to get client [" + clientID + "]", new Throwable("Client not found"));
         }
 
         String bundlePath = encPath + File.separator + bundleID + File.separator;

@@ -9,7 +9,6 @@ import android.util.Base64;
 import com.google.common.primitives.Bytes;
 
 import com.ddd.client.bundlesecurity.SecurityUtils;
-import com.ddd.client.bundlesecurity.SecurityExceptions.IDGenerationException;
 
 public class BundleIDGenerator {
     public static final boolean UPSTREAM = true;

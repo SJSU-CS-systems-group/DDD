@@ -95,7 +95,7 @@ public class SecurityUtils {
             byte[] publicKey = decodePublicKeyfromFile(publicKeyPath);
             id = generateID(publicKey);
         } catch (Exception e) {
-            throw new IDGenerationException("Failed to generateID: " + e);
+            throw new IDGenerationException("Failed to generateID: ", e);
         }
         return id;
     }
@@ -113,7 +113,7 @@ public class SecurityUtils {
         try {
             md = MessageDigest.getInstance("SHA-1");
         } catch (NoSuchAlgorithmException e) {
-            throw new IDGenerationException("[BS]: NoSuchAlgorithmException while generating ID");
+            throw new IDGenerationException("[BS]: NoSuchAlgorithmException while generating ID", new Throwable("NoSuchAlgorithmException for MessageDigest Algorithm"));
         }
 
         byte[] hashedKey = md.digest(publicKey);
@@ -127,7 +127,7 @@ public class SecurityUtils {
             encodedKey += "\n" + PUBLICKEY_FOOTER;
             stream.write(encodedKey.getBytes());
         } catch (IOException e) {
-            throw new EncodingException("[BS]: Failed to Encode Public Key to file:" + e);
+            throw new EncodingException("[BS]: Failed to Encode Public Key to file:", e);
         }
     }
 
@@ -145,7 +145,7 @@ public class SecurityUtils {
                 throw new InvalidKeyException("Error: Invalid Public Key Format");
             }
         } catch (Exception e) {
-            throw new EncodingException("Error: Invalid Public Key Format");
+            throw new EncodingException("Error: Invalid Public Key Format", new Throwable("Invalid Public Key Format"));
         }
     }
 
@@ -165,7 +165,7 @@ public class SecurityUtils {
 
             return Curve.verifySignature(publicKey, message, signature);
         } catch (InvalidKeyException | IOException e) {
-            throw new SignatureVerificationException("Error Verifying Signature: " + e);
+            throw new SignatureVerificationException("Error Verifying Signature: ", e);
         }
     }
 
@@ -174,7 +174,7 @@ public class SecurityUtils {
         try {
             clientIdentityKey = decodePublicKeyfromFile(bundlePath + File.separator + CLIENT_IDENTITY_KEY);
         } catch (EncodingException e) {
-            throw new IDGenerationException("Error decoding public key file: " + e);
+            throw new IDGenerationException("Error decoding public key file: ", e);
         }
         return generateID(clientIdentityKey);
     }
@@ -201,7 +201,7 @@ public class SecurityUtils {
         } catch (NoSuchAlgorithmException | InvalidKeySpecException | NoSuchPaddingException |
                  java.security.InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException |
                  BadPaddingException e) {
-            throw new AESAlgorithmException("Error Encrypting text using AES: " + e);
+            throw new AESAlgorithmException("Error Encrypting text using AES: ", e);
         }
         return Base64.encodeToString(encryptedData, Base64.URL_SAFE | Base64.NO_WRAP);
     }
@@ -226,7 +226,7 @@ public class SecurityUtils {
         } catch (NoSuchAlgorithmException | InvalidKeySpecException | NoSuchPaddingException |
                  java.security.InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException |
                  BadPaddingException e) {
-            throw new AESAlgorithmException("Error Decrypting text using AES: ");
+            throw new AESAlgorithmException("Error Decrypting text using AES: ", new Throwable("Error Decrypting text using AES"));
         }
         return decryptedData;
     }

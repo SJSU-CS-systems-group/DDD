@@ -2,8 +2,8 @@ package com.ddd.server.bundlesecurity;
 
 public class SecurityExceptions {
     public static class InvalidClientSessionException extends Exception {
-        public InvalidClientSessionException(String errorMessage) {
-            super(errorMessage);
+        public InvalidClientSessionException(String errorMessage, Throwable throwable) {
+            super(errorMessage, throwable);
         }
     }
 

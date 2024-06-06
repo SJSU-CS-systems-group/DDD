@@ -156,7 +156,7 @@ public class ClientSecurity {
                     SecurityUtils.decodePublicKeyfromFile(path + File.separator + SecurityUtils.SERVER_RATCHET_KEY);
             theirRatchetKey = Curve.decodePoint(serverRatchetKey, 0);
         } catch (EncodingException e) {
-            throw new InvalidKeyException("Error Decoding Public Key: " + e);
+            throw new InvalidKeyException("Error Decoding Public Key: ", e);
         }
     }
 
@@ -223,7 +223,7 @@ public class ClientSecurity {
         try {
             agreement = Curve.calculateAgreement(theirIdentityKey.getPublicKey(), ourIdentityKeyPair.getPrivateKey());
         } catch (InvalidKeyException e) {
-            throw new BundleIDCryptographyException("Failed to calculate shared secret for bundle ID: " + e);
+            throw new BundleIDCryptographyException("Failed to calculate shared secret for bundle ID: ", e);
         }
 
         String secretKey = Base64.encodeToString(agreement, Base64.URL_SAFE | Base64.NO_WRAP);
@@ -231,7 +231,7 @@ public class ClientSecurity {
         try {
             return SecurityUtils.encryptAesCbcPkcs5(secretKey, bundleID);
         } catch (AESAlgorithmException e) {
-            throw new BundleIDCryptographyException("Failed to encrypt bundle ID: " + e);
+            throw new BundleIDCryptographyException("Failed to encrypt bundle ID: ", e);
         }
     }
 
@@ -345,7 +345,7 @@ public class ClientSecurity {
                 updateSessionRecord();
             } catch (InvalidMessageException | DuplicateMessageException | LegacyMessageException |
                      NoSessionException e) {
-                throw new BundleDecryptionException("Error Decrypting bundle: " + e);
+                throw new BundleDecryptionException("Error Decrypting bundle: ", e);
             }
 
             try (FileOutputStream stream = new FileOutputStream(decryptedFile, true)) {
@@ -377,7 +377,7 @@ public class ClientSecurity {
         try {
             agreement = Curve.calculateAgreement(theirIdentityKey.getPublicKey(), ourIdentityKeyPair.getPrivateKey());
         } catch (InvalidKeyException e) {
-            throw new BundleIDCryptographyException("Failed to calculate shared secret for bundle ID: " + e);
+            throw new BundleIDCryptographyException("Failed to calculate shared secret for bundle ID: ", e);
         }
 
         String secretKey = Base64.encodeToString(agreement, Base64.URL_SAFE | Base64.NO_WRAP);
@@ -385,7 +385,7 @@ public class ClientSecurity {
         try {
             bundleIDBytes = SecurityUtils.dencryptAesCbcPkcs5(secretKey, encryptedBundleID);
         } catch (AESAlgorithmException e) {
-            throw new BundleIDCryptographyException("Failed to decrypt bundle ID: " + e);
+            throw new BundleIDCryptographyException("Failed to decrypt bundle ID: ", e);
         }
         return new String(bundleIDBytes, StandardCharsets.UTF_8);
     }
