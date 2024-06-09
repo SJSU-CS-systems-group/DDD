@@ -95,7 +95,7 @@ public class SecurityUtils {
             byte[] publicKey = decodePublicKeyfromFile(publicKeyPath);
             id = generateID(publicKey);
         } catch (Exception e) {
-            throw new IDGenerationException("Failed to generateID: ", e);
+            throw new IDGenerationException("Failed to generateID ", e);
         }
         return id;
     }
@@ -113,7 +113,7 @@ public class SecurityUtils {
         try {
             md = MessageDigest.getInstance("SHA-1");
         } catch (NoSuchAlgorithmException e) {
-            throw new IDGenerationException("[BS]: NoSuchAlgorithmException while generating ID", new Throwable("NoSuchAlgorithmException for MessageDigest Algorithm"));
+            throw new IDGenerationException("[BS]: NoSuchAlgorithmException while generating ID", e);
         }
 
         byte[] hashedKey = md.digest(publicKey);

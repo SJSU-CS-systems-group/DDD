@@ -383,7 +383,7 @@ public class ClientSecurity {
         String secretKey = Base64.encodeToString(agreement, Base64.URL_SAFE | Base64.NO_WRAP);
 
         try {
-            bundleIDBytes = SecurityUtils.dencryptAesCbcPkcs5(secretKey, encryptedBundleID);
+            bundleIDBytes = SecurityUtils.decryptAesCbcPkcs5(secretKey, encryptedBundleID);
         } catch (AESAlgorithmException e) {
             throw new BundleIDCryptographyException("Failed to decrypt bundle ID: ", e);
         }
