@@ -1,11 +1,11 @@
-package com.ddd.server.bundlerouting.WindowUtils;
+package com.ddd.bundlerouting.WindowUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
-import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.BufferUnderflow;
-import com.ddd.server.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
+import com.ddd.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
+import com.ddd.bundlerouting.WindowUtils.WindowExceptions.BufferUnderflow;
+import com.ddd.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
 
 public class CircularBuffer {
     private String[] buffer = null;
@@ -86,7 +86,7 @@ public class CircularBuffer {
         return count;
     }
 
-    public String[] getBuffer() {
+    public List<String> getBuffer() {
         List<String> sList = new ArrayList<String>();
         int count = capacity;
         int i = start;
@@ -97,7 +97,7 @@ public class CircularBuffer {
             count--;
         }
 
-        return sList.toArray(new String[sList.size()]);
+        return sList;
     }
 
     public int getLength() {

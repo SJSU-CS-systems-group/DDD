@@ -6,7 +6,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.ddd.server.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
+import com.ddd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
 
 @Service
 public class BundleRouting {

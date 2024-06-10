@@ -1,4 +1,4 @@
-package com.ddd.server.bundlerouting;
+package com.ddd.bundlerouting;
 
 public class RoutingExceptions {
     public static class ClientMetaDataFileException extends Exception {

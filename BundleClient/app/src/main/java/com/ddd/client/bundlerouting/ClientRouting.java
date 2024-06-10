@@ -15,7 +15,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import com.ddd.client.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
+import com.ddd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
 
 public class ClientRouting {
     private static ClientRouting singleClientRoutingInstance = null;
