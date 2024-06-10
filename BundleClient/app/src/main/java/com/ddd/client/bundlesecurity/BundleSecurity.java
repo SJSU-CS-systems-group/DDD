@@ -17,6 +17,7 @@ import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.NoSessionException;
 import com.ddd.bundleclient.HelloworldActivity;
 import com.ddd.bundleclient.R;
+import com.ddd.bundlesecurity.SecurityExceptions;
 import com.ddd.client.bundlerouting.ClientBundleGenerator;
 import com.ddd.client.bundlerouting.ClientWindow;
 import com.ddd.bundlerouting.WindowUtils.WindowExceptions;

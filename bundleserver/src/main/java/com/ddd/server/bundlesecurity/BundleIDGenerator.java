@@ -6,7 +6,7 @@ import java.util.Base64;
 import com.google.common.primitives.Bytes;
 
 import com.ddd.server.bundlesecurity.SecurityUtils;
-import com.ddd.server.bundlesecurity.SecurityExceptions.IDGenerationException;
+import com.ddd.bundlesecurity.SecurityExceptions.IDGenerationException;
 
 public class BundleIDGenerator {
     public static final boolean UPSTREAM = true;

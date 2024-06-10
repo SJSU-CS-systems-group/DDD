@@ -34,12 +34,12 @@ import org.whispersystems.libsignal.state.SessionState;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 
 import com.ddd.client.bundlesecurity.SecurityUtils;
-import com.ddd.client.bundlesecurity.SecurityExceptions.AESAlgorithmException;
-import com.ddd.client.bundlesecurity.SecurityExceptions.BundleDecryptionException;
-import com.ddd.client.bundlesecurity.SecurityExceptions.EncodingException;
-import com.ddd.client.bundlesecurity.SecurityExceptions.IDGenerationException;
-import com.ddd.client.bundlesecurity.SecurityExceptions.SignatureVerificationException;
-import com.ddd.client.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
+import com.ddd.bundlesecurity.SecurityExceptions.AESAlgorithmException;
+import com.ddd.bundlesecurity.SecurityExceptions.BundleDecryptionException;
+import com.ddd.bundlesecurity.SecurityExceptions.EncodingException;
+import com.ddd.bundlesecurity.SecurityExceptions.IDGenerationException;
+import com.ddd.bundlesecurity.SecurityExceptions.SignatureVerificationException;
+import com.ddd.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
 
 import android.util.Base64;
 

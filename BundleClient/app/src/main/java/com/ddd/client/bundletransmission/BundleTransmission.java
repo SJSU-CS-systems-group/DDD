@@ -21,7 +21,7 @@ import com.ddd.client.bundlerouting.ClientWindow;
 import com.ddd.bundlerouting.RoutingExceptions;
 import com.ddd.client.bundlesecurity.BundleIDGenerator;
 import com.ddd.client.bundlesecurity.BundleSecurity;
-import com.ddd.client.bundlesecurity.SecurityExceptions;
+import com.ddd.bundlesecurity.SecurityExceptions;
 import com.ddd.model.ADU;
 import com.ddd.model.Acknowledgement;
 import com.ddd.model.Bundle;

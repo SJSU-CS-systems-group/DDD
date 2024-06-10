@@ -5,7 +5,7 @@ import android.content.Context;
 import android.util.Log;
 import android.widget.TextView;
 
-import com.ddd.client.bundlesecurity.SecurityExceptions;
+import com.ddd.bundlesecurity.SecurityExceptions;
 import com.ddd.client.bundletransmission.BundleTransmission;
 
 import java.io.FileOutputStream;

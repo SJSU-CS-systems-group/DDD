@@ -33,11 +33,10 @@ import org.whispersystems.libsignal.ecc.ECKeyPair;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
 import org.whispersystems.libsignal.state.impl.InMemorySignalProtocolStore;
 import org.whispersystems.libsignal.util.KeyHelper;
-
-import com.ddd.client.bundlesecurity.SecurityExceptions.IDGenerationException;
-import com.ddd.client.bundlesecurity.SecurityExceptions.EncodingException;
-import com.ddd.client.bundlesecurity.SecurityExceptions.SignatureVerificationException;
-import com.ddd.client.bundlesecurity.SecurityExceptions.AESAlgorithmException;
+import com.ddd.bundlesecurity.SecurityExceptions.IDGenerationException;
+import com.ddd.bundlesecurity.SecurityExceptions.EncodingException;
+import com.ddd.bundlesecurity.SecurityExceptions.SignatureVerificationException;
+import com.ddd.bundlesecurity.SecurityExceptions.AESAlgorithmException;
 
 import android.util.Base64;
 
@@ -206,7 +205,7 @@ public class SecurityUtils {
         return Base64.encodeToString(encryptedData, Base64.URL_SAFE | Base64.NO_WRAP);
     }
 
-    public static byte[] dencryptAesCbcPkcs5(String sharedSecret, String cipherText) throws AESAlgorithmException {
+    public static byte[] decryptAesCbcPkcs5(String sharedSecret, String cipherText) throws AESAlgorithmException {
         byte[] iv = new byte[16];
         byte[] encryptedData = Base64.decode(cipherText, Base64.URL_SAFE | Base64.NO_WRAP);
         byte[] decryptedData = null;

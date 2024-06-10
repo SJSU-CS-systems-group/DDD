@@ -8,8 +8,8 @@ import java.nio.charset.StandardCharsets;
 
 import com.ddd.client.bundlesecurity.BundleIDGenerator;
 import com.ddd.client.bundlesecurity.ClientSecurity;
-import com.ddd.client.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
-import com.ddd.client.bundlesecurity.SecurityExceptions.IDGenerationException;
+import com.ddd.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
+import com.ddd.bundlesecurity.SecurityExceptions.IDGenerationException;
 import com.ddd.client.bundlesecurity.SecurityUtils;
 
 public class ClientBundleGenerator {
