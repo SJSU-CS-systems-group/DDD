@@ -107,7 +107,7 @@ public class FileChooserFragment extends Fragment {
                 //Venus added
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     logger.log(Level.INFO, "Permission Granted!");
-                    Toast.makeTest(this.getContext(), "Permission Granted!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this.getContext(), "Permission Granted!", Toast.LENGTH_SHORT).show();
                     this.doBrowseFile();
                 }
                 else {

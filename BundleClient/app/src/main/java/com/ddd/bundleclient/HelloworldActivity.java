@@ -35,6 +35,14 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
+//Venus added
+import java.util.logging.Logger;
+import static java.util.logging.Level.DEBUG;
+import static java.util.logging.Level.ERROR;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.V;
+import static java.util.logging.Level.WARNING;
+
 public class HelloworldActivity extends AppCompatActivity implements WifiDirectStateListener {
     // tag used for testing in logcat
     public static final String TAG = "bundleclient";
@@ -68,6 +76,8 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
     String currentTransportId;
     String BundleExtension = ".bundle";
 
+    private static final Logger logger = Logger.getLogger(HelloworldActivity.class.getName());
+
     /**
      * check for location permissions manually, will give a prompt
      */
@@ -75,14 +85,22 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
     public void onRequestPermissionsResult(int requestCode,
                                            @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        Log.d(TAG, "checking permissions " + grantResults.length);
-        switch (requestCode) {
-            case PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION:
-                if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                    Log.e(TAG, "Fine location permission is not granted!");
-                    finish();
-                }
-                break;
+//        Log.d(TAG, "checking permissions " + grantResults.length);
+//        switch (requestCode) {
+//            case PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION:
+//                if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+//                    Log.e(TAG, "Fine location permission is not granted!");
+//                    finish();
+//                }
+        //Venus
+            logger.log(DEBUG, "checking permissions" + grantResults.length);
+            switch (requestCode) {
+                case PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION :
+                    if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                        logger.log(ERROR, "Find location is not granted!");
+                        finish();
+                    }
+                    break;
         }
     }
 
@@ -139,7 +157,8 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
     public void exchangeMessage() {
         // connect to transport
         exchangeButton.setEnabled(false);
-        Log.d(TAG, "connection complete");
+        //Log.d(TAG, "connection complete");
+        logger.log(INFO, "connection complete");
         new GrpcReceiveTask(this).executeInBackground("192.168.49.1", "1778");
         //changed from execute to executeInBackground
     }
