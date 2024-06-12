@@ -83,11 +83,10 @@ public class SecurityUtils {
     public static final int KEYLEN = 256;
 
     public static class ClientSession {
-        SignalProtocolAddress clientProtocolAddress;
-        IdentityKey IdentityKey;
-        ECPublicKey BaseKey;
-
-        SessionCipher cipherSession;
+        public SignalProtocolAddress clientProtocolAddress;
+        public IdentityKey IdentityKey;
+        public ECPublicKey BaseKey;
+        public SessionCipher cipherSession;
 
         public String getClientID() {
             return this.clientProtocolAddress.getName();

@@ -8,8 +8,10 @@ import com.ddd.bundlesecurity.SecurityExceptions.InvalidClientIDException;
 import com.ddd.bundlesecurity.SecurityExceptions.InvalidClientSessionException;
 import com.ddd.bundlesecurity.SecurityExceptions.ServerIntializationException;
 import com.ddd.bundlesecurity.SecurityExceptions.SignatureVerificationException;
+import com.ddd.bundlesecurity.BundleIDGenerator;
+import com.ddd.bundlesecurity.SecurityUtils;
+import com.ddd.bundlesecurity.SecurityUtils.ClientSession;
 
-import com.ddd.server.bundlesecurity.SecurityUtils.ClientSession;
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
