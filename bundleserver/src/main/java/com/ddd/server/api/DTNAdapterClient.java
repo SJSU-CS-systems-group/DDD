@@ -10,12 +10,18 @@ import io.grpc.StatusRuntimeException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.INFO;
+
 
 public class DTNAdapterClient {
     public String ipAddress;
     public int port;
     private DTNAdapterGrpc.DTNAdapterBlockingStub blockingStub;
     private DTNAdapterGrpc.DTNAdapterStub asyncStub;
+    private static final Logger logger = Logger.getLogger(DTNAdapterClient.class.getName());
+
 
     public DTNAdapterClient(String ipAddress, int port) {
         this.ipAddress = ipAddress;
@@ -42,8 +48,7 @@ public class DTNAdapterClient {
             AppData data = AppData.newBuilder().setClientId(clientId).addAllDataList(dataListConverted)
                     .setLastADUIdReceived(lastADUIdReceived).build();
             AppData appData = client.blockingStub.saveData(data);
-            System.out.println(
-                    "[DTNAdapterClient.SendData] response: appData.getDataCount()- " + appData.getDataListCount());
+            logger.log(INFO, "[DTNAdapterClient.SendData] response: appData.getDataCount()- " + appData.getDataListCount());
             return appData;
         } catch (StatusRuntimeException e) {
             e.printStackTrace();
@@ -57,7 +62,7 @@ public class DTNAdapterClient {
         try {
             ClientData data = ClientData.newBuilder().setClientId(clientId).build();
             PrepareResponse response = client.blockingStub.prepareData(data);
-            System.out.println("[DTNAdapterClient.PrepareData] response: " + response);
+            logger.log(INFO, "[DTNAdapterClient.PrepareData] response: " + response);
         } catch (StatusRuntimeException e) {
             e.printStackTrace();
         }

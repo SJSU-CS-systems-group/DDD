@@ -41,7 +41,10 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 
+import static java.util.logging.Level.*;
+
 public class ServerSecurity {
+
     private static final String DEFAULT_SERVER_NAME = "Bundle Server";
     private static final int ServerDeviceID = 0;
     private static ServerSecurity singleServerInstance = null;

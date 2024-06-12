@@ -15,6 +15,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
+import org.springframework.boot.logging.LogLevel;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.ddd.model.ADU;
@@ -42,6 +43,11 @@ import com.ddd.server.repository.LargestBundleIdReceivedRepository;
 import com.ddd.utils.AckRecordUtils;
 import com.ddd.utils.Constants;
 
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
+
+
 @Service
 public class BundleTransmission {
 
@@ -58,7 +64,7 @@ public class BundleTransmission {
     private ServerWindow serverWindow;
 
     private int WINDOW_LENGTH = 3;
-    private Logger logger = Logger.getLogger(this.getClass().getName());
+    private static final Logger logger = Logger.getLogger(BundleTransmission.class.getName());
 
     public BundleTransmission(BundleSecurity bundleSecurity, ApplicationDataManager applicationDataManager,
                               BundleRouting bundleRouting,
@@ -87,7 +93,7 @@ public class BundleTransmission {
             String serverIdReceived = SecurityUtils.generateID(
                     uncompressedBundle.getSource() + File.separator + SecurityUtils.SERVER_IDENTITY_KEY);
             if (!bundleSecurity.bundleServerIdMatchesCurrentServer(serverIdReceived)) {
-                logger.log(Level.WARNING, "Received bundle's serverIdentity didn't match with current server, " +
+                logger.log(WARNING, "Received bundle's serverIdentity didn't match with current server, " +
                         "ignoring bundle with bundleId: " + uncompressedBundle.getBundleId());
                 return;
             }
@@ -99,7 +105,7 @@ public class BundleTransmission {
             if (!opt.isEmpty() &&
                     (this.bundleSecurity.isNewerBundle(opt.get(), uncompressedBundle.getSource().getAbsolutePath()) >=
                             0)) {
-                System.out.println("[BT] Skipping bundle " + bundle.getSource().getName() + " as it is outdated");
+                logger.log(WARNING, "[BT] Skipping bundle " + bundle.getSource().getName() + " as it is outdated");
                 return;
             }
 
@@ -192,14 +198,13 @@ public class BundleTransmission {
                 try {
                     this.processReceivedBundle(transportId, bundle);
                 } catch (Exception e) {
-                    System.out.println(
-                            "[BT] Failed to process received bundle from transportId: " + transportId + ", error: " +
+                    logger.log(SEVERE,"[BT] Failed to process received bundle from transportId: " + transportId + ", error: " +
                                     e.getMessage());
                 } finally {
                     try {
                         FileUtils.delete(bundleFile);
                     } catch (IOException e) {
-                        System.out.println(e);
+                        logger.log(SEVERE,"e");
                     }
                 }
             }
@@ -251,7 +256,7 @@ public class BundleTransmission {
 
     private BundleTransferDTO generateBundleForTransmission(String transportId, String clientId,
                                                             Set<String> bundleIdsPresent) throws ClientWindowNotFound {
-        System.out.println("[BT] Processing bundle generation request for client " + clientId);
+        logger.log(INFO,"[BT] Processing bundle generation request for client " + clientId);
         Set<String> deletionSet = new HashSet<>();
         List<BundleDTO> bundlesToSend = new ArrayList<>();
 
@@ -266,13 +271,13 @@ public class BundleTransmission {
         try {
             this.serverWindow.addClient(clientId, this.WINDOW_LENGTH);
         } catch (Exception e) {
-            System.out.println("[WIN] INFO : Did not Add client " + clientId + " : " + e);
+            logger.log(SEVERE, "[WIN] INFO : Did not Add client " + clientId + " : " + e);
         }
 
         boolean isSenderWindowFull = this.serverWindow.isClientWindowFull(clientId);
 
         if (isSenderWindowFull) {
-            System.out.println("[BT] Server's sender window is full for the client " + clientId);
+            logger.log(INFO, "[BT] Server's sender window is full for the client " + clientId);
             UncompressedPayload.Builder retxmnBundlePayloadBuilder =
                     optional.get(); // there was definitely a bundle sent previously if sender window is full
 
@@ -359,7 +364,7 @@ public class BundleTransmission {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
-        System.out.println("[BT] Found " + clientIds.size() + " reachable from the transport " + transportId);
+        logger.log(SEVERE, "[BT] Found " + clientIds.size() + " reachable from the transport " + transportId);
         Set<String> deletionSet = new HashSet<>();
         List<BundleDTO> bundlesToSend = new ArrayList<>();
         Map<String, Set<String>> clientIdToBundleIds = new HashMap<>();
@@ -389,7 +394,7 @@ public class BundleTransmission {
     }
 
     public List<File> getBundlesForTransmission(String transportId) {
-        System.out.println("[BT] Inside getBundlesForTransmission method for transport id: " + transportId);
+        logger.log(INFO, "[BT] Inside getBundlesForTransmission method for transport id: " + transportId);
         List<File> bundles = new ArrayList<>();
         File recvTransportSubDir =
                 new File(this.config.getBundleTransmission().getToSendDirectory() + File.separator + transportId);
@@ -401,12 +406,11 @@ public class BundleTransmission {
         });
 
         if (recvTransport == null || recvTransport.length == 0) {
-            System.out.println("[BT] No bundles to deliver through transport " + transportId);
+            logger.log(INFO, "[BT] No bundles to deliver through transport " + transportId);
             return bundles;
         }
 
-        System.out.println(
-                "[BT] Found " + recvTransport.length + " bundles to deliver through transport " + transportId);
+        logger.log(INFO,"[BT] Found " + recvTransport.length + " bundles to deliver through transport " + transportId);
         for (File bundleFile : recvTransport) {
             bundles.add(bundleFile);
         }
@@ -414,7 +418,7 @@ public class BundleTransmission {
     }
 
     public void notifyBundleSent(BundleDTO bundleDTO) {
-        System.out.println("[BT] Inside method notifyBundleSent");
+        logger.log(INFO, "[BT] Inside method notifyBundleSent");
         //      try {
         //        FileUtils.delete(bundle.getSource());
         //      } catch (IOException e) {
@@ -425,7 +429,7 @@ public class BundleTransmission {
         try {
             clientId = BundleIDGenerator.getClientIDFromBundleID(bundleDTO.getBundleId(), BundleIDGenerator.DOWNSTREAM);
             this.serverWindow.updateClientWindow(clientId, bundleDTO.getBundleId());
-            System.out.println("[BT] Updated client window for client " + clientId + " with bundle id: " +
+            logger.log(INFO, "[BT] Updated client window for client " + clientId + " with bundle id: " +
                                        bundleDTO.getBundleId());
         } catch (Exception e) {
             e.printStackTrace();
