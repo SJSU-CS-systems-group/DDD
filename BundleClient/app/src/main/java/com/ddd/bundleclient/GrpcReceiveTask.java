@@ -20,8 +20,18 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
+import java.util.logging.Logger;
+import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.SEVERE;
+
 //  private class GrpcReceiveTask extends AsyncTask<String, Void, String> {
 class GrpcReceiveTask {
+
+    private static final Logger logger = Logger.getLogger(GrpcReceiveTask.class.getName());
+
     private Context applicationContext;
     private final WeakReference<Activity> activityReference;
     private ManagedChannel channel;
@@ -45,7 +55,7 @@ class GrpcReceiveTask {
                     inBackground(port, host);
                 } catch (Exception e) {
                     // Handle any exceptions
-                    Log.d(HelloworldActivity.TAG, "executeInBackground failed");
+                    logger.log(WARNING, "executeInBackground failed");
                 }
             }
         });
@@ -61,7 +71,7 @@ class GrpcReceiveTask {
         channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
         FileServiceGrpc.FileServiceStub stub = FileServiceGrpc.newStub(channel);
         List<String> bundleRequests = null;
-        Log.d(HelloworldActivity.TAG, "Starting File Receive");
+        logger.log(FINE, "Starting File Receive");
         resultText.append("Starting File Receive...\n");
         try {
             BundleTransmission bundleTransmission;
@@ -69,23 +79,23 @@ class GrpcReceiveTask {
             bundleRequests = HelloworldActivity.clientWindow.getWindow(
                     bundleTransmission.getBundleSecurity().getClientSecurity());
         } catch (SecurityExceptions.BundleIDCryptographyException e) {
-            Log.d(HelloworldActivity.TAG, "{BR}: Failed to get Window: " + e);
+            logger.log(WARNING, "{BR}: Failed to get Window: " + e);
             e.printStackTrace();
         } catch (Exception e) {
-            Log.d(HelloworldActivity.TAG, "{BR}: Failed to get Window: " + e);
+            logger.log(WARNING, "{BR}: Failed to get Window: " + e);
             e.printStackTrace();
         }
         if (bundleRequests == null) {
-            Log.d(HelloworldActivity.TAG, "BUNDLE REQuests is NUll / ");
+            logger.log(FINE, "BUNDLE REQuests is NUll / ");
 ///        throw new Exception("bundle request is null");
             postExecute("Incomplete");
         } else if (bundleRequests.size() == 0) {
-            Log.d(HelloworldActivity.TAG, "BUNDLE REQuests has size 0 / ");
+            logger.log(FINE, "BUNDLE REQuests has size 0 / ");
         }
         for (String bundle : bundleRequests) {
             String bundleName = bundle + ".bundle";
             ReqFilePath request = ReqFilePath.newBuilder().setValue(bundleName).build();
-            Log.d(HelloworldActivity.TAG, "Downloading file: " + bundleName);
+            logger.log(INFO, "Downloading file: " + bundleName);
             StreamObserver<Bytes> downloadObserver = new StreamObserver<Bytes>() {
                 FileOutputStream fileOutputStream = null;
 

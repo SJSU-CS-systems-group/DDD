@@ -45,7 +45,7 @@ import static java.util.logging.Level.SEVERE;
 
 public class HelloworldActivity extends AppCompatActivity implements WifiDirectStateListener {
     // tag used for testing in logcat
-    public static final String TAG = "bundleclient";
+
     // Wifi Direct set up
     private com.ddd.wifidirect.WifiDirectManager wifiDirectManager;
     public static final int PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION = 1001;
@@ -85,14 +85,7 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
     public void onRequestPermissionsResult(int requestCode,
                                            @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-//        Log.d(TAG, "checking permissions " + grantResults.length);
-//        switch (requestCode) {
-//            case PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION:
-//                if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-//                    Log.e(TAG, "Fine location permission is not granted!");
-//                    finish();
-//                }
-        //Venus
+
             logger.log(INFO, "checking permissions" + grantResults.length);
             switch (requestCode) {
                 case PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION :
@@ -166,16 +159,16 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
     public void connectTransport() {
         connectButton.setEnabled(false);
         wifiDirectResponseText.setText("Starting connection...\n");
-        logger.log(DEBUG, "connecting to transport");
+        logger.log(FINE, "connecting to transport");
         // we need to check and request for necessary permissions
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            logger.log(DEBUG, "requesting permission");
+            logger.log(FINE, "requesting permission");
             requestPermissions(new String[] { Manifest.permission.ACCESS_FINE_LOCATION },
                                HelloworldActivity.PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION);
             logger.log(WARNING, "Permission granted");
         }
         if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            logger.log(DEBUG, "requesting permission");
+            logger.log(FINE, "requesting permission");
             requestPermissions(new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE },
                                HelloworldActivity.WRITE_EXTERNAL_STORAGE);
         }
@@ -197,11 +190,11 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
                 wifiDirectResponseText.append("Manager initialization failed\n");
                 logger.log(WARNING, "Manager initialization failed\n");
             } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL == action) {
-                logger.log(WARNING, "Manager initialization successful\n");
+                logger.log(FINER, "Manager initialization successful\n");
                 connectTransport();
             } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_DISCOVERY_SUCCESSFUL == action) {
                 wifiDirectResponseText.append("Discovery initiation successful\n");
-                logger.log(WARNING, "Discovery initiation successful\n");
+                logger.log(FINER, "Discovery initiation successful\n");
             } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_DISCOVERY_FAILED == action) {
                 wifiDirectResponseText.append("Discovery initiation failed\n");
                 logger.log(WARNING, "Discovery initiation failed\n");
@@ -217,11 +210,11 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
             } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_SUCCESSFUL ==
                     action) {
                 wifiDirectResponseText.append("Device connection initiation successful\n");
-                logger.log(WARNING, "Device connection initiation successful\n");
+                logger.log(FINER, "Device connection initiation successful\n");
             } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL ==
                     action) {
                 wifiDirectResponseText.append("Device connected to transport\n");
-                logger.log(WARNING, "Device connected to transport\n");
+                logger.log(FINER, "Device connected to transport\n");
                 updateConnectedDevices();
                 connectButton.setEnabled(true);
                 exchangeMessage();
