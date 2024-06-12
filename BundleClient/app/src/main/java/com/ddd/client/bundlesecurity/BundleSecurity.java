@@ -171,9 +171,10 @@ public class BundleSecurity {
             paths = client.encrypt(payload.getSource().getAbsolutePath(), bundleGenDirPath, bundleId);
 
             EncryptedPayload encryptedPayload = new EncryptedPayload(bundleId, new File(paths[0]));
-
             File source = new File(bundleGenDirPath + File.separator + bundleId);
-            EncryptionHeader encHeader = new EncryptionHeader(new File(paths[2]), new File(paths[3]));
+            EncryptionHeader encHeader =
+                    EncryptionHeader.builder().clientBaseKey(new File(paths[2])).clientIdentityKey(new File(paths[3]))
+                            .serverIdentityKey(new File(paths[4])).build();
             return new UncompressedBundle(bundleId, source, encHeader, encryptedPayload, new File(paths[1]));
         } catch (Exception e) {
             e.printStackTrace();

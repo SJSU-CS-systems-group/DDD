@@ -559,4 +559,8 @@ public class ServerSecurity {
         return BundleIDGenerator.compareBundleIDs(receivedBundleID, latestBundleID, BundleIDGenerator.UPSTREAM);
     }
 
+    public String getServerId() throws IDGenerationException {
+        return SecurityUtils.generateID(ourIdentityKeyPair.getPublicKey().serialize());
+    }
+
 };

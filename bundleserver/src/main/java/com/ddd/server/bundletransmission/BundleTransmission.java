@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
 import org.springframework.stereotype.Service;
@@ -56,6 +58,7 @@ public class BundleTransmission {
     private ServerWindow serverWindow;
 
     private int WINDOW_LENGTH = 3;
+    private Logger logger = Logger.getLogger(this.getClass().getName());
 
     public BundleTransmission(BundleSecurity bundleSecurity, ApplicationDataManager applicationDataManager,
                               BundleRouting bundleRouting,
@@ -80,6 +83,15 @@ public class BundleTransmission {
                 this.bundleGenServ.extractBundle(bundle, bundleRecvProcDir.getAbsolutePath());
         String clientId = "";
         try {
+
+            String serverIdReceived = SecurityUtils.generateID(
+                    uncompressedBundle.getSource() + File.separator + SecurityUtils.SERVER_IDENTITY_KEY);
+            if (!bundleSecurity.bundleServerIdMatchesCurrentServer(serverIdReceived)) {
+                logger.log(Level.WARNING, "Received bundle's serverIdentity didn't match with current server, " +
+                        "ignoring bundle with bundleId: " + uncompressedBundle.getBundleId());
+                return;
+            }
+
             clientId = SecurityUtils.generateID(
                     uncompressedBundle.getSource() + File.separator + SecurityUtils.CLIENT_IDENTITY_KEY);
             Optional<String> opt = this.applicationDataManager.getLargestRecvdBundleId(clientId);

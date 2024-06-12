@@ -182,8 +182,8 @@ public class BundleSecurity {
             EncryptedPayload encryptedPayload = new EncryptedPayload(bundleId, new File(paths[0]));
 
             File source = new File(bundleGenDirPath + File.separator + bundleId);
-            EncryptionHeader encHeader =
-                    new EncryptionHeader(new File(paths[2]), new File(paths[3]), new File(paths[4]));
+            EncryptionHeader encHeader = EncryptionHeader.builder().serverSignedPreKey(new File(paths[2]))
+                    .serverIdentityKey(new File(paths[3])).serverRatchetKey(new File(paths[4])).build();
             return new UncompressedBundle( // TODO get encryption header, payload signature
                                            bundleId, source, encHeader, encryptedPayload, new File(paths[1]));
 
@@ -196,6 +196,14 @@ public class BundleSecurity {
     public int isNewerBundle(String bundlePath, String lastReceivedBundleID) throws IOException,
             BundleIDCryptographyException {
         return this.serverSecurity.isNewerBundle(bundlePath, lastReceivedBundleID);
+    }
+
+    public String getServerId() throws SecurityExceptions.IDGenerationException {
+        return serverSecurity.getServerId();
+    }
+
+    public boolean bundleServerIdMatchesCurrentServer(String receivedServerId) throws SecurityExceptions.IDGenerationException {
+        return receivedServerId.equals(getServerId());
     }
 
 }
