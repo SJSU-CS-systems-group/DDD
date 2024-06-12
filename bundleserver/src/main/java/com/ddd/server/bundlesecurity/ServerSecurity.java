@@ -392,7 +392,8 @@ public class ServerSecurity {
         /* get Client Session */
         ClientSession client = getClientSessionFromFile(clientRootPath + File.separator + clientID);
         if (client == null) {
-            throw new InvalidClientSessionException("Failed to get client [" + clientID + "]", new Throwable("Client not found"));
+            throw new InvalidClientSessionException("Failed to get client [" + clientID + "]",
+                                                    new Throwable("Client not found"));
         }
 
         String bundlePath = encPath + File.separator + bundleID + File.separator;
