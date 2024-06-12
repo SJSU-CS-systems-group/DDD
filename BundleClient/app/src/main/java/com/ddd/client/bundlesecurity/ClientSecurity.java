@@ -33,7 +33,7 @@ import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SessionState;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 
-import com.ddd.client.bundlesecurity.SecurityUtils;
+import com.ddd.bundlesecurity.SecurityUtils;
 import com.ddd.bundlesecurity.SecurityExceptions.AESAlgorithmException;
 import com.ddd.bundlesecurity.SecurityExceptions.BundleDecryptionException;
 import com.ddd.bundlesecurity.SecurityExceptions.EncodingException;
