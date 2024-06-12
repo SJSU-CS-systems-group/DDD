@@ -12,7 +12,6 @@ import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
 
 import com.ddd.server.bundlesecurity.SecurityUtils;
-//import com.ddd.server.bundlesecurity.SecurityExceptions.EncodingException;
 import com.ddd.bundlesecurity.SecurityExceptions.EncodingException;
 
 import picocli.CommandLine;
