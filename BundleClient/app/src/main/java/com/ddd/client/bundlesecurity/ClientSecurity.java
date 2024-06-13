@@ -66,7 +66,7 @@ public class ClientSecurity {
 
     private ClientSecurity(int deviceID, String clientRootPath, String serverKeyPath) throws InvalidKeyException,
             IDGenerationException, EncodingException, IOException {
-        String clientKeyPath = clientRootPath + File.separator + "Client_Keys";
+        String clientKeyPath = clientRootPath +                                                File.separator +                               "Client_Keys";
 
         // Read Server Keys from specified directory
         InitializeServerKeysFromFiles(serverKeyPath);

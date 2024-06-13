@@ -3,6 +3,9 @@ name: Build Modules
 on:
   pull_request:
     branches: main
+  push:
+    branches: 
+      - '**'
 
 jobs:
   # Github Action to detect file changes between
@@ -132,7 +135,7 @@ jobs:
         build-bundle-transport,
         build-bundle-server,
       ]
-    if: ${{ always() }}
+    if: ${{ always() }} && github.event.commits[0].author.name != 'github-actions[bot]'
     runs-on: ubuntu-latest
 
     steps:
