@@ -37,6 +37,36 @@ public class ServerWindow {
     @Autowired
     private Environment env;
 
+    // @Autowired
+    // public ServerWindow(ServerSecurity serverSecurity) throws SQLException
+    // {
+    //     this.serverSecurity = serverSecurity;
+    //     clientWindowMap = new HashMap<>();
+
+    //     // TODO: Change to config
+    //     String url = "jdbc:mysql://localhost:3306";
+    //     String uname = "root";
+    //     String password = "mchougule478";
+    //     String dbName = "DTN_SERVER_DB";
+
+    //     database = new SNRDatabases(url, uname, password, dbName);
+
+    //     try {
+    //         initializeWindow();
+    //     } catch (SQLException | BufferOverflow | InvalidLength e) {
+    //         System.out.println(e + "\n[WIN] INFO: Failed to initialize window from database");
+
+    //         String dbTableCreateQuery = "CREATE TABLE " + dbTableName + " " +
+    //                 "(clientID VARCHAR(256) not NULL," +
+    //                 STARTCOUNTER + " VARCHAR(256)," +
+    //                 ENDCOUNTER + " VARCHAR(256)," +
+    //                 WINDOW_LENGTH + " INTEGER," +
+    //                 "PRIMARY KEY (clientID))";
+
+    //         database.createTable(dbTableCreateQuery);
+    //     }
+    // }
+
     @PostConstruct
     public void init() throws SQLException {
         // TODO: Change to config
@@ -45,7 +75,7 @@ public class ServerWindow {
         String password = env.getProperty("spring.datasource.password");
         String dbName = env.getProperty("spring.datasource.db-name");
 
-        database = new SNRDatabases(url, uname, password, dbName);
+        database = new SNRDatabases(url,                            uname, password,                       dbName);
 
         try {
             initializeWindow();
@@ -53,8 +83,8 @@ public class ServerWindow {
             System.out.println(e + "\n[WIN] INFO: Failed to initialize window from database");
 
             String dbTableCreateQuery =
-                    "CREATE TABLE " + dbTableName + " " + "(clientID VARCHAR(256) not NULL," + STARTCOUNTER +
-                            " VARCHAR(256)," + ENDCOUNTER + " VARCHAR(256)," + WINDOW_LENGTH + " INTEGER," +
+                    "CREATE TABLE " + dbTableName + " " + "(clientID VARCHAR(256) not NULL," +                          STARTCOUNTER +
+                            " VARCHAR(256)," + ENDCOUNTER +                             " VARCHAR(256)," + WINDOW_LENGTH + " INTEGER," +
                             "PRIMARY KEY (clientID))";
 
             database.createTable(dbTableCreateQuery);
