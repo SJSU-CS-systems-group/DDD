@@ -44,8 +44,9 @@ jobs:
 
       - name: Cat stuff
         run: |
-          echo "$(ls)"
+          echo "$(ls -a)"
           echo "$(pwd)"
+          echo "$(cat .git/config)"
 
 #   # Github Action to Compile bundle-core
 #   build-bundle-core:
