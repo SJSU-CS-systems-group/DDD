@@ -23,6 +23,8 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.ddd.bundletransport.utils.FileUtils;
+import com.ddd.bundletransport.utils.SecurityUtils;
 import com.ddd.wifidirect.WifiDirectManager;
 
 import org.whispersystems.libsignal.ecc.Curve;
@@ -38,8 +40,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity implements RpcServerStateListener {
-
-    private static final int PORT = 7777;
     public static final int PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION = 1001;
     public static final String TAG = "dddTransport";
 
@@ -98,7 +98,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
                 if (grpcServer.isShutdown()) {
                     manageRequestedWifiDirectGroup();
                     Log.d(TAG, "starting grpc server!!!!!!!");
-                    grpcServer.startServer(this, PORT);
+                    grpcServer.startServer(this);
                 }
             }
         });

@@ -18,6 +18,7 @@ import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 public class RpcServer {
     private final String TAG = "dddTransport";
     private final String inetSocketAddressIP = "192.168.49.1";
+    private final int port = 7777;
     private ServerState state = ServerState.SHUTDOWN;
 
     public enum ServerState {
@@ -32,7 +33,7 @@ public class RpcServer {
         listeners.add(ssl);
     }
 
-    public void startServer(Context context, int port) {
+    public void startServer(Context context) {
         if (state == ServerState.RUNNING || state == ServerState.PENDING) {
             return;
         }

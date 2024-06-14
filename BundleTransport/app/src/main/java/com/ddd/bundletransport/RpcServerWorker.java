@@ -12,14 +12,16 @@ import com.ddd.bundletransport.service.FileServiceImpl;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 import io.grpc.Server;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 
-public class RpcServerWorker extends Worker {
-    private Server server;
+public class RpcServerWorker extends Worker implements RpcServerStateListener{
+    private RpcServer rpcServer;
     private final int port;
     private final SocketAddress address;
+    Level
 
     // the ip that wifi direct always uses and that bundle client connects to
     private final String inetSocketAddressIP = "192.168.49.1";
@@ -31,12 +33,12 @@ public class RpcServerWorker extends Worker {
     }
 
     private void startRpcServer() {
-        server =
-                NettyServerBuilder.forAddress(address).addService(new FileServiceImpl(getApplicationContext())).build();
 
-        Log.d(MainActivity.TAG, "start rpc server at:" + server.toString());
+        rpcServer = new RpcServer(this);
+
+        Log.d(MainActivity.TAG, "start rpc server at:" + rpcServer.toString());
         try {
-            server.start().awaitTermination();
+            rpcServer.startServer(this.getApplicationContext());
 
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -45,12 +47,8 @@ public class RpcServerWorker extends Worker {
 
     private void stopRpcServer() {
         Log.d(MainActivity.TAG, "stop rpc server");
-        if (server != null) {
-            try {
-                server.shutdown().awaitTermination(5, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+        if (rpcServer != null && !rpcServer.isShutdown()) {
+            rpcServer.shutdownServer();
         }
     }
 
@@ -65,5 +63,10 @@ public class RpcServerWorker extends Worker {
     public Result doWork() {
         startRpcServer();
         return Result.success();
+    }
+
+    @Override
+    public void onStateChanged(RpcServer.ServerState newState) {
+
     }
 }
