@@ -5,46 +5,24 @@ on:
     branches: main
 
 jobs:
-  call-auto-formatter:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-
-      - name: Install IntelliJ IDEA
-        run: |
-          wget -q -O idea.tar.gz https://download.jetbrains.com/idea/ideaIC-2024.1.1.tar.gz
-          tar -xzf idea.tar.gz
-
-      - name: Format code
-        run: |
-          ./*/bin/format.sh -m *.java -r .
-
-      - name: Commit changes
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          if ! git diff --exit-code > /dev/null
-          then
-            git commit -a -m "Auto-format code"
-            git push
-          fi
-
   # Github Action to detect file changes between
   # main branch and pull request branch
   changes:
-    needs: [call-auto-formatter]
-    if: ${{ always() }}
     runs-on: ubuntu-latest
     outputs:
       core: ${{ steps.filter.outputs.core }}
       client: ${{ steps.filter.outputs.client }}
       transport: ${{ steps.filter.outputs.transport }}
       server: ${{ steps.filter.outputs.server }}
+      commit-author: ${{ steps.check.outputs.author }}
     steps:
+      - name: Get previous commit author
+        id: check
+        run: echo "author=$(git show -s | grep Author)" >> $GITHUB_OUTPUT
+
+      - name: Print previous commit author
+        run: echo "Previous ${{ steps.check.outputs.author }}"
+
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -68,8 +46,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Setup JDK 17
         uses: actions/setup-java@v3
@@ -90,8 +66,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Setup gradle
         uses: gradle/gradle-build-action@v2
@@ -119,8 +93,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Setup gradle
         uses: gradle/gradle-build-action@v2
@@ -144,8 +116,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Setup JDK 17
         uses: actions/setup-java@v3
@@ -160,3 +130,41 @@ jobs:
       - name: Run maven package on BundleServer
         working-directory: ./bundleserver
         run: mvn package
+
+  call-auto-formatter:
+    needs:
+      [
+        changes,
+        build-bundle-core,
+        build-bundle-client,
+        build-bundle-transport,
+        build-bundle-server,
+      ]
+    if: ${{ always() && !contains(needs.changes.outputs.commit-author, 'github-actions[bot]')}}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: secrets.DDDTOKEN
+
+      - name: Install IntelliJ IDEA
+        run: |
+          wget -q -O idea.tar.gz https://download.jetbrains.com/idea/ideaIC-2024.1.1.tar.gz
+          tar -xzf idea.tar.gz
+
+      - name: Format code
+        run: |
+          ./*/bin/format.sh -m *.java -r .
+
+      - name: Commit changes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git diff --exit-code > /dev/null
+          then
+            git commit -a -m "Auto-format code"
+            git push
+          fi
