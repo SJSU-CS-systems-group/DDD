@@ -5,7 +5,8 @@ on:
     branches: main
 
 jobs:
-  # Job to detect file changes
+  # Github Action to detect file changes between
+  # main branch and pull request branch
   changes:
     runs-on: ubuntu-latest
     outputs:
