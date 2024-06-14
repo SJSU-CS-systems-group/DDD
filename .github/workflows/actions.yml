@@ -16,10 +16,10 @@ jobs:
     #   server: ${{ steps.filter.outputs.server }}
     #   commit-author: ${{ steps.check.outputs.author }}
     steps:
-      # - name: Checkout code
-      #   uses: actions/checkout@v4
-      #   with:
-      #     ref: ${{ github.action.pull_request.head.ref }}
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.action.pull_request.head.ref }}
 
       # - name: Get previous commit author
       #   id: check
