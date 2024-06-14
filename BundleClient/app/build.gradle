@@ -89,7 +89,7 @@ protobuf {
             // https://repo.maven.apache.org/maven2/io/grpc/protoc-gen-grpc-java/1.42.0/
             // for macOS M1 and M2, using 'osx-x86_64' version
             // if M2 also install Rosetta in terminal using command: softwareupdate --install-rosetta
-            artifact = 'io.grpc:protoc-gen-grpc-java:1.42.0:osx-x86_64'
+            artifact = 'io.grpc:protoc-gen-grpc-java:1.42.0'
         }
     }
     generateProtoTasks {
