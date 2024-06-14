@@ -10,7 +10,7 @@ if (osName.contains("mac") && osArch.equals("aarch64")) {
     project.ext.osArch = "osx-x86_64"
 
 } else {
-    project.ext.osArch = osArch
+    project.ext.osArch = ""
 }
 
 android {
