@@ -9,44 +9,48 @@ jobs:
   # main branch and pull request branch
   changes:
     runs-on: ubuntu-latest
-    outputs:
-      core: ${{ steps.filter.outputs.core }}
-      client: ${{ steps.filter.outputs.client }}
-      transport: ${{ steps.filter.outputs.transport }}
-      server: ${{ steps.filter.outputs.server }}
-      commit-author: ${{ steps.check.outputs.author }}
+    # outputs:
+    #   core: ${{ steps.filter.outputs.core }}
+    #   client: ${{ steps.filter.outputs.client }}
+    #   transport: ${{ steps.filter.outputs.transport }}
+    #   server: ${{ steps.filter.outputs.server }}
+    #   commit-author: ${{ steps.check.outputs.author }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.action.pull_request.head.ref }}
+      # - name: Checkout code
+      #   uses: actions/checkout@v4
+      #   with:
+      #     ref: ${{ github.action.pull_request.head.ref }}
 
-      - name: Get previous commit author
-        id: check
-        run: echo "author=$(git show -s | grep Author)" >> $GITHUB_OUTPUT
+      # - name: Get previous commit author
+      #   id: check
+      #   run: echo "author=$(git show -s | grep Author)" >> $GITHUB_OUTPUT
 
-      - name: Print previous commit author
-        run: echo "Previous ${{ steps.check.outputs.author }}"
+      # - name: Print previous commit author
+      #   run: echo "Previous ${{ steps.check.outputs.author }}"
 
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          # Detect any changes to the following folders
-          filters: |
-            core:
-              - 'bundle-core/**'
-            client:
-              - 'BundleClient/**'
-            transport:
-              - 'BundleTransport/**'
-            server:
-              - 'bundleserver/**'
+      # - uses: dorny/paths-filter@v3
+      #   id: filter
+      #   with:
+      #     # Detect any changes to the following folders
+      #     filters: |
+      #       core:
+      #         - 'bundle-core/**'
+      #       client:
+      #         - 'BundleClient/**'
+      #       transport:
+      #         - 'BundleTransport/**'
+      #       server:
+      #         - 'bundleserver/**'
 
       - name: Cat stuff
         run: |
           echo "$(ls -a)"
+          echo "---"
           echo "$(pwd)"
+          echo "---"
           echo "$(cat .git/config)"
+          echo "---"
+          echo "$(ls -a ./.git/)"
 
 #   # Github Action to Compile bundle-core
 #   build-bundle-core:
