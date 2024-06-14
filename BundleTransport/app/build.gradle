@@ -3,6 +3,16 @@ plugins {
     id "com.google.protobuf" version '0.9.0'
 }
 
+def osName = System.getProperty("os.name").toLowerCase()
+def osArch = System.getProperty("os.arch")
+
+if (osName.contains("mac") && osArch.equals("aarch64")) {
+    project.ext.osArch = "osx-x86_64"
+
+} else {
+    project.ext.osArch = osArch
+}
+
 android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -84,7 +94,7 @@ protobuf {
             // https://repo.maven.apache.org/maven2/io/grpc/protoc-gen-grpc-java/1.42.0/
             // for macOS M1 and M2, using 'osx-x86_64' version
             // if M2 also install Rosetta in terminal using command: softwareupdate --install-rosetta
-            artifact = 'io.grpc:protoc-gen-grpc-java:1.42.0'
+            artifact = "io.grpc:protoc-gen-grpc-java:1.42.0:$project.ext.osArch"
         }
     }
     generateProtoTasks {
