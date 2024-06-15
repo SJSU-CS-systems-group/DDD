@@ -2,6 +2,9 @@ package com.ddd.server;
 
 import com.ddd.server.commands.CommandProcessor;
 import com.ddd.server.commands.bundleuploader.BundleUploader;
+import io.leego.banana.Ansi;
+import io.leego.banana.BananaUtils;
+import io.leego.banana.Font;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.Banner;
 import org.springframework.boot.SpringApplication;
@@ -61,6 +64,8 @@ public class BundleServerApplication {
             log.error("Please enter properties file path as argument!");
             System.exit(1);
         }
+
+        app.setBanner((e, s, o) -> o.println(BananaUtils.bananansi("DDD Bundle Server", Font.ANSI_SHADOW, Ansi.GREEN)));
 
         if (CommandProcessor.checkForCommand(args)) {
             // we are doing a CLI command, so don't start up like a server
