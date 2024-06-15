@@ -69,7 +69,8 @@ public class BundleServerApplication {
 
         app.setBanner((e, s, o) -> {
             try {
-                var figletRenderer = new FigletRenderer(FigFontResources.loadFigFontResource(FigFontResources.SLANT_FLF));
+                var figletRenderer =
+                        new FigletRenderer(FigFontResources.loadFigFontResource(FigFontResources.SLANT_FLF));
                 o.println(figletRenderer.renderText("DDD Bundle Server"));
             } catch (IOException ex) {
                 o.println("**** DDD BundleServer ****");
