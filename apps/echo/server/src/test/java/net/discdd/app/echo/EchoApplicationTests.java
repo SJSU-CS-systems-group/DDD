@@ -19,10 +19,9 @@ class EchoApplicationTests {
                 ManagedChannelBuilder.forAddress("localhost", 9090).usePlaintext().build());
         var prepRsp = stub.prepareData(net.discdd.server.ClientData.newBuilder().setClientId("ben").build());
         Assertions.assertEquals(net.discdd.server.StatusCode.SUCCESS, prepRsp.getCode());
-        var saveRsp = stub.saveData(net.discdd.server.AppData.newBuilder().setClientId("ben")
-                                    .addDataList(net.discdd.server.AppDataUnit.newBuilder().setAduId(1)
-                                                 .setData(com.google.protobuf.ByteString.copyFromUtf8("hello")).build())
-                                    .build());
+        var saveRsp = stub.saveData(net.discdd.server.AppData.newBuilder().setClientId("ben").addDataList(
+                net.discdd.server.AppDataUnit.newBuilder().setAduId(1)
+                        .setData(com.google.protobuf.ByteString.copyFromUtf8("hello")).build()).build());
         Assertions.assertEquals(1, saveRsp.getLastADUIdReceived());
         Assertions.assertEquals(1, saveRsp.getDataListCount());
         Assertions.assertEquals(1, saveRsp.getDataList(0).getAduId());
