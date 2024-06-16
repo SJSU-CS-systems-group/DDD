@@ -149,6 +149,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Print previous commit author
+        run: echo "Previous ${{ needs.changes.outputs.commit-author }}"
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
