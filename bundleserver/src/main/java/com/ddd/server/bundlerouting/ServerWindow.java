@@ -53,8 +53,8 @@ public class ServerWindow {
             System.out.println(e + "\n[WIN] INFO: Failed to initialize window from database");
 
             String dbTableCreateQuery =
-                    "CREATE TABLE " + dbTableName + " " + "(clientID VARCHAR(256) not NULL," + STARTCOUNTER +
-                            " VARCHAR(256)," + ENDCOUNTER + " VARCHAR(256)," + WINDOW_LENGTH + " INTEGER," +
+                    "CREATE TABLE " + dbTableName + " " + "(clientID VARCHAR(256) not NULL,"                    + STARTCOUNTER +
+                            " VARCHAR(256)," +                  ENDCOUNTER + " VARCHAR(256),"                   + WINDOW_LENGTH + " INTEGER," +
                             "PRIMARY KEY (clientID))";
 
             database.createTable(dbTableCreateQuery);
