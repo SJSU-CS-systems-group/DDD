@@ -51,7 +51,6 @@ public class ServerSecurity {
     private static ServerSecurity singleServerInstance = null;
     private static final Logger logger = Logger.getLogger(ServerSecurity.class.getName());
 
-
     private SignalProtocolAddress ourAddress;
     private IdentityKeyPair ourIdentityKeyPair;
     private ECKeyPair ourSignedPreKey;
@@ -200,7 +199,7 @@ public class ServerSecurity {
             clientSessionRecord = serverProtocolStore.loadSession(clientSession.clientProtocolAddress);
             stream.write(clientSessionRecord.serialize());
         } catch (IOException e) {
-            logger.log(SEVERE,"Update Session Record" ,e);
+            logger.log(SEVERE, "Update Session Record", e);
         }
     }
 
@@ -225,6 +224,8 @@ public class ServerSecurity {
                        Paths.get(clientDataPath + File.separator + SecurityUtils.CLIENT_BASE_KEY));
         } catch (IOException e) {
             logger.log(SEVERE, e + "\n[ServerSecurity] INFO: Client Keys already exist Client Data Path for client ID " + clientID);
+            logger.log(SEVERE,
+                       e + "\n[SEC] INFO: Client Keys already exist Client Data Path for client ID " + clientID);
         }
 
         initializeClientKeysFromFiles(clientDataPath, clientSession);
@@ -238,6 +239,8 @@ public class ServerSecurity {
         } catch (IOException e) {
             logger.log(SEVERE,
                     "[ServerSecurity]: Error Reading Session record from " + sessionStorePath + "\nCreating New Session Record!");
+            logger.log(SEVERE, "[ServerSecurity]: Error Reading Session record from " + sessionStorePath +
+                    "\nCreating New Session Record!");
             clientSessionRecord = new SessionRecord();
             initializeRatchet(clientSessionRecord.getSessionState(), clientSession);
         }

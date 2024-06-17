@@ -21,13 +21,11 @@ import com.ddd.server.bundlesecurity.SecurityExceptions.BundleIDCryptographyExce
 import com.ddd.utils.Constants;
 import static java.util.logging.Level.*;
 
-
 @Service
 public class BundleSecurity {
     @Value("${bundle-server.application-data-manager.state-manager.bundle-id-next-counter}")
     private String BUNDLE_ID_NEXT_COUNTER;
     private static final Logger logger = Logger.getLogger(BundleSecurity.class.getName());
-
 
     @Autowired
     private ServerSecurity serverSecurity;
