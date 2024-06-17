@@ -271,7 +271,7 @@ public class BundleTransmission {
         try {
             this.serverWindow.addClient(clientId, this.WINDOW_LENGTH);
         } catch (Exception e) {
-            logger.log(SEVERE, "[WIN] INFO : Did not Add client " + clientId + " : " + e);
+            logger.log(SEVERE, "[ServerWindow] INFO : Did not Add client " + clientId + " : " + e);
         }
 
         boolean isSenderWindowFull = this.serverWindow.isClientWindowFull(clientId);
@@ -433,7 +433,7 @@ public class BundleTransmission {
         try {
             clientId = BundleIDGenerator.getClientIDFromBundleID(bundleDTO.getBundleId(), BundleIDGenerator.DOWNSTREAM);
             this.serverWindow.updateClientWindow(clientId, bundleDTO.getBundleId());
-            logger.log(INFO, "[BT] Updated client window for client " + clientId + " with bundle id: " +
+            logger.log(INFO, "[BundleTransmission] Updated client window for client " + clientId + " with bundle id: " +
                     bundleDTO.getBundleId());
         } catch (Exception e) {
             e.printStackTrace();
