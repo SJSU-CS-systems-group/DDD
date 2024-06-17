@@ -18,8 +18,6 @@ import java.util.Optional;
 
 import org.apache.commons.io.FileUtils;
 import com.ddd.bundleclient.HelloworldActivity;
-import com.ddd.client.bundlesecurity.ClientSecurity;
-import com.ddd.client.bundlesecurity.SecurityUtils;
 import com.ddd.model.ADU;
 import com.ddd.model.Acknowledgement;
 import com.ddd.model.Bundle;

@@ -1,6 +1,6 @@
 package com.ddd.server.commands.bundlesecurity;
 
-import com.ddd.server.bundlesecurity.SecurityUtils;
+import com.ddd.bundlesecurity.SecurityUtils;
 import com.ddd.server.bundlesecurity.ServerSecurity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;

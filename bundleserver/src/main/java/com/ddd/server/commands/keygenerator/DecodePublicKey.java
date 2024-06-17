@@ -1,12 +1,14 @@
 package com.ddd.server.commands.keygenerator;
 
-import com.ddd.server.bundlesecurity.SecurityExceptions.EncodingException;
-import com.ddd.server.bundlesecurity.SecurityUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
+
+import com.ddd.bundlesecurity.SecurityUtils;
+import com.ddd.bundlesecurity.SecurityExceptions.EncodingException;
+
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;

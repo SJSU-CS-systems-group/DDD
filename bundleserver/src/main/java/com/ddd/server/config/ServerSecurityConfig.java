@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.SEVERE;
+import com.ddd.server.bundlesecurity.ServerSecurity;
 
 @Configuration
 public class ServerSecurityConfig {

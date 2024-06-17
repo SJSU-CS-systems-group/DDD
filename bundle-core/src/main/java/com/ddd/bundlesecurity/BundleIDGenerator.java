@@ -1,21 +1,48 @@
-package com.ddd.client.bundlesecurity;
+package com.ddd.bundlesecurity;
 
-import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-
-import android.util.Base64;
+import java.util.Base64;
+import java.util.logging.Logger;
 
 import com.google.common.primitives.Bytes;
 
-import com.ddd.client.bundlesecurity.SecurityUtils;
-import com.ddd.client.bundlesecurity.SecurityExceptions.IDGenerationException;
+import com.ddd.bundlesecurity.SecurityExceptions.IDGenerationException;
 
 public class BundleIDGenerator {
     public static final boolean UPSTREAM = true;
     public static final boolean DOWNSTREAM = false;
     /* Length of the Counter */
     private static final int counterLength = 8;
+
+    /* Counter value used as unsigned long */
+    private long currentCounter = 0;
+
+    /* Generates bundleID
+     * Used when a window is NOT involved to maintain the counter values
+     * Parameters:
+     * clientKeyPath:   Path to client Identity key (public key)
+     * direction:   UPSTREAM (Client->Server), DOWNSTREAM (Server->Client)
+     * Returns:
+     * bundleID as a Base64 encoded String
+     */
+    public String generateBundleID(String clientKeyPath, boolean direction) throws IDGenerationException {
+        String clientID = SecurityUtils.getClientID(clientKeyPath);
+
+        currentCounter++;
+
+        byte[] bClientID = Base64.getUrlDecoder().decode(clientID);
+        byte[] bCounter = new byte[1];
+        bCounter[0] = (byte) currentCounter;
+        byte[] bundleID = new byte[bClientID.length + counterLength];
+
+        if (direction == UPSTREAM) {
+            bundleID = Bytes.concat(bClientID, bCounter);
+        } else {
+            bundleID = Bytes.concat(bCounter, bClientID);
+        }
+
+        return Base64.getUrlEncoder().encodeToString(bundleID);
+    }
 
     /* Generates bundleID for the specified clientID and counter value
      * Used when a window is involved to maintain the counter values
@@ -27,7 +54,7 @@ public class BundleIDGenerator {
      * bundleID as a Base64 encoded String
      */
     public static String generateBundleID(String clientID, long counter, boolean direction) {
-        byte[] bClientID = Base64.decode(clientID, Base64.URL_SAFE | Base64.NO_WRAP);
+        byte[] bClientID = Base64.getUrlDecoder().decode(clientID);
         byte[] bCounter = new byte[1];
         bCounter[0] = (byte) counter;
         byte[] bundleID = new byte[bClientID.length + counterLength];
@@ -38,7 +65,7 @@ public class BundleIDGenerator {
             bundleID = Bytes.concat(bCounter, bClientID);
         }
 
-        return Base64.encodeToString(bundleID, Base64.URL_SAFE | Base64.NO_WRAP);
+        return Base64.getUrlEncoder().encodeToString(bundleID);
     }
 
     /* Compares BundleIDs
@@ -66,7 +93,7 @@ public class BundleIDGenerator {
      * counter value as an unsigned long
      */
     public static long getCounterFromBundleID(String bundleID, boolean direction) {
-        byte[] bundleIDBytes = Base64.decode(bundleID, Base64.URL_SAFE | Base64.NO_WRAP);
+        byte[] bundleIDBytes = Base64.getUrlDecoder().decode(bundleID);
 
         int index = (direction == DOWNSTREAM) ? 0 : (bundleIDBytes.length - 1);
 
@@ -74,7 +101,7 @@ public class BundleIDGenerator {
     }
 
     public static String getClientIDFromBundleID(String bundleID, boolean direction) {
-        byte[] bundleIDBytes = Base64.decode(bundleID, Base64.URL_SAFE | Base64.NO_WRAP);
+        byte[] bundleIDBytes = Base64.getUrlDecoder().decode(bundleID);
         byte[] clientIDBytes = null;
 
         if (direction == UPSTREAM) {
@@ -83,6 +110,6 @@ public class BundleIDGenerator {
             clientIDBytes = Arrays.copyOfRange(bundleIDBytes, 1, bundleIDBytes.length);
         }
 
-        return Base64.encodeToString(clientIDBytes, Base64.URL_SAFE | Base64.NO_WRAP);
+        return Base64.getUrlEncoder().encodeToString(clientIDBytes);
     }
 }
