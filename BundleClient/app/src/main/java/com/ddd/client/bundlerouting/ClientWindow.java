@@ -11,6 +11,7 @@ import com.ddd.client.bundlesecurity.SecurityExceptions.BundleIDCryptographyExce
 import com.ddd.client.bundlesecurity.SecurityUtils;
 
 import java.util.logging.Logger;
+
 import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
@@ -143,11 +144,12 @@ public class ClientWindow {
 
         if (Long.compareUnsigned(ack, begin) == -1) {
             logger.log(FINE,
-                    "Received old [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(begin) + "]");
+                       "Received old [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(begin) + "]");
             return;
         } else if (Long.compareUnsigned(ack, end) == 1) {
             logger.log(FINE,
-                    "Received Invalid ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(end) + "]");
+                       "Received Invalid ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(end) +
+                               "]");
             return;
         }
 
