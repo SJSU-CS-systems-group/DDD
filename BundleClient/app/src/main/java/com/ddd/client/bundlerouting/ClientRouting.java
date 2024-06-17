@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import java.util.HashMap;
 
+
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINER;
@@ -15,7 +16,8 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 import static java.util.logging.Level.SEVERE;
 
-import com.ddd.client.bundlesecurity.SecurityUtils;
+import com.ddd.bundlesecurity.SecurityUtils;
+
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;

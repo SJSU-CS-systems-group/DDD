@@ -5,10 +5,10 @@ import com.ddd.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
 
 import android.util.Log;
 import com.ddd.bundlerouting.WindowUtils.CircularBuffer;
-import com.ddd.client.bundlesecurity.BundleIDGenerator;
+import com.ddd.bundlesecurity.BundleIDGenerator;
 import com.ddd.client.bundlesecurity.ClientSecurity;
-import com.ddd.client.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
-import com.ddd.client.bundlesecurity.SecurityUtils;
+import com.ddd.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
+import com.ddd.bundlesecurity.SecurityUtils;
 
 import java.util.logging.Logger;
 

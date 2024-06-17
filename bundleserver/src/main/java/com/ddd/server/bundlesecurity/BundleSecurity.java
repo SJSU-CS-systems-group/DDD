@@ -17,7 +17,8 @@ import com.ddd.model.EncryptionHeader;
 import com.ddd.model.Payload;
 import com.ddd.model.UncompressedBundle;
 import com.ddd.model.UncompressedPayload;
-import com.ddd.server.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
+import com.ddd.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
+import com.ddd.bundlesecurity.SecurityExceptions;
 import com.ddd.utils.Constants;
 
 import static java.util.logging.Level.*;

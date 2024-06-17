@@ -14,11 +14,13 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 import static java.util.logging.Level.SEVERE;
 
-import com.ddd.client.bundlesecurity.BundleIDGenerator;
+
+import com.ddd.bundlesecurity.BundleIDGenerator;
+
 import com.ddd.client.bundlesecurity.ClientSecurity;
-import com.ddd.client.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
-import com.ddd.client.bundlesecurity.SecurityExceptions.IDGenerationException;
-import com.ddd.client.bundlesecurity.SecurityUtils;
+import com.ddd.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
+import com.ddd.bundlesecurity.SecurityExceptions.IDGenerationException;
+import com.ddd.bundlesecurity.SecurityUtils;
 
 public class ClientBundleGenerator {
 
