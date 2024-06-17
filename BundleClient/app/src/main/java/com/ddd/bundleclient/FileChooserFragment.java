@@ -109,8 +109,7 @@ public class FileChooserFragment extends Fragment {
                     logger.log(Level.INFO, "Permission Granted!");
                     Toast.makeText(this.getContext(), "Permission Granted!", Toast.LENGTH_SHORT).show();
                     this.doBrowseFile();
-                }
-                else {
+                } else {
                     logger.log(Level.WARNING, "Permission Denied!");
                     Toast.makeText(this.getContext(), "Permission Denied!", Toast.LENGTH_SHORT).show();
 

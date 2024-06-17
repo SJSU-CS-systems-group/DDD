@@ -21,6 +21,7 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
 import java.util.logging.Logger;
+
 import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;

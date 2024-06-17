@@ -19,6 +19,7 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 
 import java.util.logging.Logger;
+
 import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
@@ -256,11 +257,11 @@ public class FileUtils {
             while ((read = inputStream.read(buffers)) != -1) {
                 outputStream.write(buffers, 0, read);
             }
-            logger.log(INFO,"File Size", "Size " + file.length());
+            logger.log(INFO, "File Size", "Size " + file.length());
             inputStream.close();
             outputStream.close();
-            logger.log(INFO,"File Path", "Path " + file.getPath());
-            logger.log(INFO,"File Size", "Size " + file.length());
+            logger.log(INFO, "File Path", "Path " + file.getPath());
+            logger.log(INFO, "File Size", "Size " + file.length());
         } catch (Exception e) {
             logger.log(WARNING, "Error:" + e.getMessage());
         }
@@ -295,11 +296,11 @@ public class FileUtils {
             while ((read = inputStream.read(buffers)) != -1) {
                 outputStream.write(buffers, 0, read);
             }
-            logger.log(INFO,"File Size", "Size " + file.length());
+            logger.log(INFO, "File Size", "Size " + file.length());
             inputStream.close();
             outputStream.close();
-            logger.log(INFO,"File Path", "Path " + file.getPath());
-            logger.log(INFO,"File Size", "Size " + file.length());
+            logger.log(INFO, "File Path", "Path " + file.getPath());
+            logger.log(INFO, "File Size", "Size " + file.length());
         } catch (Exception e) {
             logger.log(WARNING, "Error:" + e.getMessage());
         }

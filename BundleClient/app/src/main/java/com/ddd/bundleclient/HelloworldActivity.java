@@ -37,6 +37,7 @@ import io.grpc.stub.StreamObserver;
 
 //Venus added
 import java.util.logging.Logger;
+
 import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
@@ -86,14 +87,14 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
                                            @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
-            logger.log(INFO, "checking permissions" + grantResults.length);
-            switch (requestCode) {
-                case PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION :
-                    if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                        logger.log(SEVERE, "Find location is not granted!");
-                        finish();
-                    }
-                    break;
+        logger.log(INFO, "checking permissions" + grantResults.length);
+        switch (requestCode) {
+            case PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION:
+                if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                    logger.log(SEVERE, "Find location is not granted!");
+                    finish();
+                }
+                break;
         }
     }
 
