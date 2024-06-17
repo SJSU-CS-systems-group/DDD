@@ -17,7 +17,6 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
-
 @RestController
 @RequestMapping("/")
 public class TestController {

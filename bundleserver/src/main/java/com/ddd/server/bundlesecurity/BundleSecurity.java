@@ -23,7 +23,6 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
-
 @Service
 public class BundleSecurity {
     @Value("${bundle-server.application-data-manager.state-manager.bundle-id-next-counter}")

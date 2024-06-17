@@ -24,7 +24,6 @@ import java.util.logging.Logger;
 
 import static java.util.logging.Level.SEVERE;
 
-
 @Slf4j
 @SpringBootApplication
 @EnableJpaRepositories("com.ddd.server")
