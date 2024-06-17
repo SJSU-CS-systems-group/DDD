@@ -47,7 +47,6 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
-
 @Service
 public class BundleTransmission {
 
@@ -198,13 +197,14 @@ public class BundleTransmission {
                 try {
                     this.processReceivedBundle(transportId, bundle);
                 } catch (Exception e) {
-                    logger.log(SEVERE,"[BT] Failed to process received bundle from transportId: " + transportId + ", error: " +
-                                    e.getMessage());
+                    logger.log(SEVERE,
+                               "[BT] Failed to process received bundle from transportId: " + transportId + ", error: " +
+                                       e.getMessage());
                 } finally {
                     try {
                         FileUtils.delete(bundleFile);
                     } catch (IOException e) {
-                        logger.log(SEVERE,"e");
+                        logger.log(SEVERE, "e");
                     }
                 }
             }
@@ -256,7 +256,7 @@ public class BundleTransmission {
 
     private BundleTransferDTO generateBundleForTransmission(String transportId, String clientId,
                                                             Set<String> bundleIdsPresent) throws ClientWindowNotFound {
-        logger.log(INFO,"[BT] Processing bundle generation request for client " + clientId);
+        logger.log(INFO, "[BT] Processing bundle generation request for client " + clientId);
         Set<String> deletionSet = new HashSet<>();
         List<BundleDTO> bundlesToSend = new ArrayList<>();
 
@@ -410,7 +410,7 @@ public class BundleTransmission {
             return bundles;
         }
 
-        logger.log(INFO,"[BT] Found " + recvTransport.length + " bundles to deliver through transport " + transportId);
+        logger.log(INFO, "[BT] Found " + recvTransport.length + " bundles to deliver through transport " + transportId);
         for (File bundleFile : recvTransport) {
             bundles.add(bundleFile);
         }
@@ -430,7 +430,7 @@ public class BundleTransmission {
             clientId = BundleIDGenerator.getClientIDFromBundleID(bundleDTO.getBundleId(), BundleIDGenerator.DOWNSTREAM);
             this.serverWindow.updateClientWindow(clientId, bundleDTO.getBundleId());
             logger.log(INFO, "[BT] Updated client window for client " + clientId + " with bundle id: " +
-                                       bundleDTO.getBundleId());
+                    bundleDTO.getBundleId());
         } catch (Exception e) {
             e.printStackTrace();
         }

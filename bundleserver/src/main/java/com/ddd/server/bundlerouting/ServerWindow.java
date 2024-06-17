@@ -84,7 +84,7 @@ public class ServerWindow {
         try {
             initializeWindow();
         } catch (SQLException | BufferOverflow | InvalidLength e) {
-            logger.log(SEVERE, "[WIN] INFO: Failed to initialize window from database",e );
+            logger.log(SEVERE, "[WIN] INFO: Failed to initialize window from database", e);
 
             String dbTableCreateQuery =
                     "CREATE TABLE " + dbTableName + " " + "(clientID VARCHAR(256) not NULL," + STARTCOUNTER +
@@ -201,7 +201,7 @@ public class ServerWindow {
         try {
             decryptedBundleID = serverSecurity.decryptBundleID(bundleID, clientID);
         } catch (BundleIDCryptographyException e) {
-            logger.log(SEVERE, "Error",e);
+            logger.log(SEVERE, "Error", e);
             throw new InvalidBundleID("[WIN]: Failed to Decrypt bundleID");
         }
 

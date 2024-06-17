@@ -101,7 +101,7 @@ public class SNRDatabases {
         }
 
         conn.close();
-        logger.log(INFO,"[SNRDB]: Executed " + query);
+        logger.log(INFO, "[SNRDB]: Executed " + query);
 
         return results;
     }

@@ -55,7 +55,6 @@ public class FileStoreHelper {
     String RootFolder = "";
     private static final Logger logger = Logger.getLogger(FileStoreHelper.class.getName());
 
-
     public FileStoreHelper(String rootFolder) {
         RootFolder = rootFolder;
     }

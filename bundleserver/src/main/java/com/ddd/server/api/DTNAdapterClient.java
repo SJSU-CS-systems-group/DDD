@@ -14,14 +14,12 @@ import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
 
-
 public class DTNAdapterClient {
     public String ipAddress;
     public int port;
     private DTNAdapterGrpc.DTNAdapterBlockingStub blockingStub;
     private DTNAdapterGrpc.DTNAdapterStub asyncStub;
     private static final Logger logger = Logger.getLogger(DTNAdapterClient.class.getName());
-
 
     public DTNAdapterClient(String ipAddress, int port) {
         this.ipAddress = ipAddress;
@@ -48,7 +46,8 @@ public class DTNAdapterClient {
             AppData data = AppData.newBuilder().setClientId(clientId).addAllDataList(dataListConverted)
                     .setLastADUIdReceived(lastADUIdReceived).build();
             AppData appData = client.blockingStub.saveData(data);
-            logger.log(INFO, "[DTNAdapterClient.SendData] response: appData.getDataCount()- " + appData.getDataListCount());
+            logger.log(INFO,
+                       "[DTNAdapterClient.SendData] response: appData.getDataCount()- " + appData.getDataListCount());
             return appData;
         } catch (StatusRuntimeException e) {
             e.printStackTrace();
