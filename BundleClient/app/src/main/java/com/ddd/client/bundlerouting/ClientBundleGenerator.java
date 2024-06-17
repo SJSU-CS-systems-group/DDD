@@ -14,7 +14,6 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 import static java.util.logging.Level.SEVERE;
 
-
 import com.ddd.bundlesecurity.BundleIDGenerator;
 
 import com.ddd.client.bundlesecurity.ClientSecurity;
