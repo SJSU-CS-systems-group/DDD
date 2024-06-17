@@ -1,6 +1,7 @@
 package com.ddd.utils;
 
 public class Constants {
+    public static final String bwh="Ben was here";
     /* Bundle contents */
     public static final String BUNDLE_ADU_DIRECTORY_NAME = "ADU";
 
