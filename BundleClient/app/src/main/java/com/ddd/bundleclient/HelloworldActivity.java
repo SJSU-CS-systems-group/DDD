@@ -45,7 +45,6 @@ import static java.util.logging.Level.WARNING;
 import static java.util.logging.Level.SEVERE;
 
 public class HelloworldActivity extends AppCompatActivity implements WifiDirectStateListener {
-    // tag used for testing in logcat
 
     // Wifi Direct set up
     private com.ddd.wifidirect.WifiDirectManager wifiDirectManager;
