@@ -12,7 +12,7 @@ import android.util.Log;
 import androidx.core.app.ActivityCompat;
 
 import com.ddd.bundleclient.HelloworldActivity;
-import com.ddd.client.bundlesecurity.SecurityExceptions;
+import com.ddd.bundlesecurity.SecurityExceptions;
 
 /**
  * A BroadcastReceiver that notifies of important wifi p2p events.

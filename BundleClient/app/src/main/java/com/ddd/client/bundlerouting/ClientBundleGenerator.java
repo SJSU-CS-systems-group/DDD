@@ -6,11 +6,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-import com.ddd.client.bundlesecurity.BundleIDGenerator;
+import com.ddd.bundlesecurity.BundleIDGenerator;
 import com.ddd.client.bundlesecurity.ClientSecurity;
-import com.ddd.client.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
-import com.ddd.client.bundlesecurity.SecurityExceptions.IDGenerationException;
-import com.ddd.client.bundlesecurity.SecurityUtils;
+import com.ddd.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
+import com.ddd.bundlesecurity.SecurityExceptions.IDGenerationException;
+import com.ddd.bundlesecurity.SecurityUtils;
 
 public class ClientBundleGenerator {
     static ClientBundleGenerator singleGeneratorInstance = null;
