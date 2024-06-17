@@ -38,6 +38,7 @@ public class BundleDeliveryAgent {
             return toSend;
         } catch (Exception e) {
             logger.log(WARNING, "Error: ", e);
-        } return null;
+        }
+        return null;
     }
 }
