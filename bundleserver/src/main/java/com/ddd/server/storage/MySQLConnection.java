@@ -3,13 +3,20 @@ package com.ddd.server.storage;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;
+import java.util.logging.Logger;
 
+import com.mysql.cj.MysqlConnection;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+
 @Component
 public class MySQLConnection {
+    private static final Logger logger = Logger.getLogger(MySQLConnection.class.getName());
+
     @Value("${spring.datasource.driver-class-name}")
     private String driver;
 
@@ -26,7 +33,7 @@ public class MySQLConnection {
 
     public Connection GetConnection() {
         try {
-            System.out.println("DB connection begins");
+            logger.log(INFO, "DataBase connection begins");
             Class.forName(driver);
 
 //            Connection con= DriverManager.getConnection(
@@ -34,7 +41,7 @@ public class MySQLConnection {
 //                   &useLegacyDatetimeCode=false&serverTimezone=UTC","root","Triquenguyen@2702");
 
             Connection con = DriverManager.getConnection(url, uname, password);
-            System.out.println("DB connected" + url + uname + password);
+            logger.log(INFO, "DataBase connected" + url + uname + password);
             return con;
 
             /*Statement stmt=con.createStatement();
@@ -43,7 +50,7 @@ public class MySQLConnection {
                 System.out.println(rs.getInt(1)+"  "+rs.getString(2)+"  "+rs.getString(3));
             con.close();*/
         } catch (Exception e) {
-            System.out.println(e);
+            logger.log(SEVERE, "Problem getting connection", e);
         }
         return null;
     }

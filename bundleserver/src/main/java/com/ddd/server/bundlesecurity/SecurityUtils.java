@@ -41,10 +41,14 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 import java.util.Base64;
 import java.util.List;
+import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import static java.util.logging.Level.*;
+
 public class SecurityUtils {
+    private static final Logger logger = Logger.getLogger(SecurityUtils.class.getName());
     public static final String PAYLOAD_FILENAME = "payload";
     public static final String SIGNATURE_FILENAME = ".signature";
     public static final String PAYLOAD_DIR = "payloads";
@@ -122,7 +126,7 @@ public class SecurityUtils {
         try {
             md = MessageDigest.getInstance("SHA-1");
         } catch (NoSuchAlgorithmException e) {
-            throw new IDGenerationException("[BS]: NoSuchAlgorithmException while generating ID ", e);
+            throw new IDGenerationException("[BundleSecurity]: NoSuchAlgorithmException while generating ID ", e);
         }
 
         byte[] hashedKey = md.digest(publicKey);
@@ -319,7 +323,7 @@ public class SecurityUtils {
                 entry = zis.getNextEntry();
             }
 
-            System.out.println("Unzipped to: " + destDir.getAbsolutePath());
+            logger.log(INFO, "Unzipped to: " + destDir.getAbsolutePath());
 
             return destDir.getAbsolutePath();
         } catch (IOException e) {
