@@ -11,10 +11,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.concurrent.Callable;
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.*;
 
 @Component
 @CommandLine.Command(name = "encrypt-bundle", description = "Encrypt bundle")
 public class EncryptBundle implements Callable<Void> {
+    private static final Logger logger = Logger.getLogger(EncryptBundle.class.getName());
     @Value("${bundle-server.bundle-transmission.received-processing-directory}")
     private String receivedProcessingDir;
 
@@ -35,7 +39,7 @@ public class EncryptBundle implements Callable<Void> {
 
     @Override
     public Void call() {
-        System.out.println("Encrypting bundle " + bundlePath);
+        logger.log(INFO, "Encrypting bundle " + bundlePath);
 
         if (encPath == null) {
             encPath = receivedProcessingDir + File.separator + "encrypted" + File.separator;
@@ -50,7 +54,7 @@ public class EncryptBundle implements Callable<Void> {
 
             Arrays.stream(paths).forEach(System.out::println);
 
-            System.out.println("Finished encrypting " + bundlePath);
+            logger.log(INFO, "Finished encrypting " + bundlePath);
         } catch (Exception e) {
             e.printStackTrace();
         }

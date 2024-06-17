@@ -3,6 +3,7 @@ package com.ddd.server.commands.keygenerator;
 import java.io.File;
 import java.util.Base64;
 import java.util.concurrent.Callable;
+import java.util.logging.Logger;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -18,9 +19,12 @@ import picocli.CommandLine;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
+import static java.util.logging.Level.*;
+
 @Component
 @CommandLine.Command(name = "decode-pub-key", description = "Decode public key given private key")
 public class DecodePublicKey implements Callable<Void> {
+    private static final Logger logger = Logger.getLogger(DecodePublicKey.class.getName());
     @Value("${bundle-server.bundle-security.server-serverkeys-path}")
     private String storePath;
 
@@ -58,11 +62,12 @@ public class DecodePublicKey implements Callable<Void> {
 
     private void writeToFile(ECPublicKey pubKey) throws EncodingException {
         SecurityUtils.createEncodedPublicKeyFile(pubKey, storePath + File.separator + pubFilename);
-        System.out.println("Written to file");
+        logger.log(INFO,
+                "Written to file");
     }
 
     private void print(ECPublicKey pubKey) {
-        System.out.println("Extracted public key: " + Base64.getUrlEncoder().encodeToString(pubKey.serialize()));
+        logger.log(WARNING, "Extracted public key: " + Base64.getUrlEncoder().encodeToString(pubKey.serialize()));
     }
 
     @Override
@@ -72,7 +77,7 @@ public class DecodePublicKey implements Callable<Void> {
             try {
                 serializedPrivateKey = decodeFile();
             } catch (EncodingException e) {
-                System.out.println("Couldn't decode file, check file name.");
+                logger.log(SEVERE, "Couldn't decode file, check file name.");
             }
         } else if (pvtbase64 != null) {
             serializedPrivateKey = decodeBase64();
@@ -90,8 +95,8 @@ public class DecodePublicKey implements Callable<Void> {
                     print(pubKey);
                 }
             } catch (Exception e) {
-                System.out.println(e.getMessage());
-                System.out.println("Couldn't complete extraction.");
+                logger.log(SEVERE, e.getMessage());
+                logger.log(SEVERE, "Couldn't complete extraction.");
             }
         }
 

@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Base64;
 import java.util.concurrent.Callable;
+import java.util.logging.Logger;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -17,9 +18,12 @@ import picocli.CommandLine;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
+import static java.util.logging.Level.*;
+
 @Component
 @CommandLine.Command(name = "generate-keys", description = "Generate pair of EC keys")
 public class GenerateKeys implements Callable<Void> {
+    private static final Logger logger = Logger.getLogger(GenerateKeys.class.getName());
     private final String PUB_KEY_HEADER = "-----BEGIN EC PUBLIC KEY-----";
     private final String PUB_KEY_FOOTER = "-----END EC PUBLIC KEY-----";
     private final String PVT_KEY_HEADER = "-----BEGIN EC PRIVATE KEY-----";
@@ -44,7 +48,7 @@ public class GenerateKeys implements Callable<Void> {
     private String publicKeyOutputFileName;
 
     private void createKeyPair() {
-        System.out.println("Generating " + type + " keys...");
+        logger.log(INFO, "Generating " + type + " keys...");
         ECKeyPair keyPair = Curve.generateKeyPair();
 
         if (type.toLowerCase().equals("identity")) {
@@ -66,9 +70,9 @@ public class GenerateKeys implements Callable<Void> {
             encodedKey += isPrivate ? base64PrivateKey : base64PublicKey;
             encodedKey += "\n" + (isPrivate ? PVT_KEY_FOOTER : PUB_KEY_FOOTER);
             stream.write(encodedKey.getBytes());
-            System.out.println("Written to file");
+            logger.log(INFO, "Written to file");
         } catch (Exception e) {
-            System.out.println(
+            logger.log(SEVERE,
                     "com.ddd.server.keygenerator.commands.GenerateKeys.writeToFile error: " + e.getMessage());
         }
     }
@@ -80,7 +84,7 @@ public class GenerateKeys implements Callable<Void> {
             String s = System.console().readLine("Do you want to overwrite " + file.getPath() + "? [y/n]: ");
 
             if ("y".equalsIgnoreCase(s)) {
-                System.out.println("Overwriting " + file.getPath() + "...");
+                logger.log(WARNING, "Overwriting " + file.getPath() + "...");
                 writeToFile(isPrivate, file);
             } else {
                 if (isPrivate) {
@@ -93,20 +97,20 @@ public class GenerateKeys implements Callable<Void> {
             try {
                 file.createNewFile();
             } catch (IOException e) {
-                System.out.println(
+                logger.log(SEVERE,
                         "com.ddd.server.keygenerator.commands.GenerateKeys.verifyWrite error: " + e.getMessage());
             }
-            System.out.println("Writing to " + file.getPath() + "...");
+            logger.log(WARNING, "Writing to " + file.getPath() + "...");
             writeToFile(isPrivate, file);
         }
     }
 
     private void printPrivateKey() {
-        System.out.println("Private key: " + base64PrivateKey);
+        logger.log(INFO, "Private key: " + base64PrivateKey);
     }
 
     private void printPublicKey() {
-        System.out.println("Public key: " + base64PublicKey);
+        logger.log(INFO, "Public key: " + base64PublicKey);
     }
 
     private void validInputs() throws IllegalArgumentException {
@@ -133,7 +137,7 @@ public class GenerateKeys implements Callable<Void> {
                 verifyWrite(false, publicKeyOutputFileName);
             }
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            logger.log(SEVERE, e.getMessage());
         }
 
         return null;

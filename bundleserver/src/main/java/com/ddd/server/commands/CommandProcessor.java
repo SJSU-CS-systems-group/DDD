@@ -1,16 +1,20 @@
 package com.ddd.server.commands;
 
 import org.reflections.Reflections;
-import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
 import java.util.Map;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
+
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
 
 /**
  * Preprocessor to figure out if we are being called with a command
  */
 public class CommandProcessor {
+    private static final Logger logger = Logger.getLogger(CommandProcessor.class.getName());
     static Map<String, ? extends Class<?>> commands;
 
     public static boolean checkForCommand(String[] args) {
@@ -22,7 +26,7 @@ public class CommandProcessor {
 
         final boolean doingHelp = command.equals("--help") || command.equals("-h");
         if (doingHelp) {
-            System.out.println("Available commands:");
+            logger.log(INFO, "Available commands:");
         }
 
         // find all classes annotated with @Command
@@ -30,7 +34,8 @@ public class CommandProcessor {
         commands = reflections.getTypesAnnotatedWith(Command.class).stream().map(c -> {
             var a = c.getAnnotation(Command.class);
             if (doingHelp) {
-                System.out.println(a.name() + " - " + String.join(" ", a.description()));
+                logger.log(WARNING,
+                        a.name() + " - " + String.join(" ", a.description()));
             }
             return Map.entry(a.name(), c);
         }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
