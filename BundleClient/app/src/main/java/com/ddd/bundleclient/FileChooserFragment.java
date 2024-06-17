@@ -17,6 +17,9 @@ import android.widget.Toast;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 
+import java.util.logging.Logger;
+import java.util.logging.Level;
+
 /**
  * A simple {@link Fragment} subclass.
  * Use the {@link FileChooserFragment #newInstance} factory method to
@@ -27,6 +30,9 @@ public class FileChooserFragment extends Fragment {
     private static final int MY_REQUEST_CODE_PERMISSION = 1000;
     private static final int MY_RESULT_CODE_FILECHOOSER = 2000;
     private static final String LOG_TAG = "AndroidExample";
+    //Venus added
+    private static final Logger logger = Logger.getLogger(FileChooserFragment.class.getName());
+
     private Button buttonBrowse;
     private EditText editTextPath;
 
@@ -90,19 +96,32 @@ public class FileChooserFragment extends Fragment {
 
                 // Note: If request is cancelled, the result arrays are empty.
                 // Permissions granted (CALL_PHONE).
+//  //              if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+//
+//                    Log.i(LOG_TAG, "Permission granted!");
+//                    Toast.makeText(this.getContext(), "Permission granted!", Toast.LENGTH_SHORT).show();
+//
+//                    this.doBrowseFile();
+//                }
+
+                //Venus added
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-
-                    Log.i(LOG_TAG, "Permission granted!");
-                    Toast.makeText(this.getContext(), "Permission granted!", Toast.LENGTH_SHORT).show();
-
+                    logger.log(Level.INFO, "Permission Granted!");
+                    Toast.makeText(this.getContext(), "Permission Granted!", Toast.LENGTH_SHORT).show();
                     this.doBrowseFile();
-                }
-                // Cancelled or denied.
-                else {
-                    Log.i(LOG_TAG, "Permission denied!");
-                    Toast.makeText(this.getContext(), "Permission denied!", Toast.LENGTH_SHORT).show();
+                } else {
+                    logger.log(Level.WARNING, "Permission Denied!");
+                    Toast.makeText(this.getContext(), "Permission Denied!", Toast.LENGTH_SHORT).show();
+
                 }
                 break;
+
+//    //            // Cancelled or denied.
+//                else {
+//                    Log.i(LOG_TAG, "Permission denied!");
+//                    Toast.makeText(this.getContext(), "Permission denied!", Toast.LENGTH_SHORT).show();
+//                }
+//                break;
             }
         }
     }

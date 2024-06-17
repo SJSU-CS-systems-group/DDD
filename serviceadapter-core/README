@@ -1,0 +1,2 @@
+This is the core library that is used by all ServiceAdapters to communicate
+with the BundleServer.

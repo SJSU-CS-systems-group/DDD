@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.logging.Logger;
 
 import javax.annotation.PostConstruct;
 
@@ -21,8 +22,12 @@ import com.ddd.model.ADU;
 import com.ddd.model.UncompressedPayload;
 import com.ddd.server.config.BundleServerConfig;
 
+import static java.util.logging.Level.*;
+
 @Service
 public class ApplicationDataManager {
+
+    private static final Logger logger = Logger.getLogger(ApplicationDataManager.class.getName());
 
     @Autowired
     private StateManager stateManager;
@@ -78,7 +83,7 @@ public class ApplicationDataManager {
     }
 
     public void storeADUs(String clientId, String bundleId, List<ADU> adus) {
-        System.out.println("[ADM] Store ADUs");
+        logger.log(INFO, "[ApplicationDataManager] Store ADUs");
         this.registerRecvdBundleId(clientId, bundleId);
         Map<String, List<ADU>> appIdToADUMap = new HashMap<>();
 
@@ -87,7 +92,7 @@ public class ApplicationDataManager {
             appIdToADUMap.put(registeredAppId, new ArrayList<>());
         }
         for (ADU adu : adus) {
-            System.out.println("[ADM] " + adu.getADUId());
+            logger.log(INFO, "[ApplicationDataManager] " + adu.getADUId());
             Long largestAduIdReceived = this.stateManager.largestADUIdReceived(clientId, adu.getAppId());
             if (largestAduIdReceived != null && adu.getADUId() <= largestAduIdReceived) {
                 continue;
@@ -102,7 +107,7 @@ public class ApplicationDataManager {
             }
         }
         for (String appId : appIdToADUMap.keySet()) {
-            System.out.println("[ADM] " + appId + " " + appIdToADUMap.get(appId));
+            logger.log(INFO, "[ApplicationDataManager] " + appId + " " + appIdToADUMap.get(appId));
             this.dataStoreAdaptor.persistADUsForServer(clientId, appId, appIdToADUMap.get(appId));
         }
     }
@@ -147,7 +152,7 @@ public class ApplicationDataManager {
     }
 
     public void collectDataForClients(String clientId) {
-        System.out.println("[ADM] Collecting data for client " + clientId);
+        logger.log(WARNING, "[ApplicationDataManager] Collecting data for client " + clientId);
         List<String> appIds = this.getRegisteredAppIds();
         for (String appId : appIds) {
             this.dataStoreAdaptor.prepareData(appId, clientId);

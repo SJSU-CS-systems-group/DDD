@@ -24,6 +24,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.ddd.wifidirect.WifiDirectManager;
+import com.ddd.wifidirect.WifiDirectStateListener;
 
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
@@ -33,13 +34,14 @@ import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class MainActivity extends AppCompatActivity implements RpcServerStateListener {
+public class MainActivity extends AppCompatActivity implements RpcServerStateListener, WifiDirectStateListener {
 
-    private static final int PORT = 7777;
+    private static final int PORT = 1778;
     public static final int PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION = 1001;
     public static final String TAG = "dddTransport";
 
@@ -61,6 +63,10 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
     private ExecutorService executor = Executors.newFixedThreadPool(2);
     ;
     private TextView serverConnectStatus;
+
+    private TextView connectedPeersText;
+    private TextView nearByPeersText;
+
     private Button connectServerBtn;
     private ConnectivityManager connectivityManager;
     private ConnectivityManager.NetworkCallback serverConnectNetworkCallback;
@@ -252,6 +258,8 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         portInput = findViewById(R.id.port_input);
         serverConnectStatus = findViewById(R.id.server_connection_status);
         connectServerBtn = findViewById(R.id.btn_connect_bundle_server);
+        connectedPeersText = findViewById(R.id.connected_peers);
+        nearByPeersText = findViewById(R.id.nearby_peers);
 
         // retrieve domain and port from shared preferences
         // populate text inputs if data is retrieved
@@ -261,7 +269,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         String SERVER_BASE_PATH = this.getExternalFilesDir(null) + "/BundleTransmission";
         Receive_Directory = SERVER_BASE_PATH + "/client";
         Server_Directory = SERVER_BASE_PATH + "/server";
-        wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle());
+        wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle(), this);
         wifiDirectManager.initialize();
 
         grpcServer = new RpcServer(this);
@@ -388,5 +396,51 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
 
         //connectivityManager.unregisterNetworkCallback(serverConnectNetworkCallback);
         executor.shutdown();
+    }
+
+    private void updateConnectedDevices() {
+        updateNearbyDevices();
+        connectedPeersText.setText("");
+        if (wifiDirectManager.getConnectedPeers() != null) {
+            Log.d(TAG, "Connected Devices Updates\n");
+            wifiDirectManager.getConnectedPeers().stream().forEach(device -> {
+                connectedPeersText.append(device.deviceName + "\n");
+            });
+        }
+
+    }
+
+    private void updateNearbyDevices() {
+        nearByPeersText.setText("");
+        HashSet<String> nearbyDevicesSet = new HashSet<>();
+        HashSet<String> connectedDevicesSet = new HashSet<>();
+        if (wifiDirectManager.getConnectedPeers() != null && !wifiDirectManager.getConnectedPeers().isEmpty()) {
+            for (WifiP2pDevice p2pDevice : wifiDirectManager.getConnectedPeers()) {
+                connectedDevicesSet.add(p2pDevice.deviceName);
+            }
+        }
+        if (wifiDirectManager.getPeerList() != null) {
+            for (WifiP2pDevice p2pDevice : wifiDirectManager.getPeerList()) {
+                if (!connectedDevicesSet.contains(p2pDevice.deviceName)) {
+                    nearbyDevicesSet.add(p2pDevice.deviceName);
+                }
+            }
+        }
+        Log.d(TAG, "Nearby Devices Updates\n");
+        nearbyDevicesSet.stream().forEach(deviceName -> {
+            nearByPeersText.append(deviceName + "\n");
+        });
+    }
+
+    @Override
+    public void onReceiveAction(WifiDirectManager.WIFI_DIRECT_ACTIONS action) {
+        runOnUiThread(() -> {
+            if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_PEERS_CHANGED == action) {
+                updateNearbyDevices();
+            } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL ==
+                    action) {
+                updateConnectedDevices();
+            }
+        });
     }
 }

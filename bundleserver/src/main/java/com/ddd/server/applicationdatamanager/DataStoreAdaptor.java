@@ -1,5 +1,11 @@
 package com.ddd.server.applicationdatamanager;
 
+import com.ddd.model.ADU;
+import com.ddd.server.api.ServiceAdapterClient;
+import com.ddd.server.storage.MySQLConnection;
+import com.ddd.utils.FileStoreHelper;
+import net.discdd.server.AppData;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.sql.Connection;
@@ -7,14 +13,9 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
-import com.ddd.model.ADU;
-import com.ddd.server.api.DTNAdapterClient;
-import com.ddd.server.storage.MySQLConnection;
-import com.ddd.utils.FileStoreHelper;
-import edu.sjsu.dtn.adapter.communicationservice.AppData;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import static java.util.logging.Level.*;
 
 /*
  * SendFileStoreHelper - store data that we get from adapter servers
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Component;
  * */
 
 public class DataStoreAdaptor {
+    private static final Logger logger = Logger.getLogger(DataStoreAdaptor.class.getName());
     private FileStoreHelper sendFileStoreHelper;
     private FileStoreHelper receiveFileStoreHelper;
 
@@ -32,18 +34,18 @@ public class DataStoreAdaptor {
 
     public void deleteADUs(String clientId, String appId, Long aduIdEnd) {
         this.sendFileStoreHelper.deleteAllFilesUpTo(clientId, appId, aduIdEnd);
-        System.out.println("[DSA] Deleted ADUs for application " + appId + " with id upto " + aduIdEnd);
+        logger.log(INFO, "[DataStoreAdaptor] Deleted ADUs for application " + appId + " with id upto " + aduIdEnd);
     }
 
     public void prepareData(String appId, String clientId) {
         String appAdapterAddress = getAppAdapterAddress(appId);
-        System.out.println("[DataStoreAdaptor.prepareData] " + appAdapterAddress);
+        logger.log(INFO, "[DataStoreAdaptor.prepareData] " + appAdapterAddress);
         if (appAdapterAddress == null || appAdapterAddress.isEmpty()) {
-            System.out.println("[DataStoreAdaptor.prepareData] appAdapterAddress not valid");
+            logger.log(WARNING, "[DataStoreAdaptor.prepareData] appAdapterAddress not valid");
         }
         String ipAddress = appAdapterAddress.split(":")[0];
         int port = Integer.parseInt(appAdapterAddress.split(":")[1]);
-        DTNAdapterClient client = new DTNAdapterClient(ipAddress, port);
+        ServiceAdapterClient client = new ServiceAdapterClient(ipAddress, port);
         client.PrepareData(clientId);
     }
 
@@ -56,13 +58,13 @@ public class DataStoreAdaptor {
             MySQLConnection mysql = new MySQLConnection();
             Connection con = mysql.GetConnection();
             Statement stmt = con.createStatement();
-            System.out.println("select address from registered_app_adapter_table where app_id='" + appId + "';");
+            logger.log(WARNING, "select address from registered_app_adapter_table where app_id='" + appId + "';");
 
             ResultSet rs =
                     stmt.executeQuery("select address from registered_app_adapter_table where app_id='" + appId + "';");
             String adapterAddress = "";
             while (rs.next()) {
-                System.out.println("max value for app- " + rs.getString(1));
+                logger.log(INFO, "max value for app- " + rs.getString(1));
                 adapterAddress = rs.getString(1);
             }
             con.close();
@@ -81,12 +83,12 @@ public class DataStoreAdaptor {
         }
         List<ADU> dataList = receiveFileStoreHelper.getAppData(appId, clientId);
         String appAdapterAddress = this.getAppAdapterAddress(appId);
-        System.out.println("[DataStoreAdaptor.persistADUForServer] " + appAdapterAddress);
+        logger.log(INFO, "[DataStoreAdaptor.persistADUForServer] " + appAdapterAddress);
         String ipAddress = appAdapterAddress.split(":")[0];
         int port = Integer.parseInt(appAdapterAddress.split(":")[1]);
-        DTNAdapterClient client = new DTNAdapterClient(ipAddress, port);
-        AppData data = client.SendData(clientId, dataList,
-                                       this.sendFileStoreHelper.getLastADUIdReceived(clientId + "/" + appId));
+        var client = new ServiceAdapterClient(ipAddress, port);
+        var data = client.SendData(clientId, dataList,
+                                   this.sendFileStoreHelper.getLastADUIdReceived(clientId + "/" + appId));
 
         if (data != null && dataList.size() > 0) {
             long lastAduIdSent = dataList.get(dataList.size() - 1).getADUId();
@@ -94,9 +96,8 @@ public class DataStoreAdaptor {
         }
 
         this.saveDataFromAdaptor(clientId, appId, data);
-        System.out.println(
-                "[DSA] Stored ADUs for application " + appId + " for client " + clientId + ". number of ADUs - " +
-                        data.getDataListCount());
+        logger.log(WARNING, "[DataStoreAdaptor] Stored ADUs for application " + appId + " for client " + clientId +
+                ". number of ADUs - " + data.getDataListCount());
     }
 
     public ADU fetchADU(String clientId, String appId, long aduId) {
