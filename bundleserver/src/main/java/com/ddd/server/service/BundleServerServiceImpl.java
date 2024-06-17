@@ -172,8 +172,9 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
                                 BundleList.newBuilder().setBundleList(String.join(", ",
                                                                                   bundleTransferDTO.getDeletionSet())))
                         .build();
-                logger.log(WARNING, "[BundleServerService] Sending " + String.join(", ", bundleTransferDTO.getDeletionSet()) +
-                        " to delete on Transport id :" + request.getTransportId());
+                logger.log(WARNING,
+                           "[BundleServerService] Sending " + String.join(", ", bundleTransferDTO.getDeletionSet()) +
+                                   " to delete on Transport id :" + request.getTransportId());
                 responseObserver.onNext(response);
             }
             responseObserver.onCompleted();

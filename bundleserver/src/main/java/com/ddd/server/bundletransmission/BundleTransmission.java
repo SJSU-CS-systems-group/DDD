@@ -104,7 +104,8 @@ public class BundleTransmission {
             if (!opt.isEmpty() &&
                     (this.bundleSecurity.isNewerBundle(opt.get(), uncompressedBundle.getSource().getAbsolutePath()) >=
                             0)) {
-                logger.log(WARNING, "[BundleTransmission] Skipping bundle " + bundle.getSource().getName() + " as it is outdated");
+                logger.log(WARNING, "[BundleTransmission] Skipping bundle " + bundle.getSource().getName() +
+                        " as it is outdated");
                 return;
             }
 
@@ -197,9 +198,8 @@ public class BundleTransmission {
                 try {
                     this.processReceivedBundle(transportId, bundle);
                 } catch (Exception e) {
-                    logger.log(SEVERE,
-                               "[BundleTransmission] Failed to process received bundle from transportId: " + transportId + ", error: " +
-                                       e.getMessage());
+                    logger.log(SEVERE, "[BundleTransmission] Failed to process received bundle from transportId: " +
+                            transportId + ", error: " + e.getMessage());
                 } finally {
                     try {
                         FileUtils.delete(bundleFile);
@@ -364,7 +364,8 @@ public class BundleTransmission {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
-        logger.log(SEVERE, "[BundleTransmission] Found " + clientIds.size() + " reachable from the transport " + transportId);
+        logger.log(SEVERE,
+                   "[BundleTransmission] Found " + clientIds.size() + " reachable from the transport " + transportId);
         Set<String> deletionSet = new HashSet<>();
         List<BundleDTO> bundlesToSend = new ArrayList<>();
         Map<String, Set<String>> clientIdToBundleIds = new HashMap<>();
@@ -394,7 +395,8 @@ public class BundleTransmission {
     }
 
     public List<File> getBundlesForTransmission(String transportId) {
-        logger.log(INFO, "[BundleTransmission] Inside getBundlesForTransmission method for transport id: " + transportId);
+        logger.log(INFO,
+                   "[BundleTransmission] Inside getBundlesForTransmission method for transport id: " + transportId);
         List<File> bundles = new ArrayList<>();
         File recvTransportSubDir =
                 new File(this.config.getBundleTransmission().getToSendDirectory() + File.separator + transportId);
@@ -410,7 +412,9 @@ public class BundleTransmission {
             return bundles;
         }
 
-        logger.log(INFO, "[BundleTransmission] Found " + recvTransport.length + " bundles to deliver through transport " + transportId);
+        logger.log(INFO,
+                   "[BundleTransmission] Found " + recvTransport.length + " bundles to deliver through transport " +
+                           transportId);
         for (File bundleFile : recvTransport) {
             bundles.add(bundleFile);
         }
