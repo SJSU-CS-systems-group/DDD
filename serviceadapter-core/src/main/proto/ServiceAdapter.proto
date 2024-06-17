@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+// This is the service that is used to exchange data between
+// BundleServer and the ServiceAdapters
+
+option java_multiple_files = true;
+option java_package = "net.discdd.server";
+
+service ServiceAdapter {
+  // saveData sends received ADUs to the ServiceAdapter and at
+  // the same time receives ADUs to send back to clients as the
+  // return value.
+  rpc saveData (AppData) returns (AppData) {}
+  // tell the ServiceAdapter to prepare data for a given client
+  rpc prepareData (ClientData) returns (PrepareResponse) {}
+}
+
+message AppData {
+  string clientId = 1;
+  repeated AppDataUnit dataList = 2;
+  int64 lastADUIdReceived = 3;
+}
+
+message AppDataUnit{
+  int64 aduId = 1;
+  bytes data = 2;
+}
+
+message PrepareResponse {
+  StatusCode code = 1;
+}
+
+enum StatusCode {
+  SUCCESS = 0;
+  FAIL = 1;
+  CLIENT_NOT_REGISTERED = 2;
+}
+
+message ClientData{
+  string clientId = 1;
+}
