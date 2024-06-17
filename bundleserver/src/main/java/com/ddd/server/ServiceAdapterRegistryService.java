@@ -8,6 +8,7 @@ import net.discdd.server.ConnectionData;
 import net.discdd.server.ResponseStatus;
 import net.discdd.server.ServiceAdapterRegistryGrpc;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.util.logging.Logger;
 
@@ -15,7 +16,7 @@ import static java.util.logging.Level.INFO;
 
 @Component
 public class ServiceAdapterRegistryService extends ServiceAdapterRegistryGrpc.ServiceAdapterRegistryImplBase {
-    private static final Logger logger = Logger.getLogger(DTNCommunicationService.class.getName());
+    private static final Logger logger = Logger.getLogger(ServiceAdapterRegistryService.class.getName());
 
     @Autowired
     private RegisteredAppAdapterRepository registeredAppAdapterRepository;
