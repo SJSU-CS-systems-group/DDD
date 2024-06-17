@@ -88,7 +88,7 @@ public class DataStoreAdaptor {
         int port = Integer.parseInt(appAdapterAddress.split(":")[1]);
         var client = new ServiceAdapterClient(ipAddress, port);
         var data = client.SendData(clientId, dataList,
-                                       this.sendFileStoreHelper.getLastADUIdReceived(clientId + "/" + appId));
+                                   this.sendFileStoreHelper.getLastADUIdReceived(clientId + "/" + appId));
 
         if (data != null && dataList.size() > 0) {
             long lastAduIdSent = dataList.get(dataList.size() - 1).getADUId();
