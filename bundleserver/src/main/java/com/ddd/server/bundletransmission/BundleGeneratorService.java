@@ -9,6 +9,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.logging.Logger;
 
 import org.springframework.stereotype.Service;
 import com.ddd.model.ADU;
@@ -27,10 +28,14 @@ import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 
+import static java.util.logging.Level.*;
+
 @Service
 public class BundleGeneratorService {
 
     private static final String BUNDLE_EXTENSION = ".bundle";
+    private static final Logger logger = Logger.getLogger(BundleGeneratorService.class.getName());
+
 
     public BundleGeneratorService(ServerSecurity serverSecurity) {}
 
@@ -54,7 +59,8 @@ public class BundleGeneratorService {
 
         String ackPath = extractedPayloadPath + File.separator + Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME;
         String aduPath = extractedPayloadPath + File.separator + Constants.BUNDLE_ADU_DIRECTORY_NAME;
-        System.out.println("[BGS] ADU Path" + aduPath);
+        logger.log(WARNING,
+                "[BundleGeneratorService] ADU Path" + aduPath);
         UncompressedPayload.Builder builder = new UncompressedPayload.Builder();
 
         builder.setAckRecord(AckRecordUtils.readAckRecordFromFile(new File(ackPath)));
@@ -113,7 +119,7 @@ public class BundleGeneratorService {
             ADUUtils.writeADUs(uncompressedPayload.getADUs(), aduDirectory);
         }
 
-        System.out.println("[BundleUtils] Wrote bundle payload with id = " + bundleId + " to " + targetDirectory);
+        logger.log(WARNING, "[BundleUtils] Wrote bundle payload with id = " + bundleId + " to " + targetDirectory);
     }
 
     public static boolean doContentsMatch(UncompressedPayload.Builder a, UncompressedPayload.Builder b) {
