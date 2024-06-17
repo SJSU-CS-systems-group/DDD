@@ -33,6 +33,9 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
 class GrpcSendTask {
+
+    private static final Logger logger = Logger.getLogger(GrpcSendTask.class.getName());
+    
     //    private final HelloworldActivity helloworldActivity;
     private final WeakReference<Activity> activityReference;
     private ManagedChannel channel;
