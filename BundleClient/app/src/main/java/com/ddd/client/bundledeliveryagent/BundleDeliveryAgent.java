@@ -16,7 +16,7 @@ import java.io.File;
 
 public class BundleDeliveryAgent {
 
-    private static final Logger logger = Logger.getLogger(DataStoreAdaptor.class.getName());
+    private static final Logger logger = Logger.getLogger(BundleDeliveryAgent.class.getName());
 
     private static String ROOT_FOLDER;
     private static String RelativePath = "/Shared/received-bundles";

@@ -86,7 +86,7 @@ public class DataStoreAdaptor {
             File file = sendFileStoreHelper.getADUFile(appId, aduId + "");
             FileInputStream fis = new FileInputStream(file);
             int fileSize = fis.available();
-            logger.log(FINER, "size:" + fileSize);
+            logger.log(FINER, "Size:" + fileSize);
             ADU adu = new ADU(file, appId, aduId, fileSize);
             return adu;
         } catch (Exception ex) {
