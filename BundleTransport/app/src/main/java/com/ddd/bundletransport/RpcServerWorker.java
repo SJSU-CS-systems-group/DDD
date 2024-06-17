@@ -19,24 +19,23 @@ import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 
 public class RpcServerWorker extends Worker implements RpcServerStateListener {
     private RpcServer rpcServer;
-    private final int port;
-    private final SocketAddress address;
-    Level
+//    private final int port;
+//    private final SocketAddress address;
 
     // the ip that wifi direct always uses and that bundle client connects to
-    private final String inetSocketAddressIP = "192.168.49.1";
+//    private final String inetSocketAddressIP = "192.168.49.1";
 
     public RpcServerWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
         super(context, workerParams);
-        port = workerParams.getInputData().getInt("PORT", 1778);
-        address = new InetSocketAddress(inetSocketAddressIP, port);
+//        port = workerParams.getInputData().getInt("PORT", 1778);
+//        address = new InetSocketAddress(inetSocketAddressIP, 1778);
     }
 
     private void startRpcServer() {
 
         rpcServer = new RpcServer(this);
 
-        Log.d(MainActivity.TAG, "start rpc server at:" + rpcServer.toString());
+        Log.d(MainActivity.TAG, "start rpc server at:" + rpcServer);
         try {
             rpcServer.startServer(this.getApplicationContext());
 
