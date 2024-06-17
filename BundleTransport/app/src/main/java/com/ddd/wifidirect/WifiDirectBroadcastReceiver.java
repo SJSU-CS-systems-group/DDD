@@ -75,7 +75,7 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
         // This can be sent as a result of peers being found, lost or updated.
         if (WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)) {
             Log.d(MainActivity.TAG, "WifiDirectBroadcastReceiver INTENT PEERS_CHANGED");
-            if (manager!=null) {
+            if (manager != null) {
                 try {
                     manager.getManager().requestPeers(manager.getChannel(), manager);
                 } catch (SecurityException e) {
@@ -108,10 +108,11 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
                 this.manager.setConnected(true);
                 Log.d(MainActivity.TAG, "WIFI_P2P_CONNECTION_CHANGED_ACTION connected");
 
-                if (wifiP2pGroup != null ) {
+                if (wifiP2pGroup != null) {
                     Log.d(MainActivity.TAG, "WifiP2pGroup client list changed");
                     this.manager.setConnectedPeers(wifiP2pGroup.getClientList());
-                    this.manager.notifyActionToListeners(WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL);
+                    this.manager.notifyActionToListeners(
+                            WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL);
                 }
             } else {
                 // It's a disconnect

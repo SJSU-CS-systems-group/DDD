@@ -58,6 +58,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
     private boolean isConnected;
 
     private List<WifiDirectStateListener> listeners = new ArrayList<>();
+
     public void notifyActionToListeners(WIFI_DIRECT_ACTIONS action) {
         for (WifiDirectStateListener listener : listeners) {
             listener.onReceiveAction(action);
@@ -65,8 +66,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
     }
 
     public enum WIFI_DIRECT_ACTIONS {
-        WIFI_DIRECT_MANAGER_PEERS_CHANGED,
-        WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL
+        WIFI_DIRECT_MANAGER_PEERS_CHANGED, WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL
     }
 
     /**

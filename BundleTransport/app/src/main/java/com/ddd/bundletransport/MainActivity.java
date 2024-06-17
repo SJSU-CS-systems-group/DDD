@@ -437,8 +437,8 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         runOnUiThread(() -> {
             if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_PEERS_CHANGED == action) {
                 updateNearbyDevices();
-            }
-            else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL == action) {
+            } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL ==
+                    action) {
                 updateConnectedDevices();
             }
         });
