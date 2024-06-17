@@ -4,7 +4,7 @@ import java.io.File;
 
 public class EncryptedBundle {
 
-    private static final ya = "gokul was here";
+    private static final ya ="gokul was here";
 
     private File source;
 
