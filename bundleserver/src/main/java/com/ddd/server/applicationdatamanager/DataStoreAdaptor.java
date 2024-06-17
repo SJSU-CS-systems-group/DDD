@@ -1,5 +1,11 @@
 package com.ddd.server.applicationdatamanager;
 
+import com.ddd.model.ADU;
+import com.ddd.server.api.ServiceAdapterClient;
+import com.ddd.server.storage.MySQLConnection;
+import com.ddd.utils.FileStoreHelper;
+import net.discdd.server.AppData;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.sql.Connection;
@@ -8,14 +14,6 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
-
-import com.ddd.model.ADU;
-import com.ddd.server.api.DTNAdapterClient;
-import com.ddd.server.storage.MySQLConnection;
-import com.ddd.utils.FileStoreHelper;
-import edu.sjsu.dtn.adapter.communicationservice.AppData;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 import static java.util.logging.Level.*;
 
@@ -47,7 +45,7 @@ public class DataStoreAdaptor {
         }
         String ipAddress = appAdapterAddress.split(":")[0];
         int port = Integer.parseInt(appAdapterAddress.split(":")[1]);
-        DTNAdapterClient client = new DTNAdapterClient(ipAddress, port);
+        ServiceAdapterClient client = new ServiceAdapterClient(ipAddress, port);
         client.PrepareData(clientId);
     }
 
@@ -88,9 +86,9 @@ public class DataStoreAdaptor {
         logger.log(INFO, "[DataStoreAdaptor.persistADUForServer] " + appAdapterAddress);
         String ipAddress = appAdapterAddress.split(":")[0];
         int port = Integer.parseInt(appAdapterAddress.split(":")[1]);
-        DTNAdapterClient client = new DTNAdapterClient(ipAddress, port);
-        AppData data = client.SendData(clientId, dataList,
-                                       this.sendFileStoreHelper.getLastADUIdReceived(clientId + "/" + appId));
+        var client = new ServiceAdapterClient(ipAddress, port);
+        var data = client.SendData(clientId, dataList,
+                                   this.sendFileStoreHelper.getLastADUIdReceived(clientId + "/" + appId));
 
         if (data != null && dataList.size() > 0) {
             long lastAduIdSent = dataList.get(dataList.size() - 1).getADUId();
