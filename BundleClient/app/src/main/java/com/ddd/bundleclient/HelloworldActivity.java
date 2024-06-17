@@ -77,6 +77,8 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
     String currentTransportId;
     String BundleExtension = ".bundle";
 
+    public static final String TAG = "bundleclient";
+
     private static final Logger logger = Logger.getLogger(HelloworldActivity.class.getName());
 
     /**
