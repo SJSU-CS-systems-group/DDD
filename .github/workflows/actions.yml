@@ -132,6 +132,10 @@ jobs:
         working-directory: ./bundle-core
         run: mvn install
 
+      - name: Run maven package on server dependency > bundle-core
+        working-directory: ./serviceadapter-core
+        run: mvn install
+
       - name: Run maven package on BundleServer
         working-directory: ./bundleserver
         run: mvn package
