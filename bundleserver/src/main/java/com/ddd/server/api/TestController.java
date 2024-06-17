@@ -15,7 +15,6 @@ import com.ddd.server.bundletransmission.BundleTransmission;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
-import static java.util.logging.Level.FINE;
 
 @RestController
 @RequestMapping("/")

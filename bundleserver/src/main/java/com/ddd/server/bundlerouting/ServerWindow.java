@@ -84,7 +84,7 @@ public class ServerWindow {
         try {
             initializeWindow();
         } catch (SQLException | BufferOverflow | InvalidLength e) {
-            logger.log(SEVERE, "[WIN] INFO: Failed to initialize window from database", e);
+            logger.log(SEVERE, "[ServerWindow] INFO: Failed to initialize window from database", e);
 
             String dbTableCreateQuery =
                     "CREATE TABLE " + dbTableName + " " + "(clientID VARCHAR(256) not NULL," + STARTCOUNTER +
@@ -134,7 +134,7 @@ public class ServerWindow {
      */
     private CircularBuffer getClientWindow(String clientID) throws ClientWindowNotFound {
         if (!clientWindowMap.containsKey(clientID)) {
-            throw new ClientWindowNotFound("[WIN]: ClientID[" + clientID + "] Not Found");
+            throw new ClientWindowNotFound("[ServerWindow]: ClientID[" + clientID + "] Not Found");
         }
 
         return clientWindowMap.get(clientID);
@@ -156,7 +156,7 @@ public class ServerWindow {
         try {
             database.updateEntry(updateQuery);
         } catch (SQLException e) {
-            logger.log(SEVERE, "[WIN]: Failed to update Server Window DB!");
+            logger.log(SEVERE, "[ServerWindow]: Failed to update Server Window DB!");
             e.printStackTrace();
         }
     }
@@ -168,7 +168,7 @@ public class ServerWindow {
         try {
             database.insertIntoTable(insertQuery);
         } catch (SQLException e) {
-            logger.log(SEVERE, "[WIN]: Failed to Initalize Client [" + clientID + "]to Server Window DB!");
+            logger.log(SEVERE, "[ServerWindow]: Failed to Initalize Client [" + clientID + "]to Server Window DB!");
             e.printStackTrace();
         }
     }
@@ -182,7 +182,7 @@ public class ServerWindow {
      */
     public void addClient(String clientID, int windowLength) throws InvalidLength, ClientAlreadyExists {
         if (clientWindowMap.containsKey(clientID)) {
-            throw new ClientAlreadyExists("[WIN]: Cannot Add to Map; client already exists");
+            throw new ClientAlreadyExists("[ServerWindow]: Cannot Add to Map; client already exists");
         }
         clientWindowMap.put(clientID, new CircularBuffer(windowLength));
         initializeEntry(clientID, windowLength);
@@ -202,7 +202,7 @@ public class ServerWindow {
             decryptedBundleID = serverSecurity.decryptBundleID(bundleID, clientID);
         } catch (BundleIDCryptographyException e) {
             logger.log(SEVERE, "Error", e);
-            throw new InvalidBundleID("[WIN]: Failed to Decrypt bundleID");
+            throw new InvalidBundleID("[ServerWindow]: Failed to Decrypt bundleID");
         }
 
         CircularBuffer circularBuffer = getClientWindow(clientID);
@@ -212,7 +212,7 @@ public class ServerWindow {
         long endCounter = Long.parseUnsignedLong(getValueFromTable(clientID, ENDCOUNTER));
 
         if (endCounter != bundleIDcounter) {
-            throw new InvalidBundleID("[WIN]: Expected: " + Long.toUnsignedString(endCounter) + ", Got: " +
+            throw new InvalidBundleID("[ServerWindow]: Expected: " + Long.toUnsignedString(endCounter) + ", Got: " +
                                               Long.toUnsignedString(bundleIDcounter));
         }
 
@@ -240,7 +240,7 @@ public class ServerWindow {
             BundleIDCryptographyException {
         CircularBuffer circularBuffer = getClientWindow(clientID);
         String decryptedBundleID = serverSecurity.decryptBundleID(ackedBundleID, clientID);
-        logger.log(WARNING, "[WIN]: Decrypted Ack from file = " + decryptedBundleID);
+        logger.log(WARNING, "[ServerWindow]: Decrypted Ack from file = " + decryptedBundleID);
         long ack = BundleIDGenerator.getCounterFromBundleID(decryptedBundleID, BundleIDGenerator.DOWNSTREAM);
 
         try {
@@ -252,12 +252,12 @@ public class ServerWindow {
             updateValueInTable(clientID, STARTCOUNTER, Long.toUnsignedString(startCounter));
 
             // TODO: Change to log
-            logger.log(INFO, "[WIN]: Updated start Counter: " + startCounter);
+            logger.log(INFO, "[ServerWindow]: Updated start Counter: " + startCounter);
         } catch (RecievedOldACK | RecievedInvalidACK e) {
-            logger.log(SEVERE, "[WIN]: Received Old/Invalid ACK!");
+            logger.log(SEVERE, "[ServerWindow]: Received Old/Invalid ACK!");
             e.printStackTrace();
         } catch (SQLException e) {
-            logger.log(SEVERE, "[WIN]: Failed to update Database!");
+            logger.log(SEVERE, "[ServerWindow]: Failed to update Database!");
             e.printStackTrace();
         }
     }

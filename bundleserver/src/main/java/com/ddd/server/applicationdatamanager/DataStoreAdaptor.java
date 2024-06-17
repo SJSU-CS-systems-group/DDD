@@ -36,7 +36,7 @@ public class DataStoreAdaptor {
 
     public void deleteADUs(String clientId, String appId, Long aduIdEnd) {
         this.sendFileStoreHelper.deleteAllFilesUpTo(clientId, appId, aduIdEnd);
-        logger.log(INFO, "[DSA] Deleted ADUs for application " + appId + " with id upto " + aduIdEnd);
+        logger.log(INFO, "[DataStoreAdaptor] Deleted ADUs for application " + appId + " with id upto " + aduIdEnd);
     }
 
     public void prepareData(String appId, String clientId) {
@@ -99,7 +99,7 @@ public class DataStoreAdaptor {
 
         this.saveDataFromAdaptor(clientId, appId, data);
         logger.log(WARNING,
-                   "[DSA] Stored ADUs for application " + appId + " for client " + clientId + ". number of ADUs - " +
+                   "[DataStoreAdaptor] Stored ADUs for application " + appId + " for client " + clientId + ". number of ADUs - " +
                            data.getDataListCount());
     }
 

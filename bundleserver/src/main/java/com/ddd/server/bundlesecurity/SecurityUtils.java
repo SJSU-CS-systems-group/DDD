@@ -126,7 +126,7 @@ public class SecurityUtils {
         try {
             md = MessageDigest.getInstance("SHA-1");
         } catch (NoSuchAlgorithmException e) {
-            throw new IDGenerationException("[BS]: NoSuchAlgorithmException while generating ID ", e);
+            throw new IDGenerationException("[BundleSecurity]: NoSuchAlgorithmException while generating ID ", e);
         }
 
         byte[] hashedKey = md.digest(publicKey);

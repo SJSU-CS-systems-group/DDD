@@ -150,8 +150,8 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
     @Override
     public void downloadBundle(BundleDownloadRequest request, StreamObserver<BundleDownloadResponse> responseObserver) {
         String transportFiles = request.getBundleList();
-        logger.log(INFO, "[BDA] bundles on transport" + transportFiles);
-        logger.log(INFO, "[BDA]Request from Transport id :" + request.getTransportId());
+        logger.log(INFO, "[BundleServerService] bundles on transport" + transportFiles);
+        logger.log(INFO, "[BundleServerService]Request from Transport id :" + request.getTransportId());
         String[] filesOnTransport = null;
         Set<String> filesOnTransportSet = Collections.<String>emptySet();
         if (!transportFiles.isEmpty()) {
@@ -172,7 +172,7 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
                                 BundleList.newBuilder().setBundleList(String.join(", ",
                                                                                   bundleTransferDTO.getDeletionSet())))
                         .build();
-                logger.log(WARNING, "[BDA] Sending " + String.join(", ", bundleTransferDTO.getDeletionSet()) +
+                logger.log(WARNING, "[BundleServerService] Sending " + String.join(", ", bundleTransferDTO.getDeletionSet()) +
                         " to delete on Transport id :" + request.getTransportId());
                 responseObserver.onNext(response);
             }
@@ -181,7 +181,7 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
 
             for (File bundle : bundlesList) {
                 if (!filesOnTransportSet.contains(bundle.getName())) {
-                    logger.log(WARNING, "[BDA]Downloading " + bundle.getName() + " to Transport id :" +
+                    logger.log(WARNING, "[BundleServerService]Downloading " + bundle.getName() + " to Transport id :" +
                             request.getTransportId());
                     BundleMetaData bundleMetaData = BundleMetaData.newBuilder().setBid(bundle.getName()).build();
                     responseObserver.onNext(BundleDownloadResponse.newBuilder().setMetadata(bundleMetaData).build());
@@ -201,7 +201,7 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
                     responseObserver.onCompleted();
                 }
             }
-            logger.log(INFO, "[BDA] All bundles were transferred completing status success");
+            logger.log(INFO, "[BundleServerService] All bundles were transferred completing status success");
             responseObserver.onNext(BundleDownloadResponse.newBuilder().setStatus(Status.SUCCESS).build());
             responseObserver.onCompleted();
         }

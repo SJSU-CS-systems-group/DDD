@@ -69,12 +69,12 @@ public class BundleSecurity {
     }
 
     public void decryptBundleContents(UncompressedPayload bundle) {
-        logger.log(WARNING, "[BS] Decrypting contents of bundle with id: " + bundle.getBundleId());
+        logger.log(WARNING, "[BundleSecurity] Decrypting contents of bundle with id: " + bundle.getBundleId());
     }
 
     public void processACK(String clientId, String bundleId) {
         // TODO During window implementation
-        logger.log(WARNING, "[BS] Received acknowledgement for sent bundle id " + bundleId);
+        logger.log(WARNING, "[BundleSecurity] Received acknowledgement for sent bundle id " + bundleId);
     }
 
     public boolean isLatestReceivedBundleId(String clientId, String bundleId, String largestBundleIdReceived) {
@@ -157,7 +157,7 @@ public class BundleSecurity {
             } catch (Exception e) {
                 // TODO
                 logger.log(SEVERE,
-                        "[BS] Failed to decrypt payload");
+                        "[BundleSecurity] Failed to decrypt payload");
                 // e.printStackTrace();
                 return null;
             }

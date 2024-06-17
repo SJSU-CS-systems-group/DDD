@@ -33,7 +33,7 @@ public class MySQLConnection {
 
     public Connection GetConnection() {
         try {
-            logger.log(INFO, "DB connection begins");
+            logger.log(INFO, "DataBase connection begins");
             Class.forName(driver);
 
 //            Connection con= DriverManager.getConnection(
@@ -41,7 +41,7 @@ public class MySQLConnection {
 //                   &useLegacyDatetimeCode=false&serverTimezone=UTC","root","Triquenguyen@2702");
 
             Connection con = DriverManager.getConnection(url, uname, password);
-            logger.log(INFO, "DB connected" + url + uname + password);
+            logger.log(INFO, "DataBase connected" + url + uname + password);
             return con;
 
             /*Statement stmt=con.createStatement();

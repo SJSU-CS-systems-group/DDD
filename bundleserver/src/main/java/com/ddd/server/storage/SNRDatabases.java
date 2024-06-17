@@ -39,9 +39,9 @@ public class SNRDatabases {
 
         try {
             statement.execute(createQuery);
-            logger.log(INFO, "[SNRDB]: Created DB");
+            logger.log(INFO, "[SNRDatabases]: Created DB");
         } catch (SQLException e) {
-            logger.log(SEVERE, "[SNRDB]: Database already exists");
+            logger.log(SEVERE, "[SNRDatabases]: Database already exists");
         }
 
         conn.close();
@@ -54,9 +54,9 @@ public class SNRDatabases {
 
         try {
             statement.executeUpdate(createQuery);
-            logger.log(INFO, "[SNRDB]: Created Table");
+            logger.log(INFO, "[SNRDatabases]: Created Table");
         } catch (SQLException e) {
-            logger.log(SEVERE, "[SNRDB]: Table already exists");
+            logger.log(SEVERE, "[SNRDatabases]: Table already exists");
             exists = true;
         }
         conn.close();
@@ -81,7 +81,7 @@ public class SNRDatabases {
 
         statement.executeUpdate(query);
         conn.close();
-        logger.log(INFO, "[SNRDB]: Executed " + query);
+        logger.log(INFO, "[SNRDatabases]: Executed " + query);
     }
 
     private List<String[]> executeQuery(String query) throws SQLException {
@@ -101,7 +101,7 @@ public class SNRDatabases {
         }
 
         conn.close();
-        logger.log(INFO, "[SNRDB]: Executed " + query);
+        logger.log(INFO, "[SNRDatabases]: Executed " + query);
 
         return results;
     }

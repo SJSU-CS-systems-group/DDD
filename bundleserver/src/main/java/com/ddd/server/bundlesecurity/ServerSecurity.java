@@ -81,7 +81,7 @@ public class ServerSecurity {
             try {
                 name = SecurityUtils.generateID(ourIdentityKeyPair.getPublicKey().serialize());
             } catch (IDGenerationException e) {
-                logger.log(SEVERE, "[SEC]:Failed to generate ID, using default value:" + name);
+                logger.log(SEVERE, "[ServerSecurity]:Failed to generate ID, using default value:" + name);
             }
             ourAddress = new SignalProtocolAddress(name, ServerDeviceID);
             ourOneTimePreKey = Optional.<ECKeyPair>absent();
@@ -103,9 +103,9 @@ public class ServerSecurity {
         //     try {
         //     // TODO: Load protocol store from files(serverProtocolStore)
         //         loadKeysfromFiles(serverKeyPath);
-        //         logger.log(SEVERE,"[Sec]: Using Existing Keys");
+        //         logger.log(SEVERE,"[ServerSecurity]: Using Existing Keys");
         //     } catch (InvalidKeyException | IOException | EncodingException e) {
-        //         logger.log(SEVERE,"[Sec]: Error Loading Keys from files, generating new keys instead");
+        //         logger.log(SEVERE,"[ServerSecurity]: Error Loading Keys from files, generating new keys instead");
 
         // ECKeyPair identityKeyPair       = Curve.generateKeyPair();
         // ourIdentityKeyPair              = new IdentityKeyPair(new IdentityKey(identityKeyPair.getPublicKey()),
@@ -216,7 +216,7 @@ public class ServerSecurity {
         String clientDataPath = clientRootPath + File.separator + clientID;
 
         SecurityUtils.createDirectory(clientDataPath);
-        logger.log(FINE, "[SEC]:Client Data Path = " + clientDataPath);
+        logger.log(FINE, "[ServerSecurity]:Client Data Path = " + clientDataPath);
         try {
             Files.copy(Paths.get(clientKeyPath + File.separator + SecurityUtils.CLIENT_IDENTITY_KEY),
                        Paths.get(clientDataPath + File.separator + SecurityUtils.CLIENT_IDENTITY_KEY));
@@ -224,7 +224,7 @@ public class ServerSecurity {
             Files.copy(Paths.get(clientKeyPath + File.separator + SecurityUtils.CLIENT_BASE_KEY),
                        Paths.get(clientDataPath + File.separator + SecurityUtils.CLIENT_BASE_KEY));
         } catch (IOException e) {
-            logger.log(SEVERE, e + "\n[SEC] INFO: Client Keys already exist Client Data Path for client ID " + clientID);
+            logger.log(SEVERE, e + "\n[ServerSecurity] INFO: Client Keys already exist Client Data Path for client ID " + clientID);
         }
 
         initializeClientKeysFromFiles(clientDataPath, clientSession);
@@ -237,7 +237,7 @@ public class ServerSecurity {
             clientSessionRecord = new SessionRecord(sessionStoreBytes);
         } catch (IOException e) {
             logger.log(SEVERE,
-                    "[SEC]: Error Reading Session record from " + sessionStorePath + "\nCreating New Session Record!");
+                    "[ServerSecurity]: Error Reading Session record from " + sessionStorePath + "\nCreating New Session Record!");
             clientSessionRecord = new SessionRecord();
             initializeRatchet(clientSessionRecord.getSessionState(), clientSession);
         }
@@ -280,7 +280,7 @@ public class ServerSecurity {
             return clientMap.get(clientID);
         } else {
             // TODO: Change to log
-            logger.log(SEVERE, "[SEC]:Key[ " + clientID + " ] NOT found!");
+            logger.log(SEVERE, "[ServerSecurity]:Key[ " + clientID + " ] NOT found!");
         }
         return null;
     }
@@ -292,7 +292,7 @@ public class ServerSecurity {
             client = getClientSession(clientKeyPath, clientID);
         } catch (InvalidKeyException | IDGenerationException | EncodingException e) {
             e.printStackTrace();
-            throw new InvalidClientSessionException("[SEC]:Error getting client session from file: " + e);
+            throw new InvalidClientSessionException("[ServerSecurity]:Error getting client session from file: " + e);
         }
         return client;
     }
@@ -371,19 +371,19 @@ public class ServerSecurity {
             try (FileOutputStream stream = new FileOutputStream(decryptedFile, true)) {
                 stream.write(serverDecryptedMessage);
             }
-            logger.log(FINE, "[SEC]:Decrypted Size = %d\n", serverDecryptedMessage.length);
+            logger.log(FINE, "[ServerSecurity]:Decrypted Size = %d\n", serverDecryptedMessage.length);
 
             if (SecurityUtils.verifySignature(serverDecryptedMessage, client.IdentityKey.getPublicKey(),
                                               signatureFile)) {
-                logger.log(WARNING, "[SEC]:Verified Signature!");
+                logger.log(WARNING, "[ServerSecurity]:Verified Signature!");
             } else {
                 // Failed to verify sign, delete bundle and return
-                logger.log(WARNING, "[SEC]:Invalid Signature [" + payloadName + "], Aborting bundle " + bundleID);
+                logger.log(WARNING, "[ServerSecurity]:Invalid Signature [" + payloadName + "], Aborting bundle " + bundleID);
 
                 try {
                     Files.deleteIfExists(Paths.get(decryptedFile));
                 } catch (Exception e) {
-                    logger.log(SEVERE, "[SEC] Error: Failed to delete decrypted file [%s]", decryptedFile);
+                    logger.log(SEVERE, "[ServerSecurity] Error: Failed to delete decrypted file [%s]", decryptedFile);
                     logger.log(SEVERE, "Error" + e);
                 }
             }
@@ -557,7 +557,7 @@ public class ServerSecurity {
             bundleIDbytes = SecurityUtils.decryptAesCbcPkcs5(sharedSecret, lastBundleID);
             latestBundleID = new String(bundleIDbytes, StandardCharsets.UTF_8);
         } catch (AESAlgorithmException | InvalidKeyException | EncodingException e) {
-            throw new BundleIDCryptographyException("[SEC]: Failed to decrypt/decode BundleID:", e);
+            throw new BundleIDCryptographyException("[ServerSecurity]: Failed to decrypt/decode BundleID:", e);
         }
 
         return BundleIDGenerator.compareBundleIDs(receivedBundleID, latestBundleID, BundleIDGenerator.UPSTREAM);
