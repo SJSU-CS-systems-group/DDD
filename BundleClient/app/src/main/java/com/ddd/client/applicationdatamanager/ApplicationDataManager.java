@@ -224,8 +224,8 @@ class StateManager {
             try {
                 this.dataStoreAdaptor.deleteADUs(appId, aduId);
             } catch (IOException e) {
-                logger.log(WARNING, "bundleclient",
-                           "Could not delete ADUs up to adu: " + aduId + ", error: " + e.getMessage());
+                logger.log(WARNING, 
+                           "Could not delete ADUs up to adu: " + aduId, e);
                 continue;
             }
 
@@ -242,6 +242,8 @@ class StateManager {
 }
 
 public class ApplicationDataManager {
+
+    private static final Logger logger = Logger.getLogger(ApplicationDataManager.class.getName());
 
     private StateManager stateManager;
 
@@ -315,7 +317,7 @@ public class ApplicationDataManager {
                 this.stateManager.updateLargestADUIdReceived(adu.getAppId(), adu.getADUId());
                 logger.log(FINE, "[ADM] Updated Largest ADU id: " + adu.getADUId() + "," + adu.getSource());
             } catch (IOException e) {
-                logger.log(WARNING, "Could not persist adu: " + adu.getADUId() + ", error: " + e.getMessage());
+                logger.log(WARNING, "Could not persist adu: " + adu.getADUId(), e);
             }
         }
     }
