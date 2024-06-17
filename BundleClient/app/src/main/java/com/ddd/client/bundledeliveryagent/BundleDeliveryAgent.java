@@ -37,7 +37,7 @@ public class BundleDeliveryAgent {
             BundleDTO toSend = this.bundleTransmission.generateBundleForTransmission();
             return toSend;
         } catch (Exception e) {
-            logger.log(WARNING, "Error: ", e)
+            logger.log(WARNING, "Error: ", e);
         } return null;
     }
 }
