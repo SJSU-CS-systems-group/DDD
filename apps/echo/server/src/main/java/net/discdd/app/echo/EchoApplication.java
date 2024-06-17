@@ -11,6 +11,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import java.util.Arrays;
 import java.util.logging.Logger;
 
+import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
@@ -44,7 +45,8 @@ public class EchoApplication {
             var managedChannel = ManagedChannelBuilder.forTarget(bundleServerURL).usePlaintext().build();
             var channelState = managedChannel.getState(true);
             try {
-                if (channelState != ConnectivityState.READY) {
+                // TODO: remove the false when we figure out that the connect is successful!
+                if (false && channelState != ConnectivityState.READY) {
                     logger.log(WARNING, String.format("Could not connect to %s %s", bundleServerURL, channelState));
                 } else {
                     var rsp = ServiceAdapterRegistryGrpc.newBlockingStub(managedChannel)
@@ -54,6 +56,7 @@ public class EchoApplication {
                                    String.format("Could not register with BundleServer: rc = %d %s", rsp.getCode(),
                                                  rsp.getMessage()));
                     }
+                    logger.log(INFO, String.format("Registered with server at %s", bundleServerURL));
                 }
             } catch (Exception e) {
                 logger.log(WARNING, "Could not register with BundleServer: " + e.getMessage());
