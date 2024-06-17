@@ -17,7 +17,7 @@ import java.util.logging.Level;
 import io.grpc.Server;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 
-public class RpcServerWorker extends Worker implements RpcServerStateListener{
+public class RpcServerWorker extends Worker implements RpcServerStateListener {
     private RpcServer rpcServer;
     private final int port;
     private final SocketAddress address;
