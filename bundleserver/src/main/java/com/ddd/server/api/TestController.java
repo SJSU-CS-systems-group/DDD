@@ -12,12 +12,10 @@ import com.ddd.model.BundleDTO;
 import com.ddd.model.BundleTransferDTO;
 import com.ddd.server.bundletransmission.BundleTransmission;
 
-
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 import static java.util.logging.Level.FINE;
-
 
 @RestController
 @RequestMapping("/")
@@ -27,7 +25,6 @@ public class TestController {
     private BundleTransmission bundleTransmission;
     private static final Logger logger = Logger.getLogger(TestController.class.getName());
 
-
     String transportId = "transport0";
 
     @GetMapping("/receive")
@@ -36,7 +33,7 @@ public class TestController {
         try {
             this.bundleTransmission.processReceivedBundles(this.transportId);
         } catch (Exception e) {
-            logger.log(SEVERE,"Testing ",e);
+            logger.log(SEVERE, "Testing ", e);
         }
     }
 
@@ -47,14 +44,15 @@ public class TestController {
             BundleTransferDTO bundleTransferDTO =
                     this.bundleTransmission.generateBundlesForTransmission(this.transportId, bundleIdsPresent);
 
-            logger.log(WARNING, "[BundleServerApp] Following are the bundle ids that the transport " + this.transportId +
-                                       " should delete");
+            logger.log(WARNING,
+                       "[BundleServerApp] Following are the bundle ids that the transport " + this.transportId +
+                               " should delete");
 
             for (String bundleId : bundleTransferDTO.getDeletionSet()) {
-                logger.log(FINE, "Test Send " ,bundleId);
+                logger.log(FINE, "Test Send ", bundleId);
             }
             logger.log(WARNING, "[BundleServerApp] Following are the ids of the bundles to be sent to transport " +
-                                       this.transportId);
+                    this.transportId);
 
             for (BundleDTO bundle : bundleTransferDTO.getBundles()) {
                 logger.log(FINE, bundle.getBundleId());

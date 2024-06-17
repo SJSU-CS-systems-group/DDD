@@ -50,7 +50,7 @@ public class MySQLConnection {
                 System.out.println(rs.getInt(1)+"  "+rs.getString(2)+"  "+rs.getString(3));
             con.close();*/
         } catch (Exception e) {
-            logger.log(SEVERE,"Problem getting connection", e);
+            logger.log(SEVERE, "Problem getting connection", e);
         }
         return null;
     }

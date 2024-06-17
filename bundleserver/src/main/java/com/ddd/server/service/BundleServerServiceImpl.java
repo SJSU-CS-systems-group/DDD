@@ -44,7 +44,6 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
     private String SendDir;
     private static final Logger logger = Logger.getLogger(BundleServerServiceImpl.class.getName());
 
-
     @Autowired
     private BundleTransmission bundleTransmission;
 
@@ -162,7 +161,7 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
         }
 
         List<File> bundlesList = bundleTransmission.getBundlesForTransmission(request.getTransportId());
-        logger.log(FINE,"Downloaded " + bundleTransmission);
+        logger.log(FINE, "Downloaded " + bundleTransmission);
         if (bundlesList.isEmpty()) {
             BundleTransferDTO bundleTransferDTO =
                     bundleTransmission.generateBundlesForTransmission(request.getTransportId(), filesOnTransportSet);
@@ -174,7 +173,7 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
                                                                                   bundleTransferDTO.getDeletionSet())))
                         .build();
                 logger.log(WARNING, "[BDA] Sending " + String.join(", ", bundleTransferDTO.getDeletionSet()) +
-                                           " to delete on Transport id :" + request.getTransportId());
+                        " to delete on Transport id :" + request.getTransportId());
                 responseObserver.onNext(response);
             }
             responseObserver.onCompleted();
@@ -182,8 +181,8 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
 
             for (File bundle : bundlesList) {
                 if (!filesOnTransportSet.contains(bundle.getName())) {
-                    logger.log(WARNING,
-                            "[BDA]Downloading " + bundle.getName() + " to Transport id :" + request.getTransportId());
+                    logger.log(WARNING, "[BDA]Downloading " + bundle.getName() + " to Transport id :" +
+                            request.getTransportId());
                     BundleMetaData bundleMetaData = BundleMetaData.newBuilder().setBid(bundle.getName()).build();
                     responseObserver.onNext(BundleDownloadResponse.newBuilder().setMetadata(bundleMetaData).build());
                     InputStream in;
