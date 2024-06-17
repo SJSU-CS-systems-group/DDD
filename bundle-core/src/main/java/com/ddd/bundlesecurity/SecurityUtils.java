@@ -16,6 +16,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import java.util.logging.Logger;
 
 import java.security.InvalidAlgorithmParameterException;
 import java.security.MessageDigest;
