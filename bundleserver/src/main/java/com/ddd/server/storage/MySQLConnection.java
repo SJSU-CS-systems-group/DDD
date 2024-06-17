@@ -1,14 +1,11 @@
 package com.ddd.server.storage;
 
-import java.sql.Connection;
-import java.sql.Driver;
-import java.sql.DriverManager;
-import java.util.logging.Logger;
-
-import com.mysql.cj.MysqlConnection;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
@@ -47,7 +44,7 @@ public class MySQLConnection {
             /*Statement stmt=con.createStatement();
             ResultSet rs=stmt.executeQuery("select * from emp");
             while(rs.next())
-                System.out.println(rs.getInt(1)+"  "+rs.getString(2)+"  "+rs.getString(3));
+                logger.log(WARNING,rs.getInt(1)+"  "+rs.getString(2)+"  "+rs.getString(3));
             con.close();*/
         } catch (Exception e) {
             logger.log(SEVERE, "Problem getting connection", e);
