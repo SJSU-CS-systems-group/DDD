@@ -19,6 +19,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+//Venus added
+import java.util.logging.Logger;
+import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.SEVERE;
+
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
@@ -44,7 +52,7 @@ class GrpcSendTask {
                     inBackground(port, host);
                 } catch (Exception e) {
                     // Handle any exceptions
-                    Log.d(HelloworldActivity.TAG, "executeInBackground failed");
+                    logger.log(WARNING, "executeInBackground failed");
                 }
             }
         });
@@ -83,7 +91,7 @@ class GrpcSendTask {
             }
             inputStream.close();
             streamObserver.onCompleted();
-            Log.d(HelloworldActivity.TAG, "Completed file transfer");
+            logger.log(INFO, "Completed file transfer");
             postExecute("Complete");
         } catch (Exception e) {
             StringWriter sw = new StringWriter();

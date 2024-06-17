@@ -114,12 +114,12 @@ class GrpcReceiveTask {
 
                 @Override
                 public void onError(Throwable t) {
-                    Log.d(HelloworldActivity.TAG, "Error downloading file: " + t.getMessage(), t);
+                    logger.log(SEVERE, "Error downloading file: " + t.getMessage(), t);
                     if (fileOutputStream != null) {
                         try {
                             fileOutputStream.close();
                         } catch (IOException e) {
-                            Log.d(HelloworldActivity.TAG, "Error closing output stream", e);
+                            logger.log(SEVERE, "Error closing output stream", e);
                         }
                     }
                 }
@@ -130,9 +130,9 @@ class GrpcReceiveTask {
                         fileOutputStream.flush();
                         fileOutputStream.close();
                     } catch (IOException e) {
-                        Log.d(HelloworldActivity.TAG, "Error closing output stream", e);
+                        logger.log(SEVERE, "Error closing output stream", e);
                     }
-                    Log.d(HelloworldActivity.TAG, "File download complete");
+                    logger.log(INFO, "File download complete");
                 }
             };
             stub.downloadFile(request, downloadObserver);
