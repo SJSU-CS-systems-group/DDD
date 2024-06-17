@@ -51,7 +51,6 @@ public class ServerSecurity {
     private static ServerSecurity singleServerInstance = null;
     private static final Logger logger = Logger.getLogger(ServerSecurity.class.getName());
 
-
     private SignalProtocolAddress ourAddress;
     private IdentityKeyPair ourIdentityKeyPair;
     private ECKeyPair ourSignedPreKey;
@@ -93,11 +92,11 @@ public class ServerSecurity {
 
             e.printStackTrace();
             logger.log(SEVERE,
-                    "Error loading server keys. Ensure the following key files exist in your application.yml's " +
-                            "{bundle-server.bundle-security.server-serverkeys-path} path:\n" + "%s\n" +
-                            "server_identity.pub\n" + "serverIdentity.pvt\n" + "server_signed_pre.pub\n" +
-                            "serverSignedPreKey.pvt\n" + "server_ratchet.pub\n" + "serverRatchetKey.pvt\n",
-                    serverKeyPath);
+                       "Error loading server keys. Ensure the following key files exist in your application.yml's " +
+                               "{bundle-server.bundle-security.server-serverkeys-path} path:\n" + "%s\n" +
+                               "server_identity.pub\n" + "serverIdentity.pvt\n" + "server_signed_pre.pub\n" +
+                               "serverSignedPreKey.pvt\n" + "server_ratchet.pub\n" + "serverRatchetKey.pvt\n",
+                       serverKeyPath);
             // BundleServerApplication.exit();
         }
         //     try {
@@ -200,7 +199,7 @@ public class ServerSecurity {
             clientSessionRecord = serverProtocolStore.loadSession(clientSession.clientProtocolAddress);
             stream.write(clientSessionRecord.serialize());
         } catch (IOException e) {
-            logger.log(SEVERE,"Update Session Record" ,e);
+            logger.log(SEVERE, "Update Session Record", e);
         }
     }
 
@@ -224,7 +223,8 @@ public class ServerSecurity {
             Files.copy(Paths.get(clientKeyPath + File.separator + SecurityUtils.CLIENT_BASE_KEY),
                        Paths.get(clientDataPath + File.separator + SecurityUtils.CLIENT_BASE_KEY));
         } catch (IOException e) {
-            logger.log(SEVERE, e + "\n[SEC] INFO: Client Keys already exist Client Data Path for client ID " + clientID);
+            logger.log(SEVERE,
+                       e + "\n[SEC] INFO: Client Keys already exist Client Data Path for client ID " + clientID);
         }
 
         initializeClientKeysFromFiles(clientDataPath, clientSession);
@@ -236,8 +236,8 @@ public class ServerSecurity {
             byte[] sessionStoreBytes = SecurityUtils.readFromFile(sessionStorePath);
             clientSessionRecord = new SessionRecord(sessionStoreBytes);
         } catch (IOException e) {
-            logger.log(SEVERE,
-                    "[SEC]: Error Reading Session record from " + sessionStorePath + "\nCreating New Session Record!");
+            logger.log(SEVERE, "[SEC]: Error Reading Session record from " + sessionStorePath +
+                    "\nCreating New Session Record!");
             clientSessionRecord = new SessionRecord();
             initializeRatchet(clientSessionRecord.getSessionState(), clientSession);
         }

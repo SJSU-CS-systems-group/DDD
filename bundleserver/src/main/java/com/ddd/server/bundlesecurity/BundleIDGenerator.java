@@ -9,13 +9,11 @@ import com.google.common.primitives.Bytes;
 import com.ddd.server.bundlesecurity.SecurityUtils;
 import com.ddd.server.bundlesecurity.SecurityExceptions.IDGenerationException;
 
-
 public class BundleIDGenerator {
     public static final boolean UPSTREAM = true;
     public static final boolean DOWNSTREAM = false;
     /* Length of the Counter */
     private static final int counterLength = 8;
-
 
     /* Counter value used as unsigned long */
     private long currentCounter = 0;

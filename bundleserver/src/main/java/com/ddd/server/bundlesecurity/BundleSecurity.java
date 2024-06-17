@@ -19,15 +19,14 @@ import com.ddd.model.UncompressedBundle;
 import com.ddd.model.UncompressedPayload;
 import com.ddd.server.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
 import com.ddd.utils.Constants;
-import static java.util.logging.Level.*;
 
+import static java.util.logging.Level.*;
 
 @Service
 public class BundleSecurity {
     @Value("${bundle-server.application-data-manager.state-manager.bundle-id-next-counter}")
     private String BUNDLE_ID_NEXT_COUNTER;
     private static final Logger logger = Logger.getLogger(BundleSecurity.class.getName());
-
 
     @Autowired
     private ServerSecurity serverSecurity;
@@ -121,8 +120,7 @@ public class BundleSecurity {
     }
 
     public void decrypt(String bundlePath, String decryptedPath) {
-        logger.log(WARNING,
-                "mock decrypt implementation");
+        logger.log(WARNING, "mock decrypt implementation");
     }
 
     public String[] encrypt(String toBeEncPath, String encPath, String bundleID, String clientID) {
@@ -156,8 +154,7 @@ public class BundleSecurity {
                                             uncompressedBundle.getSource().getAbsolutePath());
             } catch (Exception e) {
                 // TODO
-                logger.log(SEVERE,
-                        "[BS] Failed to decrypt payload");
+                logger.log(SEVERE, "[BS] Failed to decrypt payload");
                 // e.printStackTrace();
                 return null;
             }
