@@ -14,7 +14,20 @@ jobs:
       client: ${{ steps.filter.outputs.client }}
       transport: ${{ steps.filter.outputs.transport }}
       server: ${{ steps.filter.outputs.server }}
+      commit-author: ${{ steps.check.outputs.author }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Get previous commit author
+        id: check
+        run: echo "author=$(git show -s | grep Author)" >> $GITHUB_OUTPUT
+
+      - name: Print previous commit author
+        run: echo "Previous ${{ steps.check.outputs.author }}"
+
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -132,14 +145,18 @@ jobs:
         build-bundle-transport,
         build-bundle-server,
       ]
-    if: ${{ always() }}
+    if: ${{ always() && !contains(needs.changes.outputs.commit-author, 'github-actions[bot]')}}
     runs-on: ubuntu-latest
 
     steps:
+      - name: Print previous commit author
+        run: echo "Previous ${{ needs.changes.outputs.commit-author }}"
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.DDDTOKEN }}
 
       - name: Install IntelliJ IDEA
         run: |
