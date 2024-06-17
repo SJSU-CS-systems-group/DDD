@@ -3,10 +3,14 @@ package com.ddd.server.api;
 import com.ddd.model.ADU;
 import com.ddd.utils.FileStoreHelper;
 import com.google.protobuf.ByteString;
-import edu.sjsu.dtn.adapter.communicationservice.*;
 import io.grpc.Channel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
+import net.discdd.server.AppData;
+import net.discdd.server.AppDataUnit;
+import net.discdd.server.ClientData;
+import net.discdd.server.PrepareResponse;
+import net.discdd.server.ServiceAdapterGrpc;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,23 +18,23 @@ import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
 
-public class DTNAdapterClient {
+public class ServiceAdapterClient {
     public String ipAddress;
     public int port;
-    private DTNAdapterGrpc.DTNAdapterBlockingStub blockingStub;
-    private DTNAdapterGrpc.DTNAdapterStub asyncStub;
-    private static final Logger logger = Logger.getLogger(DTNAdapterClient.class.getName());
+    private static final Logger logger = Logger.getLogger(ServiceAdapterClient.class.getName());
+    private ServiceAdapterGrpc.ServiceAdapterBlockingStub blockingStub;
+    private ServiceAdapterGrpc.ServiceAdapterStub asyncStub;
 
-    public DTNAdapterClient(String ipAddress, int port) {
+    public ServiceAdapterClient(String ipAddress, int port) {
         this.ipAddress = ipAddress;
         this.port = port;
         Channel channel = ManagedChannelBuilder.forAddress(ipAddress, port).usePlaintext().build();
-        blockingStub = DTNAdapterGrpc.newBlockingStub(channel);
-        asyncStub = DTNAdapterGrpc.newStub(channel);
+        blockingStub = ServiceAdapterGrpc.newBlockingStub(channel);
+        asyncStub = ServiceAdapterGrpc.newStub(channel);
     }
 
     public AppData SendData(String clientId, List<ADU> dataList, long lastADUIdReceived) {
-        DTNAdapterClient client = new DTNAdapterClient(ipAddress, port);
+        ServiceAdapterClient client = new ServiceAdapterClient(ipAddress, port);
         try {
             List<AppDataUnit> dataListConverted = new ArrayList<>();
             for (int i = 0; i < dataList.size(); i++) {
@@ -57,7 +61,7 @@ public class DTNAdapterClient {
     }
 
     public void PrepareData(String clientId) {
-        DTNAdapterClient client = new DTNAdapterClient(ipAddress, port);
+        ServiceAdapterClient client = new ServiceAdapterClient(ipAddress, port);
         try {
             ClientData data = ClientData.newBuilder().setClientId(clientId).build();
             PrepareResponse response = client.blockingStub.prepareData(data);

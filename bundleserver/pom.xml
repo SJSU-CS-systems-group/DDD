@@ -170,6 +170,11 @@
 			<artifactId>jfiglet</artifactId>
 			<version>1.0.1</version>
 		</dependency>
+		<dependency>
+			<groupId>net.discdd</groupId>
+			<artifactId>serviceadapter-core</artifactId>
+			<version>1.0</version>
+		</dependency>
 	</dependencies>
 	<dependencyManagement>
 		<dependencies>
