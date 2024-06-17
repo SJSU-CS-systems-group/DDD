@@ -29,7 +29,7 @@ public class ServiceAdapterRegistryService extends ServiceAdapterRegistryGrpc.Se
 
     @Override
     public void registerAdapter(ConnectionData connectionData, StreamObserver<ResponseStatus> responseObserver) {
-        logger.log(INFO,"Testing server from Python client");
+        logger.log(INFO, "Testing server from Python client");
 
         RegisteredAppAdapter newAppAdapter =
                 new RegisteredAppAdapter(connectionData.getAppName(), connectionData.getUrl());

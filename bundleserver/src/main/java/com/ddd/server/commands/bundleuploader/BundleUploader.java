@@ -54,18 +54,18 @@ public class BundleUploader implements CommandLineRunner, Callable<Integer> {
 
                     @Override
                     public void onNext(BundleUploadResponse bundleUploadResponse) {
-                        logger.log(INFO,bundleUploadResponse.toString());
+                        logger.log(INFO, bundleUploadResponse.toString());
                     }
 
                     @Override
                     public void onError(Throwable throwable) {
-                        logger.log(SEVERE,throwable.getMessage());
+                        logger.log(SEVERE, throwable.getMessage());
                         System.exit(3);
                     }
 
                     @Override
                     public void onCompleted() {
-                        logger.log(INFO,"Complete");
+                        logger.log(INFO, "Complete");
                         latch.countDown();
 
                     }
@@ -76,20 +76,20 @@ public class BundleUploader implements CommandLineRunner, Callable<Integer> {
         streamObserver.onNext(metadata);
 
         // upload file in chunks
-        logger.log(INFO,"Started file transfer");
+        logger.log(INFO, "Started file transfer");
         FileInputStream inputStream = new FileInputStream(bundle.getAbsolutePath());
         int chunkSize = 1000 * 1000 * 4;
         byte[] bytes = new byte[chunkSize];
         int size = 0;
         while ((size = inputStream.read(bytes)) != -1) {
-            logger.log(WARNING,"Sending chunk size: " + size);
+            logger.log(WARNING, "Sending chunk size: " + size);
             BundleUploadRequest uploadRequest = BundleUploadRequest.newBuilder().setFile(
                     edu.sjsu.ddd.bundleserver.service.File.newBuilder().setContent(ByteString.copyFrom(bytes, 0, size))
                             .build()).build();
             streamObserver.onNext(uploadRequest);
         }
         inputStream.close();
-        logger.log(INFO,"Files are sent");
+        logger.log(INFO, "Files are sent");
         streamObserver.onCompleted();
         latch.await();
         return null;

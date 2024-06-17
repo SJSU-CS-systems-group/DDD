@@ -34,8 +34,7 @@ public class CommandProcessor {
         commands = reflections.getTypesAnnotatedWith(Command.class).stream().map(c -> {
             var a = c.getAnnotation(Command.class);
             if (doingHelp) {
-                logger.log(WARNING,
-                        a.name() + " - " + String.join(" ", a.description()));
+                logger.log(WARNING, a.name() + " - " + String.join(" ", a.description()));
             }
             return Map.entry(a.name(), c);
         }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));

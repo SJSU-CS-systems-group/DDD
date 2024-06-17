@@ -58,7 +58,7 @@ public class BundleGeneratorService {
 
         String ackPath = extractedPayloadPath + File.separator + Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME;
         String aduPath = extractedPayloadPath + File.separator + Constants.BUNDLE_ADU_DIRECTORY_NAME;
-        logger.log(INFO,"[BundleGeneratorService] ADU Path" + aduPath);
+        logger.log(INFO, "[BundleGeneratorService] ADU Path" + aduPath);
         UncompressedPayload.Builder builder = new UncompressedPayload.Builder();
 
         builder.setAckRecord(AckRecordUtils.readAckRecordFromFile(new File(ackPath)));
@@ -117,7 +117,7 @@ public class BundleGeneratorService {
             ADUUtils.writeADUs(uncompressedPayload.getADUs(), aduDirectory);
         }
 
-        logger.log(INFO,"[BundleUtils] Wrote bundle payload with id = " + bundleId + " to " + targetDirectory);
+        logger.log(INFO, "[BundleUtils] Wrote bundle payload with id = " + bundleId + " to " + targetDirectory);
     }
 
     public static boolean doContentsMatch(UncompressedPayload.Builder a, UncompressedPayload.Builder b) {

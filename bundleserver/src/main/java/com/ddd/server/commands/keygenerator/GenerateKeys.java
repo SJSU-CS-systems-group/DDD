@@ -73,7 +73,7 @@ public class GenerateKeys implements Callable<Void> {
             logger.log(INFO, "Written to file");
         } catch (Exception e) {
             logger.log(SEVERE,
-                    "com.ddd.server.keygenerator.commands.GenerateKeys.writeToFile error: " + e.getMessage());
+                       "com.ddd.server.keygenerator.commands.GenerateKeys.writeToFile error: " + e.getMessage());
         }
     }
 
@@ -98,7 +98,7 @@ public class GenerateKeys implements Callable<Void> {
                 file.createNewFile();
             } catch (IOException e) {
                 logger.log(SEVERE,
-                        "com.ddd.server.keygenerator.commands.GenerateKeys.verifyWrite error: " + e.getMessage());
+                           "com.ddd.server.keygenerator.commands.GenerateKeys.verifyWrite error: " + e.getMessage());
             }
             logger.log(WARNING, "Writing to " + file.getPath() + "...");
             writeToFile(isPrivate, file);

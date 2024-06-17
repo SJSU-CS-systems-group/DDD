@@ -62,8 +62,7 @@ public class DecodePublicKey implements Callable<Void> {
 
     private void writeToFile(ECPublicKey pubKey) throws EncodingException {
         SecurityUtils.createEncodedPublicKeyFile(pubKey, storePath + File.separator + pubFilename);
-        logger.log(INFO,
-                "Written to file");
+        logger.log(INFO, "Written to file");
     }
 
     private void print(ECPublicKey pubKey) {

@@ -229,9 +229,8 @@ class StateManager {
             this.largestAduIdDeliveredRepository.save(record);
         }
 
-        logger.log(INFO,
-                "[StateManager] Processed acknowledgement for sent bundle id " + bundleId + " corresponding to client " +
-                        clientId);
+        logger.log(INFO, "[StateManager] Processed acknowledgement for sent bundle id " + bundleId +
+                " corresponding to client " + clientId);
     }
 
     @Transactional(rollbackFor = Exception.class)
