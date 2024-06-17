@@ -40,6 +40,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
+import java.util.logging.Logger;
 
 import static java.util.logging.Level.*;
 
@@ -48,6 +49,8 @@ public class ServerSecurity {
     private static final String DEFAULT_SERVER_NAME = "Bundle Server";
     private static final int ServerDeviceID = 0;
     private static ServerSecurity singleServerInstance = null;
+    private static final Logger logger = Logger.getLogger(ServerSecurity.class.getName());
+
 
     private SignalProtocolAddress ourAddress;
     private IdentityKeyPair ourIdentityKeyPair;
@@ -78,7 +81,7 @@ public class ServerSecurity {
             try {
                 name = SecurityUtils.generateID(ourIdentityKeyPair.getPublicKey().serialize());
             } catch (IDGenerationException e) {
-                System.out.println("[SEC]:Failed to generate ID, using default value:" + name);
+                logger.log(SEVERE, "[SEC]:Failed to generate ID, using default value:" + name);
             }
             ourAddress = new SignalProtocolAddress(name, ServerDeviceID);
             ourOneTimePreKey = Optional.<ECKeyPair>absent();
@@ -86,10 +89,10 @@ public class ServerSecurity {
             clientRootPath = serverRootPath + File.separator + "Clients";
             SecurityUtils.createDirectory(clientRootPath);
         } catch (Exception e) {
-//            System.out.println(e.getMessage());
+//            logger.log(SEVERE,(e.getMessage());
 
             e.printStackTrace();
-            System.out.printf(
+            logger.log(SEVERE,
                     "Error loading server keys. Ensure the following key files exist in your application.yml's " +
                             "{bundle-server.bundle-security.server-serverkeys-path} path:\n" + "%s\n" +
                             "server_identity.pub\n" + "serverIdentity.pvt\n" + "server_signed_pre.pub\n" +
@@ -100,9 +103,9 @@ public class ServerSecurity {
         //     try {
         //     // TODO: Load protocol store from files(serverProtocolStore)
         //         loadKeysfromFiles(serverKeyPath);
-        //         System.out.println("[Sec]: Using Existing Keys");
+        //         logger.log(SEVERE,"[Sec]: Using Existing Keys");
         //     } catch (InvalidKeyException | IOException | EncodingException e) {
-        //         System.out.println("[Sec]: Error Loading Keys from files, generating new keys instead");
+        //         logger.log(SEVERE,"[Sec]: Error Loading Keys from files, generating new keys instead");
 
         // ECKeyPair identityKeyPair       = Curve.generateKeyPair();
         // ourIdentityKeyPair              = new IdentityKeyPair(new IdentityKey(identityKeyPair.getPublicKey()),
@@ -197,7 +200,7 @@ public class ServerSecurity {
             clientSessionRecord = serverProtocolStore.loadSession(clientSession.clientProtocolAddress);
             stream.write(clientSessionRecord.serialize());
         } catch (IOException e) {
-            System.out.println(e);
+            logger.log(SEVERE,"Update Session Record" ,e);
         }
     }
 
@@ -213,7 +216,7 @@ public class ServerSecurity {
         String clientDataPath = clientRootPath + File.separator + clientID;
 
         SecurityUtils.createDirectory(clientDataPath);
-        System.out.println("[SEC]:Client Data Path = " + clientDataPath);
+        logger.log(FINE, "[SEC]:Client Data Path = " + clientDataPath);
         try {
             Files.copy(Paths.get(clientKeyPath + File.separator + SecurityUtils.CLIENT_IDENTITY_KEY),
                        Paths.get(clientDataPath + File.separator + SecurityUtils.CLIENT_IDENTITY_KEY));
@@ -221,8 +224,7 @@ public class ServerSecurity {
             Files.copy(Paths.get(clientKeyPath + File.separator + SecurityUtils.CLIENT_BASE_KEY),
                        Paths.get(clientDataPath + File.separator + SecurityUtils.CLIENT_BASE_KEY));
         } catch (IOException e) {
-            System.out.println(
-                    e + "\n[SEC] INFO: Client Keys already exist Client Data Path for client ID " + clientID);
+            logger.log(SEVERE, e + "\n[SEC] INFO: Client Keys already exist Client Data Path for client ID " + clientID);
         }
 
         initializeClientKeysFromFiles(clientDataPath, clientSession);
@@ -234,7 +236,7 @@ public class ServerSecurity {
             byte[] sessionStoreBytes = SecurityUtils.readFromFile(sessionStorePath);
             clientSessionRecord = new SessionRecord(sessionStoreBytes);
         } catch (IOException e) {
-            System.out.println(
+            logger.log(SEVERE,
                     "[SEC]: Error Reading Session record from " + sessionStorePath + "\nCreating New Session Record!");
             clientSessionRecord = new SessionRecord();
             initializeRatchet(clientSessionRecord.getSessionState(), clientSession);
@@ -278,7 +280,7 @@ public class ServerSecurity {
             return clientMap.get(clientID);
         } else {
             // TODO: Change to log
-            System.out.println("[SEC]:Key[ " + clientID + " ] NOT found!");
+            logger.log(SEVERE, "[SEC]:Key[ " + clientID + " ] NOT found!");
         }
         return null;
     }
@@ -356,7 +358,7 @@ public class ServerSecurity {
             Files.createDirectories(Paths.get(decryptedPath));
         }
 
-        System.out.println(decryptedFile);
+        logger.log(INFO, decryptedFile);
         int fileCount = new File(payloadPath).list().length;
 
         for (int i = 1; i <= fileCount; ++i) {
@@ -369,20 +371,20 @@ public class ServerSecurity {
             try (FileOutputStream stream = new FileOutputStream(decryptedFile, true)) {
                 stream.write(serverDecryptedMessage);
             }
-            System.out.printf("[SEC]:Decrypted Size = %d\n", serverDecryptedMessage.length);
+            logger.log(FINE, "[SEC]:Decrypted Size = %d\n", serverDecryptedMessage.length);
 
             if (SecurityUtils.verifySignature(serverDecryptedMessage, client.IdentityKey.getPublicKey(),
                                               signatureFile)) {
-                System.out.println("[SEC]:Verified Signature!");
+                logger.log(WARNING, "[SEC]:Verified Signature!");
             } else {
                 // Failed to verify sign, delete bundle and return
-                System.out.println("[SEC]:Invalid Signature [" + payloadName + "], Aborting bundle " + bundleID);
+                logger.log(WARNING, "[SEC]:Invalid Signature [" + payloadName + "], Aborting bundle " + bundleID);
 
                 try {
                     Files.deleteIfExists(Paths.get(decryptedFile));
                 } catch (Exception e) {
-                    System.out.printf("[SEC] Error: Failed to delete decrypted file [%s]", decryptedFile);
-                    System.out.println(e);
+                    logger.log(SEVERE, "[SEC] Error: Failed to delete decrypted file [%s]", decryptedFile);
+                    logger.log(SEVERE, "Error" + e);
                 }
             }
         }
