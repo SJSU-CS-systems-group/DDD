@@ -6,6 +6,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
+import java.util.logging.Logger;
+import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.SEVERE;
+
 import com.ddd.client.bundlesecurity.BundleIDGenerator;
 import com.ddd.client.bundlesecurity.ClientSecurity;
 import com.ddd.client.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
@@ -13,6 +20,9 @@ import com.ddd.client.bundlesecurity.SecurityExceptions.IDGenerationException;
 import com.ddd.client.bundlesecurity.SecurityUtils;
 
 public class ClientBundleGenerator {
+
+    private static final Logger logger = Logger.getLogger(ClientBundleGenerator.class.getName());
+
     static ClientBundleGenerator singleGeneratorInstance = null;
     ClientSecurity clientSecurity = null;
 
@@ -37,7 +47,7 @@ public class ClientBundleGenerator {
         try (FileOutputStream stream = new FileOutputStream(counterFilePath)) {
             stream.write(Long.toUnsignedString(currentCounter).getBytes(StandardCharsets.UTF_8));
         } catch (IOException ex) {
-            System.out.println("[BR]: Failed to create counter backup file! " + ex);
+            logger.log(WARNING,"[BR]: Failed to create counter backup file! " + ex);
         }
     }
 
@@ -45,7 +55,7 @@ public class ClientBundleGenerator {
         if (singleGeneratorInstance == null) {
             singleGeneratorInstance = new ClientBundleGenerator(clientSecurity, rootPath);
         } else {
-            System.out.println("[BR]: Client bundle generator instance is already created!");
+            logger.log(WARNING,"[BR]: Client bundle generator instance is already created!");
         }
         return singleGeneratorInstance;
     }
