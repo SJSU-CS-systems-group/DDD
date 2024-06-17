@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.*;
 
 public class DTNAdapterClient {
     public String ipAddress;

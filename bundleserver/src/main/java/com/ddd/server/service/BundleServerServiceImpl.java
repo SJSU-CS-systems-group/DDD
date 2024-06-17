@@ -33,10 +33,7 @@ import edu.sjsu.ddd.bundleserver.service.BundleUploadResponse;
 import edu.sjsu.ddd.bundleserver.service.Status;
 import io.grpc.stub.StreamObserver;
 
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.WARNING;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.*;
 
 @Service
 public class BundleServerServiceImpl extends BundleServiceImplBase {

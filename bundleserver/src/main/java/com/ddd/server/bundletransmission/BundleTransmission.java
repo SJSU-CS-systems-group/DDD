@@ -43,9 +43,7 @@ import com.ddd.server.repository.LargestBundleIdReceivedRepository;
 import com.ddd.utils.AckRecordUtils;
 import com.ddd.utils.Constants;
 
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.*;
 
 @Service
 public class BundleTransmission {

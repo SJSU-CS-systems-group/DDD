@@ -9,13 +9,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
+import static java.util.logging.Level.*;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.logging.Logger;
 
 @Component
 public class DTNCommunicationService extends DTNCommunicationGrpc.DTNCommunicationImplBase {
+    private static final Logger logger = Logger.getLogger(DTNCommunicationService.class.getName());
     @Autowired
     private static Environment env;
 
@@ -31,7 +35,7 @@ public class DTNCommunicationService extends DTNCommunicationGrpc.DTNCommunicati
 
     @Override
     public void registerAdapter(ConnectionData connectionData, StreamObserver<ResponseStatus> responseObserver) {
-        System.out.println("Testing server from Python client");
+        logger.log(INFO, "Testing server from Python client");
 
         RegisteredAppAdapter newAppAdapter =
                 new RegisteredAppAdapter(connectionData.getAppName(), connectionData.getUrl());
