@@ -85,7 +85,7 @@ public class BundleSecurity {
     //  }
 
     public void encryptBundleContents(UncompressedPayload bundle) {
-        logger.log(WARNING, "[BS] Encrypting contents of the bundle with id: " + bundle.getBundleId());
+        logger.log(WARNING, "[BundleSecurity] Encrypting contents of the bundle with id: " + bundle.getBundleId());
     }
 
     public boolean isSenderWindowFull(String clientId) {
@@ -100,7 +100,7 @@ public class BundleSecurity {
         } else {
             clientId = bundleId.split("#")[0];
         }
-        logger.log(INFO, "[BS] Client id corresponding to bundle id: " + bundleId + " is " + clientId);
+        logger.log(INFO, "[BundleSecurity] Client id corresponding to bundle id: " + bundleId + " is " + clientId);
         return clientId;
     }
 
