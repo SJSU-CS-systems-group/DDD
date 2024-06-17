@@ -98,9 +98,8 @@ public class DataStoreAdaptor {
         }
 
         this.saveDataFromAdaptor(clientId, appId, data);
-        logger.log(WARNING,
-                   "[DataStoreAdaptor] Stored ADUs for application " + appId + " for client " + clientId + ". number of ADUs - " +
-                           data.getDataListCount());
+        logger.log(WARNING, "[DataStoreAdaptor] Stored ADUs for application " + appId + " for client " + clientId +
+                ". number of ADUs - " + data.getDataListCount());
     }
 
     public ADU fetchADU(String clientId, String appId, long aduId) {

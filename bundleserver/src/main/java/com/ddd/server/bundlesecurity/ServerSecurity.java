@@ -92,11 +92,11 @@ public class ServerSecurity {
 
             e.printStackTrace();
             logger.log(SEVERE,
-                    "Error loading server keys. Ensure the following key files exist in your application.yml's " +
-                            "{bundle-server.bundle-security.server-serverkeys-path} path:\n" + "%s\n" +
-                            "server_identity.pub\n" + "serverIdentity.pvt\n" + "server_signed_pre.pub\n" +
-                            "serverSignedPreKey.pvt\n" + "server_ratchet.pub\n" + "serverRatchetKey.pvt\n",
-                    serverKeyPath);
+                       "Error loading server keys. Ensure the following key files exist in your application.yml's " +
+                               "{bundle-server.bundle-security.server-serverkeys-path} path:\n" + "%s\n" +
+                               "server_identity.pub\n" + "serverIdentity.pvt\n" + "server_signed_pre.pub\n" +
+                               "serverSignedPreKey.pvt\n" + "server_ratchet.pub\n" + "serverRatchetKey.pvt\n",
+                       serverKeyPath);
             // BundleServerApplication.exit();
         }
         //     try {
@@ -223,7 +223,9 @@ public class ServerSecurity {
             Files.copy(Paths.get(clientKeyPath + File.separator + SecurityUtils.CLIENT_BASE_KEY),
                        Paths.get(clientDataPath + File.separator + SecurityUtils.CLIENT_BASE_KEY));
         } catch (IOException e) {
-            logger.log(SEVERE, e + "\n[ServerSecurity] INFO: Client Keys already exist Client Data Path for client ID " + clientID);
+            logger.log(SEVERE,
+                       e + "\n[ServerSecurity] INFO: Client Keys already exist Client Data Path for client ID " +
+                               clientID);
             logger.log(SEVERE,
                        e + "\n[SEC] INFO: Client Keys already exist Client Data Path for client ID " + clientID);
         }
@@ -237,8 +239,8 @@ public class ServerSecurity {
             byte[] sessionStoreBytes = SecurityUtils.readFromFile(sessionStorePath);
             clientSessionRecord = new SessionRecord(sessionStoreBytes);
         } catch (IOException e) {
-            logger.log(SEVERE,
-                    "[ServerSecurity]: Error Reading Session record from " + sessionStorePath + "\nCreating New Session Record!");
+            logger.log(SEVERE, "[ServerSecurity]: Error Reading Session record from " + sessionStorePath +
+                    "\nCreating New Session Record!");
             logger.log(SEVERE, "[ServerSecurity]: Error Reading Session record from " + sessionStorePath +
                     "\nCreating New Session Record!");
             clientSessionRecord = new SessionRecord();
@@ -381,7 +383,8 @@ public class ServerSecurity {
                 logger.log(WARNING, "[ServerSecurity]:Verified Signature!");
             } else {
                 // Failed to verify sign, delete bundle and return
-                logger.log(WARNING, "[ServerSecurity]:Invalid Signature [" + payloadName + "], Aborting bundle " + bundleID);
+                logger.log(WARNING,
+                           "[ServerSecurity]:Invalid Signature [" + payloadName + "], Aborting bundle " + bundleID);
 
                 try {
                     Files.deleteIfExists(Paths.get(decryptedFile));
