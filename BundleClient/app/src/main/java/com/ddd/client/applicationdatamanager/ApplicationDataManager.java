@@ -224,8 +224,7 @@ class StateManager {
             try {
                 this.dataStoreAdaptor.deleteADUs(appId, aduId);
             } catch (IOException e) {
-                logger.log(WARNING, 
-                           "Could not delete ADUs up to adu: " + aduId, e);
+                logger.log(WARNING, "Could not delete ADUs up to adu: " + aduId, e);
                 continue;
             }
 
