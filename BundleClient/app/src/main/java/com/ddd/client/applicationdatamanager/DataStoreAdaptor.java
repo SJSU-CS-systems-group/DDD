@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import java.util.logging.Logger;
+
 import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
@@ -66,7 +67,7 @@ public class DataStoreAdaptor {
         receiveFileStoreHelper.addFile(adu.getAppId(), receiveFileStoreHelper.getDataFromFile(adu.getSource()));
         sendDataToApp(adu);
         logger.log(INFO,
-                "[ADM-DSA] Persisting inbound ADU " + adu.getAppId() + "-" + adu.getADUId() + " to the Data Store");
+                   "[ADM-DSA] Persisting inbound ADU " + adu.getAppId() + "-" + adu.getADUId() + " to the Data Store");
 
     }
 
@@ -77,8 +78,8 @@ public class DataStoreAdaptor {
     public void deleteADUs(String appId, long aduIdEnd) throws IOException {
 
         sendFileStoreHelper.deleteAllFilesUpTo(appId, aduIdEnd);
-        logger.log(INFO,"[DSA] Deleted ADUs for application " + appId + " with id upto " + aduIdEnd);
-        logger.log(INFO,"[ADM-DSA] Deleting outbound ADUs of application " + appId + " upto id " + aduIdEnd);
+        logger.log(INFO, "[DSA] Deleted ADUs for application " + appId + " with id upto " + aduIdEnd);
+        logger.log(INFO, "[ADM-DSA] Deleting outbound ADUs of application " + appId + " upto id " + aduIdEnd);
     }
 
     private ADU fetchADU(String appId, long aduId) {

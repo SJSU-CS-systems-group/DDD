@@ -6,6 +6,7 @@ import com.ddd.model.UncompressedPayload;
 import com.ddd.model.BundleWrapper;
 
 import java.util.logging.Logger;
+
 import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
@@ -37,7 +38,6 @@ public class BundleDeliveryAgent {
             return toSend;
         } catch (Exception e) {
             logger.log(WARNING, "Error: ", e)
-        }
-        return null;
+        } return null;
     }
 }

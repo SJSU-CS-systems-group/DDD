@@ -35,6 +35,7 @@ import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 
 import java.util.logging.Logger;
+
 import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
@@ -223,7 +224,8 @@ class StateManager {
             try {
                 this.dataStoreAdaptor.deleteADUs(appId, aduId);
             } catch (IOException e) {
-                logger.log(WARNING,"bundleclient", "Could not delete ADUs up to adu: " + aduId + ", error: " + e.getMessage());
+                logger.log(WARNING, "bundleclient",
+                           "Could not delete ADUs up to adu: " + aduId + ", error: " + e.getMessage());
                 continue;
             }
 
@@ -288,9 +290,9 @@ public class ApplicationDataManager {
     }
 
     public void processAcknowledgement(String bundleId) {
-        logger.log(FINE,"[ADM] Processing acknowledgement for sent bundle id: " + bundleId);
+        logger.log(FINE, "[ADM] Processing acknowledgement for sent bundle id: " + bundleId);
         if ("HB".equals(bundleId)) {
-            logger.log(INFO,"[ADM] This is a heartbeat message.");
+            logger.log(INFO, "[ADM] This is a heartbeat message.");
             return;
         }
         this.stateManager.processAcknowledgement(bundleId);
@@ -301,22 +303,19 @@ public class ApplicationDataManager {
 
         for (final ADU adu : adus) {
             Long largestAduIdReceived = this.stateManager.getLargestADUIdReceived(adu.getAppId());
-            logger.log(FINE,"[ADM] Largest id for ADUs received for application " + adu.getAppId() + " is " +
-                                       largestAduIdReceived);
+            logger.log(FINE, "[ADM] Largest id for ADUs received for application " + adu.getAppId() + " is " +
+                    largestAduIdReceived);
             if (largestAduIdReceived != null && adu.getADUId() <= largestAduIdReceived) {
                 continue;
             }
 
             try {
                 this.dataStoreAdaptor.persistADU(adu);
-                logger.log(FINE,
-                      "[ADM] Updating Largest ADU id: " + adu.getADUId() + "," + adu.getSource());
+                logger.log(FINE, "[ADM] Updating Largest ADU id: " + adu.getADUId() + "," + adu.getSource());
                 this.stateManager.updateLargestADUIdReceived(adu.getAppId(), adu.getADUId());
-                logger.log(FINE,
-                      "[ADM] Updated Largest ADU id: " + adu.getADUId() + "," + adu.getSource());
+                logger.log(FINE, "[ADM] Updated Largest ADU id: " + adu.getADUId() + "," + adu.getSource());
             } catch (IOException e) {
-                logger.log(WARNING,
-                      "Could not persist adu: " + adu.getADUId() + ", error: " + e.getMessage());
+                logger.log(WARNING, "Could not persist adu: " + adu.getADUId() + ", error: " + e.getMessage());
             }
         }
     }
@@ -332,15 +331,13 @@ public class ApplicationDataManager {
             for (ADU adu : adus) {
                 if (adu.getSize() + cumulativeSize > this.APP_DATA_SIZE_LIMIT) {
                     logger.log(FINER, "max data size exceeded");
-                    logger.log(INFO,
-                          "Unable to add ADUs with id: " + adu.getAppId() + File.separator + adu.getADUId() +
-                                  " and after into the bundle");
+                    logger.log(INFO, "Unable to add ADUs with id: " + adu.getAppId() + File.separator + adu.getADUId() +
+                            " and after into the bundle");
                     exceededSize = true;
                     break;
                 }
                 res.add(adu);
-                logger.log(FINE,
-                      "Added ADU: " + adu.getAppId() + File.separator + adu.getADUId() + " to the bundle");
+                logger.log(FINE, "Added ADU: " + adu.getAppId() + File.separator + adu.getADUId() + " to the bundle");
                 cumulativeSize += adu.getSize();
             }
 
