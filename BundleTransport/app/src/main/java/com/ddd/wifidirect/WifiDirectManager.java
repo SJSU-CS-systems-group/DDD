@@ -43,9 +43,31 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
     private WifiDirectLifeCycleObserver lifeCycleObserver;
     private WifiDirectBroadcastReceiver receiver;
     private ArrayList<WifiP2pDevice> discoveredPeers;
+
+    public Collection<WifiP2pDevice> getConnectedPeers() {
+        return connectedPeers;
+    }
+
+    public void setConnectedPeers(Collection<WifiP2pDevice> connectedPeers) {
+        this.connectedPeers = connectedPeers;
+    }
+
+    private Collection<WifiP2pDevice> connectedPeers;
     private String wifiDirectGroupHostIP;
     private String groupHostInfo;
     private boolean isConnected;
+
+    private List<WifiDirectStateListener> listeners = new ArrayList<>();
+
+    public void notifyActionToListeners(WIFI_DIRECT_ACTIONS action) {
+        for (WifiDirectStateListener listener : listeners) {
+            listener.onReceiveAction(action);
+        }
+    }
+
+    public enum WIFI_DIRECT_ACTIONS {
+        WIFI_DIRECT_MANAGER_PEERS_CHANGED, WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL
+    }
 
     /**
      * Ctor
@@ -57,9 +79,10 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
      *                  AppCompatActivity.getLifeCycle() call in
      *                  your main activity
      */
-    public WifiDirectManager(Context context, Lifecycle lifeCycle) {
+    public WifiDirectManager(Context context, Lifecycle lifeCycle, WifiDirectStateListener listener) {
         this.context = context;
         this.lifeCycle = lifeCycle;
+        listeners.add(listener);
     }
 
     public void initialize() {
@@ -152,13 +175,14 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
      */
     @Override
     public void onPeersAvailable(WifiP2pDeviceList deviceList) {
-        Log.d(MainActivity.TAG, "Peers available...");
+        Log.d(MainActivity.TAG, "Peers available: " + deviceList.getDeviceList().size());
         List<WifiP2pDevice> devices = new ArrayList<>();
         Collection<WifiP2pDevice> foundDevices = deviceList.getDeviceList();
         devices.addAll(foundDevices);
         //this.discoveredPeers = (ArrayList<WifiP2pDevice>) deviceList.getDeviceList();
 
         this.discoveredPeers = (ArrayList<WifiP2pDevice>) devices;
+        notifyActionToListeners(WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_PEERS_CHANGED);
     }
 
     /**
