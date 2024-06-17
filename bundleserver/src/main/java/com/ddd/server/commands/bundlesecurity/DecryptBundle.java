@@ -11,7 +11,8 @@ import java.io.*;
 import java.util.concurrent.Callable;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.*;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
 
 @Component
 @CommandLine.Command(name = "decrypt-bundle", description = "Decrypt bundle")

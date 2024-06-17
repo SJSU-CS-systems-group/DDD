@@ -2,8 +2,6 @@ package com.ddd.server;
 
 import com.ddd.server.commands.CommandProcessor;
 import com.ddd.server.commands.bundleuploader.BundleUploader;
-import com.github.dtmo.jfiglet.FigFont;
-import com.github.dtmo.jfiglet.FigFontReader;
 import com.github.dtmo.jfiglet.FigFontResources;
 import com.github.dtmo.jfiglet.FigletRenderer;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +22,8 @@ import java.util.Arrays;
 import java.util.Properties;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.*;
+import static java.util.logging.Level.SEVERE;
+
 
 @Slf4j
 @SpringBootApplication

@@ -1,25 +1,24 @@
 package com.ddd.server.commands.keygenerator;
 
+import com.ddd.server.bundlesecurity.SecurityExceptions.EncodingException;
+import com.ddd.server.bundlesecurity.SecurityUtils;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import org.whispersystems.libsignal.IdentityKeyPair;
+import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.ecc.ECPublicKey;
+import picocli.CommandLine;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
+
 import java.io.File;
 import java.util.Base64;
 import java.util.concurrent.Callable;
 import java.util.logging.Logger;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-
-import org.whispersystems.libsignal.IdentityKeyPair;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.ecc.ECPublicKey;
-
-import com.ddd.server.bundlesecurity.SecurityUtils;
-import com.ddd.server.bundlesecurity.SecurityExceptions.EncodingException;
-
-import picocli.CommandLine;
-import picocli.CommandLine.Option;
-import picocli.CommandLine.Parameters;
-
-import static java.util.logging.Level.*;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 @Component
 @CommandLine.Command(name = "decode-pub-key", description = "Decode public key given private key")

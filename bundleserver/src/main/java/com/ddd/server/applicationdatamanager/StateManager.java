@@ -1,15 +1,5 @@
 package com.ddd.server.applicationdatamanager;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.logging.Logger;
-
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import com.ddd.model.ADU;
 import com.ddd.model.UncompressedPayload;
 import com.ddd.server.bundletransmission.BundleGeneratorService;
@@ -25,8 +15,18 @@ import com.ddd.server.repository.entity.LargestBundleIdReceived;
 import com.ddd.server.repository.entity.LastBundleIdSent;
 import com.ddd.server.repository.entity.SentAduDetails;
 import com.ddd.server.repository.entity.SentBundleDetails;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import static java.util.logging.Level.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.INFO;
 
 @Service
 class StateManager {

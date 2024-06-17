@@ -45,7 +45,7 @@ import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import static java.util.logging.Level.*;
+import static java.util.logging.Level.INFO;
 
 public class SecurityUtils {
     private static final Logger logger = Logger.getLogger(SecurityUtils.class.getName());

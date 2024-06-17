@@ -1,5 +1,14 @@
 package com.ddd.server.bundlerouting;
 
+import com.ddd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
+import com.ddd.server.storage.SNRDatabases;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
+import org.springframework.stereotype.Repository;
+
+import javax.annotation.PostConstruct;
 import java.io.File;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -9,19 +18,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Logger;
 
-import javax.annotation.PostConstruct;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.env.Environment;
-import org.springframework.stereotype.Repository;
-
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import com.ddd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
-import com.ddd.server.storage.SNRDatabases;
-
-import static java.util.logging.Level.*;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
 
 @Repository
 public class ServerRouting {

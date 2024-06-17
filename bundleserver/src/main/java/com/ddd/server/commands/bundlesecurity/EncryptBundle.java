@@ -13,7 +13,7 @@ import java.util.Arrays;
 import java.util.concurrent.Callable;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.*;
+import static java.util.logging.Level.INFO;
 
 @Component
 @CommandLine.Command(name = "encrypt-bundle", description = "Encrypt bundle")

@@ -1,17 +1,5 @@
 package com.ddd.server.bundletransmission;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.FileSystems;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.logging.Logger;
-
-import org.springframework.stereotype.Service;
 import com.ddd.model.ADU;
 import com.ddd.model.Acknowledgement;
 import com.ddd.model.Bundle;
@@ -27,8 +15,20 @@ import com.ddd.utils.JarUtils;
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
+import org.springframework.stereotype.Service;
 
-import static java.util.logging.Level.*;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.FileSystems;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.INFO;
 
 @Service
 public class BundleGeneratorService {
