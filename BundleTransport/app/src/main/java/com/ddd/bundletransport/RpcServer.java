@@ -33,6 +33,8 @@ public class RpcServer {
         listeners.add(ssl);
     }
 
+    public RpcServer(){}
+
     public void startServer(Context context) {
         if (state == ServerState.RUNNING || state == ServerState.PENDING) {
             return;

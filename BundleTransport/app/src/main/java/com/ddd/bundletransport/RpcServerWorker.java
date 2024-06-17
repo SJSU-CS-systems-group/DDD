@@ -17,7 +17,7 @@ import java.util.logging.Level;
 import io.grpc.Server;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 
-public class RpcServerWorker extends Worker implements RpcServerStateListener {
+public class RpcServerWorker extends Worker{
     private RpcServer rpcServer;
 
     public RpcServerWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
@@ -26,7 +26,7 @@ public class RpcServerWorker extends Worker implements RpcServerStateListener {
 
     private void startRpcServer() {
 
-        rpcServer = new RpcServer(this);
+        rpcServer = new RpcServer();
 
         Log.d(MainActivity.TAG, "start rpc server at:" + rpcServer);
         try {
@@ -55,10 +55,5 @@ public class RpcServerWorker extends Worker implements RpcServerStateListener {
     public Result doWork() {
         startRpcServer();
         return Result.success();
-    }
-
-    @Override
-    public void onStateChanged(RpcServer.ServerState newState) {
-
     }
 }
