@@ -12,9 +12,7 @@ import com.ddd.model.BundleDTO;
 import com.ddd.model.BundleTransferDTO;
 import com.ddd.server.bundletransmission.BundleTransmission;
 
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.*;
 
 @RestController
 @RequestMapping("/")
