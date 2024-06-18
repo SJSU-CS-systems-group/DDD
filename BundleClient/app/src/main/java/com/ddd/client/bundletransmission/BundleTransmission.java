@@ -227,8 +227,7 @@ public class BundleTransmission {
         BundleUtils.writeUncompressedPayload(toSendBundlePayload, new File(
                 this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + UNCOMPRESSED_PAYLOAD), bundleId);
         try {
-            logger.log(INFO,,
-                  "Placing routing.metadata in " + toSendBundlePayload.getSource().getAbsolutePath());
+            logger.log(INFO, , "Placing routing.metadata in " + toSendBundlePayload.getSource().getAbsolutePath());
             clientRouting.bundleMetaData(toSendBundlePayload.getSource().getAbsolutePath());
         } catch (RoutingExceptions.ClientMetaDataFileException e) {
             System.out.println("[BR]: Failed to add Routing metadata to bundle!");
@@ -248,7 +247,7 @@ public class BundleTransmission {
     }
 
     public BundleDTO generateBundleForTransmission() {
-        logger.log(FINE,, "Started process of generating bundle");
+        logger.log(FINE, , "Started process of generating bundle");
         File toSendDir = new File(this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + TO_SEND_DIRECTORY);
 
         BundleDTO toSend = null;
@@ -278,8 +277,7 @@ public class BundleTransmission {
             toSend = this.generateNewBundle(unprocessedPayloadBuilder, toSendDir, bundleId);
         }
 
-        logger.log(INFO,, "sending bundle with id: " + toSend.getBundleId());
-        return toSend;
+        logger.log(INFO, , "sending bundle with id: " + toSend.getBundleId()); return toSend;
     }
 
     public void notifyBundleSent(BundleDTO bundle) {
