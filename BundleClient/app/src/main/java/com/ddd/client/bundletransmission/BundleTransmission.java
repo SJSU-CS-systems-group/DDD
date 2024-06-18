@@ -277,7 +277,8 @@ public class BundleTransmission {
             toSend = this.generateNewBundle(unprocessedPayloadBuilder, toSendDir, bundleId);
         }
 
-        logger.log(INFO, "sending bundle with id: " + toSend.getBundleId()); return toSend;
+        logger.log(INFO, "sending bundle with id: " + toSend.getBundleId());
+        return toSend;
     }
 
     public void notifyBundleSent(BundleDTO bundle) {
