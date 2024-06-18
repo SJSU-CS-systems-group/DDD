@@ -33,7 +33,7 @@ public class FileStoreHelper {
     private String appFolder = "";
 
     public FileStoreHelper(String rootFolder) {
-        logger.log(FINE,"bundelclient", "rootFolder: " + rootFolder);
+        logger.log(FINE, "bundelclient", "rootFolder: " + rootFolder);
         RootFolder = rootFolder;
     }
 
@@ -141,7 +141,7 @@ public class FileStoreHelper {
         String folder = RootFolder + File.separator + appId;
         for (long i = 1; i <= metadata.lastReceivedMessageId; i++) {
             byte[] data = readFile(folder + File.separator + i + ".txt");
-            logger.log(FINE,"bundleclient", data.toString());
+            logger.log(FINE, "bundleclient", data.toString());
             dataList.add(data);
         }
 
@@ -160,7 +160,7 @@ public class FileStoreHelper {
         Metadata metadata = getIfNotCreateMetadata(folder);
         long nextMessageId = metadata.lastProcessedMessageId + 1;
         if (nextMessageId > metadata.lastReceivedMessageId) {
-            logger.log(INFO,"bundleclient", "no data to show");
+            logger.log(INFO, "bundleclient", "no data to show");
             if (nextMessageId > 1) {
                 nextMessageId--;
             } else {
@@ -206,7 +206,7 @@ public class FileStoreHelper {
         String folder = appId;
         Metadata metadata = getIfNotCreateMetadata(folder);
         if (metadata.lastSentMessageId >= aduId) {
-            logger.log(INFO,"[FileStoreHelper.deleteAllFilesUpTo] Data already deleted.");
+            logger.log(INFO, "[FileStoreHelper.deleteAllFilesUpTo] Data already deleted.");
             return;
         }
         for (long i = metadata.lastSentMessageId + 1; i <= aduId; i++) {

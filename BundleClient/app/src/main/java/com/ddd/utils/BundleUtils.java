@@ -186,7 +186,7 @@ public class BundleUtils {
             ADUUtils.writeADUs(uncompressedPayload.getADUs(), aduDirectory);
         }
 
-        logger.log(INFO,"[BundleUtils] Wrote bundle payload with id = " + bundleId + " to " + targetDirectory);
+        logger.log(INFO, "[BundleUtils] Wrote bundle payload with id = " + bundleId + " to " + targetDirectory);
     }
 
     public static Payload compressPayload(UncompressedPayload uncompressedPayload, String payloadDirPath) {

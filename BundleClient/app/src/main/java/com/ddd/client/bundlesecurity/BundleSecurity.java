@@ -72,7 +72,7 @@ public class BundleSecurity {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        logger.log(INFO,"[BS] Largest bundle id received so far: " + bundleId);
+        logger.log(INFO, "[BS] Largest bundle id received so far: " + bundleId);
         return bundleId.trim();
     }
 
@@ -132,7 +132,7 @@ public class BundleSecurity {
             client = ClientSecurity.initializeInstance(1, bundleSecurityPath, serverKeyPath);
             clientBundleGenerator = ClientBundleGenerator.initializeInstance(client, rootFolder);
             clientWindow = ClientWindow.initializeInstance(5, client.getClientID(), rootFolder);
-            logger.log(FINE,, "Kuch Bhi");
+            logger.log(FINE, , "Kuch Bhi");
         } catch (InvalidKeyException | SecurityExceptions.IDGenerationException | SecurityExceptions.EncodingException |
                  WindowExceptions.InvalidLength | WindowExceptions.BufferOverflow e) {
             e.printStackTrace();
@@ -161,7 +161,7 @@ public class BundleSecurity {
     }
 
     public void decryptBundleContents(UncompressedPayload bundle) {
-        logger.log(INFO,"[BS] Decrypting contents of the bundle with id: " + bundle.getBundleId());
+        logger.log(INFO, "[BS] Decrypting contents of the bundle with id: " + bundle.getBundleId());
     }
 
     public String generateNewBundleId() throws SecurityExceptions.IDGenerationException,
@@ -172,7 +172,7 @@ public class BundleSecurity {
     public UncompressedBundle encryptPayload(Payload payload, String bundleGenDirPath) {
         String bundleId = payload.getBundleId();
         logger.log(INFO, "Encrypting payload in bundleId: " + bundleId);
-        logger.log(INFO,"[BS] Payload source:" + payload.getSource() + " bundle id " + bundleId);
+        logger.log(INFO, "[BS] Payload source:" + payload.getSource() + " bundle id " + bundleId);
         String[] paths;
         if (!this.isEncryptionEnabled) {
             return new UncompressedBundle(bundleId, payload.getSource(), null, null, null);

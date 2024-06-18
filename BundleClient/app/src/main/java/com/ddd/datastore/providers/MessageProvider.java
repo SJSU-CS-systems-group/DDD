@@ -94,7 +94,7 @@ public class MessageProvider extends ContentProvider {
             }
         } catch (Exception ex) {
             ex.printStackTrace();
-            logger.log(WARNING,"bundleclient", ex.getMessage());
+            logger.log(WARNING, "bundleclient", ex.getMessage());
             cursor = null;
         }
         return cursor;
@@ -130,10 +130,10 @@ public class MessageProvider extends ContentProvider {
         try {
             String appName = getCallerAppId();
             byte[] data = contentValues.getAsByteArray("data");
-            logger.log(INFO,"bundleclient", "inserting: " + new String(data));
+            logger.log(INFO, "bundleclient", "inserting: " + new String(data));
             return fileStoreHelper.addFile(appName, data);
         } catch (IOException e) {
-            logger.log(WARNING,"bundleclient", "Unable to add file, error: " + e.getMessage());
+            logger.log(WARNING, "bundleclient", "Unable to add file, error: " + e.getMessage());
             return null;
         }
     }

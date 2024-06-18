@@ -13,7 +13,7 @@ public class BundleClientApplication {
     private static BundleDeliveryAgent bundleDeliveryAgent = new BundleDeliveryAgent("");
 
     public static void main(String[] args) {
-        logger.log(INFO,"Starting Bundle Client!");
+        logger.log(INFO, "Starting Bundle Client!");
         bundleDeliveryAgent.send();
     }
 }

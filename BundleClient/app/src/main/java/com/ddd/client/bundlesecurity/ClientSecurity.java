@@ -83,9 +83,9 @@ public class ClientSecurity {
 
         try {
             loadKeysfromFiles(clientKeyPath);
-            logger.log(FINE,"[Sec]: Using Existing Keys");
+            logger.log(FINE, "[Sec]: Using Existing Keys");
         } catch (IOException | EncodingException e) {
-            logger.log(WARNING,"[Sec]: Error Loading Keys from files, generating new keys instead\n" + e);
+            logger.log(WARNING, "[Sec]: Error Loading Keys from files, generating new keys instead\n" + e);
             // Create Client's Key pairs
             ECKeyPair identityKeyPair = Curve.generateKeyPair();
             ourIdentityKeyPair = new IdentityKeyPair(new IdentityKey(identityKeyPair.getPublicKey()),
@@ -200,7 +200,7 @@ public class ClientSecurity {
             clientSessionRecord = new SessionRecord(sessionStoreBytes);
         } catch (IOException e) {
             logger.log(WARNING,
-                    "Error Reading Session record from " + sessionStorePath + "\nCreating New Session Record!");
+                       "Error Reading Session record from " + sessionStorePath + "\nCreating New Session Record!");
             clientSessionRecord = new SessionRecord();
             initializeRatchet(clientSessionRecord.getSessionState());
         }
@@ -268,7 +268,7 @@ public class ClientSecurity {
         if (singleClientInstance == null) {
             singleClientInstance = new ClientSecurity(deviceID, clientRootPath, serverKeyPath);
         } else {
-            logger.log(FINE,"[Sec]: Client Security Instance is already initialized!");
+            logger.log(FINE, "[Sec]: Client Security Instance is already initialized!");
         }
 
         return singleClientInstance;
@@ -361,18 +361,18 @@ public class ClientSecurity {
             try (FileOutputStream stream = new FileOutputStream(decryptedFile, true)) {
                 stream.write(serverDecryptedMessage);
             }
-            logger.log(FINER,"Decrypted Size = %d\n", serverDecryptedMessage.length);
+            logger.log(FINER, "Decrypted Size = %d\n", serverDecryptedMessage.length);
 
             if (SecurityUtils.verifySignature(serverDecryptedMessage, theirIdentityKey.getPublicKey(), signatureFile)) {
-                logger.log(FINE,"Verified Signature!");
+                logger.log(FINE, "Verified Signature!");
             } else {
                 // Failed to verify sign, delete bundle and return
-                logger.log(WARNING,"Invalid Signature [" + payloadName + "], Aborting bundle " + bundleID);
+                logger.log(WARNING, "Invalid Signature [" + payloadName + "], Aborting bundle " + bundleID);
 
                 try {
                     new File(decryptedFile).delete();
                 } catch (Exception e) {
-                    logger.log(WARNING,"Error: Failed to delete decrypted file [%s]", decryptedFile);
+                    logger.log(WARNING, "Error: Failed to delete decrypted file [%s]", decryptedFile);
                     System.out.println(e);
                 }
             }
