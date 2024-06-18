@@ -31,13 +31,11 @@ public class RpcServer {
     private List<RpcServerStateListener> listeners = new ArrayList<>();
 
     public RpcServer(RpcServerStateListener ssl) {
-        if (null != ssl)
-            listeners.add(ssl);
+        if (null != ssl) listeners.add(ssl);
     }
 
-
     public static RpcServer getInstance(RpcServerStateListener ssl) {
-        if (null == rpcServerInstance){
+        if (null == rpcServerInstance) {
             rpcServerInstance = new RpcServer(ssl);
         }
         return rpcServerInstance;
