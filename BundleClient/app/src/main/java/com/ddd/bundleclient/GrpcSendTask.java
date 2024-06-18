@@ -79,7 +79,7 @@ class GrpcSendTask {
             streamObserver.onNext(metadata);
 
 //      upload file as chunk
-            Log.d(HelloworldActivity.TAG, "Started file transfer");
+            logger.log(INFO, "Started file transfer");
             FileInputStream inputStream = null;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 inputStream = new FileInputStream(toSend.getBundle().getSource());
