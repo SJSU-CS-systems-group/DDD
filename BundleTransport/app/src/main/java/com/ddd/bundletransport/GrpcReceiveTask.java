@@ -1,11 +1,11 @@
 package com.ddd.bundletransport;
 
-import android.content.Context;
 import android.util.Log;
 
 import com.ddd.bundletransport.service.BundleDownloadRequest;
 import com.ddd.bundletransport.service.BundleDownloadResponse;
 import com.ddd.bundletransport.service.BundleServiceGrpc;
+import com.ddd.bundletransport.utils.FileUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -13,9 +13,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
