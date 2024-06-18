@@ -1,18 +1,21 @@
 package com.ddd.server.api;
 
-import java.util.HashSet;
-import java.util.Set;
-import java.util.logging.Logger;
-
+import com.ddd.model.BundleDTO;
+import com.ddd.model.BundleTransferDTO;
+import com.ddd.server.bundletransmission.BundleTransmission;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.ddd.model.BundleDTO;
-import com.ddd.model.BundleTransferDTO;
-import com.ddd.server.bundletransmission.BundleTransmission;
 
-import static java.util.logging.Level.*;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 @RestController
 @RequestMapping("/")

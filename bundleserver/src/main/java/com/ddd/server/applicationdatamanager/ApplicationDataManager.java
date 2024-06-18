@@ -1,5 +1,13 @@
 package com.ddd.server.applicationdatamanager;
 
+import com.ddd.model.ADU;
+import com.ddd.model.UncompressedPayload;
+import com.ddd.server.config.BundleServerConfig;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import javax.annotation.PostConstruct;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -13,16 +21,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Logger;
 
-import javax.annotation.PostConstruct;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import com.ddd.model.ADU;
-import com.ddd.model.UncompressedPayload;
-import com.ddd.server.config.BundleServerConfig;
-
-import static java.util.logging.Level.*;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
 
 @Service
 public class ApplicationDataManager {

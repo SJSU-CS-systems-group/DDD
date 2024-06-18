@@ -30,7 +30,7 @@
 //               BeanPropertyRowMapper.newInstance(SentAduDetails.class),
 //               id);
 //     } catch (EmptyResultDataAccessException e) {
-//       //      System.out.println(e);
+//       //      logger.log(SEVERE,e);
 //     }
 //     if (record == null) {
 //       return Optional.empty();

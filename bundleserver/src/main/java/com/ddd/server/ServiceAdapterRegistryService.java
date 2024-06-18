@@ -10,8 +10,14 @@ import net.discdd.server.ServiceAdapterRegistryGrpc;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.INFO;
+
 @Component
 public class ServiceAdapterRegistryService extends ServiceAdapterRegistryGrpc.ServiceAdapterRegistryImplBase {
+    private static final Logger logger = Logger.getLogger(ServiceAdapterRegistryService.class.getName());
+
     @Autowired
     private RegisteredAppAdapterRepository registeredAppAdapterRepository;
 
@@ -24,6 +30,7 @@ public class ServiceAdapterRegistryService extends ServiceAdapterRegistryGrpc.Se
 
     @Override
     public void registerAdapter(ConnectionData connectionData, StreamObserver<ResponseStatus> responseObserver) {
+        logger.log(INFO, "Testing server from Python client");
         RegisteredAppAdapter newAppAdapter =
                 new RegisteredAppAdapter(connectionData.getAppName(), connectionData.getUrl());
 

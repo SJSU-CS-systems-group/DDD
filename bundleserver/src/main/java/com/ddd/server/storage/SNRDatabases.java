@@ -9,7 +9,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.*;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 
 public class SNRDatabases {
     private static final Logger logger = Logger.getLogger(SNRDatabases.class.getName());
