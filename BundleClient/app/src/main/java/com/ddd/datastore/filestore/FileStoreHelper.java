@@ -1,7 +1,6 @@
 package com.ddd.datastore.filestore;
 
 import android.net.Uri;
-import android.util.Log;
 
 import com.ddd.client.applicationdatamanager.ApplicationDataManager;
 import com.ddd.model.Metadata;

@@ -32,7 +32,6 @@ import com.ddd.model.UncompressedPayload;
 import com.ddd.utils.AckRecordUtils;
 import com.ddd.utils.BundleUtils;
 import com.ddd.utils.Constants;
-import android.util.Log;
 
 public class BundleTransmission {
 

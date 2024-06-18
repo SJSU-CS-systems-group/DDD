@@ -2,7 +2,6 @@ package com.ddd.bundleclient;
 
 import android.app.Activity;
 import android.content.Context;
-import android.util.Log;
 import android.widget.TextView;
 
 import com.ddd.bundlesecurity.SecurityExceptions;

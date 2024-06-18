@@ -39,7 +39,6 @@ import com.ddd.utils.Constants;
 import com.ddd.utils.JarUtils;
 
 import android.content.res.Resources;
-import android.util.Log;
 
 public class BundleSecurity {
 

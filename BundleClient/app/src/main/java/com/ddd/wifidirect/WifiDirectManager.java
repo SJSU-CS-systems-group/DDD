@@ -13,7 +13,6 @@ import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Build;
 import android.os.Looper;
-import android.util.Log;
 
 import java.util.logging.Logger;
 

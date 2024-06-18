@@ -3,7 +3,6 @@ package com.ddd.bundleclient;
 import android.app.Activity;
 import android.content.Context;
 import android.os.Build;
-import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
 
