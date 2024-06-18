@@ -35,9 +35,17 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
+//Venus added
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.SEVERE;
+
 public class HelloworldActivity extends AppCompatActivity implements WifiDirectStateListener {
-    // tag used for testing in logcat
-    public static final String TAG = "bundleclient";
+
     // Wifi Direct set up
     private com.ddd.wifidirect.WifiDirectManager wifiDirectManager;
     public static final int PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION = 1001;
@@ -68,6 +76,10 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
     String currentTransportId;
     String BundleExtension = ".bundle";
 
+    public static final String TAG = "bundleclient";
+
+    private static final Logger logger = Logger.getLogger(HelloworldActivity.class.getName());
+
     /**
      * check for location permissions manually, will give a prompt
      */
@@ -75,11 +87,12 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
     public void onRequestPermissionsResult(int requestCode,
                                            @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        Log.d(TAG, "checking permissions " + grantResults.length);
+
+        logger.log(INFO, "checking permissions" + grantResults.length);
         switch (requestCode) {
             case PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION:
                 if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                    Log.e(TAG, "Fine location permission is not granted!");
+                    logger.log(SEVERE, "Find location is not granted!");
                     finish();
                 }
                 break;
@@ -109,7 +122,7 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
             BundleSecurity.initializeKeyPaths(ApplicationContext.getResources(),
                                               ApplicationContext.getApplicationInfo().dataDir);
         } catch (IOException e) {
-            Log.d(TAG, "[SEC]: Failed to initialize Server Keys");
+            logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys");
             e.printStackTrace();
         }
 
@@ -117,7 +130,7 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
 
         try {
             clientWindow = bundleTransmission.getBundleSecurity().getClientWindow();
-            Log.d(TAG, "{MC} - got clientwindow " + clientWindow);
+            logger.log(WARNING, "{MC} - got clientwindow " + clientWindow);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -139,7 +152,8 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
     public void exchangeMessage() {
         // connect to transport
         exchangeButton.setEnabled(false);
-        Log.d(TAG, "connection complete");
+        //Log.d(TAG, "connection complete");
+        logger.log(INFO, "connection complete");
         new GrpcReceiveTask(this).executeInBackground("192.168.49.1", "1778");
         //changed from execute to executeInBackground
     }
@@ -147,16 +161,16 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
     public void connectTransport() {
         connectButton.setEnabled(false);
         wifiDirectResponseText.setText("Starting connection...\n");
-        Log.d(TAG, "connecting to transport");
+        logger.log(FINE, "connecting to transport");
         // we need to check and request for necessary permissions
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            Log.d(TAG, "requesting permission");
+            logger.log(FINE, "requesting permission");
             requestPermissions(new String[] { Manifest.permission.ACCESS_FINE_LOCATION },
                                HelloworldActivity.PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION);
-            Log.d(TAG, "Permission granted");
+            logger.log(WARNING, "Permission granted");
         }
         if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            Log.d(TAG, "requesting permission");
+            logger.log(FINE, "requesting permission");
             requestPermissions(new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE },
                                HelloworldActivity.WRITE_EXTERNAL_STORAGE);
         }
@@ -176,39 +190,39 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
         runOnUiThread(() -> {
             if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_INITIALIZATION_FAILED == action) {
                 wifiDirectResponseText.append("Manager initialization failed\n");
-                Log.d(TAG, "Manager initialization failed\n");
+                logger.log(WARNING, "Manager initialization failed\n");
             } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL == action) {
-                Log.d(TAG, "Manager initialization successful\n");
+                logger.log(FINER, "Manager initialization successful\n");
                 connectTransport();
             } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_DISCOVERY_SUCCESSFUL == action) {
                 wifiDirectResponseText.append("Discovery initiation successful\n");
-                Log.d(TAG, "Discovery initiation successful\n");
+                logger.log(FINER, "Discovery initiation successful\n");
             } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_DISCOVERY_FAILED == action) {
                 wifiDirectResponseText.append("Discovery initiation failed\n");
-                Log.d(TAG, "Discovery initiation failed\n");
+                logger.log(WARNING, "Discovery initiation failed\n");
                 connectButton.setEnabled(true);
             } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_PEERS_CHANGED == action) {
                 wifiDirectResponseText.append("Peers changed\n");
-                Log.d(TAG, "Peers changed\n");
+                logger.log(WARNING, "Peers changed\n");
             } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_FAILED ==
                     action) {
                 wifiDirectResponseText.append("Device connection initiation failed\n");
-                Log.d(TAG, "Device connection initiation failed\n");
+                logger.log(WARNING, "Device connection initiation failed\n");
                 connectButton.setEnabled(true);
             } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_SUCCESSFUL ==
                     action) {
                 wifiDirectResponseText.append("Device connection initiation successful\n");
-                Log.d(TAG, "Device connection initiation successful\n");
+                logger.log(FINER, "Device connection initiation successful\n");
             } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL ==
                     action) {
                 wifiDirectResponseText.append("Device connected to transport\n");
-                Log.d(TAG, "Device connected to transport\n");
+                logger.log(FINER, "Device connected to transport\n");
                 updateConnectedDevices();
                 connectButton.setEnabled(true);
                 exchangeMessage();
             } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_FAILED == action) {
                 wifiDirectResponseText.append("Device failed to connect to transport\n");
-                Log.d(TAG, "Device failed to connect to transport\n");
+                logger.log(WARNING, "Device failed to connect to transport\n");
                 connectButton.setEnabled(true);
             }
         });

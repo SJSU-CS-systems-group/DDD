@@ -25,7 +25,7 @@
 //               BeanPropertyRowMapper.newInstance(LargestBundleIdReceived.class),
 //               clientId);
 //     } catch (EmptyResultDataAccessException e) {
-//       //      System.out.println(e);
+//       //      logger.log(SEVERE,e);
 //     }
 //     if (record == null) {
 //       return Optional.empty();

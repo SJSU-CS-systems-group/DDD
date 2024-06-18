@@ -7,7 +7,16 @@ import java.io.IOException;
 
 import java.util.HashMap;
 
-import com.ddd.client.bundlesecurity.SecurityUtils;
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.SEVERE;
+
+import com.ddd.bundlesecurity.SecurityUtils;
+
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -18,6 +27,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ddd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
 
 public class ClientRouting {
+
+    private static final Logger logger = Logger.getLogger(ClientRouting.class.getName());
+
     private static ClientRouting singleClientRoutingInstance = null;
     HashMap<String, Long> metadata = null;
     String metaDataPath = null;
@@ -57,7 +69,7 @@ public class ClientRouting {
         if (singleClientRoutingInstance == null) {
             singleClientRoutingInstance = new ClientRouting(metaDataPath);
         } else {
-            System.out.println("[BR]: Client Routing Instance already Exists!");
+            logger.log(INFO, "[BR]: Client Routing Instance already Exists!");
         }
         return singleClientRoutingInstance;
     }

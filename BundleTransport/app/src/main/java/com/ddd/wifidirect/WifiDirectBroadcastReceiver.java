@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.NetworkInfo;
 import android.net.wifi.p2p.WifiP2pDevice;
+import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.util.Log;
 
@@ -71,9 +72,15 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
         }
         // Broadcast intent action indicating that the available peer list has changed.
         // This can be sent as a result of peers being found, lost or updated.
-        else if (WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)) {
+        if (WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)) {
             Log.d(MainActivity.TAG, "WifiDirectBroadcastReceiver INTENT PEERS_CHANGED");
-            ArrayList<WifiP2pDevice> newPeers = manager.getPeerList();
+            if (manager != null) {
+                try {
+                    manager.getManager().requestPeers(manager.getChannel(), manager);
+                } catch (SecurityException e) {
+                    e.printStackTrace();
+                }
+            }
         }
 //         Broadcast intent action indicating that the state of Wi-Fi p2p
 //         connectivity has changed.
@@ -92,13 +99,20 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
             //getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP);
 
             NetworkInfo networkInfo = (NetworkInfo) intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
+            WifiP2pGroup wifiP2pGroup = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP);
 
             if (networkInfo.isConnected()) {
                 // we are connected, request connection
                 // info to find group owner IP
                 this.manager.setConnected(true);
-                this.manager.getManager().requestConnectionInfo(this.manager.getChannel(), this.manager);
                 Log.d(MainActivity.TAG, "WIFI_P2P_CONNECTION_CHANGED_ACTION connected");
+
+                if (wifiP2pGroup != null) {
+                    Log.d(MainActivity.TAG, "WifiP2pGroup client list changed");
+                    this.manager.setConnectedPeers(wifiP2pGroup.getClientList());
+                    this.manager.notifyActionToListeners(
+                            WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL);
+                }
             } else {
                 // It's a disconnect
                 this.manager.setConnected(false);

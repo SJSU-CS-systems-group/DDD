@@ -18,9 +18,19 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.SEVERE;
+
 public class FileUtils {
 
     private static final String LOG_TAG = "FileUtils";
+
+    private static final Logger logger = Logger.getLogger(FileUtils.class.getName());
 
     private static Uri contentUri = null;
 
@@ -247,13 +257,13 @@ public class FileUtils {
             while ((read = inputStream.read(buffers)) != -1) {
                 outputStream.write(buffers, 0, read);
             }
-            Log.e("File Size", "Size " + file.length());
+            logger.log(INFO, "File Size", "Size " + file.length());
             inputStream.close();
             outputStream.close();
-            Log.e("File Path", "Path " + file.getPath());
-            Log.e("File Size", "Size " + file.length());
+            logger.log(INFO, "File Path", "Path " + file.getPath());
+            logger.log(INFO, "File Size", "Size " + file.length());
         } catch (Exception e) {
-            Log.e(LOG_TAG, e.getMessage());
+            logger.log(WARNING, "Error:" + e.getMessage());
         }
         return file.getPath();
     }
@@ -286,13 +296,13 @@ public class FileUtils {
             while ((read = inputStream.read(buffers)) != -1) {
                 outputStream.write(buffers, 0, read);
             }
-            Log.e("File Size", "Size " + file.length());
+            logger.log(INFO, "File Size", "Size " + file.length());
             inputStream.close();
             outputStream.close();
-            Log.e("File Path", "Path " + file.getPath());
-            Log.e("File Size", "Size " + file.length());
+            logger.log(INFO, "File Path", "Path " + file.getPath());
+            logger.log(INFO, "File Size", "Size " + file.length());
         } catch (Exception e) {
-            Log.e(LOG_TAG, e.getMessage());
+            logger.log(WARNING, "Error:" + e.getMessage());
         }
         return file.getPath();
     }

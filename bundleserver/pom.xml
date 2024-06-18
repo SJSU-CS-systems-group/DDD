@@ -18,8 +18,8 @@
 		<maven.compiler.source>17</maven.compiler.source>
 		<maven.compiler.target>17</maven.compiler.target>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<protobuf.version>3.5.1</protobuf.version>
-		<grpc.version>1.50.2</grpc.version>
+                <protobuf.version>3.23.4</protobuf.version>
+		<grpc.version>1.58.0</grpc.version>
 	</properties>
 	<profiles>
 		<profile>
@@ -165,6 +165,32 @@
 				<artifactId>picocli-spring-boot-starter</artifactId>
 				<version>4.7.5</version>
 		</dependency>
+		<dependency>
+			<groupId>io.leego</groupId>
+			<artifactId>banana</artifactId>
+			<version>2.1.0</version>
+		</dependency>
+		<dependency>
+			<groupId>net.discdd</groupId>
+			<artifactId>serviceadapter-core</artifactId>
+			<version>1.0</version>
+		</dependency>
+		<dependency>
+			<groupId>net.discdd</groupId>
+			<artifactId>serviceadapter-core</artifactId>
+			<version>1.0</version>
+		</dependency>
+		<dependency>
+			<groupId>net.devh</groupId>
+			<artifactId>grpc-server-spring-boot-starter</artifactId>
+			<version>2.15.0.RELEASE</version>
+		</dependency>
+		<dependency>
+			<groupId>net.devh</groupId>
+			<artifactId>grpc-client-spring-boot-starter</artifactId>
+			<version>2.15.0.RELEASE</version>
+		</dependency>
+
 	</dependencies>
 	<dependencyManagement>
 		<dependencies>

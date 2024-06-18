@@ -1,10 +1,17 @@
 syntax = "proto3";
 
-option java_multiple_files = true;
-option java_package = "edu.sjsu.dtn.adapter.communicationservice";
+// This is the service that is used to exchange data between
+// BundleServer and the ServiceAdapters
 
-service DTNAdapter {
+option java_multiple_files = true;
+option java_package = "net.discdd.server";
+
+service ServiceAdapter {
+  // saveData sends received ADUs to the ServiceAdapter and at
+  // the same time receives ADUs to send back to clients as the
+  // return value.
   rpc saveData (AppData) returns (AppData) {}
+  // tell the ServiceAdapter to prepare data for a given client
   rpc prepareData (ClientData) returns (PrepareResponse) {}
 }
 
