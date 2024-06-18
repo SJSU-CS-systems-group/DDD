@@ -132,7 +132,7 @@ public class BundleSecurity {
             client = ClientSecurity.initializeInstance(1, bundleSecurityPath, serverKeyPath);
             clientBundleGenerator = ClientBundleGenerator.initializeInstance(client, rootFolder);
             clientWindow = ClientWindow.initializeInstance(5, client.getClientID(), rootFolder);
-            logger.log(FINE, , "Kuch Bhi");
+            logger.log(FINE, "Kuch Bhi");
         } catch (InvalidKeyException | SecurityExceptions.IDGenerationException | SecurityExceptions.EncodingException |
                  WindowExceptions.InvalidLength | WindowExceptions.BufferOverflow e) {
             e.printStackTrace();
