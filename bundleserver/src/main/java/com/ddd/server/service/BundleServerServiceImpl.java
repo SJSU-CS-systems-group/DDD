@@ -13,6 +13,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Logger;
 
 import javax.annotation.PostConstruct;
 
@@ -32,10 +33,16 @@ import edu.sjsu.ddd.bundleserver.service.BundleUploadResponse;
 import edu.sjsu.ddd.bundleserver.service.Status;
 import io.grpc.stub.StreamObserver;
 
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+
 @Service
 public class BundleServerServiceImpl extends BundleServiceImplBase {
     private String ReceiveDir;
     private String SendDir;
+    private static final Logger logger = Logger.getLogger(BundleServerServiceImpl.class.getName());
 
     @Autowired
     private BundleTransmission bundleTransmission;
@@ -95,18 +102,18 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
 
             @Override
             public void onError(Throwable throwable) {
-                System.out.println("Error" + throwable.toString());
+                logger.log(WARNING, "Error" + throwable.toString());
                 status = Status.FAILED;
                 this.onCompleted();
             }
 
             @Override
             public void onCompleted() {
-                System.out.println("Complete");
+                logger.log(INFO, "Complete");
                 try {
                     closeFile(writer);
                 } catch (IOException e) {
-                    System.out.println("BundleServerServiceImpl.uploadBundle error: " + e.getMessage());
+                    logger.log(SEVERE, "BundleServerServiceImpl.uploadBundle error: " + e.getMessage());
                 }
                 status = Status.IN_PROGRESS.equals(status) ? Status.SUCCESS : status;
                 BundleUploadResponse response = BundleUploadResponse.newBuilder().setStatus(status).build();
@@ -143,8 +150,8 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
     @Override
     public void downloadBundle(BundleDownloadRequest request, StreamObserver<BundleDownloadResponse> responseObserver) {
         String transportFiles = request.getBundleList();
-        System.out.println("[BDA] bundles on transport" + transportFiles);
-        System.out.println("[BDA]Request from Transport id :" + request.getTransportId());
+        logger.log(INFO, "[BundleServerService] bundles on transport" + transportFiles);
+        logger.log(INFO, "[BundleServerService]Request from Transport id :" + request.getTransportId());
         String[] filesOnTransport = null;
         Set<String> filesOnTransportSet = Collections.<String>emptySet();
         if (!transportFiles.isEmpty()) {
@@ -154,7 +161,7 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
         }
 
         List<File> bundlesList = bundleTransmission.getBundlesForTransmission(request.getTransportId());
-        System.out.println(bundleTransmission);
+        logger.log(FINE, "Downloaded " + bundleTransmission);
         if (bundlesList.isEmpty()) {
             BundleTransferDTO bundleTransferDTO =
                     bundleTransmission.generateBundlesForTransmission(request.getTransportId(), filesOnTransportSet);
@@ -165,8 +172,9 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
                                 BundleList.newBuilder().setBundleList(String.join(", ",
                                                                                   bundleTransferDTO.getDeletionSet())))
                         .build();
-                System.out.println("[BDA] Sending " + String.join(", ", bundleTransferDTO.getDeletionSet()) +
-                                           " to delete on Transport id :" + request.getTransportId());
+                logger.log(WARNING,
+                           "[BundleServerService] Sending " + String.join(", ", bundleTransferDTO.getDeletionSet()) +
+                                   " to delete on Transport id :" + request.getTransportId());
                 responseObserver.onNext(response);
             }
             responseObserver.onCompleted();
@@ -174,8 +182,8 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
 
             for (File bundle : bundlesList) {
                 if (!filesOnTransportSet.contains(bundle.getName())) {
-                    System.out.println(
-                            "[BDA]Downloading " + bundle.getName() + " to Transport id :" + request.getTransportId());
+                    logger.log(WARNING, "[BundleServerService]Downloading " + bundle.getName() + " to Transport id :" +
+                            request.getTransportId());
                     BundleMetaData bundleMetaData = BundleMetaData.newBuilder().setBid(bundle.getName()).build();
                     responseObserver.onNext(BundleDownloadResponse.newBuilder().setMetadata(bundleMetaData).build());
                     InputStream in;
@@ -194,7 +202,7 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
                     responseObserver.onCompleted();
                 }
             }
-            System.out.println("[BDA] All bundles were transferred completing status success");
+            logger.log(INFO, "[BundleServerService] All bundles were transferred completing status success");
             responseObserver.onNext(BundleDownloadResponse.newBuilder().setStatus(Status.SUCCESS).build());
             responseObserver.onCompleted();
         }

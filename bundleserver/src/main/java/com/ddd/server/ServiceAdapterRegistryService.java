@@ -3,21 +3,20 @@ package com.ddd.server;
 import com.ddd.server.repository.RegisteredAppAdapterRepository;
 import com.ddd.server.repository.entity.RegisteredAppAdapter;
 import com.ddd.server.storage.MySQLConnection;
-import edu.sjsu.dtn.server.communicationservice.*;
 import io.grpc.stub.StreamObserver;
+import net.discdd.server.ConnectionData;
+import net.discdd.server.ResponseStatus;
+import net.discdd.server.ServiceAdapterRegistryGrpc;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.Statement;
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.INFO;
 
 @Component
-public class DTNCommunicationService extends DTNCommunicationGrpc.DTNCommunicationImplBase {
-    @Autowired
-    private static Environment env;
+public class ServiceAdapterRegistryService extends ServiceAdapterRegistryGrpc.ServiceAdapterRegistryImplBase {
+    private static final Logger logger = Logger.getLogger(ServiceAdapterRegistryService.class.getName());
 
     @Autowired
     private RegisteredAppAdapterRepository registeredAppAdapterRepository;
@@ -25,19 +24,19 @@ public class DTNCommunicationService extends DTNCommunicationGrpc.DTNCommunicati
     @Autowired
     MySQLConnection mysql;
 
-    public DTNCommunicationService(MySQLConnection mysql) {
+    public ServiceAdapterRegistryService(MySQLConnection mysql) {
         this.mysql = mysql;
     }
 
     @Override
     public void registerAdapter(ConnectionData connectionData, StreamObserver<ResponseStatus> responseObserver) {
-        System.out.println("Testing server from Python client");
-
+        logger.log(INFO, "Testing server from Python client");
         RegisteredAppAdapter newAppAdapter =
                 new RegisteredAppAdapter(connectionData.getAppName(), connectionData.getUrl());
 
         registeredAppAdapterRepository.save(newAppAdapter);
 
+        responseObserver.onNext(ResponseStatus.newBuilder().setCode(0).setMessage("OK").build());
         responseObserver.onCompleted();
     }
 }

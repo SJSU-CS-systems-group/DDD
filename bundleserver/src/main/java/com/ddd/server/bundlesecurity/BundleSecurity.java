@@ -1,28 +1,34 @@
 package com.ddd.server.bundlesecurity;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Arrays;
-
-import javax.annotation.PostConstruct;
-
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 import com.ddd.model.EncryptedPayload;
 import com.ddd.model.EncryptionHeader;
 import com.ddd.model.Payload;
 import com.ddd.model.UncompressedBundle;
 import com.ddd.model.UncompressedPayload;
-import com.ddd.server.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
+import com.ddd.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
+import com.ddd.bundlesecurity.SecurityExceptions;
 import com.ddd.utils.Constants;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import javax.annotation.PostConstruct;
+import java.io.File;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 @Service
 public class BundleSecurity {
     @Value("${bundle-server.application-data-manager.state-manager.bundle-id-next-counter}")
     private String BUNDLE_ID_NEXT_COUNTER;
+    private static final Logger logger = Logger.getLogger(BundleSecurity.class.getName());
 
     @Autowired
     private ServerSecurity serverSecurity;
@@ -64,12 +70,12 @@ public class BundleSecurity {
     }
 
     public void decryptBundleContents(UncompressedPayload bundle) {
-        System.out.println("[BS] Decrypting contents of bundle with id: " + bundle.getBundleId());
+        logger.log(WARNING, "[BundleSecurity] Decrypting contents of bundle with id: " + bundle.getBundleId());
     }
 
     public void processACK(String clientId, String bundleId) {
         // TODO During window implementation
-        System.out.println("[BS] Received acknowledgement for sent bundle id " + bundleId);
+        logger.log(WARNING, "[BundleSecurity] Received acknowledgement for sent bundle id " + bundleId);
     }
 
     public boolean isLatestReceivedBundleId(String clientId, String bundleId, String largestBundleIdReceived) {
@@ -82,7 +88,7 @@ public class BundleSecurity {
     //  }
 
     public void encryptBundleContents(UncompressedPayload bundle) {
-        System.out.println("[BS] Encrypting contents of the bundle with id: " + bundle.getBundleId());
+        logger.log(WARNING, "[BundleSecurity] Encrypting contents of the bundle with id: " + bundle.getBundleId());
     }
 
     public boolean isSenderWindowFull(String clientId) {
@@ -97,7 +103,7 @@ public class BundleSecurity {
         } else {
             clientId = bundleId.split("#")[0];
         }
-        System.out.println("[BS] Client id corresponding to bundle id: " + bundleId + " is " + clientId);
+        logger.log(INFO, "[BundleSecurity] Client id corresponding to bundle id: " + bundleId + " is " + clientId);
         return clientId;
     }
 
@@ -116,7 +122,7 @@ public class BundleSecurity {
     }
 
     public void decrypt(String bundlePath, String decryptedPath) {
-        System.out.println("mock decrypt implementation");
+        logger.log(WARNING, "mock decrypt implementation");
     }
 
     public String[] encrypt(String toBeEncPath, String encPath, String bundleID, String clientID) {
@@ -135,7 +141,7 @@ public class BundleSecurity {
             e.printStackTrace();
         }
 
-        System.out.println("mock encrypt implementation");
+        logger.log(INFO, "mock encrypt implementation");
         return null;
     }
 
@@ -150,7 +156,7 @@ public class BundleSecurity {
                                             uncompressedBundle.getSource().getAbsolutePath());
             } catch (Exception e) {
                 // TODO
-                System.out.println("[BS] Failed to decrypt payload");
+                logger.log(SEVERE, "[BundleSecurity] Failed to decrypt payload");
                 // e.printStackTrace();
                 return null;
             }

@@ -1,5 +1,14 @@
 package com.ddd.server.bundlerouting;
 
+import com.ddd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
+import com.ddd.server.storage.SNRDatabases;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
+import org.springframework.stereotype.Repository;
+
+import javax.annotation.PostConstruct;
 import java.io.File;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -7,21 +16,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.logging.Logger;
 
-import javax.annotation.PostConstruct;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.env.Environment;
-import org.springframework.stereotype.Repository;
-
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import com.ddd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
-import com.ddd.server.storage.SNRDatabases;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
 
 @Repository
 public class ServerRouting {
+    private static final Logger logger = Logger.getLogger(ServerRouting.class.getName());
 
     SNRDatabases database = null;
     private static final String dbTableName = "ServerRoutingTable";
@@ -58,7 +60,7 @@ public class ServerRouting {
 
         database = new SNRDatabases(url, uname, password, dbName);
 
-        System.out.println("Create ServerRoutingTable");
+        logger.log(INFO, "Create ServerRoutingTable");
 
         String dbTableCreateQuery = "CREATE TABLE " + dbTableName + " " + "(transportID VARCHAR(256) not NULL," +
                 "clientID VARCHAR(256) not NULL," + "score VARCHAR(256)," + "PRIMARY KEY (transportID, clientID))";
@@ -121,7 +123,7 @@ public class ServerRouting {
         }
 
         if (clientMap == null || clientMap.keySet().isEmpty()) {
-            System.out.println("[BR]: Client Metadata is empty, initializing transport with score 0");
+            logger.log(WARNING, "[BundleRouting]: Client Metadata is empty, initializing transport with score 0");
             updateEntry(transportID, clientID, 0);
         } else {
             for (Map.Entry<String, Long> entry : clientMap.entrySet()) {
