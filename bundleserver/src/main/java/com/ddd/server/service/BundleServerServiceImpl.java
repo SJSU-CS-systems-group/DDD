@@ -1,5 +1,22 @@
 package com.ddd.server.service;
 
+import com.ddd.model.BundleTransferDTO;
+import com.ddd.server.bundletransmission.BundleTransmission;
+import com.google.protobuf.ByteString;
+import edu.sjsu.ddd.bundleserver.service.BundleDownloadRequest;
+import edu.sjsu.ddd.bundleserver.service.BundleDownloadResponse;
+import edu.sjsu.ddd.bundleserver.service.BundleList;
+import edu.sjsu.ddd.bundleserver.service.BundleMetaData;
+import edu.sjsu.ddd.bundleserver.service.BundleServiceGrpc.BundleServiceImplBase;
+import edu.sjsu.ddd.bundleserver.service.BundleUploadRequest;
+import edu.sjsu.ddd.bundleserver.service.BundleUploadResponse;
+import edu.sjsu.ddd.bundleserver.service.Status;
+import io.grpc.stub.StreamObserver;
+import net.devh.boot.grpc.server.service.GrpcService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+
+import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -15,30 +32,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.logging.Logger;
 
-import javax.annotation.PostConstruct;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import com.ddd.model.BundleTransferDTO;
-import com.ddd.server.bundletransmission.BundleTransmission;
-import com.google.protobuf.ByteString;
-import edu.sjsu.ddd.bundleserver.service.BundleDownloadRequest;
-import edu.sjsu.ddd.bundleserver.service.BundleDownloadResponse;
-import edu.sjsu.ddd.bundleserver.service.BundleList;
-import edu.sjsu.ddd.bundleserver.service.BundleMetaData;
-import edu.sjsu.ddd.bundleserver.service.BundleServiceGrpc.BundleServiceImplBase;
-import edu.sjsu.ddd.bundleserver.service.BundleUploadRequest;
-import edu.sjsu.ddd.bundleserver.service.BundleUploadResponse;
-import edu.sjsu.ddd.bundleserver.service.Status;
-import io.grpc.stub.StreamObserver;
-
 import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.WARNING;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
-@Service
+@GrpcService
 public class BundleServerServiceImpl extends BundleServiceImplBase {
     private String ReceiveDir;
     private String SendDir;
