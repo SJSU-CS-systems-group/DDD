@@ -26,9 +26,9 @@ public class RpcServerWorker extends Worker {
 
     private void startRpcServer() {
 
-        rpcServer = new RpcServer();
+        rpcServer = RpcServer.getInstance(null);
 
-        Log.d(MainActivity.TAG, "start rpc server at:" + rpcServer);
+        Log.d(MainActivity.TAG, "start rpc server from RpcServerWorker at:" + rpcServer);
         try {
             rpcServer.startServer(this.getApplicationContext());
 

@@ -97,7 +97,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
             synchronized (grpcServer) {
                 if (grpcServer.isShutdown()) {
                     manageRequestedWifiDirectGroup();
-                    Log.d(TAG, "starting grpc server!!!!!!!");
+                    Log.d(TAG, "starting grpc server from main activity!!!!!!!");
                     grpcServer.startServer(this);
                 }
             }
@@ -264,7 +264,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle());
         wifiDirectManager.initialize();
 
-        grpcServer = new RpcServer(this);
+        grpcServer = RpcServer.getInstance(this);
         startRpcServer();
 
         domainInput.addTextChangedListener(new TextWatcher() {

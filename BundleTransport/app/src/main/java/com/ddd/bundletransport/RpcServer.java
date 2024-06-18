@@ -26,16 +26,25 @@ public class RpcServer {
     }
 
     private Server server;
+    private static RpcServer rpcServerInstance;
 
     private List<RpcServerStateListener> listeners = new ArrayList<>();
 
     public RpcServer(RpcServerStateListener ssl) {
-        listeners.add(ssl);
+        if (null != ssl)
+            listeners.add(ssl);
     }
 
-    public RpcServer() {}
+
+    public static RpcServer getInstance(RpcServerStateListener ssl) {
+        if (null == rpcServerInstance){
+            rpcServerInstance = new RpcServer(ssl);
+        }
+        return rpcServerInstance;
+    }
 
     public void startServer(Context context) {
+        Log.d(TAG, "Server state is : " + state.name());
         if (state == ServerState.RUNNING || state == ServerState.PENDING) {
             return;
         }
