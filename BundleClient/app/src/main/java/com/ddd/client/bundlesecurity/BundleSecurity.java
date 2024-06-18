@@ -12,6 +12,14 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.NoSuchAlgorithmException;
 
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.SEVERE;
+
 import org.apache.commons.lang3.StringUtils;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.NoSessionException;
@@ -34,6 +42,8 @@ import android.content.res.Resources;
 import android.util.Log;
 
 public class BundleSecurity {
+
+    private static final Logger logger = Logger.getLogger(BundleSecurity.class.getName());
 
     private ClientSecurity client = null;
     private static String RootFolder;
@@ -63,7 +73,7 @@ public class BundleSecurity {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        System.out.println("[BS] Largest bundle id received so far: " + bundleId);
+        logger.log(INFO,"[BS] Largest bundle id received so far: " + bundleId);
         return bundleId.trim();
     }
 
@@ -123,7 +133,7 @@ public class BundleSecurity {
             client = ClientSecurity.initializeInstance(1, bundleSecurityPath, serverKeyPath);
             clientBundleGenerator = ClientBundleGenerator.initializeInstance(client, rootFolder);
             clientWindow = ClientWindow.initializeInstance(5, client.getClientID(), rootFolder);
-            Log.d(HelloworldActivity.TAG, "Kuch Bhi");
+            logger.log(FINE,, "Kuch Bhi");
         } catch (InvalidKeyException | SecurityExceptions.IDGenerationException | SecurityExceptions.EncodingException |
                  WindowExceptions.InvalidLength | WindowExceptions.BufferOverflow e) {
             e.printStackTrace();
@@ -133,12 +143,12 @@ public class BundleSecurity {
     }
 
     public void registerLargestBundleIdReceived(String bundleId) {
-        Log.d(HelloworldActivity.TAG, "[BS] Inside registerLargestBundleIdReceived function " + bundleId);
+        logger.log(INFO, "[BS] Inside registerLargestBundleIdReceived function " + bundleId);
         try {
             clientWindow.processBundle(bundleId, client);
-            Log.d(HelloworldActivity.TAG, "Receive window is:");
+            logger.log(INFO, "Receive window is:");
             for (String windowBundleId : clientWindow.getWindow(client)) {
-                Log.d(HelloworldActivity.TAG, windowBundleId);
+                logger.log(INFO, windowBundleId);
             }
         } catch (WindowExceptions.BufferOverflow e) {
             e.printStackTrace();
@@ -152,7 +162,7 @@ public class BundleSecurity {
     }
 
     public void decryptBundleContents(UncompressedPayload bundle) {
-        System.out.println("[BS] Decrypting contents of the bundle with id: " + bundle.getBundleId());
+        logger.log(INFO,"[BS] Decrypting contents of the bundle with id: " + bundle.getBundleId());
     }
 
     public String generateNewBundleId() throws SecurityExceptions.IDGenerationException,
@@ -162,8 +172,8 @@ public class BundleSecurity {
 
     public UncompressedBundle encryptPayload(Payload payload, String bundleGenDirPath) {
         String bundleId = payload.getBundleId();
-        Log.d(HelloworldActivity.TAG, "encrypting payload in bundleId: " + bundleId);
-        System.out.println("[BS] Payload source:" + payload.getSource() + " bundle id " + bundleId);
+        logger.log(INFO, "Encrypting payload in bundleId: " + bundleId);
+        logger.log(INFO,"[BS] Payload source:" + payload.getSource() + " bundle id " + bundleId);
         String[] paths;
         if (!this.isEncryptionEnabled) {
             return new UncompressedBundle(bundleId, payload.getSource(), null, null, null);

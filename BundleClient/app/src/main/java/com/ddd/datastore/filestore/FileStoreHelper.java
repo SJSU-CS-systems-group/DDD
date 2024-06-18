@@ -18,12 +18,23 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.SEVERE;
+
 public class FileStoreHelper {
+
+    private static final Logger logger = Logger.getLogger(FileStoreHelper.class.getName());
+
     private String RootFolder = "";
     private String appFolder = "";
 
     public FileStoreHelper(String rootFolder) {
-        Log.d("bundelclient", "rootFolder: " + rootFolder);
+        logger.log(FINE,"bundelclient", "rootFolder: " + rootFolder);
         RootFolder = rootFolder;
     }
 
@@ -131,7 +142,7 @@ public class FileStoreHelper {
         String folder = RootFolder + File.separator + appId;
         for (long i = 1; i <= metadata.lastReceivedMessageId; i++) {
             byte[] data = readFile(folder + File.separator + i + ".txt");
-            Log.d("bundleclient", data.toString());
+            logger.log(FINE,"bundleclient", data.toString());
             dataList.add(data);
         }
 
@@ -150,7 +161,7 @@ public class FileStoreHelper {
         Metadata metadata = getIfNotCreateMetadata(folder);
         long nextMessageId = metadata.lastProcessedMessageId + 1;
         if (nextMessageId > metadata.lastReceivedMessageId) {
-            Log.d("bundleclient", "no data to show");
+            logger.log(INFO,"bundleclient", "no data to show");
             if (nextMessageId > 1) {
                 nextMessageId--;
             } else {
@@ -196,12 +207,12 @@ public class FileStoreHelper {
         String folder = appId;
         Metadata metadata = getIfNotCreateMetadata(folder);
         if (metadata.lastSentMessageId >= aduId) {
-            System.out.println("[FileStoreHelper.deleteAllFilesUpTo] Data already deleted.");
+            logger.log(INFO,"[FileStoreHelper.deleteAllFilesUpTo] Data already deleted.");
             return;
         }
         for (long i = metadata.lastSentMessageId + 1; i <= aduId; i++) {
             deleteFile(i + ".txt");
-            System.out.println(i + ".txt deleted");
+            logger.log(INFO, i + ".txt deleted");
         }
 
         metadata.lastSentMessageId = aduId;

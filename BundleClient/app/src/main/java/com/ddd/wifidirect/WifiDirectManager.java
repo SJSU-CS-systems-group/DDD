@@ -15,6 +15,14 @@ import android.os.Build;
 import android.os.Looper;
 import android.util.Log;
 
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.SEVERE;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.lifecycle.DefaultLifecycleObserver;
@@ -35,7 +43,10 @@ import java.util.concurrent.Future;
  * Contains wrapper methods around common WifiDirect tasks
  */
 public class WifiDirectManager
+
         implements WifiP2pManager.ConnectionInfoListener, WifiP2pManager.PeerListListener, Runnable {
+
+    private static final Logger logger = Logger.getLogger(WifiDirectManager.class.getName());
 
     public enum WIFI_DIRECT_ACTIONS {
         WIFI_DIRECT_MANAGER_INITIALIZATION_FAILED, WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL,
@@ -106,23 +117,23 @@ public class WifiDirectManager
     private boolean initClient(Context context) {
         WifiManager wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
         if (wifiManager == null) {
-            Log.d(HelloworldActivity.TAG, "Cannot get Wi-Fi system service");
+            logger.log(INFO, "Cannot get Wi-Fi system service");
             return false;
         }
         if (!wifiManager.isP2pSupported()) {
-            Log.d(HelloworldActivity.TAG, "Wi-Fi Direct is not supported by the hardware or Wi-Fi is off");
+            logger.log(INFO, "Wi-Fi Direct is not supported by the hardware or Wi-Fi is off");
             return false;
         }
 
         this.manager = (WifiP2pManager) context.getSystemService(Context.WIFI_P2P_SERVICE);
         if (manager == null) {
-            Log.e(HelloworldActivity.TAG, "Cannot get Wi-Fi Direct system service");
+            logger.log(WARNING, "Cannot get Wi-Fi Direct system service");
             return false;
         }
 
         this.channel = this.manager.initialize(context, Looper.getMainLooper(), null);
         if (channel == null) {
-            Log.e(HelloworldActivity.TAG, "Cannot initialize Wi-Fi Direct");
+            logger.log(WARNING, "Cannot initialize Wi-Fi Direct");
             return false;
         }
 
@@ -149,7 +160,7 @@ public class WifiDirectManager
     @SuppressLint("MissingPermission")
     private void discoverPeers() {
         if (!wifiDirectEnabled) {
-            Log.d(HelloworldActivity.TAG, "Wifidirect not enabled");
+            logger.log(FINE, "Wifidirect not enabled");
             return;
         }
         this.manager.discoverPeers(this.channel, new WifiP2pManager.ActionListener() {
@@ -225,7 +236,7 @@ public class WifiDirectManager
             @Override
             public void onFailure(int reasonCode) {
 
-                Log.d(HelloworldActivity.TAG, "Failed to create a group with reasonCode: " + reasonCode);
+                logger.log(WARNING, "Failed to create a group with reasonCode: " + reasonCode);
                 cFuture.complete(false);
             }
         });
@@ -249,7 +260,7 @@ public class WifiDirectManager
             cBuilder.setPassphrase(password);
             return cBuilder.build();
         } catch (Exception e) {
-            Log.d(HelloworldActivity.TAG, "BuildGroupConfigexception " + e);
+            logger.log(WARNING, "BuildGroupConfigexception " + e);
         }
         return null;
     }
@@ -270,7 +281,7 @@ public class WifiDirectManager
 
             @Override
             public void onFailure(int reasonCode) {
-                Log.d(HelloworldActivity.TAG, "Failed to remove a group with reasonCode: " + reasonCode +
+                logger.log(WARNING, "Failed to remove a group with reasonCode: " + reasonCode +
                         " Note: this could mean device was never part of a group");
                 cFuture.complete(false);
             }
