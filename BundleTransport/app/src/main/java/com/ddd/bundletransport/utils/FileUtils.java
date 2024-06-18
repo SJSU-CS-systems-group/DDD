@@ -1,8 +1,9 @@
-package com.ddd.bundletransport;
+package com.ddd.bundletransport.utils;
 
 import android.os.Build;
 import android.util.Log;
 
+import com.ddd.bundletransport.MainActivity;
 import com.ddd.bundletransport.service.BundleDownloadResponse;
 import com.google.protobuf.ByteString;
 

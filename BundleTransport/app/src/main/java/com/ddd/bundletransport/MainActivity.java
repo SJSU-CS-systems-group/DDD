@@ -23,6 +23,8 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.ddd.bundletransport.utils.FileUtils;
+import com.ddd.bundletransport.utils.SecurityUtils;
 import com.ddd.wifidirect.WifiDirectManager;
 import com.ddd.wifidirect.WifiDirectStateListener;
 
@@ -40,8 +42,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity implements RpcServerStateListener, WifiDirectStateListener {
-
-    private static final int PORT = 1778;
     public static final int PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION = 1001;
     public static final String TAG = "dddTransport";
 
@@ -103,8 +103,8 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
             synchronized (grpcServer) {
                 if (grpcServer.isShutdown()) {
                     manageRequestedWifiDirectGroup();
-                    Log.d(TAG, "starting grpc server!!!!!!!");
-                    grpcServer.startServer(this, PORT);
+                    Log.d(TAG, "starting grpc server from main activity!!!!!!!");
+                    grpcServer.startServer(this);
                 }
             }
         });
@@ -272,7 +272,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle(), this);
         wifiDirectManager.initialize();
 
-        grpcServer = new RpcServer(this);
+        grpcServer = RpcServer.getInstance(this);
         startRpcServer();
 
         domainInput.addTextChangedListener(new TextWatcher() {

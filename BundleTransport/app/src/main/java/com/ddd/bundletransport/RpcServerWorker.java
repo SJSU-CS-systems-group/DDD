@@ -12,31 +12,25 @@ import com.ddd.bundletransport.service.FileServiceImpl;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 import io.grpc.Server;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 
 public class RpcServerWorker extends Worker {
-    private Server server;
-    private final int port;
-    private final SocketAddress address;
-
-    // the ip that wifi direct always uses and that bundle client connects to
-    private final String inetSocketAddressIP = "192.168.49.1";
+    private RpcServer rpcServer;
 
     public RpcServerWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
         super(context, workerParams);
-        port = workerParams.getInputData().getInt("PORT", 1778);
-        address = new InetSocketAddress(inetSocketAddressIP, port);
     }
 
     private void startRpcServer() {
-        server =
-                NettyServerBuilder.forAddress(address).addService(new FileServiceImpl(getApplicationContext())).build();
 
-        Log.d(MainActivity.TAG, "start rpc server at:" + server.toString());
+        rpcServer = RpcServer.getInstance(null);
+
+        Log.d(MainActivity.TAG, "start rpc server from RpcServerWorker at:" + rpcServer);
         try {
-            server.start().awaitTermination();
+            rpcServer.startServer(this.getApplicationContext());
 
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -45,12 +39,8 @@ public class RpcServerWorker extends Worker {
 
     private void stopRpcServer() {
         Log.d(MainActivity.TAG, "stop rpc server");
-        if (server != null) {
-            try {
-                server.shutdown().awaitTermination(5, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+        if (rpcServer != null && !rpcServer.isShutdown()) {
+            rpcServer.shutdownServer();
         }
     }
 

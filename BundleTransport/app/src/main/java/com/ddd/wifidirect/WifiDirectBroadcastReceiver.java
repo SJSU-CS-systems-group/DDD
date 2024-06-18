@@ -60,10 +60,9 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
                 Log.d(MainActivity.TAG, "P2P state changed Wifi Direct is enabled - " + state);
                 // auto start gRPC server when app is opened
                 Log.d(MainActivity.TAG, "Starting server, at least one device is connected to group");
-                Data data = new Data.Builder().putInt("PORT", 1778).build();
                 PeriodicWorkRequest request =
                         new PeriodicWorkRequest.Builder(RpcServerWorker.class, 15, TimeUnit.MINUTES, 15,
-                                                        TimeUnit.MINUTES).setInputData(data).build();
+                                                        TimeUnit.MINUTES).build();
                 WorkManager.getInstance(context)
                         .enqueueUniquePeriodicWork(MainActivity.TAG, ExistingPeriodicWorkPolicy.REPLACE, request);
             } else {

@@ -1,4 +1,4 @@
-package com.ddd.bundletransport;
+package com.ddd.bundletransport.utils;
 
 import com.google.firebase.crashlytics.buildtools.reloc.org.apache.commons.io.IOUtils;
 
