@@ -178,7 +178,7 @@ public class BundleTransmission {
         File bundleStorageDirectory = new File(bundlesLocation);
         logger.log(FINE, "inside receives" + bundlesLocation);
         if (bundleStorageDirectory.listFiles() == null || bundleStorageDirectory.listFiles().length == 0) {
-            Log.d(HelloworldActivity.TAG, "No Bundle received");
+            logger.log(INFO, "No Bundle received");
             return;
         }
         for (final File bundleFile : bundleStorageDirectory.listFiles()) {
