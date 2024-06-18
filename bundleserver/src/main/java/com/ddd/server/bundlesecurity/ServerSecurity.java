@@ -45,7 +45,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.*;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 public class ServerSecurity {
 

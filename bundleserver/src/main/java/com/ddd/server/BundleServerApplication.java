@@ -2,10 +2,9 @@ package com.ddd.server;
 
 import com.ddd.server.commands.CommandProcessor;
 import com.ddd.server.commands.bundleuploader.BundleUploader;
-import com.github.dtmo.jfiglet.FigFont;
-import com.github.dtmo.jfiglet.FigFontReader;
-import com.github.dtmo.jfiglet.FigFontResources;
-import com.github.dtmo.jfiglet.FigletRenderer;
+import io.leego.banana.Ansi;
+import io.leego.banana.BananaUtils;
+import io.leego.banana.Font;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.Banner;
 import org.springframework.boot.SpringApplication;
@@ -22,12 +21,16 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Properties;
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.SEVERE;
 
 @Slf4j
 @SpringBootApplication
 @EnableJpaRepositories("com.ddd.server")
 @EntityScan("com.ddd.server.repository.entity")
 public class BundleServerApplication {
+    private static final Logger logger = Logger.getLogger(BundleServerApplication.class.getName());
 
     public static void main(String[] args) {
         class MySpringApplication extends SpringApplication {
@@ -40,7 +43,7 @@ public class BundleServerApplication {
                 // check for obvious configuration errors
                 var root = applicationContext.getEnvironment().getProperty("bundle-server.bundle-store-root");
                 if (root == null || !new File(root).isDirectory()) {
-                    log.error("bundle-server.bundle-store-root is not a directory or not set: " + root);
+                    logger.log(SEVERE, "bundle-server.bundle-store-root is not a directory or not set: " + root);
                     System.exit(1);
                 }
                 super.refresh(applicationContext);
@@ -55,27 +58,19 @@ public class BundleServerApplication {
                     app.setDefaultProperties(properties);
                     args = Arrays.copyOfRange(args, 1, args.length);
                 } catch (Exception e) {
-                    log.error("Please enter valid properties file path!");
+                    logger.log(SEVERE, "Please enter valid properties file path!");
                     System.exit(1);
                 }
             } else {
-                log.error("Entered properties file path does not exist!");
+                logger.log(SEVERE, "Entered properties file path does not exist!");
                 System.exit(1);
             }
         } else {
-            log.error("Please enter properties file path as argument!");
+            logger.log(SEVERE, "Please enter properties file path as argument!");
             System.exit(1);
         }
 
-        app.setBanner((e, s, o) -> {
-            try {
-                var figletRenderer =
-                        new FigletRenderer(FigFontResources.loadFigFontResource(FigFontResources.SLANT_FLF));
-                o.println(figletRenderer.renderText("DDD Bundle Server"));
-            } catch (IOException ex) {
-                o.println("**** DDD BundleServer ****");
-            }
-        });
+        app.setBanner((e, s, o) -> o.println(BananaUtils.bananansi("DDD Bundle Server", Font.ANSI_SHADOW, Ansi.GREEN)));
 
         if (CommandProcessor.checkForCommand(args)) {
             // we are doing a CLI command, so don't start up like a server

@@ -1,16 +1,5 @@
 package com.ddd.server.bundlerouting;
 
-import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.logging.Logger;
-
-import javax.annotation.PostConstruct;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.core.env.Environment;
-
 import com.ddd.bundlerouting.WindowUtils.CircularBuffer;
 import com.ddd.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
 import com.ddd.bundlerouting.WindowUtils.WindowExceptions.ClientAlreadyExists;
@@ -22,11 +11,21 @@ import com.ddd.bundlerouting.WindowUtils.WindowExceptions.RecievedOldACK;
 import com.ddd.bundlesecurity.BundleIDGenerator;
 import com.ddd.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
 import com.ddd.bundlesecurity.SecurityExceptions.InvalidClientIDException;
-
-import com.ddd.server.storage.SNRDatabases;
 import com.ddd.server.bundlesecurity.ServerSecurity;
+import com.ddd.server.storage.SNRDatabases;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
+import org.springframework.stereotype.Service;
 
-import static java.util.logging.Level.*;
+import javax.annotation.PostConstruct;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 @Service
 public class ServerWindow {

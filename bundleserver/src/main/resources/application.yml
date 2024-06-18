@@ -16,6 +16,9 @@ spring:
 #    password: <add in external properties file>
     db-name: dtn_server_db
 
+grpc:
+  server:
+    port: 8080
 server:
   port: 8081
 bundle-server:

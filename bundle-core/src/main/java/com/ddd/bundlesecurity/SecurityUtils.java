@@ -50,7 +50,7 @@ import com.ddd.bundlesecurity.SecurityExceptions.EncodingException;
 import com.ddd.bundlesecurity.SecurityExceptions.IDGenerationException;
 import com.ddd.bundlesecurity.SecurityExceptions.SignatureVerificationException;
 
-import static java.util.logging.Level.*;
+import static java.util.logging.Level.INFO;
 
 public class SecurityUtils {
     private static final Logger logger = Logger.getLogger(SecurityUtils.class.getName());

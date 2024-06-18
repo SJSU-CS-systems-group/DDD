@@ -1,17 +1,5 @@
 package com.ddd.server.bundlesecurity;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.logging.Logger;
-
-import javax.annotation.PostConstruct;
-
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 import com.ddd.model.EncryptedPayload;
 import com.ddd.model.EncryptionHeader;
 import com.ddd.model.Payload;
@@ -20,8 +8,21 @@ import com.ddd.model.UncompressedPayload;
 import com.ddd.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
 import com.ddd.bundlesecurity.SecurityExceptions;
 import com.ddd.utils.Constants;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
-import static java.util.logging.Level.*;
+import javax.annotation.PostConstruct;
+import java.io.File;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 @Service
 public class BundleSecurity {

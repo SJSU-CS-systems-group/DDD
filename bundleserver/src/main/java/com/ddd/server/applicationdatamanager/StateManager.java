@@ -1,14 +1,5 @@
 package com.ddd.server.applicationdatamanager;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import com.ddd.model.ADU;
 import com.ddd.model.UncompressedPayload;
 import com.ddd.server.bundletransmission.BundleGeneratorService;
@@ -24,9 +15,22 @@ import com.ddd.server.repository.entity.LargestBundleIdReceived;
 import com.ddd.server.repository.entity.LastBundleIdSent;
 import com.ddd.server.repository.entity.SentAduDetails;
 import com.ddd.server.repository.entity.SentBundleDetails;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.INFO;
 
 @Service
 class StateManager {
+    private static final Logger logger = Logger.getLogger(StateManager.class.getName());
 
     private DataStoreAdaptor dataStoreAdaptor;
 
@@ -65,7 +69,7 @@ class StateManager {
     public void registerRecvdBundleId(String clientId, String bundleId) {
         LargestBundleIdReceived largestBundleIdReceived = new LargestBundleIdReceived(clientId, bundleId);
         this.largestBundleIdReceivedRepository.save(largestBundleIdReceived);
-        System.out.println("[SM] Registered bundle identifier: " + bundleId + " of client " + clientId);
+        logger.log(INFO, "[StateManager]] Registered bundle identifier: " + bundleId + " of client " + clientId);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -225,9 +229,8 @@ class StateManager {
             this.largestAduIdDeliveredRepository.save(record);
         }
 
-        System.out.println(
-                "[SM] Processed acknowledgement for sent bundle id " + bundleId + " corresponding to client " +
-                        clientId);
+        logger.log(INFO, "[StateManager] Processed acknowledgement for sent bundle id " + bundleId +
+                " corresponding to client " + clientId);
     }
 
     @Transactional(rollbackFor = Exception.class)

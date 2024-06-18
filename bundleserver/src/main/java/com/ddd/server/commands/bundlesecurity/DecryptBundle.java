@@ -9,10 +9,15 @@ import picocli.CommandLine;
 
 import java.io.*;
 import java.util.concurrent.Callable;
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
 
 @Component
 @CommandLine.Command(name = "decrypt-bundle", description = "Decrypt bundle")
 public class DecryptBundle implements Callable<Void> {
+    private static final Logger logger = Logger.getLogger(DecryptBundle.class.getName());
     @Value("${bundle-server.bundle-transmission.received-processing-directory}")
     private String receivedProcessingDir;
 
@@ -31,7 +36,7 @@ public class DecryptBundle implements Callable<Void> {
     @Override
     public Void call() {
         try {
-            System.out.println("Decrypting bundle" + bundlePath);
+            logger.log(WARNING, "Decrypting bundle" + bundlePath);
 
             bundlePath = SecurityUtils.unzip(bundlePath);
 
@@ -50,7 +55,7 @@ public class DecryptBundle implements Callable<Void> {
 
             decryptedBundlePath = SecurityUtils.unzip(decryptedBundlePath);
 
-            System.out.println("Finished decrypting " + decryptedBundlePath);
+            logger.log(INFO, "Finished decrypting " + decryptedBundlePath);
         } catch (Exception e) {
             e.printStackTrace();
         }
