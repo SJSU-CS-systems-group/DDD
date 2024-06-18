@@ -2,8 +2,9 @@ package com.ddd.server;
 
 import com.ddd.server.commands.CommandProcessor;
 import com.ddd.server.commands.bundleuploader.BundleUploader;
-import com.github.dtmo.jfiglet.FigFontResources;
-import com.github.dtmo.jfiglet.FigletRenderer;
+import io.leego.banana.Ansi;
+import io.leego.banana.BananaUtils;
+import io.leego.banana.Font;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.Banner;
 import org.springframework.boot.SpringApplication;
@@ -69,15 +70,7 @@ public class BundleServerApplication {
             System.exit(1);
         }
 
-        app.setBanner((e, s, o) -> {
-            try {
-                var figletRenderer =
-                        new FigletRenderer(FigFontResources.loadFigFontResource(FigFontResources.SLANT_FLF));
-                o.println(figletRenderer.renderText("DDD Bundle Server"));
-            } catch (IOException ex) {
-                o.println("**** DDD BundleServer ****");
-            }
-        });
+        app.setBanner((e, s, o) -> o.println(BananaUtils.bananansi("DDD Bundle Server", Font.ANSI_SHADOW, Ansi.GREEN)));
 
         if (CommandProcessor.checkForCommand(args)) {
             // we are doing a CLI command, so don't start up like a server
