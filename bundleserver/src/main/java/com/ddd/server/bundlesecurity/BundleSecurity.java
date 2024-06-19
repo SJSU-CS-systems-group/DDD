@@ -1,46 +1,51 @@
 package com.ddd.server.bundlesecurity;
 
-import com.ddd.model.EncryptedPayload;
-import com.ddd.model.EncryptionHeader;
-import com.ddd.model.Payload;
-import com.ddd.model.UncompressedBundle;
-import com.ddd.model.UncompressedPayload;
-import com.ddd.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
-import com.ddd.bundlesecurity.SecurityExceptions;
+import com.ddd.model.*;
 import com.ddd.utils.Constants;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.whispersystems.libsignal.InvalidKeyException;
 
 import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.security.GeneralSecurityException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.*;
 
 @Service
 public class BundleSecurity {
+    private static final Logger logger = Logger.getLogger(BundleSecurity.class.getName());
     @Value("${bundle-server.application-data-manager.state-manager.bundle-id-next-counter}")
     private String BUNDLE_ID_NEXT_COUNTER;
-    private static final Logger logger = Logger.getLogger(BundleSecurity.class.getName());
-
     @Autowired
     private ServerSecurity serverSecurity;
 
-    private boolean encryptionEnabled = true;
+    private final boolean encryptionEnabled = true;
+
+    /* Compares BundleIDs
+     * Paramerters:
+     * id1:         First BundleID
+     * id2:         Second BundleID
+     * direction:   true UPSTREAM (Client->Server), false DOWNSTREAM (Server->Client)
+     * Returns:
+     * -1 =>  id1 < id2
+     * 0  =>  id1 = id2
+     * 1  =>  id1 > id2
+     */
+    public static int compareBundleIDs(String id1, String id2, boolean direction) {
+        return -1;
+    }
 
     private Long getRecvdBundleIdCounter(String bundleId) {
         return Long.valueOf(bundleId.split("-")[1]);
-    }
-
-    private int compareRecvdBundleIds(String a, String b) {
-        return this.getRecvdBundleIdCounter(a).compareTo(this.getRecvdBundleIdCounter(b));
     }
 
     // @Autowired
@@ -56,6 +61,10 @@ public class BundleSecurity {
     //     e.printStackTrace();
     //   }
     // }
+
+    private int compareRecvdBundleIds(String a, String b) {
+        return this.getRecvdBundleIdCounter(a).compareTo(this.getRecvdBundleIdCounter(b));
+    }
 
     @PostConstruct
     private void init() {
@@ -78,14 +87,14 @@ public class BundleSecurity {
         logger.log(WARNING, "[BundleSecurity] Received acknowledgement for sent bundle id " + bundleId);
     }
 
+    //  public String generateBundleID(String clientKeyPath, boolean direction) {
+    //    return "";
+    //  }
+
     public boolean isLatestReceivedBundleId(String clientId, String bundleId, String largestBundleIdReceived) {
         return (StringUtils.isEmpty(largestBundleIdReceived) ||
                 this.compareRecvdBundleIds(bundleId, largestBundleIdReceived) > 0);
     }
-
-    //  public String generateBundleID(String clientKeyPath, boolean direction) {
-    //    return "";
-    //  }
 
     public void encryptBundleContents(UncompressedPayload bundle) {
         logger.log(WARNING, "[BundleSecurity] Encrypting contents of the bundle with id: " + bundle.getBundleId());
@@ -107,20 +116,6 @@ public class BundleSecurity {
         return clientId;
     }
 
-    /* Compares BundleIDs
-     * Paramerters:
-     * id1:         First BundleID
-     * id2:         Second BundleID
-     * direction:   true UPSTREAM (Client->Server), false DOWNSTREAM (Server->Client)
-     * Returns:
-     * -1 =>  id1 < id2
-     * 0  =>  id1 = id2
-     * 1  =>  id1 > id2
-     */
-    public static int compareBundleIDs(String id1, String id2, boolean direction) {
-        return -1;
-    }
-
     public void decrypt(String bundlePath, String decryptedPath) {
         logger.log(WARNING, "mock decrypt implementation");
     }
@@ -131,7 +126,7 @@ public class BundleSecurity {
 
         File bundleIdFile = new File(bundleDir + File.separator + Constants.BUNDLE_IDENTIFIER_FILE_NAME);
         try {
-            FileUtils.writeLines(bundleIdFile, Arrays.asList(new String[] { bundleID }));
+            FileUtils.writeLines(bundleIdFile, Arrays.asList(bundleID));
         } catch (IOException e1) {
             e1.printStackTrace();
         }
@@ -152,8 +147,8 @@ public class BundleSecurity {
 
         if (this.encryptionEnabled) {
             try {
-                this.serverSecurity.decrypt(uncompressedBundle.getSource().getAbsolutePath(),
-                                            uncompressedBundle.getSource().getAbsolutePath());
+                this.serverSecurity.decrypt(uncompressedBundle.getSource().toPath(),
+                                            uncompressedBundle.getSource().toPath());
             } catch (Exception e) {
                 // TODO
                 logger.log(SEVERE, "[BundleSecurity] Failed to decrypt payload");
@@ -162,12 +157,11 @@ public class BundleSecurity {
             }
 
             try {
-                bundleId = this.serverSecurity.getBundleIDFromFile(uncompressedBundle.getSource().getAbsolutePath());
+                bundleId = this.serverSecurity.getBundleIDFromFile(uncompressedBundle.getSource().toPath());
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            File decryptedPayload = new File(
-                    uncompressedBundle.getSource().getAbsolutePath() + File.separator + bundleId + ".decrypted");
+            File decryptedPayload = uncompressedBundle.getSource().toPath().resolve(bundleId + ".decrypted").toFile();
             if (decryptedPayload.exists()) {
                 decryptedPayload.renameTo(decryptedPayloadJar);
             }
@@ -175,40 +169,33 @@ public class BundleSecurity {
         return new Payload(bundleId, decryptedPayloadJar);
     }
 
-    public UncompressedBundle encryptPayload(String clientId, Payload payload, String bundleGenDirPath) {
+    public UncompressedBundle encryptPayload(String clientId, Payload payload, Path bundleGenDirPath) throws InvalidClientSessionException, IOException, NoSuchAlgorithmException, InvalidKeyException {
         String bundleId = payload.getBundleId();
-        String[] paths;
         if (!this.encryptionEnabled) {
             return new UncompressedBundle(bundleId, payload.getSource(), null, null, null);
         }
-        try {
-            paths = this.serverSecurity.encrypt(payload.getSource().getAbsolutePath(), bundleGenDirPath, bundleId,
-                                                clientId);
+        var paths = this.serverSecurity.encrypt(payload.getSource().toPath(), bundleGenDirPath, bundleId, clientId);
 
-            EncryptedPayload encryptedPayload = new EncryptedPayload(bundleId, new File(paths[0]));
+        EncryptedPayload encryptedPayload = new EncryptedPayload(bundleId, paths[0].toFile());
 
-            File source = new File(bundleGenDirPath + File.separator + bundleId);
-            EncryptionHeader encHeader = EncryptionHeader.builder().serverSignedPreKey(new File(paths[2]))
-                    .serverIdentityKey(new File(paths[3])).serverRatchetKey(new File(paths[4])).build();
-            return new UncompressedBundle( // TODO get encryption header, payload signature
-                                           bundleId, source, encHeader, encryptedPayload, new File(paths[1]));
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
+        File source = new File(bundleGenDirPath + File.separator + bundleId);
+        EncryptionHeader encHeader =
+                EncryptionHeader.builder().serverSignedPreKey(paths[2].toFile()).serverIdentityKey(paths[3].toFile())
+                        .serverRatchetKey(paths[4].toFile()).build();
+        return new UncompressedBundle( // TODO get encryption header, payload signature
+                                       bundleId, source, encHeader, encryptedPayload, paths[1].toFile());
     }
 
-    public int isNewerBundle(String bundlePath, String lastReceivedBundleID) throws IOException,
-            BundleIDCryptographyException {
+    public int isNewerBundle(Path bundlePath, String lastReceivedBundleID) throws GeneralSecurityException,
+            IOException, InvalidKeyException {
         return this.serverSecurity.isNewerBundle(bundlePath, lastReceivedBundleID);
     }
 
-    public String getServerId() throws SecurityExceptions.IDGenerationException {
+    public String getServerId() throws NoSuchAlgorithmException {
         return serverSecurity.getServerId();
     }
 
-    public boolean bundleServerIdMatchesCurrentServer(String receivedServerId) throws SecurityExceptions.IDGenerationException {
+    public boolean bundleServerIdMatchesCurrentServer(String receivedServerId) throws NoSuchAlgorithmException {
         return receivedServerId.equals(getServerId());
     }
 

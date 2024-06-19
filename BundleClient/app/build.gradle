@@ -15,15 +15,15 @@ if (osName.contains("mac") && osArch.equals("aarch64")) {
 
 android {
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
     }
 
     compileSdk 31
 
     defaultConfig {
         applicationId "com.ddd.bundleclient"
-        minSdk 24
+        minSdk 26
         targetSdk 31
         versionCode 1
         versionName "1.0"

@@ -1,12 +1,18 @@
 package com.ddd.server.config;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import java.nio.file.Path;
+
 @Component
 @ConfigurationProperties("bundle-server")
+@Getter
+@Setter
 public class BundleServerConfig {
-    private String bundleStoreRoot;
+    private Path bundleStoreRoot;
     private String registeredAppIds;
 
     public String getRegisteredAppIds() {
@@ -21,126 +27,25 @@ public class BundleServerConfig {
     private ApplicationDataManager applicationDataManager = new ApplicationDataManager();
     private BundleSecurity bundleSecurity = new BundleSecurity();
 
-    public BundleTransmission getBundleTransmission() {
-        return this.bundleTransmission;
-    }
-
-    public void setBundleTransmission(BundleTransmission bundleTransmission) {
-        this.bundleTransmission = bundleTransmission;
-    }
-
-    public ApplicationDataManager getApplicationDataManager() {
-        return this.applicationDataManager;
-    }
-
-    public void setApplicationDataManager(ApplicationDataManager applicationDataManager) {
-        this.applicationDataManager = applicationDataManager;
-    }
-
-    public String getBundleStoreRoot() {
-        return this.bundleStoreRoot;
-    }
-
-    public void setBundleStoreRoot(String bundleStoreRoot) {
-        this.bundleStoreRoot = bundleStoreRoot;
-    }
-
-    public BundleSecurity getBundleSecurity() {
-        return bundleSecurity;
-    }
-
-    public void setBundleSecurity(BundleSecurity bundleSecurity) {
-        this.bundleSecurity = bundleSecurity;
-    }
-
+    @Getter
+    @Setter
     public static class BundleTransmission {
         private Long bundleSizeLimit;
-        private String bundleReceivedLocation;
-        private String bundleGenerationDirectory;
-        private String toBeBundledDirectory;
-        private String toSendDirectory;
-        private String receivedProcessingDirectory;
+        private Path bundleReceivedLocation;
+        private Path bundleGenerationDirectory;
+        private Path toBeBundledDirectory;
+        private Path toSendDirectory;
+        private Path receivedProcessingDirectory;
 
-        private String uncompressedPayloadDirectory;
-        private String compressedPayloadDirectory;
-        private String encryptedPayloadDirectory;
+        private Path uncompressedPayloadDirectory;
+        private Path compressedPayloadDirectory;
+        private Path encryptedPayloadDirectory;
 
-        public String getUncompressedPayloadDirectory() {
-            return this.uncompressedPayloadDirectory;
-        }
-
-        public void setUncompressedPayloadDirectory(String uncompressedPayloadDirectory) {
-            this.uncompressedPayloadDirectory = uncompressedPayloadDirectory;
-        }
-
-        public String getCompressedPayloadDirectory() {
-            return this.compressedPayloadDirectory;
-        }
-
-        public void setCompressedPayloadDirectory(String compressedPayloadDirectory) {
-            this.compressedPayloadDirectory = compressedPayloadDirectory;
-        }
-
-        public String getEncryptedPayloadDirectory() {
-            return this.encryptedPayloadDirectory;
-        }
-
-        public void setEncryptedPayloadDirectory(String encryptedPayloadDirectory) {
-            this.encryptedPayloadDirectory = encryptedPayloadDirectory;
-        }
-
-        public void setReceivedProcessingDirectory(String receivedProcessingDirectory) {
-            this.receivedProcessingDirectory = receivedProcessingDirectory;
-        }
-
-        public Long getBundleSizeLimit() {
-            return this.bundleSizeLimit;
-        }
-
-        public void setBundleSizeLimit(Long bundleSizeLimit) {
-            this.bundleSizeLimit = bundleSizeLimit;
-        }
-
-        public String getBundleReceivedLocation() {
-            return this.bundleReceivedLocation;
-        }
-
-        public void setBundleReceivedLocation(String bundleReceivedLocation) {
-            this.bundleReceivedLocation = bundleReceivedLocation;
-        }
-
-        public String getBundleGenerationDirectory() {
-            return this.bundleGenerationDirectory;
-        }
-
-        public void setBundleGenerationDirectory(String bundleGenerationDirectory) {
-            this.bundleGenerationDirectory = bundleGenerationDirectory;
-        }
-
-        public String getToBeBundledDirectory() {
-            return this.toBeBundledDirectory;
-        }
-
-        public void setToBeBundledDirectory(String toBeBundledDirectory) {
-            this.toBeBundledDirectory = toBeBundledDirectory;
-        }
-
-        public String getToSendDirectory() {
-            return this.toSendDirectory;
-        }
-
-        public void setToSendDirectory(String toSendDirectory) {
-            this.toSendDirectory = toSendDirectory;
-        }
-
-        public String getReceivedProcessingDirectory() {
-            return this.receivedProcessingDirectory;
-        }
     }
 
     public static class ApplicationDataManager {
         private Long appDataSizeLimit;
-        private String registeredAppIdsPath;
+        private Path registeredAppIdsPath;
 
         public Long getAppDataSizeLimit() {
             return this.appDataSizeLimit;
@@ -150,11 +55,11 @@ public class BundleServerConfig {
             this.appDataSizeLimit = appDataSizeLimit;
         }
 
-        public String getRegisteredAppIdsPath() {
+        public Path getRegisteredAppIdsPath() {
             return this.registeredAppIdsPath;
         }
 
-        public void setRegisteredAppIdsPath(String registeredAppIdsPath) {
+        public void setRegisteredAppIdsPath(Path registeredAppIdsPath) {
             this.registeredAppIdsPath = registeredAppIdsPath;
         }
 
@@ -199,13 +104,13 @@ public class BundleServerConfig {
     }
 
     public static class BundleSecurity {
-        private String serverKeyPath;
+        private Path serverKeyPath;
 
-        public String getServerKeyPath() {
+        public Path getServerKeyPath() {
             return serverKeyPath;
         }
 
-        public void setServerKeyPath(String serverKeyPath) {
+        public void setServerKeyPath(Path serverKeyPath) {
             this.serverKeyPath = serverKeyPath;
         }
     }

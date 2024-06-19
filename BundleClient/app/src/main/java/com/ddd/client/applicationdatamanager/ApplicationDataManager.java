@@ -1,10 +1,18 @@
 package com.ddd.client.applicationdatamanager;
 
-import android.content.ContentResolver;
-import android.content.ContentValues;
-import android.content.Context;
-import android.database.Cursor;
-import android.net.Uri;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+
+import com.ddd.model.ADU;
+import com.ddd.model.UncompressedPayload;
+import com.ddd.utils.BundleUtils;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonIOException;
+import com.google.gson.JsonSyntaxException;
+import com.google.gson.reflect.TypeToken;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -14,32 +22,13 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.nio.file.FileSystems;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
-import com.ddd.bundleclient.HelloworldActivity;
-import com.ddd.datastore.providers.MessageProvider;
-import com.ddd.model.ADU;
-import com.ddd.model.UncompressedPayload;
-import com.ddd.utils.ADUUtils;
-import com.ddd.utils.BundleUtils;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonIOException;
-import com.google.gson.JsonSyntaxException;
-import com.google.gson.reflect.TypeToken;
-
 import java.util.logging.Logger;
-
-import static java.util.logging.Level.FINER;
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.WARNING;
-import static java.util.logging.Level.SEVERE;
 
 class StateManager {
 
@@ -56,9 +45,9 @@ class StateManager {
 
     private static String LAST_SENT_BUNDLE_STRUCTURE = "/Shared/DB/LAST_SENT_BUNDLE_STRUCTURE.json";
 
-    private String ROOT_DIR = "";
+    final private Path ROOT_DIR;
 
-    public StateManager(String rootFolder) {
+    public StateManager(Path rootFolder) {
         ROOT_DIR = rootFolder;
         this.dataStoreAdaptor = new DataStoreAdaptor(rootFolder);
         try {
@@ -251,9 +240,9 @@ public class ApplicationDataManager {
 
     private static String REGISTERED_APP_IDS = "/Shared/REGISTERED_APP_IDS.txt";
 
-    private String ROOT_DIR = "";
+    private final Path ROOT_DIR;
 
-    public ApplicationDataManager(String rootDir) {
+    public ApplicationDataManager(Path rootDir) {
         ROOT_DIR = rootDir;
         this.stateManager = new StateManager(rootDir);
         this.dataStoreAdaptor = new DataStoreAdaptor(rootDir);
@@ -266,7 +255,7 @@ public class ApplicationDataManager {
             String line = "";
             while ((line = bufferedReader.readLine()) != null) {
                 String appId = line.trim();
-                logger.log(FINE, appId);
+                logger.log(INFO, "Registered " + appId);
                 registeredAppIds.add(appId);
             }
         } catch (IOException e) {
@@ -276,7 +265,7 @@ public class ApplicationDataManager {
     }
 
     public void registerAppId(String appId) {
-        File file = new File(ROOT_DIR);
+        File file = ROOT_DIR.toFile();
         if (!file.exists()) {
             file.mkdirs();
         }

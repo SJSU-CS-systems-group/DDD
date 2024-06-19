@@ -14,6 +14,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,20 +28,18 @@ import static java.util.logging.Level.WARNING;
 import static java.util.logging.Level.SEVERE;
 
 public class FileStoreHelper {
-
     private static final Logger logger = Logger.getLogger(FileStoreHelper.class.getName());
-
-    private String RootFolder = "";
-    private String appFolder = "";
+    private Path rootFolder;
+    private Path appFolder;
 
     public FileStoreHelper(String rootFolder) {
         logger.log(FINE, "bundelclient", "rootFolder: " + rootFolder);
-        RootFolder = rootFolder;
+        this.rootFolder = Paths.get(rootFolder);
     }
 
     public FileStoreHelper(String rootFolder, String appFolder) {
-        RootFolder = rootFolder;
-        this.appFolder = appFolder;
+        this.rootFolder = Paths.get(rootFolder);
+        this.appFolder = Paths.get(appFolder);
     }
 
     public static String convertStreamToString(InputStream is) throws IOException {
@@ -64,7 +64,7 @@ public class FileStoreHelper {
     }
 
     public void createAppIdDirIfNotExists(String appId) throws IOException {
-        File f = new File(RootFolder + File.separator + appId);
+        File f = new File(rootFolder + File.separator + appId);
         if (f.isFile()) {
             f.delete();
         }
@@ -77,7 +77,7 @@ public class FileStoreHelper {
     }
 
     private Metadata getMetadata(String folder) throws IOException {
-        String data = getStringFromFile(RootFolder + File.separator + folder + File.separator + "metadata.json");
+        String data = getStringFromFile(rootFolder + File.separator + folder + File.separator + "metadata.json");
         Gson gson = new Gson();
         return gson.fromJson(data, Metadata.class);
     }
@@ -94,7 +94,7 @@ public class FileStoreHelper {
     private void setMetadata(String folder, Metadata metadata) throws IOException {
         Gson gson = new Gson();
         String metadataString = gson.toJson(metadata);
-        writeFile(RootFolder + File.separator + folder + File.separator + "metadata.json", metadataString.getBytes());
+        writeFile(rootFolder + File.separator + folder + File.separator + "metadata.json", metadataString.getBytes());
     }
 
     public byte[] getDataFromFile(File file) throws IOException {
@@ -125,7 +125,7 @@ public class FileStoreHelper {
     public List<byte[]> getAppData(String appId) throws IOException {
         List<byte[]> appDataList = new ArrayList<>();
         Metadata metadata = getIfNotCreateMetadata(appId);
-        String folder = RootFolder + File.separator + appId;
+        String folder = rootFolder + File.separator + appId;
 
         for (long i = metadata.lastProcessedMessageId + 1; i <= metadata.lastReceivedMessageId; i++) {
             appDataList.add(readFile(folder + File.separator + i + ".txt"));
@@ -138,7 +138,7 @@ public class FileStoreHelper {
     public List<byte[]> getAllAppData(String appId) throws IOException {
         List<byte[]> dataList = new ArrayList<>();
         Metadata metadata = getIfNotCreateMetadata(appId);
-        String folder = RootFolder + File.separator + appId;
+        String folder = rootFolder + File.separator + appId;
         for (long i = 1; i <= metadata.lastReceivedMessageId; i++) {
             byte[] data = readFile(folder + File.separator + i + ".txt");
             logger.log(FINE, "bundleclient", data.toString());
@@ -149,11 +149,11 @@ public class FileStoreHelper {
     }
 
     public byte[] getADU(String appId, String aduId) throws IOException {
-        return readFile(RootFolder + File.separator + appId + File.separator + aduId + ".txt");
+        return readFile(rootFolder + File.separator + appId + File.separator + aduId + ".txt");
     }
 
     public File getADUFile(String appId, String aduId) {
-        return new File(RootFolder + File.separator + appId + File.separator + aduId + ".txt");
+        return new File(rootFolder + File.separator + appId + File.separator + aduId + ".txt");
     }
 
     public byte[] getNextAppData(String folder) throws IOException {
@@ -167,13 +167,13 @@ public class FileStoreHelper {
                 return null;
             }
         }
-        byte[] appData = readFile(RootFolder + File.separator + folder + File.separator + nextMessageId + ".txt");
+        byte[] appData = readFile(rootFolder + File.separator + folder + File.separator + nextMessageId + ".txt");
         metadata.lastProcessedMessageId = nextMessageId;
         setMetadata(folder, metadata);
         return appData;
     }
 
-    private void registerAppId(String appId) {
+    private void registerAppId(String appId) throws IOException {
         ApplicationDataManager adm = new ApplicationDataManager(appFolder);
         List<String> appIds = adm.getRegisteredAppIds();
 
@@ -191,7 +191,7 @@ public class FileStoreHelper {
         metadata.lastReceivedMessageId++;
         setMetadata(folder, metadata);
 
-        File f = new File(RootFolder + File.separator + folder);
+        File f = new File(rootFolder + File.separator + folder);
         String messagePath;
 
         int numFile = f.list().length;
@@ -218,7 +218,7 @@ public class FileStoreHelper {
     }
 
     public void deleteFile(String fileName) {
-        File file = new File(RootFolder + File.separator + fileName);
+        File file = new File(rootFolder + File.separator + fileName);
         file.delete();
     }
 }

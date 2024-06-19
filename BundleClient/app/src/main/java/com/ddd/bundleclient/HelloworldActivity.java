@@ -1,12 +1,16 @@
 package com.ddd.bundleclient;
 
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
+
 import android.Manifest;
-import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.os.Build;
 import android.os.Bundle;
-import android.text.method.ScrollingMovementMethod;;
+import android.text.method.ScrollingMovementMethod;
 import android.widget.Button;
 import android.widget.TextView;
 
@@ -16,32 +20,14 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.ddd.client.bundlerouting.ClientWindow;
 import com.ddd.client.bundlesecurity.BundleSecurity;
 import com.ddd.client.bundletransmission.BundleTransmission;
-import com.ddd.model.BundleDTO;
 import com.ddd.wifidirect.WifiDirectManager;
 import com.ddd.wifidirect.WifiDirectStateListener;
-import com.google.protobuf.ByteString;
 
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.lang.ref.WeakReference;
+import java.nio.file.Paths;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
-import io.grpc.stub.StreamObserver;
-
-//Venus added
 import java.util.logging.Logger;
-
-import static java.util.logging.Level.FINER;
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.WARNING;
-import static java.util.logging.Level.SEVERE;
 
 public class HelloworldActivity extends AppCompatActivity implements WifiDirectStateListener {
 
@@ -90,7 +76,7 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
         logger.log(INFO, "checking permissions" + grantResults.length);
         switch (requestCode) {
             case PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION:
-                if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                if (grantResults.length > 0 && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
                     logger.log(SEVERE, "Find location is not granted!");
                     finish();
                 }
@@ -125,9 +111,9 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
             e.printStackTrace();
         }
 
-        bundleTransmission = new BundleTransmission(getApplicationContext().getApplicationInfo().dataDir);
-
         try {
+            bundleTransmission =
+                    new BundleTransmission(Paths.get(getApplicationContext().getApplicationInfo().dataDir));
             clientWindow = bundleTransmission.getBundleSecurity().getClientWindow();
             logger.log(WARNING, "{MC} - got clientwindow " + clientWindow);
         } catch (Exception e) {
@@ -236,7 +222,11 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
     @Override
     public void onPause() {
         super.onPause();
-        unregisterReceiver(wifiDirectManager.getReceiver());
+        try {
+            unregisterReceiver(wifiDirectManager.getReceiver());
+        } catch (IllegalArgumentException e) {
+            logger.log(WARNING, "WifiDirect receiver unregistered before registered");
+        }
     }
 
     @Override

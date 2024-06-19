@@ -1,5 +1,6 @@
 package com.ddd.server.commands.bundlesecurity;
 
+import com.ddd.server.bundlesecurity.InvalidClientSessionException;
 import com.ddd.server.bundlesecurity.ServerSecurity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -50,7 +51,7 @@ public class EncryptBundle implements Callable<Void> {
 
         try {
             // Encrypt the bundle
-            String[] paths = serverSecurity.encrypt(bundlePath, encPath, bundleId, clientId);
+            Path[] paths = serverSecurity.encrypt(Paths.get(bundlePath), Paths.get(encPath), bundleId, clientId);
 
             Arrays.stream(paths).forEach(System.out::println);
 

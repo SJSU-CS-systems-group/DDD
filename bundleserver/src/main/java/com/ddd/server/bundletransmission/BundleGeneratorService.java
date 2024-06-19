@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileSystems;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -70,20 +71,19 @@ public class BundleGeneratorService {
         return builder.build();
     }
 
-    public Bundle compressBundle(UncompressedBundle uncompressedBundle, String bundleGenPath) {
+    public Bundle compressBundle(UncompressedBundle uncompressedBundle, Path bundleGenPath) {
         String bundleId = uncompressedBundle.getBundleId();
         File uncompressedBundlePath = uncompressedBundle.getSource();
-        File bundleFile = new File(bundleGenPath + File.separator + bundleId + BUNDLE_EXTENSION);
+        File bundleFile = bundleGenPath.resolve(bundleId + BUNDLE_EXTENSION).toFile();
         JarUtils.dirToJar(uncompressedBundlePath.getAbsolutePath(), bundleFile.getAbsolutePath());
         return new Bundle(bundleFile);
     }
 
-    public Payload compressPayload(UncompressedPayload uncompressedPayload, String payloadDirPath) {
+    public Payload compressPayload(UncompressedPayload uncompressedPayload, Path payloadDirPath) {
         String bundleId = uncompressedPayload.getBundleId();
 
         File uncompressedPath = uncompressedPayload.getSource();
-        File compressedPath =
-                new File(payloadDirPath + File.separator + Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar");
+        File compressedPath = payloadDirPath.resolve(Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar").toFile();
         JarUtils.dirToJar(uncompressedPath.getAbsolutePath(), compressedPath.getAbsolutePath());
         return new Payload(bundleId, compressedPath);
     }

@@ -1,59 +1,51 @@
 package com.ddd.client.bundlerouting;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-
-import java.util.logging.Logger;
-
-import static java.util.logging.Level.FINER;
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
-import static java.util.logging.Level.SEVERE;
 
 import com.ddd.bundlesecurity.BundleIDGenerator;
 
 import com.ddd.client.bundlesecurity.ClientSecurity;
-import com.ddd.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
-import com.ddd.bundlesecurity.SecurityExceptions.IDGenerationException;
-import com.ddd.bundlesecurity.SecurityUtils;
+
+import org.whispersystems.libsignal.InvalidKeyException;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.GeneralSecurityException;
+import java.util.logging.Logger;
 
 public class ClientBundleGenerator {
 
     private static final Logger logger = Logger.getLogger(ClientBundleGenerator.class.getName());
 
     static ClientBundleGenerator singleGeneratorInstance = null;
-    ClientSecurity clientSecurity = null;
+    ClientSecurity clientSecurity;
 
     /* Counter value used as unsigned long */
     private long currentCounter = 0;
 
-    private String counterFilePath = null;
+    final private Path counterFilePath;
 
-    private ClientBundleGenerator(ClientSecurity clientSecurity, String rootPath) {
+    private ClientBundleGenerator(ClientSecurity clientSecurity, Path rootPath) throws IOException {
         this.clientSecurity = clientSecurity;
-        counterFilePath = rootPath + File.separator + "BundleRouting" + File.separator + "sentBundle.id";
+        counterFilePath = rootPath.resolve(Paths.get("BundleRouting", "sentBundle.id"));
 
         try {
-            byte[] counterFromFile = SecurityUtils.readFromFile(counterFilePath);
+            byte[] counterFromFile = Files.readAllBytes(counterFilePath);
             currentCounter = Long.parseUnsignedLong(new String(counterFromFile, StandardCharsets.UTF_8));
         } catch (IOException e) {
             updateBundleIDFile();
         }
     }
 
-    private void updateBundleIDFile() {
-        try (FileOutputStream stream = new FileOutputStream(counterFilePath)) {
-            stream.write(Long.toUnsignedString(currentCounter).getBytes(StandardCharsets.UTF_8));
-        } catch (IOException ex) {
-            logger.log(WARNING, "[BR]: Failed to create counter backup file! " + ex);
-        }
+    private void updateBundleIDFile() throws IOException {
+        counterFilePath.getParent().toFile().mkdirs();
+        Files.write(counterFilePath, Long.toUnsignedString(currentCounter).getBytes());
     }
 
-    public static ClientBundleGenerator initializeInstance(ClientSecurity clientSecurity, String rootPath) {
+    synchronized public static ClientBundleGenerator initializeInstance(ClientSecurity clientSecurity, Path rootPath) throws IOException {
         if (singleGeneratorInstance == null) {
             singleGeneratorInstance = new ClientBundleGenerator(clientSecurity, rootPath);
         } else {
@@ -62,14 +54,14 @@ public class ClientBundleGenerator {
         return singleGeneratorInstance;
     }
 
-    public static ClientBundleGenerator getInstance() throws IllegalStateException {
+    synchronized public static ClientBundleGenerator getInstance() throws IllegalStateException {
         if (singleGeneratorInstance == null) {
             throw new IllegalStateException("Client Bundle Generator has not been initialized!");
         }
         return singleGeneratorInstance;
     }
 
-    public String generateBundleID() throws IDGenerationException, BundleIDCryptographyException {
+    public String generateBundleID() throws IOException, InvalidKeyException, GeneralSecurityException {
         String clientID = clientSecurity.getClientID();
         currentCounter++;
 
@@ -78,14 +70,16 @@ public class ClientBundleGenerator {
         return clientSecurity.encryptBundleID(plainBundleID);
     }
 
-    public int compareBundleIDs(String id1, String id2, boolean direction) throws BundleIDCryptographyException {
+    public int compareBundleIDs(String id1, String id2, boolean direction) throws GeneralSecurityException,
+            InvalidKeyException {
         String decryptedBundleID1 = clientSecurity.decryptBundleID(id1);
         String decryptedBundleID2 = clientSecurity.decryptBundleID(id2);
 
         return BundleIDGenerator.compareBundleIDs(decryptedBundleID1, decryptedBundleID2, direction);
     }
 
-    public long getCounterFromBundleID(String bundleID, boolean direction) throws BundleIDCryptographyException {
+    public long getCounterFromBundleID(String bundleID, boolean direction) throws GeneralSecurityException,
+            InvalidKeyException {
         String decryptedBundleID = clientSecurity.decryptBundleID(bundleID);
         return BundleIDGenerator.getCounterFromBundleID(decryptedBundleID, direction);
     }

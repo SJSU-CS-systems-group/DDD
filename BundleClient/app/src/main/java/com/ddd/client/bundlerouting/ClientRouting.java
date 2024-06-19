@@ -1,22 +1,8 @@
 package com.ddd.client.bundlerouting;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-
-import java.util.HashMap;
-
-import java.util.logging.Logger;
-
-import static java.util.logging.Level.FINER;
-import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.WARNING;
-import static java.util.logging.Level.SEVERE;
 
-import com.ddd.bundlesecurity.SecurityUtils;
-
+import com.ddd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -24,7 +10,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import com.ddd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.logging.Logger;
 
 public class ClientRouting {
 
@@ -32,7 +23,7 @@ public class ClientRouting {
 
     private static ClientRouting singleClientRoutingInstance = null;
     HashMap<String, Long> metadata = null;
-    String metaDataPath = null;
+    Path metaDataPath = null;
     private final String METADATAFILE = "routing.metadata";
 
     /* Initialize client routing score table
@@ -42,13 +33,13 @@ public class ClientRouting {
      * Return:
      * None
      */
-    private ClientRouting(String rootPath) throws IOException, ClientMetaDataFileException {
-        this.metaDataPath = rootPath + File.separator + "BundleRouting" + File.separator;
-        SecurityUtils.createDirectory(metaDataPath);
+    private ClientRouting(Path rootPath) throws IOException, ClientMetaDataFileException {
+        this.metaDataPath = rootPath.resolve("BundleRouting");
+        metaDataPath.toFile().mkdirs();
 
-        metaDataPath += METADATAFILE;
+        metaDataPath = metaDataPath.resolve(METADATAFILE);
 
-        File metadataFile = new File(metaDataPath);
+        File metadataFile = metaDataPath.toFile();
         ObjectMapper objectMapper = new ObjectMapper();
 
         metadata = new HashMap<>();
@@ -64,8 +55,7 @@ public class ClientRouting {
         }
     }
 
-    public static ClientRouting initializeInstance(String metaDataPath) throws ClientMetaDataFileException,
-            IOException {
+    public static ClientRouting initializeInstance(Path metaDataPath) throws ClientMetaDataFileException, IOException {
         if (singleClientRoutingInstance == null) {
             singleClientRoutingInstance = new ClientRouting(metaDataPath);
         } else {
@@ -99,7 +89,7 @@ public class ClientRouting {
 
         ObjectMapper mapper = new ObjectMapper();
         try {
-            File metadataFile = new File(metaDataPath);
+            File metadataFile = metaDataPath.toFile();
             JsonNode rootNode = mapper.readTree(metadataFile);
             ((ObjectNode) rootNode).put(transportID, count);
             mapper.writeValue(metadataFile, rootNode);
@@ -114,13 +104,7 @@ public class ClientRouting {
      * Returns:
      * None
      */
-    public void bundleMetaData(String bundlePath) throws ClientMetaDataFileException {
-        String bundleMetaDataPath = bundlePath + File.separator + METADATAFILE;
-
-        try {
-            SecurityUtils.copyContent(new FileInputStream(metaDataPath), new FileOutputStream(bundleMetaDataPath));
-        } catch (IOException e) {
-            throw new ClientMetaDataFileException("Error copying Routing Meta Data to Bundle Path:" + e);
-        }
+    public void bundleMetaData(Path bundlePath) throws ClientMetaDataFileException, IOException {
+        Files.copy(metaDataPath, bundlePath.resolve(METADATAFILE));
     }
 }

@@ -1,39 +1,37 @@
 package com.ddd.client.bundlerouting;
 
-import com.ddd.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
-import com.ddd.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
-import com.ddd.bundlerouting.WindowUtils.CircularBuffer;
-import com.ddd.bundlesecurity.BundleIDGenerator;
-import com.ddd.client.bundlesecurity.ClientSecurity;
-import com.ddd.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
-import com.ddd.bundlesecurity.SecurityUtils;
-
-import java.util.logging.Logger;
-
-import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
-import static java.util.logging.Level.SEVERE;
 
-import java.io.File;
-import java.io.FileOutputStream;
+import com.ddd.bundlerouting.WindowUtils.CircularBuffer;
+import com.ddd.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
+import com.ddd.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
+import com.ddd.bundlesecurity.BundleIDGenerator;
+import com.ddd.client.bundlesecurity.ClientSecurity;
+
+import org.whispersystems.libsignal.InvalidKeyException;
+
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.GeneralSecurityException;
 import java.util.List;
+import java.util.Locale;
+import java.util.logging.Logger;
 
 public class ClientWindow {
 
     private static final Logger logger = Logger.getLogger(ClientWindow.class.getName());
 
     static private ClientWindow singleClientWindowInstance = null;
-    private String clientWindowDataPath = null;
-    final private String windowFile = "clientWindow.csv";
+    final private Path clientWindowDataPath;
+    final private String WINDOW_FILE = "clientWindow.csv";
 
-    public static final String TAG = "dddDebug";
-
-    private CircularBuffer window = null;
+    private final CircularBuffer window;
     private String clientID = null;
     private int windowLength = 10; /* Default Value */
 
@@ -48,7 +46,7 @@ public class ClientWindow {
      * Returns:
      * None
      */
-    private void fillWindow(int count, long startCounter) throws BufferOverflow {
+    private void fillWindow(int count, long startCounter) throws BufferOverflow, IOException {
         long length = startCounter + count;
 
         for (long i = startCounter; i < length; ++i) {
@@ -59,21 +57,16 @@ public class ClientWindow {
         updateDBWindow();
     }
 
-    private void updateDBWindow() {
-        String dbFile = clientWindowDataPath + File.separator + windowFile;
+    private void updateDBWindow() throws IOException {
+        var dbFile = clientWindowDataPath.resolve(WINDOW_FILE);
 
-        try (FileOutputStream stream = new FileOutputStream(dbFile)) {
-            String metadata = Long.toUnsignedString(begin) + "," + Long.toUnsignedString(end) + "," + windowLength;
-            stream.write(metadata.getBytes());
-        } catch (IOException e) {
-            logger.log(WARNING, "Error: Failed to write Window to file! " + e);
-        }
+        Files.write(dbFile, String.format(Locale.US, "%d,%d,%d", begin, end, windowLength).getBytes());
     }
 
     private void initializeWindow() throws IOException {
-        String dbFile = clientWindowDataPath + File.separator + windowFile;
+        var dbFile = clientWindowDataPath.resolve(WINDOW_FILE);
 
-        String dbData = new String(SecurityUtils.readFromFile(dbFile), StandardCharsets.UTF_8);
+        String dbData = new String(Files.readAllBytes(dbFile), UTF_8);
 
         String[] dbCSV = dbData.split(",");
 
@@ -89,10 +82,9 @@ public class ClientWindow {
      * Returns:
      * None
      */
-    private ClientWindow(int length, String clientID, String rootPath) throws InvalidLength, BufferOverflow {
-        clientWindowDataPath = rootPath + File.separator + "ClientWindow";
-
-        SecurityUtils.createDirectory(clientWindowDataPath);
+    private ClientWindow(int length, String clientID, Path rootPath) throws InvalidLength, BufferOverflow, IOException {
+        clientWindowDataPath = rootPath.resolve("ClientWindow");
+        clientWindowDataPath.toFile().mkdirs();
 
         try {
             initializeWindow();
@@ -101,7 +93,6 @@ public class ClientWindow {
             if (length > 0) {
                 windowLength = length;
             } else {
-
                 logger.log(WARNING, "Invalid window size -- using default size: " + windowLength);
             }
         }
@@ -113,7 +104,7 @@ public class ClientWindow {
         fillWindow(windowLength, begin);
     }
 
-    public static ClientWindow initializeInstance(int windowLength, String clientID, String rootPath) throws InvalidLength, BufferOverflow {
+    public static ClientWindow initializeInstance(int windowLength, String clientID, Path rootPath) throws InvalidLength, BufferOverflow, IOException {
         if (singleClientWindowInstance == null) {
             singleClientWindowInstance = new ClientWindow(windowLength, clientID, rootPath);
         } else {
@@ -135,20 +126,17 @@ public class ClientWindow {
      * Returns:
      * None
      */
-    public void processBundle(String bundleID, ClientSecurity clientSecurity) throws BufferOverflow,
-            BundleIDCryptographyException {
+    public void processBundle(String bundleID, ClientSecurity clientSecurity) throws BufferOverflow, IOException,
+            GeneralSecurityException, InvalidKeyException {
         String decryptedBundleID = clientSecurity.decryptBundleID(bundleID);
         logger.log(FINE, "Largest Bundle ID = " + decryptedBundleID);
         long ack = BundleIDGenerator.getCounterFromBundleID(decryptedBundleID, BundleIDGenerator.DOWNSTREAM);
 
         if (Long.compareUnsigned(ack, begin) == -1) {
-            logger.log(FINE,
-                       "Received old [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(begin) + "]");
+            logger.log(FINE, "Received old [" + ack + " < " + begin + "]");
             return;
         } else if (Long.compareUnsigned(ack, end) == 1) {
-            logger.log(FINE,
-                       "Received Invalid ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(end) +
-                               "]");
+            logger.log(FINE, "Received Invalid ACK [" + ack + " < " + end + "]");
             return;
         }
 
@@ -176,7 +164,7 @@ public class ClientWindow {
      * Returns:
      * None
      */
-    public List<String> getWindow(ClientSecurity client) throws BundleIDCryptographyException {
+    public List<String> getWindow(ClientSecurity client) throws InvalidKeyException, GeneralSecurityException {
         List<String> bundleIDs = window.getBuffer();
 
         for (int i = 0; i < bundleIDs.size(); ++i) {

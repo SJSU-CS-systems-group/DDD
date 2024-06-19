@@ -9,15 +9,16 @@ import com.ddd.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
 import com.ddd.bundlerouting.WindowUtils.WindowExceptions.RecievedInvalidACK;
 import com.ddd.bundlerouting.WindowUtils.WindowExceptions.RecievedOldACK;
 import com.ddd.bundlesecurity.BundleIDGenerator;
-import com.ddd.bundlesecurity.SecurityExceptions.BundleIDCryptographyException;
-import com.ddd.bundlesecurity.SecurityExceptions.InvalidClientIDException;
+import com.ddd.server.bundlesecurity.InvalidClientIDException;
 import com.ddd.server.bundlesecurity.ServerSecurity;
 import com.ddd.server.storage.SNRDatabases;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
+import org.whispersystems.libsignal.InvalidKeyException;
 
 import javax.annotation.PostConstruct;
+import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
@@ -166,14 +167,9 @@ public class ServerWindow {
      * None
      */
     public void updateClientWindow(String clientID, String bundleID) throws ClientWindowNotFound, BufferOverflow,
-            InvalidBundleID, SQLException {
+            InvalidBundleID, SQLException, InvalidClientIDException, GeneralSecurityException, InvalidKeyException {
         String decryptedBundleID = null;
-        try {
-            decryptedBundleID = serverSecurity.decryptBundleID(bundleID, clientID);
-        } catch (BundleIDCryptographyException e) {
-            logger.log(SEVERE, "Error", e);
-            throw new InvalidBundleID("[ServerWindow]: Failed to Decrypt bundleID");
-        }
+        decryptedBundleID = serverSecurity.decryptBundleID(bundleID, clientID);
 
         CircularBuffer circularBuffer = getClientWindow(clientID);
 
@@ -191,8 +187,8 @@ public class ServerWindow {
         updateValueInTable(clientID, ENDCOUNTER, Long.toUnsignedString(endCounter));
     }
 
-    public String getCurrentbundleID(String clientID) throws BundleIDCryptographyException, InvalidClientIDException,
-            SQLException {
+    public String getCurrentbundleID(String clientID) throws InvalidClientIDException, SQLException,
+            GeneralSecurityException, InvalidKeyException {
         long endCounter = Long.parseUnsignedLong(getValueFromTable(clientID, ENDCOUNTER));
 
         String plainBundleID = BundleIDGenerator.generateBundleID(clientID, endCounter, BundleIDGenerator.DOWNSTREAM);
@@ -207,7 +203,7 @@ public class ServerWindow {
      * None
      */
     public void processACK(String clientID, String ackedBundleID) throws ClientWindowNotFound, InvalidLength,
-            BundleIDCryptographyException {
+            InvalidClientIDException, GeneralSecurityException, InvalidKeyException {
         CircularBuffer circularBuffer = getClientWindow(clientID);
         String decryptedBundleID = serverSecurity.decryptBundleID(ackedBundleID, clientID);
         logger.log(WARNING, "[ServerWindow]: Decrypted Ack from file = " + decryptedBundleID);
@@ -254,14 +250,14 @@ public class ServerWindow {
         return getClientWindow(clientID).isBufferFull();
     }
 
-    public int compareBundleIDs(String id1, String id2, String clientID, boolean direction) throws BundleIDCryptographyException {
+    public int compareBundleIDs(String id1, String id2, String clientID, boolean direction) throws InvalidClientIDException, GeneralSecurityException, InvalidKeyException {
         String decryptedBundleID1 = serverSecurity.decryptBundleID(id1, clientID);
         String decryptedBundleID2 = serverSecurity.decryptBundleID(id2, clientID);
 
         return BundleIDGenerator.compareBundleIDs(decryptedBundleID1, decryptedBundleID2, direction);
     }
 
-    public long getCounterFromBundleID(String bundleID, String clientID, boolean direction) throws BundleIDCryptographyException {
+    public long getCounterFromBundleID(String bundleID, String clientID, boolean direction) throws InvalidClientIDException, GeneralSecurityException, InvalidKeyException {
         String decryptedBundleID = serverSecurity.decryptBundleID(bundleID, clientID);
         return BundleIDGenerator.getCounterFromBundleID(decryptedBundleID, direction);
     }

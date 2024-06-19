@@ -1,13 +1,10 @@
 package com.ddd.wifidirect;
 
-import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.net.NetworkInfo;
 import android.net.wifi.p2p.WifiP2pManager;
-// import android.util.Log;
 
 import java.util.logging.Logger;
 
@@ -17,10 +14,7 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 import static java.util.logging.Level.SEVERE;
 
-import androidx.core.app.ActivityCompat;
-
 import com.ddd.bundleclient.HelloworldActivity;
-import com.ddd.bundlesecurity.SecurityExceptions;
 
 /**
  * A BroadcastReceiver that notifies of important wifi p2p events.

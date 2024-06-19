@@ -1,21 +1,5 @@
 package com.ddd.utils;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINER;
@@ -38,6 +22,20 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 public class BundleUtils {
 
@@ -189,7 +187,7 @@ public class BundleUtils {
         logger.log(INFO, "[BundleUtils] Wrote bundle payload with id = " + bundleId + " to " + targetDirectory);
     }
 
-    public static Payload compressPayload(UncompressedPayload uncompressedPayload, String payloadDirPath) {
+    public static Payload compressPayload(UncompressedPayload uncompressedPayload, Path payloadDirPath) {
         String bundleId = uncompressedPayload.getBundleId();
         logger.log(INFO, "Compressing payload for bundleId: " + bundleId);
 

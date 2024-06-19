@@ -1,12 +1,13 @@
 package com.ddd.bundlesecurity;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.logging.Logger;
 
 import com.google.common.primitives.Bytes;
-
-import com.ddd.bundlesecurity.SecurityExceptions.IDGenerationException;
+import org.whispersystems.libsignal.InvalidKeyException;
 
 public class BundleIDGenerator {
     public static final boolean UPSTREAM = true;
@@ -25,23 +26,13 @@ public class BundleIDGenerator {
      * Returns:
      * bundleID as a Base64 encoded String
      */
-    public String generateBundleID(String clientKeyPath, boolean direction) throws IDGenerationException {
+    synchronized public String generateBundleID(Path clientKeyPath, boolean direction) throws IOException,
+            NoSuchAlgorithmException, InvalidKeyException {
         String clientID = SecurityUtils.getClientID(clientKeyPath);
 
         currentCounter++;
 
-        byte[] bClientID = Base64.getUrlDecoder().decode(clientID);
-        byte[] bCounter = new byte[1];
-        bCounter[0] = (byte) currentCounter;
-        byte[] bundleID = new byte[bClientID.length + counterLength];
-
-        if (direction == UPSTREAM) {
-            bundleID = Bytes.concat(bClientID, bCounter);
-        } else {
-            bundleID = Bytes.concat(bCounter, bClientID);
-        }
-
-        return Base64.getUrlEncoder().encodeToString(bundleID);
+        return generateBundleID(clientID, currentCounter, direction);
     }
 
     /* Generates bundleID for the specified clientID and counter value

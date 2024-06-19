@@ -1,5 +1,8 @@
 package com.ddd.bundleclient;
 
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+
 import android.app.Activity;
 import android.content.Context;
 import android.os.Build;
@@ -14,18 +17,11 @@ import java.io.FileInputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.ref.WeakReference;
+import java.nio.file.Paths;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
-//Venus added
 import java.util.logging.Logger;
-
-import static java.util.logging.Level.FINER;
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.WARNING;
-import static java.util.logging.Level.SEVERE;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -71,7 +67,7 @@ class GrpcSendTask {
             FileServiceGrpc.FileServiceStub stub = FileServiceGrpc.newStub(channel);
             StreamObserver<FileUploadRequest> streamObserver = stub.uploadFile(new FileUploadObserver());
             BundleTransmission bundleTransmission;
-            bundleTransmission = new BundleTransmission(applicationContext.getApplicationInfo().dataDir);
+            bundleTransmission = new BundleTransmission(Paths.get(applicationContext.getApplicationInfo().dataDir));
             BundleDTO toSend = bundleTransmission.generateBundleForTransmission();
             System.out.println("[BDA] An outbound bundle generated with id: " + toSend.getBundleId());
             FileUploadRequest metadata = FileUploadRequest.newBuilder()
