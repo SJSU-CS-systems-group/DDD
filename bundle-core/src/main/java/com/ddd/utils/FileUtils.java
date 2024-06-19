@@ -13,6 +13,7 @@ public class FileUtils {
         }
         Files.write(path, bytes, java.nio.file.StandardOpenOption.CREATE_NEW);
     }
+
     public static void createEmptyFileIfNeeded(Path path) throws IOException {
         createFileWithDefaultIfNeeded(path, new byte[0]);
     }
