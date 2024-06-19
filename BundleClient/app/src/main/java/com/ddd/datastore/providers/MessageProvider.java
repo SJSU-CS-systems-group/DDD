@@ -9,7 +9,14 @@ import android.database.MatrixCursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Binder;
-import android.util.Log;
+
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.SEVERE;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -23,6 +30,9 @@ import java.util.HashMap;
 import java.util.List;
 
 public class MessageProvider extends ContentProvider {
+
+    private static final Logger logger = Logger.getLogger(MessageProvider.class.getName());
+
     public static final String PROVIDER_NAME = "com.ddd.provider.datastoreprovider";
 
     public static final String URL = "content://" + PROVIDER_NAME + "/messages";
@@ -84,7 +94,7 @@ public class MessageProvider extends ContentProvider {
             }
         } catch (Exception ex) {
             ex.printStackTrace();
-            Log.e("bundleclient", ex.getMessage());
+            logger.log(WARNING, "bundleclient", ex.getMessage());
             cursor = null;
         }
         return cursor;
@@ -120,10 +130,10 @@ public class MessageProvider extends ContentProvider {
         try {
             String appName = getCallerAppId();
             byte[] data = contentValues.getAsByteArray("data");
-            Log.d("bundleclient", "inserting: " + new String(data));
+            logger.log(INFO, "bundleclient", "inserting: " + new String(data));
             return fileStoreHelper.addFile(appName, data);
         } catch (IOException e) {
-            Log.e("bundleclient", "Unable to add file, error: " + e.getMessage());
+            logger.log(WARNING, "bundleclient", "Unable to add file, error: " + e.getMessage());
             return null;
         }
     }

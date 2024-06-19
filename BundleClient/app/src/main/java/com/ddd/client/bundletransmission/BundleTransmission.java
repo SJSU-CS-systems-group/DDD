@@ -11,6 +11,14 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.SEVERE;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import com.ddd.bundleclient.HelloworldActivity;
@@ -32,9 +40,10 @@ import com.ddd.model.UncompressedPayload;
 import com.ddd.utils.AckRecordUtils;
 import com.ddd.utils.BundleUtils;
 import com.ddd.utils.Constants;
-import android.util.Log;
 
 public class BundleTransmission {
+
+    private static final Logger logger = Logger.getLogger(BundleTransmission.class.getName());
 
     private BundleSecurity bundleSecurity;
 
@@ -133,7 +142,7 @@ public class BundleTransmission {
                                                                                   File.separator + RECEIVED_PROCESSING);
         Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
         try {
-            Log.d(HelloworldActivity.TAG, "Updating client routing metadata for transport  " + transportId);
+            logger.log(INFO, "Updating client routing metadata for transport  " + transportId);
             clientRouting.updateMetaData(transportId);
         } catch (RoutingExceptions.ClientMetaDataFileException e) {
             e.printStackTrace();
@@ -167,18 +176,18 @@ public class BundleTransmission {
 
     public void processReceivedBundles(String transportId, String bundlesLocation) {
         File bundleStorageDirectory = new File(bundlesLocation);
-        Log.d(HelloworldActivity.TAG, "inside receives" + bundlesLocation);
+        logger.log(FINE, "inside receives" + bundlesLocation);
         if (bundleStorageDirectory.listFiles() == null || bundleStorageDirectory.listFiles().length == 0) {
-            Log.d(HelloworldActivity.TAG, "No Bundle received");
+            logger.log(INFO, "No Bundle received");
             return;
         }
         for (final File bundleFile : bundleStorageDirectory.listFiles()) {
             Bundle bundle = new Bundle(bundleFile);
-            Log.d(HelloworldActivity.TAG, "Processing: " + bundle.getSource().getName());
+            logger.log(INFO, "Processing: " + bundle.getSource().getName());
             this.processReceivedBundle(transportId, bundle);
-            Log.d(HelloworldActivity.TAG, "Deleting Directory");
+            logger.log(INFO, "Deleting Directory");
             FileUtils.deleteQuietly(bundle.getSource());
-            Log.d(HelloworldActivity.TAG, "Deleted Directory");
+            logger.log(INFO, "Deleted Directory");
         }
         String largestBundleId = getLargestBundleIdReceived();
         this.bundleSecurity.registerLargestBundleIdReceived(largestBundleId);
@@ -218,8 +227,7 @@ public class BundleTransmission {
         BundleUtils.writeUncompressedPayload(toSendBundlePayload, new File(
                 this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + UNCOMPRESSED_PAYLOAD), bundleId);
         try {
-            Log.d(HelloworldActivity.TAG,
-                  "Placing routing.metadata in " + toSendBundlePayload.getSource().getAbsolutePath());
+            logger.log(INFO, "Placing routing.metadata in " + toSendBundlePayload.getSource().getAbsolutePath());
             clientRouting.bundleMetaData(toSendBundlePayload.getSource().getAbsolutePath());
         } catch (RoutingExceptions.ClientMetaDataFileException e) {
             System.out.println("[BR]: Failed to add Routing metadata to bundle!");
@@ -239,7 +247,7 @@ public class BundleTransmission {
     }
 
     public BundleDTO generateBundleForTransmission() {
-        Log.d(HelloworldActivity.TAG, "Started process of generating bundle");
+        logger.log(FINE, "Started process of generating bundle");
         File toSendDir = new File(this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + TO_SEND_DIRECTORY);
 
         BundleDTO toSend = null;
@@ -269,7 +277,7 @@ public class BundleTransmission {
             toSend = this.generateNewBundle(unprocessedPayloadBuilder, toSendDir, bundleId);
         }
 
-        Log.d(HelloworldActivity.TAG, "sending bundle with id: " + toSend.getBundleId());
+        logger.log(INFO, "sending bundle with id: " + toSend.getBundleId());
         return toSend;
     }
 

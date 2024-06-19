@@ -7,7 +7,15 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.NetworkInfo;
 import android.net.wifi.p2p.WifiP2pManager;
-import android.util.Log;
+// import android.util.Log;
+
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.SEVERE;
 
 import androidx.core.app.ActivityCompat;
 
@@ -21,6 +29,8 @@ import com.ddd.bundlesecurity.SecurityExceptions;
  * we will handle the event
  */
 public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
+
+    private static final Logger logger = Logger.getLogger(WifiDirectBroadcastReceiver.class.getName());
 
     private WifiDirectManager manager;
 
@@ -54,10 +64,10 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
             // Check if WifiDirect on this device is turned on.
             int state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1);
             if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
-                Log.d(HelloworldActivity.TAG, "WifiDirect enabled");
+                logger.log(FINER, "WifiDirect enabled");
                 manager.setWifiDirectEnabled(true);
             } else {
-                Log.d(HelloworldActivity.TAG, "WifiDirect not enabled");
+                logger.log(FINER, "WifiDirect not enabled");
                 manager.setWifiDirectEnabled(false);
             }
 
@@ -100,7 +110,7 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
             /*else {
                 // It's a disconnect
                 this.manager.setConnected(false);
-                Log.d(HelloworldActivity.TAG,
+                logger.log(INFO,
                         "WIFI_P2P_CONNECTION_CHANGED_ACTION disconnected");
             }
              */

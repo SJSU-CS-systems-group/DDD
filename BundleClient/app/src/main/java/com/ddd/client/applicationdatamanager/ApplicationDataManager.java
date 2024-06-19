@@ -5,7 +5,6 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
-import android.util.Log;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -267,7 +266,7 @@ public class ApplicationDataManager {
             String line = "";
             while ((line = bufferedReader.readLine()) != null) {
                 String appId = line.trim();
-                Log.d(HelloworldActivity.TAG, appId);
+                logger.log(FINE, appId);
                 registeredAppIds.add(appId);
             }
         } catch (IOException e) {

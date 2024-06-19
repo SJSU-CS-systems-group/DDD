@@ -6,8 +6,7 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.text.method.ScrollingMovementMethod;
-import android.util.Log;
+import android.text.method.ScrollingMovementMethod;;
 import android.widget.Button;
 import android.widget.TextView;
 

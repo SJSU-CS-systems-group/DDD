@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
-import android.util.Log;
 
 import com.ddd.bundleclient.HelloworldActivity;
 import com.ddd.datastore.filestore.FileStoreHelper;
