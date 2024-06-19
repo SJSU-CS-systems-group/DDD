@@ -1,16 +1,9 @@
 package com.ddd.client.bundlesecurity;
 
+import static java.util.logging.Level.INFO;
+
 import android.content.res.Resources;
 
-import java.util.logging.Logger;
-
-import static java.util.logging.Level.FINER;
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.WARNING;
-import static java.util.logging.Level.SEVERE;
-
-import com.ddd.bundleclient.HelloworldActivity;
 import com.ddd.bundleclient.R;
 import com.ddd.bundlerouting.WindowUtils.WindowExceptions;
 import com.ddd.client.bundlerouting.ClientBundleGenerator;
@@ -21,6 +14,7 @@ import com.ddd.model.Payload;
 import com.ddd.model.UncompressedBundle;
 import com.ddd.model.UncompressedPayload;
 import com.ddd.utils.Constants;
+import com.ddd.utils.FileUtils;
 
 import org.apache.commons.lang3.StringUtils;
 import org.whispersystems.libsignal.DuplicateMessageException;
@@ -39,15 +33,17 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
+import java.util.logging.Logger;
 
 public class BundleSecurity {
     private static final Logger logger = Logger.getLogger(BundleSecurity.class.getName());
 
     public static final String BUNDLE_SECURITY_DIR = "BundleSecurity";
-    private static final String LARGEST_BUNDLE_ID_RECEIVED = "/Shared/DB/LARGEST_BUNDLE_ID_RECEIVED.txt";
-    private static final String BUNDLE_ID_NEXT_COUNTER = "/Shared/DB/BUNDLE_ID_NEXT_COUNTER.txt";
+    private static final String LARGEST_BUNDLE_ID_RECEIVED = "Shared/DB/LARGEST_BUNDLE_ID_RECEIVED.txt";
+    private static final String BUNDLE_ID_NEXT_COUNTER = "Shared/DB/BUNDLE_ID_NEXT_COUNTER.txt";
     private static Path rootFolder;
     private final ClientWindow clientWindow;
     private final ClientBundleGenerator clientBundleGenerator;
@@ -65,13 +61,10 @@ public class BundleSecurity {
         Path serverKeyPath = bundleSecurityPath.resolve("Server_Keys");
 
         Path bundleIdNextCounter = rootFolder.resolve(BUNDLE_ID_NEXT_COUNTER);
+        FileUtils.createFileWithDefaultIfNeeded(bundleIdNextCounter, "0".getBytes());
 
-        bundleIdNextCounter.toFile().getParentFile().mkdirs();
-        bundleIdNextCounter.toFile().createNewFile();
         Path largestBundleIdReceived = rootFolder.resolve(LARGEST_BUNDLE_ID_RECEIVED);
-
-        largestBundleIdReceived.toFile().getParentFile().mkdirs();
-        largestBundleIdReceived.toFile().createNewFile();
+        FileUtils.createFileWithDefaultIfNeeded(largestBundleIdReceived, "0".getBytes());
 
         this.counter = Integer.valueOf(Files.readAllLines(bundleIdNextCounter).get(0));
 
@@ -80,8 +73,6 @@ public class BundleSecurity {
         client = ClientSecurity.initializeInstance(1, bundleSecurityPath, serverKeyPath);
         clientBundleGenerator = ClientBundleGenerator.initializeInstance(client, rootFolder);
         clientWindow = ClientWindow.initializeInstance(5, client.getClientID(), rootFolder);
-        Log.d(HelloworldActivity.TAG, "Kuch Bhi");
-
     }
 
     public static void initializeKeyPaths(Resources resources, String rootDir) throws IOException {
@@ -97,13 +88,13 @@ public class BundleSecurity {
         Path outServerSignedPre = serverKeyPath.resolve("server_signed_pre.pub");
         Path outServerRatchet = serverKeyPath.resolve("server_ratchet.pub");
 
-        Files.copy(inServerIdentity, outServerIdentity);
+        Files.copy(inServerIdentity, outServerIdentity, StandardCopyOption.REPLACE_EXISTING);
         inServerIdentity.close();
 
-        Files.copy(inServerSignedPre, outServerSignedPre);
+        Files.copy(inServerSignedPre, outServerSignedPre, StandardCopyOption.REPLACE_EXISTING);
         inServerSignedPre.close();
 
-        Files.copy(inServerRatchet, outServerRatchet);
+        Files.copy(inServerRatchet, outServerRatchet, StandardCopyOption.REPLACE_EXISTING);
         inServerRatchet.close();
     }
 

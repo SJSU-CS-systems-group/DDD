@@ -1,16 +1,12 @@
 package com.ddd.client.bundlesecurity;
 
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.WARNING;
+
 import android.util.Base64;
 
 import com.ddd.bundlesecurity.SecurityUtils;
-
-import java.util.logging.Logger;
-
-import static java.util.logging.Level.FINER;
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.WARNING;
-import static java.util.logging.Level.SEVERE;
 
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.IdentityKey;
@@ -48,6 +44,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Logger;
 
 public class ClientSecurity {
 
@@ -84,7 +81,7 @@ public class ClientSecurity {
             logger.log(FINE, "[Sec]: Using Existing Keys");
             System.out.println("[Sec]: Using Existing Keys");
         } catch (IOException | InvalidKeyException e) {
-            logger.log(WARNING, "[Sec]: Error Loading Keys from files, generating new keys instead", e);
+            logger.log(WARNING, "[Sec]: Error Loading Keys from files, generating new keys instead");
             // Create Client's Key pairs
             ECKeyPair identityKeyPair = Curve.generateKeyPair();
             ourIdentityKeyPair = new IdentityKeyPair(new IdentityKey(identityKeyPair.getPublicKey()),

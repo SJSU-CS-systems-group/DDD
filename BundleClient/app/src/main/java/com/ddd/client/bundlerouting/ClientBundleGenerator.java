@@ -41,6 +41,7 @@ public class ClientBundleGenerator {
     }
 
     private void updateBundleIDFile() throws IOException {
+        counterFilePath.getParent().toFile().mkdirs();
         Files.write(counterFilePath, Long.toUnsignedString(currentCounter).getBytes());
     }
 

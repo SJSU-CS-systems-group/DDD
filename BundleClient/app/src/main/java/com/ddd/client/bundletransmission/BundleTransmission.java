@@ -1,16 +1,8 @@
 package com.ddd.client.bundletransmission;
 
-import java.util.logging.Logger;
-
-import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.WARNING;
-import static java.util.logging.Level.SEVERE;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
-import com.ddd.bundleclient.HelloworldActivity;
 import com.ddd.bundlerouting.RoutingExceptions;
 import com.ddd.bundlerouting.WindowUtils.WindowExceptions;
 import com.ddd.bundlesecurity.BundleIDGenerator;
@@ -47,27 +39,28 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.logging.Logger;
 
 public class BundleTransmission {
     private static final Logger logger = Logger.getLogger(BundleTransmission.class.getName());
 
     /* Bundle generation directory */
-    private static final String BUNDLE_GENERATION_DIRECTORY = "/BundleTransmission/bundle-generation";
+    private static final String BUNDLE_GENERATION_DIRECTORY = "BundleTransmission/bundle-generation";
     private static final String TO_BE_BUNDLED_DIRECTORY = "to-be-bundled";
     private static final String TO_SEND_DIRECTORY = "to-send";
     private static final String UNCOMPRESSED_PAYLOAD = "uncompressed-payload";
     private static final String COMPRESSED_PAYLOAD = "compressed-payload";
     private static final String ENCRYPTED_PAYLOAD = "encrypted-payload";
     private static final String RECEIVED_PROCESSING = "received-processing";
-    private static final String LARGEST_BUNDLE_ID_RECEIVED = "/Shared/DB/LARGEST_BUNDLE_ID_RECEIVED.txt";
+    private static final String LARGEST_BUNDLE_ID_RECEIVED = "Shared/DB/LARGEST_BUNDLE_ID_RECEIVED.txt";
     private final BundleSecurity bundleSecurity;
     private final ApplicationDataManager applicationDataManager;
     private final long BUNDLE_SIZE_LIMIT = 1000000000L;
 
     final private Path ROOT_DIR;
+    private final Path ackRecordPath;
 
     private ClientRouting clientRouting;
 
@@ -80,31 +73,21 @@ public class BundleTransmission {
 
         this.clientRouting = ClientRouting.initializeInstance(rootFolder);
 
-        File bundleGenerationDir = new File(this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY);
-        bundleGenerationDir.mkdirs();
-        File toBeBundledDir = new File(bundleGenerationDir + File.separator + TO_BE_BUNDLED_DIRECTORY);
-        toBeBundledDir.mkdirs();
-        File ackRecFile = new File(toBeBundledDir + File.separator + Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME);
-        ackRecFile.createNewFile();
+        var bundleGenerationDir = ROOT_DIR.resolve(BUNDLE_GENERATION_DIRECTORY);
+        var toBeBundledDir = ROOT_DIR.resolve(TO_BE_BUNDLED_DIRECTORY);
+        ackRecordPath = toBeBundledDir.resolve(Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME);
+        com.ddd.utils.FileUtils.createFileWithDefaultIfNeeded(ackRecordPath, "HB".getBytes());
+        var tosendDir = bundleGenerationDir.resolve(TO_SEND_DIRECTORY);
+        tosendDir.toFile().mkdirs();
 
-        FileUtils.writeLines(ackRecFile, Arrays.asList("HB"));
-
-        File tosendDir = new File(bundleGenerationDir + File.separator + TO_SEND_DIRECTORY);
-        tosendDir.mkdirs();
-
-        File uncompressedPayloadDir = new File(bundleGenerationDir + File.separator + UNCOMPRESSED_PAYLOAD);
-        uncompressedPayloadDir.mkdirs();
-        File compressedPayloadDir = new File(bundleGenerationDir + File.separator + COMPRESSED_PAYLOAD);
-        compressedPayloadDir.mkdirs();
-        File encryptedPayloadDir = new File(bundleGenerationDir + File.separator + ENCRYPTED_PAYLOAD);
-        encryptedPayloadDir.mkdirs();
-        File receivedProcDir = new File(bundleGenerationDir + File.separator + RECEIVED_PROCESSING);
-        receivedProcDir.mkdirs();
-    }
-
-    private String getAckRecordLocation() {
-        return this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + "/" + TO_BE_BUNDLED_DIRECTORY + "/" +
-                Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME;
+        var uncompressedPayloadDir = bundleGenerationDir.resolve(UNCOMPRESSED_PAYLOAD);
+        uncompressedPayloadDir.toFile().mkdirs();
+        var compressedPayloadDir = bundleGenerationDir.resolve(COMPRESSED_PAYLOAD);
+        compressedPayloadDir.toFile().mkdirs();
+        var encryptedPayloadDir = bundleGenerationDir.resolve(ENCRYPTED_PAYLOAD);
+        encryptedPayloadDir.toFile().mkdirs();
+        var receivedProcDir = bundleGenerationDir.resolve(RECEIVED_PROCESSING);
+        receivedProcDir.toFile().mkdirs();
     }
 
     public void registerBundleId(String bundleId) throws IOException {
@@ -152,7 +135,7 @@ public class BundleTransmission {
         UncompressedPayload uncompressedPayload =
                 BundleUtils.extractPayload(payload, uncompressedBundle.getSource().getAbsolutePath());
 
-        AckRecordUtils.writeAckRecordToFile(new Acknowledgement(bundleId), new File(this.getAckRecordLocation()));
+        AckRecordUtils.writeAckRecordToFile(new Acknowledgement(bundleId), ackRecordPath.toFile());
         this.registerBundleId(bundleId);
 
         String ackedBundleId = uncompressedPayload.getAckRecord().getBundleId();
@@ -184,7 +167,7 @@ public class BundleTransmission {
     private UncompressedPayload.Builder generateBundleBuilder() {
 
         UncompressedPayload.Builder builder = new UncompressedPayload.Builder();
-        Acknowledgement ackRecord = AckRecordUtils.readAckRecordFromFile(new File(this.getAckRecordLocation()));
+        Acknowledgement ackRecord = AckRecordUtils.readAckRecordFromFile(ackRecordPath.toFile());
         builder.setAckRecord(ackRecord);
 
         List<ADU> ADUs = this.applicationDataManager.fetchADUs(ackRecord.getSize());

@@ -76,7 +76,7 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
         logger.log(INFO, "checking permissions" + grantResults.length);
         switch (requestCode) {
             case PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION:
-                if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                if (grantResults.length > 0 && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
                     logger.log(SEVERE, "Find location is not granted!");
                     finish();
                 }
@@ -222,7 +222,11 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
     @Override
     public void onPause() {
         super.onPause();
-        unregisterReceiver(wifiDirectManager.getReceiver());
+        try {
+            unregisterReceiver(wifiDirectManager.getReceiver());
+        } catch (IllegalArgumentException e) {
+            logger.log(WARNING, "WifiDirect receiver unregistered before registered");
+        }
     }
 
     @Override
