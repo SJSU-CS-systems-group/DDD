@@ -1,31 +1,25 @@
 package com.ddd.client.applicationdatamanager;
 
-import android.content.ContentValues;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+
 import android.content.Context;
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Build;
 
 import com.ddd.bundleclient.HelloworldActivity;
 import com.ddd.datastore.filestore.FileStoreHelper;
-import com.ddd.datastore.providers.MessageProvider;
 import com.ddd.model.ADU;
-import com.ddd.model.UncompressedPayload;
-import com.ddd.wifidirect.WifiDirectBroadcastReceiver;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-
 import java.util.logging.Logger;
-
-import static java.util.logging.Level.FINER;
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.WARNING;
-import static java.util.logging.Level.SEVERE;
 
 public class DataStoreAdaptor {
 
@@ -34,13 +28,8 @@ public class DataStoreAdaptor {
     private FileStoreHelper sendFileStoreHelper;
     private FileStoreHelper receiveFileStoreHelper;
     private Context applicationContext;
-    //ContentResolver contentResolver;
-/*
-    public DataStoreAdaptor(ContentResolver contentResolver){
-        this.contentResolver = contentResolver;
-    }*/
 
-    public DataStoreAdaptor(String appRootDataDirectory) {
+    public DataStoreAdaptor(Path appRootDataDirectory) {
         sendFileStoreHelper = new FileStoreHelper(appRootDataDirectory + "/send");
         receiveFileStoreHelper = new FileStoreHelper(appRootDataDirectory + "/receive");
     }

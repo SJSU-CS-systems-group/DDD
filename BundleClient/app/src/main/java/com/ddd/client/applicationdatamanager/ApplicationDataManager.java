@@ -266,7 +266,7 @@ public class ApplicationDataManager {
             String line = "";
             while ((line = bufferedReader.readLine()) != null) {
                 String appId = line.trim();
-                logger.log(FINE, appId);
+                Log.d(HelloworldActivity.TAG, appId);
                 registeredAppIds.add(appId);
             }
         } catch (IOException e) {

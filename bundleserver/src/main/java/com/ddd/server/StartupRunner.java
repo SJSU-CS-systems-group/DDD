@@ -20,27 +20,27 @@ public class StartupRunner implements CommandLineRunner {
     }
 
     private void setUpFileStore() {
-        File bundleReceivedDir = new File(this.bundleStoreConfig.getBundleTransmission().getBundleReceivedLocation());
+        File bundleReceivedDir = this.bundleStoreConfig.getBundleTransmission().getBundleReceivedLocation().toFile();
         bundleReceivedDir.mkdirs();
         File bundleGenerationDir =
-                new File(this.bundleStoreConfig.getBundleTransmission().getBundleGenerationDirectory());
+                this.bundleStoreConfig.getBundleTransmission().getBundleGenerationDirectory().toFile();
         bundleGenerationDir.mkdirs();
-        File toBeBundledDir = new File(this.bundleStoreConfig.getBundleTransmission().getToBeBundledDirectory());
+        File toBeBundledDir = this.bundleStoreConfig.getBundleTransmission().getToBeBundledDirectory().toFile();
         toBeBundledDir.mkdirs();
-        File tosendDir = new File(this.bundleStoreConfig.getBundleTransmission().getToSendDirectory());
+        File tosendDir = this.bundleStoreConfig.getBundleTransmission().getToSendDirectory().toFile();
         tosendDir.mkdirs();
         File receivedProcessingDir =
-                new File(this.bundleStoreConfig.getBundleTransmission().getReceivedProcessingDirectory());
+                this.bundleStoreConfig.getBundleTransmission().getReceivedProcessingDirectory().toFile();
         receivedProcessingDir.mkdirs();
 
         File unCompressedPayloadDir =
-                new File(this.bundleStoreConfig.getBundleTransmission().getUncompressedPayloadDirectory());
+                this.bundleStoreConfig.getBundleTransmission().getUncompressedPayloadDirectory().toFile();
         unCompressedPayloadDir.mkdirs();
         File compressedPayloadDir =
-                new File(this.bundleStoreConfig.getBundleTransmission().getCompressedPayloadDirectory());
+                this.bundleStoreConfig.getBundleTransmission().getCompressedPayloadDirectory().toFile();
         compressedPayloadDir.mkdirs();
         File encryptedPayloadDir =
-                new File(this.bundleStoreConfig.getBundleTransmission().getEncryptedPayloadDirectory());
+                this.bundleStoreConfig.getBundleTransmission().getEncryptedPayloadDirectory().toFile();
         encryptedPayloadDir.mkdirs();
     }
 }

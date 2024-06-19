@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import picocli.CommandLine;
 
 import java.io.*;
+import java.nio.file.Paths;
 import java.util.concurrent.Callable;
 import java.util.logging.Logger;
 
@@ -44,7 +45,7 @@ public class DecryptBundle implements Callable<Void> {
                 decryptedPath = receivedProcessingDir + File.separator + "decrypted" + File.separator;
             }
 
-            serverSecurity.decrypt(bundlePath, decryptedPath);
+            serverSecurity.decrypt(Paths.get(bundlePath), Paths.get(decryptedPath));
 
             int startIndex = bundlePath.lastIndexOf("\\") + 1;
 

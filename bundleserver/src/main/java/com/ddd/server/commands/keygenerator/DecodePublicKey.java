@@ -7,13 +7,14 @@ import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
 
 import com.ddd.bundlesecurity.SecurityUtils;
-import com.ddd.bundlesecurity.SecurityExceptions.EncodingException;
-
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Base64;
 import java.util.concurrent.Callable;
 import java.util.logging.Logger;
@@ -27,7 +28,10 @@ import static java.util.logging.Level.WARNING;
 public class DecodePublicKey implements Callable<Void> {
     private static final Logger logger = Logger.getLogger(DecodePublicKey.class.getName());
     @Value("${bundle-server.bundle-security.server-serverkeys-path}")
-    private String storePath;
+    private void setStorePath(String storePath) {
+        this.storePath = Paths.get(storePath);
+    }
+    private Path storePath;
 
     @Parameters(arity = "1", index = "0")
     String command;
@@ -49,8 +53,8 @@ public class DecodePublicKey implements Callable<Void> {
         return identityKeyPair.getPublicKey().getPublicKey();
     }
 
-    private byte[] decodeFile() throws EncodingException {
-        return SecurityUtils.decodePrivateKeyFromFile(storePath + File.separator + pvtFilename);
+    private byte[] decodeFile() throws IOException, InvalidKeyException {
+        return SecurityUtils.decodePrivateKeyFromFile(storePath.resolve(pvtFilename));
     }
 
     private byte[] decodeBase64() {
@@ -61,8 +65,8 @@ public class DecodePublicKey implements Callable<Void> {
         return pvtraw.getBytes();
     }
 
-    private void writeToFile(ECPublicKey pubKey) throws EncodingException {
-        SecurityUtils.createEncodedPublicKeyFile(pubKey, storePath + File.separator + pubFilename);
+    private void writeToFile(ECPublicKey pubKey) throws IOException {
+        SecurityUtils.createEncodedPublicKeyFile(pubKey, storePath.resolve(pubFilename));
         logger.log(INFO, "Written to file");
     }
 
@@ -71,14 +75,11 @@ public class DecodePublicKey implements Callable<Void> {
     }
 
     @Override
-    public Void call() {
+    public Void call() throws IOException, InvalidKeyException {
         byte[] serializedPrivateKey = null;
         if (pvtFilename != null) {
-            try {
                 serializedPrivateKey = decodeFile();
-            } catch (EncodingException e) {
-                logger.log(SEVERE, "Couldn't decode file, check file name.");
-            }
+
         } else if (pvtbase64 != null) {
             serializedPrivateKey = decodeBase64();
         } else if (pvtraw != null) {

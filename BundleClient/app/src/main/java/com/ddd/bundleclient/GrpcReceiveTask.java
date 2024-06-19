@@ -1,31 +1,38 @@
 package com.ddd.bundleclient;
 
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
+
 import android.app.Activity;
 import android.content.Context;
 import android.widget.TextView;
 
-import com.ddd.bundlesecurity.SecurityExceptions;
+import com.ddd.bundlerouting.RoutingExceptions;
+import com.ddd.bundlerouting.WindowUtils.WindowExceptions;
 import com.ddd.client.bundletransmission.BundleTransmission;
+
+import org.whispersystems.libsignal.DuplicateMessageException;
+import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.InvalidMessageException;
+import org.whispersystems.libsignal.LegacyMessageException;
+import org.whispersystems.libsignal.NoSessionException;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.nio.file.Paths;
+import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
-
-import java.util.logging.Logger;
-
-import static java.util.logging.Level.FINER;
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.WARNING;
-import static java.util.logging.Level.SEVERE;
 
 //  private class GrpcReceiveTask extends AsyncTask<String, Void, String> {
 class GrpcReceiveTask {
@@ -74,11 +81,10 @@ class GrpcReceiveTask {
         logger.log(FINE, "Starting File Receive");
         resultText.append("Starting File Receive...\n");
         try {
-            BundleTransmission bundleTransmission;
-            bundleTransmission = new BundleTransmission(applicationContext.getApplicationInfo().dataDir);
+            var bundleTransmission = new BundleTransmission(Paths.get(applicationContext.getApplicationInfo().dataDir));
             bundleRequests = HelloworldActivity.clientWindow.getWindow(
                     bundleTransmission.getBundleSecurity().getClientSecurity());
-        } catch (SecurityExceptions.BundleIDCryptographyException e) {
+        } catch (RuntimeException e) {
             logger.log(WARNING, "{BR}: Failed to get Window: " + e);
             e.printStackTrace();
         } catch (Exception e) {
@@ -149,7 +155,7 @@ class GrpcReceiveTask {
 //    protected String doInBackground(String... params) {
 //      //code has been moved
 //    }
-    protected void postExecute(String result) {
+    protected void postExecute(String result) throws NoSessionException, InvalidMessageException, WindowExceptions.BufferOverflow, DuplicateMessageException, RoutingExceptions.ClientMetaDataFileException, IOException, LegacyMessageException, InvalidKeyException, WindowExceptions.InvalidLength, GeneralSecurityException {
         if (result.equals("Incomplete")) {
             resultText.append(result + "\n");
             return;
@@ -165,7 +171,7 @@ class GrpcReceiveTask {
         sendTask.executeInBackground("192.168.49.1", "1778");
 
         String FILE_PATH = applicationContext.getApplicationInfo().dataDir + "/Shared/received-bundles";
-        BundleTransmission bundleTransmission = new BundleTransmission(applicationContext.getApplicationInfo().dataDir);
+        BundleTransmission bundleTransmission = new BundleTransmission(Paths.get(applicationContext.getApplicationInfo().dataDir));
         bundleTransmission.processReceivedBundles(currentTransportId, FILE_PATH);
 
         Activity activity = activityReference.get();
