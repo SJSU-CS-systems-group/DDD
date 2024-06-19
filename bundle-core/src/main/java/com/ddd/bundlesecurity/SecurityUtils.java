@@ -69,7 +69,8 @@ public class SecurityUtils {
      * Returns:
      * The generated ID as a string
      */
-    public static String generateID(Path publicKeyPath) throws IOException, InvalidKeyException, NoSuchAlgorithmException {
+    public static String generateID(Path publicKeyPath) throws IOException, InvalidKeyException,
+            NoSuchAlgorithmException {
         byte[] publicKey = decodePublicKeyfromFile(publicKeyPath);
         return generateID(publicKey);
     }
@@ -86,7 +87,8 @@ public class SecurityUtils {
     }
 
     public static void createEncodedPublicKeyFile(ECPublicKey publicKey, Path path) throws IOException {
-        Files.write(path, (PUB_KEY_HEADER + "\n" + Base64.getUrlEncoder().encodeToString(publicKey.serialize()) + "\n" + PUB_KEY_FOOTER).getBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        Files.write(path, (PUB_KEY_HEADER + "\n" + Base64.getUrlEncoder().encodeToString(publicKey.serialize()) + "\n" +
+                PUB_KEY_FOOTER).getBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
     }
 
@@ -94,13 +96,15 @@ public class SecurityUtils {
         List<String> encodedKeyList = Files.readAllLines(path);
 
         if (encodedKeyList.size() != 3) {
-            throw new InvalidKeyException(String.format("Error: %s should have three lines: HEADER, KEY, FOOTER", path.getFileName()));
+            throw new InvalidKeyException(
+                    String.format("Error: %s should have three lines: HEADER, KEY, FOOTER", path.getFileName()));
         }
 
         if ((encodedKeyList.get(0).equals(PUB_KEY_HEADER)) && (encodedKeyList.get(2).equals(PUB_KEY_FOOTER))) {
             return Base64.getUrlDecoder().decode(encodedKeyList.get(1));
         } else {
-            throw new InvalidKeyException(String.format("Error: %s has invalid public key header or footer", path.getFileName()));
+            throw new InvalidKeyException(
+                    String.format("Error: %s has invalid public key header or footer", path.getFileName()));
         }
     }
 
@@ -108,20 +112,23 @@ public class SecurityUtils {
         List<String> encodedKeyList = Files.readAllLines(path);
 
         if (encodedKeyList.size() != 3) {
-            throw new InvalidKeyException(String.format("Error: %s should have three lines: HEADER, KEY, FOOTER", path.getFileName()));
+            throw new InvalidKeyException(
+                    String.format("Error: %s should have three lines: HEADER, KEY, FOOTER", path.getFileName()));
         }
 
         if (encodedKeyList.get(0).equals(PVT_KEY_HEADER) && encodedKeyList.get(2).equals(PVT_KEY_FOOTER)) {
             return Base64.getUrlDecoder().decode(encodedKeyList.get(1));
         } else {
-            throw new InvalidKeyException(String.format("Error: %s has invalid private key header or footer", path.getFileName()));
+            throw new InvalidKeyException(
+                    String.format("Error: %s has invalid private key header or footer", path.getFileName()));
         }
     }
 
     public static InMemorySignalProtocolStore createInMemorySignalProtocolStore() {
         ECKeyPair tIdentityKeyPairKeys = Curve.generateKeyPair();
 
-        IdentityKeyPair tIdentityKeyPair = new IdentityKeyPair(new IdentityKey(tIdentityKeyPairKeys.getPublicKey()), tIdentityKeyPairKeys.getPrivateKey());
+        IdentityKeyPair tIdentityKeyPair = new IdentityKeyPair(new IdentityKey(tIdentityKeyPairKeys.getPublicKey()),
+                                                               tIdentityKeyPairKeys.getPrivateKey());
 
         return new InMemorySignalProtocolStore(tIdentityKeyPair, KeyHelper.generateRegistrationId(false));
     }
@@ -133,12 +140,15 @@ public class SecurityUtils {
         return Curve.verifySignature(publicKey, message, signature);
     }
 
-    public static String getClientID(Path bundlePath) throws IOException, InvalidKeyException, NoSuchAlgorithmException {
+    public static String getClientID(Path bundlePath) throws IOException, InvalidKeyException,
+            NoSuchAlgorithmException {
         byte[] clientIdentityKey = decodePublicKeyfromFile(bundlePath.resolve(CLIENT_IDENTITY_KEY));
         return generateID(clientIdentityKey);
     }
 
-    public static String encryptAesCbcPkcs5(String sharedSecret, String plainText) throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException, InvalidAlgorithmParameterException, java.security.InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
+    public static String encryptAesCbcPkcs5(String sharedSecret, String plainText) throws NoSuchAlgorithmException,
+            InvalidKeySpecException, NoSuchPaddingException, InvalidAlgorithmParameterException,
+            java.security.InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
         byte[] iv = new byte[16];
         byte[] encryptedData = null;
 

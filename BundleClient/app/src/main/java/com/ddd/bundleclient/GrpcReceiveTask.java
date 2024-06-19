@@ -155,7 +155,10 @@ class GrpcReceiveTask {
 //    protected String doInBackground(String... params) {
 //      //code has been moved
 //    }
-    protected void postExecute(String result) throws NoSessionException, InvalidMessageException, WindowExceptions.BufferOverflow, DuplicateMessageException, RoutingExceptions.ClientMetaDataFileException, IOException, LegacyMessageException, InvalidKeyException, WindowExceptions.InvalidLength, GeneralSecurityException {
+    protected void postExecute(String result) throws NoSessionException, InvalidMessageException,
+            WindowExceptions.BufferOverflow, DuplicateMessageException, RoutingExceptions.ClientMetaDataFileException
+            , IOException, LegacyMessageException, InvalidKeyException, WindowExceptions.InvalidLength,
+            GeneralSecurityException {
         if (result.equals("Incomplete")) {
             resultText.append(result + "\n");
             return;
@@ -171,7 +174,8 @@ class GrpcReceiveTask {
         sendTask.executeInBackground("192.168.49.1", "1778");
 
         String FILE_PATH = applicationContext.getApplicationInfo().dataDir + "/Shared/received-bundles";
-        BundleTransmission bundleTransmission = new BundleTransmission(Paths.get(applicationContext.getApplicationInfo().dataDir));
+        BundleTransmission bundleTransmission =
+                new BundleTransmission(Paths.get(applicationContext.getApplicationInfo().dataDir));
         bundleTransmission.processReceivedBundles(currentTransportId, FILE_PATH);
 
         Activity activity = activityReference.get();

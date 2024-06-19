@@ -111,9 +111,9 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
             e.printStackTrace();
         }
 
-
         try {
-            bundleTransmission = new BundleTransmission(Paths.get(getApplicationContext().getApplicationInfo().dataDir));
+            bundleTransmission =
+                    new BundleTransmission(Paths.get(getApplicationContext().getApplicationInfo().dataDir));
             clientWindow = bundleTransmission.getBundleSecurity().getClientWindow();
             logger.log(WARNING, "{MC} - got clientwindow " + clientWindow);
         } catch (Exception e) {

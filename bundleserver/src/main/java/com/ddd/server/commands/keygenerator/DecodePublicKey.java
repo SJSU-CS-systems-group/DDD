@@ -27,10 +27,12 @@ import static java.util.logging.Level.WARNING;
 @CommandLine.Command(name = "decode-pub-key", description = "Decode public key given private key")
 public class DecodePublicKey implements Callable<Void> {
     private static final Logger logger = Logger.getLogger(DecodePublicKey.class.getName());
+
     @Value("${bundle-server.bundle-security.server-serverkeys-path}")
     private void setStorePath(String storePath) {
         this.storePath = Paths.get(storePath);
     }
+
     private Path storePath;
 
     @Parameters(arity = "1", index = "0")
@@ -78,7 +80,7 @@ public class DecodePublicKey implements Callable<Void> {
     public Void call() throws IOException, InvalidKeyException {
         byte[] serializedPrivateKey = null;
         if (pvtFilename != null) {
-                serializedPrivateKey = decodeFile();
+            serializedPrivateKey = decodeFile();
 
         } else if (pvtbase64 != null) {
             serializedPrivateKey = decodeBase64();

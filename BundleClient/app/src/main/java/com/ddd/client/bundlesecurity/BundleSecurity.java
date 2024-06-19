@@ -56,7 +56,8 @@ public class BundleSecurity {
     private ClientSecurity client = null;
     private int counter = 0;
 
-    public BundleSecurity(Path rootFolder) throws IOException, InvalidKeyException, WindowExceptions.InvalidLength, WindowExceptions.BufferOverflow, NoSuchAlgorithmException {
+    public BundleSecurity(Path rootFolder) throws IOException, InvalidKeyException, WindowExceptions.InvalidLength,
+            WindowExceptions.BufferOverflow, NoSuchAlgorithmException {
         BundleSecurity.rootFolder = rootFolder;
 
         Path bundleSecurityPath = rootFolder.resolve(BUNDLE_SECURITY_DIR);
@@ -108,7 +109,8 @@ public class BundleSecurity {
 
     private String getLargestBundleIdReceived() {
         String bundleId = "";
-        try (BufferedReader bufferedReader = new BufferedReader(new FileReader(new File(rootFolder + LARGEST_BUNDLE_ID_RECEIVED)))) {
+        try (BufferedReader bufferedReader = new BufferedReader(
+                new FileReader(new File(rootFolder + LARGEST_BUNDLE_ID_RECEIVED)))) {
             String line = "";
             while ((line = bufferedReader.readLine()) != null) {
                 bundleId = line.trim();
@@ -129,14 +131,16 @@ public class BundleSecurity {
     }
 
     private void writeCounterToDB() {
-        try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(rootFolder + BUNDLE_ID_NEXT_COUNTER)))) {
+        try (BufferedWriter bufferedWriter = new BufferedWriter(
+                new FileWriter(new File(rootFolder + BUNDLE_ID_NEXT_COUNTER)))) {
             bufferedWriter.write(String.valueOf(this.counter));
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public void registerLargestBundleIdReceived(String bundleId) throws WindowExceptions.BufferOverflow, IOException, InvalidKeyException, GeneralSecurityException {
+    public void registerLargestBundleIdReceived(String bundleId) throws WindowExceptions.BufferOverflow, IOException,
+            InvalidKeyException, GeneralSecurityException {
         logger.log(INFO, "[BS] Inside registerLargestBundleIdReceived function " + bundleId);
         clientWindow.processBundle(bundleId, client);
         logger.log(INFO, "Receive window is:");
@@ -157,7 +161,8 @@ public class BundleSecurity {
         return clientBundleGenerator.generateBundleID();
     }
 
-    public UncompressedBundle encryptPayload(Payload payload, Path bundleGenDirPath) throws IOException, InvalidKeyException {
+    public UncompressedBundle encryptPayload(Payload payload, Path bundleGenDirPath) throws IOException,
+            InvalidKeyException {
         String bundleId = payload.getBundleId();
         logger.log(INFO, "Encrypting payload in bundleId: " + bundleId);
         logger.log(INFO, "[BS] Payload source:" + payload.getSource() + " bundle id " + bundleId);
@@ -169,19 +174,25 @@ public class BundleSecurity {
 
         EncryptedPayload encryptedPayload = new EncryptedPayload(bundleId, paths[0].toFile());
         File source = new File(bundleGenDirPath + File.separator + bundleId);
-        EncryptionHeader encHeader = EncryptionHeader.builder().clientBaseKey(paths[2].toFile()).clientIdentityKey(paths[3].toFile()).serverIdentityKey(paths[4].toFile()).build();
+        EncryptionHeader encHeader =
+                EncryptionHeader.builder().clientBaseKey(paths[2].toFile()).clientIdentityKey(paths[3].toFile())
+                        .serverIdentityKey(paths[4].toFile()).build();
         return new UncompressedBundle(bundleId, source, encHeader, encryptedPayload, paths[1].toFile());
 
     }
 
-    public Payload decryptPayload(UncompressedBundle uncompressedBundle) throws NoSessionException, InvalidMessageException, DuplicateMessageException, IOException, LegacyMessageException, InvalidKeyException {
-        File decryptedPayloadJar = new File(uncompressedBundle.getSource().getAbsolutePath() + File.separator + Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar");
+    public Payload decryptPayload(UncompressedBundle uncompressedBundle) throws NoSessionException,
+            InvalidMessageException, DuplicateMessageException, IOException, LegacyMessageException,
+            InvalidKeyException {
+        File decryptedPayloadJar = new File(uncompressedBundle.getSource().getAbsolutePath() + File.separator +
+                                                    Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar");
         String bundleId = "";
         if (this.isEncryptionEnabled) {
             ClientSecurity clientSecurity = ClientSecurity.getInstance();
             clientSecurity.decrypt(uncompressedBundle.getSource().toPath(), uncompressedBundle.getSource().toPath());
             bundleId = clientSecurity.getBundleIDFromFile(uncompressedBundle.getSource().toPath());
-            File decryptedPayload = new File(uncompressedBundle.getSource().getAbsolutePath() + File.separator + bundleId + ".decrypted");
+            File decryptedPayload = new File(
+                    uncompressedBundle.getSource().getAbsolutePath() + File.separator + bundleId + ".decrypted");
             if (decryptedPayload.exists()) {
                 decryptedPayload.renameTo(decryptedPayloadJar);
             }
@@ -191,7 +202,8 @@ public class BundleSecurity {
 
     public boolean isLatestReceivedBundleId(String bundleId) {
         String largestBundleIdReceived = this.getLargestBundleIdReceived();
-        return (StringUtils.isEmpty(largestBundleIdReceived) || this.compareReceivedBundleIds(bundleId, largestBundleIdReceived) > 0);
+        return (StringUtils.isEmpty(largestBundleIdReceived) ||
+                this.compareReceivedBundleIds(bundleId, largestBundleIdReceived) > 0);
     }
 
     public ClientWindow getClientWindow() {

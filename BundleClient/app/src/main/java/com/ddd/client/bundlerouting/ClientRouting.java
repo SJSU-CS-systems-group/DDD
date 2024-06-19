@@ -55,8 +55,7 @@ public class ClientRouting {
         }
     }
 
-    public static ClientRouting initializeInstance(Path metaDataPath) throws ClientMetaDataFileException,
-            IOException {
+    public static ClientRouting initializeInstance(Path metaDataPath) throws ClientMetaDataFileException, IOException {
         if (singleClientRoutingInstance == null) {
             singleClientRoutingInstance = new ClientRouting(metaDataPath);
         } else {

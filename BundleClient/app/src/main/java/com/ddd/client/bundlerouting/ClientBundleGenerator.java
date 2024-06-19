@@ -30,7 +30,7 @@ public class ClientBundleGenerator {
 
     private ClientBundleGenerator(ClientSecurity clientSecurity, Path rootPath) throws IOException {
         this.clientSecurity = clientSecurity;
-        counterFilePath = rootPath.resolve(Paths.get("BundleRouting","sentBundle.id"));
+        counterFilePath = rootPath.resolve(Paths.get("BundleRouting", "sentBundle.id"));
 
         try {
             byte[] counterFromFile = Files.readAllBytes(counterFilePath);
@@ -69,14 +69,16 @@ public class ClientBundleGenerator {
         return clientSecurity.encryptBundleID(plainBundleID);
     }
 
-    public int compareBundleIDs(String id1, String id2, boolean direction) throws GeneralSecurityException, InvalidKeyException {
+    public int compareBundleIDs(String id1, String id2, boolean direction) throws GeneralSecurityException,
+            InvalidKeyException {
         String decryptedBundleID1 = clientSecurity.decryptBundleID(id1);
         String decryptedBundleID2 = clientSecurity.decryptBundleID(id2);
 
         return BundleIDGenerator.compareBundleIDs(decryptedBundleID1, decryptedBundleID2, direction);
     }
 
-    public long getCounterFromBundleID(String bundleID, boolean direction) throws GeneralSecurityException, InvalidKeyException {
+    public long getCounterFromBundleID(String bundleID, boolean direction) throws GeneralSecurityException,
+            InvalidKeyException {
         String decryptedBundleID = clientSecurity.decryptBundleID(bundleID);
         return BundleIDGenerator.getCounterFromBundleID(decryptedBundleID, direction);
     }

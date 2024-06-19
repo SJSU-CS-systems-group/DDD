@@ -26,7 +26,8 @@ public class BundleIDGenerator {
      * Returns:
      * bundleID as a Base64 encoded String
      */
-    synchronized public String generateBundleID(Path clientKeyPath, boolean direction) throws IOException, NoSuchAlgorithmException, InvalidKeyException {
+    synchronized public String generateBundleID(Path clientKeyPath, boolean direction) throws IOException,
+            NoSuchAlgorithmException, InvalidKeyException {
         String clientID = SecurityUtils.getClientID(clientKeyPath);
 
         currentCounter++;

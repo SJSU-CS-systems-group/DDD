@@ -126,18 +126,17 @@ public class ClientWindow {
      * Returns:
      * None
      */
-    public void processBundle(String bundleID, ClientSecurity clientSecurity) throws BufferOverflow, IOException, GeneralSecurityException, InvalidKeyException {
+    public void processBundle(String bundleID, ClientSecurity clientSecurity) throws BufferOverflow, IOException,
+            GeneralSecurityException, InvalidKeyException {
         String decryptedBundleID = clientSecurity.decryptBundleID(bundleID);
         logger.log(FINE, "Largest Bundle ID = " + decryptedBundleID);
         long ack = BundleIDGenerator.getCounterFromBundleID(decryptedBundleID, BundleIDGenerator.DOWNSTREAM);
 
         if (Long.compareUnsigned(ack, begin) == -1) {
-            logger.log(FINE,
-                       "Received old [" + ack + " < " + begin + "]");
+            logger.log(FINE, "Received old [" + ack + " < " + begin + "]");
             return;
         } else if (Long.compareUnsigned(ack, end) == 1) {
-            logger.log(FINE,
-                       "Received Invalid ACK [" + ack + " < " + end + "]");
+            logger.log(FINE, "Received Invalid ACK [" + ack + " < " + end + "]");
             return;
         }
 

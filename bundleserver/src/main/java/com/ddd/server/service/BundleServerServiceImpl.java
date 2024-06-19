@@ -168,10 +168,10 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
         List<File> bundlesList = bundleTransmission.getBundlesForTransmission(request.getTransportId());
         logger.log(FINE, "Downloaded " + bundleTransmission);
         if (bundlesList.isEmpty()) {
-            BundleTransferDTO bundleTransferDTO =
-                    null;
+            BundleTransferDTO bundleTransferDTO = null;
             try {
-                bundleTransferDTO = bundleTransmission.generateBundlesForTransmission(request.getTransportId(), filesOnTransportSet);
+                bundleTransferDTO = bundleTransmission.generateBundlesForTransmission(request.getTransportId(),
+                                                                                      filesOnTransportSet);
             } catch (Exception e) {
                 logger.log(WARNING, "[BundleServerService] Error generating bundles for transmission", e);
                 responseObserver.onError(e);

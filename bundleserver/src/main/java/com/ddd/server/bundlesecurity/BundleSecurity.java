@@ -92,7 +92,8 @@ public class BundleSecurity {
     //  }
 
     public boolean isLatestReceivedBundleId(String clientId, String bundleId, String largestBundleIdReceived) {
-        return (StringUtils.isEmpty(largestBundleIdReceived) || this.compareRecvdBundleIds(bundleId, largestBundleIdReceived) > 0);
+        return (StringUtils.isEmpty(largestBundleIdReceived) ||
+                this.compareRecvdBundleIds(bundleId, largestBundleIdReceived) > 0);
     }
 
     public void encryptBundleContents(UncompressedPayload bundle) {
@@ -141,11 +142,13 @@ public class BundleSecurity {
 
     public Payload decryptPayload(UncompressedBundle uncompressedBundle) {
         String bundleId = "";
-        File decryptedPayloadJar = new File(uncompressedBundle.getSource().getAbsolutePath() + File.separator + Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar");
+        File decryptedPayloadJar = new File(uncompressedBundle.getSource().getAbsolutePath() + File.separator +
+                                                    Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar");
 
         if (this.encryptionEnabled) {
             try {
-                this.serverSecurity.decrypt(uncompressedBundle.getSource().toPath(), uncompressedBundle.getSource().toPath());
+                this.serverSecurity.decrypt(uncompressedBundle.getSource().toPath(),
+                                            uncompressedBundle.getSource().toPath());
             } catch (Exception e) {
                 // TODO
                 logger.log(SEVERE, "[BundleSecurity] Failed to decrypt payload");
@@ -176,12 +179,15 @@ public class BundleSecurity {
         EncryptedPayload encryptedPayload = new EncryptedPayload(bundleId, paths[0].toFile());
 
         File source = new File(bundleGenDirPath + File.separator + bundleId);
-        EncryptionHeader encHeader = EncryptionHeader.builder().serverSignedPreKey(paths[2].toFile()).serverIdentityKey(paths[3].toFile()).serverRatchetKey(paths[4].toFile()).build();
+        EncryptionHeader encHeader =
+                EncryptionHeader.builder().serverSignedPreKey(paths[2].toFile()).serverIdentityKey(paths[3].toFile())
+                        .serverRatchetKey(paths[4].toFile()).build();
         return new UncompressedBundle( // TODO get encryption header, payload signature
-                bundleId, source, encHeader, encryptedPayload, paths[1].toFile());
+                                       bundleId, source, encHeader, encryptedPayload, paths[1].toFile());
     }
 
-    public int isNewerBundle(Path bundlePath, String lastReceivedBundleID) throws GeneralSecurityException, IOException, InvalidKeyException {
+    public int isNewerBundle(Path bundlePath, String lastReceivedBundleID) throws GeneralSecurityException,
+            IOException, InvalidKeyException {
         return this.serverSecurity.isNewerBundle(bundlePath, lastReceivedBundleID);
     }
 
