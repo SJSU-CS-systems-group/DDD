@@ -41,7 +41,16 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+
 public class MainActivity extends AppCompatActivity implements RpcServerStateListener, WifiDirectStateListener {
+
+    private static final Logger logger = Logger.getLogger(MainActivity.class.getName());
+
     public static final int PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION = 1001;
     // public static final String TAG = "dddTransport";
 
@@ -77,7 +86,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION) {
             if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                Log.e(TAG, "Fine location permission is not granted!");
+                logger.log(SEVERE, "Fine location permission is not granted!");
                 finish();
             }
         }
@@ -90,7 +99,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
             Toast.makeText(this, "I request groupInfo: ", Toast.LENGTH_SHORT).show();
             WifiP2pGroup group = b;
             Collection<WifiP2pDevice> devices = group.getClientList();
-            Log.d(TAG, "Looping through group devices");
+            logger.log(FINE, "Looping through group devices");
             for (WifiP2pDevice d : devices) {
                 Log.d(TAG, d.toString());
             }
@@ -103,7 +112,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
             synchronized (grpcServer) {
                 if (grpcServer.isShutdown()) {
                     manageRequestedWifiDirectGroup();
-                    Log.d(TAG, "starting grpc server from main activity!!!!!!!");
+                    logger.log(INFO, "starting grpc server from main activity!!!!!!!");
                     grpcServer.startServer(this);
                 }
             }
@@ -158,7 +167,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         serverDomain = domainInput.getText().toString();
         serverPort = portInput.getText().toString();
         if (!serverDomain.isEmpty() && !serverPort.isEmpty()) {
-            Log.d(TAG, "Sending to " + serverDomain + ":" + serverPort);
+            logger.log(INFO, "Sending to " + serverDomain + ":" + serverPort);
 
             runOnUiThread(() -> {
                 serverConnectStatus.setText(
@@ -184,28 +193,28 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         serverConnectNetworkCallback = new ConnectivityManager.NetworkCallback() {
             @Override
             public void onAvailable(Network network) {
-                Log.d(TAG, "Available network: " + network.toString());
-                Log.d(TAG, "Initiating automatic connection to server");
+                logger.log(INFO, "Available network: " + network.toString());
+                logger.log(INFO, "Initiating automatic connection to server");
                 connectToServer();
             }
 
             @Override
             public void onLost(Network network) {
-                Log.d(TAG, "Lost network connectivity");
+                logger.log(WARNING, "Lost network connectivity");
 //                toggleBtnEnabled(connectServerBtn, false);
                 connectServerBtn.setEnabled(false);
             }
 
             @Override
             public void onUnavailable() {
-                Log.e(TAG, "Unavailable network connectivity");
+                logger.log(WARNING, "Unavailable network connectivity");
 //                toggleBtnEnabled(connectServerBtn, false);
                 connectServerBtn.setEnabled(false);
             }
 
             @Override
             public void onBlockedStatusChanged(Network network, boolean blocked) {
-                Log.d(TAG, "Blocked network connectivity");
+                logger.log(WARNING, "Blocked network connectivity");
 //                toggleBtnEnabled(connectServerBtn, false);
                 connectServerBtn.setEnabled(false);
 
