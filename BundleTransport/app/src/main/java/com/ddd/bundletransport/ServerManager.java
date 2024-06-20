@@ -1,7 +1,6 @@
 package com.ddd.bundletransport;
 
 import android.content.Context;
-import android.util.Log;
 
 import java.io.File;
 import java.util.concurrent.ExecutorService;
@@ -17,7 +16,7 @@ public class ServerManager implements Runnable {
 
     private static final Logger logger = Logger.getLogger(ServerManager.class.getName());
 
-    // private final static String TAG = "dddTransport";
+    //private final static String TAG = "dddTransport";
 
     private Function<Exception, Void> sendCallback, receiveCallback;
     private Function<Void, Void> connectComplete;
