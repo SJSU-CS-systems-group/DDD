@@ -53,7 +53,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
     private static final Logger logger = Logger.getLogger(MainActivity.class.getName());
 
     public static final int PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION = 1001;
-    // public static final String TAG = "dddTransport";
+    public static final String TAG = "dddTransport";
 
     private Button startGRPCServerBtn, stopGRPCServerBtn;
     private WifiDirectManager wifiDirectManager;
