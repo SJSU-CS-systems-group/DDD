@@ -98,13 +98,15 @@ public class GrpcReceiveTask {
                         logger.log(INFO, "Downloading chunk of: " + response.getMetadata().getBid());
                         writer = FileUtils.getFilePath(response, receiveDir);
                     } catch (IOException e) {
-                        logger.log(WARNING, "/GrpcReceiveTask.java -> executeTask() -> onNext() IOException: " + e.getMessage());
+                        logger.log(WARNING,
+                                   "/GrpcReceiveTask.java -> executeTask() -> onNext() IOException: " + e.getMessage());
                     }
                 } else {
                     try {
                         FileUtils.writeFile(writer, response.getFile().getContent());
                     } catch (IOException e) {
-                        logger.log(WARNING, "/GrpcReceiveTask.java -> executeTask() -> onNext() IOException: " + e.getMessage());
+                        logger.log(WARNING,
+                                   "/GrpcReceiveTask.java -> executeTask() -> onNext() IOException: " + e.getMessage());
                     }
                 }
             }
@@ -118,8 +120,8 @@ public class GrpcReceiveTask {
                     try {
                         fileOutputStream.close();
                     } catch (IOException e) {
-                        logger.log(WARNING,
-                              "/GrpcReceiveTask.java -> executeTask() -> onError() IOException: " + e.getMessage());
+                        logger.log(WARNING, "/GrpcReceiveTask.java -> executeTask() -> onError() IOException: " +
+                                e.getMessage());
 
                     }
                 }

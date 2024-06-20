@@ -398,7 +398,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
 
     @Override
     protected void onDestroy() {
-        logger.log(INFO,"onDestroy Receiver", "Called");
+        logger.log(INFO, "onDestroy Receiver", "Called");
 
         super.onDestroy();
         stopRpcServer();
