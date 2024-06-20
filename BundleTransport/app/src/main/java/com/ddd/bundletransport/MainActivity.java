@@ -14,7 +14,7 @@ import android.net.wifi.p2p.WifiP2pGroup;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.util.Log;
+
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -41,7 +41,17 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.SEVERE;
+
 public class MainActivity extends AppCompatActivity implements RpcServerStateListener, WifiDirectStateListener {
+
+    private static final Logger logger = Logger.getLogger(MainActivity.class.getName());
+
     public static final int PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION = 1001;
     public static final String TAG = "dddTransport";
 
@@ -77,7 +87,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION) {
             if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                Log.e(TAG, "Fine location permission is not granted!");
+                logger.log(SEVERE, "Fine location permission is not granted!");
                 finish();
             }
         }
@@ -90,9 +100,9 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
             Toast.makeText(this, "I request groupInfo: ", Toast.LENGTH_SHORT).show();
             WifiP2pGroup group = b;
             Collection<WifiP2pDevice> devices = group.getClientList();
-            Log.d(TAG, "Looping through group devices");
+            logger.log(FINE, "Looping through group devices");
             for (WifiP2pDevice d : devices) {
-                Log.d(TAG, d.toString());
+                logger.log(FINE, d.toString());
             }
             return b;
         });
@@ -103,7 +113,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
             synchronized (grpcServer) {
                 if (grpcServer.isShutdown()) {
                     manageRequestedWifiDirectGroup();
-                    Log.d(TAG, "starting grpc server from main activity!!!!!!!");
+                    logger.log(INFO, "starting grpc server from main activity!!!!!!!");
                     grpcServer.startServer(this);
                 }
             }
@@ -158,7 +168,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         serverDomain = domainInput.getText().toString();
         serverPort = portInput.getText().toString();
         if (!serverDomain.isEmpty() && !serverPort.isEmpty()) {
-            Log.d(TAG, "Sending to " + serverDomain + ":" + serverPort);
+            logger.log(INFO, "Sending to " + serverDomain + ":" + serverPort);
 
             runOnUiThread(() -> {
                 serverConnectStatus.setText(
@@ -184,28 +194,28 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         serverConnectNetworkCallback = new ConnectivityManager.NetworkCallback() {
             @Override
             public void onAvailable(Network network) {
-                Log.d(TAG, "Available network: " + network.toString());
-                Log.d(TAG, "Initiating automatic connection to server");
+                logger.log(INFO, "Available network: " + network.toString());
+                logger.log(INFO, "Initiating automatic connection to server");
                 connectToServer();
             }
 
             @Override
             public void onLost(Network network) {
-                Log.d(TAG, "Lost network connectivity");
+                logger.log(WARNING, "Lost network connectivity");
 //                toggleBtnEnabled(connectServerBtn, false);
                 connectServerBtn.setEnabled(false);
             }
 
             @Override
             public void onUnavailable() {
-                Log.e(TAG, "Unavailable network connectivity");
+                logger.log(WARNING, "Unavailable network connectivity");
 //                toggleBtnEnabled(connectServerBtn, false);
                 connectServerBtn.setEnabled(false);
             }
 
             @Override
             public void onBlockedStatusChanged(Network network, boolean blocked) {
-                Log.d(TAG, "Blocked network connectivity");
+                logger.log(WARNING, "Blocked network connectivity");
 //                toggleBtnEnabled(connectServerBtn, false);
                 connectServerBtn.setEnabled(false);
 
@@ -226,7 +236,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         runOnUiThread(() -> {
             if (thrown != null) {
                 serverConnectStatus.append("Bundles upload failed.\n");
-                Log.e(TAG, "Failed bundle upload, exception: " + thrown.getMessage());
+                logger.log(SEVERE, "Failed bundle upload, exception: " + thrown.getMessage());
             } else {
                 serverConnectStatus.append("Bundles uploaded successfully.\n");
             }
@@ -239,7 +249,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         runOnUiThread(() -> {
             if (thrown != null) {
                 serverConnectStatus.append("Bundles download failed.\n");
-                Log.e(TAG, "Failed bundle d, exception: " + thrown.getMessage());
+                logger.log(SEVERE, "Failed bundle d, exception: " + thrown.getMessage());
             } else {
                 serverConnectStatus.append("Bundles downloaded successfully.\n");
             }
@@ -328,7 +338,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         } else {
             try {
                 transportID = SecurityUtils.generateID(tidPath);
-                Log.d(TAG, "Transport ID : " + transportID);
+                logger.log(FINE, "Transport ID : " + transportID);
             } catch (IOException | InvalidKeyException | NoSuchAlgorithmException e) {
                 e.printStackTrace();
             }
@@ -389,7 +399,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
 
     @Override
     protected void onDestroy() {
-        Log.i("onDestroy Receiver", "Called");
+        logger.log(INFO, "onDestroy Receiver", "Called");
 
         super.onDestroy();
         stopRpcServer();
@@ -402,7 +412,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         updateNearbyDevices();
         connectedPeersText.setText("");
         if (wifiDirectManager.getConnectedPeers() != null) {
-            Log.d(TAG, "Connected Devices Updates\n");
+            logger.log(FINE, "Connected Devices Updates\n");
             wifiDirectManager.getConnectedPeers().stream().forEach(device -> {
                 connectedPeersText.append(device.deviceName + "\n");
             });
@@ -426,7 +436,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
                 }
             }
         }
-        Log.d(TAG, "Nearby Devices Updates\n");
+        logger.log(FINE, "Nearby Devices Updates\n");
         nearbyDevicesSet.stream().forEach(deviceName -> {
             nearByPeersText.append(deviceName + "\n");
         });

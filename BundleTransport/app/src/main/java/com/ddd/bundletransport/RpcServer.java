@@ -3,7 +3,6 @@ package com.ddd.bundletransport;
 import com.ddd.bundletransport.service.FileServiceImpl;
 
 import android.content.Context;
-import android.util.Log;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -12,11 +11,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+
 import io.grpc.Server;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 
 public class RpcServer {
-    private final String TAG = "dddTransport";
+
+    private static final Logger logger = Logger.getLogger(RpcServer.class.getName());
+
+    // private final String TAG = "dddTransport";
     private final String inetSocketAddressIP = "192.168.49.1";
     private final int port = 7777;
     private ServerState state = ServerState.SHUTDOWN;
@@ -42,7 +50,7 @@ public class RpcServer {
     }
 
     public void startServer(Context context) {
-        Log.d(TAG, "Server state is : " + state.name());
+        logger.log(INFO, "Server state is : " + state.name());
         if (state == ServerState.RUNNING || state == ServerState.PENDING) {
             return;
         }
@@ -51,14 +59,14 @@ public class RpcServer {
         notifyStateChange(ServerState.PENDING);
         server = NettyServerBuilder.forAddress(address).addService(new FileServiceImpl(context)).build();
 
-        Log.d(TAG, "Starting rpc server at: " + server.toString());
+        logger.log(INFO, "Starting rpc server at: " + server.toString());
 
         try {
             server.start();
             notifyStateChange(ServerState.RUNNING);
-            Log.d(TAG, "Rpc server running at: " + server.toString());
+            logger.log(FINE, "Rpc server running at: " + server.toString());
         } catch (IOException e) {
-            Log.e(TAG, "RpcServer -> startServer() IOException: " + e.getMessage());
+            logger.log(WARNING, "RpcServer -> startServer() IOException: " + e.getMessage());
             notifyStateChange(ServerState.SHUTDOWN);
         }
     }
@@ -68,7 +76,7 @@ public class RpcServer {
             return;
         }
 
-        Log.d(TAG, "Stopping rpc server");
+        logger.log(INFO, "Stopping rpc server");
         notifyStateChange(ServerState.PENDING);
         if (server != null) {
             try {
@@ -76,13 +84,13 @@ public class RpcServer {
                 if (!stopped) {
                     throw new Exception("Server not stopped");
                 }
-                Log.d(TAG, "Stopped rpc server");
+                logger.log(WARNING, "Stopped rpc server");
                 notifyStateChange(ServerState.SHUTDOWN);
             } catch (IOException e) {
-                Log.e(TAG, "RpcServer -> terminateServer() IOException: " + e.getMessage());
+                logger.log(WARNING, "RpcServer -> terminateServer() IOException: " + e.getMessage());
                 notifyStateChange(ServerState.RUNNING);
             } catch (Exception e) {
-                Log.e(TAG, "RpcServer -> terminateServer() Exception: " + e.getMessage());
+                logger.log(WARNING, "RpcServer -> terminateServer() Exception: " + e.getMessage());
                 notifyStateChange(ServerState.RUNNING);
             }
         }
