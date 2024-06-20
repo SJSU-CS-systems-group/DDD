@@ -14,10 +14,20 @@ import java.net.SocketAddress;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.SEVERE;
+
 import io.grpc.Server;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 
 public class RpcServerWorker extends Worker {
+
+    private static final Logger logger = Logger.getLogger(RpcServerWorker.class.getName());
+
     private RpcServer rpcServer;
 
     public RpcServerWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
@@ -28,7 +38,7 @@ public class RpcServerWorker extends Worker {
 
         rpcServer = RpcServer.getInstance(null);
 
-        Log.d(MainActivity.TAG, "start rpc server from RpcServerWorker at:" + rpcServer);
+        logger.log(INFO, "start rpc server from RpcServerWorker at:" + rpcServer);
         try {
             rpcServer.startServer(this.getApplicationContext());
 
@@ -38,7 +48,7 @@ public class RpcServerWorker extends Worker {
     }
 
     private void stopRpcServer() {
-        Log.d(MainActivity.TAG, "stop rpc server");
+        logger.log(WARNING, "stop rpc server");
         if (rpcServer != null && !rpcServer.isShutdown()) {
             rpcServer.shutdownServer();
         }
