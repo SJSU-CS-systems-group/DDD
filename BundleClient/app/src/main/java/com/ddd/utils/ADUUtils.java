@@ -66,30 +66,4 @@ public class ADUUtils {
 
         return ret;
     }
-
-    public static List<ADU> readADUs(File aduDirectory, String appId) {
-        List<ADU> ret = new ArrayList<>();
-        File[] aduFiles = aduDirectory.listFiles();
-        if (aduFiles == null) {
-            return ret;
-        }
-        File appSubDirectory = new File(aduDirectory.getAbsolutePath() + "/" + appId);
-
-        for (final File aduFile : appSubDirectory.listFiles()) {
-            String aduFileName = aduFile.getName();
-            long aduId = Long.valueOf(aduFileName.split("-")[1]);
-            long size = aduFile.length();
-            ret.add(new ADU(aduFile, appId, aduId, size));
-        }
-
-        return ret;
-    }
-
-    private static Long getADUId(String aduFileName) {
-        return Long.valueOf(aduFileName.split("-")[1]);
-    }
-
-    public static ADU readADUFromFile(File aduFile, String appId) {
-        return new ADU(aduFile, appId, getADUId(aduFile.getName()), aduFile.getTotalSpace());
-    }
 }

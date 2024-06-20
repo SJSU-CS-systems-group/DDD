@@ -98,38 +98,6 @@ public class BundleSecurity {
         inServerRatchet.close();
     }
 
-    private String getLargestBundleIdReceived() {
-        String bundleId = "";
-        try (BufferedReader bufferedReader = new BufferedReader(
-                new FileReader(new File(rootFolder + LARGEST_BUNDLE_ID_RECEIVED)))) {
-            String line = "";
-            while ((line = bufferedReader.readLine()) != null) {
-                bundleId = line.trim();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        logger.log(INFO, "[BS] Largest bundle id received so far: " + bundleId);
-        return bundleId.trim();
-    }
-
-    private Long getRecvdBundleIdCounter(String bundleId) {
-        return Long.valueOf(bundleId.split("#")[1]);
-    }
-
-    private int compareReceivedBundleIds(String a, String b) {
-        return this.getRecvdBundleIdCounter(a).compareTo(this.getRecvdBundleIdCounter(b));
-    }
-
-    private void writeCounterToDB() {
-        try (BufferedWriter bufferedWriter = new BufferedWriter(
-                new FileWriter(new File(rootFolder + BUNDLE_ID_NEXT_COUNTER)))) {
-            bufferedWriter.write(String.valueOf(this.counter));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     public void registerLargestBundleIdReceived(String bundleId) throws WindowExceptions.BufferOverflow, IOException,
             InvalidKeyException, GeneralSecurityException {
         logger.log(INFO, "[BS] Inside registerLargestBundleIdReceived function " + bundleId);
@@ -142,10 +110,6 @@ public class BundleSecurity {
 
     public ClientBundleGenerator getClientBundleGenerator() {
         return clientBundleGenerator;
-    }
-
-    public void decryptBundleContents(UncompressedPayload bundle) {
-        logger.log(INFO, "[BS] Decrypting contents of the bundle with id: " + bundle.getBundleId());
     }
 
     public String generateNewBundleId() throws IOException, InvalidKeyException, GeneralSecurityException {
@@ -189,12 +153,6 @@ public class BundleSecurity {
             }
         }
         return new Payload(bundleId, decryptedPayloadJar);
-    }
-
-    public boolean isLatestReceivedBundleId(String bundleId) {
-        String largestBundleIdReceived = this.getLargestBundleIdReceived();
-        return (StringUtils.isEmpty(largestBundleIdReceived) ||
-                this.compareReceivedBundleIds(bundleId, largestBundleIdReceived) > 0);
     }
 
     public ClientWindow getClientWindow() {

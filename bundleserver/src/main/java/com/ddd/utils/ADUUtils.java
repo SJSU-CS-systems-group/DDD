@@ -76,12 +76,4 @@ public class ADUUtils {
         }
         return ret;
     }
-
-    private static Long getADUId(String aduFileName) {
-        return Long.valueOf(aduFileName.split("-")[1]);
-    }
-
-    public static ADU readADUFromFile(File aduFile, String appId) {
-        return new ADU(aduFile, appId, getADUId(aduFile.getName()), aduFile.getTotalSpace());
-    }
 }
