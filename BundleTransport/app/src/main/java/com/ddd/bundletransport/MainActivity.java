@@ -46,6 +46,7 @@ import java.util.logging.Logger;
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.SEVERE;
 
 public class MainActivity extends AppCompatActivity implements RpcServerStateListener, WifiDirectStateListener {
 
