@@ -27,12 +27,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
-import java.util.logging.Logger;
-
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.WARNING;
-import static java.util.logging.Level.SEVERE;
 
 /**
  * Main WifiDirect class
