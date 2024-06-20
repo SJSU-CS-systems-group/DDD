@@ -2,8 +2,6 @@ package com.ddd.server.bundlesecurity;
 
 import com.ddd.model.*;
 import com.ddd.utils.Constants;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -15,7 +13,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.*;
@@ -30,42 +27,6 @@ public class BundleSecurity {
 
     private final boolean encryptionEnabled = true;
 
-    /* Compares BundleIDs
-     * Paramerters:
-     * id1:         First BundleID
-     * id2:         Second BundleID
-     * direction:   true UPSTREAM (Client->Server), false DOWNSTREAM (Server->Client)
-     * Returns:
-     * -1 =>  id1 < id2
-     * 0  =>  id1 = id2
-     * 1  =>  id1 > id2
-     */
-    public static int compareBundleIDs(String id1, String id2, boolean direction) {
-        return -1;
-    }
-
-    private Long getRecvdBundleIdCounter(String bundleId) {
-        return Long.valueOf(bundleId.split("-")[1]);
-    }
-
-    // @Autowired
-    // public BundleSecurity(
-    //     @Value("${bundle-server.application-data-manager.state-manager.bundle-id-next-counter}") String
-    //     BUNDLE_ID_NEXT_COUNTER) {
-    //   File bundleIdNextCounter = new File(BUNDLE_ID_NEXT_COUNTER);
-
-    //   try {
-    //     bundleIdNextCounter.getParentFile().mkdirs();
-    //     bundleIdNextCounter.createNewFile();
-    //   } catch (IOException e) {
-    //     e.printStackTrace();
-    //   }
-    // }
-
-    private int compareRecvdBundleIds(String a, String b) {
-        return this.getRecvdBundleIdCounter(a).compareTo(this.getRecvdBundleIdCounter(b));
-    }
-
     @PostConstruct
     private void init() {
         File bundleIdNextCounter = new File(BUNDLE_ID_NEXT_COUNTER);
@@ -76,68 +37,6 @@ public class BundleSecurity {
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    public void decryptBundleContents(UncompressedPayload bundle) {
-        logger.log(WARNING, "[BundleSecurity] Decrypting contents of bundle with id: " + bundle.getBundleId());
-    }
-
-    public void processACK(String clientId, String bundleId) {
-        // TODO During window implementation
-        logger.log(WARNING, "[BundleSecurity] Received acknowledgement for sent bundle id " + bundleId);
-    }
-
-    //  public String generateBundleID(String clientKeyPath, boolean direction) {
-    //    return "";
-    //  }
-
-    public boolean isLatestReceivedBundleId(String clientId, String bundleId, String largestBundleIdReceived) {
-        return (StringUtils.isEmpty(largestBundleIdReceived) ||
-                this.compareRecvdBundleIds(bundleId, largestBundleIdReceived) > 0);
-    }
-
-    public void encryptBundleContents(UncompressedPayload bundle) {
-        logger.log(WARNING, "[BundleSecurity] Encrypting contents of the bundle with id: " + bundle.getBundleId());
-    }
-
-    public boolean isSenderWindowFull(String clientId) {
-        // TODO
-        return false;
-    }
-
-    public String getClientIdFromBundleId(String bundleId) {
-        String clientId = "";
-        if (bundleId.contains("-")) {
-            clientId = bundleId.split("-")[0];
-        } else {
-            clientId = bundleId.split("#")[0];
-        }
-        logger.log(INFO, "[BundleSecurity] Client id corresponding to bundle id: " + bundleId + " is " + clientId);
-        return clientId;
-    }
-
-    public void decrypt(String bundlePath, String decryptedPath) {
-        logger.log(WARNING, "mock decrypt implementation");
-    }
-
-    public String[] encrypt(String toBeEncPath, String encPath, String bundleID, String clientID) {
-        File bundleDir = new File(encPath + File.separator + bundleID);
-        bundleDir.mkdirs();
-
-        File bundleIdFile = new File(bundleDir + File.separator + Constants.BUNDLE_IDENTIFIER_FILE_NAME);
-        try {
-            FileUtils.writeLines(bundleIdFile, Arrays.asList(bundleID));
-        } catch (IOException e1) {
-            e1.printStackTrace();
-        }
-        try {
-            FileUtils.copyFile(new File(toBeEncPath), new File(bundleDir + File.separator + bundleID + ".jar"));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        logger.log(INFO, "mock encrypt implementation");
-        return null;
     }
 
     public Payload decryptPayload(UncompressedBundle uncompressedBundle) {

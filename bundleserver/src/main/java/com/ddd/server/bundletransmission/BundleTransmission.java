@@ -23,7 +23,6 @@ import org.whispersystems.libsignal.InvalidKeyException;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
-import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.util.*;
@@ -154,9 +153,6 @@ public class BundleTransmission {
             } catch (SQLException e1) {
                 e1.printStackTrace();
             }
-//      for (String clientId: reachableClients) {
-//        this.applicationDataManager.collectDataForClients(clientId);
-//      }
             for (final File bundleFile : transportDir.listFiles()) {
                 Bundle bundle = new Bundle(bundleFile);
                 try {
