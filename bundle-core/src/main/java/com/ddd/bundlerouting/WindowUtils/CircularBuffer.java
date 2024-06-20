@@ -75,7 +75,7 @@ public class CircularBuffer {
                 i = (i + 1) % length;
             } catch (BufferUnderflow e) {
                 // TODO Change to LOG Warn
-                logger.log(WARNING,"ERROR: Buffer is Empty");
+                logger.log(WARNING, "ERROR: Buffer is Empty");
             }
         }
 
@@ -84,7 +84,7 @@ public class CircularBuffer {
             delete();
         } catch (BufferUnderflow e) {
             // TODO Change to LOG Warn
-            logger.log(WARNING,"ERROR: Buffer is Empty");
+            logger.log(WARNING, "ERROR: Buffer is Empty");
         }
 
         /* Return number of deleted items */
