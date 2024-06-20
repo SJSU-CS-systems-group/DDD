@@ -2,12 +2,17 @@ package com.ddd.bundlerouting.WindowUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 import com.ddd.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
 import com.ddd.bundlerouting.WindowUtils.WindowExceptions.BufferUnderflow;
 import com.ddd.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
 
+import static java.util.logging.Level.WARNING;
+
 public class CircularBuffer {
+    private static final Logger logger = Logger.getLogger(CircularBuffer.class.getName());
+
     private String[] buffer = null;
 
     private int start = 0;
@@ -70,7 +75,7 @@ public class CircularBuffer {
                 i = (i + 1) % length;
             } catch (BufferUnderflow e) {
                 // TODO Change to LOG Warn
-                System.out.println("ERROR: Buffer is Empty");
+                logger.log(WARNING, "ERROR: Buffer is Empty");
             }
         }
 
@@ -79,7 +84,7 @@ public class CircularBuffer {
             delete();
         } catch (BufferUnderflow e) {
             // TODO Change to LOG Warn
-            System.out.println("ERROR: Buffer is Empty");
+            logger.log(WARNING, "ERROR: Buffer is Empty");
         }
 
         /* Return number of deleted items */
