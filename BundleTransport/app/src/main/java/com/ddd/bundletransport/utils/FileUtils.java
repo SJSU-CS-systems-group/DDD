@@ -16,7 +16,17 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Objects;
 
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.SEVERE;
+
 public class FileUtils {
+
+    private static final Logger logger = Logger.getLogger(FileUtils.class.getName());
 
     public static String getFilesList(String directory) {
         String fileList = "";
@@ -55,7 +65,7 @@ public class FileUtils {
             writer.write(content.toByteArray());
             writer.flush();
         } catch (Exception e) {
-            Log.d(MainActivity.TAG, "writeFile: " + e.getMessage());
+            logger.log(WARNING, "writeFile: " + e.getMessage());
         }
 
     }
@@ -73,7 +83,7 @@ public class FileUtils {
         if (deleteDir.listFiles() != null) {
             for (File bundle : Objects.requireNonNull(deleteDir.listFiles())) {
                 boolean result = bundle.delete();
-                Log.d(MainActivity.TAG, bundle.getName() + "deleted:" + result);
+                logger.log(INFO, bundle.getName() + "deleted:" + result);
             }
         }
     }
