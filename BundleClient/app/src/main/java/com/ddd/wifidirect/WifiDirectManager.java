@@ -22,14 +22,6 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 import static java.util.logging.Level.SEVERE;
 
-import java.util.logging.Logger;
-
-import static java.util.logging.Level.FINER;
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.WARNING;
-import static java.util.logging.Level.SEVERE;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.lifecycle.DefaultLifecycleObserver;
