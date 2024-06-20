@@ -207,14 +207,14 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
 
             @Override
             public void onSuccess() {
-                logger.log(FINE,"wDebug", "Created a group");
+                logger.log(FINE, "wDebug", "Created a group");
                 //cFuture.complete(true);
             }
 
             @Override
             public void onFailure(int reasonCode) {
 
-                logger.log(WARNING,"wDebug", "Failed to create a group with reasonCode: " + reasonCode);
+                logger.log(WARNING, "wDebug", "Failed to create a group with reasonCode: " + reasonCode);
                 //cFuture.complete(false);
             }
         });
@@ -238,7 +238,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
             cBuilder.setPassphrase(password);
             return cBuilder.build();
         } catch (Exception e) {
-            logger.log(WARNING,"wDebug -- BuildGroupConfigexception: ", e);
+            logger.log(WARNING, "wDebug -- BuildGroupConfigexception: ", e);
         }
         return null;
     }
@@ -259,7 +259,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
 
             @Override
             public void onFailure(int reasonCode) {
-                logger.log(WARNING,"wDebug", "Failed to remove a group with reasonCode: " + reasonCode +
+                logger.log(WARNING, "wDebug", "Failed to remove a group with reasonCode: " + reasonCode +
                         " Note: this could mean device was never part of a group");
                 cFuture.complete(false);
             }
@@ -330,7 +330,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
 //            }
 //            return config;
         } catch (Exception e) {
-            logger.log(WARNING,"wDebug -- makeConfigException: ", e);
+            logger.log(WARNING, "wDebug -- makeConfigException: ", e);
         }
         return null;
     }
