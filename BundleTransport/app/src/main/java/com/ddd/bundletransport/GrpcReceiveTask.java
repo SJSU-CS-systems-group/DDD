@@ -15,11 +15,21 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.SEVERE;
+
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
 public class GrpcReceiveTask {
+
+    private static final Logger logger = Logger.getLogger(GrpcReceiveTask.class.getName());
+
     private final static String TAG = "dddTransport";
     private String host, receiveDir, transportId;
     private int port;
@@ -27,7 +37,7 @@ public class GrpcReceiveTask {
     private ManagedChannel channel;
 
     public GrpcReceiveTask(String host, int port, String transportId, String receiveDir) {
-        Log.d(TAG, "initializing grpcreceivetask...");
+        logger.log(INFO, "initializing grpcreceivetask...");
         this.host = host;
         this.port = port;
         this.transportId = transportId;
@@ -38,7 +48,7 @@ public class GrpcReceiveTask {
         Exception thrown = null;
         try {
             executeTask();
-            Log.d(TAG, "Executed receive task");
+            logger.log(FINE, "Executed receive task");
         } catch (Exception e) {
             thrown = e;
         }
@@ -46,14 +56,14 @@ public class GrpcReceiveTask {
         try {
             postExecuteTask();
         } catch (InterruptedException e) {
-            Log.e(TAG, "Failed to shutdown GrpcReceiveTask channel: " + e.getMessage());
+            logger.log(WARNING, "Failed to shutdown GrpcReceiveTask channel: " + e.getMessage());
         }
 
         return thrown;
     }
 
     private void executeTask() throws Exception {
-        Log.d(TAG, "executing grpcreceivetask...");
+        logger.log(INFO, "executing grpcreceivetask...");
 
         channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
         BundleServiceGrpc.BundleServiceStub stub = BundleServiceGrpc.newStub(channel);
@@ -68,50 +78,50 @@ public class GrpcReceiveTask {
 
             @Override
             public void onNext(BundleDownloadResponse response) {
-                Log.d(TAG, "onNext: called with " + response.toString());
+                logger.log(FINE, "onNext: called with " + response.toString());
                 if (response.hasBundleList()) {
-                    Log.d(TAG, "Got list for deletion");
+                    logger.log(FINE, "Got list for deletion");
                     List<String> toDelete = Arrays.asList(response.getBundleList().getBundleList().split(","));
                     if (!toDelete.isEmpty()) {
                         File clientDir = new File(receiveDir);
                         for (File bundle : clientDir.listFiles()) {
                             if (toDelete.contains(bundle.getName())) {
-                                Log.d(TAG, "Deleteing file: " + bundle.getName());
+                                logger.log(INFO, "Deleting file: " + bundle.getName());
                                 bundle.delete();
                             }
                         }
                     } else {
-                        Log.d(TAG, "No bundles to delete");
+                        logger.log(INFO, "No bundles to delete");
                     }
                 } else if (response.hasStatus()) {
-                    Log.d(TAG, "Status found: terminating loop");
+                    logger.log(INFO, "Status found: terminating loop");
                     receiveBundles = false;
                 } else if (response.hasMetadata()) {
                     try {
-                        Log.d(TAG, "Downloading chunk of: " + response.getMetadata().getBid());
+                        logger.log(INFO, "Downloading chunk of: " + response.getMetadata().getBid());
                         writer = FileUtils.getFilePath(response, receiveDir);
                     } catch (IOException e) {
-                        Log.e(TAG, "/GrpcReceiveTask.java -> executeTask() -> onNext() IOException: " + e.getMessage());
+                        logger.log(WARNING, "/GrpcReceiveTask.java -> executeTask() -> onNext() IOException: " + e.getMessage());
                     }
                 } else {
                     try {
                         FileUtils.writeFile(writer, response.getFile().getContent());
                     } catch (IOException e) {
-                        Log.e(TAG, "/GrpcReceiveTask.java -> executeTask() -> onNext() IOException: " + e.getMessage());
+                        logger.log(WARNING, "/GrpcReceiveTask.java -> executeTask() -> onNext() IOException: " + e.getMessage());
                     }
                 }
             }
 
             @Override
             public void onError(Throwable t) {
-                Log.e(TAG, "Error downloading file: " + t.getMessage(), t);
+                logger.log(SEVERE, "Error downloading file: " + t.getMessage(), t);
                 receiveBundles = false;
                 thrown[0] = t;
                 if (fileOutputStream != null) {
                     try {
                         fileOutputStream.close();
                     } catch (IOException e) {
-                        Log.e(TAG,
+                        logger.log(WARNING,
                               "/GrpcReceiveTask.java -> executeTask() -> onError() IOException: " + e.getMessage());
 
                     }
@@ -124,14 +134,14 @@ public class GrpcReceiveTask {
                     FileUtils.closeFile(writer);
                 }
 
-                Log.d(TAG, "File download complete");
+                logger.log(INFO, "File download complete");
                 statusComplete = true;
             }
         };
 
         while (receiveBundles) {
             if (statusComplete) {
-                Log.d(TAG, "/GrpcReceiveTask.java -> executeTask() receiveBundles = " + receiveBundles);
+                logger.log(INFO, "/GrpcReceiveTask.java -> executeTask() receiveBundles = " + receiveBundles);
 
                 String existingBundles = FileUtils.getFilesList(receiveDir);
                 BundleDownloadRequest request =
@@ -140,11 +150,11 @@ public class GrpcReceiveTask {
 
                 stub.downloadBundle(request, downloadObserver);
 
-                Log.d(TAG, "Receive task complete");
+                logger.log(FINE, "Receive task complete");
                 statusComplete = false;
             }
         }
-        Log.d(TAG, "Error thrown: " + thrown[0]);
+        logger.log(SEVERE, "Error thrown: " + thrown[0]);
         if (thrown[0] != null) {
             throw new Exception(thrown[0].getMessage());
         }

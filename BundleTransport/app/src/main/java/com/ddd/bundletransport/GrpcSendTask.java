@@ -18,18 +18,27 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
 public class GrpcSendTask {
+
+    private static final Logger logger = Logger.getLogger(GrpcSendTask.class.getName());
+
     private final static String TAG = "dddTransport";
     private String host, serverDir, transportId;
     private int port;
     private ManagedChannel channel;
 
     public GrpcSendTask(String host, int port, String transportId, String serverDir) {
-        Log.d(TAG, "initializing grpcsendtask...");
+        logger.log(INFO, "initializing grpcsendtask...");
         this.host = host;
         this.port = port;
         this.transportId = transportId;
@@ -47,20 +56,20 @@ public class GrpcSendTask {
         try {
             postExecuteTask();
         } catch (InterruptedException e) {
-            Log.e(TAG, "Failed to shutdown GrpcSendTask channel: " + e.getMessage());
+            logger.log(WARNING, "Failed to shutdown GrpcSendTask channel: " + e.getMessage());
         }
 
         return thrown;
     }
 
     private void executeTask() throws IOException {
-        Log.d(TAG, "executing grpcsendtask...");
+        logger.log(INFO, "executing grpcsendtask...");
 
         channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
         BundleServiceGrpc.BundleServiceStub stub = BundleServiceGrpc.newStub(channel);
         StreamObserver<BundleUploadRequest> streamObserver = stub.uploadBundle(new BundleUploadObserver());
         File sendDir = new File(serverDir);
-        Log.d(TAG, "received the stream observer: " + streamObserver);
+        logger.log(FINE, "received the stream observer: " + streamObserver);
         //get transport ID
         if (sendDir.exists()) {
             File[] bundles = sendDir.listFiles();
@@ -72,7 +81,7 @@ public class GrpcSendTask {
                     streamObserver.onNext(metadata);
 
                     // upload file as chunk
-                    Log.d(TAG, "Started file transfer");
+                    logger.log(FINE, "Started file transfer");
                     FileInputStream inputStream = new FileInputStream(bundle.getAbsolutePath());
                     ;
                     /*if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
@@ -84,7 +93,7 @@ public class GrpcSendTask {
                     byte[] bytes = new byte[chunkSize];
                     int size = 0;
                     while ((size = inputStream.read(bytes)) != -1) {
-                        Log.d(TAG, "Sending chunk size: " + size);
+                        logger.log(FINE, "Sending chunk size: " + size);
                         BundleUploadRequest uploadRequest = BundleUploadRequest.newBuilder().setFile(
                                 com.ddd.bundletransport.service.File.newBuilder()
                                         .setContent(ByteString.copyFrom(bytes, 0, size)).build()).build();
@@ -96,7 +105,7 @@ public class GrpcSendTask {
             }
         }
 
-        Log.d(TAG, "Files are sent");
+        logger.log(INFO, "Files are sent");
         streamObserver.onCompleted();
     }
 

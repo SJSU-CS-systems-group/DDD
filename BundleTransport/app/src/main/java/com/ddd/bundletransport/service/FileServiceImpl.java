@@ -17,9 +17,19 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.SEVERE;
+
 import io.grpc.stub.StreamObserver;
 
 public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
+
+    private static final Logger logger = Logger.getLogger(FileServiceImpl.class.getName());
 
     private android.content.Context context;
     private Path SERVER_BASE_PATH;
@@ -64,14 +74,14 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
             @Override
             public void onError(Throwable throwable) {
-                Log.d(MainActivity.TAG, "Error" + throwable.toString());
+                logger.log(SEVERE, "Error" + throwable.toString());
                 status = Status.FAILED;
                 this.onCompleted();
             }
 
             @Override
             public void onCompleted() {
-                Log.d(MainActivity.TAG, "Complete");
+                logger.log(INFO, "Complete");
                 closeFile(writer);
                 status = Status.IN_PROGRESS.equals(status) ? Status.SUCCESS : status;
                 FileUploadResponse response = FileUploadResponse.newBuilder().setStatus(status).build();
@@ -110,7 +120,7 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
             requestedPath = String.valueOf(SERVER_BASE_PATH.resolve("client").resolve(request.getValue()));
 //            requestedPath = String.valueOf(SERVER_BASE_PATH.resolve("client").resolve("payload.zip"));
         }
-        Log.d(MainActivity.TAG, "Downloading " + requestedPath);
+        logger.log(FINE, "Downloading " + requestedPath);
         assert requestedPath != null;
         File file = new File(requestedPath);
         InputStream in;
@@ -128,6 +138,6 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
         if (ex != null) ex.printStackTrace();
 
         responseObserver.onCompleted();
-        Log.d(MainActivity.TAG, "Complete " + requestedPath);
+        logger.log(INFO, "Complete " + requestedPath);
     }
 }

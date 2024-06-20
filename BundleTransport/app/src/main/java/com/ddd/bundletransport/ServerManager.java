@@ -7,9 +7,16 @@ import java.io.File;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.INFO;
+
 import io.grpc.ManagedChannel;
 
 public class ServerManager implements Runnable {
+
+    private static final Logger logger = Logger.getLogger(ServerManager.class.getName());
+
     private final static String TAG = "dddTransport";
 
     private Function<Exception, Void> sendCallback, receiveCallback;
@@ -33,7 +40,7 @@ public class ServerManager implements Runnable {
     public void run() {
         sendCallback.apply(sendTask.run());
         receiveCallback.apply(receiveTask.run());
-        Log.d(TAG, "Connect server completed");
+        logger.log(INFO, "Connect server completed");
         connectComplete.apply(null);
     }
 }
