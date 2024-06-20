@@ -11,7 +11,7 @@ import com.ddd.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
 import static java.util.logging.Level.WARNING;
 
 public class CircularBuffer {
-    private static final Logger logger = Logger.getLogger(CircularBuffer.class.getName());
+        private static final Logger logger = Logger.getLogger(CircularBuffer.class.getName());
     private String[] buffer = null;
 
     private int start = 0;
