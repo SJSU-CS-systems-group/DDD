@@ -2,7 +2,6 @@ package com.ddd.bundletransport;
 
 import android.content.Context;
 import android.os.Build;
-import android.util.Log;
 
 import com.ddd.bundletransport.service.BundleMetaData;
 import com.ddd.bundletransport.service.BundleServiceGrpc;
@@ -32,7 +31,6 @@ public class GrpcSendTask {
 
     private static final Logger logger = Logger.getLogger(GrpcSendTask.class.getName());
 
-    private final static String TAG = "dddTransport";
     private String host, serverDir, transportId;
     private int port;
     private ManagedChannel channel;

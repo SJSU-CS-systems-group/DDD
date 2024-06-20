@@ -3,7 +3,6 @@ package com.ddd.bundletransport;
 import com.ddd.bundletransport.service.FileServiceImpl;
 
 import android.content.Context;
-import android.util.Log;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -25,7 +24,7 @@ public class RpcServer {
 
     private static final Logger logger = Logger.getLogger(RpcServer.class.getName());
 
-    private final String TAG = "dddTransport";
+    // private final String TAG = "dddTransport";
     private final String inetSocketAddressIP = "192.168.49.1";
     private final int port = 7777;
     private ServerState state = ServerState.SHUTDOWN;
@@ -51,7 +50,7 @@ public class RpcServer {
     }
 
     public void startServer(Context context) {
-        Log.d(TAG, "Server state is : " + state.name());
+        logger.log(INFO, "Server state is : " + state.name());
         if (state == ServerState.RUNNING || state == ServerState.PENDING) {
             return;
         }

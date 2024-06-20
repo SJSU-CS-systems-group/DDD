@@ -17,7 +17,7 @@ public class ServerManager implements Runnable {
 
     private static final Logger logger = Logger.getLogger(ServerManager.class.getName());
 
-    private final static String TAG = "dddTransport";
+    // private final static String TAG = "dddTransport";
 
     private Function<Exception, Void> sendCallback, receiveCallback;
     private Function<Void, Void> connectComplete;

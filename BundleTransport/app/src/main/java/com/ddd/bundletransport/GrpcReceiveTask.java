@@ -1,7 +1,5 @@
 package com.ddd.bundletransport;
 
-import android.util.Log;
-
 import com.ddd.bundletransport.service.BundleDownloadRequest;
 import com.ddd.bundletransport.service.BundleDownloadResponse;
 import com.ddd.bundletransport.service.BundleServiceGrpc;
@@ -30,7 +28,6 @@ public class GrpcReceiveTask {
 
     private static final Logger logger = Logger.getLogger(GrpcReceiveTask.class.getName());
 
-    private final static String TAG = "dddTransport";
     private String host, receiveDir, transportId;
     private int port;
     private boolean receiveBundles, statusComplete;
