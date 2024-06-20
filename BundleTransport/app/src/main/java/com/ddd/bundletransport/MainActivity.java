@@ -101,7 +101,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
             Collection<WifiP2pDevice> devices = group.getClientList();
             logger.log(FINE, "Looping through group devices");
             for (WifiP2pDevice d : devices) {
-                Log.d(TAG, d.toString());
+                logger.log(FINE, d.toString());
             }
             return b;
         });
@@ -235,7 +235,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         runOnUiThread(() -> {
             if (thrown != null) {
                 serverConnectStatus.append("Bundles upload failed.\n");
-                Log.e(TAG, "Failed bundle upload, exception: " + thrown.getMessage());
+                logger.log(SEVERE, "Failed bundle upload, exception: " + thrown.getMessage());
             } else {
                 serverConnectStatus.append("Bundles uploaded successfully.\n");
             }
@@ -248,7 +248,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         runOnUiThread(() -> {
             if (thrown != null) {
                 serverConnectStatus.append("Bundles download failed.\n");
-                Log.e(TAG, "Failed bundle d, exception: " + thrown.getMessage());
+                logger.log(SEVERE, "Failed bundle d, exception: " + thrown.getMessage());
             } else {
                 serverConnectStatus.append("Bundles downloaded successfully.\n");
             }
@@ -337,7 +337,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         } else {
             try {
                 transportID = SecurityUtils.generateID(tidPath);
-                Log.d(TAG, "Transport ID : " + transportID);
+                logger.log(FINE, "Transport ID : " + transportID);
             } catch (IOException | InvalidKeyException | NoSuchAlgorithmException e) {
                 e.printStackTrace();
             }
@@ -398,7 +398,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
 
     @Override
     protected void onDestroy() {
-        Log.i("onDestroy Receiver", "Called");
+        logger.log(INFO,"onDestroy Receiver", "Called");
 
         super.onDestroy();
         stopRpcServer();
@@ -411,7 +411,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         updateNearbyDevices();
         connectedPeersText.setText("");
         if (wifiDirectManager.getConnectedPeers() != null) {
-            Log.d(TAG, "Connected Devices Updates\n");
+            logger.log(FINE, "Connected Devices Updates\n");
             wifiDirectManager.getConnectedPeers().stream().forEach(device -> {
                 connectedPeersText.append(device.deviceName + "\n");
             });
@@ -435,7 +435,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
                 }
             }
         }
-        Log.d(TAG, "Nearby Devices Updates\n");
+        logger.log(FINE, "Nearby Devices Updates\n");
         nearbyDevicesSet.stream().forEach(deviceName -> {
             nearByPeersText.append(deviceName + "\n");
         });
