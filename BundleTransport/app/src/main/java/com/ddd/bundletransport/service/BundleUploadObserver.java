@@ -5,6 +5,7 @@ import android.util.Log;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 
 import com.ddd.bundletransport.MainActivity;
 
