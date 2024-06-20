@@ -28,11 +28,20 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.SEVERE;
+
 /**
  * Main WifiDirect class
  * Contains wrapper methods around common WifiDirect tasks
  */
 public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener, WifiP2pManager.PeerListListener {
+
+    private static final Logger logger = Logger.getLogger(WifiDirectManager.class.getName());
 
     private final IntentFilter intentFilter = new IntentFilter();
 
@@ -86,7 +95,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
     }
 
     public void initialize() {
-        Log.d(MainActivity.TAG, "Initializing wifidirectmanager...");
+        logger.log(INFO, "Initializing wifidirectmanager...");
         this.initClient(this.context);
         this.registerIntents();
 
@@ -151,13 +160,13 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
 
             @Override
             public void onSuccess() {
-                Log.d(MainActivity.TAG, "discovering...");
+                logger.log(INFO, "discovering...");
                 cFuture.complete(true);
             }
 
             @Override
             public void onFailure(int reasonCode) {
-                Log.d(MainActivity.TAG, "Failed Discovery...");
+                logger.log(WARNING, "Failed Discovery...");
                 cFuture.complete(false);
             }
         });
@@ -175,7 +184,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
      */
     @Override
     public void onPeersAvailable(WifiP2pDeviceList deviceList) {
-        Log.d(MainActivity.TAG, "Peers available: " + deviceList.getDeviceList().size());
+        logger.log(INFO, "Peers available: " + deviceList.getDeviceList().size());
         List<WifiP2pDevice> devices = new ArrayList<>();
         Collection<WifiP2pDevice> foundDevices = deviceList.getDeviceList();
         devices.addAll(foundDevices);
@@ -199,14 +208,14 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
 
             @Override
             public void onSuccess() {
-                Log.d("wDebug", "Created a group");
+                logger.log(FINE,"wDebug", "Created a group");
                 //cFuture.complete(true);
             }
 
             @Override
             public void onFailure(int reasonCode) {
 
-                Log.d("wDebug", "Failed to create a group with reasonCode: " + reasonCode);
+                logger.log(WARNING,"wDebug", "Failed to create a group with reasonCode: " + reasonCode);
                 //cFuture.complete(false);
             }
         });
@@ -230,7 +239,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
             cBuilder.setPassphrase(password);
             return cBuilder.build();
         } catch (Exception e) {
-            Log.d("wDebug", "BuildGroupConfigexception " + e);
+            logger.log(WARNING,"wDebug -- BuildGroupConfigexception: ", e);
         }
         return null;
     }
@@ -251,7 +260,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
 
             @Override
             public void onFailure(int reasonCode) {
-                Log.d("wDebug", "Failed to remove a group with reasonCode: " + reasonCode +
+                logger.log(WARNING,"wDebug", "Failed to remove a group with reasonCode: " + reasonCode +
                         " Note: this could mean device was never part of a group");
                 cFuture.complete(false);
             }
@@ -322,7 +331,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
 //            }
 //            return config;
         } catch (Exception e) {
-            Log.d("wDebug", "makeConfigException " + e);
+            logger.log(WARNING,"wDebug -- makeConfigException: ", e);
         }
         return null;
     }
@@ -375,12 +384,12 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
 
     public String getGroupHostIP() {
         if (this.isConnected) {
-            Log.d(MainActivity.TAG, "Group Host Info: " + this.groupHostInfo);
+            logger.log(INFO, "Group Host Info: " + this.groupHostInfo);
             return this.wifiDirectGroupHostIP;
         } else {
             this.wifiDirectGroupHostIP = "";
             this.groupHostInfo = "";
-            Log.d(MainActivity.TAG, "This device is currently not connected");
+            logger.log(WARNING, "This device is currently not connected");
             return "";
         }
     }

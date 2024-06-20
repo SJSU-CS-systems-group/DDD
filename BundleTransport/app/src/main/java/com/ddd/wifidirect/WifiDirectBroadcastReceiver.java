@@ -20,6 +20,13 @@ import com.ddd.bundletransport.RpcServerWorker;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.SEVERE;
+
 /**
  * A BroadcastReceiver that notifies of important wifi p2p events.
  * Acts as a event dispatcher to DeviceDetailFragment
@@ -27,6 +34,8 @@ import java.util.concurrent.TimeUnit;
  * we will handle the event
  */
 public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
+
+    private static final Logger logger = Logger.getLogger(WifiDirectBroadcastReceiver.class.getName());
 
     private WifiDirectManager manager;
 
@@ -57,23 +66,23 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
             // Check if WifiDirect on this device is turned on.
             int state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1);
             if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
-                Log.d(MainActivity.TAG, "P2P state changed Wifi Direct is enabled - " + state);
+                logger.log(INFO, "P2P state changed Wifi Direct is enabled - " + state);
                 // auto start gRPC server when app is opened
-                Log.d(MainActivity.TAG, "Starting server, at least one device is connected to group");
+                logger.log(FINE, "Starting server, at least one device is connected to group");
                 PeriodicWorkRequest request =
                         new PeriodicWorkRequest.Builder(RpcServerWorker.class, 15, TimeUnit.MINUTES, 15,
                                                         TimeUnit.MINUTES).build();
                 WorkManager.getInstance(context)
                         .enqueueUniquePeriodicWork(MainActivity.TAG, ExistingPeriodicWorkPolicy.REPLACE, request);
             } else {
-                Log.d(MainActivity.TAG, "P2P state changed Wifi Direct is not enabled - " + state);
+                logger.log(INFO, "P2P state changed Wifi Direct is not enabled - " + state);
             }
 
         }
         // Broadcast intent action indicating that the available peer list has changed.
         // This can be sent as a result of peers being found, lost or updated.
         if (WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)) {
-            Log.d(MainActivity.TAG, "WifiDirectBroadcastReceiver INTENT PEERS_CHANGED");
+            logger.log(INFO, "WifiDirectBroadcastReceiver INTENT PEERS_CHANGED");
             if (manager != null) {
                 try {
                     manager.getManager().requestPeers(manager.getChannel(), manager);
@@ -88,7 +97,7 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
 //         Another extra EXTRA_NETWORK_INFO provides the network info in the form of a NetworkInfo.
 //         A third extra provides the details of the EXTRA_WIFI_P2P_GROUP and may contain a null
         else if (WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {
-            Log.d(MainActivity.TAG, "WifiDirect group connection CHANGED!");
+            logger.log(WARNING, "WifiDirect group connection CHANGED!");
             if (manager == null) {
                 return;
             }
@@ -105,10 +114,10 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
                 // we are connected, request connection
                 // info to find group owner IP
                 this.manager.setConnected(true);
-                Log.d(MainActivity.TAG, "WIFI_P2P_CONNECTION_CHANGED_ACTION connected");
+                logger.log(INFO, "WIFI_P2P_CONNECTION_CHANGED_ACTION connected");
 
                 if (wifiP2pGroup != null) {
-                    Log.d(MainActivity.TAG, "WifiP2pGroup client list changed");
+                    logger.log(INFO, "WifiP2pGroup client list changed");
                     this.manager.setConnectedPeers(wifiP2pGroup.getClientList());
                     this.manager.notifyActionToListeners(
                             WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL);
@@ -116,7 +125,7 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
             } else {
                 // It's a disconnect
                 this.manager.setConnected(false);
-                Log.d(MainActivity.TAG, "WIFI_P2P_CONNECTION_CHANGED_ACTION disconnected");
+                logger.log(INFO, "WIFI_P2P_CONNECTION_CHANGED_ACTION disconnected");
             }
         } else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
             // unneeded
