@@ -11,7 +11,6 @@ import static java.util.logging.Level.FINE;
 
 import net.discdd.transport.FileUploadResponse;
 
-
 class FileUploadObserver implements StreamObserver<FileUploadResponse> {
 
     private static final Logger logger = Logger.getLogger(FileUploadObserver.class.getName());
