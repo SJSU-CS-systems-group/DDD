@@ -23,7 +23,7 @@
         android:label="@string/app_name"
         android:theme="@style/Base.V7.Theme.AppCompat.Light" >
         <activity
-            android:name=".HelloworldActivity"
+            android:name="net.discdd.bundleclient.HelloworldActivity"
             android:label="@string/app_name"
             android:exported="true">
             <intent-filter>
@@ -32,7 +32,7 @@
             </intent-filter>
         </activity>
         <provider
-            android:name="com.ddd.datastore.providers.MessageProvider"
+            android:name="net.discdd.datastore.providers.MessageProvider"
             android:authorities="com.ddd.provider.datastoreprovider"
             android:exported="true"
             android:multiprocess="true"
