@@ -84,7 +84,7 @@ class GrpcReceiveTask {
         FileServiceGrpc.FileServiceStub stub = FileServiceGrpc.newStub(channel);
         List<String> bundleRequests = null;
         logger.log(FINE, "Starting File Receive");
-        resultText.append("Starting File Receive...\n");
+        activity.runOnUiThread(() -> resultText.append("Starting File Receive...\n"));
         try {
             var bundleTransmission = new BundleTransmission(Paths.get(applicationContext.getApplicationInfo().dataDir));
             bundleRequests = HelloworldActivity.clientWindow.getWindow(
@@ -165,7 +165,7 @@ class GrpcReceiveTask {
             , IOException, LegacyMessageException, InvalidKeyException, WindowExceptions.InvalidLength,
             GeneralSecurityException {
         if (result.equals("Incomplete")) {
-            resultText.append(result + "\n");
+            activity.runOnUiThread(() -> resultText.append(result + "\n"));
             return;
         }
         try {
