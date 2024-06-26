@@ -12,14 +12,12 @@ import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 import java.io.File;
-import java.io.IOException;
-import java.util.Arrays;
 import java.util.Properties;
 import java.util.logging.Logger;
 
@@ -50,13 +48,11 @@ public class BundleServerApplication {
             }
         }
         var app = new MySpringApplication(BundleServerApplication.class);
-        if (args.length > 0) {
-            Resource resource = new FileSystemResource(args[0]);
-            if (resource.exists()) {
+        Resource resource = new ClassPathResource("custom-application.properties");
+        if (resource.exists()) {
                 try {
                     Properties properties = PropertiesLoaderUtils.loadProperties(resource);
                     app.setDefaultProperties(properties);
-                    args = Arrays.copyOfRange(args, 1, args.length);
                 } catch (Exception e) {
                     logger.log(SEVERE, "Please enter valid properties file path!");
                     System.exit(1);
@@ -65,10 +61,6 @@ public class BundleServerApplication {
                 logger.log(SEVERE, "Entered properties file path does not exist!");
                 System.exit(1);
             }
-        } else {
-            logger.log(SEVERE, "Please enter properties file path as argument!");
-            System.exit(1);
-        }
 
         app.setBanner((e, s, o) -> o.println(BananaUtils.bananansi("DDD Bundle Server", Font.ANSI_SHADOW, Ansi.GREEN)));
 

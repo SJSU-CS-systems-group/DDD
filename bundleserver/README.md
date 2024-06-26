@@ -45,19 +45,12 @@ in the resources/application.yml file change the spring.datasource.password attr
 Additional Notes
 ----------------
 
-For running server (in server mode), add custom properties in an application.properties file, outside of your git repository
-and add its path as program argument on run command.
-java -jar {jar file} {custom application.properties file}
+For running server (in server mode), add custom properties in a custom-application.properties file, at bundleserver/src/main/resources folder
 
-Sample application.properties file:
+Sample custom-application.properties file:
 ```
 spring.datasource.password = tripti
 bundle-server.bundle-store-root = C:/Users/tript/IdeaProjects/DDD/bundleserver
 ```
-Sample server run command:
-```
-java -jar \target\bundleserver-0.0.1-SNAPSHOT.jar C:/Users/tripti/Downloads/application.properties   
-```
-Do not add your custom application.properties in git
 
-AND: Use IntelliJ IDEA for IDE
+Use IntelliJ IDEA for IDE
