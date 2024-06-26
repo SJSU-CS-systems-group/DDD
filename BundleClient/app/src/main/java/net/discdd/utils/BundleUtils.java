@@ -203,6 +203,7 @@ public class BundleUtils {
     public static UncompressedBundle extractBundle(Bundle bundle, String extractDirPath) {
         String bundleFileName = bundle.getSource().getName();
         logger.log(INFO, "Extracting bundle for bundle name: " + bundleFileName);
+
         String extractedBundlePath =
                 Paths.get(extractDirPath).resolve(bundleFileName.substring(0, bundleFileName.lastIndexOf('.')))
                         .toString();
