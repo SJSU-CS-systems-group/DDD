@@ -1,5 +1,6 @@
 package com.ddd.utils;
 
+import java.nio.file.Paths;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINER;
@@ -152,20 +153,15 @@ public class BundleUtils {
         return true;
     }
 
-    public static void writeUncompressedPayload(UncompressedPayload uncompressedPayload, File targetDirectory,
-                                                String bundleFileName) {
+    public static void writeUncompressedPayload(UncompressedPayload uncompressedPayload, File targetDirectory, String bundleFileName) {
         String bundleId = uncompressedPayload.getBundleId();
-        String bundleFilePath = targetDirectory.getAbsolutePath() + File.separator + bundleId;
+        var bundleFilePath = Paths.get(targetDirectory.toURI()).resolve(bundleId);
+        var ackRecordFile = bundleFilePath.resolve(Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME).toFile();
+
         logger.log(INFO, "Writing uncompressed payload to path: " + bundleFilePath);
 
-        File bundleFile = new File(bundleFilePath);
-        if (!bundleFile.exists()) {
-            bundleFile.mkdirs();
-        }
+        bundleFilePath.toFile().mkdirs();
 
-        String ackPath = bundleFilePath + File.separator + Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME;
-
-        File ackRecordFile = new File(ackPath);
         if (!ackRecordFile.exists()) {
             try {
                 ackRecordFile.createNewFile();
@@ -173,14 +169,14 @@ public class BundleUtils {
                 e.printStackTrace();
             }
         }
+
         AckRecordUtils.writeAckRecordToFile(uncompressedPayload.getAckRecord(), ackRecordFile);
 
-        String aduPath = bundleFilePath + File.separator + Constants.BUNDLE_ADU_DIRECTORY_NAME;
+        File aduDirectory = bundleFilePath.resolve(Constants.BUNDLE_ADU_DIRECTORY_NAME).toFile();
 
         List<ADU> adus = uncompressedPayload.getADUs();
 
         if (!adus.isEmpty()) {
-            File aduDirectory = new File(aduPath);
             aduDirectory.mkdirs();
             ADUUtils.writeADUs(uncompressedPayload.getADUs(), aduDirectory);
         }
@@ -193,8 +189,7 @@ public class BundleUtils {
         logger.log(INFO, "Compressing payload for bundleId: " + bundleId);
 
         File uncompressedPath = uncompressedPayload.getSource();
-        File compressedPath =
-                new File(payloadDirPath + File.separator + Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar");
+        File compressedPath = payloadDirPath.resolve(Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar").toFile();
         JarUtils.dirToJar(uncompressedPath.getAbsolutePath(), compressedPath.getAbsolutePath());
         return new Payload(bundleId, compressedPath);
     }
@@ -203,7 +198,7 @@ public class BundleUtils {
         String bundleId = uncompressedBundle.getBundleId();
         logger.log(INFO, "Compressing bundle for bundleId: " + bundleId);
         File uncompressedBundlePath = uncompressedBundle.getSource();
-        File bundleFile = new File(bundleGenPath + File.separator + bundleId + BUNDLE_EXTENSION);
+        File bundleFile = Paths.get(bundleGenPath).resolve(bundleId + BUNDLE_EXTENSION).toFile();
         JarUtils.dirToJar(uncompressedBundlePath.getAbsolutePath(), bundleFile.getAbsolutePath());
         return new Bundle(bundleFile);
     }
@@ -211,8 +206,7 @@ public class BundleUtils {
     public static UncompressedBundle extractBundle(Bundle bundle, String extractDirPath) {
         String bundleFileName = bundle.getSource().getName();
         logger.log(INFO, "Extracting bundle for bundle name: " + bundleFileName);
-        String extractedBundlePath =
-                extractDirPath + File.separator + bundleFileName.substring(0, bundleFileName.lastIndexOf('.'));
+        String extractedBundlePath = Paths.get(extractDirPath).resolve(bundleFileName.substring(0, bundleFileName.lastIndexOf('.'))).toString();
         JarUtils.jarToDir(bundle.getSource().getAbsolutePath(), extractedBundlePath);
 
         File[] payloads = new File(extractedBundlePath + File.separator + "payloads").listFiles();
