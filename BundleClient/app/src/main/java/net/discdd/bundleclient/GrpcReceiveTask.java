@@ -85,12 +85,13 @@ class GrpcReceiveTask {
         var stub = FileServiceGrpc.newBlockingStub(channel);
         List<String> bundleRequests = null;
         logger.log(FINE, "Starting File Receive");
-<<<<<<<<< Temporary merge branch 1:BundleClient/app/src/main/java/com/ddd/bundleclient/GrpcReceiveTask.java
+<<<<<<<<<Temporary merge branch 1:
+        BundleClient / app / src / main / java / com / ddd / bundleclient / GrpcReceiveTask.java
         resultText.setText("Starting File Receive...\n");
 =========
         activity.runOnUiThread(() -> resultText.append("Starting File Receive...\n"));
->>>>>>>>> Temporary merge branch 2:BundleClient/app/src/main/java/net/discdd/bundleclient/GrpcReceiveTask.java
-        try {
+>>>>>>>>>Temporary merge branch 2:
+        BundleClient / app / src / main / java / net / discdd / bundleclient / GrpcReceiveTask.java try {
             var bundleTransmission = new BundleTransmission(Paths.get(applicationContext.getApplicationInfo().dataDir));
             bundleRequests = HelloworldActivity.clientWindow.getWindow(
                     bundleTransmission.getBundleSecurity().getClientSecurity());
@@ -120,19 +121,18 @@ class GrpcReceiveTask {
             var responses = stub.downloadFile(request);
 
             try {
-                final FileOutputStream fileOutputStream = responses.hasNext() ? new FileOutputStream(FILE_PATH + "/" + bundleName) : null;
+                final FileOutputStream fileOutputStream =
+                        responses.hasNext() ? new FileOutputStream(FILE_PATH + "/" + bundleName) : null;
 
-                responses.forEachRemaining(
-                        r -> {
-                            try {
-                                fileOutputStream.write(r.getValue().toByteArray());
-                                currentTransportId = r.getTransportId();
-                            } catch (IOException e) {
-                                errorOccurred[0] = true;
-                                logger.log(SEVERE, "Cannot write bytes ", e);
-                            }
-                        }
-                );
+                responses.forEachRemaining(r -> {
+                    try {
+                        fileOutputStream.write(r.getValue().toByteArray());
+                        currentTransportId = r.getTransportId();
+                    } catch (IOException e) {
+                        errorOccurred[0] = true;
+                        logger.log(SEVERE, "Cannot write bytes ", e);
+                    }
+                });
             } catch (StatusRuntimeException e) {
                 logger.log(SEVERE, "Receive bundle failed " + channel, e);
             }
@@ -231,7 +231,6 @@ class GrpcReceiveTask {
 
             logger.log(INFO, "File download complete");
         }
-
 
     }
 }

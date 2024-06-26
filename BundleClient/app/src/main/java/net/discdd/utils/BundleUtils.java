@@ -149,7 +149,8 @@ public class BundleUtils {
         return true;
     }
 
-    public static void writeUncompressedPayload(UncompressedPayload uncompressedPayload, File targetDirectory, String bundleFileName) {
+    public static void writeUncompressedPayload(UncompressedPayload uncompressedPayload, File targetDirectory,
+                                                String bundleFileName) {
         String bundleId = uncompressedPayload.getBundleId();
         var bundleFilePath = Paths.get(targetDirectory.toURI()).resolve(bundleId);
         var ackRecordFile = bundleFilePath.resolve(Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME).toFile();
@@ -202,13 +203,15 @@ public class BundleUtils {
     public static UncompressedBundle extractBundle(Bundle bundle, String extractDirPath) {
         String bundleFileName = bundle.getSource().getName();
         logger.log(INFO, "Extracting bundle for bundle name: " + bundleFileName);
-<<<<<<<<< Temporary merge branch 1:BundleClient/app/src/main/java/com/ddd/utils/BundleUtils.java
-        String extractedBundlePath = Paths.get(extractDirPath).resolve(bundleFileName.substring(0, bundleFileName.lastIndexOf('.'))).toString();
+<<<<<<<<<Temporary merge branch 1:BundleClient / app / src / main / java / com / ddd / utils / BundleUtils.java
+        String extractedBundlePath =
+                Paths.get(extractDirPath).resolve(bundleFileName.substring(0, bundleFileName.lastIndexOf('.')))
+                        .toString();
 =========
         String extractedBundlePath =
                 Paths.get(extractDirPath).resolve(bundleFileName.substring(0, bundleFileName.lastIndexOf('.')))
                         .toString();
->>>>>>>>> Temporary merge branch 2:BundleClient/app/src/main/java/net/discdd/utils/BundleUtils.java
+>>>>>>>>>Temporary merge branch 2:BundleClient / app / src / main / java / net / discdd / utils / BundleUtils.java
         JarUtils.jarToDir(bundle.getSource().getAbsolutePath(), extractedBundlePath);
 
         File[] payloads = new File(extractedBundlePath + File.separator + "payloads").listFiles();
