@@ -19,12 +19,12 @@ android {
         targetCompatibility JavaVersion.VERSION_11
     }
 
-    compileSdk 31
+    compileSdk 33
 
     defaultConfig {
-        applicationId "com.ddd.bundleclient"
+        applicationId "net.discdd.bundleclient"
         minSdk 26
-        targetSdk 31
+        targetSdk 33
         versionCode 1
         versionName "1.0"
     }
@@ -47,14 +47,14 @@ android {
     sourceSets {
         main {
             proto {
-                // srcDir 'src/main/proto'
+//                 srcDir 'src/main/proto'
             }
             java {
                 // srcDir 'src/main/java'
             }
         }
     }
-    namespace 'com.ddd.bundleclient'
+    namespace 'net.discdd.bundleclient'
 }
 
 dependencies {

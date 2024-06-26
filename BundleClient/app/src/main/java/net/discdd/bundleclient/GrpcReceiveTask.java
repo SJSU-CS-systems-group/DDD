@@ -9,14 +9,13 @@ import android.app.Activity;
 import android.content.Context;
 import android.widget.TextView;
 
-import com.ddd.bundleclient.R;
+import com.ddd.bundleclient.FileServiceGrpc;
 import com.ddd.bundlerouting.RoutingExceptions;
 import com.ddd.bundlerouting.WindowUtils.WindowExceptions;
 
 import net.discdd.client.bundletransmission.BundleTransmission;
-import net.discdd.transport.Bytes;
-import net.discdd.transport.FileServiceGrpc;
-import net.discdd.transport.ReqFilePath;
+import com.ddd.bundleclient.Bytes;
+import com.ddd.bundleclient.ReqFilePath;
 
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -85,13 +84,8 @@ class GrpcReceiveTask {
         var stub = FileServiceGrpc.newBlockingStub(channel);
         List<String> bundleRequests = null;
         logger.log(FINE, "Starting File Receive");
-<<<<<<<<<Temporary merge branch 1:
-        BundleClient / app / src / main / java / com / ddd / bundleclient / GrpcReceiveTask.java
-        resultText.setText("Starting File Receive...\n");
-=========
         activity.runOnUiThread(() -> resultText.append("Starting File Receive...\n"));
->>>>>>>>>Temporary merge branch 2:
-        BundleClient / app / src / main / java / net / discdd / bundleclient / GrpcReceiveTask.java try {
+        try {
             var bundleTransmission = new BundleTransmission(Paths.get(applicationContext.getApplicationInfo().dataDir));
             bundleRequests = HelloworldActivity.clientWindow.getWindow(
                     bundleTransmission.getBundleSecurity().getClientSecurity());

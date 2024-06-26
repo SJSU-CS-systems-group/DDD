@@ -9,7 +9,6 @@ import android.os.Build;
 import android.widget.Button;
 import android.widget.TextView;
 
-import com.ddd.bundleclient.R;
 import net.discdd.client.bundletransmission.BundleTransmission;
 import com.ddd.bundleclient.File;
 import com.ddd.bundleclient.FileServiceGrpc;

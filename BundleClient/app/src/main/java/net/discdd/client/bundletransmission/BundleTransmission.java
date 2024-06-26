@@ -1,4 +1,4 @@
-package com.ddd.client.bundletransmission;
+package net.discdd.client.bundletransmission;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
@@ -6,10 +6,10 @@ import static java.util.logging.Level.INFO;
 import com.ddd.bundlerouting.RoutingExceptions;
 import com.ddd.bundlerouting.WindowUtils.WindowExceptions;
 import com.ddd.bundlesecurity.BundleIDGenerator;
-import com.ddd.client.applicationdatamanager.ApplicationDataManager;
-import com.ddd.client.bundlerouting.ClientBundleGenerator;
-import com.ddd.client.bundlerouting.ClientRouting;
-import com.ddd.client.bundlesecurity.BundleSecurity;
+import net.discdd.client.applicationdatamanager.ApplicationDataManager;
+import net.discdd.client.bundlerouting.ClientBundleGenerator;
+import net.discdd.client.bundlerouting.ClientRouting;
+import net.discdd.client.bundlesecurity.BundleSecurity;
 import com.ddd.model.ADU;
 import com.ddd.model.Acknowledgement;
 import com.ddd.model.Bundle;
@@ -17,8 +17,8 @@ import com.ddd.model.BundleDTO;
 import com.ddd.model.Payload;
 import com.ddd.model.UncompressedBundle;
 import com.ddd.model.UncompressedPayload;
-import com.ddd.utils.AckRecordUtils;
-import com.ddd.utils.BundleUtils;
+import net.discdd.utils.AckRecordUtils;
+import net.discdd.utils.BundleUtils;
 import com.ddd.utils.Constants;
 
 import org.apache.commons.io.FileUtils;
