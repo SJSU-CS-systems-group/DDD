@@ -1,4 +1,4 @@
-package com.ddd.bundletransport;
+package net.discdd.bundletransport;
 
 import android.Manifest;
 import android.content.Context;
@@ -23,10 +23,10 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.ddd.bundletransport.utils.FileUtils;
-import com.ddd.bundletransport.utils.SecurityUtils;
-import com.ddd.wifidirect.WifiDirectManager;
-import com.ddd.wifidirect.WifiDirectStateListener;
+import net.discdd.bundletransport.utils.FileUtils;
+import net.discdd.bundletransport.utils.SecurityUtils;
+import net.discdd.wifidirect.WifiDirectManager;
+import net.discdd.wifidirect.WifiDirectStateListener;
 
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
@@ -47,6 +47,8 @@ import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 import static java.util.logging.Level.SEVERE;
+
+
 
 public class MainActivity extends AppCompatActivity implements RpcServerStateListener, WifiDirectStateListener {
 

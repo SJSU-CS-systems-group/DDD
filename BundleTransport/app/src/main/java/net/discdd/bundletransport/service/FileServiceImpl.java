@@ -1,10 +1,16 @@
-package com.ddd.bundletransport.service;
+package net.discdd.bundletransport.service;
 
 import android.content.Context;
 import android.os.Build;
-import android.util.Log;
 
-import com.ddd.bundletransport.MainActivity;
+import net.discdd.bundletransport.MainActivity;
+
+import com.ddd.bundletransport.service.Bytes;
+import com.ddd.bundletransport.service.FileServiceGrpc;
+import com.ddd.bundletransport.service.FileUploadRequest;
+import com.ddd.bundletransport.service.FileUploadResponse;
+import com.ddd.bundletransport.service.ReqFilePath;
+import com.ddd.bundletransport.service.Status;
 import com.google.protobuf.ByteString;
 
 import java.io.File;
@@ -19,13 +25,12 @@ import java.nio.file.StandardOpenOption;
 
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.WARNING;
 import static java.util.logging.Level.SEVERE;
 
 import io.grpc.stub.StreamObserver;
+
 
 public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 

@@ -1,4 +1,4 @@
-package com.ddd.wifidirect;
+package net.discdd.wifidirect;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -19,8 +19,6 @@ import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleOwner;
 
-import com.ddd.bundletransport.MainActivity;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -32,7 +30,6 @@ import java.util.logging.Logger;
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
-import static java.util.logging.Level.SEVERE;
 
 /**
  * Main WifiDirect class

@@ -1,22 +1,19 @@
-package com.ddd.wifidirect;
+package net.discdd.wifidirect;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.net.NetworkInfo;
-import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pManager;
 
-import androidx.work.Data;
 import androidx.work.ExistingPeriodicWorkPolicy;
 import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkManager;
 
-import com.ddd.bundletransport.MainActivity;
-import com.ddd.bundletransport.RpcServerWorker;
+import net.discdd.bundletransport.MainActivity;
+import net.discdd.bundletransport.RpcServerWorker;
 
-import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
 import java.util.logging.Logger;
@@ -24,7 +21,6 @@ import java.util.logging.Logger;
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
-import static java.util.logging.Level.SEVERE;
 
 /**
  * A BroadcastReceiver that notifies of important wifi p2p events.
