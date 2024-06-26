@@ -1,11 +1,15 @@
-package net.discdd.utils;
+package com.ddd.utils;
 
-import java.nio.file.Paths;
 import java.util.logging.Logger;
 
+import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.SEVERE;
 
+import org.apache.commons.io.FileUtils;
+import com.ddd.bundleclient.HelloworldActivity;
 import com.ddd.model.ADU;
 import com.ddd.model.Acknowledgement;
 import com.ddd.model.Bundle;
@@ -13,7 +17,6 @@ import com.ddd.model.EncryptedPayload;
 import com.ddd.model.Payload;
 import com.ddd.model.UncompressedBundle;
 import com.ddd.model.UncompressedPayload;
-import com.ddd.utils.Constants;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonIOException;
@@ -152,13 +155,16 @@ public class BundleUtils {
     public static void writeUncompressedPayload(UncompressedPayload uncompressedPayload, File targetDirectory,
                                                 String bundleFileName) {
         String bundleId = uncompressedPayload.getBundleId();
-        var bundleFilePath = Paths.get(targetDirectory.toURI()).resolve(bundleId);
-        var ackRecordFile = bundleFilePath.resolve(Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME).toFile();
-
+        String bundleFilePath = targetDirectory.getAbsolutePath() + "/" + bundleId;
         logger.log(INFO, "Writing uncompressed payload to path: " + bundleFilePath);
 
-        bundleFilePath.toFile().mkdirs();
+        File bundleFile = new File(bundleFilePath);
+        if (!bundleFile.exists()) {
+            bundleFile.mkdirs();
+        }
+        String ackPath = bundleFilePath + File.separator + Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME;
 
+        File ackRecordFile = new File(ackPath);
         if (!ackRecordFile.exists()) {
             try {
                 ackRecordFile.createNewFile();
@@ -166,14 +172,14 @@ public class BundleUtils {
                 e.printStackTrace();
             }
         }
-
         AckRecordUtils.writeAckRecordToFile(uncompressedPayload.getAckRecord(), ackRecordFile);
 
-        File aduDirectory = bundleFilePath.resolve(Constants.BUNDLE_ADU_DIRECTORY_NAME).toFile();
+        String aduPath = bundleFilePath + File.separator + Constants.BUNDLE_ADU_DIRECTORY_NAME;
 
         List<ADU> adus = uncompressedPayload.getADUs();
 
         if (!adus.isEmpty()) {
+            File aduDirectory = new File(aduPath);
             aduDirectory.mkdirs();
             ADUUtils.writeADUs(uncompressedPayload.getADUs(), aduDirectory);
         }
@@ -186,7 +192,8 @@ public class BundleUtils {
         logger.log(INFO, "Compressing payload for bundleId: " + bundleId);
 
         File uncompressedPath = uncompressedPayload.getSource();
-        File compressedPath = payloadDirPath.resolve(Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar").toFile();
+        File compressedPath =
+                new File(payloadDirPath + File.separator + Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar");
         JarUtils.dirToJar(uncompressedPath.getAbsolutePath(), compressedPath.getAbsolutePath());
         return new Payload(bundleId, compressedPath);
     }
@@ -195,7 +202,7 @@ public class BundleUtils {
         String bundleId = uncompressedBundle.getBundleId();
         logger.log(INFO, "Compressing bundle for bundleId: " + bundleId);
         File uncompressedBundlePath = uncompressedBundle.getSource();
-        File bundleFile = Paths.get(bundleGenPath).resolve(bundleId + BUNDLE_EXTENSION).toFile();
+        File bundleFile = new File(bundleGenPath + File.separator + bundleId + BUNDLE_EXTENSION);
         JarUtils.dirToJar(uncompressedBundlePath.getAbsolutePath(), bundleFile.getAbsolutePath());
         return new Bundle(bundleFile);
     }
@@ -203,10 +210,8 @@ public class BundleUtils {
     public static UncompressedBundle extractBundle(Bundle bundle, String extractDirPath) {
         String bundleFileName = bundle.getSource().getName();
         logger.log(INFO, "Extracting bundle for bundle name: " + bundleFileName);
-
         String extractedBundlePath =
-                Paths.get(extractDirPath).resolve(bundleFileName.substring(0, bundleFileName.lastIndexOf('.')))
-                        .toString();
+                extractDirPath + File.separator + bundleFileName.substring(0, bundleFileName.lastIndexOf('.'));
         JarUtils.jarToDir(bundle.getSource().getAbsolutePath(), extractedBundlePath);
 
         File[] payloads = new File(extractedBundlePath + File.separator + "payloads").listFiles();
