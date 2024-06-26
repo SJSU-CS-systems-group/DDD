@@ -17,7 +17,6 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 import static java.util.logging.Level.SEVERE;
 
-
 import com.ddd.bundletransport.service.BundleDownloadRequest;
 import com.ddd.bundletransport.service.BundleDownloadResponse;
 import com.ddd.bundletransport.service.BundleServiceGrpc;
@@ -155,7 +154,7 @@ public class GrpcReceiveTask {
                 statusComplete = false;
             }
         }
-        logger.log(SEVERE, "Error thrown: " + thrown[0]);
+        logger.log(SEVERE, "Error thrown: ", thrown[0]);
         if (thrown[0] != null) {
             throw new Exception(thrown[0].getMessage());
         }

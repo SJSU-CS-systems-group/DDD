@@ -4,10 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
-import com.ddd.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
-import com.ddd.bundlerouting.WindowUtils.WindowExceptions.BufferUnderflow;
-import com.ddd.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
-
 import static java.util.logging.Level.WARNING;
 
 public class CircularBuffer {
@@ -20,17 +16,17 @@ public class CircularBuffer {
     private int length = 0;
     private int capacity = 0;
 
-    public CircularBuffer(int length) throws InvalidLength {
+    public CircularBuffer(int length) throws WindowExceptions.InvalidLength {
         if (length <= 0) {
-            throw new InvalidLength("Length [" + length + "] <= 0");
+            throw new WindowExceptions.InvalidLength("Length [" + length + "] <= 0");
         }
         buffer = new String[length];
         this.length = length;
     }
 
-    public void add(String item) throws BufferOverflow {
+    public void add(String item) throws WindowExceptions.BufferOverflow {
         if (capacity + 1 > length) {
-            throw new BufferOverflow("Exceeding lenght(" + length + ")");
+            throw new WindowExceptions.BufferOverflow("Exceeding lenght(" + length + ")");
         }
 
         end = (end + 1) % length;
@@ -39,9 +35,9 @@ public class CircularBuffer {
     }
 
     // Used only to initialize window to an older state
-    public void initializeFromIndex(String item, int index) throws BufferOverflow {
+    public void initializeFromIndex(String item, int index) throws WindowExceptions.BufferOverflow {
         if (index >= length) {
-            throw new BufferOverflow("Exceeding lenght(" + length + ")");
+            throw new WindowExceptions.BufferOverflow("Exceeding lenght(" + length + ")");
         }
 
         buffer[index] = item;
@@ -49,9 +45,9 @@ public class CircularBuffer {
         capacity = 1;
     }
 
-    private void delete() throws BufferUnderflow {
+    private void delete() throws WindowExceptions.BufferUnderflow {
         if (capacity == 0) {
-            throw new BufferUnderflow("Buffer is empty");
+            throw new WindowExceptions.BufferUnderflow("Buffer is empty");
         }
 
         buffer[start] = null;
@@ -59,12 +55,12 @@ public class CircularBuffer {
         capacity--;
     }
 
-    public int deleteUntilIndex(int index) throws InvalidLength {
+    public int deleteUntilIndex(int index) throws WindowExceptions.InvalidLength {
         int i = start;
         int count = 1;
 
         if (index > length) {
-            throw new InvalidLength("Invalid Index provided, length = [" + length + "]");
+            throw new WindowExceptions.InvalidLength("Invalid Index provided, length = [" + length + "]");
         }
 
         /* Delete elements until provided index */
@@ -73,7 +69,7 @@ public class CircularBuffer {
                 delete();
                 count++;
                 i = (i + 1) % length;
-            } catch (BufferUnderflow e) {
+            } catch (WindowExceptions.BufferUnderflow e) {
                 // TODO Change to LOG Warn
                 logger.log(WARNING, "ERROR: Buffer is Empty");
             }
@@ -82,7 +78,7 @@ public class CircularBuffer {
         /* Delete the element at index */
         try {
             delete();
-        } catch (BufferUnderflow e) {
+        } catch (WindowExceptions.BufferUnderflow e) {
             // TODO Change to LOG Warn
             logger.log(WARNING, "ERROR: Buffer is Empty");
         }
