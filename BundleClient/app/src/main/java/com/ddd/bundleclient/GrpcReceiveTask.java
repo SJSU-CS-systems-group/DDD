@@ -80,7 +80,7 @@ class GrpcReceiveTask {
         var stub = FileServiceGrpc.newBlockingStub(channel);
         List<String> bundleRequests = null;
         logger.log(FINE, "Starting File Receive");
-//        resultText.setText("Starting File Receive...\n");
+        resultText.setText("Starting File Receive...\n");
         try {
             var bundleTransmission = new BundleTransmission(Paths.get(applicationContext.getApplicationInfo().dataDir));
             bundleRequests = HelloworldActivity.clientWindow.getWindow(
