@@ -9,13 +9,13 @@ import android.app.Activity;
 import android.content.Context;
 import android.widget.TextView;
 
-import com.ddd.bundleclient.FileServiceGrpc;
 import com.ddd.bundlerouting.RoutingExceptions;
 import com.ddd.bundlerouting.WindowUtils.WindowExceptions;
 
 import net.discdd.client.bundletransmission.BundleTransmission;
-import com.ddd.bundleclient.Bytes;
-import com.ddd.bundleclient.ReqFilePath;
+import net.discdd.transport.Bytes;
+import net.discdd.transport.FileServiceGrpc;
+import net.discdd.transport.ReqFilePath;
 
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.InvalidKeyException;

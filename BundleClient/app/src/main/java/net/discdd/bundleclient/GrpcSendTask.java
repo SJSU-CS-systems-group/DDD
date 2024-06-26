@@ -10,10 +10,10 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import net.discdd.client.bundletransmission.BundleTransmission;
-import com.ddd.bundleclient.File;
-import com.ddd.bundleclient.FileServiceGrpc;
-import com.ddd.bundleclient.FileUploadRequest;
-import com.ddd.bundleclient.MetaData;
+import net.discdd.transport.File;
+import net.discdd.transport.FileServiceGrpc;
+import net.discdd.transport.FileUploadRequest;
+import net.discdd.transport.MetaData;
 
 import com.ddd.model.BundleDTO;
 import com.google.protobuf.ByteString;
