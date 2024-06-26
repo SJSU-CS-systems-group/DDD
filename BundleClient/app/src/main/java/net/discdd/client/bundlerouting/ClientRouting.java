@@ -105,6 +105,8 @@ public class ClientRouting {
      * None
      */
     public void bundleMetaData(Path bundlePath) throws ClientMetaDataFileException, IOException {
-        Files.copy(metaDataPath, bundlePath.resolve(METADATAFILE));
+        if (!Files.exists(bundlePath.resolve(METADATAFILE))) {
+            Files.copy(metaDataPath, bundlePath.resolve(METADATAFILE));
+        }
     }
 }
