@@ -26,7 +26,6 @@ public class ServerRouting {
         this.score = score;
     }
 
-
     public String getClientId() {
         return clientID;
     }
@@ -50,12 +49,10 @@ public class ServerRouting {
     public void setScore(String score) {
         this.score = score;
     }
+
     @Override
     public String toString() {
-        return "ServerRouting{" +
-                "transportID='" + transportID + '\'' +
-                ", clientID='" + clientID + '\'' +
-                ", score ='" + score + '\'' +
-               '}';
+        return "ServerRouting{" + "transportID='" + transportID + '\'' + ", clientID='" + clientID + '\'' +
+                ", score ='" + score + '\'' + '}';
     }
 }

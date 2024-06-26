@@ -9,5 +9,6 @@ import java.util.Optional;
 @Repository
 public interface ServerRoutingRepository extends CrudRepository<ServerRouting, String> {
     Optional<ServerRouting> findByTransportID(String transportID);
+
     Optional<ServerRouting> findClientID(String clientID);
 }

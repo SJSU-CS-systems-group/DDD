@@ -59,13 +59,10 @@ public class ServerWindow {
     public void setEndCounter(String endCounter) {
         this.endCounter = endCounter;
     }
+
     @Override
     public String toString() {
-        return "ServerWindow{" +
-                "clientId='" + clientID + '\'' +
-                ", startCounter='" + startCounter + '\'' +
-                ", endCounter='" + endCounter + '\'' +
-                ", windowLength=" + windowLength +
-                '}';
+        return "ServerWindow{" + "clientId='" + clientID + '\'' + ", startCounter='" + startCounter + '\'' +
+                ", endCounter='" + endCounter + '\'' + ", windowLength=" + windowLength + '}';
     }
 }
