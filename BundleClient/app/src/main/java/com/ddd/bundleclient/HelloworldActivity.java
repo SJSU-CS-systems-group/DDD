@@ -139,7 +139,7 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
         exchangeButton.setEnabled(false);
         //Log.d(TAG, "connection complete");
         logger.log(INFO, "connection complete");
-        new GrpcReceiveTask(this).executeInBackground("192.168.49.1", "1778");
+        new GrpcReceiveTask(this).executeInBackground("192.168.49.1", "7777");
         //changed from execute to executeInBackground
     }
 
