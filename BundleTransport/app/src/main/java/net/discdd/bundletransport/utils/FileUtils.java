@@ -1,9 +1,7 @@
-package com.ddd.bundletransport.utils;
+package net.discdd.bundletransport.utils;
 
 import android.os.Build;
-import android.util.Log;
 
-import com.ddd.bundletransport.MainActivity;
 import com.ddd.bundletransport.service.BundleDownloadResponse;
 import com.google.protobuf.ByteString;
 
@@ -18,11 +16,8 @@ import java.util.Objects;
 
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.FINER;
-import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
-import static java.util.logging.Level.SEVERE;
 
 public class FileUtils {
 
