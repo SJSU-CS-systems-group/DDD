@@ -40,4 +40,4 @@ build/
 FileStore/
 
 ### Custom Properties
-!**/src/main/resources/custom-application.properties
+**/src/main/resources/custom-application.properties
