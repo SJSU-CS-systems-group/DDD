@@ -1,16 +1,11 @@
-package com.ddd.bundletransport;
-
-import android.content.Context;
+package net.discdd.bundletransport;
 
 import java.io.File;
-import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
-
-import io.grpc.ManagedChannel;
 
 public class ServerManager implements Runnable {
 

@@ -1,6 +1,6 @@
-package com.ddd.bundletransport;
+package net.discdd.bundletransport;
 
-import com.ddd.bundletransport.service.FileServiceImpl;
+import net.discdd.bundletransport.service.FileServiceImpl;
 
 import android.content.Context;
 

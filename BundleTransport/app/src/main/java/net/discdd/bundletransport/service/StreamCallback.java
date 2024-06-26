@@ -1,4 +1,4 @@
-package com.ddd.bundletransport.service;
+package net.discdd.bundletransport.service;
 
 import com.google.protobuf.ByteString;
 

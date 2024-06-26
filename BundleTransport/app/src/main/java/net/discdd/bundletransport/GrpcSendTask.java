@@ -1,21 +1,17 @@
-package com.ddd.bundletransport;
+package net.discdd.bundletransport;
 
-import android.content.Context;
-import android.os.Build;
+
+import net.discdd.bundletransport.service.BundleUploadObserver;
 
 import com.ddd.bundletransport.service.BundleMetaData;
 import com.ddd.bundletransport.service.BundleServiceGrpc;
-import com.ddd.bundletransport.service.BundleUploadObserver;
 import com.ddd.bundletransport.service.BundleUploadRequest;
 import com.google.protobuf.ByteString;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 
 import java.util.logging.Logger;
 
