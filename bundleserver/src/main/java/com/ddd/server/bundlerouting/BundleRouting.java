@@ -1,8 +1,11 @@
 package com.ddd.server.bundlerouting;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 
+import com.ddd.server.repository.ServerRoutingRepository;
+import com.ddd.server.repository.entity.ServerRouting;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -12,7 +15,10 @@ import com.ddd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
 public class BundleRouting {
 
     @Autowired
-    ServerRouting routingTable;
+    com.ddd.server.bundlerouting.ServerRouting routingTable;
+
+    @Autowired
+    ServerRoutingRepository serverRoutingRepository;
 
   /*public BundleRouting() throws SQLException
   {
@@ -20,7 +26,14 @@ public class BundleRouting {
   }*/
 
     public List<String> getClients(String transportId) throws SQLException {
-        return routingTable.getClients(transportId);
+        List<ServerRouting> serverRoutings = serverRoutingRepository.findByTransportID(transportId);
+        List<String> clientIDs = new ArrayList<>();
+        if (serverRoutings != null) {
+            for (ServerRouting serverRouting : serverRoutings) {
+                clientIDs.add(serverRouting.getClientID());
+            }
+        }
+        return clientIDs;
     }
 
     public void addClient(String clientId, int windowLength) {}

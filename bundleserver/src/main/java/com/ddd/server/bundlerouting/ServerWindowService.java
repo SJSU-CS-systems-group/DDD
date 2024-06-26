@@ -12,7 +12,7 @@ import com.ddd.bundlesecurity.BundleIDGenerator;
 import com.ddd.server.bundlesecurity.InvalidClientIDException;
 import com.ddd.server.bundlesecurity.ServerSecurity;
 import com.ddd.server.repository.ServerWindowRepository;
-import com.ddd.server.repository.entity.ServerRouting;
+import com.ddd.server.repository.entity.ServerWindow;
 import com.ddd.server.storage.SNRDatabases;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
@@ -31,15 +31,15 @@ import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
 @Service
-public class ServerWindow {
+public class ServerWindowService {
 
-    private final ServerWindowRepository ServerWindowRepository;
+    private final ServerWindowRepository serverwindowrepo;
 
     @Autowired
-    public ServerWindow(ServerWindowRepository serverWindowRepository) {
-        this.ServerWindowRepository = serverWindowRepository;
+    public ServerWindowService(ServerWindowRepository serverWindowRepository) {
+        this.serverwindowrepo = serverWindowRepository;
     }
-    private static final Logger logger = Logger.getLogger(ServerWindow.class.getName());
+    private static final Logger logger = Logger.getLogger(ServerWindowService.class.getName());
     HashMap<String, CircularBuffer> clientWindowMap = null;
     ServerSecurity serverSecurity = null;
     private SNRDatabases database = null;
@@ -79,10 +79,10 @@ public class ServerWindow {
         //String query =
           //      "SELECT clientID, " + STARTCOUNTER + ", " + ENDCOUNTER + ", " + WINDOW_LENGTH + " FROM " + dbTableName;
 
-        List<ServerWindow> entities = ServerWindowRepository.findAll();
+        Iterable<ServerWindow> entities = serverwindowrepo.findAll();
 
-        for (ServerWindow : entities) {
-            String clientID = entity.getClientId();
+        for (ServerWindow entity: entities) {
+            String clientID = entity.getClientID();
             long startCounter = Long.parseLong(entity.getStartCounter());
             long endCounter = Long.parseLong(entity.getEndCounter());
             int windowLength = entity.getWindowLength();

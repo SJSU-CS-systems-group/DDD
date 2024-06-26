@@ -4,9 +4,13 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity(name = "ServerRouting")
 @Table(name = "serverroutingtable")
+@Getter @Setter @AllArgsConstructor
 public class ServerRouting {
 
     @Id
@@ -20,36 +24,6 @@ public class ServerRouting {
     @Column(name = "score", nullable = false, columnDefinition = "VARCHAR(256)")
     private String score;
 
-    public ServerRouting(String transportID, String clientID, String score) {
-        this.transportID = transportID;
-        this.clientID = clientID;
-        this.score = score;
-    }
-
-
-    public String getClientId() {
-        return clientID;
-    }
-
-    public void setClientId(String clientId) {
-        this.clientID = clientId;
-    }
-
-    public String getTransportId() {
-        return transportID;
-    }
-
-    public void setTransportId(String transportId) {
-        this.transportID = transportId;
-    }
-
-    public String getScore() {
-        return score;
-    }
-
-    public void setScore(String score) {
-        this.score = score;
-    }
     @Override
     public String toString() {
         return "ServerRouting{" +

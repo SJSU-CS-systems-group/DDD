@@ -8,5 +8,5 @@ import java.util.Optional;
 
 @Repository
 public interface ServerWindowRepository extends CrudRepository<ServerWindow, String> {
-    Optional<ServerWindow> findClientID(String clientID);
+    Optional<ServerWindow> findByClientID(String clientID);
 }
