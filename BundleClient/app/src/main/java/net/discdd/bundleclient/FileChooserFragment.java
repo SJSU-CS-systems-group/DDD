@@ -17,7 +17,6 @@ import android.widget.Toast;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 
-
 import java.util.logging.Logger;
 import java.util.logging.Level;
 
