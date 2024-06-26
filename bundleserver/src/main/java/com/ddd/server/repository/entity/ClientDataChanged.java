@@ -43,5 +43,4 @@ public class ClientDataChanged {
         return "ClientDataChangedTable{" + "clientId='" + clientId + '\'' + ", hasNewData=" + hasNewData + '}';
     }
 
-
 }
