@@ -57,17 +57,17 @@ public class BundleServerApplication {
         }
         Resource resource = new ClassPathResource("custom-application.properties");
         if (resource.exists()) {
-                try {
-                    Properties properties = PropertiesLoaderUtils.loadProperties(resource);
-                    app.setDefaultProperties(properties);
-                } catch (Exception e) {
-                    logger.log(SEVERE, "Please enter valid properties file path!");
-                    System.exit(1);
-                }
-            } else {
-                logger.log(SEVERE, "Entered properties file path does not exist!");
+            try {
+                Properties properties = PropertiesLoaderUtils.loadProperties(resource);
+                app.setDefaultProperties(properties);
+            } catch (Exception e) {
+                logger.log(SEVERE, "Please enter valid properties file path!");
                 System.exit(1);
             }
+        } else {
+            logger.log(SEVERE, "Entered properties file path does not exist!");
+            System.exit(1);
+        }
 
         app.setBanner((e, s, o) -> o.println(BananaUtils.bananansi("DDD Bundle Server", Font.ANSI_SHADOW, Ansi.GREEN)));
 
