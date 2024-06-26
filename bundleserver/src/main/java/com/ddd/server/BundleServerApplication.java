@@ -18,6 +18,9 @@ import org.springframework.core.io.support.PropertiesLoaderUtils;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Properties;
 import java.util.logging.Logger;
 
@@ -30,7 +33,7 @@ import static java.util.logging.Level.SEVERE;
 public class BundleServerApplication {
     private static final Logger logger = Logger.getLogger(BundleServerApplication.class.getName());
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         class MySpringApplication extends SpringApplication {
             MySpringApplication(Class<?>... primarySources) {
                 super(primarySources);
@@ -48,6 +51,10 @@ public class BundleServerApplication {
             }
         }
         var app = new MySpringApplication(BundleServerApplication.class);
+
+        if (!new ClassPathResource("custom-application.properties").exists()) {
+            Files.createFile(Paths.get("src/main/resources/custom-application.properties"));
+        }
         Resource resource = new ClassPathResource("custom-application.properties");
         if (resource.exists()) {
                 try {
