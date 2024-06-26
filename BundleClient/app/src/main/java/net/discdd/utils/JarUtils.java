@@ -18,7 +18,6 @@ import java.util.jar.Manifest;
 import java.util.zip.CRC32;
 import java.util.zip.CheckedInputStream;
 
-import android.util.Base64;
 import net.discdd.datastore.filestore.FileStoreHelper;
 
 public class JarUtils {

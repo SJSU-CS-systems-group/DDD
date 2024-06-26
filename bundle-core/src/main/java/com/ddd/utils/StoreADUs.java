@@ -144,7 +144,7 @@ public class StoreADUs {
     //TODO: will update server usages to camelCase instead of PascalCase calls
     /** question: is isClient too hacky? Should i use String UserRole,
      * role, or context instead? Should i approach this entirely diff?*/
-    public String addFile(String folder, byte data[], boolean isClient) throws IOException {
+    public File addFile(String folder, byte data[], boolean isClient) throws IOException {
         File f = new File(RootFolder + File.separator + folder);
         int numFile = f.list().length;
         //server filepath is: root, client, app, num, txt
@@ -157,6 +157,10 @@ public class StoreADUs {
         FileOutputStream oFile = new FileOutputStream(file, false);
         oFile.write(data);
         oFile.close();
+        return file;
     }
-
+    public long getLastADUIdReceived(String folder) throws IOException {
+        Metadata metadata = getMetadata(folder);
+        return metadata.lastReceivedMessageId;
+    }
 }

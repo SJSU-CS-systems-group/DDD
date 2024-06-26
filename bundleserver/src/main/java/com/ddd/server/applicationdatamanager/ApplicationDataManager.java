@@ -26,7 +26,6 @@ import static java.util.logging.Level.WARNING;
 
 import javax.annotation.PostConstruct;
 
-import com.ddd.utils.FileStorable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -85,14 +84,14 @@ public class ApplicationDataManager {
         }
     }
 
-    public void processAcknowledgement(String clientId, String bundleId) {
+    public void processAcknowledgement(String clientId, String bundleId) throws IOException {
         if ("HB".equals(bundleId)) {
             return;
         }
         this.stateManager.processAcknowledgement(clientId, bundleId);
     }
 
-    public void storeADUs(String clientId, String bundleId, List<ADU> adus) {
+    public void storeADUs(String clientId, String bundleId, List<ADU> adus) throws IOException {
         logger.log(INFO, "[ApplicationDataManager] Store ADUs");
         this.registerRecvdBundleId(clientId, bundleId);
         Map<String, List<ADU>> appIdToADUMap = new HashMap<>();

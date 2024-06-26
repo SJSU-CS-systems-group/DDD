@@ -4,13 +4,9 @@ import com.ddd.model.ADU;
 import com.ddd.model.Metadata;
 import com.ddd.server.applicationdatamanager.ApplicationDataManager;
 import com.google.gson.Gson;
+import com.ddd.utils.StoreADUs;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -56,7 +52,7 @@ import static java.util.logging.Level.WARNING;
 public class FileStoreHelper {
     String RootFolder = "";
     private static final Logger logger = Logger.getLogger(FileStoreHelper.class.getName());
-
+    private StoreADUs ADUsStorage;
     public FileStoreHelper(String rootFolder) {
         RootFolder = rootFolder;
     }
@@ -72,8 +68,8 @@ public class FileStoreHelper {
         }
         adm.registerAppId(appId);
     }
-    public byte[] getNextAppData(String folder) {
-        Metadata metadata = getMetadata(folder);
+    public byte[] getNextAppData(String folder) throws IOException {
+        Metadata metadata = ADUsStorage.getMetadata(folder);
         long nextMessageId = metadata.lastProcessedMessageId + 1;
         if (nextMessageId > metadata.lastReceivedMessageId) {
             logger.log(INFO, "no data to show");
@@ -81,9 +77,9 @@ public class FileStoreHelper {
                 nextMessageId--;
             } else return null;
         }
-        byte[] appData = readFile(RootFolder + "/" + folder + "/" + nextMessageId + ".txt");
+        byte[] appData = ADUsStorage.readFile(RootFolder + "/" + folder + "/" + nextMessageId + ".txt");
         metadata.lastProcessedMessageId = nextMessageId;
-        setMetadata(folder, metadata);
+        ADUsStorage.setMetadata(folder, metadata);
         return appData;
     }
 }

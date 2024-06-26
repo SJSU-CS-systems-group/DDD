@@ -45,37 +45,6 @@ public class BundleSecurity {
             e.printStackTrace();
         }
     }
-
-<<<<<<< HEAD
-=======
-    public void decryptBundleContents(UncompressedPayload bundle) {
-        logger.log(WARNING, "[BundleSecurity] Decrypting contents of bundle with id: " + bundle.getBundleId());
-    }
-
-    public void processACK(String clientId, String bundleId) {
-        // TODO During window implementation
-        logger.log(WARNING, "[BundleSecurity] Received acknowledgement for sent bundle id " + bundleId);
-    }
-
-    //  public String generateBundleID(String clientKeyPath, boolean direction) {
-    //    return "";
-    //  }
-
-    public boolean isLatestReceivedBundleId(String clientId, String bundleId, String largestBundleIdReceived) {
-        return (StringUtils.isEmpty(largestBundleIdReceived) ||
-                this.compareRecvdBundleIds(bundleId, largestBundleIdReceived) > 0);
-    }
-
-    public void encryptBundleContents(UncompressedPayload bundle) {
-        logger.log(WARNING, "[BundleSecurity] Encrypting contents of the bundle with id: " + bundle.getBundleId());
-    }
-
-    public boolean isSenderWindowFull(String clientId) {
-        // TODO
-        return false;
-    }
-
->>>>>>> 9f59b57f1 (Massive unwind of exceptions and Path conversions (#110))
     public String getClientIdFromBundleId(String bundleId) {
         String clientId = "";
         if (bundleId.contains("-")) {
@@ -87,13 +56,6 @@ public class BundleSecurity {
         return clientId;
     }
 
-<<<<<<< HEAD
-=======
-    public void decrypt(String bundlePath, String decryptedPath) {
-        logger.log(WARNING, "mock decrypt implementation");
-    }
-
->>>>>>> 9f59b57f1 (Massive unwind of exceptions and Path conversions (#110))
     public String[] encrypt(String toBeEncPath, String encPath, String bundleID, String clientID) {
         File bundleDir = new File(encPath + File.separator + bundleID);
         bundleDir.mkdirs();
@@ -165,17 +127,7 @@ public class BundleSecurity {
         return this.serverSecurity.isNewerBundle(bundlePath, lastReceivedBundleID);
     }
 
-<<<<<<< HEAD
     public boolean bundleServerIdMatchesCurrentServer(String receivedServerId) throws NoSuchAlgorithmException {
         return receivedServerId.equals(serverSecurity.getServerId());
-=======
-    public String getServerId() throws NoSuchAlgorithmException {
-        return serverSecurity.getServerId();
     }
-
-    public boolean bundleServerIdMatchesCurrentServer(String receivedServerId) throws NoSuchAlgorithmException {
-        return receivedServerId.equals(getServerId());
->>>>>>> 9f59b57f1 (Massive unwind of exceptions and Path conversions (#110))
-    }
-
 }

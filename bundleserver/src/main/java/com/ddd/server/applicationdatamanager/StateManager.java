@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -210,7 +211,7 @@ class StateManager {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void processAcknowledgement(String clientId, String bundleId) {
+    public void processAcknowledgement(String clientId, String bundleId) throws IOException {
         Map<String, Long> sentDetails = this.getSentBundleAduRangeDetails(bundleId);
         for (String appId : sentDetails.keySet()) {
             this.dataStoreAdaptor.deleteADUs(clientId, appId, sentDetails.get(appId));

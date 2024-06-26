@@ -1,7 +1,7 @@
 package com.ddd.server.api;
 
 import com.ddd.model.ADU;
-import com.ddd.utils.FileStoreHelper;
+import com.ddd.utils.StoreADUs;
 import com.google.protobuf.ByteString;
 import io.grpc.Channel;
 import io.grpc.ManagedChannelBuilder;
@@ -24,6 +24,7 @@ public class ServiceAdapterClient {
     private static final Logger logger = Logger.getLogger(ServiceAdapterClient.class.getName());
     private ServiceAdapterGrpc.ServiceAdapterBlockingStub blockingStub;
     private ServiceAdapterGrpc.ServiceAdapterStub asyncStub;
+    private StoreADUs ADUsStorage;
 
     public ServiceAdapterClient(String ipAddress, int port) {
         this.ipAddress = ipAddress;
@@ -40,7 +41,7 @@ public class ServiceAdapterClient {
             for (int i = 0; i < dataList.size(); i++) {
                 try {
                     byte[] data =
-                            FileStoreHelper.getStringFromFile(dataList.get(i).getSource().getAbsolutePath()).getBytes();
+                            ADUsStorage.getStringFromFile(dataList.get(i).getSource().getAbsolutePath()).getBytes();
                     dataListConverted.add(AppDataUnit.newBuilder().setData(ByteString.copyFrom(data))
                                                   .setAduId(dataList.get(i).getADUId()).build());
                 } catch (Exception ex) {
