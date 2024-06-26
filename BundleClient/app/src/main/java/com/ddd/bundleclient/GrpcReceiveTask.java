@@ -32,6 +32,7 @@ import java.util.logging.Logger;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 
 //  private class GrpcReceiveTask extends AsyncTask<String, Void, String> {
@@ -62,7 +63,7 @@ class GrpcReceiveTask {
                     inBackground(port, host);
                 } catch (Exception e) {
                     // Handle any exceptions
-                    logger.log(WARNING, "executeInBackground failed");
+                    logger.log(WARNING, "executeInBackground failed", e);
                 }
             }
         });
@@ -76,10 +77,10 @@ class GrpcReceiveTask {
         file.mkdirs();
         int port = Integer.parseInt(portStr);
         channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
-        FileServiceGrpc.FileServiceStub stub = FileServiceGrpc.newStub(channel);
+        var stub = FileServiceGrpc.newBlockingStub(channel);
         List<String> bundleRequests = null;
         logger.log(FINE, "Starting File Receive");
-        resultText.append("Starting File Receive...\n");
+//        resultText.setText("Starting File Receive...\n");
         try {
             var bundleTransmission = new BundleTransmission(Paths.get(applicationContext.getApplicationInfo().dataDir));
             bundleRequests = HelloworldActivity.clientWindow.getWindow(
@@ -98,53 +99,38 @@ class GrpcReceiveTask {
         } else if (bundleRequests.size() == 0) {
             logger.log(FINE, "BUNDLE REQuests has size 0 / ");
         }
+
+        final var errorOccurred = new boolean[1];
+
         for (String bundle : bundleRequests) {
             String bundleName = bundle + ".bundle";
             ReqFilePath request = ReqFilePath.newBuilder().setValue(bundleName).build();
             logger.log(INFO, "Downloading file: " + bundleName);
-            StreamObserver<Bytes> downloadObserver = new StreamObserver<Bytes>() {
-                FileOutputStream fileOutputStream = null;
+            var downloadObserver = new DownloadObserver(FILE_PATH, bundleName);
 
-                @Override
-                public void onNext(Bytes fileContent) {
-                    try {
-                        if (fileOutputStream == null) {
-                            fileOutputStream = new FileOutputStream(FILE_PATH + "/" + bundleName);
+            var responses = stub.downloadFile(request);
+
+            try {
+                final FileOutputStream fileOutputStream = responses.hasNext() ? new FileOutputStream(FILE_PATH + "/" + bundleName) : null;
+
+                responses.forEachRemaining(
+                        r -> {
+                            try {
+                                fileOutputStream.write(r.getValue().toByteArray());
+                                currentTransportId = r.getTransportId();
+                            } catch (IOException e) {
+                                errorOccurred[0] = true;
+                                logger.log(SEVERE, "Cannot write bytes ", e);
+                            }
                         }
-                        fileOutputStream.write(fileContent.getValue().toByteArray());
-                        currentTransportId = fileContent.getTransportId();
-                    } catch (IOException e) {
-                        onError(e);
-                    }
-                }
+                );
+            } catch (StatusRuntimeException e) {
+                logger.log(SEVERE, "Receive bundle failed " + channel, e);
+            }
 
-                @Override
-                public void onError(Throwable t) {
-                    logger.log(SEVERE, "Error downloading file: " + t.getMessage(), t);
-                    if (fileOutputStream != null) {
-                        try {
-                            fileOutputStream.close();
-                        } catch (IOException e) {
-                            logger.log(SEVERE, "Error closing output stream", e);
-                        }
-                    }
-                }
-
-                @Override
-                public void onCompleted() {
-                    try {
-                        fileOutputStream.flush();
-                        fileOutputStream.close();
-                    } catch (IOException e) {
-                        logger.log(SEVERE, "Error closing output stream", e);
-                    }
-                    logger.log(INFO, "File download complete");
-                }
-            };
-            stub.downloadFile(request, downloadObserver);
             break;
         }
-        postExecute("Complete");
+        postExecute(errorOccurred[0] ? "Failed" : "Completed");
     }
 
     public void shutdownExecutor() {
@@ -171,7 +157,7 @@ class GrpcReceiveTask {
 //        new HelloworldActivity.GrpcSendTask(HelloworldActivity.this)
 //        new GrpcSendTask.executeInBackground("192.168.49.1", "1778");
         GrpcSendTask sendTask = new GrpcSendTask(activity);
-        sendTask.executeInBackground("192.168.49.1", "1778");
+        sendTask.executeInBackground("192.168.49.1", "7777");
 
         String FILE_PATH = applicationContext.getApplicationInfo().dataDir + "/Shared/received-bundles";
         BundleTransmission bundleTransmission =
@@ -182,5 +168,61 @@ class GrpcReceiveTask {
         if (activity == null) {
             return;
         }
+    }
+
+    private class DownloadObserver implements StreamObserver<Bytes> {
+        private final String FILE_PATH;
+        private final String bundleName;
+        FileOutputStream fileOutputStream;
+
+        public boolean errorOccurred;
+        public boolean complete;
+
+        public DownloadObserver(String FILE_PATH, String bundleName) {
+            this.FILE_PATH = FILE_PATH;
+            this.bundleName = bundleName;
+        }
+
+        @Override
+        public void onNext(Bytes fileContent) {
+            try {
+                if (fileOutputStream == null) {
+                    fileOutputStream = new FileOutputStream(FILE_PATH + "/" + bundleName);
+                }
+                fileOutputStream.write(fileContent.getValue().toByteArray());
+                currentTransportId = fileContent.getTransportId();
+            } catch (IOException e) {
+                onError(e);
+            }
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            errorOccurred = true;
+            logger.log(SEVERE, "Error downloading file: ", t);
+            if (fileOutputStream != null) {
+                try {
+                    fileOutputStream.close();
+                } catch (IOException e) {
+                    logger.log(SEVERE, "Error closing output stream", e);
+                }
+            }
+        }
+
+        @Override
+        public void onCompleted() {
+            complete = true;
+
+            try {
+                fileOutputStream.flush();
+                fileOutputStream.close();
+            } catch (IOException e) {
+                logger.log(SEVERE, "Error closing output stream", e);
+            }
+
+            logger.log(INFO, "File download complete");
+        }
+
+
     }
 }

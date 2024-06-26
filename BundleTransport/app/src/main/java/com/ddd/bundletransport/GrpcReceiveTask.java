@@ -153,7 +153,7 @@ public class GrpcReceiveTask {
                 statusComplete = false;
             }
         }
-        logger.log(SEVERE, "Error thrown: " + thrown[0]);
+        logger.log(SEVERE, "Error thrown: ", thrown[0]);
         if (thrown[0] != null) {
             throw new Exception(thrown[0].getMessage());
         }
