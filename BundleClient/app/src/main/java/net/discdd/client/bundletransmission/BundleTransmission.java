@@ -115,7 +115,8 @@ public class BundleTransmission {
             RoutingExceptions.ClientMetaDataFileException, NoSessionException, InvalidMessageException,
             DuplicateMessageException, LegacyMessageException, InvalidKeyException, GeneralSecurityException {
         String largestBundleIdReceived = this.getLargestBundleIdReceived();
-        UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, this.ROOT_DIR.resolve(Paths.get(BUNDLE_GENERATION_DIRECTORY,RECEIVED_PROCESSING)).toString());
+        UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, this.ROOT_DIR.resolve(
+                Paths.get(BUNDLE_GENERATION_DIRECTORY, RECEIVED_PROCESSING)).toString());
         Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
         logger.log(INFO, "Updating client routing metadata for transport  " + transportId);
         clientRouting.updateMetaData(transportId);
@@ -185,8 +186,9 @@ public class BundleTransmission {
 
     private BundleDTO generateNewBundle(UncompressedPayload.Builder builder, File targetDir, String bundleId) throws RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException {
         builder.setBundleId(bundleId);
-        File uncompressedBundleFile = this.ROOT_DIR.resolve(Paths.get(BUNDLE_GENERATION_DIRECTORY, UNCOMPRESSED_PAYLOAD)).toFile();
-        builder.setSource(new File(uncompressedBundleFile,  bundleId));
+        File uncompressedBundleFile =
+                this.ROOT_DIR.resolve(Paths.get(BUNDLE_GENERATION_DIRECTORY, UNCOMPRESSED_PAYLOAD)).toFile();
+        builder.setSource(new File(uncompressedBundleFile, bundleId));
         UncompressedPayload toSendBundlePayload = builder.build();
         BundleUtils.writeUncompressedPayload(toSendBundlePayload, uncompressedBundleFile, bundleId);
         logger.log(INFO, "Placing routing.metadata in " + toSendBundlePayload.getSource().getAbsolutePath());
