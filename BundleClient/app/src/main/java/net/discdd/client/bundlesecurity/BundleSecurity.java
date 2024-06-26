@@ -4,6 +4,8 @@ import static java.util.logging.Level.INFO;
 
 import android.content.res.Resources;
 import com.ddd.bundlerouting.WindowUtils.WindowExceptions;
+
+import net.discdd.bundleclient.R;
 import net.discdd.client.bundlerouting.ClientBundleGenerator;
 import net.discdd.client.bundlerouting.ClientWindow;
 import com.ddd.model.EncryptedPayload;
