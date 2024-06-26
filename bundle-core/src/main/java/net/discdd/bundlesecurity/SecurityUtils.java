@@ -1,4 +1,4 @@
-package com.ddd.bundlesecurity;
+package net.discdd.bundlesecurity;
 
 import org.whispersystems.libsignal.*;
 import org.whispersystems.libsignal.ecc.Curve;

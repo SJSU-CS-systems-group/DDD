@@ -1,4 +1,4 @@
-package com.ddd.model;
+package net.discdd.model;
 
 import lombok.Builder;
 import lombok.Data;

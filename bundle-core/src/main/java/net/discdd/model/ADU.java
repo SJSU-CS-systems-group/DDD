@@ -1,4 +1,4 @@
-package com.ddd.model;
+package net.discdd.model;
 
 import java.io.File;
 import java.util.Objects;

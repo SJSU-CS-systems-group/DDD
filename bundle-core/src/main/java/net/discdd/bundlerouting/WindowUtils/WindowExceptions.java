@@ -1,4 +1,4 @@
-package com.ddd.bundlerouting.WindowUtils;
+package net.discdd.bundlerouting.WindowUtils;
 
 public class WindowExceptions {
     public static class InvalidLength extends Exception {

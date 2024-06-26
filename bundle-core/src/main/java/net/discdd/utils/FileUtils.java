@@ -1,4 +1,4 @@
-package com.ddd.utils;
+package net.discdd.utils;
 
 import java.io.IOException;
 import java.nio.file.Files;

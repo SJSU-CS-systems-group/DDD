@@ -1,4 +1,4 @@
-package com.ddd.bundlesecurity;
+package net.discdd.bundlesecurity;
 
 import java.io.IOException;
 import java.nio.file.Path;

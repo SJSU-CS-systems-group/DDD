@@ -1,12 +1,12 @@
-package com.ddd.bundlerouting.WindowUtils;
+package net.discdd.bundlerouting.WindowUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
-import com.ddd.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
-import com.ddd.bundlerouting.WindowUtils.WindowExceptions.BufferUnderflow;
-import com.ddd.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
+import net.discdd.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
+import net.discdd.bundlerouting.WindowUtils.WindowExceptions.BufferUnderflow;
+import net.discdd.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
 
 import static java.util.logging.Level.WARNING;
 
