@@ -11,10 +11,10 @@ import android.widget.TextView;
 
 import com.ddd.bundleclient.R;
 import net.discdd.client.bundletransmission.BundleTransmission;
-import net.discdd.transport.File;
-import net.discdd.transport.FileServiceGrpc;
-import net.discdd.transport.FileUploadRequest;
-import net.discdd.transport.MetaData;
+import com.ddd.bundleclient.File;
+import com.ddd.bundleclient.FileServiceGrpc;
+import com.ddd.bundleclient.FileUploadRequest;
+import com.ddd.bundleclient.MetaData;
 
 import com.ddd.model.BundleDTO;
 import com.google.protobuf.ByteString;
