@@ -155,13 +155,14 @@ public class BundleUtils {
     public static void writeUncompressedPayload(UncompressedPayload uncompressedPayload, File targetDirectory,
                                                 String bundleFileName) {
         String bundleId = uncompressedPayload.getBundleId();
-        String bundleFilePath = targetDirectory.getAbsolutePath() + "/" + bundleId;
+        String bundleFilePath = targetDirectory.getAbsolutePath() + File.separator + bundleId;
         logger.log(INFO, "Writing uncompressed payload to path: " + bundleFilePath);
 
         File bundleFile = new File(bundleFilePath);
         if (!bundleFile.exists()) {
             bundleFile.mkdirs();
         }
+
         String ackPath = bundleFilePath + File.separator + Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME;
 
         File ackRecordFile = new File(ackPath);
