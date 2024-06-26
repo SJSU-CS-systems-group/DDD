@@ -10,7 +10,9 @@ import lombok.Setter;
 
 @Entity(name = "ServerRouting")
 @Table(name = "serverroutingtable")
-@Getter @Setter @AllArgsConstructor
+@Getter
+@Setter
+@AllArgsConstructor
 public class ServerRouting {
 
     @Id
@@ -26,10 +28,7 @@ public class ServerRouting {
 
     @Override
     public String toString() {
-        return "ServerRouting{" +
-                "transportID='" + transportID + '\'' +
-                ", clientID='" + clientID + '\'' +
-                ", score ='" + score + '\'' +
-               '}';
+        return "ServerRouting{" + "transportID='" + transportID + '\'' + ", clientID='" + clientID + '\'' +
+                ", score ='" + score + '\'' + '}';
     }
 }

@@ -39,6 +39,7 @@ public class ServerWindowService {
     public ServerWindowService(ServerWindowRepository serverWindowRepository) {
         this.serverwindowrepo = serverWindowRepository;
     }
+
     private static final Logger logger = Logger.getLogger(ServerWindowService.class.getName());
     HashMap<String, CircularBuffer> clientWindowMap = null;
     ServerSecurity serverSecurity = null;
@@ -77,20 +78,19 @@ public class ServerWindowService {
 
     private void initializeWindow() throws SQLException, InvalidLength, BufferOverflow {
         //String query =
-          //      "SELECT clientID, " + STARTCOUNTER + ", " + ENDCOUNTER + ", " + WINDOW_LENGTH + " FROM " + dbTableName;
+        //      "SELECT clientID, " + STARTCOUNTER + ", " + ENDCOUNTER + ", " + WINDOW_LENGTH + " FROM " + dbTableName;
 
         Iterable<ServerWindow> entities = serverwindowrepo.findAll();
 
-        for (ServerWindow entity: entities) {
+        for (ServerWindow entity : entities) {
             String clientID = entity.getClientID();
             long startCounter = Long.parseLong(entity.getStartCounter());
             long endCounter = Long.parseLong(entity.getEndCounter());
             int windowLength = entity.getWindowLength();
 
-
             // for (String[] result : results) {
-         //   String clientID = result[0];
-           // long startCounter = Long.parseLong(result[1]);
+            //   String clientID = result[0];
+            // long startCounter = Long.parseLong(result[1]);
             //long endCounter = Long.parseLong(result[2]);
             //int windowLength = Integer.parseInt(result[3]);
 
