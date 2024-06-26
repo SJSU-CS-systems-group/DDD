@@ -31,7 +31,6 @@ import static java.util.logging.Level.SEVERE;
 
 import io.grpc.stub.StreamObserver;
 
-
 public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
     private static final Logger logger = Logger.getLogger(FileServiceImpl.class.getName());

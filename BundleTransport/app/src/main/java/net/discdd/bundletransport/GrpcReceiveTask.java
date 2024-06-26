@@ -17,7 +17,6 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 import static java.util.logging.Level.SEVERE;
 
-
 import com.ddd.bundletransport.service.BundleDownloadRequest;
 import com.ddd.bundletransport.service.BundleDownloadResponse;
 import com.ddd.bundletransport.service.BundleServiceGrpc;
