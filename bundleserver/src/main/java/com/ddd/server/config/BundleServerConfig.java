@@ -36,7 +36,6 @@ public class BundleServerConfig {
     @Setter
     public static class ApplicationDataManager {
         private Long appDataSizeLimit;
-        private Path registeredAppIdsPath;
 
         @Getter
         @Setter
