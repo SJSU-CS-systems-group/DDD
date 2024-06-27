@@ -24,6 +24,15 @@ import java.util.logging.Logger;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 
+import javax.annotation.PostConstruct;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import com.ddd.model.ADU;
+import com.ddd.model.UncompressedPayload;
+import com.ddd.server.config.BundleServerConfig;
+
 @Service
 public class ApplicationDataManager {
 
@@ -75,14 +84,14 @@ public class ApplicationDataManager {
         }
     }
 
-    public void processAcknowledgement(String clientId, String bundleId) {
+    public void processAcknowledgement(String clientId, String bundleId) throws IOException {
         if ("HB".equals(bundleId)) {
             return;
         }
         this.stateManager.processAcknowledgement(clientId, bundleId);
     }
 
-    public void storeADUs(String clientId, String bundleId, List<ADU> adus) {
+    public void storeADUs(String clientId, String bundleId, List<ADU> adus) throws IOException {
         logger.log(INFO, "[ApplicationDataManager] Store ADUs");
         this.registerRecvdBundleId(clientId, bundleId);
         Map<String, List<ADU>> appIdToADUMap = new HashMap<>();
@@ -112,13 +121,13 @@ public class ApplicationDataManager {
         }
     }
 
-    public List<ADU> fetchADUs(String clientId) {
+    public List<ADU> fetchADUs(long initialSize, String clientId) {
         List<ADU> res = new ArrayList<>();
         for (String appId : this.getRegisteredAppIds()) {
             Long largestAduIdDelivered = this.stateManager.getLargestADUIdDeliveredByAppId(clientId, appId);
             Long aduIdStart = (largestAduIdDelivered != null) ? (largestAduIdDelivered + 1) : 1;
             List<ADU> adus = this.dataStoreAdaptor.fetchADUs(clientId, appId, aduIdStart);
-            Long cumulativeSize = 0L;
+            long cumulativeSize = initialSize;
             for (ADU adu : adus) {
                 if (adu.getSize() + cumulativeSize >
                         this.bundleServerConfig.getApplicationDataManager().getAppDataSizeLimit()) {

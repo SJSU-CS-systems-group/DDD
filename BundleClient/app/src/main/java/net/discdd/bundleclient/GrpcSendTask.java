@@ -3,6 +3,9 @@ package net.discdd.bundleclient;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+
 import android.app.Activity;
 import android.content.Context;
 import android.os.Build;

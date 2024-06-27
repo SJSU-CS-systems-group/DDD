@@ -131,5 +131,4 @@ public class BundleSecurity {
     public boolean bundleServerIdMatchesCurrentServer(String receivedServerId) throws NoSuchAlgorithmException {
         return receivedServerId.equals(serverSecurity.getServerId());
     }
-
 }

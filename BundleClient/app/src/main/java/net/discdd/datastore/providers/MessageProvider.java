@@ -1,5 +1,7 @@
 package net.discdd.datastore.providers;
 
+import static android.net.Uri.fromFile;
+
 import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.content.UriMatcher;
@@ -9,6 +11,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Binder;
 
+import java.io.File;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
@@ -19,6 +22,7 @@ import androidx.annotation.Nullable;
 
 import net.discdd.datastore.filestore.FileStoreHelper;
 import net.discdd.datastore.sqlite.DBHelper;
+import com.ddd.utils.StoreADUs;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -40,7 +44,15 @@ public class MessageProvider extends ContentProvider {
 
     private static HashMap<String, String> values;
     static final UriMatcher uriMatcher;
-    private FileStoreHelper fileStoreHelper;
+
+    private StoreADUs ADUsStorage;
+
+    /**
+     * TODO: this FileStoreHelper is used to create App ID if it does not already exist BUT
+     * this utility will be moved to ApplicationDataManager, delete this instance once that
+     * is done.
+     */
+    private FileStoreHelper tempFileStoreHelper;
 
     static {
         uriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
@@ -57,7 +69,7 @@ public class MessageProvider extends ContentProvider {
     private String getCallerAppId() throws IOException {
         int receiverId = Binder.getCallingUid();
         String appId = getContext().getPackageManager().getNameForUid(receiverId);
-        fileStoreHelper.createAppIdDirIfNotExists(appId);
+        tempFileStoreHelper.createAppIdDirIfNotExists(appId);
         return appId;
     }
 
@@ -65,8 +77,7 @@ public class MessageProvider extends ContentProvider {
     public boolean onCreate() {
         DBHelper dbHelper = new DBHelper(getContext());
         sqlDB = dbHelper.getWritableDatabase();
-        fileStoreHelper = new FileStoreHelper(getContext().getApplicationInfo().dataDir + "/send",
-                                              getContext().getApplicationInfo().dataDir);
+        ADUsStorage = new StoreADUs(new File(getContext().getApplicationInfo().dataDir, "/send"), true);
         if (sqlDB != null) return true;
         return false;
     }
@@ -81,7 +92,8 @@ public class MessageProvider extends ContentProvider {
 
         try {
             String appId = getCallerAppId();
-            List<byte[]> datalist = fileStoreHelper.getAllAppData(appId);
+//            List<byte[]> datalist = fileStoreHelper.getAllAppData(appId);
+            List<byte[]> datalist = ADUsStorage.getAllAppData(appId);
             cursor = new MatrixCursor(new String[] { "data" });
             for (byte[] data : datalist) {
 
@@ -126,7 +138,7 @@ public class MessageProvider extends ContentProvider {
             String appName = getCallerAppId();
             byte[] data = contentValues.getAsByteArray("data");
             logger.log(INFO, "bundleclient", "inserting: " + new String(data));
-            return fileStoreHelper.addFile(appName, data);
+            return fromFile(ADUsStorage.addADU(null, appName, data, -1));
         } catch (IOException e) {
             logger.log(WARNING, "bundleclient", "Unable to add file, error: " + e.getMessage());
             return null;
