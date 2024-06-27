@@ -77,8 +77,7 @@ public class MessageProvider extends ContentProvider {
     public boolean onCreate() {
         DBHelper dbHelper = new DBHelper(getContext());
         sqlDB = dbHelper.getWritableDatabase();
-        ADUsStorage = new StoreADUs(new File(getContext().getApplicationInfo().dataDir, "/send"),
-                true);
+        ADUsStorage = new StoreADUs(new File(getContext().getApplicationInfo().dataDir, "/send"), true);
         if (sqlDB != null) return true;
         return false;
     }

@@ -82,8 +82,8 @@ public class DataStoreAdaptor {
     public void persistADUsForServer(String clientId, String appId, List<ADU> adus) throws IOException {
         for (int i = 0; i < adus.size(); i++) {
             ADU adu = adus.get(i);
-            this.receiveADUsStorage.addADU(clientId, adu.getAppId(),
-                                                Files.readAllBytes(adu.getSource().toPath()), adu.getADUId());
+            this.receiveADUsStorage.addADU(clientId, adu.getAppId(), Files.readAllBytes(adu.getSource().toPath()),
+                                           adu.getADUId());
         }
         List<ADU> dataList = receiveADUsStorage.getAppData(appId, clientId);
         String appAdapterAddress = this.getAppAdapterAddress(appId);
@@ -91,8 +91,7 @@ public class DataStoreAdaptor {
         String ipAddress = appAdapterAddress.split(":")[0];
         int port = Integer.parseInt(appAdapterAddress.split(":")[1]);
         var client = new ServiceAdapterClient(ipAddress, port);
-        var data = client.SendData(clientId, dataList,
-                                   this.sendADUsStorage.getLastADUIdReceived(clientId, appId));
+        var data = client.SendData(clientId, dataList, this.sendADUsStorage.getLastADUIdReceived(clientId, appId));
 
         if (data != null && dataList.size() > 0) {
             long lastAduIdSent = dataList.get(dataList.size() - 1).getADUId();
@@ -122,7 +121,8 @@ public class DataStoreAdaptor {
     public void saveDataFromAdaptor(String clientId, String appId, AppData appData) {
         try {
             for (int i = 0; i < appData.getDataListCount(); i++) {
-                this.sendADUsStorage.addADU(clientId, appId, appData.getDataList(i).getData().toByteArray(), appData.getDataList(i).getAduId());
+                this.sendADUsStorage.addADU(clientId, appId, appData.getDataList(i).getData().toByteArray(),
+                                            appData.getDataList(i).getAduId());
             }
         } catch (Exception ex) {
             ex.printStackTrace();

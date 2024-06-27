@@ -45,6 +45,7 @@ public class BundleSecurity {
             e.printStackTrace();
         }
     }
+
     public String getClientIdFromBundleId(String bundleId) {
         String clientId = "";
         if (bundleId.contains("-")) {

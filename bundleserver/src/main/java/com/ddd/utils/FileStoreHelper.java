@@ -56,9 +56,11 @@ public class FileStoreHelper {
     String RootFolder = "";
     private static final Logger logger = Logger.getLogger(FileStoreHelper.class.getName());
     private StoreADUs ADUsStorage;
+
     public FileStoreHelper(String rootFolder) {
         RootFolder = rootFolder;
     }
+
     private void registerAppId(String appId) {
         ApplicationDataManager adm = new ApplicationDataManager();
         List<String> appIds = adm.getRegisteredAppIds();
@@ -71,6 +73,7 @@ public class FileStoreHelper {
         }
         adm.registerAppId(appId);
     }
+
     public byte[] getNextAppData(String folder) throws IOException {
         Metadata metadata = ADUsStorage.getMetadata(new File(folder));
         long nextMessageId = metadata.lastProcessedMessageId + 1;
@@ -80,7 +83,7 @@ public class FileStoreHelper {
                 nextMessageId--;
             } else return null;
         }
-        byte[] appData = Files.readAllBytes(Paths.get(RootFolder, folder, String.valueOf(nextMessageId),  ".txt"));
+        byte[] appData = Files.readAllBytes(Paths.get(RootFolder, folder, String.valueOf(nextMessageId), ".txt"));
         metadata.lastProcessedMessageId = nextMessageId;
         ADUsStorage.setMetadata(new File(folder), metadata);
         return appData;

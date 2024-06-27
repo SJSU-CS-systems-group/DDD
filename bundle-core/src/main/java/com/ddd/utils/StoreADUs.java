@@ -46,7 +46,7 @@ public class StoreADUs {
 
     public Metadata getMetadata(File folder) throws IOException {
         try {
-            String data = Files.readString(rootFolder.toPath().resolve(folder.toPath().resolve( "metadata.json")));
+            String data = Files.readString(rootFolder.toPath().resolve(folder.toPath().resolve("metadata.json")));
             Gson gson = new Gson();
             return gson.fromJson(data, Metadata.class);
         } catch (Exception e) {
@@ -56,6 +56,7 @@ public class StoreADUs {
             return metadata;
         }
     }
+
     public void setMetadata(File folder, Metadata metadata) throws IOException {
         Gson gson = new Gson();
         String metadataString = gson.toJson(metadata);
@@ -65,6 +66,7 @@ public class StoreADUs {
         oFile.write(metadataString.getBytes());
         oFile.close();
     }
+
     public Metadata getIfNotCreateMetadata(File folder) throws IOException {
         try {
             return getMetadata(folder);
@@ -73,6 +75,7 @@ public class StoreADUs {
             return getMetadata(folder);
         }
     }
+
     public List<ADU> getAppData(String appId, String clientId) throws IOException {
         List<ADU> appDataList = new ArrayList<>();
         var folder = new File(clientId, appId);
@@ -82,12 +85,13 @@ public class StoreADUs {
         }
         return appDataList;
     }
+
     public List<byte[]> getAllAppData(String appId) throws IOException {
         List<byte[]> dataList = new ArrayList<>();
-        Metadata metadata = getIfNotCreateMetadata(new File (appId));
+        Metadata metadata = getIfNotCreateMetadata(new File(appId));
         var folder = new File(rootFolder, appId);
         for (long i = 1; i <= metadata.lastReceivedMessageId; i++) {
-            byte[] data = Files.readAllBytes(new File (folder, i + ".txt").toPath());
+            byte[] data = Files.readAllBytes(new File(folder, i + ".txt").toPath());
             logger.log(FINE, "bundleclient", data.toString());
             dataList.add(data);
         }
@@ -99,9 +103,10 @@ public class StoreADUs {
         File file = new File(rootFolder + File.separator + fileName);
         file.delete();
     }
+
     public void deleteAllFilesUpTo(String clientId, String appId, long aduId) throws IOException {
         //check if there are enough files
-        var folder = clientId == null? Paths.get(appId) : Paths.get(clientId, appId);
+        var folder = clientId == null ? Paths.get(appId) : Paths.get(clientId, appId);
         Metadata metadata = getIfNotCreateMetadata(folder.toFile());
         if (metadata.lastSentMessageId >= aduId) {
             logger.log(INFO, "[FileStoreHelper.deleteAllFilesUpTo] Data already deleted.");
@@ -114,6 +119,7 @@ public class StoreADUs {
 
         metadata.lastSentMessageId = aduId;
     }
+
     public byte[] getADU(String clientId, String appId, String aduId) throws IOException {
         var appFolder = getAppFolder(clientId, appId);
         var adu = Files.readAllBytes(appFolder.resolve(aduId + ".txt"));
@@ -121,7 +127,8 @@ public class StoreADUs {
     }
 
     private Path getAppFolder(String clientId, String appId) {
-        return clientId == null? rootFolder.toPath().resolve(appId) : rootFolder.toPath().resolve(Paths.get(clientId, appId));
+        return clientId == null ? rootFolder.toPath().resolve(appId) :
+                rootFolder.toPath().resolve(Paths.get(clientId, appId));
     }
 
     public File getADUFile(String clientId, String appId, String aduId) throws IOException {
@@ -133,7 +140,7 @@ public class StoreADUs {
      * @param clientId
      * @param appId
      * @param data
-     * @param aduId if -1 we will set to next ID
+     * @param aduId    if -1 we will set to next ID
      * @return
      * @throws IOException
      */
@@ -144,8 +151,7 @@ public class StoreADUs {
         var lastAduId = forSending ? metadata.lastSentMessageId : metadata.lastReceivedMessageId;
         if (aduId != -1) {
             aduId = ++lastAduId;
-        }
-        else if (aduId <= lastAduId) {
+        } else if (aduId <= lastAduId) {
             return null;
         }
         if (forSending) {
@@ -160,8 +166,9 @@ public class StoreADUs {
         oFile.close();
         return file;
     }
+
     public long getLastADUIdReceived(String clientId, String appId) throws IOException {
-        Metadata metadata = getMetadata(clientId == null? new File(appId) : new File(clientId, appId));
+        Metadata metadata = getMetadata(clientId == null ? new File(appId) : new File(clientId, appId));
         return metadata.lastReceivedMessageId;
     }
 }

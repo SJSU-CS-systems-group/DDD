@@ -22,7 +22,7 @@ public class ADUUtils {
         try (BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(
                 adu.getSource())); BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(
                 new FileOutputStream(aduFile));) {
-                bufferedInputStream.transferTo(bufferedOutputStream);
+            bufferedInputStream.transferTo(bufferedOutputStream);
         }
     }
 
@@ -32,7 +32,7 @@ public class ADUUtils {
         }
         for (final ADU adu : adus) {
             String appId = adu.getAppId();
-            var appDirectory = new File (targetDirectory, appId);
+            var appDirectory = new File(targetDirectory, appId);
             if (!appDirectory.exists()) {
                 appDirectory.mkdirs();
             }

@@ -42,8 +42,7 @@ public class ServiceAdapterClient {
             List<AppDataUnit> dataListConverted = new ArrayList<>();
             for (int i = 0; i < dataList.size(); i++) {
                 try {
-                    byte[] data =
-                            Files.readString(Path.of(dataList.get(i).getSource().getAbsolutePath())).getBytes();
+                    byte[] data = Files.readString(Path.of(dataList.get(i).getSource().getAbsolutePath())).getBytes();
                     dataListConverted.add(AppDataUnit.newBuilder().setData(ByteString.copyFrom(data))
                                                   .setAduId(dataList.get(i).getADUId()).build());
                 } catch (Exception ex) {

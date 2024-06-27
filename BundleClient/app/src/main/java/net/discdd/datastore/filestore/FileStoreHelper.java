@@ -58,6 +58,7 @@ public class FileStoreHelper {
 
     /**
      * will be abstract due to use of app-specific adp
+     *
      * @param appId
      * @throws IOException
      */
@@ -73,6 +74,7 @@ public class FileStoreHelper {
         }
         adm.registerAppId(appId);
     }
+
     public void createAppIdDirIfNotExists(String appId) throws IOException {
         File f = new File(rootFolder + File.separator + appId);
         if (f.isFile()) {
