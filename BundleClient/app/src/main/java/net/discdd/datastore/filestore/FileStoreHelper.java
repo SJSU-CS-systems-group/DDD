@@ -1,29 +1,20 @@
 package net.discdd.datastore.filestore;
 
-import android.net.Uri;
-
-import net.discdd.client.applicationdatamanager.ApplicationDataManager;
-import com.ddd.model.Metadata;
-import com.ddd.utils.StoreADUs;
-import com.google.gson.Gson;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-
-import java.util.logging.Logger;
-
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
+
+import com.ddd.model.Metadata;
+import com.ddd.utils.StoreADUs;
+
+import net.discdd.client.applicationdatamanager.ApplicationDataManager;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.logging.Logger;
 
 public class FileStoreHelper {
     private static final Logger logger = Logger.getLogger(FileStoreHelper.class.getName());
@@ -49,7 +40,7 @@ public class FileStoreHelper {
      * @throws IOException
      */
     public byte[] getNextAppData(String folder) throws IOException {
-        Metadata metadata = ADUsStorage.getIfNotCreateMetadata(folder);
+        Metadata metadata = ADUsStorage.getIfNotCreateMetadata(new File(folder));
         long nextMessageId = metadata.lastProcessedMessageId + 1;
         if (nextMessageId > metadata.lastReceivedMessageId) {
             logger.log(INFO, "bundleclient", "no data to show");
@@ -59,9 +50,9 @@ public class FileStoreHelper {
                 return null;
             }
         }
-        byte[] appData = ADUsStorage.readFile(rootFolder + File.separator + folder + File.separator + nextMessageId + ".txt");
+        byte[] appData = Files.readAllBytes(rootFolder.resolve(Paths.get(folder, nextMessageId + ".txt")));
         metadata.lastProcessedMessageId = nextMessageId;
-        ADUsStorage.setMetadata(folder, metadata);
+        ADUsStorage.setMetadata(new File(folder), metadata);
         return appData;
     }
 
@@ -92,6 +83,6 @@ public class FileStoreHelper {
             registerAppId(appId);
         }
 
-        ADUsStorage.getIfNotCreateMetadata(appId);
+        ADUsStorage.getIfNotCreateMetadata(new File(appId));
     }
 }

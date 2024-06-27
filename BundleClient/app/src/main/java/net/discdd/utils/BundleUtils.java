@@ -217,7 +217,7 @@ public class BundleUtils {
                                        null, new File(extractedBundlePath), null, encryptedPayload, payloadSign);
     }
 
-    public static UncompressedPayload extractPayload(Payload payload, String extractDirPath) {
+    public static UncompressedPayload extractPayload(Payload payload, String extractDirPath) throws IOException {
         String extractedPayloadPath = extractDirPath + File.separator + "extracted-payload";
         logger.log(INFO, "Extracting payload for payload path: " + extractedPayloadPath);
         JarUtils.jarToDir(payload.getSource().getAbsolutePath(), extractedPayloadPath);

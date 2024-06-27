@@ -18,8 +18,6 @@ import java.util.jar.Manifest;
 import java.util.zip.CRC32;
 import java.util.zip.CheckedInputStream;
 
-import net.discdd.datastore.filestore.FileStoreHelper;
-
 public class JarUtils {
     private static long getChecksum(File file) throws IOException {
         long checkSum = 0L;

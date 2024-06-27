@@ -12,6 +12,8 @@ import net.discdd.server.ClientData;
 import net.discdd.server.PrepareResponse;
 import net.discdd.server.ServiceAdapterGrpc;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -41,7 +43,7 @@ public class ServiceAdapterClient {
             for (int i = 0; i < dataList.size(); i++) {
                 try {
                     byte[] data =
-                            ADUsStorage.getStringFromFile(dataList.get(i).getSource().getAbsolutePath()).getBytes();
+                            Files.readString(Path.of(dataList.get(i).getSource().getAbsolutePath())).getBytes();
                     dataListConverted.add(AppDataUnit.newBuilder().setData(ByteString.copyFrom(data))
                                                   .setAduId(dataList.get(i).getADUId()).build());
                 } catch (Exception ex) {

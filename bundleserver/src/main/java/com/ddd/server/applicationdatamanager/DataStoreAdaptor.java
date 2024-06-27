@@ -9,6 +9,7 @@ import net.discdd.server.AppData;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
@@ -30,8 +31,8 @@ public class DataStoreAdaptor {
     private StoreADUs receiveADUsStorage;
 
     public DataStoreAdaptor(String appRootDataDirectory) {
-        this.sendADUsStorage = new StoreADUs(appRootDataDirectory + "/send");
-        this.receiveADUsStorage = new StoreADUs(appRootDataDirectory + "/receive");
+        this.sendADUsStorage = new StoreADUs(new File(appRootDataDirectory, "send"), true);
+        this.receiveADUsStorage = new StoreADUs(new File(appRootDataDirectory, "receive"), false);
     }
 
     public void deleteADUs(String clientId, String appId, Long aduIdEnd) throws IOException {
@@ -80,8 +81,9 @@ public class DataStoreAdaptor {
     // store all data for one app received from transport and send to app adapter
     public void persistADUsForServer(String clientId, String appId, List<ADU> adus) throws IOException {
         for (int i = 0; i < adus.size(); i++) {
-            this.receiveADUsStorage.addFile(clientId + File.separator + adus.get(i).getAppId(),
-                                                this.receiveADUsStorage.getDataFromFile(adus.get(i).getSource()), false);
+            ADU adu = adus.get(i);
+            this.receiveADUsStorage.addADU(clientId, adu.getAppId(),
+                                                Files.readAllBytes(adu.getSource().toPath()), adu.getADUId());
         }
         List<ADU> dataList = receiveADUsStorage.getAppData(appId, clientId);
         String appAdapterAddress = this.getAppAdapterAddress(appId);
@@ -90,7 +92,7 @@ public class DataStoreAdaptor {
         int port = Integer.parseInt(appAdapterAddress.split(":")[1]);
         var client = new ServiceAdapterClient(ipAddress, port);
         var data = client.SendData(clientId, dataList,
-                                   this.sendADUsStorage.getLastADUIdReceived(clientId + "/" + appId));
+                                   this.sendADUsStorage.getLastADUIdReceived(clientId, appId));
 
         if (data != null && dataList.size() > 0) {
             long lastAduIdSent = dataList.get(dataList.size() - 1).getADUId();
@@ -120,7 +122,7 @@ public class DataStoreAdaptor {
     public void saveDataFromAdaptor(String clientId, String appId, AppData appData) {
         try {
             for (int i = 0; i < appData.getDataListCount(); i++) {
-                this.sendADUsStorage.addFile(clientId + File.separator + appId, appData.getDataList(i).getData().toByteArray(), false);
+                this.sendADUsStorage.addADU(clientId, appId, appData.getDataList(i).getData().toByteArray(), appData.getDataList(i).getAduId());
             }
         } catch (Exception ex) {
             ex.printStackTrace();

@@ -11,6 +11,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Binder;
 
+import java.io.File;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
@@ -76,8 +77,8 @@ public class MessageProvider extends ContentProvider {
     public boolean onCreate() {
         DBHelper dbHelper = new DBHelper(getContext());
         sqlDB = dbHelper.getWritableDatabase();
-        ADUsStorage = new StoreADUs(getContext().getApplicationInfo().dataDir + "/send",
-                getContext().getApplicationInfo().dataDir);
+        ADUsStorage = new StoreADUs(new File(getContext().getApplicationInfo().dataDir, "/send"),
+                true);
         if (sqlDB != null) return true;
         return false;
     }
@@ -138,7 +139,7 @@ public class MessageProvider extends ContentProvider {
             String appName = getCallerAppId();
             byte[] data = contentValues.getAsByteArray("data");
             logger.log(INFO, "bundleclient", "inserting: " + new String(data));
-            return fromFile(ADUsStorage.addFile(appName, data, true));
+            return fromFile(ADUsStorage.addADU(null, appName, data, -1));
         } catch (IOException e) {
             logger.log(WARNING, "bundleclient", "Unable to add file, error: " + e.getMessage());
             return null;

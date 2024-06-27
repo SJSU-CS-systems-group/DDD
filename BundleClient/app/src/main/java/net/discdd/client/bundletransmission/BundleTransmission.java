@@ -164,7 +164,7 @@ public class BundleTransmission {
         this.bundleSecurity.registerLargestBundleIdReceived(largestBundleId);
     }
 
-    private UncompressedPayload.Builder generateBundleBuilder() {
+    private UncompressedPayload.Builder generateBundleBuilder() throws IOException {
 
         UncompressedPayload.Builder builder = new UncompressedPayload.Builder();
         Acknowledgement ackRecord = AckRecordUtils.readAckRecordFromFile(ackRecordPath.toFile());
