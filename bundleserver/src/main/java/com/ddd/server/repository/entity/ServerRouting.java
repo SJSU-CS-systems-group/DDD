@@ -23,7 +23,7 @@ public class ServerRouting {
     @Column(name = "clientID", nullable = false, columnDefinition = "VARCHAR(256)")
     private String clientID;
 
-    @Column(name = "score", nullable = false, columnDefinition = "VARCHAR(256)")
+    @Column(name = "score", columnDefinition = "VARCHAR(256)")
     private String score;
 
     @Override
