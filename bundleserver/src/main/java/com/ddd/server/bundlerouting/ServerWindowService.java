@@ -85,7 +85,6 @@ public class ServerWindowService {
             long endCounter = Long.parseLong(entity.getEndCounter());
             int windowLength = entity.getWindowLength();
 
-
             CircularBuffer circularBuffer = createBuffer(clientID, startCounter, endCounter, windowLength);
             clientWindowMap.put(clientID, circularBuffer);
         }
