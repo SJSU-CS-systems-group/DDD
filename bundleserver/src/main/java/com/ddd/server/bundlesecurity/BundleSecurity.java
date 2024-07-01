@@ -80,7 +80,9 @@ public class BundleSecurity {
 
     public Payload decryptPayload(UncompressedBundle uncompressedBundle) {
         String bundleId = "";
-        File decryptedPayloadJar = uncompressedBundle.getSource().toPath().resolve(Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar").toFile();
+        File decryptedPayloadJar =
+                uncompressedBundle.getSource().toPath().resolve(Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar")
+                        .toFile();
 
         if (this.encryptionEnabled) {
             try {

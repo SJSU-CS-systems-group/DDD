@@ -92,7 +92,7 @@ public class ServerRoutingRepoTemp {
      */
     public void processClientMetaData(String payloadPath, String transportID, String clientID) throws ClientMetaDataFileException, SQLException {
 
-        String clientMetaDataPath = Path.of(payloadPath,  METADATAFILE).toString();
+        String clientMetaDataPath = Path.of(payloadPath, METADATAFILE).toString();
         HashMap<String, Long> clientMap = null;
         ObjectMapper mapper = new ObjectMapper();
 

@@ -125,7 +125,7 @@ public class JarUtils {
                 }
 
                 // Create the destination file
-                File destinationFile = Path.of(dirPath,entry.getName()).toFile();
+                File destinationFile = Path.of(dirPath, entry.getName()).toFile();
 
                 // Create any necessary subdirectories
                 destinationFile.getParentFile().mkdirs();

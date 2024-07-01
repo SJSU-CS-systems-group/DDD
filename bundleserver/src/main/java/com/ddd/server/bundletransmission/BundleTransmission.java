@@ -72,12 +72,12 @@ public class BundleTransmission {
 
     @Transactional(rollbackFor = Exception.class)
     public void processReceivedBundle(String transportId, Bundle bundle) throws Exception {
-        Path bundleRecvProcDir = this.config.getBundleTransmission().getReceivedProcessingDirectory().resolve(transportId);
+        Path bundleRecvProcDir =
+                this.config.getBundleTransmission().getReceivedProcessingDirectory().resolve(transportId);
 
         bundleRecvProcDir.toFile().mkdirs();
 
-        UncompressedBundle uncompressedBundle =
-                this.bundleGenServ.extractBundle(bundle, bundleRecvProcDir);
+        UncompressedBundle uncompressedBundle = this.bundleGenServ.extractBundle(bundle, bundleRecvProcDir);
         String clientId = "";
         String serverIdReceived = SecurityUtils.generateID(
                 uncompressedBundle.getSource().toPath().resolve(SecurityUtils.SERVER_IDENTITY_KEY));
@@ -104,7 +104,7 @@ public class BundleTransmission {
         }
 
         UncompressedPayload uncompressedPayload =
-                this.bundleGenServ. extractPayload(payload, uncompressedBundle.getSource().toPath());
+                this.bundleGenServ.extractPayload(payload, uncompressedBundle.getSource().toPath());
 
         File ackRecordFile = new File(this.getAckRecordLocation(clientId));
         ackRecordFile.getParentFile().mkdirs();
@@ -186,7 +186,8 @@ public class BundleTransmission {
     }
 
     private String getAckRecordLocation(String clientId) {
-        return this.config.getBundleTransmission().getToBeBundledDirectory().resolve(Path.of(clientId, Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME)).toString();
+        return this.config.getBundleTransmission().getToBeBundledDirectory()
+                .resolve(Path.of(clientId, Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME)).toString();
     }
 
     private UncompressedPayload.Builder generatePayloadBuilder(String clientId) {
@@ -257,7 +258,8 @@ public class BundleTransmission {
                     optional.get(); // there was definitely a bundle sent previously if sender window is full
 
             bundleId = retxmnBundlePayloadBuilder.getBundleId();
-            retxmnBundlePayloadBuilder.setSource(this.config.getBundleTransmission().getUncompressedPayloadDirectory().resolve(bundleId).toFile());
+            retxmnBundlePayloadBuilder.setSource(
+                    this.config.getBundleTransmission().getUncompressedPayloadDirectory().resolve(bundleId).toFile());
             UncompressedPayload toSend = retxmnBundlePayloadBuilder.build();
             toSendOpt = Optional.of(toSend);
             isRetransmission = true;
@@ -278,7 +280,8 @@ public class BundleTransmission {
             }
 
             generatedPayloadBuilder.setBundleId(bundleId);
-            generatedPayloadBuilder.setSource(this.config.getBundleTransmission().getUncompressedPayloadDirectory().resolve(bundleId).toFile());
+            generatedPayloadBuilder.setSource(
+                    this.config.getBundleTransmission().getUncompressedPayloadDirectory().resolve(bundleId).toFile());
             UncompressedPayload toSend = generatedPayloadBuilder.build();
             toSendOpt = Optional.of(toSend);
         }
@@ -348,7 +351,8 @@ public class BundleTransmission {
         logger.log(INFO,
                    "[BundleTransmission] Inside getBundlesForTransmission method for transport id: " + transportId);
         List<File> bundles = new ArrayList<>();
-        File recvTransportSubDir = this.config.getBundleTransmission().getToSendDirectory().resolve(transportId).toFile();
+        File recvTransportSubDir =
+                this.config.getBundleTransmission().getToSendDirectory().resolve(transportId).toFile();
         File[] recvTransport = recvTransportSubDir.listFiles(new FileFilter() {
             @Override
             public boolean accept(File file) {

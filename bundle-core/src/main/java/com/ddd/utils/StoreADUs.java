@@ -47,7 +47,7 @@ public class StoreADUs {
     private Metadata getMetadata(String clientId, String appId) throws IOException {
         Path metadataPath = getAppFolder(clientId, appId).resolve("metadata.json");
         try {
-            String data = new String( Files.readAllBytes(metadataPath));
+            String data = new String(Files.readAllBytes(metadataPath));
             logger.log(INFO, "metadata path " + metadataPath);
             Gson gson = new Gson();
             return gson.fromJson(data, Metadata.class);

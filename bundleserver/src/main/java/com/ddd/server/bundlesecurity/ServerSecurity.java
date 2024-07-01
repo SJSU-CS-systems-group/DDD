@@ -169,7 +169,9 @@ public class ServerSecurity {
     }
 
     private void updateSessionRecord(ClientSession clientSession) {
-        String sessionStorePath = clientRootPath.resolve(Path.of(clientSession.getClientID(), SecurityUtils.SESSION_STORE_FILE)).toString();
+        String sessionStorePath =
+                clientRootPath.resolve(Path.of(clientSession.getClientID(), SecurityUtils.SESSION_STORE_FILE))
+                        .toString();
         SessionRecord clientSessionRecord = null;
 
         try (FileOutputStream stream = new FileOutputStream(sessionStorePath)) {

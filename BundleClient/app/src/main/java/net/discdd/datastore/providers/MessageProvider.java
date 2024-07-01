@@ -52,7 +52,7 @@ public class MessageProvider extends ContentProvider {
      * this utility will be moved to ApplicationDataManager, delete this instance once that
      * is done.
      */
-    private FileStoreHelper tempFileStoreHelper ;
+    private FileStoreHelper tempFileStoreHelper;
 
     static {
         uriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
