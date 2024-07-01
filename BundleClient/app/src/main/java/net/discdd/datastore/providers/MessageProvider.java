@@ -20,7 +20,6 @@ import static java.util.logging.Level.WARNING;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import net.discdd.datastore.filestore.FileStoreHelper;
 import net.discdd.datastore.sqlite.DBHelper;
 import com.ddd.utils.StoreADUs;
 
@@ -52,7 +51,6 @@ public class MessageProvider extends ContentProvider {
      * this utility will be moved to ApplicationDataManager, delete this instance once that
      * is done.
      */
-    private FileStoreHelper tempFileStoreHelper;
 
     static {
         uriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
@@ -91,7 +89,6 @@ public class MessageProvider extends ContentProvider {
 
         try {
             String appId = getCallerAppId();
-//            List<byte[]> datalist = fileStoreHelper.getAllAppData(appId);
             List<byte[]> datalist = ADUsStorage.getAllAppData(appId);
             cursor = new MatrixCursor(new String[] { "data" });
             for (byte[] data : datalist) {
@@ -102,19 +99,6 @@ public class MessageProvider extends ContentProvider {
             cursor = null;
         }
         return cursor;
-
-        /*SQLiteQueryBuilder queryBuilder=new SQLiteQueryBuilder();
-        queryBuilder.setTables(TABLE_NAME);
-        switch ((uriMatcher.match(uri))){
-            case uriCode:
-                queryBuilder.setProjectionMap(values);
-                break;
-            default:
-                throw new IllegalArgumentException("Unknown URI "+uri);
-        }
-        Cursor cursor=queryBuilder.query(sqlDB, projection, selection, selectionArgs, null, null, sortOrder);
-        cursor.setNotificationUri(getContext().getContentResolver(), uri);
-        return cursor;*/
     }
 
     @Nullable
