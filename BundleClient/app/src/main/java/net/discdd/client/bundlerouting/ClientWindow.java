@@ -3,6 +3,7 @@ package net.discdd.client.bundlerouting;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 

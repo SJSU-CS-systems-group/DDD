@@ -177,7 +177,7 @@ public class BundleTransmission {
     }
 
     private UncompressedPayload.Builder generatePayloadBuilder(String clientId) {
-        List<ADU> ADUs = this.applicationDataManager.fetchADUs(clientId);
+        List<ADU> ADUs = this.applicationDataManager.fetchADUs(0L, clientId);
 
         UncompressedPayload.Builder builder = new UncompressedPayload.Builder();
 

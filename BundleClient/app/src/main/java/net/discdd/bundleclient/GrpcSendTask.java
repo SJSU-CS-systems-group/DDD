@@ -3,13 +3,15 @@ package net.discdd.bundleclient;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+
 import android.app.Activity;
 import android.content.Context;
 import android.os.Build;
 import android.widget.Button;
 import android.widget.TextView;
 
-import com.ddd.bundleclient.R;
 import net.discdd.client.bundletransmission.BundleTransmission;
 import net.discdd.transport.File;
 import net.discdd.transport.FileServiceGrpc;

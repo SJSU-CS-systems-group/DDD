@@ -37,7 +37,6 @@ bundle-server:
     encrypted-payload-directory: "${bundle-server.bundle-store-root}BundleTransmission/bundle-generation/encrypted-payload"
   application-data-manager:
     app-data-size-limit: 31457280
-    registered-app-ids-path: "${bundle-server.bundle-store-root}Shared/REGISTERED_APP_IDS.txt"
     state-manager:
       largest-adu-id-received: "${bundle-server.bundle-store-root}Shared/DB/LARGEST_ADU_ID_RECEIVED.json"
       sent-bundle-details: "${bundle-server.bundle-store-root}Shared/DB/SENT_BUNDLE_DETAILS.json"

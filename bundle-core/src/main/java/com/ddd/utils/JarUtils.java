@@ -1,11 +1,10 @@
-package net.discdd.utils;
+package com.ddd.utils;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
@@ -106,7 +105,6 @@ public class JarUtils {
     }
 
     public static void jarToDir(String jarFilePath, String dirPath) {
-
         try {
             JarFile jarFile = new JarFile(jarFilePath);
 
@@ -136,21 +134,20 @@ public class JarUtils {
                 destinationFile.getParentFile().mkdirs();
 
                 // Extract the file
+                MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
                 InputStream inputStream = jarFile.getInputStream(entry);
                 FileOutputStream outputStream = new FileOutputStream(destinationFile);
                 byte[] buffer = new byte[1024];
                 int bytesRead;
                 while ((bytesRead = inputStream.read(buffer)) != -1) {
                     outputStream.write(buffer, 0, bytesRead);
+                    messageDigest.update(buffer, 0, bytesRead);
                 }
                 inputStream.close();
                 outputStream.close();
 
                 // Verify the checksum of the extracted file
-                MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
-                var fileBytes = Files.readAllBytes(destinationFile.toPath());
-                String fileChecksum = Base64.getEncoder().encodeToString(messageDigest.digest(fileBytes));
-                fileChecksum = fileChecksum.trim().replaceAll("\n$", "");
+                String fileChecksum = Base64.getEncoder().encodeToString(messageDigest.digest());
                 String manifestChecksum = manifest.getEntries().get(entry.getName()).getValue("SHA-256-Digest");
                 if (!fileChecksum.equals(manifestChecksum)) {
                     throw new SecurityException("Checksum verification failed for " + entry.getName());

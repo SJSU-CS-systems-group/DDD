@@ -3,11 +3,13 @@ package com.ddd.server.applicationdatamanager;
 import com.ddd.model.ADU;
 import com.ddd.server.api.ServiceAdapterClient;
 import com.ddd.server.storage.MySQLConnection;
-import com.ddd.utils.FileStoreHelper;
+import com.ddd.utils.StoreADUs;
 import net.discdd.server.AppData;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
@@ -25,16 +27,16 @@ import static java.util.logging.Level.WARNING;
 
 public class DataStoreAdaptor {
     private static final Logger logger = Logger.getLogger(DataStoreAdaptor.class.getName());
-    private FileStoreHelper sendFileStoreHelper;
-    private FileStoreHelper receiveFileStoreHelper;
+    private StoreADUs sendADUsStorage;
+    private StoreADUs receiveADUsStorage;
 
     public DataStoreAdaptor(String appRootDataDirectory) {
-        this.sendFileStoreHelper = new FileStoreHelper(appRootDataDirectory + "/send");
-        this.receiveFileStoreHelper = new FileStoreHelper(appRootDataDirectory + "/receive");
+        this.sendADUsStorage = new StoreADUs(new File(appRootDataDirectory, "send"), true);
+        this.receiveADUsStorage = new StoreADUs(new File(appRootDataDirectory, "receive"), false);
     }
 
-    public void deleteADUs(String clientId, String appId, Long aduIdEnd) {
-        this.sendFileStoreHelper.deleteAllFilesUpTo(clientId, appId, aduIdEnd);
+    public void deleteADUs(String clientId, String appId, Long aduIdEnd) throws IOException {
+        this.sendADUsStorage.deleteAllFilesUpTo(clientId, appId, aduIdEnd);
         logger.log(INFO, "[DataStoreAdaptor] Deleted ADUs for application " + appId + " with id upto " + aduIdEnd);
     }
 
@@ -77,23 +79,23 @@ public class DataStoreAdaptor {
     }
 
     // store all data for one app received from transport and send to app adapter
-    public void persistADUsForServer(String clientId, String appId, List<ADU> adus) {
+    public void persistADUsForServer(String clientId, String appId, List<ADU> adus) throws IOException {
         for (int i = 0; i < adus.size(); i++) {
-            this.receiveFileStoreHelper.AddFile(adus.get(i).getAppId(), clientId,
-                                                this.receiveFileStoreHelper.getDataFromFile(adus.get(i).getSource()));
+            ADU adu = adus.get(i);
+            this.receiveADUsStorage.addADU(clientId, adu.getAppId(), Files.readAllBytes(adu.getSource().toPath()),
+                                           adu.getADUId());
         }
-        List<ADU> dataList = receiveFileStoreHelper.getAppData(appId, clientId);
+        List<ADU> dataList = receiveADUsStorage.getAppData(appId, clientId);
         String appAdapterAddress = this.getAppAdapterAddress(appId);
         logger.log(INFO, "[DataStoreAdaptor.persistADUForServer] " + appAdapterAddress);
         String ipAddress = appAdapterAddress.split(":")[0];
         int port = Integer.parseInt(appAdapterAddress.split(":")[1]);
         var client = new ServiceAdapterClient(ipAddress, port);
-        var data = client.SendData(clientId, dataList,
-                                   this.sendFileStoreHelper.getLastADUIdReceived(clientId + "/" + appId));
+        var data = client.SendData(clientId, dataList, this.sendADUsStorage.getLastADUIdReceived(clientId, appId));
 
         if (data != null && dataList.size() > 0) {
             long lastAduIdSent = dataList.get(dataList.size() - 1).getADUId();
-            receiveFileStoreHelper.deleteAllFilesUpTo(clientId, appId, lastAduIdSent);
+            receiveADUsStorage.deleteAllFilesUpTo(clientId, appId, lastAduIdSent);
         }
 
         this.saveDataFromAdaptor(clientId, appId, data);
@@ -103,7 +105,7 @@ public class DataStoreAdaptor {
 
     public ADU fetchADU(String clientId, String appId, long aduId) {
         try {
-            File file = this.sendFileStoreHelper.getADUFile(clientId, appId, aduId + "");
+            File file = this.sendADUsStorage.getADUFile(clientId, appId, aduId + "");
             FileInputStream fis = new FileInputStream(file);
             int fileSize = fis.available();
             ADU adu = new ADU(file, appId, aduId, fileSize, clientId);
@@ -119,7 +121,8 @@ public class DataStoreAdaptor {
     public void saveDataFromAdaptor(String clientId, String appId, AppData appData) {
         try {
             for (int i = 0; i < appData.getDataListCount(); i++) {
-                this.sendFileStoreHelper.AddFile(appId, clientId, appData.getDataList(i).getData().toByteArray());
+                this.sendADUsStorage.addADU(clientId, appId, appData.getDataList(i).getData().toByteArray(),
+                                            appData.getDataList(i).getAduId());
             }
         } catch (Exception ex) {
             ex.printStackTrace();

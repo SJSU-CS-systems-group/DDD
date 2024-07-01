@@ -22,7 +22,7 @@ android {
     compileSdk 31
 
     defaultConfig {
-        applicationId "com.ddd.bundletransport"
+        applicationId "net.discdd.bundletransport"
         minSdk 24
         targetSdk 31
         versionCode 1
@@ -37,12 +37,6 @@ android {
         }
     }
 
-    lintOptions {
-        abortOnError false
-        disable 'GoogleAppIndexingWarning', 'HardcodedText', 'InvalidPackage'
-        textReport true
-        textOutput "stdout"
-    }
 
     sourceSets {
         main {
@@ -54,7 +48,13 @@ android {
             }
         }
     }
-    namespace 'com.ddd.bundletransport'
+    namespace 'net.discdd.bundletransport'
+    lint {
+        abortOnError false
+        disable 'GoogleAppIndexingWarning', 'HardcodedText', 'InvalidPackage'
+        textOutput file('stdout')
+        textReport true
+    }
 }
 
 dependencies {
