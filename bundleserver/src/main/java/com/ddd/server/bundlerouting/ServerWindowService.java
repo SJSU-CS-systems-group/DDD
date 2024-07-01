@@ -23,7 +23,6 @@ import javax.annotation.PostConstruct;
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
