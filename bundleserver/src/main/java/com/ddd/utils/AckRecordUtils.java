@@ -1,19 +1,15 @@
 package com.ddd.utils;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-
 import com.ddd.model.Acknowledgement;
+
+import java.io.*;
+import java.nio.file.Files;
 
 public class AckRecordUtils {
 
     public static Acknowledgement readAckRecordFromFile(File inputFile) {
         try {
-            String bundleId = Files.readString(Paths.get(inputFile.getAbsolutePath()));
+            String bundleId = Files.readString(inputFile.toPath());
             return new Acknowledgement(bundleId);
         } catch (IOException e) {
             e.printStackTrace();
