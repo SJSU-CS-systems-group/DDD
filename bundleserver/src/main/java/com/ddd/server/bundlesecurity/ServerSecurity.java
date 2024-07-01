@@ -169,8 +169,7 @@ public class ServerSecurity {
     }
 
     private void updateSessionRecord(ClientSession clientSession) {
-        String sessionStorePath = clientRootPath + File.separator + clientSession.getClientID() + File.separator +
-                SecurityUtils.SESSION_STORE_FILE;
+        String sessionStorePath = clientRootPath.resolve(Path.of(clientSession.getClientID(), SecurityUtils.SESSION_STORE_FILE)).toString();
         SessionRecord clientSessionRecord = null;
 
         try (FileOutputStream stream = new FileOutputStream(sessionStorePath)) {
@@ -363,7 +362,7 @@ public class ServerSecurity {
                                                     new Throwable("Client not found"));
         }
 
-        var bundlePath = encPath.resolve(bundleID + File.separator);
+        var bundlePath = encPath.resolve(bundleID);
         var payloadPath = bundlePath.resolve(SecurityUtils.PAYLOAD_DIR);
         var signPath = bundlePath.resolve(SecurityUtils.SIGNATURE_DIR);
         List<Path> returnPaths = new ArrayList<>();

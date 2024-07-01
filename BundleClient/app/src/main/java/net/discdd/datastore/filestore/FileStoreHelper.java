@@ -35,30 +35,6 @@ public class FileStoreHelper {
     /**
      * will be abstract due to use of app-specific adp
      *
-     * @param folder
-     * @return
-     * @throws IOException
-     */
-    public byte[] getNextAppData(String folder) throws IOException {
-        Metadata metadata = ADUsStorage.getIfNotCreateMetadata(new File(folder));
-        long nextMessageId = metadata.lastProcessedMessageId + 1;
-        if (nextMessageId > metadata.lastReceivedMessageId) {
-            logger.log(INFO, "bundleclient", "no data to show");
-            if (nextMessageId > 1) {
-                nextMessageId--;
-            } else {
-                return null;
-            }
-        }
-        byte[] appData = Files.readAllBytes(rootFolder.resolve(Paths.get(folder, nextMessageId + ".txt")));
-        metadata.lastProcessedMessageId = nextMessageId;
-        ADUsStorage.setMetadata(new File(folder), metadata);
-        return appData;
-    }
-
-    /**
-     * will be abstract due to use of app-specific adp
-     *
      * @param appId
      * @throws IOException
      */
@@ -75,16 +51,4 @@ public class FileStoreHelper {
         adm.registerAppId(appId);
     }
 
-    public void createAppIdDirIfNotExists(String appId) throws IOException {
-        File f = new File(rootFolder + File.separator + appId);
-        if (f.isFile()) {
-            f.delete();
-        }
-        if (!f.exists()) {
-            f.mkdirs();
-            registerAppId(appId);
-        }
-
-        ADUsStorage.getIfNotCreateMetadata(new File(appId));
-    }
 }

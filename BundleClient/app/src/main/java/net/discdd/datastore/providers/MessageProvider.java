@@ -52,7 +52,7 @@ public class MessageProvider extends ContentProvider {
      * this utility will be moved to ApplicationDataManager, delete this instance once that
      * is done.
      */
-    private FileStoreHelper tempFileStoreHelper;
+    private FileStoreHelper tempFileStoreHelper ;
 
     static {
         uriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
@@ -69,7 +69,6 @@ public class MessageProvider extends ContentProvider {
     private String getCallerAppId() throws IOException {
         int receiverId = Binder.getCallingUid();
         String appId = getContext().getPackageManager().getNameForUid(receiverId);
-        tempFileStoreHelper.createAppIdDirIfNotExists(appId);
         return appId;
     }
 
@@ -96,12 +95,10 @@ public class MessageProvider extends ContentProvider {
             List<byte[]> datalist = ADUsStorage.getAllAppData(appId);
             cursor = new MatrixCursor(new String[] { "data" });
             for (byte[] data : datalist) {
-
                 cursor.newRow().add("data", new String(data));
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.log(WARNING, "bundleclient", ex.getMessage());
+            logger.log(WARNING, "Error getting app data", ex);
             cursor = null;
         }
         return cursor;
@@ -137,10 +134,10 @@ public class MessageProvider extends ContentProvider {
         try {
             String appName = getCallerAppId();
             byte[] data = contentValues.getAsByteArray("data");
-            logger.log(INFO, "bundleclient", "inserting: " + new String(data));
+            logger.log(INFO, "inserting: " + new String(data));
             return fromFile(ADUsStorage.addADU(null, appName, data, -1));
         } catch (IOException e) {
-            logger.log(WARNING, "bundleclient", "Unable to add file, error: " + e.getMessage());
+            logger.log(WARNING, "Unable to add file", e);
             return null;
         }
     }

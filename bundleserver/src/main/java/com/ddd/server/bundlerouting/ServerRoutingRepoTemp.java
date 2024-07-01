@@ -9,7 +9,8 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Repository;
 
 import javax.annotation.PostConstruct;
-import java.io.File;
+import java.io.*;
+import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -91,7 +92,7 @@ public class ServerRoutingRepoTemp {
      */
     public void processClientMetaData(String payloadPath, String transportID, String clientID) throws ClientMetaDataFileException, SQLException {
 
-        String clientMetaDataPath = payloadPath + File.separator + METADATAFILE;
+        String clientMetaDataPath = Path.of(payloadPath,  METADATAFILE).toString();
         HashMap<String, Long> clientMap = null;
         ObjectMapper mapper = new ObjectMapper();
 

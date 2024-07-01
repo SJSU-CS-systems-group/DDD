@@ -1,24 +1,26 @@
 package com.ddd.server.bundlesecurity;
 
-import com.ddd.model.*;
+import com.ddd.model.EncryptedPayload;
+import com.ddd.model.EncryptionHeader;
+import com.ddd.model.Payload;
+import com.ddd.model.UncompressedBundle;
 import com.ddd.utils.Constants;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.whispersystems.libsignal.InvalidKeyException;
 
 import javax.annotation.PostConstruct;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.*;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 
 @Service
 public class BundleSecurity {
@@ -58,17 +60,16 @@ public class BundleSecurity {
     }
 
     public String[] encrypt(String toBeEncPath, String encPath, String bundleID, String clientID) {
-        File bundleDir = new File(encPath + File.separator + bundleID);
-        bundleDir.mkdirs();
+        Path bundleDir = Path.of(encPath, bundleID);
 
-        File bundleIdFile = new File(bundleDir + File.separator + Constants.BUNDLE_IDENTIFIER_FILE_NAME);
+        File bundleIdFile = bundleDir.resolve(Constants.BUNDLE_IDENTIFIER_FILE_NAME).toFile();
         try {
             FileUtils.writeLines(bundleIdFile, Arrays.asList(bundleID));
         } catch (IOException e1) {
             e1.printStackTrace();
         }
         try {
-            FileUtils.copyFile(new File(toBeEncPath), new File(bundleDir + File.separator + bundleID + ".jar"));
+            FileUtils.copyFile(new File(toBeEncPath), bundleDir.resolve(bundleID + ".jar").toFile());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -79,8 +80,7 @@ public class BundleSecurity {
 
     public Payload decryptPayload(UncompressedBundle uncompressedBundle) {
         String bundleId = "";
-        File decryptedPayloadJar = new File(uncompressedBundle.getSource().getAbsolutePath() + File.separator +
-                                                    Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar");
+        File decryptedPayloadJar = uncompressedBundle.getSource().toPath().resolve(Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar").toFile();
 
         if (this.encryptionEnabled) {
             try {
@@ -115,7 +115,7 @@ public class BundleSecurity {
 
         EncryptedPayload encryptedPayload = new EncryptedPayload(bundleId, paths[0].toFile());
 
-        File source = new File(bundleGenDirPath + File.separator + bundleId);
+        File source = bundleGenDirPath.resolve(bundleId).toFile();
         EncryptionHeader encHeader =
                 EncryptionHeader.builder().serverSignedPreKey(paths[2].toFile()).serverIdentityKey(paths[3].toFile())
                         .serverRatchetKey(paths[4].toFile()).build();

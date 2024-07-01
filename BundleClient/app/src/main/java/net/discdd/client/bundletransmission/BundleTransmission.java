@@ -115,7 +115,7 @@ public class BundleTransmission {
             RoutingExceptions.ClientMetaDataFileException, NoSessionException, InvalidMessageException,
             DuplicateMessageException, LegacyMessageException, InvalidKeyException, GeneralSecurityException {
         String largestBundleIdReceived = this.getLargestBundleIdReceived();
-        UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, this.ROOT_DIR.resolve(Paths.get(BUNDLE_GENERATION_DIRECTORY,RECEIVED_PROCESSING)).toString());
+        UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, this.ROOT_DIR.resolve(Paths.get(BUNDLE_GENERATION_DIRECTORY,RECEIVED_PROCESSING)));
         Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
         logger.log(INFO, "Updating client routing metadata for transport  " + transportId);
         clientRouting.updateMetaData(transportId);
@@ -131,7 +131,7 @@ public class BundleTransmission {
             return;
         }
         UncompressedPayload uncompressedPayload =
-                BundleUtils.extractPayload(payload, uncompressedBundle.getSource().getAbsolutePath());
+                BundleUtils.extractPayload(payload, uncompressedBundle.getSource().toPath());
 
         AckRecordUtils.writeAckRecordToFile(new Acknowledgement(bundleId), ackRecordPath.toFile());
         this.registerBundleId(bundleId);
@@ -197,7 +197,7 @@ public class BundleTransmission {
         UncompressedBundle uncompressedBundle = this.bundleSecurity.encryptPayload(payload, this.ROOT_DIR.resolve(
                 Paths.get(BUNDLE_GENERATION_DIRECTORY, ENCRYPTED_PAYLOAD)));
 
-        Bundle toSend = BundleUtils.compressBundle(uncompressedBundle, targetDir.getAbsolutePath());
+        Bundle toSend = BundleUtils.compressBundle(uncompressedBundle, targetDir.toPath());
         this.applicationDataManager.notifyBundleSent(toSendBundlePayload);
         System.out.println("[BT] Generated new bundle for transmission with bundle id: " + bundleId);
         return new BundleDTO(bundleId, toSend);

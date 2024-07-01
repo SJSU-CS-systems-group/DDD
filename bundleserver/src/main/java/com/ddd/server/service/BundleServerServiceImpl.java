@@ -1,9 +1,6 @@
 package com.ddd.server.service;
 
-import com.ddd.bundlerouting.WindowUtils.WindowExceptions;
 import com.ddd.model.BundleTransferDTO;
-import com.ddd.server.bundlesecurity.InvalidClientIDException;
-import com.ddd.server.bundlesecurity.InvalidClientSessionException;
 import com.ddd.server.bundletransmission.BundleTransmission;
 import com.google.protobuf.ByteString;
 import edu.sjsu.ddd.bundleserver.service.BundleDownloadRequest;
@@ -18,19 +15,13 @@ import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.whispersystems.libsignal.InvalidKeyException;
 
 import javax.annotation.PostConstruct;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.security.GeneralSecurityException;
-import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -131,8 +122,7 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
 
     private OutputStream getFilePath(BundleUploadRequest request) throws IOException {
         String fileName = request.getMetadata().getBid();
-        java.io.File directoryReceive =
-                new java.io.File(ReceiveDir + java.io.File.separator + request.getMetadata().getTransportId());
+        File directoryReceive = Path.of(ReceiveDir, request.getMetadata().getTransportId()).toFile();
         if (!directoryReceive.exists()) {
             directoryReceive.mkdirs();
         }
