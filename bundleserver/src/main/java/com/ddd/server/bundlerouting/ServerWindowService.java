@@ -11,6 +11,8 @@ import com.ddd.bundlerouting.WindowUtils.WindowExceptions.RecievedOldACK;
 import com.ddd.bundlesecurity.BundleIDGenerator;
 import com.ddd.server.bundlesecurity.InvalidClientIDException;
 import com.ddd.server.bundlesecurity.ServerSecurity;
+import com.ddd.server.repository.ServerWindowRepository;
+import com.ddd.server.repository.entity.ServerWindow;
 import com.ddd.server.storage.SNRDatabases;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
@@ -21,7 +23,6 @@ import javax.annotation.PostConstruct;
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
@@ -29,8 +30,16 @@ import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
 @Service
-public class ServerWindow {
-    private static final Logger logger = Logger.getLogger(ServerWindow.class.getName());
+public class ServerWindowService {
+
+    private final ServerWindowRepository serverwindowrepo;
+
+    @Autowired
+    public ServerWindowService(ServerWindowRepository serverWindowRepository) {
+        this.serverwindowrepo = serverWindowRepository;
+    }
+
+    private static final Logger logger = Logger.getLogger(ServerWindowService.class.getName());
     HashMap<String, CircularBuffer> clientWindowMap = null;
     ServerSecurity serverSecurity = null;
     private SNRDatabases database = null;
@@ -67,16 +76,14 @@ public class ServerWindow {
     }
 
     private void initializeWindow() throws SQLException, InvalidLength, BufferOverflow {
-        String query =
-                "SELECT clientID, " + STARTCOUNTER + ", " + ENDCOUNTER + ", " + WINDOW_LENGTH + " FROM " + dbTableName;
 
-        List<String[]> results = database.getFromTable(query);
+        Iterable<ServerWindow> entities = serverwindowrepo.findAll();
 
-        for (String[] result : results) {
-            String clientID = result[0];
-            long startCounter = Long.parseLong(result[1]);
-            long endCounter = Long.parseLong(result[2]);
-            int windowLength = Integer.parseInt(result[3]);
+        for (ServerWindow entity : entities) {
+            String clientID = entity.getClientID();
+            long startCounter = Long.parseLong(entity.getStartCounter());
+            long endCounter = Long.parseLong(entity.getEndCounter());
+            int windowLength = entity.getWindowLength();
 
             CircularBuffer circularBuffer = createBuffer(clientID, startCounter, endCounter, windowLength);
             clientWindowMap.put(clientID, circularBuffer);

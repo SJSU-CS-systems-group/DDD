@@ -42,4 +42,5 @@ public class ClientDataChanged {
     public String toString() {
         return "ClientDataChangedTable{" + "clientId='" + clientId + '\'' + ", hasNewData=" + hasNewData + '}';
     }
+
 }

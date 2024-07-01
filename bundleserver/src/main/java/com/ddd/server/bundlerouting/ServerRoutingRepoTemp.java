@@ -22,8 +22,8 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 
 @Repository
-public class ServerRouting {
-    private static final Logger logger = Logger.getLogger(ServerRouting.class.getName());
+public class ServerRoutingRepoTemp {
+    private static final Logger logger = Logger.getLogger(ServerRoutingRepoTemp.class.getName());
 
     SNRDatabases database = null;
     private static final String dbTableName = "ServerRoutingTable";
@@ -80,27 +80,6 @@ public class ServerRouting {
                 Long.toUnsignedString(score) + "'";
 
         database.updateEntry(query);
-    }
-
-    /* Returns the sorted list of clients accessible via the transport
-     * Parameters:
-     * transportID  : encoded transport ID
-     * Returns:
-     * List of client IDs sorted based on score
-     */
-    public List<String> getClients(String transportID) throws SQLException {
-        String query = "SELECT clientID from " + dbTableName + " WHERE transportID = '" + transportID +
-                "' ORDER BY score DESC";
-
-        List<String[]> results = database.getFromTable(query);
-
-        List<String> clients = new ArrayList<>();
-
-        for (String[] result : results) {
-            clients.add(result[0]);
-        }
-
-        return clients;
     }
 
     /* Parses the client metadata and updates the respective scores

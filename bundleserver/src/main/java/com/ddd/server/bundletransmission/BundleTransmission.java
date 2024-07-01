@@ -7,7 +7,7 @@ import com.ddd.bundlesecurity.SecurityUtils;
 import com.ddd.model.*;
 import com.ddd.server.applicationdatamanager.ApplicationDataManager;
 import com.ddd.server.bundlerouting.BundleRouting;
-import com.ddd.server.bundlerouting.ServerWindow;
+import com.ddd.server.bundlerouting.ServerWindowService;
 import com.ddd.server.bundlesecurity.BundleSecurity;
 import com.ddd.server.bundlesecurity.InvalidClientIDException;
 import com.ddd.server.bundlesecurity.InvalidClientSessionException;
@@ -39,20 +39,20 @@ public class BundleTransmission {
     private final ApplicationDataManager applicationDataManager;
     private final BundleRouting bundleRouting;
     private final BundleGeneratorService bundleGenServ;
-    private final ServerWindow serverWindow;
+    private final ServerWindowService serverWindowService;
     private final int WINDOW_LENGTH = 3;
 
     public BundleTransmission(BundleSecurity bundleSecurity, ApplicationDataManager applicationDataManager,
                               BundleRouting bundleRouting,
                               LargestBundleIdReceivedRepository largestBundleIdReceivedRepository,
                               BundleServerConfig config, BundleGeneratorService bundleGenServ,
-                              ServerWindow serverWindow) {
+                              ServerWindowService serverWindowService) {
         this.bundleSecurity = bundleSecurity;
         this.applicationDataManager = applicationDataManager;
         this.config = config;
         this.bundleRouting = bundleRouting;
         this.bundleGenServ = bundleGenServ;
-        this.serverWindow = serverWindow;
+        this.serverWindowService = serverWindowService;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -120,7 +120,7 @@ public class BundleTransmission {
         }
 
         if (!"HB".equals(uncompressedPayload.getAckRecord().getBundleId())) {
-            this.serverWindow.processACK(clientId, uncompressedPayload.getAckRecord().getBundleId());
+            this.serverWindowService.processACK(clientId, uncompressedPayload.getAckRecord().getBundleId());
         }
 
         try {
@@ -211,7 +211,7 @@ public class BundleTransmission {
 
     private String generateBundleId(String clientId) throws SQLException, InvalidClientIDException,
             GeneralSecurityException, InvalidKeyException {
-        return this.serverWindow.getCurrentbundleID(clientId);
+        return this.serverWindowService.getCurrentbundleID(clientId);
     }
 
     private BundleTransferDTO generateBundleForTransmission(String transportId, String clientId,
@@ -231,12 +231,12 @@ public class BundleTransmission {
         boolean isRetransmission = false;
 
         try {
-            this.serverWindow.addClient(clientId, this.WINDOW_LENGTH);
+            this.serverWindowService.addClient(clientId, this.WINDOW_LENGTH);
         } catch (Exception e) {
             logger.log(SEVERE, "[ServerWindow] INFO : Did not Add client " + clientId + " : " + e);
         }
 
-        boolean isSenderWindowFull = this.serverWindow.isClientWindowFull(clientId);
+        boolean isSenderWindowFull = this.serverWindowService.isClientWindowFull(clientId);
 
         if (isSenderWindowFull) {
             logger.log(INFO, "[BundleTransmission] Server's sender window is full for the client " + clientId);
@@ -369,7 +369,7 @@ public class BundleTransmission {
         String clientId = "";
         try {
             clientId = BundleIDGenerator.getClientIDFromBundleID(bundleDTO.getBundleId(), BundleIDGenerator.DOWNSTREAM);
-            this.serverWindow.updateClientWindow(clientId, bundleDTO.getBundleId());
+            this.serverWindowService.updateClientWindow(clientId, bundleDTO.getBundleId());
             logger.log(INFO, "[BundleTransmission] Updated client window for client " + clientId + " with bundle id: " +
                     bundleDTO.getBundleId());
         } catch (Exception e) {
