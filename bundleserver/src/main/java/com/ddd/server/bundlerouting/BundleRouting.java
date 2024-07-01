@@ -15,15 +15,10 @@ import com.ddd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
 public class BundleRouting {
 
     @Autowired
-    com.ddd.server.bundlerouting.ServerRouting routingTable;
+    ServerRoutingRepoTemp routingTable;
 
     @Autowired
     ServerRoutingRepository serverRoutingRepository;
-
-  /*public BundleRouting() throws SQLException
-  {
-      routingTable = new ServerRouting();
-  }*/
 
     public List<String> getClients(String transportId) throws SQLException {
         List<ServerRouting> serverRoutings = serverRoutingRepository.findByTransportID(transportId);

@@ -22,8 +22,8 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 
 @Repository
-public class ServerRouting {
-    private static final Logger logger = Logger.getLogger(ServerRouting.class.getName());
+public class ServerRoutingRepoTemp {
+    private static final Logger logger = Logger.getLogger(ServerRoutingRepoTemp.class.getName());
 
     SNRDatabases database = null;
     private static final String dbTableName = "ServerRoutingTable";

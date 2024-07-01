@@ -10,7 +10,9 @@ import lombok.Setter;
 
 @Entity(name = "ServerRouting")
 @Table(name = "serverroutingtable")
-@Getter @Setter @AllArgsConstructor
+@Getter
+@Setter
+@AllArgsConstructor
 public class ServerRouting {
 
     @Id
