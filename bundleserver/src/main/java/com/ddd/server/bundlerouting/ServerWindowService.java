@@ -23,6 +23,7 @@ import javax.annotation.PostConstruct;
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
@@ -76,6 +77,8 @@ public class ServerWindowService {
     }
 
     private void initializeWindow() throws SQLException, InvalidLength, BufferOverflow {
+        //String query =
+        //      "SELECT clientID, " + STARTCOUNTER + ", " + ENDCOUNTER + ", " + WINDOW_LENGTH + " FROM " + dbTableName;
 
         Iterable<ServerWindow> entities = serverwindowrepo.findAll();
 
@@ -85,6 +88,11 @@ public class ServerWindowService {
             long endCounter = Long.parseLong(entity.getEndCounter());
             int windowLength = entity.getWindowLength();
 
+            // for (String[] result : results) {
+            //   String clientID = result[0];
+            // long startCounter = Long.parseLong(result[1]);
+            //long endCounter = Long.parseLong(result[2]);
+            //int windowLength = Integer.parseInt(result[3]);
 
             CircularBuffer circularBuffer = createBuffer(clientID, startCounter, endCounter, windowLength);
             clientWindowMap.put(clientID, circularBuffer);
@@ -105,6 +113,12 @@ public class ServerWindowService {
         return circularBuffer;
     }
 
+    /* Returns the window for the requested client
+     * Parameters:
+     * clientID     : encoded clientID
+     * Returns:
+     * CircularBuffer object
+     */
     private CircularBuffer getClientWindow(String clientID) throws ClientWindowNotFound {
         if (!clientWindowMap.containsKey(clientID)) {
             throw new ClientWindowNotFound("[ServerWindow]: ClientID[" + clientID + "] Not Found");
@@ -146,6 +160,13 @@ public class ServerWindowService {
         }
     }
 
+    /* Add a new client and initialize its window
+     * Parameters:
+     * clientID     : encoded clientID
+     * windowLength : length of the window to be created
+     * Returns:
+     * None
+     */
     public void addClient(String clientID, int windowLength) throws InvalidLength, ClientAlreadyExists {
         if (clientWindowMap.containsKey(clientID)) {
             throw new ClientAlreadyExists("[ServerWindow]: Cannot Add to Map; client already exists");
@@ -154,6 +175,13 @@ public class ServerWindowService {
         initializeEntry(clientID, windowLength);
     }
 
+    /* Commits the bundleID to the client's window
+     * Parameter:
+     * clientID     : encoded clientID
+     * bundleID     : encoded bundleID
+     * Returns:
+     * None
+     */
     public void updateClientWindow(String clientID, String bundleID) throws ClientWindowNotFound, BufferOverflow,
             InvalidBundleID, SQLException, InvalidClientIDException, GeneralSecurityException, InvalidKeyException {
         String decryptedBundleID = null;
@@ -183,6 +211,13 @@ public class ServerWindowService {
         return serverSecurity.encryptBundleID(plainBundleID, clientID);
     }
 
+    /* Move window ahead based on the ACK received
+     * Parameters:
+     * clientID   : encoded clientID
+     * ackPath    : Path to the encoded acknowledgement (encrypted)
+     * Returns:
+     * None
+     */
     public void processACK(String clientID, String ackedBundleID) throws ClientWindowNotFound, InvalidLength,
             InvalidClientIDException, GeneralSecurityException, InvalidKeyException {
         CircularBuffer circularBuffer = getClientWindow(clientID);
@@ -224,6 +259,9 @@ public class ServerWindowService {
         }
     }
 
+    /* Check if window is full
+     *
+     */
     public boolean isClientWindowFull(String clientID) throws ClientWindowNotFound {
         return getClientWindow(clientID).isBufferFull();
     }
