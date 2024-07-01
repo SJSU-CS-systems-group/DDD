@@ -10,7 +10,9 @@ import lombok.Setter;
 
 @Entity(name = "ServerWindow")
 @Table(name = "serverwindow")
-@Getter @Setter @AllArgsConstructor
+@Getter
+@Setter
+@AllArgsConstructor
 public class ServerWindow {
     @Id
     @Column(name = "clientID", nullable = false, columnDefinition = "VARCHAR(256)")
@@ -27,11 +29,7 @@ public class ServerWindow {
 
     @Override
     public String toString() {
-        return "ServerWindow{" +
-                "clientId='" + clientID + '\'' +
-                ", startCounter='" + startCounter + '\'' +
-                ", endCounter='" + endCounter + '\'' +
-                ", windowLength=" + windowLength +
-                '}';
+        return "ServerWindow{" + "clientId='" + clientID + '\'' + ", startCounter='" + startCounter + '\'' +
+                ", endCounter='" + endCounter + '\'' + ", windowLength=" + windowLength + '}';
     }
 }
