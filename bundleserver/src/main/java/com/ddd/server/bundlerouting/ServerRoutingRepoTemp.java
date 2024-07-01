@@ -82,27 +82,6 @@ public class ServerRoutingRepoTemp {
         database.updateEntry(query);
     }
 
-    /* Returns the sorted list of clients accessible via the transport
-     * Parameters:
-     * transportID  : encoded transport ID
-     * Returns:
-     * List of client IDs sorted based on score
-     */
-    public List<String> getClients(String transportID) throws SQLException {
-        String query = "SELECT clientID from " + dbTableName + " WHERE transportID = '" + transportID +
-                "' ORDER BY score DESC";
-
-        List<String[]> results = database.getFromTable(query);
-
-        List<String> clients = new ArrayList<>();
-
-        for (String[] result : results) {
-            clients.add(result[0]);
-        }
-
-        return clients;
-    }
-
     /* Parses the client metadata and updates the respective scores
      * Parameters:
      * clientMetaDataPath   : Path to the json metadata file
