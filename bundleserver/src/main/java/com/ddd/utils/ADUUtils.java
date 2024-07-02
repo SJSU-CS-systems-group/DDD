@@ -1,24 +1,16 @@
 package com.ddd.utils;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileFilter;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.file.FileSystems;
+import com.ddd.model.ADU;
+
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
-
-import com.ddd.model.ADU;
 
 public class ADUUtils {
 
     public static void writeADU(ADU adu, File targetDirectory) {
         String aduFileName = adu.getAppId() + "-" + adu.getADUId();
-        File aduFile =
-                new File(targetDirectory.getAbsolutePath() + FileSystems.getDefault().getSeparator() + aduFileName);
+        File aduFile = targetDirectory.toPath().resolve(aduFileName).toFile();
 
         try (BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(
                 adu.getSource())); BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(
@@ -41,7 +33,7 @@ public class ADUUtils {
 
         for (final ADU adu : adus) {
             String appId = adu.getAppId();
-            File appDirectory = new File(targetDirectory + FileSystems.getDefault().getSeparator() + appId);
+            File appDirectory = targetDirectory.toPath().resolve(appId).toFile();
             if (!appDirectory.exists()) {
                 appDirectory.mkdirs();
             }

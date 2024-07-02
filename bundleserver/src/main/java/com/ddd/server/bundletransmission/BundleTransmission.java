@@ -4,7 +4,14 @@ import com.ddd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
 import com.ddd.bundlerouting.WindowUtils.WindowExceptions.ClientWindowNotFound;
 import com.ddd.bundlesecurity.BundleIDGenerator;
 import com.ddd.bundlesecurity.SecurityUtils;
-import com.ddd.model.*;
+import com.ddd.model.ADU;
+import com.ddd.model.Acknowledgement;
+import com.ddd.model.Bundle;
+import com.ddd.model.BundleDTO;
+import com.ddd.model.BundleTransferDTO;
+import com.ddd.model.Payload;
+import com.ddd.model.UncompressedBundle;
+import com.ddd.model.UncompressedPayload;
 import com.ddd.server.applicationdatamanager.ApplicationDataManager;
 import com.ddd.server.bundlerouting.BundleRouting;
 import com.ddd.server.bundlerouting.ServerWindowService;
@@ -20,15 +27,23 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.whispersystems.libsignal.InvalidKeyException;
 
-import java.io.File;
-import java.io.FileFilter;
-import java.io.IOException;
+import java.io.*;
+import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.*;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 @Service
 public class BundleTransmission {
@@ -57,12 +72,12 @@ public class BundleTransmission {
 
     @Transactional(rollbackFor = Exception.class)
     public void processReceivedBundle(String transportId, Bundle bundle) throws Exception {
-        File bundleRecvProcDir = new File(
-                this.config.getBundleTransmission().getReceivedProcessingDirectory() + File.separator + transportId);
-        bundleRecvProcDir.mkdirs();
+        Path bundleRecvProcDir =
+                this.config.getBundleTransmission().getReceivedProcessingDirectory().resolve(transportId);
 
-        UncompressedBundle uncompressedBundle =
-                this.bundleGenServ.extractBundle(bundle, bundleRecvProcDir.getAbsolutePath());
+        bundleRecvProcDir.toFile().mkdirs();
+
+        UncompressedBundle uncompressedBundle = this.bundleGenServ.extractBundle(bundle, bundleRecvProcDir);
         String clientId = "";
         String serverIdReceived = SecurityUtils.generateID(
                 uncompressedBundle.getSource().toPath().resolve(SecurityUtils.SERVER_IDENTITY_KEY));
@@ -89,7 +104,7 @@ public class BundleTransmission {
         }
 
         UncompressedPayload uncompressedPayload =
-                this.bundleGenServ.extractPayload(payload, uncompressedBundle.getSource().getAbsolutePath());
+                this.bundleGenServ.extractPayload(payload, uncompressedBundle.getSource().toPath());
 
         File ackRecordFile = new File(this.getAckRecordLocation(clientId));
         ackRecordFile.getParentFile().mkdirs();
@@ -102,14 +117,13 @@ public class BundleTransmission {
 
         AckRecordUtils.writeAckRecordToFile(new Acknowledgement(uncompressedPayload.getBundleId()), ackRecordFile);
 
-        File clientAckSubDirectory =
-                new File(this.config.getBundleTransmission().getToBeBundledDirectory() + File.separator + clientId);
+        Path clientAckSubDirectory = this.config.getBundleTransmission().getToBeBundledDirectory().resolve(clientId);
 
-        if (!clientAckSubDirectory.exists()) {
-            clientAckSubDirectory.mkdirs();
+        if (!clientAckSubDirectory.toFile().exists()) {
+            clientAckSubDirectory.toFile().mkdirs();
         }
-        File ackFile = new File(
-                clientAckSubDirectory.getAbsolutePath() + File.separator + Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME);
+
+        File ackFile = clientAckSubDirectory.resolve(Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME).toFile();
         try {
             if (!ackFile.exists()) {
                 ackFile.createNewFile();
@@ -172,8 +186,8 @@ public class BundleTransmission {
     }
 
     private String getAckRecordLocation(String clientId) {
-        return this.config.getBundleTransmission().getToBeBundledDirectory() + File.separator + clientId +
-                File.separator + Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME;
+        return this.config.getBundleTransmission().getToBeBundledDirectory()
+                .resolve(Path.of(clientId, Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME)).toString();
     }
 
     private UncompressedPayload.Builder generatePayloadBuilder(String clientId) {
@@ -244,8 +258,8 @@ public class BundleTransmission {
                     optional.get(); // there was definitely a bundle sent previously if sender window is full
 
             bundleId = retxmnBundlePayloadBuilder.getBundleId();
-            retxmnBundlePayloadBuilder.setSource(new File(
-                    this.config.getBundleTransmission().getUncompressedPayloadDirectory() + File.separator + bundleId));
+            retxmnBundlePayloadBuilder.setSource(
+                    this.config.getBundleTransmission().getUncompressedPayloadDirectory().resolve(bundleId).toFile());
             UncompressedPayload toSend = retxmnBundlePayloadBuilder.build();
             toSendOpt = Optional.of(toSend);
             isRetransmission = true;
@@ -266,8 +280,8 @@ public class BundleTransmission {
             }
 
             generatedPayloadBuilder.setBundleId(bundleId);
-            generatedPayloadBuilder.setSource(new File(
-                    this.config.getBundleTransmission().getUncompressedPayloadDirectory() + File.separator + bundleId));
+            generatedPayloadBuilder.setSource(
+                    this.config.getBundleTransmission().getUncompressedPayloadDirectory().resolve(bundleId).toFile());
             UncompressedPayload toSend = generatedPayloadBuilder.build();
             toSendOpt = Optional.of(toSend);
         }
@@ -338,7 +352,7 @@ public class BundleTransmission {
                    "[BundleTransmission] Inside getBundlesForTransmission method for transport id: " + transportId);
         List<File> bundles = new ArrayList<>();
         File recvTransportSubDir =
-                new File(this.config.getBundleTransmission().getToSendDirectory() + File.separator + transportId);
+                this.config.getBundleTransmission().getToSendDirectory().resolve(transportId).toFile();
         File[] recvTransport = recvTransportSubDir.listFiles(new FileFilter() {
             @Override
             public boolean accept(File file) {

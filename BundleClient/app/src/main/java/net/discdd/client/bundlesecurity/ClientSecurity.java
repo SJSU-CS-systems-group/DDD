@@ -162,7 +162,7 @@ public class ClientSecurity {
     }
 
     private void updateSessionRecord() {
-        String sessionStorePath = clientRootPath + File.separator + SecurityUtils.SESSION_STORE_FILE;
+        String sessionStorePath = clientRootPath.resolve(SecurityUtils.SESSION_STORE_FILE).toString();
 
         try (FileOutputStream stream = new FileOutputStream(sessionStorePath)) {
             SessionRecord clientSessionRecord = clientProtocolStore.loadSession(ourAddress);

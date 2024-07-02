@@ -1,10 +1,7 @@
 package com.ddd.utils;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
@@ -128,7 +125,7 @@ public class JarUtils {
                 }
 
                 // Create the destination file
-                File destinationFile = new File(dirPath + File.separator + entry.getName());
+                File destinationFile = Path.of(dirPath, entry.getName()).toFile();
 
                 // Create any necessary subdirectories
                 destinationFile.getParentFile().mkdirs();

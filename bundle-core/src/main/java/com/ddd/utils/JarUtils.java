@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
@@ -128,7 +129,7 @@ public class JarUtils {
                 }
 
                 // Create the destination file
-                File destinationFile = new File(dirPath + File.separator + entry.getName());
+                File destinationFile = Paths.get(dirPath, entry.getName()).toFile();
 
                 // Create any necessary subdirectories
                 destinationFile.getParentFile().mkdirs();
