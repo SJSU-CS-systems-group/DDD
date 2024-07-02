@@ -27,7 +27,7 @@ public class ServerRouting {
 
     @Override
     public String toString() {
-        return "ServerRouting{" + "transportID='" + serverRoutingId.getTransportID() + '\'' + ", clientID='" + serverRoutingId.getClientID() + '\'' +
-                ", score ='" + score + '\'' + '}';
+        return "ServerRouting{" + "transportID='" + serverRoutingId.getTransportID() + '\'' + ", clientID='" +
+                serverRoutingId.getClientID() + '\'' + ", score ='" + score + '\'' + '}';
     }
 }
