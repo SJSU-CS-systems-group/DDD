@@ -12,4 +12,6 @@ public interface ServerRoutingRepository extends CrudRepository<ServerRouting, S
     List<ServerRouting> findByServerRoutingIdTransportID(String transportID);
 
     Optional<ServerRouting> findByServerRoutingIdClientID(String clientID);
+
+    ServerRouting findByServerRoutingIdClientIDAndServerRoutingIdTransportID(String clientID, String transportID);
 }

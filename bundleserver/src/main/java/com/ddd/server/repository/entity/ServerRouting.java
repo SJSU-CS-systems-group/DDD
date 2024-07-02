@@ -19,6 +19,12 @@ public class ServerRouting {
     @Column(name = "score", columnDefinition = "VARCHAR(256)")
     private String score;
 
+    public ServerRouting(String transportId, String clientId, String score) {
+        this.serverRoutingId.setTransportID(transportId);
+        this.serverRoutingId.setClientID(clientId);
+        this.score = score;
+    }
+
     @Override
     public String toString() {
         return "ServerRouting{" + "transportID='" + serverRoutingId.getTransportID() + '\'' + ", clientID='" + serverRoutingId.getClientID() + '\'' +
