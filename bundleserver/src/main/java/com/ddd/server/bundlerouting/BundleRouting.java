@@ -28,18 +28,20 @@ public class BundleRouting {
     ServerRoutingRepository serverRoutingRepository;
 
     public List<String> getClients(String transportId) throws SQLException {
-        List<ServerRouting> serverRoutings = serverRoutingRepository.findByTransportID(transportId);
+        List<ServerRouting> serverRoutings = serverRoutingRepository.findByServerRoutingIdTransportID(transportId);
         List<String> clientIDs = new ArrayList<>();
         if (serverRoutings != null) {
             for (ServerRouting serverRouting : serverRoutings) {
-                clientIDs.add(serverRouting.getClientID());
+                clientIDs.add(serverRouting.getServerRoutingId().getClientID());
             }
         }
         return clientIDs;
     }
 
     private void updateEntry(String transportID, String clientID, long score) {
-        ServerRouting serverRouting = serverRoutingRepository.findByClientIDAndTransportID(clientID, transportID);
+        ServerRouting serverRouting =
+                serverRoutingRepository.findByServerRoutingIdClientIDAndServerRoutingIdTransportID(clientID,
+                                                                                                   transportID);
         if (null == serverRouting) {
             serverRouting = new ServerRouting(transportID, clientID, String.valueOf(score));
         } else {
