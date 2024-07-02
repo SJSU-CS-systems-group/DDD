@@ -40,7 +40,7 @@ public class BundleRouting {
 
     private void updateEntry(String transportID, String clientID, long score) {
         ServerRouting serverRouting = serverRoutingRepository.findByClientIDAndTransportID(clientID, transportID);
-        if(null == serverRouting) {
+        if (null == serverRouting) {
             serverRouting = new ServerRouting(transportID, clientID, String.valueOf(score));
         } else {
             serverRouting.setScore(String.valueOf(score));
@@ -74,8 +74,6 @@ public class BundleRouting {
     }
 
     public void addClient(String clientId, int windowLength) {}
-
-
 
     public void updateClientWindow(String clientID, String bundleID) {}
 }
