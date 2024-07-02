@@ -21,11 +21,11 @@ public class BundleRouting {
     ServerRoutingRepository serverRoutingRepository;
 
     public List<String> getClients(String transportId) throws SQLException {
-        List<ServerRouting> serverRoutings = serverRoutingRepository.findByTransportID(transportId);
+        List<ServerRouting> serverRoutings = serverRoutingRepository.findByServerRoutingIdTransportID(transportId);
         List<String> clientIDs = new ArrayList<>();
         if (serverRoutings != null) {
             for (ServerRouting serverRouting : serverRoutings) {
-                clientIDs.add(serverRouting.getClientID());
+                clientIDs.add(serverRouting.getServerRoutingId().getClientID());
             }
         }
         return clientIDs;

@@ -8,8 +8,8 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface ServerRoutingRepository extends CrudRepository<ServerRouting, String> {
-    List<ServerRouting> findByTransportID(String transportID);
+public interface ServerRoutingRepository extends CrudRepository<ServerRouting, ServerRoutingId> {
+    List<ServerRouting> findByServerRoutingIdTransportID(String transportID);
 
-    Optional<ServerRouting> findByClientID(String clientID);
+    Optional<ServerRouting> findByServerRoutingIdClientID(String clientID);
 }
