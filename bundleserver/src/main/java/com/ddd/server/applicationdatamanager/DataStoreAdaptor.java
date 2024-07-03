@@ -53,14 +53,12 @@ public class DataStoreAdaptor {
         client.PrepareData(clientId);
     }
 
-
     // get IP address and port for application adaptor server from database
     private String getAppAdapterAddress(String appId) {
         RegisteredAppAdapter registeredAppAdapter = registeredAppAdapterRepository.findByAppId(appId).orElse(null);
-        if (registeredAppAdapter == null){
+        if (registeredAppAdapter == null) {
             return "";
-        }
-        else return registeredAppAdapter.getAddress();
+        } else return registeredAppAdapter.getAddress();
     }
 
 
