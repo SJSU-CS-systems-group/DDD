@@ -9,6 +9,7 @@ on:
 jobs:
   # Github Action to install Maven modules in the root directory 
   compile:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
