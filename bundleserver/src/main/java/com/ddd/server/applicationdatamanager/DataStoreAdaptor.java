@@ -61,7 +61,6 @@ public class DataStoreAdaptor {
         } else return registeredAppAdapter.getAddress();
     }
 
-
     // store all data for one app received from transport and send to app adapter
     public void persistADUsForServer(String clientId, String appId, List<ADU> adus) throws IOException {
         for (int i = 0; i < adus.size(); i++) {
