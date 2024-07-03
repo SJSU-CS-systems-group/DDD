@@ -46,7 +46,6 @@ public class BundleServerApplication {
                     System.setProperty("bundle-server.bundle-store-root", root);
                 }
 
-                System.out.println("root path is " + root);
                 if (root == null || !new File(root).isDirectory()) {
                     logger.log(SEVERE, "bundle-server.bundle-store-root is not a directory or not set: " + root);
                     System.exit(1);
