@@ -17,7 +17,7 @@ jobs:
           java-version: "17"
           distribution: "temurin"
       - name: Run maven install on bundle-core, serviceadapter-core, and bundleserver
-        run: mvn install
+        run: mvn -ntp install
         
       - name: Run gradle build on BundleClient, BundleTransport
         run: ./gradlew build
