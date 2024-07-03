@@ -116,7 +116,6 @@ public class ServerWindowService {
 
     }
 
-
     /* Add a new client and initialize its window
      * Parameters:
      * clientID     : encoded clientID
@@ -153,7 +152,7 @@ public class ServerWindowService {
 
         if (endCounter != bundleIDcounter) {
             throw new InvalidBundleID("[ServerWindow]: Expected: " + Long.toUnsignedString(endCounter) + ", Got: " +
-                    Long.toUnsignedString(bundleIDcounter));
+                                              Long.toUnsignedString(bundleIDcounter));
         }
 
         circularBuffer.add(decryptedBundleID);
