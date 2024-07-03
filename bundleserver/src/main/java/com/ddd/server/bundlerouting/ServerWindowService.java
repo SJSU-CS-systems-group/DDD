@@ -13,9 +13,7 @@ import com.ddd.server.bundlesecurity.InvalidClientIDException;
 import com.ddd.server.bundlesecurity.ServerSecurity;
 import com.ddd.server.repository.ServerWindowRepository;
 import com.ddd.server.repository.entity.ServerWindow;
-import com.ddd.server.storage.SNRDatabases;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.whispersystems.libsignal.InvalidKeyException;
 
@@ -42,36 +40,13 @@ public class ServerWindowService {
     private static final Logger logger = Logger.getLogger(ServerWindowService.class.getName());
     HashMap<String, CircularBuffer> clientWindowMap = null;
     ServerSecurity serverSecurity = null;
-    private SNRDatabases database = null;
-    private static final String dbTableName = "ServerWindow";
-    private static final String STARTCOUNTER = "startCounter";
-    private static final String ENDCOUNTER = "endCounter";
-    private static final String WINDOW_LENGTH = "windowLength";
-
-    @Autowired
-    private Environment env;
 
     @PostConstruct
     public void init() throws SQLException {
-        // TODO: Change to config
-        String url = env.getProperty("spring.datasource.url");
-        String uname = env.getProperty("spring.datasource.username");
-        String password = env.getProperty("spring.datasource.password");
-        String dbName = env.getProperty("spring.datasource.db-name");
-
-        database = new SNRDatabases(url, uname, password, dbName);
-
         try {
             initializeWindow();
         } catch (SQLException | BufferOverflow | InvalidLength e) {
             logger.log(SEVERE, "[ServerWindow] INFO: Failed to initialize window from database", e);
-
-            String dbTableCreateQuery =
-                    "CREATE TABLE " + dbTableName + " " + "(clientID VARCHAR(256) not NULL," + STARTCOUNTER +
-                            " VARCHAR(256)," + ENDCOUNTER + " VARCHAR(256)," + WINDOW_LENGTH + " INTEGER," +
-                            "PRIMARY KEY (clientID))";
-
-            database.createTable(dbTableCreateQuery);
         }
     }
 
@@ -118,38 +93,29 @@ public class ServerWindowService {
         return clientWindowMap.get(clientID);
     }
 
-    private String getValueFromTable(String clientID, String columnName) throws SQLException {
-        String query = "SELECT " + columnName + " FROM " + dbTableName + " WHERE clientID = '" + clientID + "'";
-
-        String[] result = (database.getFromTable(query)).get(0);
-
-        return result[0];
+    private ServerWindow getValueFromTable(String clientID) {
+        return serverwindowrepo.findByClientID(clientID);
     }
 
-    private void updateValueInTable(String clientID, String columnName, String value) {
-        String updateQuery =
-                "UPDATE " + dbTableName + " SET " + columnName + " = '" + value + "'" + " WHERE clientID = '" +
-                        clientID + "'";
+    private void updateStartCounter(String clientID, String startCounter) {
+        ServerWindow serverWindow = serverwindowrepo.findByClientID(clientID);
+        serverWindow.setStartCounter(startCounter);
+        serverwindowrepo.save(serverWindow);
+    }
 
-        try {
-            database.updateEntry(updateQuery);
-        } catch (SQLException e) {
-            logger.log(SEVERE, "[ServerWindow]: Failed to update Server Window DB!");
-            e.printStackTrace();
-        }
+    private void updateEndCounter(String clientID, String endCounter) {
+        ServerWindow serverWindow = serverwindowrepo.findByClientID(clientID);
+        serverWindow.setEndCounter(endCounter);
+        serverwindowrepo.save(serverWindow);
     }
 
     private void initializeEntry(String clientID, int windowLength) {
-        String insertQuery =
-                "INSERT INTO " + dbTableName + " VALUES " + "('" + clientID + "', '0', '0', " + windowLength + ")";
+        ServerWindow serverWindow = new ServerWindow(clientID, "0", "0", windowLength);
 
-        try {
-            database.insertIntoTable(insertQuery);
-        } catch (SQLException e) {
-            logger.log(SEVERE, "[ServerWindow]: Failed to Initalize Client [" + clientID + "]to Server Window DB!");
-            e.printStackTrace();
-        }
+        serverwindowrepo.save(serverWindow);
+
     }
+
 
     /* Add a new client and initialize its window
      * Parameters:
@@ -182,21 +148,22 @@ public class ServerWindowService {
 
         long bundleIDcounter =
                 BundleIDGenerator.getCounterFromBundleID(decryptedBundleID, BundleIDGenerator.DOWNSTREAM);
-        long endCounter = Long.parseUnsignedLong(getValueFromTable(clientID, ENDCOUNTER));
+
+        long endCounter = Long.parseUnsignedLong(getValueFromTable(clientID).getEndCounter());
 
         if (endCounter != bundleIDcounter) {
             throw new InvalidBundleID("[ServerWindow]: Expected: " + Long.toUnsignedString(endCounter) + ", Got: " +
-                                              Long.toUnsignedString(bundleIDcounter));
+                    Long.toUnsignedString(bundleIDcounter));
         }
 
         circularBuffer.add(decryptedBundleID);
         endCounter++;
-        updateValueInTable(clientID, ENDCOUNTER, Long.toUnsignedString(endCounter));
+        updateEndCounter(clientID, Long.toUnsignedString(endCounter));
     }
 
     public String getCurrentbundleID(String clientID) throws InvalidClientIDException, SQLException,
             GeneralSecurityException, InvalidKeyException {
-        long endCounter = Long.parseUnsignedLong(getValueFromTable(clientID, ENDCOUNTER));
+        long endCounter = Long.parseUnsignedLong(getValueFromTable(clientID).getEndCounter());
 
         String plainBundleID = BundleIDGenerator.generateBundleID(clientID, endCounter, BundleIDGenerator.DOWNSTREAM);
         return serverSecurity.encryptBundleID(plainBundleID, clientID);
@@ -222,7 +189,7 @@ public class ServerWindowService {
             int index = (int) Long.remainderUnsigned(ack, circularBuffer.getLength());
             circularBuffer.deleteUntilIndex(index);
             long startCounter = ack + 1;
-            updateValueInTable(clientID, STARTCOUNTER, Long.toUnsignedString(startCounter));
+            updateStartCounter(clientID, Long.toUnsignedString(startCounter));
 
             // TODO: Change to log
             logger.log(INFO, "[ServerWindow]: Updated start Counter: " + startCounter);
@@ -236,8 +203,8 @@ public class ServerWindowService {
     }
 
     private void compareBundleID(long ack, String clientID) throws RecievedOldACK, RecievedInvalidACK, SQLException {
-        long startCounter = Long.parseUnsignedLong(getValueFromTable(clientID, STARTCOUNTER));
-        long endCounter = Long.parseUnsignedLong(getValueFromTable(clientID, ENDCOUNTER));
+        long startCounter = Long.parseUnsignedLong(getValueFromTable(clientID).getStartCounter());
+        long endCounter = Long.parseUnsignedLong(getValueFromTable(clientID).getEndCounter());
 
         if (Long.compareUnsigned(ack, startCounter) == -1) {
             throw new RecievedOldACK(
