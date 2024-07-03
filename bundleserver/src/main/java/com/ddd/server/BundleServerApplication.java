@@ -18,7 +18,6 @@ import org.springframework.core.io.support.PropertiesLoaderUtils;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.logging.Logger;
@@ -42,6 +41,11 @@ public class BundleServerApplication {
             protected void refresh(ConfigurableApplicationContext applicationContext) {
                 // check for obvious configuration errors
                 var root = applicationContext.getEnvironment().getProperty("bundle-server.bundle-store-root");
+                if (root != null && !root.endsWith("/")) {
+                    root += "/";
+                    System.setProperty("bundle-server.bundle-store-root", root);
+                }
+
                 if (root == null || !new File(root).isDirectory()) {
                     logger.log(SEVERE, "bundle-server.bundle-store-root is not a directory or not set: " + root);
                     System.exit(1);
