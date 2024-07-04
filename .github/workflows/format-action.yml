@@ -5,7 +5,7 @@ on:
     branches: main
     
 jobs:
-  compile:
+  code-format:
     runs-on: ubuntu-latest
   
     steps:
