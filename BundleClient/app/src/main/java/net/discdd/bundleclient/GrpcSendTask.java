@@ -18,7 +18,7 @@ import net.discdd.transport.FileServiceGrpc;
 import net.discdd.transport.FileUploadRequest;
 import net.discdd.transport.MetaData;
 
-import com.ddd.model.BundleDTO;
+import net.discdd.model.BundleDTO;
 import com.google.protobuf.ByteString;
 
 import java.io.FileInputStream;

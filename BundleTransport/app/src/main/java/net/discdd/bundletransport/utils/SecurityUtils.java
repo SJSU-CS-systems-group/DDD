@@ -1,7 +1,5 @@
 package net.discdd.bundletransport.utils;
 
-import com.google.firebase.crashlytics.buildtools.reloc.org.apache.commons.io.IOUtils;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -16,10 +14,8 @@ import java.security.NoSuchAlgorithmException;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
 
 import android.util.Base64;
-import android.util.Log;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public class SecurityUtils {

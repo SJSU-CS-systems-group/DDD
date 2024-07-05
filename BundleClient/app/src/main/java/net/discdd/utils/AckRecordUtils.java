@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-import com.ddd.model.Acknowledgement;
+import net.discdd.model.Acknowledgement;
 
 public class AckRecordUtils {
 

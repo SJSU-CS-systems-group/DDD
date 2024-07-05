@@ -5,7 +5,7 @@ import java.util.logging.Logger;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
-import com.ddd.bundletransport.service.BundleUploadResponse;
+import net.discdd.bundletransport.service.BundleUploadResponse;
 
 import java.util.Calendar;
 import java.util.Date;

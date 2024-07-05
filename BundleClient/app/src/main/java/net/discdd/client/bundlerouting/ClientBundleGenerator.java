@@ -2,7 +2,7 @@ package net.discdd.client.bundlerouting;
 
 import static java.util.logging.Level.WARNING;
 
-import com.ddd.bundlesecurity.BundleIDGenerator;
+import net.discdd.bundlesecurity.BundleIDGenerator;
 
 import net.discdd.client.bundlesecurity.ClientSecurity;
 

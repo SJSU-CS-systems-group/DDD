@@ -21,7 +21,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import net.discdd.datastore.sqlite.DBHelper;
-import com.ddd.utils.StoreADUs;
+import net.discdd.utils.StoreADUs;
 
 import java.io.IOException;
 import java.util.HashMap;

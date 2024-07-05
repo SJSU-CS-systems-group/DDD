@@ -58,10 +58,10 @@ android {
 }
 
 dependencies {
-    implementation 'io.grpc:grpc-protobuf:1.50.2'
-    implementation 'io.grpc:grpc-stub:1.50.2'
+    implementation 'io.grpc:grpc-protobuf:1.58.0'
+    implementation 'io.grpc:grpc-stub:1.58.0'
     compileOnly 'org.apache.tomcat:annotations-api:6.0.53' // necessary for Java 9+
-    implementation 'io.grpc:grpc-okhttp:1.50.2' // CURRENT_GRPC_VERSION
+    implementation 'io.grpc:grpc-okhttp:1.58.0' // CURRENT_GRPC_VERSION
 
     def work_version = "2.7.0"
     implementation "androidx.work:work-runtime:$work_version"
@@ -78,7 +78,7 @@ dependencies {
         exclude group: 'com.google.protobuf', module:'protobuf-java'
     }
     // DDD common core
-    implementation 'com.ddd:bundle-core:0.0.2'
+    implementation 'net.discdd:bundle-core:0.0.2'
 
     implementation 'com.google.code.gson:gson:2.8.7'
     implementation group: 'commons-io', name: 'commons-io', version: '2.4'
@@ -86,19 +86,21 @@ dependencies {
     //JSON
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.8.9'
     implementation 'com.google.guava:guava:30.1.1-jre'
+
+    protobuf "net.discdd:bundle-core:0.0.2"
 }
 
 
 protobuf {
     protoc {
-        artifact = 'com.google.protobuf:protoc:3.17.3'
+        artifact = 'com.google.protobuf:protoc:3.23.4'
     }
     plugins {
         grpc {
             // https://repo.maven.apache.org/maven2/io/grpc/protoc-gen-grpc-java/1.42.0/
             // for macOS M1 and M2, using 'osx-x86_64' version
             // if M2 also install Rosetta in terminal using command: softwareupdate --install-rosetta
-            artifact = "io.grpc:protoc-gen-grpc-java:1.42.0:$project.ext.osArch"
+            artifact = "io.grpc:protoc-gen-grpc-java:1.58.0:$project.ext.osArch"
         }
     }
     generateProtoTasks {

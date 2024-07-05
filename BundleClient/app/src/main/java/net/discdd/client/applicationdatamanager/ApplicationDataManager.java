@@ -5,9 +5,11 @@ import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 
-import com.ddd.model.ADU;
-import com.ddd.model.UncompressedPayload;
+import net.discdd.model.ADU;
+import net.discdd.model.UncompressedPayload;
+
 import net.discdd.utils.BundleUtils;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonIOException;

@@ -17,9 +17,9 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 import static java.util.logging.Level.SEVERE;
 
-import com.ddd.bundletransport.service.BundleDownloadRequest;
-import com.ddd.bundletransport.service.BundleDownloadResponse;
-import com.ddd.bundletransport.service.BundleServiceGrpc;
+import net.discdd.bundletransport.service.BundleDownloadRequest;
+import net.discdd.bundletransport.service.BundleDownloadResponse;
+import net.discdd.bundletransport.service.BundleServiceGrpc;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
