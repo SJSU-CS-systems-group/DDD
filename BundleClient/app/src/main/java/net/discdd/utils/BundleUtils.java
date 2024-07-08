@@ -153,7 +153,7 @@ public class BundleUtils {
     }
 
     public static void writeUncompressedPayload(UncompressedPayload uncompressedPayload, File targetDirectory,
-                                                String bundleFileName) {
+                                                String bundleFileName) throws IOException {
         String bundleId = uncompressedPayload.getBundleId();
         Path bundleFilePath = targetDirectory.toPath().resolve(bundleId);
         logger.log(INFO, "Writing uncompressed payload to path: " + bundleFilePath);
@@ -182,11 +182,7 @@ public class BundleUtils {
         if (!adus.isEmpty()) {
             File aduDirectory = aduPath.toFile();
             aduDirectory.mkdirs();
-            try {
-                ADUUtils.writeADUs(uncompressedPayload.getADUs(), aduDirectory);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+            ADUUtils.writeADUs(uncompressedPayload.getADUs(), aduDirectory);
         }
 
         logger.log(INFO, "[BundleUtils] Wrote bundle payload with id = " + bundleId + " to " + targetDirectory);
