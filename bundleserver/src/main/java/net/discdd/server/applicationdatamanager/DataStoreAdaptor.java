@@ -3,8 +3,10 @@ package net.discdd.server.applicationdatamanager;
 import net.discdd.model.ADU;
 import net.discdd.server.AppData;
 import net.discdd.server.api.ServiceAdapterClient;
+import net.discdd.server.repository.entity.RegisteredAppAdapter;
 import net.discdd.utils.StoreADUs;
 import org.springframework.beans.factory.annotation.Autowired;
+import net.discdd.server.repository.RegisteredAppAdapterRepository;
 
 import java.io.File;
 import java.io.FileInputStream;
