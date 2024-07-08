@@ -13,12 +13,19 @@ import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
 import android.Manifest;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.hardware.usb.UsbDevice;
+import android.hardware.usb.UsbManager;
 import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -31,6 +38,7 @@ import net.discdd.wifidirect.WifiDirectStateListener;
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Logger;
@@ -44,12 +52,14 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
     // gRPC set up
     private Button connectButton;
     private Button exchangeButton;
+    private Button usbExchangeButton;
     private Button detectTransportButton;
     private Button receiveFromTransportButton;
     private FileChooserFragment fragment;
     private TextView resultText;
     private TextView connectedDevicesText;
     private TextView wifiDirectResponseText;
+    private TextView usbConnectionText;
     private static String RECEIVE_PATH = "/Shared/received-bundles";
     //  private BundleDeliveryAgent agent;
     // context
@@ -71,6 +81,37 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
 
     private static final Logger logger = Logger.getLogger(HelloworldActivity.class.getName());
 
+    private static final String usbDirName = "DDD_transport";
+    public static boolean usbConnected = false;
+    BroadcastReceiver mUsbReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if(UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)){
+                usbExchangeButton.setEnabled(false);
+                usbConnectionText.setText("No USB connection detected\n");
+                usbConnectionText.setTextColor(Color.RED);
+                usbConnected = false;
+                showUsbDetachedToast();
+            }
+            else if(UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)){
+                if(usbDirExists()){
+                    usbExchangeButton.setEnabled(true);
+                    usbConnectionText.setText("USB connection detected\n");
+                    usbConnectionText.setTextColor(Color.GREEN);
+                    usbConnected = true;
+                    showUsbAttachedToast();
+                }
+                else{
+                    usbExchangeButton.setEnabled(false);
+                    usbConnectionText.setText("USB was connected, but /DDD_transport directory was not detected\n");
+                    usbConnectionText.setTextColor(Color.RED);
+                    usbConnected = false;
+                    showUsbAttachedToast();
+                }
+            }
+        }
+    };
     /**
      * check for location permissions manually, will give a prompt
      */
@@ -97,9 +138,11 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
         setContentView(R.layout.activity_helloworld);
         connectButton = findViewById(R.id.connect_button);
         exchangeButton = findViewById(R.id.exchange_button);
+        usbExchangeButton = findViewById(R.id.usb_exchange_button);
         resultText = findViewById(R.id.grpc_response_text);
         connectedDevicesText = findViewById(R.id.connected_device_address);
         wifiDirectResponseText = findViewById(R.id.wifidirect_response_text);
+        usbConnectionText = findViewById(R.id.usbconnection_response_text);
         resultText.setMovementMethod(new ScrollingMovementMethod());
 
         // set up wifi direct
@@ -138,6 +181,13 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
 
             exchangeMessage();
         });
+
+        //Registers USB receiver for device attachment and detachment
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
+        filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
+        registerReceiver(mUsbReceiver, filter);
+        checkUsbConnection();//used to check if usb connected before app has been started.
     }
 
     public void exchangeMessage() {
@@ -239,6 +289,57 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
     public void onDestroy() {
         super.onDestroy();
         wifiDirectExecutor.shutdown();
+        unregisterReceiver(mUsbReceiver);
+    }
+
+    //Usb connection methods
+    /**
+     * Method to show a toast message indicating USB device detachment
+     */
+    private void showUsbDetachedToast() {
+        Toast.makeText(this, "USB device detached", Toast.LENGTH_SHORT).show();
+    }
+    /**
+     * Method to show a toast message indicating USB device attachment
+     */
+    private void showUsbAttachedToast() {
+        Toast.makeText(this, "USB device attached", Toast.LENGTH_SHORT).show();
+    }
+    /**
+     * Checks if the /DDD_transport root directory exists in the connected usb fob.
+     */
+    private boolean usbDirExists() {
+        //"/mnt/media/[uuid](getSerialNumber()?)/DDD_transport
+        return false;
+    }
+    /**
+     * Method checks that a USB device is connected before app starts.
+     */
+    private void checkUsbConnection() {
+        UsbManager usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
+        HashMap<String, UsbDevice> deviceList = usbManager.getDeviceList();
+        if(!deviceList.isEmpty()){
+                //resultText.append(usbDevice.getDeviceName());
+            if(usbDirExists()) {
+                usbConnected = true;
+                usbExchangeButton.setEnabled(true);
+                usbConnectionText.setText("USB connection detected\n");
+                usbConnectionText.setTextColor(Color.GREEN);
+                showUsbAttachedToast();
+            }
+            else {
+                usbConnected = false;
+                usbExchangeButton.setEnabled(false);
+                usbConnectionText.setText("USB was connected, but /DDD_transport directory was not detected\n");
+                usbConnectionText.setTextColor(Color.RED);
+                showUsbAttachedToast();
+            }
+        }
+        else {
+            usbExchangeButton.setEnabled(false);
+            usbConnectionText.setText("Usb device not connected\n");
+            usbConnectionText.setTextColor(Color.RED);
+        }
     }
 }
 
