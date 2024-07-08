@@ -1,7 +1,7 @@
 syntax = "proto3";
-package protobuf;
+//package protobuf;
 
-option go_package = "./protobuf";
+//option go_package = "./protobuf";
 option java_multiple_files = true;
 option java_package = "net.discdd.bundletransport.service";
 option java_outer_classname = "BundleServerService";

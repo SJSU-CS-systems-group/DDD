@@ -1,11 +1,16 @@
 syntax = "proto3";
 
+//package protobuf;
+
 option java_multiple_files = true;
 option java_package = "net.discdd.transport";
 option java_outer_classname = "BundleTransport";
 option objc_class_prefix = "BTP";
 
-package protobuf;
+service FileService {
+  rpc UploadFile(stream FileUploadRequest) returns (FileUploadResponse) {}
+  rpc DownloadFile(ReqFilePath) returns (stream Bytes) {}
+}
 
 message ReqFilePath { string value = 1; }
 
@@ -46,10 +51,5 @@ message FileUploadResponse {
 message Bytes {
   bytes value = 1;
   string transportId =2;
-}
-
-service FileService {
-  rpc UploadFile(stream FileUploadRequest) returns (FileUploadResponse) {}
-  rpc DownloadFile(ReqFilePath) returns (stream Bytes) {}
 }
 
