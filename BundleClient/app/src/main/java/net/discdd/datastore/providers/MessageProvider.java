@@ -100,7 +100,6 @@ public class MessageProvider extends ContentProvider {
                     cursor.newRow().add("data", new String(data));
                 }
             }
-
         } catch (Exception ex) {
             logger.log(WARNING, "Error getting app data", ex);
             cursor = null;
