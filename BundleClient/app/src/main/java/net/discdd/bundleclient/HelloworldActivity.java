@@ -182,10 +182,6 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
             exchangeMessage();
         });
 
-//        usbExchangeButton.setOnClickListener(v -> {
-//
-//        });
-
         //Registers USB receiver for device attachment and detachment
         IntentFilter filter = new IntentFilter();
         filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
