@@ -1,6 +1,5 @@
 package net.discdd.server.api;
 
-
 import com.google.protobuf.ByteString;
 import io.grpc.Channel;
 import io.grpc.ManagedChannelBuilder;

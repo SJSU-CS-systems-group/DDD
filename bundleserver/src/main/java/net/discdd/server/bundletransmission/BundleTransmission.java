@@ -1,6 +1,5 @@
 package net.discdd.server.bundletransmission;
 
-
 import net.discdd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions.ClientWindowNotFound;
 import net.discdd.bundlesecurity.BundleIDGenerator;

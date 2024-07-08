@@ -32,7 +32,6 @@ public class RpcServer {
     private final int port = 7777;
     private ServerState state = ServerState.SHUTDOWN;
 
-
     private Server server;
     private static RpcServer rpcServerInstance;
 
