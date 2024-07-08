@@ -20,12 +20,9 @@ import static java.util.logging.Level.WARNING;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import net.discdd.client.bundlesecurity.BundleSecurity;
 import net.discdd.client.bundlesecurity.ClientSecurity;
 import net.discdd.datastore.sqlite.DBHelper;
-
 import com.ddd.utils.StoreADUs;
-
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -49,7 +46,6 @@ public class MessageProvider extends ContentProvider {
     static final UriMatcher uriMatcher;
 
     private StoreADUs ADUsStorage;
-
 
     /**
      * TODO: this FileStoreHelper is used to create App ID if it does not already exist BUT
@@ -78,10 +74,6 @@ public class MessageProvider extends ContentProvider {
     @Override
     public boolean onCreate() {
         DBHelper dbHelper = new DBHelper(getContext());
-        try {
-        } catch (Exception e) {
-            logger.log(WARNING, "Error initializing bundle security", e);
-        }
         sqlDB = dbHelper.getWritableDatabase();
         ADUsStorage = new StoreADUs(new File(getContext().getApplicationInfo().dataDir, "/send"), true);
         if (sqlDB != null) return true;
@@ -99,7 +91,7 @@ public class MessageProvider extends ContentProvider {
         try {
             String appId = getCallerAppId();
             List<byte[]> datalist = ADUsStorage.getAllAppData(appId);
-            cursor = new MatrixCursor(new String[] { "clientId", "data" });
+            cursor = new MatrixCursor(new String[] { "data" });
             if (selectionArgs != null && selectionArgs.length != 0 && "clientId".equals(selectionArgs[0]))  {
                 cursor.newRow().add("data", ClientSecurity.getInstance().getClientID());
                 return cursor;
