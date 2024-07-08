@@ -3,10 +3,10 @@ package net.discdd.client.bundledeliveryagent;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 
-import com.ddd.bundlerouting.RoutingExceptions;
-import com.ddd.bundlerouting.WindowUtils.WindowExceptions;
+import net.discdd.bundlerouting.RoutingExceptions;
+import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
 import net.discdd.client.bundletransmission.BundleTransmission;
-import com.ddd.model.BundleDTO;
+import net.discdd.model.BundleDTO;
 
 import org.whispersystems.libsignal.InvalidKeyException;
 

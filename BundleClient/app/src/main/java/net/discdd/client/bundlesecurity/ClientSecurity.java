@@ -6,7 +6,7 @@ import static java.util.logging.Level.WARNING;
 
 import android.util.Base64;
 
-import com.ddd.bundlesecurity.SecurityUtils;
+import net.discdd.bundlesecurity.SecurityUtils;
 
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.IdentityKey;
@@ -31,7 +31,6 @@ import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.util.guava.Optional;
 
 import java.io.DataInputStream;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;

@@ -2,7 +2,7 @@ package net.discdd.bundletransport.utils;
 
 import android.os.Build;
 
-import com.ddd.bundletransport.service.BundleDownloadResponse;
+import net.discdd.bundletransport.service.BundleDownloadResponse;
 import com.google.protobuf.ByteString;
 
 import java.io.File;

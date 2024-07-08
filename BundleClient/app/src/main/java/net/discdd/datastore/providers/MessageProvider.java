@@ -22,7 +22,7 @@ import androidx.annotation.Nullable;
 
 import net.discdd.client.bundlesecurity.ClientSecurity;
 import net.discdd.datastore.sqlite.DBHelper;
-import com.ddd.utils.StoreADUs;
+import net.discdd.utils.StoreADUs;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -32,7 +32,7 @@ public class MessageProvider extends ContentProvider {
 
     private static final Logger logger = Logger.getLogger(MessageProvider.class.getName());
 
-    public static final String PROVIDER_NAME = "com.ddd.provider.datastoreprovider";
+    public static final String PROVIDER_NAME = "net.discdd.provider.datastoreprovider";
 
     public static final String URL = "content://" + PROVIDER_NAME + "/messages";
 

@@ -3,17 +3,18 @@ package net.discdd.client.bundlesecurity;
 import static java.util.logging.Level.INFO;
 
 import android.content.res.Resources;
-import com.ddd.bundlerouting.WindowUtils.WindowExceptions;
+import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
 
 import net.discdd.bundleclient.R;
-import net.discdd.client.bundlerouting.ClientBundleGenerator;
+import net.discdd.model.EncryptedPayload;
+import net.discdd.model.EncryptionHeader;
+import net.discdd.model.Payload;
+import net.discdd.model.UncompressedBundle;
+import net.discdd.utils.Constants;
+import net.discdd.utils.FileUtils;
+
 import net.discdd.client.bundlerouting.ClientWindow;
-import com.ddd.model.EncryptedPayload;
-import com.ddd.model.EncryptionHeader;
-import com.ddd.model.Payload;
-import com.ddd.model.UncompressedBundle;
-import com.ddd.utils.Constants;
-import com.ddd.utils.FileUtils;
+import net.discdd.client.bundlerouting.ClientBundleGenerator;
 
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.InvalidKeyException;

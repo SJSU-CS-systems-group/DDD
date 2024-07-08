@@ -3,14 +3,13 @@ package net.discdd.client.bundlerouting;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 
-import com.ddd.bundlerouting.WindowUtils.CircularBuffer;
-import com.ddd.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
-import com.ddd.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
-import com.ddd.bundlesecurity.BundleIDGenerator;
+import net.discdd.bundlerouting.WindowUtils.CircularBuffer;
+import net.discdd.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
+import net.discdd.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
+import net.discdd.bundlesecurity.BundleIDGenerator;
 import net.discdd.client.bundlesecurity.ClientSecurity;
 
 import org.whispersystems.libsignal.InvalidKeyException;

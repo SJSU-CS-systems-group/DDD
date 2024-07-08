@@ -3,23 +3,23 @@ package net.discdd.client.bundletransmission;
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
 
-import com.ddd.bundlerouting.RoutingExceptions;
-import com.ddd.bundlerouting.WindowUtils.WindowExceptions;
-import com.ddd.bundlesecurity.BundleIDGenerator;
-import net.discdd.client.applicationdatamanager.ApplicationDataManager;
-import net.discdd.client.bundlerouting.ClientBundleGenerator;
-import net.discdd.client.bundlerouting.ClientRouting;
-import net.discdd.client.bundlesecurity.BundleSecurity;
-import com.ddd.model.ADU;
-import com.ddd.model.Acknowledgement;
-import com.ddd.model.Bundle;
-import com.ddd.model.BundleDTO;
-import com.ddd.model.Payload;
-import com.ddd.model.UncompressedBundle;
-import com.ddd.model.UncompressedPayload;
+import net.discdd.bundlerouting.RoutingExceptions;
+import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
+import net.discdd.bundlesecurity.BundleIDGenerator;
+import net.discdd.model.ADU;
+import net.discdd.model.Acknowledgement;
+import net.discdd.model.Bundle;
+import net.discdd.model.BundleDTO;
+import net.discdd.model.Payload;
+import net.discdd.model.UncompressedBundle;
+import net.discdd.model.UncompressedPayload;
+import net.discdd.utils.Constants;
 import net.discdd.utils.AckRecordUtils;
+import net.discdd.client.bundlesecurity.BundleSecurity;
+import net.discdd.client.applicationdatamanager.ApplicationDataManager;
+import net.discdd.client.bundlerouting.ClientRouting;
 import net.discdd.utils.BundleUtils;
-import com.ddd.utils.Constants;
+import net.discdd.client.bundlerouting.ClientBundleGenerator;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -76,7 +76,7 @@ public class BundleTransmission {
         var bundleGenerationDir = ROOT_DIR.resolve(BUNDLE_GENERATION_DIRECTORY);
         var toBeBundledDir = ROOT_DIR.resolve(TO_BE_BUNDLED_DIRECTORY);
         ackRecordPath = toBeBundledDir.resolve(Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME);
-        com.ddd.utils.FileUtils.createFileWithDefaultIfNeeded(ackRecordPath, "HB".getBytes());
+        net.discdd.utils.FileUtils.createFileWithDefaultIfNeeded(ackRecordPath, "HB".getBytes());
         var tosendDir = bundleGenerationDir.resolve(TO_SEND_DIRECTORY);
         tosendDir.toFile().mkdirs();
 

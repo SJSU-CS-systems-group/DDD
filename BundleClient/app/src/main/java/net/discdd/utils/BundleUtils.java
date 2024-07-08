@@ -9,15 +9,14 @@ import static java.util.logging.Level.WARNING;
 import static java.util.logging.Level.SEVERE;
 
 import org.apache.commons.io.FileUtils;
-import net.discdd.bundleclient.HelloworldActivity;
-import com.ddd.model.ADU;
-import com.ddd.model.Acknowledgement;
-import com.ddd.model.Bundle;
-import com.ddd.model.EncryptedPayload;
-import com.ddd.model.Payload;
-import com.ddd.model.UncompressedBundle;
-import com.ddd.model.UncompressedPayload;
-import com.ddd.utils.Constants;
+import net.discdd.model.ADU;
+import net.discdd.model.Acknowledgement;
+import net.discdd.model.Bundle;
+import net.discdd.model.EncryptedPayload;
+import net.discdd.model.Payload;
+import net.discdd.model.UncompressedBundle;
+import net.discdd.model.UncompressedPayload;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonIOException;
@@ -154,7 +153,7 @@ public class BundleUtils {
     }
 
     public static void writeUncompressedPayload(UncompressedPayload uncompressedPayload, File targetDirectory,
-                                                String bundleFileName) {
+                                                String bundleFileName) throws IOException {
         String bundleId = uncompressedPayload.getBundleId();
         Path bundleFilePath = targetDirectory.toPath().resolve(bundleId);
         logger.log(INFO, "Writing uncompressed payload to path: " + bundleFilePath);
