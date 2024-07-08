@@ -3,16 +3,13 @@ package net.discdd.server.applicationdatamanager;
 import net.discdd.model.ADU;
 import net.discdd.server.AppData;
 import net.discdd.server.api.ServiceAdapterClient;
-import net.discdd.server.storage.MySQLConnection;
 import net.discdd.utils.StoreADUs;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -26,6 +23,8 @@ import static java.util.logging.Level.WARNING;
  * */
 
 public class DataStoreAdaptor {
+    @Autowired
+    private RegisteredAppAdapterRepository registeredAppAdapterRepository;
     private static final Logger logger = Logger.getLogger(DataStoreAdaptor.class.getName());
     private StoreADUs sendADUsStorage;
     private StoreADUs receiveADUsStorage;
@@ -52,30 +51,12 @@ public class DataStoreAdaptor {
         client.PrepareData(clientId);
     }
 
-//  @Autowired
-//  MySQLConnection mysql;
-
     // get IP address and port for application adaptor server from database
     private String getAppAdapterAddress(String appId) {
-        try {
-            MySQLConnection mysql = new MySQLConnection();
-            Connection con = mysql.GetConnection();
-            Statement stmt = con.createStatement();
-            logger.log(WARNING, "select address from registered_app_adapter_table where app_id='" + appId + "';");
-
-            ResultSet rs =
-                    stmt.executeQuery("select address from registered_app_adapter_table where app_id='" + appId + "';");
-            String adapterAddress = "";
-            while (rs.next()) {
-                logger.log(INFO, "max value for app- " + rs.getString(1));
-                adapterAddress = rs.getString(1);
-            }
-            con.close();
-            return adapterAddress;
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-        return "";
+        RegisteredAppAdapter registeredAppAdapter = registeredAppAdapterRepository.findByAppId(appId).orElse(null);
+        if (registeredAppAdapter == null) {
+            return "";
+        } else return registeredAppAdapter.getAddress();
     }
 
     // store all data for one app received from transport and send to app adapter

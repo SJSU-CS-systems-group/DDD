@@ -20,6 +20,7 @@ import static java.util.logging.Level.WARNING;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import net.discdd.client.bundlesecurity.ClientSecurity;
 import net.discdd.datastore.sqlite.DBHelper;
 import net.discdd.utils.StoreADUs;
 
@@ -91,8 +92,13 @@ public class MessageProvider extends ContentProvider {
             String appId = getCallerAppId();
             List<byte[]> datalist = ADUsStorage.getAllAppData(appId);
             cursor = new MatrixCursor(new String[] { "data" });
-            for (byte[] data : datalist) {
-                cursor.newRow().add("data", new String(data));
+            if (selectionArgs != null && selectionArgs.length != 0 && "clientId".equals(selectionArgs[0])) {
+                cursor.newRow().add("data", ClientSecurity.getInstance().getClientID());
+                return cursor;
+            } else {
+                for (byte[] data : datalist) {
+                    cursor.newRow().add("data", new String(data));
+                }
             }
         } catch (Exception ex) {
             logger.log(WARNING, "Error getting app data", ex);

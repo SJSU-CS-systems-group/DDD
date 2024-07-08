@@ -8,6 +8,5 @@ import java.util.Optional;
 
 @Repository
 public interface RegisteredAppAdapterRepository extends CrudRepository<RegisteredAppAdapter, String> {
-    //    @Query("SELECT raa.address FROM RegisteredAppAdapter raa WHERE raa.app_id=:appId")
-    Optional<String> findAddressByAppId(String appId);
+    Optional<RegisteredAppAdapter> findByAppId(String appId);
 }
