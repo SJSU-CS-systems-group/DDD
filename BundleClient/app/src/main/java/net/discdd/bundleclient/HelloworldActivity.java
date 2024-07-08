@@ -87,22 +87,20 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-            if(UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)){
+            if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
                 usbExchangeButton.setEnabled(false);
                 usbConnectionText.setText("No USB connection detected\n");
                 usbConnectionText.setTextColor(Color.RED);
                 usbConnected = false;
                 showUsbDetachedToast();
-            }
-            else if(UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)){
-                if(usbDirExists()){
+            } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
+                if (usbDirExists()) {
                     usbExchangeButton.setEnabled(true);
                     usbConnectionText.setText("USB connection detected\n");
                     usbConnectionText.setTextColor(Color.GREEN);
                     usbConnected = true;
                     showUsbAttachedToast();
-                }
-                else{
+                } else {
                     usbExchangeButton.setEnabled(false);
                     usbConnectionText.setText("USB was connected, but /DDD_transport directory was not detected\n");
                     usbConnectionText.setTextColor(Color.RED);
@@ -112,6 +110,7 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
             }
         }
     };
+
     /**
      * check for location permissions manually, will give a prompt
      */
@@ -293,18 +292,21 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
     }
 
     //Usb connection methods
+
     /**
      * Method to show a toast message indicating USB device detachment
      */
     private void showUsbDetachedToast() {
         Toast.makeText(this, "USB device detached", Toast.LENGTH_SHORT).show();
     }
+
     /**
      * Method to show a toast message indicating USB device attachment
      */
     private void showUsbAttachedToast() {
         Toast.makeText(this, "USB device attached", Toast.LENGTH_SHORT).show();
     }
+
     /**
      * Checks if the /DDD_transport root directory exists in the connected usb fob.
      */
@@ -312,30 +314,29 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
         //"/mnt/media/[uuid](getSerialNumber()?)/DDD_transport
         return false;
     }
+
     /**
      * Method checks that a USB device is connected before app starts.
      */
     private void checkUsbConnection() {
         UsbManager usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
         HashMap<String, UsbDevice> deviceList = usbManager.getDeviceList();
-        if(!deviceList.isEmpty()){
-                //resultText.append(usbDevice.getDeviceName());
-            if(usbDirExists()) {
+        if (!deviceList.isEmpty()) {
+            //resultText.append(usbDevice.getDeviceName());
+            if (usbDirExists()) {
                 usbConnected = true;
                 usbExchangeButton.setEnabled(true);
                 usbConnectionText.setText("USB connection detected\n");
                 usbConnectionText.setTextColor(Color.GREEN);
                 showUsbAttachedToast();
-            }
-            else {
+            } else {
                 usbConnected = false;
                 usbExchangeButton.setEnabled(false);
                 usbConnectionText.setText("USB was connected, but /DDD_transport directory was not detected\n");
                 usbConnectionText.setTextColor(Color.RED);
                 showUsbAttachedToast();
             }
-        }
-        else {
+        } else {
             usbExchangeButton.setEnabled(false);
             usbConnectionText.setText("Usb device not connected\n");
             usbConnectionText.setTextColor(Color.RED);
