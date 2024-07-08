@@ -44,16 +44,6 @@ android {
         textOutput "stdout"
     }
 
-    sourceSets {
-        main {
-            proto {
-//                 srcDir 'src/main/proto'
-            }
-            java {
-                // srcDir 'src/main/java'
-            }
-        }
-    }
     namespace 'net.discdd.bundleclient'
 }
 
@@ -87,32 +77,4 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.8.9'
     implementation 'com.google.guava:guava:30.1.1-jre'
 
-    protobuf "net.discdd:bundle-core:0.0.2"
-}
-
-
-protobuf {
-    protoc {
-        artifact = 'com.google.protobuf:protoc:3.23.4'
-    }
-    plugins {
-        grpc {
-            // https://repo.maven.apache.org/maven2/io/grpc/protoc-gen-grpc-java/1.42.0/
-            // for macOS M1 and M2, using 'osx-x86_64' version
-            // if M2 also install Rosetta in terminal using command: softwareupdate --install-rosetta
-            artifact = "io.grpc:protoc-gen-grpc-java:1.58.0:$project.ext.osArch"
-        }
-    }
-    generateProtoTasks {
-        all().each { task ->
-            task.builtins {
-                java {
-                    option "lite"
-                }
-            }
-            task.plugins {
-                grpc { option 'lite' }
-            }
-        }
-    }
 }

@@ -13,9 +13,9 @@ import net.discdd.bundlerouting.RoutingExceptions;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
 import net.discdd.client.bundletransmission.BundleTransmission;
 
-import net.discdd.transport.Bytes;
-import net.discdd.transport.FileServiceGrpc;
-import net.discdd.transport.ReqFilePath;
+import net.discdd.bundletransport.service.Bytes;
+import net.discdd.bundletransport.service.FileServiceGrpc;
+import net.discdd.bundletransport.service.ReqFilePath;
 
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.InvalidKeyException;

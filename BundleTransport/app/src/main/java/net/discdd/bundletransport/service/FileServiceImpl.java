@@ -5,12 +5,6 @@ import android.os.Build;
 
 import net.discdd.bundletransport.MainActivity;
 
-import com.ddd.bundletransport.service.Bytes;
-import com.ddd.bundletransport.service.FileServiceGrpc;
-import com.ddd.bundletransport.service.FileUploadRequest;
-import com.ddd.bundletransport.service.FileUploadResponse;
-import com.ddd.bundletransport.service.ReqFilePath;
-import com.ddd.bundletransport.service.Status;
 import com.google.protobuf.ByteString;
 
 import java.io.File;
