@@ -92,7 +92,7 @@ public class MessageProvider extends ContentProvider {
             String appId = getCallerAppId();
             List<byte[]> datalist = ADUsStorage.getAllAppData(appId);
             cursor = new MatrixCursor(new String[] { "data" });
-            if (selectionArgs != null && selectionArgs.length != 0 && "clientId".equals(selectionArgs[0]))  {
+            if (selectionArgs != null && selectionArgs.length != 0 && "clientId".equals(selectionArgs[0])) {
                 cursor.newRow().add("data", ClientSecurity.getInstance().getClientID());
                 return cursor;
             } else {
