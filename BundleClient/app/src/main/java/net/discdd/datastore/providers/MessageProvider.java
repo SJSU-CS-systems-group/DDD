@@ -32,7 +32,7 @@ public class MessageProvider extends ContentProvider {
 
     private static final Logger logger = Logger.getLogger(MessageProvider.class.getName());
 
-    public static final String PROVIDER_NAME = "com.ddd.provider.datastoreprovider";
+    public static final String PROVIDER_NAME = "net.discdd.provider.datastoreprovider";
 
     public static final String URL = "content://" + PROVIDER_NAME + "/messages";
 

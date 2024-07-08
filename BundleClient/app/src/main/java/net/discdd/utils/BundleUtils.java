@@ -182,7 +182,11 @@ public class BundleUtils {
         if (!adus.isEmpty()) {
             File aduDirectory = aduPath.toFile();
             aduDirectory.mkdirs();
-            ADUUtils.writeADUs(uncompressedPayload.getADUs(), aduDirectory);
+            try {
+                ADUUtils.writeADUs(uncompressedPayload.getADUs(), aduDirectory);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
 
         logger.log(INFO, "[BundleUtils] Wrote bundle payload with id = " + bundleId + " to " + targetDirectory);
