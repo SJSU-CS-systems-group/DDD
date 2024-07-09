@@ -11,10 +11,14 @@ import java.util.logging.Logger;
 import static java.util.logging.Level.*;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.stub.StreamObserver;
+import net.discdd.bundletransport.service.BundleMetaData;
+import net.discdd.bundletransport.service.BundleServiceGrpc;
+import net.discdd.bundletransport.service.BundleUploadRequest;
 
 public class GrpcSendTask {
 
- /*   private static final Logger logger = Logger.getLogger(GrpcSendTask.class.getName());
+    private static final Logger logger = Logger.getLogger(GrpcSendTask.class.getName());
 
     private String host, serverDir, transportId;
     private int port;
@@ -67,11 +71,11 @@ public class GrpcSendTask {
                     logger.log(FINE, "Started file transfer");
                     FileInputStream inputStream = new FileInputStream(bundle.getAbsolutePath());
                     ;
-                    *//*if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+                    if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
                         inputStream = new FileInputStream(bundle.getAbsolutePath());
                     }
 
-                     *//*
+
                     int chunkSize = 1000 * 1000 * 4;
                     byte[] bytes = new byte[chunkSize];
                     int size = 0;
@@ -94,5 +98,5 @@ public class GrpcSendTask {
 
     private void postExecuteTask() throws InterruptedException {
         channel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
-    }*/
+    }
 }

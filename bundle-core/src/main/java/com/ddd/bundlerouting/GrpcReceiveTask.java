@@ -3,6 +3,9 @@ package com.ddd.bundlerouting;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
+import net.discdd.bundletransport.service.BundleDownloadRequest;
+import net.discdd.bundletransport.service.BundleDownloadResponse;
+import net.discdd.bundletransport.service.BundleServiceGrpc;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -17,7 +20,6 @@ import static java.util.logging.Level.*;
 import static java.util.logging.Level.SEVERE;
 
 public class GrpcReceiveTask {
-/*
     private static final Logger logger = Logger.getLogger(GrpcReceiveTask.class.getName());
 
     private String host, receiveDir, transportId;
@@ -26,7 +28,7 @@ public class GrpcReceiveTask {
     private ManagedChannel channel;
 
     public GrpcReceiveTask(String host, int port, String transportId, String receiveDir) {
-        logger.log(INFO, "initializing grpcreceivetask...");
+        logger.log(INFO, "Initializing GrpcReceiveTask...");
         this.host = host;
         this.port = port;
         this.transportId = transportId;
@@ -52,7 +54,7 @@ public class GrpcReceiveTask {
     }
 
     private void executeTask() throws Exception {
-        logger.log(INFO, "executing grpcreceivetask...");
+        logger.log(INFO, "Executing GrpcReceiveTask...");
 
         channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
         BundleServiceGrpc.BundleServiceStub stub = BundleServiceGrpc.newStub(channel);
@@ -153,5 +155,5 @@ public class GrpcReceiveTask {
 
     private void postExecuteTask() throws InterruptedException {
         channel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
-    }*/
+    }
 }
