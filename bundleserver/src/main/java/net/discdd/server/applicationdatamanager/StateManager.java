@@ -2,7 +2,6 @@ package net.discdd.server.applicationdatamanager;
 
 import net.discdd.model.ADU;
 import net.discdd.model.UncompressedPayload;
-import net.discdd.server.bundletransmission.BundleGeneratorService;
 import net.discdd.server.repository.LargestAduIdDeliveredRepository;
 import net.discdd.server.repository.LargestAduIdReceivedRepository;
 import net.discdd.server.repository.LargestBundleIdReceivedRepository;
@@ -15,6 +14,7 @@ import net.discdd.server.repository.entity.LargestBundleIdReceived;
 import net.discdd.server.repository.entity.LastBundleIdSent;
 import net.discdd.server.repository.entity.SentAduDetails;
 import net.discdd.server.repository.entity.SentBundleDetails;
+import net.discdd.utils.BundleUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -237,7 +237,7 @@ class StateManager {
     @Transactional(rollbackFor = Exception.class)
     public Optional<UncompressedPayload.Builder> getLastSentBundlePayloadBuilder(String clientId) {
         Map<String, Object> structure = this.getLastSentBundleStructure(clientId);
-        return BundleGeneratorService.bundleStructureToBuilder(structure);
+        return BundleUtils.bundleStructureToBuilder(structure);
     }
 
     public Optional<String> getLargestRecvdBundleId(String clientId) {
