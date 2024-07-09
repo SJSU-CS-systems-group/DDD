@@ -1,7 +1,7 @@
-package com.ddd.server.commands.com.ddd.server.commands.appids;
+package net.discdd.server.commands.appids;
 
-import com.ddd.server.repository.RegisteredAppAdapterRepository;
-import com.ddd.server.repository.entity.RegisteredAppAdapter;
+import net.discdd.server.repository.RegisteredAppAdapterRepository;
+import net.discdd.server.repository.entity.RegisteredAppAdapter;
 import org.springframework.stereotype.Component;
 import picocli.CommandLine;
 
