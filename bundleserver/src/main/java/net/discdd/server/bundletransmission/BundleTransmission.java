@@ -63,8 +63,7 @@ public class BundleTransmission {
     public BundleTransmission(BundleSecurity bundleSecurity, ApplicationDataManager applicationDataManager,
                               BundleRouting bundleRouting,
                               LargestBundleIdReceivedRepository largestBundleIdReceivedRepository,
-                              BundleServerConfig config,
-                              ServerWindowService serverWindowService) {
+                              BundleServerConfig config, ServerWindowService serverWindowService) {
         this.bundleSecurity = bundleSecurity;
         this.applicationDataManager = applicationDataManager;
         this.config = config;
@@ -273,8 +272,7 @@ public class BundleTransmission {
                 bundleId = this.generateBundleId(clientId);
             } else {
                 UncompressedPayload.Builder retxmnBundlePayloadBuilder = optional.get();
-                if (optional.isPresent() &&
-                        BundleUtils.doContentsMatch(generatedPayloadBuilder, optional.get())) {
+                if (optional.isPresent() && BundleUtils.doContentsMatch(generatedPayloadBuilder, optional.get())) {
                     bundleId = retxmnBundlePayloadBuilder.getBundleId();
                     isRetransmission = true;
                 } else { // new data to send
@@ -303,8 +301,8 @@ public class BundleTransmission {
                         .getUncompressedPayloadDirectory().toFile(), toSendBundlePayload.getBundleId());
 
                 Payload payload = this.bundleUtils.compressPayload(toSendBundlePayload,
-                                                                     this.config.getBundleTransmission()
-                                                                             .getCompressedPayloadDirectory());
+                                                                   this.config.getBundleTransmission()
+                                                                           .getCompressedPayloadDirectory());
                 UncompressedBundle uncompressedBundle = this.bundleSecurity.encryptPayload(clientId, payload,
                                                                                            this.config.getBundleTransmission()
                                                                                                    .getEncryptedPayloadDirectory());

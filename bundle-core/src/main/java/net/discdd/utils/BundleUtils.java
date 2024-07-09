@@ -33,7 +33,6 @@ public class BundleUtils {
 
     private static final String BUNDLE_EXTENSION = ".bundle";
 
-
     public static UncompressedBundle extractBundle(Bundle bundle, Path extractDirPath) {
 
         String bundleFileName = bundle.getSource().getName();
@@ -45,7 +44,7 @@ public class BundleUtils {
         File payloadSign = extractedBundlePath.resolve("signatures").toFile().listFiles()[0];
 
         return new UncompressedBundle( // TODO get encryption header, payload signature and get bundle id from BS
-                null, extractedBundlePath.toFile(), null, encryptedPayload, payloadSign);
+                                       null, extractedBundlePath.toFile(), null, encryptedPayload, payloadSign);
     }
 
     public static UncompressedPayload extractPayload(Payload payload, Path extractDirPath) {
@@ -89,7 +88,7 @@ public class BundleUtils {
     }
 
     public static void writeUncompressedPayload(UncompressedPayload uncompressedPayload, File targetDirectory,
-                                         String bundleFileName) {
+                                                String bundleFileName) {
         String bundleId = uncompressedPayload.getBundleId();
         Path bundleFilePath = targetDirectory.toPath().resolve(bundleId);
 
@@ -177,7 +176,6 @@ public class BundleUtils {
         }
         return true;
     }
-
 
     @SuppressWarnings("unchecked")
     public static Optional<UncompressedPayload.Builder> bundleStructureToBuilder(Map<String, Object> bundleStructureMap) {
