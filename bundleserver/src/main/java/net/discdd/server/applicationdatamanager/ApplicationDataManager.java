@@ -3,16 +3,12 @@ package net.discdd.server.applicationdatamanager;
 import net.discdd.model.ADU;
 import net.discdd.model.UncompressedPayload;
 import net.discdd.server.config.BundleServerConfig;
+import net.discdd.server.repository.RegisteredAppAdapterRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,6 +18,7 @@ import java.util.Optional;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
 @Service
@@ -37,16 +34,14 @@ public class ApplicationDataManager {
     @Autowired
     private BundleServerConfig bundleServerConfig;
 
-    @Value("${bundle-server.registered-app-ids}")
-    private String registeredAppIdsFile;
-
     @Value("${bundle-server.bundle-store-root}")
     private String rootDataDir;
 
-    // public ApplicationDataManager() {
-    //   //    this.dataStoreAdaptor = new DataStoreAdaptor(bundleServerConfig.getBundleStoreRoot());
-    //   this.dataStoreAdaptor = new DataStoreAdaptor(rootDataDir);
-    // }
+    private final RegisteredAppAdapterRepository registeredAppAdapterRepository;
+
+    public ApplicationDataManager(RegisteredAppAdapterRepository registeredAppAdapterRepository) {
+        this.registeredAppAdapterRepository = registeredAppAdapterRepository;
+    }
 
     @PostConstruct
     private void init() {
@@ -54,25 +49,7 @@ public class ApplicationDataManager {
     }
 
     public List<String> getRegisteredAppIds() {
-        List<String> registeredAppIds = new ArrayList<>();
-        try (BufferedReader bufferedReader = new BufferedReader(new FileReader(new File(registeredAppIdsFile)))) {
-            String line = "";
-            while ((line = bufferedReader.readLine()) != null) {
-                String appId = line.trim();
-                registeredAppIds.add(appId);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return registeredAppIds;
-    }
-
-    public void registerAppId(String appId) {
-        try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(registeredAppIdsFile)))) {
-            bufferedWriter.write(appId);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        return registeredAppAdapterRepository.findAllAppIds().stream().toList();
     }
 
     public void processAcknowledgement(String clientId, String bundleId) throws IOException {
@@ -151,11 +128,4 @@ public class ApplicationDataManager {
         return this.stateManager.getClientIdFromSentBundleId(bundleId);
     }
 
-    public void collectDataForClients(String clientId) {
-        logger.log(WARNING, "[ApplicationDataManager] Collecting data for client " + clientId);
-        List<String> appIds = this.getRegisteredAppIds();
-        for (String appId : appIds) {
-            this.dataStoreAdaptor.prepareData(appId, clientId);
-        }
-    }
 }

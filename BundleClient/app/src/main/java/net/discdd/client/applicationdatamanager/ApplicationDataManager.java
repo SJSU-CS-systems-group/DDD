@@ -266,20 +266,6 @@ public class ApplicationDataManager {
         return registeredAppIds;
     }
 
-    public void registerAppId(String appId) {
-        File file = ROOT_DIR.toFile();
-        if (!file.exists()) {
-            file.mkdirs();
-        }
-        logger.log(FINE, ROOT_DIR + REGISTERED_APP_IDS + "||" + appId);
-        try (BufferedWriter bufferedWriter = new BufferedWriter(
-                new FileWriter(new File(ROOT_DIR + REGISTERED_APP_IDS), true))) {
-            bufferedWriter.append(appId + "\n");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     public void processAcknowledgement(String bundleId) {
         logger.log(FINE, "[ADM] Processing acknowledgement for sent bundle id: " + bundleId);
         if ("HB".equals(bundleId)) {

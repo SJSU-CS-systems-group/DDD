@@ -2,7 +2,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+#    show-sql: true # uncomment to show sql commands being executed
     database-platform: org.hibernate.dialect.MySQL8Dialect
     generate-ddl: true
     properties:
