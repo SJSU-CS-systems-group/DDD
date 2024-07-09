@@ -15,33 +15,26 @@ import static java.util.logging.Level.INFO;
 
 @GrpcService
 public class ServiceAdapterRegistryService extends ServiceAdapterRegistryGrpc.ServiceAdapterRegistryImplBase {
-    @Value("${bundle-server.registered-app-ids}")
-    private String registeredAppIdsFile;
-
     private static final Logger logger = Logger.getLogger(ServiceAdapterRegistryService.class.getName());
+    final private RegisteredAppAdapterRepository registeredAppAdapterRepository;
 
     ServiceAdapterRegistryService(final RegisteredAppAdapterRepository registeredAppAdapterRepository) {
         this.registeredAppAdapterRepository = registeredAppAdapterRepository;
     }
 
-    final private RegisteredAppAdapterRepository registeredAppAdapterRepository;
-
     @Override
     public void registerAdapter(ConnectionData connectionData, StreamObserver<ResponseStatus> responseObserver) {
         logger.log(INFO, String.format("Checking %s to %s", connectionData.getAppName(), connectionData.getUrl()));
-        RegisteredAppAdapter newAppAdapter =
-                new RegisteredAppAdapter(connectionData.getAppName(), connectionData.getUrl());
-
-        try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(registeredAppIdsFile))) {
-            bufferedWriter.write(newAppAdapter.getAppId());
-            logger.log(INFO, String.format("Registered app to %s: %s", registeredAppIdsFile, newAppAdapter.getAppId()));
-        } catch (IOException e) {
-            e.printStackTrace();
+        var registeredApp = registeredAppAdapterRepository.findByAppId(connectionData.getAppName());
+        if (registeredApp.isPresent()) {
+            if (registeredApp.get().getAddress().equals(connectionData.getUrl())) {
+                responseObserver.onNext(ResponseStatus.newBuilder().setCode(0).setMessage("OK").build());
+            } else {
+                responseObserver.onNext(ResponseStatus.newBuilder().setCode(2).setMessage("A different address is registered for " + connectionData.getAppName()).build());
+            }
+        } else {
+            responseObserver.onNext(ResponseStatus.newBuilder().setCode(1).setMessage("No Such App").build());
         }
-
-        registeredAppAdapterRepository.save(newAppAdapter);
-
-        responseObserver.onNext(ResponseStatus.newBuilder().setCode(0).setMessage("OK").build());
         responseObserver.onCompleted();
     }
 }

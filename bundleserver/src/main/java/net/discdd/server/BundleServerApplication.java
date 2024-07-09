@@ -32,6 +32,7 @@ public class BundleServerApplication {
     private static final Logger logger = Logger.getLogger(BundleServerApplication.class.getName());
 
     public static void main(String[] args) {
+        System.setProperty("java.util.logging.SimpleFormatter.format", "%5$s%6$s%n");
         class MySpringApplication extends SpringApplication {
             MySpringApplication(Class<?>... primarySources) {
                 super(primarySources);
