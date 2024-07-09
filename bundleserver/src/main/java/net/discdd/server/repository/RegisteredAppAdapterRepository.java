@@ -12,6 +12,7 @@ import java.util.Optional;
 @Repository
 public interface RegisteredAppAdapterRepository extends CrudRepository<RegisteredAppAdapter, String> {
     Optional<RegisteredAppAdapter> findByAppId(String appId);
+
     @Query("SELECT appId FROM RegisteredAppAdapter")
     Collection<String> findAllAppIds();
 }

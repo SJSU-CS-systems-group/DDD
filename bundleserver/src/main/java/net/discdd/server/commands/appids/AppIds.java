@@ -7,11 +7,8 @@ import picocli.CommandLine;
 
 import java.util.concurrent.Callable;
 
-@CommandLine.Command(
-    name = "appids",
-    description = "List and updatedregistered app ids",
-    mixinStandardHelpOptions = true
-)
+@CommandLine.Command(name = "appids", description = "List and updatedregistered app ids", mixinStandardHelpOptions =
+        true)
 @Component
 public class AppIds implements Callable<Integer> {
     private final RegisteredAppAdapterRepository registeredAppAdapterRepository;
@@ -19,43 +16,27 @@ public class AppIds implements Callable<Integer> {
     AppIds(RegisteredAppAdapterRepository registeredAppAdapterRepository) {
         this.registeredAppAdapterRepository = registeredAppAdapterRepository;
     }
-    @CommandLine.Command(
-        name = "list",
-        description = "List all registered app ids"
-    )
+
+    @CommandLine.Command(name = "list", description = "List all registered app ids")
     int list() {
         System.out.println("Registered app ids:");
-        registeredAppAdapterRepository.findAll().forEach(r -> System.out.println(r.getAppId() + " registered to " + r.getAddress()));
+        registeredAppAdapterRepository.findAll()
+                .forEach(r -> System.out.println(r.getAppId() + " registered to " + r.getAddress()));
         return 0;
     }
-    @CommandLine.Command(
-        name = "update",
-        description = "Add or update an appId to server address mapping"
-    )
+
+    @CommandLine.Command(name = "update", description = "Add or update an appId to server address mapping")
     int update(
-        @CommandLine.Parameters(
-            index = "0",
-            description = "The appId to add or update"
-        ) String appId,
-        @CommandLine.Parameters(
-            index = "1",
-            description = "The server address to map to the appId"
-        ) String address
-    ) {
+            @CommandLine.Parameters(index = "0", description = "The appId to add or update") String appId,
+            @CommandLine.Parameters(index = "1", description = "The server address to map to the appId")
+            String address) {
         registeredAppAdapterRepository.save(new RegisteredAppAdapter(appId, address));
         System.out.printf("%s registered to %s%n", appId, address);
         return 0;
     }
-    @CommandLine.Command(
-        name = "delete",
-        description = "Delete an appId"
-    )
-    int delete(
-        @CommandLine.Parameters(
-            index = "0",
-            description = "The appId to delete"
-        ) String appId
-    ) {
+
+    @CommandLine.Command(name = "delete", description = "Delete an appId")
+    int delete(@CommandLine.Parameters(index = "0", description = "The appId to delete") String appId) {
         registeredAppAdapterRepository.deleteById(appId);
         System.out.printf("%s deleted%n", appId);
         return 0;
