@@ -9,7 +9,7 @@ import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
 
-import net.discdd.transport.FileUploadResponse;
+import net.discdd.bundletransport.service.FileUploadResponse;
 
 class FileUploadObserver implements StreamObserver<FileUploadResponse> {
 

@@ -1,0 +1,51 @@
+syntax = "proto3";
+package protobuf;
+
+option go_package = "./protobuf";
+option java_multiple_files = true;
+option java_package = "net.discdd.bundletransport.service";
+option java_outer_classname = "BundleServerService";
+option objc_class_prefix = "BSS";
+
+import "FileService.proto";
+
+message BundleMetaData {
+  string bid = 1;
+  string transportId = 2;
+}
+
+message BundleList{
+  string transportId = 1;
+  string bundleList = 2;
+}
+
+message BundleUploadRequest {
+  oneof request {
+    BundleMetaData metadata = 1;
+    File file = 2;
+  }
+}
+
+message BundleUploadResponse {
+  string bid = 1;
+  Status status = 2;
+}
+
+message BundleDownloadRequest {
+  string bundleList = 1;
+  string transportId = 2;
+}
+
+message BundleDownloadResponse{
+  oneof request{
+    BundleMetaData metadata = 1;
+    BundleList bundleList = 2;
+    File file = 3;
+    Status status = 4;
+  }
+}
+
+service BundleService {
+  rpc UploadBundle(stream BundleUploadRequest) returns (BundleUploadResponse) {}
+  rpc DownloadBundle(BundleDownloadRequest) returns (stream BundleDownloadResponse) {}
+}

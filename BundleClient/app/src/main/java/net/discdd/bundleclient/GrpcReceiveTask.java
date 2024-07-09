@@ -5,28 +5,17 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
-
 import android.app.Activity;
 import android.content.Context;
 import android.widget.TextView;
 
-import com.ddd.bundlerouting.RoutingExceptions;
-import com.ddd.bundlerouting.WindowUtils.WindowExceptions;
-
+import net.discdd.bundlerouting.RoutingExceptions;
+import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
 import net.discdd.client.bundletransmission.BundleTransmission;
-import net.discdd.transport.Bytes;
-import net.discdd.transport.FileServiceGrpc;
-import net.discdd.transport.ReqFilePath;
 
-import org.whispersystems.libsignal.DuplicateMessageException;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.InvalidMessageException;
-import org.whispersystems.libsignal.LegacyMessageException;
-import org.whispersystems.libsignal.NoSessionException;
+import net.discdd.bundletransport.service.Bytes;
+import net.discdd.bundletransport.service.FileServiceGrpc;
+import net.discdd.bundletransport.service.ReqFilePath;
 
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.InvalidKeyException;

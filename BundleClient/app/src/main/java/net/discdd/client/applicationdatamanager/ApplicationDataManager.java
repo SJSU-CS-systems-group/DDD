@@ -5,9 +5,11 @@ import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 
-import com.ddd.model.ADU;
-import com.ddd.model.UncompressedPayload;
+import net.discdd.model.ADU;
+import net.discdd.model.UncompressedPayload;
+
 import net.discdd.utils.BundleUtils;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonIOException;
@@ -262,20 +264,6 @@ public class ApplicationDataManager {
             e.printStackTrace();
         }
         return registeredAppIds;
-    }
-
-    public void registerAppId(String appId) {
-        File file = ROOT_DIR.toFile();
-        if (!file.exists()) {
-            file.mkdirs();
-        }
-        logger.log(FINE, ROOT_DIR + REGISTERED_APP_IDS + "||" + appId);
-        try (BufferedWriter bufferedWriter = new BufferedWriter(
-                new FileWriter(new File(ROOT_DIR + REGISTERED_APP_IDS), true))) {
-            bufferedWriter.append(appId + "\n");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     public void processAcknowledgement(String bundleId) {

@@ -21,6 +21,9 @@ import io.grpc.Server;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 
 public class RpcServer {
+    public enum ServerState {
+        RUNNING, PENDING, SHUTDOWN
+    }
 
     private static final Logger logger = Logger.getLogger(RpcServer.class.getName());
 
@@ -28,10 +31,6 @@ public class RpcServer {
     private final String inetSocketAddressIP = "192.168.49.1";
     private final int port = 7777;
     private ServerState state = ServerState.SHUTDOWN;
-
-    public enum ServerState {
-        RUNNING, PENDING, SHUTDOWN
-    }
 
     private Server server;
     private static RpcServer rpcServerInstance;
