@@ -21,6 +21,7 @@ import net.discdd.server.bundlesecurity.InvalidClientSessionException;
 import net.discdd.server.config.BundleServerConfig;
 import net.discdd.server.repository.LargestBundleIdReceivedRepository;
 import net.discdd.utils.AckRecordUtils;
+import net.discdd.utils.BundleUtils;
 import net.discdd.utils.Constants;
 import org.apache.commons.io.FileUtils;
 import org.springframework.stereotype.Service;
@@ -55,21 +56,21 @@ public class BundleTransmission {
     private final BundleSecurity bundleSecurity;
     private final ApplicationDataManager applicationDataManager;
     private final BundleRouting bundleRouting;
-    private final BundleGeneratorService bundleGenServ;
+    private final BundleUtils bundleUtils;
     private final ServerWindowService serverWindowService;
     private final int WINDOW_LENGTH = 3;
 
     public BundleTransmission(BundleSecurity bundleSecurity, ApplicationDataManager applicationDataManager,
                               BundleRouting bundleRouting,
                               LargestBundleIdReceivedRepository largestBundleIdReceivedRepository,
-                              BundleServerConfig config, BundleGeneratorService bundleGenServ,
+                              BundleServerConfig config,
                               ServerWindowService serverWindowService) {
         this.bundleSecurity = bundleSecurity;
         this.applicationDataManager = applicationDataManager;
         this.config = config;
         this.bundleRouting = bundleRouting;
-        this.bundleGenServ = bundleGenServ;
         this.serverWindowService = serverWindowService;
+        this.bundleUtils = new BundleUtils();
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -79,7 +80,7 @@ public class BundleTransmission {
 
         bundleRecvProcDir.toFile().mkdirs();
 
-        UncompressedBundle uncompressedBundle = this.bundleGenServ.extractBundle(bundle, bundleRecvProcDir);
+        UncompressedBundle uncompressedBundle = this.bundleUtils.extractBundle(bundle, bundleRecvProcDir);
         String clientId = "";
         String serverIdReceived = SecurityUtils.generateID(
                 uncompressedBundle.getSource().toPath().resolve(SecurityUtils.SERVER_IDENTITY_KEY));
@@ -106,7 +107,7 @@ public class BundleTransmission {
         }
 
         UncompressedPayload uncompressedPayload =
-                this.bundleGenServ.extractPayload(payload, uncompressedBundle.getSource().toPath());
+                this.bundleUtils.extractPayload(payload, uncompressedBundle.getSource().toPath());
 
         File ackRecordFile = new File(this.getAckRecordLocation(clientId));
         ackRecordFile.getParentFile().mkdirs();
@@ -273,7 +274,7 @@ public class BundleTransmission {
             } else {
                 UncompressedPayload.Builder retxmnBundlePayloadBuilder = optional.get();
                 if (optional.isPresent() &&
-                        BundleGeneratorService.doContentsMatch(generatedPayloadBuilder, optional.get())) {
+                        BundleUtils.doContentsMatch(generatedPayloadBuilder, optional.get())) {
                     bundleId = retxmnBundlePayloadBuilder.getBundleId();
                     isRetransmission = true;
                 } else { // new data to send
@@ -298,10 +299,10 @@ public class BundleTransmission {
                 if (!isRetransmission) {
                     this.applicationDataManager.notifyBundleGenerated(clientId, toSendBundlePayload);
                 }
-                this.bundleGenServ.writeUncompressedPayload(toSendBundlePayload, this.config.getBundleTransmission()
+                this.bundleUtils.writeUncompressedPayload(toSendBundlePayload, this.config.getBundleTransmission()
                         .getUncompressedPayloadDirectory().toFile(), toSendBundlePayload.getBundleId());
 
-                Payload payload = this.bundleGenServ.compressPayload(toSendBundlePayload,
+                Payload payload = this.bundleUtils.compressPayload(toSendBundlePayload,
                                                                      this.config.getBundleTransmission()
                                                                              .getCompressedPayloadDirectory());
                 UncompressedBundle uncompressedBundle = this.bundleSecurity.encryptPayload(clientId, payload,
@@ -312,7 +313,7 @@ public class BundleTransmission {
                         this.config.getBundleTransmission().getToSendDirectory().resolve(transportId).toFile();
                 toSendTxpDir.mkdirs();
 
-                Bundle toSend = this.bundleGenServ.compressBundle(uncompressedBundle, toSendTxpDir.toPath());
+                Bundle toSend = this.bundleUtils.compressBundle(uncompressedBundle, toSendTxpDir.toPath());
                 bundlesToSend.add(new BundleDTO(bundleId, toSend));
                 deletionSet.addAll(bundleIdsPresent);
             }
