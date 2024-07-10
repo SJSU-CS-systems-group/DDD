@@ -18,7 +18,7 @@ public class CliUtils {
         try (InputStream input = new FileInputStream(applicationYml)) {
             prop.load(input);
             String s = prop.getProperty("received-processing-directory");
-            s = s.substring(1,s.length()-1);
+            s = s.substring(1, s.length() - 1);
             resultString = s.replace("${bundle-server.bundle-store-root}", loadRoot(appProps));
             return resultString;
         } catch (IOException e) {
@@ -26,6 +26,7 @@ public class CliUtils {
             return resultString;
         }
     }
+
     public static Path getServerSecurity(File applicationYml, String appProps) {
         Properties prop = new Properties();
         String resultString = "";
@@ -36,7 +37,7 @@ public class CliUtils {
         try (InputStream input = new FileInputStream(applicationYml)) {
             prop.load(input);
             String s = prop.getProperty("server-key-path");
-            s = s.substring(1,s.length()-1);
+            s = s.substring(1, s.length() - 1);
             resultString = s.replace("${bundle-server.bundle-store-root}", loadRoot(appProps));
             return Path.of(resultString);
         } catch (IOException e) {

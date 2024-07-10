@@ -1,6 +1,5 @@
 package net.discdd.cli;
 
-
 import net.discdd.bundlesecurity.ServerSecurity;
 import net.discdd.cli.CliUtils;
 import picocli.CommandLine;
@@ -30,7 +29,8 @@ public class EncryptBundle implements Callable<Void> {
     @CommandLine.Option(names = "--applicationYaml", required = true, description = "an application yaml")
     private static File applicationYml;
 
-    @CommandLine.Option(names = "--appProps", required = true, description = "Personal application properties file path")
+    @CommandLine.Option(names = "--appProps", required = true, description = "Personal application properties file " +
+            "path")
     private static String appProps;
 
     @Override
