@@ -11,6 +11,7 @@
         <module>bundle-core</module>
         <module>serviceadapter-core</module>
         <module>bundleserver</module>
+        <module>apps/cli</module>
     </modules>
 
 </project>
