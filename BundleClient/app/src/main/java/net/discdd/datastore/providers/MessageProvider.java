@@ -12,7 +12,6 @@ import android.net.Uri;
 import android.os.Binder;
 
 import java.io.File;
-import java.nio.file.Path;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
