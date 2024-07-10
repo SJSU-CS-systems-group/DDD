@@ -45,7 +45,8 @@ public class MessageProvider extends ContentProvider {
     private static HashMap<String, String> values;
     static final UriMatcher uriMatcher;
 
-    private StoreADUs ADUsStorage;
+    private StoreADUs sendADUsStorage;
+    private StoreADUs receiveADUsStorage;
 
     /**
      * TODO: this FileStoreHelper is used to create App ID if it does not already exist BUT
@@ -75,7 +76,8 @@ public class MessageProvider extends ContentProvider {
     public boolean onCreate() {
         DBHelper dbHelper = new DBHelper(getContext());
         sqlDB = dbHelper.getWritableDatabase();
-        ADUsStorage = new StoreADUs(new File(getContext().getApplicationInfo().dataDir, "/send"), true);
+        sendADUsStorage = new StoreADUs(new File(getContext().getApplicationInfo().dataDir, "/send"), true);
+        receiveADUsStorage = new StoreADUs(new File(getContext().getApplicationInfo().dataDir, "/receive"), false);
         if (sqlDB != null) return true;
         return false;
     }
@@ -90,7 +92,7 @@ public class MessageProvider extends ContentProvider {
 
         try {
             String appId = getCallerAppId();
-            List<byte[]> datalist = ADUsStorage.getAllAppData(appId);
+            List<byte[]> datalist = receiveADUsStorage.getAllAppData(appId);
             cursor = new MatrixCursor(new String[] { "data" });
             if (selectionArgs != null && selectionArgs.length != 0 && "clientId".equals(selectionArgs[0])) {
                 cursor.newRow().add("data", ClientSecurity.getInstance().getClientID());
@@ -125,7 +127,7 @@ public class MessageProvider extends ContentProvider {
             String appName = getCallerAppId();
             byte[] data = contentValues.getAsByteArray("data");
             logger.log(INFO, "inserting: " + new String(data));
-            return fromFile(ADUsStorage.addADU(null, appName, data, -1));
+            return fromFile(sendADUsStorage.addADU(null, appName, data, -1));
         } catch (IOException e) {
             logger.log(WARNING, "Unable to add file", e);
             return null;
