@@ -372,7 +372,6 @@ public class ServerSecurity {
         return decryptedFile;
     }
 
-
     public Path[] encrypt(Path toBeEncPath, Path encPath, String bundleID, String clientID) throws IOException,
             NoSuchAlgorithmException, InvalidKeyException, InvalidClientSessionException {
         /* get Client Session */

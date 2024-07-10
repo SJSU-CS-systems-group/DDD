@@ -23,14 +23,14 @@ public class DecryptBundle implements Callable<Void> {
     private String bundlePath;
     @CommandLine.Option(names = "--decrypted-path", description = "Decrypted bundle file path")
     private String decryptedPath;
-    @CommandLine.Option(names = "--appProps", required = true, description = "Personal application properties file path")
+    @CommandLine.Option(names = "--appProps", required = true, description = "Personal application properties file " +
+            "path")
     private static String appProps;
 
     @Override
     public Void call() {
         try {
-            ServerSecurity serverSecurity = new ServerSecurity(
-                    CliUtils.getServerSecurity(applicationYml, appProps));
+            ServerSecurity serverSecurity = new ServerSecurity(CliUtils.getServerSecurity(applicationYml, appProps));
             String receivedProcessingDir = CliUtils.getReceivedProcessingDirectory(applicationYml, appProps);
 
             logger.log(WARNING, "Decrypting bundle" + bundlePath);
