@@ -20,9 +20,9 @@ import static java.util.logging.Level.WARNING;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import net.discdd.datastore.filestore.FileStoreHelper;
+import net.discdd.client.bundlesecurity.ClientSecurity;
 import net.discdd.datastore.sqlite.DBHelper;
-import com.ddd.utils.StoreADUs;
+import net.discdd.utils.StoreADUs;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -32,7 +32,7 @@ public class MessageProvider extends ContentProvider {
 
     private static final Logger logger = Logger.getLogger(MessageProvider.class.getName());
 
-    public static final String PROVIDER_NAME = "com.ddd.provider.datastoreprovider";
+    public static final String PROVIDER_NAME = "net.discdd.provider.datastoreprovider";
 
     public static final String URL = "content://" + PROVIDER_NAME + "/messages";
 
@@ -52,7 +52,6 @@ public class MessageProvider extends ContentProvider {
      * this utility will be moved to ApplicationDataManager, delete this instance once that
      * is done.
      */
-    private FileStoreHelper tempFileStoreHelper;
 
     static {
         uriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
@@ -69,7 +68,6 @@ public class MessageProvider extends ContentProvider {
     private String getCallerAppId() throws IOException {
         int receiverId = Binder.getCallingUid();
         String appId = getContext().getPackageManager().getNameForUid(receiverId);
-        tempFileStoreHelper.createAppIdDirIfNotExists(appId);
         return appId;
     }
 
@@ -77,8 +75,7 @@ public class MessageProvider extends ContentProvider {
     public boolean onCreate() {
         DBHelper dbHelper = new DBHelper(getContext());
         sqlDB = dbHelper.getWritableDatabase();
-        ADUsStorage = new StoreADUs(new File(getContext().getApplicationInfo().dataDir, "/send"),
-                true);
+        ADUsStorage = new StoreADUs(new File(getContext().getApplicationInfo().dataDir, "/send"), true);
         if (sqlDB != null) return true;
         return false;
     }
@@ -93,32 +90,21 @@ public class MessageProvider extends ContentProvider {
 
         try {
             String appId = getCallerAppId();
-//            List<byte[]> datalist = fileStoreHelper.getAllAppData(appId);
             List<byte[]> datalist = ADUsStorage.getAllAppData(appId);
             cursor = new MatrixCursor(new String[] { "data" });
-            for (byte[] data : datalist) {
-
-                cursor.newRow().add("data", new String(data));
+            if (selectionArgs != null && selectionArgs.length != 0 && "clientId".equals(selectionArgs[0])) {
+                cursor.newRow().add("data", ClientSecurity.getInstance().getClientID());
+                return cursor;
+            } else {
+                for (byte[] data : datalist) {
+                    cursor.newRow().add("data", new String(data));
+                }
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.log(WARNING, "bundleclient", ex.getMessage());
+            logger.log(WARNING, "Error getting app data", ex);
             cursor = null;
         }
         return cursor;
-
-        /*SQLiteQueryBuilder queryBuilder=new SQLiteQueryBuilder();
-        queryBuilder.setTables(TABLE_NAME);
-        switch ((uriMatcher.match(uri))){
-            case uriCode:
-                queryBuilder.setProjectionMap(values);
-                break;
-            default:
-                throw new IllegalArgumentException("Unknown URI "+uri);
-        }
-        Cursor cursor=queryBuilder.query(sqlDB, projection, selection, selectionArgs, null, null, sortOrder);
-        cursor.setNotificationUri(getContext().getContentResolver(), uri);
-        return cursor;*/
     }
 
     @Nullable
@@ -138,10 +124,10 @@ public class MessageProvider extends ContentProvider {
         try {
             String appName = getCallerAppId();
             byte[] data = contentValues.getAsByteArray("data");
-            logger.log(INFO, "bundleclient", "inserting: " + new String(data));
+            logger.log(INFO, "inserting: " + new String(data));
             return fromFile(ADUsStorage.addADU(null, appName, data, -1));
         } catch (IOException e) {
-            logger.log(WARNING, "bundleclient", "Unable to add file, error: " + e.getMessage());
+            logger.log(WARNING, "Unable to add file", e);
             return null;
         }
     }

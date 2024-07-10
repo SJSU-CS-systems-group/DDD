@@ -1,7 +1,7 @@
 package net.discdd.core;
 
 
-import com.ddd.bundlesecurity.ServerSecurity;
+import net.discdd.bundlesecurity.ServerSecurity;
 import picocli.CommandLine;
 
 import java.io.File;

@@ -3,17 +3,18 @@ package net.discdd.client.bundlesecurity;
 import static java.util.logging.Level.INFO;
 
 import android.content.res.Resources;
-import com.ddd.bundlerouting.WindowUtils.WindowExceptions;
+import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
 
 import net.discdd.bundleclient.R;
-import net.discdd.client.bundlerouting.ClientBundleGenerator;
+import net.discdd.model.EncryptedPayload;
+import net.discdd.model.EncryptionHeader;
+import net.discdd.model.Payload;
+import net.discdd.model.UncompressedBundle;
+import net.discdd.utils.Constants;
+import net.discdd.utils.FileUtils;
+
 import net.discdd.client.bundlerouting.ClientWindow;
-import com.ddd.model.EncryptedPayload;
-import com.ddd.model.EncryptionHeader;
-import com.ddd.model.Payload;
-import com.ddd.model.UncompressedBundle;
-import com.ddd.utils.Constants;
-import com.ddd.utils.FileUtils;
+import net.discdd.client.bundlerouting.ClientBundleGenerator;
 
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -122,7 +123,7 @@ public class BundleSecurity {
         paths = client.encrypt(payload.getSource().toPath(), bundleGenDirPath, bundleId);
 
         EncryptedPayload encryptedPayload = new EncryptedPayload(bundleId, paths[0].toFile());
-        File source = new File(bundleGenDirPath + File.separator + bundleId);
+        File source = bundleGenDirPath.resolve(bundleId).toFile();
         EncryptionHeader encHeader =
                 EncryptionHeader.builder().clientBaseKey(paths[2].toFile()).clientIdentityKey(paths[3].toFile())
                         .serverIdentityKey(paths[4].toFile()).build();
@@ -133,15 +134,15 @@ public class BundleSecurity {
     public Payload decryptPayload(UncompressedBundle uncompressedBundle) throws NoSessionException,
             InvalidMessageException, DuplicateMessageException, IOException, LegacyMessageException,
             InvalidKeyException {
-        File decryptedPayloadJar = new File(uncompressedBundle.getSource().getAbsolutePath() + File.separator +
-                                                    Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar");
+        File decryptedPayloadJar =
+                uncompressedBundle.getSource().toPath().resolve(Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar")
+                        .toFile();
         String bundleId = "";
         if (this.isEncryptionEnabled) {
             ClientSecurity clientSecurity = ClientSecurity.getInstance();
             clientSecurity.decrypt(uncompressedBundle.getSource().toPath(), uncompressedBundle.getSource().toPath());
             bundleId = clientSecurity.getBundleIDFromFile(uncompressedBundle.getSource().toPath());
-            File decryptedPayload = new File(
-                    uncompressedBundle.getSource().getAbsolutePath() + File.separator + bundleId + ".decrypted");
+            File decryptedPayload = uncompressedBundle.getSource().toPath().resolve(bundleId + ".decrypted").toFile();
             if (decryptedPayload.exists()) {
                 decryptedPayload.renameTo(decryptedPayloadJar);
             }

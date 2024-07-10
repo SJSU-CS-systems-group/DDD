@@ -3,23 +3,23 @@ package net.discdd.client.bundletransmission;
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
 
-import com.ddd.bundlerouting.RoutingExceptions;
-import com.ddd.bundlerouting.WindowUtils.WindowExceptions;
-import com.ddd.bundlesecurity.BundleIDGenerator;
-import net.discdd.client.applicationdatamanager.ApplicationDataManager;
-import net.discdd.client.bundlerouting.ClientBundleGenerator;
-import net.discdd.client.bundlerouting.ClientRouting;
-import net.discdd.client.bundlesecurity.BundleSecurity;
-import com.ddd.model.ADU;
-import com.ddd.model.Acknowledgement;
-import com.ddd.model.Bundle;
-import com.ddd.model.BundleDTO;
-import com.ddd.model.Payload;
-import com.ddd.model.UncompressedBundle;
-import com.ddd.model.UncompressedPayload;
+import net.discdd.bundlerouting.RoutingExceptions;
+import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
+import net.discdd.bundlesecurity.BundleIDGenerator;
+import net.discdd.model.ADU;
+import net.discdd.model.Acknowledgement;
+import net.discdd.model.Bundle;
+import net.discdd.model.BundleDTO;
+import net.discdd.model.Payload;
+import net.discdd.model.UncompressedBundle;
+import net.discdd.model.UncompressedPayload;
+import net.discdd.utils.Constants;
 import net.discdd.utils.AckRecordUtils;
+import net.discdd.client.bundlesecurity.BundleSecurity;
+import net.discdd.client.applicationdatamanager.ApplicationDataManager;
+import net.discdd.client.bundlerouting.ClientRouting;
 import net.discdd.utils.BundleUtils;
-import com.ddd.utils.Constants;
+import net.discdd.client.bundlerouting.ClientBundleGenerator;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -76,7 +76,7 @@ public class BundleTransmission {
         var bundleGenerationDir = ROOT_DIR.resolve(BUNDLE_GENERATION_DIRECTORY);
         var toBeBundledDir = ROOT_DIR.resolve(TO_BE_BUNDLED_DIRECTORY);
         ackRecordPath = toBeBundledDir.resolve(Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME);
-        com.ddd.utils.FileUtils.createFileWithDefaultIfNeeded(ackRecordPath, "HB".getBytes());
+        net.discdd.utils.FileUtils.createFileWithDefaultIfNeeded(ackRecordPath, "HB".getBytes());
         var tosendDir = bundleGenerationDir.resolve(TO_SEND_DIRECTORY);
         tosendDir.toFile().mkdirs();
 
@@ -92,7 +92,7 @@ public class BundleTransmission {
 
     public void registerBundleId(String bundleId) throws IOException {
         try (BufferedWriter bufferedWriter = new BufferedWriter(
-                new FileWriter(new File(this.ROOT_DIR + LARGEST_BUNDLE_ID_RECEIVED)))) {
+                new FileWriter(this.ROOT_DIR.resolve(LARGEST_BUNDLE_ID_RECEIVED).toFile()))) {
             bufferedWriter.write(bundleId);
         }
         System.out.println("[BS] Registered bundle identifier: " + bundleId);
@@ -101,7 +101,7 @@ public class BundleTransmission {
     private String getLargestBundleIdReceived() throws IOException {
         String bundleId = "";
         try (BufferedReader bufferedReader = new BufferedReader(
-                new FileReader(new File(this.ROOT_DIR + LARGEST_BUNDLE_ID_RECEIVED)))) {
+                new FileReader(this.ROOT_DIR.resolve(LARGEST_BUNDLE_ID_RECEIVED).toFile()))) {
             String line;
             while ((line = bufferedReader.readLine()) != null) {
                 bundleId = line.trim();
@@ -115,9 +115,8 @@ public class BundleTransmission {
             RoutingExceptions.ClientMetaDataFileException, NoSessionException, InvalidMessageException,
             DuplicateMessageException, LegacyMessageException, InvalidKeyException, GeneralSecurityException {
         String largestBundleIdReceived = this.getLargestBundleIdReceived();
-        UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle,
-                                                                          this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY +
-                                                                                  File.separator + RECEIVED_PROCESSING);
+        UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, this.ROOT_DIR.resolve(
+                Paths.get(BUNDLE_GENERATION_DIRECTORY, RECEIVED_PROCESSING)));
         Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
         logger.log(INFO, "Updating client routing metadata for transport  " + transportId);
         clientRouting.updateMetaData(transportId);
@@ -133,7 +132,7 @@ public class BundleTransmission {
             return;
         }
         UncompressedPayload uncompressedPayload =
-                BundleUtils.extractPayload(payload, uncompressedBundle.getSource().getAbsolutePath());
+                BundleUtils.extractPayload(payload, uncompressedBundle.getSource().toPath());
 
         AckRecordUtils.writeAckRecordToFile(new Acknowledgement(bundleId), ackRecordPath.toFile());
         this.registerBundleId(bundleId);
@@ -187,12 +186,11 @@ public class BundleTransmission {
 
     private BundleDTO generateNewBundle(UncompressedPayload.Builder builder, File targetDir, String bundleId) throws RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException {
         builder.setBundleId(bundleId);
-        builder.setSource(new File(
-                this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + UNCOMPRESSED_PAYLOAD + File.separator +
-                        bundleId));
+        File uncompressedBundleFile =
+                this.ROOT_DIR.resolve(Paths.get(BUNDLE_GENERATION_DIRECTORY, UNCOMPRESSED_PAYLOAD)).toFile();
+        builder.setSource(new File(uncompressedBundleFile, bundleId));
         UncompressedPayload toSendBundlePayload = builder.build();
-        BundleUtils.writeUncompressedPayload(toSendBundlePayload, new File(
-                this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + UNCOMPRESSED_PAYLOAD), bundleId);
+        BundleUtils.writeUncompressedPayload(toSendBundlePayload, uncompressedBundleFile, bundleId);
         logger.log(INFO, "Placing routing.metadata in " + toSendBundlePayload.getSource().getAbsolutePath());
         clientRouting.bundleMetaData(toSendBundlePayload.getSource().toPath());
 
@@ -201,7 +199,7 @@ public class BundleTransmission {
         UncompressedBundle uncompressedBundle = this.bundleSecurity.encryptPayload(payload, this.ROOT_DIR.resolve(
                 Paths.get(BUNDLE_GENERATION_DIRECTORY, ENCRYPTED_PAYLOAD)));
 
-        Bundle toSend = BundleUtils.compressBundle(uncompressedBundle, targetDir.getAbsolutePath());
+        Bundle toSend = BundleUtils.compressBundle(uncompressedBundle, targetDir.toPath());
         this.applicationDataManager.notifyBundleSent(toSendBundlePayload);
         System.out.println("[BT] Generated new bundle for transmission with bundle id: " + bundleId);
         return new BundleDTO(bundleId, toSend);
@@ -210,7 +208,7 @@ public class BundleTransmission {
     public BundleDTO generateBundleForTransmission() throws RoutingExceptions.ClientMetaDataFileException,
             IOException, InvalidKeyException, GeneralSecurityException {
         logger.log(FINE, "Started process of generating bundle");
-        File toSendDir = new File(this.ROOT_DIR + BUNDLE_GENERATION_DIRECTORY + File.separator + TO_SEND_DIRECTORY);
+        File toSendDir = this.ROOT_DIR.resolve(Paths.get(BUNDLE_GENERATION_DIRECTORY, TO_SEND_DIRECTORY)).toFile();
 
         BundleDTO toSend = null;
         Optional<UncompressedPayload.Builder> optional = this.applicationDataManager.getLastSentBundleBuilder();

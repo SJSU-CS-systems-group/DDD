@@ -9,6 +9,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 
+import net.discdd.model.ADU;
+import net.discdd.utils.StoreADUs;
 import net.discdd.bundleclient.HelloworldActivity;
 import com.ddd.model.ADU;
 import com.ddd.utils.StoreADUs;

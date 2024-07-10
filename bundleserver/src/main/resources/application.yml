@@ -2,7 +2,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+#    show-sql: true # uncomment to show sql commands being executed
     database-platform: org.hibernate.dialect.MySQL8Dialect
     generate-ddl: true
     properties:
@@ -12,7 +12,7 @@ spring:
   datasource:
     driver-class-name: com.mysql.jdbc.Driver
     url: jdbc:mysql://localhost:3306/dtn_server_db?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
-    username: root
+#    username: <add in external properties file>
 #    password: <add in external properties file>
     db-name: dtn_server_db
 

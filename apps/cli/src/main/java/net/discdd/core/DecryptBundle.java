@@ -6,8 +6,8 @@ import java.nio.file.Paths;
 import java.util.concurrent.Callable;
 import java.util.logging.Logger;
 
-import com.ddd.bundlesecurity.SecurityUtils;
-import com.ddd.bundlesecurity.ServerSecurity;
+import net.discdd.bundlesecurity.SecurityUtils;
+import net.discdd.bundlesecurity.ServerSecurity;
 import picocli.CommandLine;
 
 import static java.util.logging.Level.INFO;

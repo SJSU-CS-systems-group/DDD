@@ -2,9 +2,9 @@ package net.discdd.bundletransport;
 
 import net.discdd.bundletransport.service.BundleUploadObserver;
 
-import com.ddd.bundletransport.service.BundleMetaData;
-import com.ddd.bundletransport.service.BundleServiceGrpc;
-import com.ddd.bundletransport.service.BundleUploadRequest;
+import net.discdd.bundletransport.service.BundleMetaData;
+import net.discdd.bundletransport.service.BundleServiceGrpc;
+import net.discdd.bundletransport.service.BundleUploadRequest;
 import com.google.protobuf.ByteString;
 
 import java.io.File;
@@ -88,7 +88,7 @@ public class GrpcSendTask {
                     while ((size = inputStream.read(bytes)) != -1) {
                         logger.log(FINE, "Sending chunk size: " + size);
                         BundleUploadRequest uploadRequest = BundleUploadRequest.newBuilder().setFile(
-                                com.ddd.bundletransport.service.File.newBuilder()
+                                net.discdd.bundletransport.service.File.newBuilder()
                                         .setContent(ByteString.copyFrom(bytes, 0, size)).build()).build();
 
                         streamObserver.onNext(uploadRequest);

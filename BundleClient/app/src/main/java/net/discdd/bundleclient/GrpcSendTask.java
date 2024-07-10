@@ -13,12 +13,12 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import net.discdd.client.bundletransmission.BundleTransmission;
-import net.discdd.transport.File;
-import net.discdd.transport.FileServiceGrpc;
-import net.discdd.transport.FileUploadRequest;
-import net.discdd.transport.MetaData;
+import net.discdd.bundletransport.service.File;
+import net.discdd.bundletransport.service.FileServiceGrpc;
+import net.discdd.bundletransport.service.FileUploadRequest;
+import net.discdd.bundletransport.service.MetaData;
 
-import com.ddd.model.BundleDTO;
+import net.discdd.model.BundleDTO;
 import com.google.protobuf.ByteString;
 
 import java.io.FileInputStream;
