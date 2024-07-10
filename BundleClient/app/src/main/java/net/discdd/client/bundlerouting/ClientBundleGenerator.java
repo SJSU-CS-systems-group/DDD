@@ -18,6 +18,7 @@ import java.util.logging.Logger;
 
 public class ClientBundleGenerator {
 
+
     private static final Logger logger = Logger.getLogger(ClientBundleGenerator.class.getName());
 
     static ClientBundleGenerator singleGeneratorInstance = null;
