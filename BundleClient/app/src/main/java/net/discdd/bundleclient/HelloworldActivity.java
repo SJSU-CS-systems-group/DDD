@@ -16,6 +16,9 @@ import android.graphics.Color;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.storage.StorageManager;
+import android.os.storage.StorageVolume;
 import android.text.method.ScrollingMovementMethod;
 import android.widget.Button;
 import android.widget.TextView;
@@ -23,6 +26,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 
 import net.discdd.client.bundlerouting.ClientWindow;
 import net.discdd.client.bundlesecurity.BundleSecurity;
@@ -30,9 +34,11 @@ import net.discdd.client.bundletransmission.BundleTransmission;
 import net.discdd.wifidirect.WifiDirectManager;
 import net.discdd.wifidirect.WifiDirectStateListener;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Logger;
@@ -75,7 +81,7 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
 
     private static final Logger logger = Logger.getLogger(HelloworldActivity.class.getName());
 
-    private static final String usbDirName = "DDD_transport";
+    private static final String usbDirName = "/DDD_transport";
     public static boolean usbConnected = false;
     BroadcastReceiver mUsbReceiver = new BroadcastReceiver() {
         @Override
@@ -305,7 +311,37 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
      * Checks if the /DDD_transport root directory exists in the connected usb fob.
      */
     private boolean usbDirExists() {
+        // UsbDevice usbDevice = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+        // String usbDevicePath = usbDevice.getDeviceName();
         //"/mnt/media/[uuid](getSerialNumber()?)/DDD_transport
+        StorageManager storageManager = (StorageManager) getSystemService(STORAGE_SERVICE);
+//        File usbStorage = storageManager.getSpecialFolder(StorageManager.SPECIAL_FOLDER_USB_STORAGE);
+
+        List<StorageVolume> storageVolumeList = storageManager.getStorageVolumes();
+        resultText.append("Checkpoint 1");
+        for(StorageVolume storageVolume: storageVolumeList) {
+            resultText.append("checkpoint 2");
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                resultText.append("checkpoint 3");
+                File fileUsb = new File(storageVolume.getDirectory().getAbsolutePath() + usbDirName);
+                resultText.append(fileUsb.toString());
+                //our next if statement is not passing
+                if(storageVolume.isRemovable() && storageVolume.getState().equals((Environment.MEDIA_MOUNTED))) {
+                    resultText.append("checkpoint 4");
+                    //File fileUsb = new File(storageVolume.getDirectory().getPath() + usbDirName); // returns /storage/emulated/0/DDD_transport
+                    resultText.append(fileUsb.toString());
+                    if(fileUsb.exists()) {
+                        resultText.append("checkpoint 5");
+                        usbConnectionText.setText("File exists: " + fileUsb.toString() + "\n");
+                        return true;
+                    }
+                    else {
+                        resultText.append("checkpoint 6");
+                        usbConnectionText.setText("File deos not exist: " + fileUsb.toString() + "\n");
+                    }
+                }
+            }
+        }
         return false;
     }
 
