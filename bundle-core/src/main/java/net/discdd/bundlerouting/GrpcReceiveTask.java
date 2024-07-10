@@ -6,6 +6,7 @@ import io.grpc.stub.StreamObserver;
 import net.discdd.bundletransport.service.BundleDownloadRequest;
 import net.discdd.bundletransport.service.BundleDownloadResponse;
 import net.discdd.bundletransport.service.BundleServiceGrpc;
+import net.discdd.utils.FileUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -136,7 +137,7 @@ public class GrpcReceiveTask {
             if (statusComplete) {
                 logger.log(INFO, "/GrpcReceiveTask.java -> executeTask() receiveBundles = " + receiveBundles);
 
-                String existingBundles = FileUtils.getFilesList(receiveDir);
+                String existingBundles = FileUtils.getFileNamesListFromDirectory(receiveDir);
                 BundleDownloadRequest request =
                         BundleDownloadRequest.newBuilder().setTransportId(transportId).setBundleList(existingBundles)
                                 .build();

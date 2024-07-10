@@ -1,4 +1,7 @@
-package net.discdd.bundletransport;
+package net.discdd.bundlerouting.service;
+
+import net.discdd.bundlerouting.GrpcReceiveTask;
+import net.discdd.bundlerouting.GrpcSendTask;
 
 import java.io.File;
 import java.util.function.Function;
@@ -6,13 +9,9 @@ import java.util.function.Function;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
-
 public class ServerManager implements Runnable {
 
     private static final Logger logger = Logger.getLogger(ServerManager.class.getName());
-
-    //private final static String TAG = "dddTransport";
-
     private Function<Exception, Void> sendCallback, receiveCallback;
     private Function<Void, Void> connectComplete;
     private GrpcSendTask sendTask;

@@ -23,7 +23,8 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
-import net.discdd.bundletransport.utils.FileUtils;
+import net.discdd.bundlerouting.service.ServerManager;
+import net.discdd.utils.FileUtils;
 import net.discdd.bundletransport.utils.SecurityUtils;
 import net.discdd.wifidirect.WifiDirectManager;
 import net.discdd.wifidirect.WifiDirectStateListener;
@@ -361,8 +362,8 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         });
 
         findViewById(R.id.btn_clear_storage).setOnClickListener(v -> {
-            FileUtils.deleteBundles(Receive_Directory);
-            FileUtils.deleteBundles(Server_Directory);
+            FileUtils.deleteBundlesFromDirectory(Receive_Directory);
+            FileUtils.deleteBundlesFromDirectory(Server_Directory);
         });
 
         // connect to server

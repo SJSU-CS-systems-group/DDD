@@ -12,6 +12,7 @@ import static java.util.logging.Level.*;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
+import net.discdd.bundlerouting.service.BundleUploadObserver;
 import net.discdd.bundletransport.service.BundleMetaData;
 import net.discdd.bundletransport.service.BundleServiceGrpc;
 import net.discdd.bundletransport.service.BundleUploadRequest;
@@ -70,11 +71,6 @@ public class GrpcSendTask {
                     // upload file as chunk
                     logger.log(FINE, "Started file transfer");
                     FileInputStream inputStream = new FileInputStream(bundle.getAbsolutePath());
-                    ;
-                    if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
-                        inputStream = new FileInputStream(bundle.getAbsolutePath());
-                    }
-
 
                     int chunkSize = 1000 * 1000 * 4;
                     byte[] bytes = new byte[chunkSize];
@@ -82,7 +78,7 @@ public class GrpcSendTask {
                     while ((size = inputStream.read(bytes)) != -1) {
                         logger.log(FINE, "Sending chunk size: " + size);
                         BundleUploadRequest uploadRequest = BundleUploadRequest.newBuilder().setFile(
-                                com.ddd.bundletransport.service.File.newBuilder()
+                                net.discdd.bundletransport.service.File.newBuilder()
                                         .setContent(ByteString.copyFrom(bytes, 0, size)).build()).build();
 
                         streamObserver.onNext(uploadRequest);
