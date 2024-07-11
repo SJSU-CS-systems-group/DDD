@@ -162,6 +162,8 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
             e.printStackTrace();
         }
 
+
+
         connectButton.setOnClickListener(v -> {
             connectTransport();
         });
@@ -193,7 +195,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     }
 
     public void connectTransport() {
-        connectButton.setEnabled(false);
+//        connectButton.setEnabled(true);
         wifiDirectResponseText.setText("Starting connection...\n");
         logger.log(FINE, "connecting to transport");
         // we need to check and request for necessary permissions

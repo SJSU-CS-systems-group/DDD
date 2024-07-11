@@ -39,13 +39,13 @@ class StateManager {
     private static final Logger logger = Logger.getLogger(StateManager.class.getName());
 
     /* Database tables */
-    private static String SENT_BUNDLE_DETAILS = "/Shared/DB/SENT_BUNDLE_DETAILS.json";
+    private static String SENT_BUNDLE_DETAILS = "Shared/DB/SENT_BUNDLE_DETAILS.json";
 
-    private static String LARGEST_ADU_ID_RECEIVED = "/Shared/DB/LARGEST_ADU_ID_RECEIVED.json";
+    private static String LARGEST_ADU_ID_RECEIVED = "Shared/DB/LARGEST_ADU_ID_RECEIVED.json";
 
-    private static String LARGEST_ADU_ID_DELIVERED = "/Shared/DB/LARGEST_ADU_ID_DELIVERED.json";
+    private static String LARGEST_ADU_ID_DELIVERED = "Shared/DB/LARGEST_ADU_ID_DELIVERED.json";
 
-    private static String LAST_SENT_BUNDLE_STRUCTURE = "/Shared/DB/LAST_SENT_BUNDLE_STRUCTURE.json";
+    private static String LAST_SENT_BUNDLE_STRUCTURE = "Shared/DB/LAST_SENT_BUNDLE_STRUCTURE.json";
 
     final private Path ROOT_DIR;
 
@@ -53,17 +53,16 @@ class StateManager {
         ROOT_DIR = rootFolder;
         this.dataStoreAdaptor = new DataStoreAdaptor(rootFolder);
         try {
-            File sentBundleDetails = new File(ROOT_DIR + SENT_BUNDLE_DETAILS);
-            sentBundleDetails.getParentFile().mkdirs();
+            File sentBundleDetails = ROOT_DIR.resolve(SENT_BUNDLE_DETAILS).toFile();
             sentBundleDetails.createNewFile();
-            File largestADUIdReceived = new File(ROOT_DIR + LARGEST_ADU_ID_DELIVERED);
-            largestADUIdReceived.getParentFile().mkdirs();
+
+            File largestADUIdReceived = ROOT_DIR.resolve(LARGEST_ADU_ID_DELIVERED).toFile();
             largestADUIdReceived.createNewFile();
-            File largestADUIdDelivered = new File(ROOT_DIR + LARGEST_ADU_ID_RECEIVED);
-            largestADUIdDelivered.getParentFile().mkdirs();
+
+            File largestADUIdDelivered = ROOT_DIR.resolve(LARGEST_ADU_ID_RECEIVED).toFile();
             largestADUIdDelivered.createNewFile();
-            File lastSentBundleStructure = new File(ROOT_DIR + LAST_SENT_BUNDLE_STRUCTURE);
-            lastSentBundleStructure.getParentFile().mkdirs();
+
+            File lastSentBundleStructure = ROOT_DIR.resolve(LAST_SENT_BUNDLE_STRUCTURE).toFile();
             lastSentBundleStructure.createNewFile();
         } catch (IOException e) {
             e.printStackTrace();
@@ -240,7 +239,7 @@ public class ApplicationDataManager {
 
     private Long APP_DATA_SIZE_LIMIT = 1000000000L;
 
-    private static String REGISTERED_APP_IDS = "/Shared/REGISTERED_APP_IDS.txt";
+    private static String REGISTERED_APP_IDS = "Shared/REGISTERED_APP_IDS.txt";
 
     private final Path ROOT_DIR;
 
@@ -250,10 +249,14 @@ public class ApplicationDataManager {
         this.dataStoreAdaptor = new DataStoreAdaptor(rootDir);
     }
 
-    public List<String> getRegisteredAppIds() {
+    public List<String> getRegisteredAppIds() throws IOException {
         List<String> registeredAppIds = new ArrayList<>();
+
+        var registeredAppIdFile = ROOT_DIR.resolve(REGISTERED_APP_IDS).toFile();
+        registeredAppIdFile.createNewFile();
+
         try (BufferedReader bufferedReader = new BufferedReader(
-                new FileReader(new File(ROOT_DIR + REGISTERED_APP_IDS)))) {
+                new FileReader(registeredAppIdFile))) {
             String line = "";
             while ((line = bufferedReader.readLine()) != null) {
                 String appId = line.trim();
@@ -297,7 +300,7 @@ public class ApplicationDataManager {
         }
     }
 
-    public List<ADU> fetchADUs(long initialSize, String clientId) {
+    public List<ADU> fetchADUs(long initialSize, String clientId) throws IOException {
         long cumulativeSize = initialSize;
         List<ADU> res = new ArrayList<>();
         boolean exceededSize = false;

@@ -80,11 +80,11 @@ public class MessageProvider extends ContentProvider {
         sqlDB = dbHelper.getWritableDatabase();
         var appRootDataDir = Paths.get(getContext().getApplicationInfo().dataDir);
 
-
         sendADUsStorage = new StoreADUs(appRootDataDir.resolve("send"), true);
         receiveADUsStorage = new StoreADUs(appRootDataDir.resolve("receive"), false);
 
-        logger.log(INFO, "Receive path" + appRootDataDir.resolve("receive").toString());
+        logger.log(INFO, "Receive path " + appRootDataDir.resolve("receive").toString());
+
         if (sqlDB != null) return true;
         return false;
     }

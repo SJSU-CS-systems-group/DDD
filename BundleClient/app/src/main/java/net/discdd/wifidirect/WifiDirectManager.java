@@ -179,7 +179,6 @@ public class WifiDirectManager
      * is activated and manager.requestPeers() is called which leads to this
      * function
      *
-     * @param deviceList
      */
 
     @SuppressLint("MissingPermission")
