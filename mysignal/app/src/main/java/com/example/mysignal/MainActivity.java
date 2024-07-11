@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-    static final Uri CONTENT_URL = Uri.parse("content://com.ddd.provider.datastoreprovider/messages");
+    static final Uri CONTENT_URL = Uri.parse("content://net.discdd.provider.datastoreprovider/messages");
     static final String TAG = "ddd_signal";
     EditText receiver, messageText, appName;
     Button insert, delete, view, update, startServiceBtn;

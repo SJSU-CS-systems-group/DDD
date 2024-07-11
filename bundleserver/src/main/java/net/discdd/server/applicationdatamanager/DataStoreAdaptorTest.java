@@ -3,12 +3,13 @@ package net.discdd.server.applicationdatamanager;
 import net.discdd.model.ADU;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
 public class DataStoreAdaptorTest {
-    private static final String ROOT_DIRECTORY =
-            "C:\\Users\\dmuna\\Documents\\GitHub\\DDD-Security\\bundleserver\\FileStore";
+    private static final Path ROOT_DIRECTORY =
+            Path.of("C:\\Users\\dmuna\\Documents\\GitHub\\DDD-Security\\bundleserver\\FileStore");
 
     private static void fetchADUsTest(DataStoreAdaptor adaptor, String clientId, String appId) throws IOException {
         List<ADU> adus = new ArrayList<>();

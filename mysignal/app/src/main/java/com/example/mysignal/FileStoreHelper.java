@@ -76,18 +76,18 @@ public class FileStoreHelper {
         String[] fileList = f.list();
 
         for (long i = 1; i <= fileList.length; i++) {
-            appDataList.add(readFile(folder + "/" + i + ".txt"));
+            appDataList.add(readFile(folder + "/" + i + ".adu"));
 
         }
         return appDataList;
     }
 
     public byte[] getADU(String appId, String aduId) throws IOException {
-        return readFile(RootFolder + "/" + appId + "/" + aduId + ".txt");
+        return readFile(RootFolder + "/" + appId + "/" + aduId + ".adu");
     }
 
     public File getADUFile(String appId, String aduId) {
-        return new File(RootFolder + "/" + appId + "/" + aduId + ".txt");
+        return new File(RootFolder + "/" + appId + "/" + aduId + ".adu");
     }
 
     public void AddFile(String folder, byte data[]) throws IOException {
@@ -100,12 +100,12 @@ public class FileStoreHelper {
         File dataFile;
         if (!f.isDirectory()) {
             f.mkdirs();
-            dataFile = new File(RootFolder + "/" + folder + "/1.txt");
+            dataFile = new File(RootFolder + "/" + folder + "/1.adu");
         } else {
             Log.d("deepak", RootFolder + "/" + folder + " is a directory");
             int noOfMessages = f.list().length + 1;
             Log.d("deepak", "noOfMessages-" + noOfMessages);
-            dataFile = new File(RootFolder + "/" + folder + "/" + noOfMessages + ".txt");
+            dataFile = new File(RootFolder + "/" + folder + "/" + noOfMessages + ".adu");
         }
 
         dataFile.createNewFile();
