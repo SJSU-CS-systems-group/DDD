@@ -1,16 +1,16 @@
 package net.discdd.server.service;
 
 import com.google.protobuf.ByteString;
-import edu.sjsu.ddd.bundleserver.service.BundleDownloadRequest;
-import edu.sjsu.ddd.bundleserver.service.BundleDownloadResponse;
-import edu.sjsu.ddd.bundleserver.service.BundleList;
-import edu.sjsu.ddd.bundleserver.service.BundleMetaData;
-import edu.sjsu.ddd.bundleserver.service.BundleServiceGrpc.BundleServiceImplBase;
-import edu.sjsu.ddd.bundleserver.service.BundleUploadRequest;
-import edu.sjsu.ddd.bundleserver.service.BundleUploadResponse;
-import edu.sjsu.ddd.bundleserver.service.Status;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
+import net.discdd.bundletransport.service.BundleDownloadRequest;
+import net.discdd.bundletransport.service.BundleDownloadResponse;
+import net.discdd.bundletransport.service.BundleList;
+import net.discdd.bundletransport.service.BundleMetaData;
+import net.discdd.bundletransport.service.BundleServiceGrpc;
+import net.discdd.bundletransport.service.BundleUploadRequest;
+import net.discdd.bundletransport.service.BundleUploadResponse;
+import net.discdd.bundletransport.service.Status;
 import net.discdd.model.BundleTransferDTO;
 import net.discdd.server.bundletransmission.BundleTransmission;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +32,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
@@ -39,7 +40,7 @@ import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
 @GrpcService
-public class BundleServerServiceImpl extends BundleServiceImplBase {
+public class BundleServerServiceImpl extends BundleServiceGrpc.BundleServiceImplBase {
     private String ReceiveDir;
     private String SendDir;
     private static final Logger logger = Logger.getLogger(BundleServerServiceImpl.class.getName());
@@ -136,19 +137,9 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
 
     @Override
     public void downloadBundle(BundleDownloadRequest request, StreamObserver<BundleDownloadResponse> responseObserver) {
-        String transportFiles = request.getBundleList();
-        logger.log(INFO, "[BundleServerService] bundles on transport" + transportFiles);
-        if (null != request.getTransportId())
-            logger.log(INFO, "[BundleServerService] Request from Transport id :" + request.getTransportId());
-        else logger.log(INFO, "[BundleServerService] Request from Client id :" + request.getClientId());
-        String[] filesOnTransport = null;
-        Set<String> filesOnTransportSet = Collections.<String>emptySet();
-        if (!transportFiles.isEmpty()) {
-            filesOnTransport = transportFiles.split(",");
-            List<String> filesOnTransportList = Arrays.asList(filesOnTransport);
-            filesOnTransportSet = new HashSet<String>(filesOnTransportList);
-        }
-
+        logger.log(INFO, "[BundleServerService] bundles on transport" + request.getBundleListList());
+        logger.log(INFO, "[BundleServerService]Request from Transport id :" + request.getTransportId());
+        Set<String> filesOnTransportSet = new HashSet<>(request.getBundleListList());
         List<File> bundlesList = bundleTransmission.getBundlesForTransmission(request.getTransportId());
         logger.log(FINE, "Downloaded " + bundleTransmission);
         if (bundlesList.isEmpty()) {
@@ -166,8 +157,7 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
                 responseObserver.onNext(BundleDownloadResponse.newBuilder().setStatus(Status.SUCCESS).build());
             } else {
                 BundleDownloadResponse response = BundleDownloadResponse.newBuilder().setBundleList(
-                                BundleList.newBuilder().setBundleList(String.join(", ",
-                                                                                  bundleTransferDTO.getDeletionSet())))
+                                BundleList.newBuilder().addAllBundleList(bundleTransferDTO.getDeletionSet()))
                         .build();
                 logger.log(WARNING,
                            "[BundleServerService] Sending " + String.join(", ", bundleTransferDTO.getDeletionSet()) +
@@ -193,9 +183,9 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
                     StreamHandler handler = new StreamHandler(in);
                     Exception ex = handler.handle(bytes -> {
                         responseObserver.onNext(BundleDownloadResponse.newBuilder().setFile(
-                                edu.sjsu.ddd.bundleserver.service.File.newBuilder().setContent(bytes)).build());
+                                net.discdd.bundletransport.service.File.newBuilder().setContent(bytes)).build());
                     });
-                    if (ex != null) ex.printStackTrace();
+                    if (ex != null) logger.log(SEVERE, "[BundleServerService] Error downloading bundle", ex);
                     responseObserver.onCompleted();
                 }
             }

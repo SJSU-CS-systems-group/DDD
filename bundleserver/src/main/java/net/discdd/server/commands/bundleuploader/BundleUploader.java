@@ -1,12 +1,12 @@
 package net.discdd.server.commands.bundleuploader;
 
 import com.google.protobuf.ByteString;
-import edu.sjsu.ddd.bundleserver.service.BundleMetaData;
-import edu.sjsu.ddd.bundleserver.service.BundleServiceGrpc;
-import edu.sjsu.ddd.bundleserver.service.BundleUploadRequest;
-import edu.sjsu.ddd.bundleserver.service.BundleUploadResponse;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
+import net.discdd.bundletransport.service.BundleMetaData;
+import net.discdd.bundletransport.service.BundleServiceGrpc;
+import net.discdd.bundletransport.service.BundleUploadRequest;
+import net.discdd.bundletransport.service.BundleUploadResponse;
 import org.springframework.boot.CommandLineRunner;
 import picocli.CommandLine;
 
@@ -84,7 +84,7 @@ public class BundleUploader implements CommandLineRunner, Callable<Integer> {
         while ((size = inputStream.read(bytes)) != -1) {
             logger.log(WARNING, "Sending chunk size: " + size);
             BundleUploadRequest uploadRequest = BundleUploadRequest.newBuilder().setFile(
-                    edu.sjsu.ddd.bundleserver.service.File.newBuilder().setContent(ByteString.copyFrom(bytes, 0, size))
+                   net.discdd.bundletransport.service.File.newBuilder().setContent(ByteString.copyFrom(bytes, 0, size))
                             .build()).build();
             streamObserver.onNext(uploadRequest);
         }

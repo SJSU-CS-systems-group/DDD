@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import static java.util.logging.Level.*;
 import static java.util.logging.Level.SEVERE;
@@ -73,7 +74,7 @@ public class GrpcReceiveTask {
                 logger.log(FINE, "onNext: called with " + response.toString());
                 if (response.hasBundleList()) {
                     logger.log(FINE, "Got list for deletion");
-                    List<String> toDelete = Arrays.asList(response.getBundleList().getBundleList().split(","));
+                    List<String> toDelete = Arrays.asList(response.getBundleList().getBundleListList().toArray(new String[0]));
                     if (!toDelete.isEmpty()) {
                         File clientDir = new File(receiveDir);
                         for (File bundle : clientDir.listFiles()) {
@@ -137,9 +138,11 @@ public class GrpcReceiveTask {
             if (statusComplete) {
                 logger.log(INFO, "/GrpcReceiveTask.java -> executeTask() receiveBundles = " + receiveBundles);
 
-                String existingBundles = FileUtils.getFileNamesListFromDirectory(receiveDir);
+                File dir = new File(receiveDir);
+                List<String> files = Arrays.stream(dir.listFiles(f -> f.length() > 0)).map(File::getName).collect(
+                        Collectors.toList());
                 BundleDownloadRequest request =
-                        BundleDownloadRequest.newBuilder().setTransportId(transportId).setBundleList(existingBundles)
+                        BundleDownloadRequest.newBuilder().setTransportId(transportId).addAllBundleList(files)
                                 .build();
 
                 stub.downloadBundle(request, downloadObserver);

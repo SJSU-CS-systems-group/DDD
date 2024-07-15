@@ -16,7 +16,7 @@ message BundleMetaData {
 
 message BundleList{
   string transportId = 1;
-  string bundleList = 2;
+  repeated string bundleList = 2;
 }
 
 message BundleUploadRequest {
@@ -32,8 +32,8 @@ message BundleUploadResponse {
 }
 
 message BundleDownloadRequest {
-  string bundleList = 1;
-  string transportId = 2;
+  repeated string bundleList = 1;
+  string transportId = 2; // senderId, identifier for client/transport
 }
 
 message BundleDownloadResponse{
