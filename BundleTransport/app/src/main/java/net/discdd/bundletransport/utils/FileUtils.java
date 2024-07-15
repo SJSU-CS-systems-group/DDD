@@ -23,18 +23,6 @@ public class FileUtils {
 
     private static final Logger logger = Logger.getLogger(FileUtils.class.getName());
 
-    public static String getFilesList(String directory) {
-        String fileList = "";
-        File dir = new File(directory);
-        File[] Files = dir.listFiles();
-        if (Files != null && Files.length > 0) {
-            for (File file : Files) {
-                fileList = fileList + "," + file.getName();
-            }
-        }
-        return fileList;
-    }
-
     public static OutputStream getFilePath(BundleDownloadResponse response, String Receive_Directory) throws IOException {
         String fileName = response.getMetadata().getBid();
         File directoryReceive = new File(Receive_Directory + File.separator + response.getMetadata().getTransportId());

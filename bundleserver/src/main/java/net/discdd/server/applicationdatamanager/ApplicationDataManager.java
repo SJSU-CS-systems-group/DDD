@@ -3,7 +3,21 @@ package net.discdd.server.applicationdatamanager;
 import net.discdd.model.ADU;
 import net.discdd.model.UncompressedPayload;
 import net.discdd.server.config.BundleServerConfig;
+import net.discdd.server.repository.LargestAduIdDeliveredRepository;
+import net.discdd.server.repository.LargestAduIdReceivedRepository;
+import net.discdd.server.repository.LargestBundleIdReceivedRepository;
+import net.discdd.server.repository.LastBundleIdSentRepository;
 import net.discdd.server.repository.RegisteredAppAdapterRepository;
+import net.discdd.server.repository.SentAduDetailsRepository;
+import net.discdd.server.repository.SentBundleDetailsRepository;
+import net.discdd.server.repository.entity.LargestAduIdDelivered;
+import net.discdd.server.repository.entity.LargestAduIdReceived;
+import net.discdd.server.repository.entity.LargestBundleIdReceived;
+import net.discdd.server.repository.entity.LastBundleIdSent;
+import net.discdd.server.repository.entity.RegisteredAppAdapter;
+import net.discdd.server.repository.entity.SentAduDetails;
+import net.discdd.server.repository.entity.SentBundleDetails;
+import net.discdd.utils.BundleUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -26,20 +40,42 @@ public class ApplicationDataManager {
 
     private static final Logger logger = Logger.getLogger(ApplicationDataManager.class.getName());
 
-    @Autowired
-    private StateManager stateManager;
-
     private DataStoreAdaptor dataStoreAdaptor;
 
-    @Autowired
-    private BundleServerConfig bundleServerConfig;
+    private final BundleServerConfig bundleServerConfig;
 
     @Value("${bundle-server.bundle-store-root}")
     private String rootDataDir;
 
+    private final LargestAduIdReceivedRepository largestAduIdReceivedRepository;
+
+    private final LargestAduIdDeliveredRepository largestAduIdDeliveredRepository;
+
+    private final LastBundleIdSentRepository lastBundleIdSentRepository;
+
+    private final LargestBundleIdReceivedRepository largestBundleIdReceivedRepository;
+
+    private final SentBundleDetailsRepository sentBundleDetailsRepository;
+
+    private final SentAduDetailsRepository sentAduDetailsRepository;
+
     private final RegisteredAppAdapterRepository registeredAppAdapterRepository;
 
-    public ApplicationDataManager(RegisteredAppAdapterRepository registeredAppAdapterRepository) {
+    public ApplicationDataManager(LargestAduIdReceivedRepository largestAduIdReceivedRepository,
+                                  LargestAduIdDeliveredRepository largestAduIdDeliveredRepository,
+                                  LastBundleIdSentRepository lastBundleIdSentRepository,
+                                  LargestBundleIdReceivedRepository largestBundleIdReceivedRepository,
+                                  SentBundleDetailsRepository sentBundleDetailsRepository,
+                                  SentAduDetailsRepository sentAduDetailsRepository,
+                                  RegisteredAppAdapterRepository registeredAppAdapterRepository,
+                                  BundleServerConfig bundleServerConfig) {
+        this.largestAduIdReceivedRepository = largestAduIdReceivedRepository;
+        this.largestAduIdDeliveredRepository = largestAduIdDeliveredRepository;
+        this.lastBundleIdSentRepository = lastBundleIdSentRepository;
+        this.largestBundleIdReceivedRepository = largestBundleIdReceivedRepository;
+        this.sentBundleDetailsRepository = sentBundleDetailsRepository;
+        this.sentAduDetailsRepository = sentAduDetailsRepository;
+        this.bundleServerConfig = bundleServerConfig;
         this.registeredAppAdapterRepository = registeredAppAdapterRepository;
     }
 
@@ -56,43 +92,69 @@ public class ApplicationDataManager {
         if ("HB".equals(bundleId)) {
             return;
         }
-        this.stateManager.processAcknowledgement(clientId, bundleId);
+
+        List<SentAduDetails> sentAduDetailsList = this.sentAduDetailsRepository.findByBundleId(bundleId);
+
+        for (SentAduDetails sentAduDetails : sentAduDetailsList) {
+            String appId = sentAduDetails.getAppId();
+            Long lastAduIdForAppId = sentAduDetails.getAduIdRangeEnd();
+            dataStoreAdaptor.deleteADUs(clientId, appId, lastAduIdForAppId);
+            Optional<LargestAduIdDelivered> opt =
+                    largestAduIdDeliveredRepository.findByClientIdAndAppId(clientId, appId);
+            if (opt.isPresent()) {
+                var record = opt.get();
+                if (record.getAduId() < lastAduIdForAppId) {
+                    record.setAduId(lastAduIdForAppId);
+                    largestAduIdDeliveredRepository.save(record);
+                }
+            } else {
+                largestAduIdDeliveredRepository.save(new LargestAduIdDelivered(clientId, appId, lastAduIdForAppId));
+            }
+        }
+
+        sentAduDetailsRepository.deleteByBundleId(bundleId);
+
+        logger.log(INFO, "[StateManager] Processed acknowledgement for sent bundle id " + bundleId +
+                " corresponding to client " + clientId);
     }
 
     public void storeADUs(String clientId, String bundleId, List<ADU> adus) throws IOException {
         logger.log(INFO, "[ApplicationDataManager] Store ADUs");
-        this.registerRecvdBundleId(clientId, bundleId);
+
+        LargestBundleIdReceived largestBundleIdReceived = new LargestBundleIdReceived(clientId, bundleId);
+        this.largestBundleIdReceivedRepository.save(largestBundleIdReceived);
+
+        logger.log(INFO, "[StateManager]] Registered bundle identifier: " + bundleId + " of client " + clientId);
         Map<String, List<ADU>> appIdToADUMap = new HashMap<>();
-
-        List<String> registeredAppIds = this.getRegisteredAppIds();
-        for (String registeredAppId : registeredAppIds) {
-            appIdToADUMap.put(registeredAppId, new ArrayList<>());
-        }
-        for (ADU adu : adus) {
-            logger.log(INFO, "[ApplicationDataManager] " + adu.getADUId());
-            Long largestAduIdReceived = this.stateManager.largestADUIdReceived(clientId, adu.getAppId());
-            if (largestAduIdReceived != null && adu.getADUId() <= largestAduIdReceived) {
-                continue;
-            }
-            this.stateManager.updateLargestADUIdReceived(clientId, adu.getAppId(), adu.getADUId());
-
-            if (appIdToADUMap.containsKey(adu.getAppId())) {
-                appIdToADUMap.get(adu.getAppId()).add(adu);
-            } else {
-                appIdToADUMap.put(adu.getAppId(), new ArrayList<>());
-                appIdToADUMap.get(adu.getAppId()).add(adu);
-            }
+        for (var adu : adus) {
+            appIdToADUMap.computeIfAbsent(adu.getAppId(), k -> new ArrayList<>()).add(adu);
         }
         for (String appId : appIdToADUMap.keySet()) {
-            logger.log(INFO, "[ApplicationDataManager] " + appId + " " + appIdToADUMap.get(appId));
-            this.dataStoreAdaptor.persistADUsForServer(clientId, appId, appIdToADUMap.get(appId));
+            List<ADU> aduList = appIdToADUMap.get(appId);
+            long largestAduIdReceived = largestAduIdReceivedRepository.findByClientIdAndAppId(clientId, appId).map(LargestAduIdReceived::getAduId).orElse(-1L);
+            long largestAduSeen = -1;
+            for (var it = aduList.iterator(); it.hasNext(); ) {
+                ADU adu = it.next();
+                if (adu.getADUId() <= largestAduIdReceived) it.remove();
+                if (adu.getADUId() > largestAduSeen) largestAduSeen = adu.getADUId();
+            }
+            this.dataStoreAdaptor.persistADUsForServer(clientId, appId, aduList);
+            if (largestAduSeen > largestAduIdReceived) {
+                largestAduIdReceivedRepository.save(new LargestAduIdReceived(clientId, appId, largestAduSeen));
+            }
         }
     }
 
     public List<ADU> fetchADUs(long initialSize, String clientId) {
         List<ADU> res = new ArrayList<>();
         for (String appId : this.getRegisteredAppIds()) {
-            Long largestAduIdDelivered = this.stateManager.getLargestADUIdDeliveredByAppId(clientId, appId);
+            Long ret = null;
+            Optional<LargestAduIdDelivered> opt = largestAduIdDeliveredRepository.findByClientIdAndAppId(clientId, appId);
+            if (opt.isPresent()) {
+                LargestAduIdDelivered record = opt.get();
+                ret = record.getAduId();
+            }
+            Long largestAduIdDelivered = ret;
             Long aduIdStart = (largestAduIdDelivered != null) ? (largestAduIdDelivered + 1) : 1;
             List<ADU> adus = this.dataStoreAdaptor.fetchADUs(clientId, appId, aduIdStart);
             long cumulativeSize = initialSize;
@@ -109,23 +171,79 @@ public class ApplicationDataManager {
     }
 
     public void notifyBundleGenerated(String clientId, UncompressedPayload bundle) {
-        this.stateManager.registerSentBundleDetails(clientId, bundle);
+        LastBundleIdSent lastBundleIdSent = new LastBundleIdSent(clientId, bundle.getBundleId());
+        lastBundleIdSentRepository.save(lastBundleIdSent);
+        Optional<SentBundleDetails> opt = sentBundleDetailsRepository.findByBundleId(bundle.getBundleId());
+        if (opt.isPresent()) {
+            return;
+        }
+        SentBundleDetails sentBundleDetails = new SentBundleDetails();
+        sentBundleDetails.setAckedBundleId(bundle.getAckRecord().getBundleId());
+        sentBundleDetails.setClientId(clientId);
+        sentBundleDetails.setBundleId(bundle.getBundleId());
+        sentBundleDetailsRepository.save(sentBundleDetails);
+
+        Map<String, Long[]> aduRangeMap = new HashMap<>();
+        for (ADU adu : bundle.getADUs()) {
+            Long[] entry = null;
+            if (aduRangeMap.containsKey(adu.getAppId())) {
+                Long[] minmax = aduRangeMap.get(adu.getAppId());
+                minmax[0] = Math.min(minmax[0], adu.getADUId());
+                minmax[1] = Math.max(minmax[1], adu.getADUId());
+                entry = minmax;
+            } else {
+                entry = new Long[] { adu.getADUId(), adu.getADUId() };
+            }
+            aduRangeMap.put(adu.getAppId(), entry);
+        }
+
+        for (String appId : aduRangeMap.keySet()) {
+            Long[] minmax = aduRangeMap.get(appId);
+            SentAduDetails sentAduDetails =
+                    new SentAduDetails(bundle.getBundleId(), appId, minmax[0], minmax[1]);
+            sentAduDetailsRepository.save(sentAduDetails);
+        }
     }
 
     public Optional<UncompressedPayload.Builder> getLastSentBundlePayloadBuilder(String clientId) {
-        return this.stateManager.getLastSentBundlePayloadBuilder(clientId);
+        Map<String, Object> ret = new HashMap<>();
+        Optional<LastBundleIdSent> opt = lastBundleIdSentRepository.findByClientId(clientId);
+        if (opt.isPresent()) {
+            String bundleId = opt.get().getBundleId();
+            Optional<SentBundleDetails> bundleDetailsOpt = sentBundleDetailsRepository.findByBundleId(bundleId);
+
+            SentBundleDetails bundleDetails =
+                    bundleDetailsOpt.get(); // assume this is guaranteed to be present. TODO: add FK on LastBundleIdSent
+            // to SentBundleDetails
+            ret.put("bundle-id", bundleId);
+            ret.put("acknowledgement", bundleDetails.getAckedBundleId());
+
+            List<SentAduDetails> bundleAduDetailsList = sentAduDetailsRepository.findByBundleId(bundleId);
+
+            Map<String, List<ADU>> aduMap = new HashMap<>();
+            for (SentAduDetails bundleAduDetails : bundleAduDetailsList) {
+                Long rangeStart = bundleAduDetails.getAduIdRangeStart();
+                Long rangeEnd = bundleAduDetails.getAduIdRangeEnd();
+                String appId = bundleAduDetails.getAppId();
+                List<ADU> aduList = new ArrayList<>();
+                for (Long aduId = rangeStart; aduId <= rangeEnd; aduId++) {
+                    ADU adu = dataStoreAdaptor.fetchADU(clientId, appId, aduId);
+                    aduList.add(adu);
+                }
+                aduMap.put(appId, aduList);
+            }
+            if (!aduMap.isEmpty()) {
+                ret.put("ADU", aduMap);
+            }
+        }
+        return BundleUtils.bundleStructureToBuilder(ret);
     }
 
-    private void registerRecvdBundleId(String clientId, String bundleId) {
-        this.stateManager.registerRecvdBundleId(clientId, bundleId);
-    }
-
-    public Optional<String> getLargestRecvdBundleId(String clientId) {
-        return this.stateManager.getLargestRecvdBundleId(clientId);
+    public String getLargestRecvdBundleId(String clientId) {
+        return largestBundleIdReceivedRepository.findByClientId(clientId).map(LargestBundleIdReceived::getBundleId).orElse(null);
     }
 
     public String getClientIdFromSentBundleId(String bundleId) {
-        return this.stateManager.getClientIdFromSentBundleId(bundleId);
+        return sentBundleDetailsRepository.findByBundleId(bundleId).map(SentBundleDetails::getClientId).orElse(null);
     }
-
 }

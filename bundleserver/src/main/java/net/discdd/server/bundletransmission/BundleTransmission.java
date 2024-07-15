@@ -91,10 +91,10 @@ public class BundleTransmission {
 
         clientId = SecurityUtils.generateID(
                 uncompressedBundle.getSource().toPath().resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
-        Optional<String> opt = this.applicationDataManager.getLargestRecvdBundleId(clientId);
+        var largestBundleId = this.applicationDataManager.getLargestRecvdBundleId(clientId);
 
-        if (!opt.isEmpty() &&
-                (this.bundleSecurity.isNewerBundle(uncompressedBundle.getSource().toPath(), opt.get()) >= 0)) {
+        if (largestBundleId != null &&
+                (this.bundleSecurity.isNewerBundle(uncompressedBundle.getSource().toPath(), largestBundleId) >= 0)) {
             logger.log(WARNING,
                        "[BundleTransmission] Skipping bundle " + bundle.getSource().getName() + " as it is outdated");
             return;
