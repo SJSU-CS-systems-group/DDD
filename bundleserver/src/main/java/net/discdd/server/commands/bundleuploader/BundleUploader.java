@@ -29,7 +29,7 @@ public class BundleUploader implements CommandLineRunner, Callable<Integer> {
     File bundle;
     @CommandLine.Parameters(description = "BundleServer host")
     String bundleServerHost;
-    @CommandLine.Parameters(description = "BundleServer post")
+    @CommandLine.Parameters(description = "BundleServer port")
     int bundleServerPort;
 
     public void run(String[] args) {

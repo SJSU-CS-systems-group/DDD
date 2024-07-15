@@ -76,7 +76,7 @@ class StateManager {
         Map<String, Long> ret = null;
         try {
             Type mapType = new TypeToken<Map<String, Long>>() {}.getType();
-            ret = gson.fromJson(new FileReader(ROOT_DIR + LARGEST_ADU_ID_RECEIVED), mapType);
+            ret = gson.fromJson(new FileReader(ROOT_DIR.resolve(LARGEST_ADU_ID_RECEIVED).toFile()), mapType);
             if (ret == null) {
                 ret = new HashMap<>();
             }
@@ -93,7 +93,7 @@ class StateManager {
     private void writeLargestADUIdReceivedDetails(Map<String, Long> largestADUIdReceivedDetails) {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         String jsonString = gson.toJson(largestADUIdReceivedDetails);
-        try (FileWriter writer = new FileWriter(new File(ROOT_DIR + LARGEST_ADU_ID_RECEIVED))) {
+        try (FileWriter writer = new FileWriter(ROOT_DIR.resolve(LARGEST_ADU_ID_RECEIVED).toFile())) {
             writer.write(jsonString);
         } catch (IOException e) {
             e.printStackTrace();
@@ -116,7 +116,7 @@ class StateManager {
     private void writeLargestADUIdDeliveredDetails(Map<String, Long> largestADUIdDeliveredDetails) {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         String jsonString = gson.toJson(largestADUIdDeliveredDetails);
-        try (FileWriter writer = new FileWriter(new File(ROOT_DIR + LARGEST_ADU_ID_DELIVERED))) {
+        try (FileWriter writer = new FileWriter(ROOT_DIR.resolve(LARGEST_ADU_ID_DELIVERED).toFile())) {
             writer.write(jsonString);
         } catch (IOException e) {
             e.printStackTrace();
@@ -128,7 +128,7 @@ class StateManager {
         Map<String, Long> ret = new HashMap<>();
         try {
             Type mapType = new TypeToken<Map<String, Long>>() {}.getType();
-            ret = gson.fromJson(new FileReader(ROOT_DIR + LARGEST_ADU_ID_DELIVERED), mapType);
+            ret = gson.fromJson(new FileReader(ROOT_DIR.resolve(LARGEST_ADU_ID_DELIVERED).toFile()), mapType);
             if (ret == null) {
                 ret = new HashMap<>();
             }
@@ -153,7 +153,7 @@ class StateManager {
         Map<String, Map<String, Long>> ret = new HashMap<>();
         try {
             Type mapType = new TypeToken<Map<String, Map<String, Long>>>() {}.getType();
-            ret = gson.fromJson(new FileReader(new File(ROOT_DIR + SENT_BUNDLE_DETAILS)), mapType);
+            ret = gson.fromJson(new FileReader(ROOT_DIR.resolve(SENT_BUNDLE_DETAILS).toFile()), mapType);
             if (ret == null) {
                 ret = new HashMap<>();
             }
@@ -170,7 +170,7 @@ class StateManager {
     private void writeSentBundleDetails(Map<String, Map<String, Long>> sentBundleDetails) {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         String jsonString = gson.toJson(sentBundleDetails);
-        try (FileWriter writer = new FileWriter(new File(ROOT_DIR + SENT_BUNDLE_DETAILS))) {
+        try (FileWriter writer = new FileWriter(ROOT_DIR.resolve(SENT_BUNDLE_DETAILS).toFile())) {
             writer.write(jsonString);
         } catch (IOException e) {
             e.printStackTrace();
@@ -178,7 +178,7 @@ class StateManager {
     }
 
     private void writeLastSentBundleStructure(UncompressedPayload lastSentBundle) {
-        BundleUtils.writeBundleStructureToJson(lastSentBundle, new File(ROOT_DIR + LAST_SENT_BUNDLE_STRUCTURE));
+        BundleUtils.writeBundleStructureToJson(lastSentBundle, ROOT_DIR.resolve(LAST_SENT_BUNDLE_STRUCTURE).toFile());
     }
 
     public void registerSentBundleDetails(UncompressedPayload sentBundle) {
@@ -225,7 +225,7 @@ class StateManager {
     }
 
     public Optional<UncompressedPayload.Builder> getLastSentBundleBuilder() {
-        return BundleUtils.jsonToBundleBuilder(new File(ROOT_DIR + LAST_SENT_BUNDLE_STRUCTURE));
+        return BundleUtils.jsonToBundleBuilder(ROOT_DIR.resolve(LAST_SENT_BUNDLE_STRUCTURE).toFile());
     }
 }
 
@@ -239,7 +239,7 @@ public class ApplicationDataManager {
 
     private Long APP_DATA_SIZE_LIMIT = 1000000000L;
 
-    private static String REGISTERED_APP_IDS = "Shared/REGISTERED_APP_IDS.txt";
+    private static List<String> REGISTER_APP_IDS = List.of("com.example.mysignal", "com.fsck.k9.debug");
 
     private final Path ROOT_DIR;
 
@@ -250,23 +250,7 @@ public class ApplicationDataManager {
     }
 
     public List<String> getRegisteredAppIds() throws IOException {
-        List<String> registeredAppIds = new ArrayList<>();
-
-        var registeredAppIdFile = ROOT_DIR.resolve(REGISTERED_APP_IDS).toFile();
-        registeredAppIdFile.createNewFile();
-
-        try (BufferedReader bufferedReader = new BufferedReader(
-                new FileReader(registeredAppIdFile))) {
-            String line = "";
-            while ((line = bufferedReader.readLine()) != null) {
-                String appId = line.trim();
-                logger.log(INFO, "Registered " + appId);
-                registeredAppIds.add(appId);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return registeredAppIds;
+        return REGISTER_APP_IDS;
     }
 
     public void processAcknowledgement(String bundleId) {
