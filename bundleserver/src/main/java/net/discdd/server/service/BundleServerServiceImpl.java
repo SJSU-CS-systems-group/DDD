@@ -47,18 +47,6 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
     @Autowired
     private BundleTransmission bundleTransmission;
 
-    // public BundleServerServiceImpl() {
-    //     java.io.File directoryReceive = new java.io.File(ReceiveDir);
-    //     if (!directoryReceive.exists()) {
-    //         directoryReceive.mkdirs();
-    //     }
-
-    //     java.io.File directorySend = new java.io.File(SendDir);
-    //     if (!directorySend.exists()) {
-    //         directorySend.mkdirs();
-    //     }
-    // }
-
     @PostConstruct
     private void init() {
         java.io.File directoryReceive = new java.io.File(ReceiveDir);
@@ -150,7 +138,9 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
     public void downloadBundle(BundleDownloadRequest request, StreamObserver<BundleDownloadResponse> responseObserver) {
         String transportFiles = request.getBundleList();
         logger.log(INFO, "[BundleServerService] bundles on transport" + transportFiles);
-        logger.log(INFO, "[BundleServerService]Request from Transport id :" + request.getTransportId());
+        if (null != request.getTransportId())
+            logger.log(INFO, "[BundleServerService] Request from Transport id :" + request.getTransportId());
+        else logger.log(INFO, "[BundleServerService] Request from Client id :" + request.getClientId());
         String[] filesOnTransport = null;
         Set<String> filesOnTransportSet = Collections.<String>emptySet();
         if (!transportFiles.isEmpty()) {
@@ -185,7 +175,7 @@ public class BundleServerServiceImpl extends BundleServiceImplBase {
                 responseObserver.onNext(response);
             }
             responseObserver.onCompleted();
-        } else {
+        } else { // can be removed by removing transport directories
 
             for (File bundle : bundlesList) {
                 if (!filesOnTransportSet.contains(bundle.getName())) {

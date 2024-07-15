@@ -36,14 +36,12 @@ class GrpcSendTask {
 
     private static final Logger logger = Logger.getLogger(GrpcSendTask.class.getName());
 
-    //    private final HelloworldActivity helloworldActivity;
     private final WeakReference<Activity> activityReference;
     private ManagedChannel channel;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private Context applicationContext;
 
     GrpcSendTask(Activity activity) {
-//        this.helloworldActivity = helloworldActivity;
         this.activityReference = new WeakReference<Activity>(activity);
         this.applicationContext = activity.getApplicationContext();
     }
@@ -63,7 +61,6 @@ class GrpcSendTask {
     }
 
     private void inBackground(String... params) throws Exception {
-//    protected String doInBackground(String... params) {
         String host = params[0];
         String portStr = params[1];
         int port = Integer.parseInt(portStr);
@@ -74,17 +71,15 @@ class GrpcSendTask {
             BundleTransmission bundleTransmission;
             bundleTransmission = new BundleTransmission(Paths.get(applicationContext.getApplicationInfo().dataDir));
             BundleDTO toSend = bundleTransmission.generateBundleForTransmission();
-            System.out.println("[BDA] An outbound bundle generated with id: " + toSend.getBundleId());
+            logger.log(INFO, "[BDA] An outbound bundle generated with id: " + toSend.getBundleId());
             FileUploadRequest metadata = FileUploadRequest.newBuilder()
                     .setMetadata(MetaData.newBuilder().setName(toSend.getBundleId()).setType("bundle").build()).build();
             streamObserver.onNext(metadata);
 
 //      upload file as chunk
             logger.log(INFO, "Started file transfer");
-            FileInputStream inputStream = null;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                inputStream = new FileInputStream(toSend.getBundle().getSource());
-            }
+            FileInputStream inputStream;
+            inputStream = new FileInputStream(toSend.getBundle().getSource());
             int chunkSize = 1000 * 1000 * 4;
             byte[] bytes = new byte[chunkSize];
             int size = 0;
@@ -102,7 +97,6 @@ class GrpcSendTask {
             PrintWriter pw = new PrintWriter(sw);
             e.printStackTrace(pw);
             pw.flush();
-//        return String.format("Failed... : %n%s", sw);
             postExecute("Failed... : " + sw);
         }
     }

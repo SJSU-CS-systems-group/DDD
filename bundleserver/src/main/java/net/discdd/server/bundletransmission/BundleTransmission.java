@@ -19,7 +19,6 @@ import net.discdd.server.bundlesecurity.BundleSecurity;
 import net.discdd.server.bundlesecurity.InvalidClientIDException;
 import net.discdd.server.bundlesecurity.InvalidClientSessionException;
 import net.discdd.server.config.BundleServerConfig;
-import net.discdd.server.repository.LargestBundleIdReceivedRepository;
 import net.discdd.utils.AckRecordUtils;
 import net.discdd.utils.BundleUtils;
 import net.discdd.utils.Constants;
@@ -61,9 +60,7 @@ public class BundleTransmission {
     private final int WINDOW_LENGTH = 3;
 
     public BundleTransmission(BundleSecurity bundleSecurity, ApplicationDataManager applicationDataManager,
-                              BundleRouting bundleRouting,
-                              LargestBundleIdReceivedRepository largestBundleIdReceivedRepository,
-                              BundleServerConfig config, ServerWindowService serverWindowService) {
+                              BundleRouting bundleRouting, BundleServerConfig config, ServerWindowService serverWindowService) {
         this.bundleSecurity = bundleSecurity;
         this.applicationDataManager = applicationDataManager;
         this.config = config;
@@ -338,6 +335,7 @@ public class BundleTransmission {
             Set<String> bundleIds = clientIdToBundleIds.getOrDefault(clientId, new HashSet<>());
             bundleIds.add(bundleId);
             clientIdToBundleIds.put(clientId, bundleIds);
+            //check if this can be removed, we should not need to this client-bundle mapping for already sent bundles
         }
         for (String clientId : clientIds) {
             BundleTransferDTO dtoForClient;

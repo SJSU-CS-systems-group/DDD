@@ -45,6 +45,7 @@ message BundleUploadResponse {
 message BundleDownloadRequest {
   string bundleList = 1;
   string transportId = 2;
+  string clientId = 3; // senderId, identifier for client/transport
 }
 
 message BundleDownloadResponse{
