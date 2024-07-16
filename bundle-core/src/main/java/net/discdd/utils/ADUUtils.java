@@ -20,28 +20,28 @@ public class ADUUtils {
 
     private static final Logger logger = Logger.getLogger(BundleUtils.class.getName());
 
-    public static void writeADU(ADU adu, Path targetDirectory) throws IOException {
-        String aduFileName = adu.getAppId() + "-" + adu.getADUId();
-        var aduFile = targetDirectory.resolve(aduFileName).toFile();
-        try (BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(
-                adu.getSource())); BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(
-                new FileOutputStream(aduFile))) {
-            bufferedInputStream.transferTo(bufferedOutputStream);
-        }
-    }
-
 //    public static void writeADU(ADU adu, Path targetDirectory) throws IOException {
 //        String aduFileName = adu.getAppId() + "-" + adu.getADUId();
-//        var aduFile = targetDirectory.resolve(aduFileName).toFile();
-//        try (BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(adu.getSource()));
-//             BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(new FileOutputStream(aduFile))) {
-//            byte[] buffer = new byte[8192];
-//            int bytesRead;
-//            while ((bytesRead = bufferedInputStream.read(buffer)) != -1) {
-//                bufferedOutputStream.write(buffer, 0, bytesRead);
-//            }
+//        var aduFile = targetDirectory.resolve(aduFileName + ".adu").toFile();
+//        try (BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(
+//                adu.getSource())); BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(
+//                new FileOutputStream(aduFile))) {
+//            bufferedInputStream.transferTo(bufferedOutputStream);
 //        }
 //    }
+
+    public static void writeADU(ADU adu, Path targetDirectory) throws IOException {
+        String aduFileName = adu.getAppId() + "-" + adu.getADUId();
+        var aduFile = targetDirectory.resolve(aduFileName + ".adu").toFile();
+        try (BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(adu.getSource()));
+             BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(new FileOutputStream(aduFile))) {
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = bufferedInputStream.read(buffer)) != -1) {
+                bufferedOutputStream.write(buffer, 0, bytesRead);
+            }
+        }
+    }
 
     public static void writeADUs(List<ADU> adus, Path targetDirectory) throws IOException {
         if (adus.isEmpty()) {

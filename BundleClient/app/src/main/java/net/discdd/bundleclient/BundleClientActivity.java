@@ -54,7 +54,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     private TextView connectedDevicesText;
     private TextView wifiDirectResponseText;
     private TextView usbConnectionText;
-    private static String RECEIVE_PATH = "/Shared/received-bundles";
+    private static String RECEIVE_PATH = "Shared/received-bundles";
     //  private BundleDeliveryAgent agent;
     // context
     public static Context ApplicationContext;
@@ -204,11 +204,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
             requestPermissions(new String[] { Manifest.permission.ACCESS_FINE_LOCATION },
                                BundleClientActivity.PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION);
             logger.log(WARNING, "Permission granted");
-        }
-        if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            logger.log(FINE, "requesting permission");
-            requestPermissions(new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE },
-                               BundleClientActivity.WRITE_EXTERNAL_STORAGE);
         }
 
         wifiDirectExecutor.execute(wifiDirectManager);
