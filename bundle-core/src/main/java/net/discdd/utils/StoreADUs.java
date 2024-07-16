@@ -136,7 +136,7 @@ public class StoreADUs {
                 rootFolder.toPath().resolve(Paths.get(clientId, appId));
     }
 
-    public File getADUFile(String clientId, String appId, String aduId) throws IOException {
+    public File getADUFile(String clientId, String appId, String aduId) {
         var appFolder = getAppFolder(clientId, appId);
         return appFolder.resolve(aduId + ".txt").toFile();
     }
