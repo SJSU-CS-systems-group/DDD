@@ -203,11 +203,6 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
                                HelloworldActivity.PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION);
             logger.log(WARNING, "Permission granted");
         }
-        if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            logger.log(FINE, "requesting permission");
-            requestPermissions(new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE },
-                               HelloworldActivity.WRITE_EXTERNAL_STORAGE);
-        }
 
         wifiDirectExecutor.execute(wifiDirectManager);
     }
