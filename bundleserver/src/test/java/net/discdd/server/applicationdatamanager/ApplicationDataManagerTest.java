@@ -12,9 +12,7 @@ import net.discdd.server.repository.SentBundleDetailsRepository;
 import net.discdd.server.repository.entity.RegisteredAppAdapter;
 import net.discdd.utils.StoreADUs;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
@@ -25,13 +23,9 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 
 /**
- * These tests are designed to run in order. The test names are such that the dependent tests will run
- * after their dependencies.
- * <p/>
  * Also, these tests use H2 database for testing
  */
 @DataJpaTest
-@TestMethodOrder(MethodOrderer.MethodName.class)
 public class ApplicationDataManagerTest {
     @Autowired
     private LargestAduIdReceivedRepository largestAduIdReceivedRepository; // = mock(LargestAduIdReceivedRepository.class);
@@ -55,7 +49,7 @@ public class ApplicationDataManagerTest {
     Path tempRootDir;
 
     @Test
-    public void test1SetupEverything() throws Exception {
+    public void testEverything() throws Exception {
         registeredAppAdapterRepository.save(new RegisteredAppAdapter("app1", "localhost:88888"));
         bundleServerConfig = new BundleServerConfig();
         bundleServerConfig.getApplicationDataManager().setAppDataSizeLimit(100_000_000L);
@@ -66,17 +60,11 @@ public class ApplicationDataManagerTest {
         var sendADUsStorageField = ApplicationDataManager.class.getDeclaredField("sendADUsStorage");
         sendADUsStorageField.setAccessible(true);
         sendADUsStorage = (StoreADUs) sendADUsStorageField.get(applicationDataManager);
-    }
 
-    @Test
-    public void test2QuickCheck() {
         Assertions.assertNotNull(applicationDataManager);
         Assertions.assertNotNull(receiveADUsStorage);
         Assertions.assertNotNull(sendADUsStorage);
-    }
-    @Test
-    public void test3PersistADUsForServer() throws Exception {
-        // Setup
+
         String clientId = "client1";
         String appId = "app1";
         var adus = new ArrayList<ADU>();
