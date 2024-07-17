@@ -21,10 +21,10 @@ import net.discdd.utils.StoreADUs;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -47,7 +47,7 @@ public class ApplicationDataManager {
     private final BundleServerConfig bundleServerConfig;
 
     @Value("${bundle-server.bundle-store-root}")
-    private String rootDataDir;
+    private Path rootDataDir;
 
     AduDeliveredListener aduDeliveredListener;
 
@@ -67,7 +67,7 @@ public class ApplicationDataManager {
     private StoreADUs receiveADUsStorage;
     private StoreADUs sendADUsStorage;
 
-    public ApplicationDataManager(@Value("${bundle-server.bundle-store-root}") String rootDataDir,
+    public ApplicationDataManager(@Value("${bundle-server.bundle-store-root}") Path rootDataDir,
                                   AduDeliveredListener aduDeliveredListener,
                                   LargestAduIdReceivedRepository largestAduIdReceivedRepository,
                                   LargestAduIdDeliveredRepository largestAduIdDeliveredRepository,
@@ -87,8 +87,8 @@ public class ApplicationDataManager {
         this.sentAduDetailsRepository = sentAduDetailsRepository;
         this.bundleServerConfig = bundleServerConfig;
         this.registeredAppAdapterRepository = registeredAppAdapterRepository;
-        this.sendADUsStorage = new StoreADUs(new File(rootDataDir, "send"), true);
-        this.receiveADUsStorage = new StoreADUs(new File(rootDataDir, "receive"), false);
+        this.sendADUsStorage = new StoreADUs(rootDataDir.resolve("send"), true);
+        this.receiveADUsStorage = new StoreADUs(rootDataDir.resolve("receive"), false);
     }
 
     public List<String> getRegisteredAppIds() {
