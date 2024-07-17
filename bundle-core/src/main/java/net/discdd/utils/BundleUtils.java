@@ -39,7 +39,6 @@ public class BundleUtils {
     private static final String BUNDLE_EXTENSION = ".bundle";
 
     public static UncompressedBundle extractBundle(Bundle bundle, Path extractDirPath) {
-
         String bundleFileName = bundle.getSource().getName();
         logger.log(INFO, "Extracting bundle for bundle name: " + bundleFileName);
         Path extractedBundlePath = extractDirPath.resolve(bundleFileName.substring(0, bundleFileName.lastIndexOf('.')));
@@ -52,15 +51,20 @@ public class BundleUtils {
                                        null, extractedBundlePath.toFile(), null, encryptedPayload, payloadSign);
     }
 
-    public static UncompressedPayload extractPayload(Payload payload, Path extractDirPath) {
-        Path extractedPayloadPath = extractDirPath.resolve("extracted-payload");
+    public static UncompressedPayload extractPayload(Payload payload, Path extractDirPath) throws IOException {
+        var extractedPayloadPath = extractDirPath.resolve("extracted-payload");
+
+        if (!Files.exists(extractedPayloadPath)) {
+            Files.createDirectories(extractedPayloadPath);
+        }
+
         logger.log(INFO, "Extracting payload for payload path: " + extractedPayloadPath);
         JarUtils.jarToDir(payload.getSource().getAbsolutePath(), extractedPayloadPath.toString());
 
         Path ackPath = extractedPayloadPath.resolve(Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME);
         Path aduPath = extractedPayloadPath.resolve(Constants.BUNDLE_ADU_DIRECTORY_NAME);
 
-        logger.log(INFO, "[BundleGeneratorService] ADU Path" + aduPath);
+        logger.log(INFO, "ADU Path" + aduPath);
 
         UncompressedPayload.Builder builder = new UncompressedPayload.Builder();
 
@@ -118,6 +122,7 @@ public class BundleUtils {
         AckRecordUtils.writeAckRecordToFile(uncompressedPayload.getAckRecord(), ackRecordFile);
 
         Path aduPath = bundleFilePath.resolve(Constants.BUNDLE_ADU_DIRECTORY_NAME);
+
 
         List<ADU> adus = uncompressedPayload.getADUs();
 
