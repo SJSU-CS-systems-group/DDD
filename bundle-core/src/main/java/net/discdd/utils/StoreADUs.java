@@ -25,11 +25,11 @@ import static java.util.logging.Level.*;
 import static java.util.logging.Level.INFO;
 
 public class StoreADUs {
-    public File rootFolder;
+    public Path rootFolder;
     private static final Logger logger = Logger.getLogger(StoreADUs.class.getName());
     private boolean forSending;
 
-    public StoreADUs(File rootFolder, boolean forSending) {
+    public StoreADUs(Path rootFolder, boolean forSending) {
         logger.log(FINE, "bundlecore", "rootFolder: " + rootFolder);
         this.rootFolder = rootFolder;
         this.forSending = forSending;
@@ -86,20 +86,20 @@ public class StoreADUs {
 
     public List<ADU> getAppData(String clientId, String appId) throws IOException {
         List<ADU> appDataList = new ArrayList<>();
-        var folder = new File(clientId, appId);
+        var folder = getAppFolder(clientId, appId);
         Metadata metadata = getMetadata(clientId, appId);
         for (long i = metadata.lastProcessedMessageId + 1; i <= metadata.lastReceivedMessageId; i++) {
-            appDataList.add(new ADU(new File(rootFolder + "/" + folder + "/" + i + ".txt"), appId, i, 0, clientId));
+            appDataList.add(new ADU(rootFolder.resolve(folder.resolve(i + ".adu")).toFile(), appId, i, 0, clientId));
         }
         return appDataList;
     }
 
     public record ClientApp(String clientId, String appId) {}
     public Stream<ClientApp> getAllClientApps() {
-        return Stream.of(rootFolder.listFiles())
+        return Stream.of(rootFolder.toFile().listFiles())
                 .filter(File::isDirectory)
                 .map(File::getName)
-                .flatMap(clientId -> Stream.of(new File(rootFolder, clientId).listFiles())
+                .flatMap(clientId -> Stream.of(rootFolder.resolve(clientId).toFile().listFiles())
                         .filter(File::isDirectory)
                         .map(File::getName)
                         .map(appId -> new ClientApp(clientId, appId)));
@@ -108,9 +108,9 @@ public class StoreADUs {
     public List<byte[]> getAllAppData(String appId) throws IOException {
         List<byte[]> dataList = new ArrayList<>();
         Metadata metadata = getIfNotCreateMetadata(null, appId);
-        var folder = new File(rootFolder, appId);
+        var folder = rootFolder.resolve(appId);
         for (long i = 1; i <= metadata.lastReceivedMessageId; i++) {
-            byte[] data = Files.readAllBytes(new File(folder, i + ".txt").toPath());
+            byte[] data = Files.readAllBytes(folder.resolve(i + ".adu"));
             logger.log(FINE, "bundleclient", data.toString());
             dataList.add(data);
         }
@@ -119,7 +119,7 @@ public class StoreADUs {
     }
 
     private void deleteFile(String fileName) {
-        File file = new File(rootFolder + File.separator + fileName);
+        File file = rootFolder.resolve(fileName).toFile();
         file.delete();
     }
 
@@ -132,8 +132,8 @@ public class StoreADUs {
             return;
         }
         for (long i = metadata.lastSentMessageId + 1; i <= aduId; i++) {
-            deleteFile(i + ".txt");
-            logger.log(INFO, i + ".txt deleted");
+            deleteFile(i + ".adu");
+            logger.log(INFO, i + ".adu deleted");
         }
 
         metadata.lastSentMessageId = aduId;
@@ -141,18 +141,18 @@ public class StoreADUs {
 
     public byte[] getADU(String clientId, String appId, Long aduId) throws IOException {
         var appFolder = getAppFolder(clientId, appId);
-        var adu = Files.readAllBytes(appFolder.resolve(aduId + ".txt"));
+        var adu = Files.readAllBytes(appFolder.resolve(aduId + ".adu "));
         return adu;
     }
 
     private Path getAppFolder(String clientId, String appId) {
-        return clientId == null ? rootFolder.toPath().resolve(appId) :
-                rootFolder.toPath().resolve(Paths.get(clientId, appId));
+        return clientId == null ? rootFolder.resolve(appId) :
+                rootFolder.resolve(Paths.get(clientId, appId));
     }
 
     public File getADUFile(String clientId, String appId, String aduId) {
         var appFolder = getAppFolder(clientId, appId);
-        return appFolder.resolve(aduId + ".txt").toFile();
+        return appFolder.resolve(aduId + ".adu").toFile();
     }
 
     /**
@@ -166,6 +166,7 @@ public class StoreADUs {
     public File addADU(String clientId, String appId, byte[] data, long aduId) throws IOException {
         var appFolder = getAppFolder(clientId, appId);
         var folder = appFolder.toFile();
+
         Metadata metadata = getIfNotCreateMetadata(clientId, appId);
         var lastAduId = forSending ? metadata.lastAddedMessageId : metadata.lastReceivedMessageId;
         if (aduId == -1L) {
@@ -179,8 +180,11 @@ public class StoreADUs {
             metadata.lastReceivedMessageId = aduId;
         }
         setMetadata(clientId, appId, metadata);
-        var file = new File(folder, aduId + ".txt");
-        Files.write(file.toPath(), data);
+        var file = new File(folder, aduId + ".adu");
+        FileOutputStream oFile = new FileOutputStream(file);
+        oFile.write(data);
+        oFile.close();
+
         return file;
     }
 

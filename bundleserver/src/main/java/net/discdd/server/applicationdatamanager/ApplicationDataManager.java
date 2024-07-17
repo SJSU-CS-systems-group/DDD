@@ -23,6 +23,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Files;
@@ -72,7 +73,7 @@ public class ApplicationDataManager {
     private StoreADUs receiveADUsStorage;
     private StoreADUs sendADUsStorage;
 
-    public ApplicationDataManager(@Value("${bundle-server.bundle-store-root}") String rootDataDir,
+    public ApplicationDataManager(@Value("${bundle-server.bundle-store-root}") Path rootDataDir,
                                   AduDeliveredListener aduDeliveredListener,
                                   LargestAduIdReceivedRepository largestAduIdReceivedRepository,
                                   LargestAduIdDeliveredRepository largestAduIdDeliveredRepository,
