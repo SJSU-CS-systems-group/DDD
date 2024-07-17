@@ -67,7 +67,8 @@ public class ApplicationDataManager {
     private StoreADUs receiveADUsStorage;
     private StoreADUs sendADUsStorage;
 
-    public ApplicationDataManager(AduDeliveredListener aduDeliveredListener,
+    public ApplicationDataManager(@Value("${bundle-server.bundle-store-root}") String rootDataDir,
+                                  AduDeliveredListener aduDeliveredListener,
                                   LargestAduIdReceivedRepository largestAduIdReceivedRepository,
                                   LargestAduIdDeliveredRepository largestAduIdDeliveredRepository,
                                   LastBundleIdSentRepository lastBundleIdSentRepository,
@@ -76,6 +77,7 @@ public class ApplicationDataManager {
                                   SentAduDetailsRepository sentAduDetailsRepository,
                                   RegisteredAppAdapterRepository registeredAppAdapterRepository,
                                   BundleServerConfig bundleServerConfig) {
+        this.rootDataDir = rootDataDir;
         this.aduDeliveredListener = aduDeliveredListener;
         this.largestAduIdReceivedRepository = largestAduIdReceivedRepository;
         this.largestAduIdDeliveredRepository = largestAduIdDeliveredRepository;
@@ -85,10 +87,6 @@ public class ApplicationDataManager {
         this.sentAduDetailsRepository = sentAduDetailsRepository;
         this.bundleServerConfig = bundleServerConfig;
         this.registeredAppAdapterRepository = registeredAppAdapterRepository;
-    }
-
-    @PostConstruct
-    private void init() {
         this.sendADUsStorage = new StoreADUs(new File(rootDataDir, "send"), true);
         this.receiveADUsStorage = new StoreADUs(new File(rootDataDir, "receive"), false);
     }

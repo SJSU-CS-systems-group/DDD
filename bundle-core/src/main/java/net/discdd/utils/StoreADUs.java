@@ -46,7 +46,7 @@ public class StoreADUs {
         return sb.toString();
     }
 
-    private Metadata getMetadata(String clientId, String appId) throws IOException {
+    public Metadata getMetadata(String clientId, String appId) throws IOException {
         Path metadataPath = getAppFolder(clientId, appId).resolve("metadata.json");
         try {
             String data = new String(Files.readAllBytes(metadataPath));
@@ -84,7 +84,7 @@ public class StoreADUs {
         }
     }
 
-    public List<ADU> getAppData(String appId, String clientId) throws IOException {
+    public List<ADU> getAppData(String clientId, String appId) throws IOException {
         List<ADU> appDataList = new ArrayList<>();
         var folder = new File(clientId, appId);
         Metadata metadata = getMetadata(clientId, appId);
@@ -180,9 +180,7 @@ public class StoreADUs {
         }
         setMetadata(clientId, appId, metadata);
         var file = new File(folder, aduId + ".txt");
-        FileOutputStream oFile = new FileOutputStream(file);
-        oFile.write(data);
-        oFile.close();
+        Files.write(file.toPath(), data);
         return file;
     }
 
