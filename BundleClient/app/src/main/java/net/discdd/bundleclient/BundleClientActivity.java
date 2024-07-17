@@ -37,8 +37,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
-public class HelloworldActivity extends AppCompatActivity implements WifiDirectStateListener {
+public class BundleClientActivity extends AppCompatActivity implements WifiDirectStateListener {
 
+    private static final int PERMISSIONS_REQUEST_CODE_NEARBY_WIFI_DEVICES = 1003;
     // Wifi Direct set up
     private WifiDirectManager wifiDirectManager;
     public static final int PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION = 1001;
@@ -54,7 +55,7 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
     private TextView connectedDevicesText;
     private TextView wifiDirectResponseText;
     private TextView usbConnectionText;
-    private static String RECEIVE_PATH = "/Shared/received-bundles";
+    private static String RECEIVE_PATH = "Shared/received-bundles";
     //  private BundleDeliveryAgent agent;
     // context
     public static Context ApplicationContext;
@@ -73,7 +74,7 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
 
     public static final String TAG = "bundleclient";
 
-    private static final Logger logger = Logger.getLogger(HelloworldActivity.class.getName());
+    private static final Logger logger = Logger.getLogger(BundleClientActivity.class.getName());
 
     private static final String usbDirName = "DDD_transport";
     public static boolean usbConnected = false;
@@ -200,7 +201,7 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             logger.log(FINE, "requesting permission");
             requestPermissions(new String[] { Manifest.permission.ACCESS_FINE_LOCATION },
-                               HelloworldActivity.PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION);
+                               BundleClientActivity.PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION);
             logger.log(WARNING, "Permission granted");
         }
 
@@ -231,6 +232,7 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
                 logger.log(WARNING, "Discovery initiation failed\n");
                 connectButton.setEnabled(true);
             } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_PEERS_CHANGED == action) {
+                wifiDirectResponseText.append("Peers changed\n");
                 wifiDirectResponseText.append("Peers changed\n");
                 logger.log(WARNING, "Peers changed\n");
             } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_FAILED ==
