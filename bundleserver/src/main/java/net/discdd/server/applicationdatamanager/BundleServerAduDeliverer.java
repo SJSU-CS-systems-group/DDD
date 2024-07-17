@@ -31,7 +31,7 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
     // TODO: This should adapt to changes in the registered app adapters repository. currently it's only checked at
     //  startup
     private final HashMap<String, AppState> apps = new HashMap<>();
-    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
     BundleServerAduDeliverer(StoreADUs sendFolder, StoreADUs receiveFolder,
                              RegisteredAppAdapterRepository registeredAppAdapterRepository) {
@@ -94,6 +94,7 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
 
             } catch (Exception e) {
                 logger.log(SEVERE, "Failed to notify " + appId + " of delivered ADU for " + clientId, e);
+                scheduler.schedule(() -> addAppWithPendingData(appId, clientId), 15, java.util.concurrent.TimeUnit.SECONDS);
             }
         });
     }
