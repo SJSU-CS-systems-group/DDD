@@ -76,32 +76,37 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
             return;
         }
         appState.executor.execute(() -> {
-            try {
-                removeAppWithPendingData(appId, clientId);
-                AppData.Builder appData = AppData.newBuilder().setClientId(clientId)
-                        .setLastADUIdReceived(receiveFolder.getLastADUIdReceived(clientId, appId));
-                long lastAduIdSent = 0;
-                for (var adu : receiveFolder.getAppData(clientId, appId)) {
-                    long aduId = adu.getADUId();
-                    if (aduId > lastAduIdSent) {
-                        lastAduIdSent = aduId;
-                    }
-                    var data = receiveFolder.getADU(clientId, appId, aduId);
-
-                    appData.addDataList(
-                            AppDataUnit.newBuilder().setData(ByteString.copyFrom(data)).setAduId(aduId).build());
-                }
-                var recvData = appState.stub.saveData(appData.build());
-                receiveFolder.deleteAllFilesUpTo(clientId, appId, lastAduIdSent);
-                for (var dataUnit : recvData.getDataListList()) {
-                    sendFolder.addADU(clientId, appId, dataUnit.getData().toByteArray(), dataUnit.getAduId());
-                }
-
-            } catch (Exception e) {
-                logger.log(SEVERE, "Failed to notify " + appId + " of delivered ADU for " + clientId, e);
-                scheduler.schedule(() -> addAppWithPendingData(appId, clientId), 15, java.util.concurrent.TimeUnit.SECONDS);
-            }
+            contactServiceAdapterForClient(clientId, appState);
         });
+    }
+
+    private void contactServiceAdapterForClient(String clientId, AppState appState) {
+        String appId = appState.appId;
+        try {
+            removeAppWithPendingData(appId, clientId);
+            AppData.Builder appData = AppData.newBuilder().setClientId(clientId)
+                    .setLastADUIdReceived(receiveFolder.getLastADUIdReceived(clientId, appId));
+            long lastAduIdSent = 0;
+            for (var adu : receiveFolder.getAppData(clientId, appId)) {
+                long aduId = adu.getADUId();
+                if (aduId > lastAduIdSent) {
+                    lastAduIdSent = aduId;
+                }
+                var data = receiveFolder.getADU(clientId, appId, aduId);
+
+                appData.addDataList(
+                        AppDataUnit.newBuilder().setData(ByteString.copyFrom(data)).setAduId(aduId).build());
+            }
+            var recvData = appState.stub.saveData(appData.build());
+            receiveFolder.deleteAllFilesUpTo(clientId, appId, lastAduIdSent);
+            for (var dataUnit : recvData.getDataListList()) {
+                sendFolder.addADU(clientId, appId, dataUnit.getData().toByteArray(), dataUnit.getAduId());
+            }
+
+        } catch (Exception e) {
+            logger.log(SEVERE, "Failed to notify " + appId + " of delivered ADU for " + clientId, e);
+            scheduler.schedule(() -> addAppWithPendingData(appId, clientId), 15, java.util.concurrent.TimeUnit.SECONDS);
+        }
     }
 
     @Override
