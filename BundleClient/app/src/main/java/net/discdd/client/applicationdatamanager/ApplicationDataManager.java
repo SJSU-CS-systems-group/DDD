@@ -240,7 +240,7 @@ public class ApplicationDataManager {
 
     private Long APP_DATA_SIZE_LIMIT = 1000000000L;
 
-    private static String REGISTERED_APP_IDS = "/Shared/REGISTERED_APP_IDS.txt";
+    private static List<String> REGISTER_APP_IDS = List.of("com.example.mysignal", "com.fsck.k9.debug");
 
     private final Path ROOT_DIR;
 
@@ -250,20 +250,8 @@ public class ApplicationDataManager {
         this.dataStoreAdaptor = new DataStoreAdaptor(rootDir);
     }
 
-    public List<String> getRegisteredAppIds() {
-        List<String> registeredAppIds = new ArrayList<>();
-        try (BufferedReader bufferedReader = new BufferedReader(
-                new FileReader(new File(ROOT_DIR + REGISTERED_APP_IDS)))) {
-            String line = "";
-            while ((line = bufferedReader.readLine()) != null) {
-                String appId = line.trim();
-                logger.log(INFO, "Registered " + appId);
-                registeredAppIds.add(appId);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return registeredAppIds;
+    public List<String> getRegisteredAppIds() throws IOException {
+        return REGISTER_APP_IDS;
     }
 
     public void processAcknowledgement(String bundleId) {
