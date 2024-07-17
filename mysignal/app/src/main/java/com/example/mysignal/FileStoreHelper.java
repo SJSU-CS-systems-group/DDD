@@ -9,15 +9,16 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
 public class FileStoreHelper {
-    String RootFolder = "";
+    Path RootFolder;
 
     private final static String MESSAGES_DIR = "messages";
 
-    public FileStoreHelper(String rootFolder) {
+    public FileStoreHelper(Path rootFolder) {
         RootFolder = rootFolder;
     }
 
@@ -64,10 +65,10 @@ public class FileStoreHelper {
 
     public List<byte[]> getAppData() throws IOException {
         List<byte[]> appDataList = new ArrayList<>();
-        String folder = RootFolder;
+        Path folder = RootFolder;
 
         Log.d(MainActivity.TAG, "File path: " + RootFolder);
-        File f = new File(RootFolder + File.separator + MESSAGES_DIR);
+        File f = RootFolder.resolve(MESSAGES_DIR).toFile();
         if (!f.exists()) {
             Log.d(MainActivity.TAG, "Creating new folder: " + f.getPath());
             f.mkdirs();
@@ -76,22 +77,22 @@ public class FileStoreHelper {
         String[] fileList = f.list();
 
         for (long i = 1; i <= fileList.length; i++) {
-            appDataList.add(readFile(folder + "/" + i + ".txt"));
+            appDataList.add(readFile(folder + "/" + i + ".adu"));
 
         }
         return appDataList;
     }
 
     public byte[] getADU(String appId, String aduId) throws IOException {
-        return readFile(RootFolder + "/" + appId + "/" + aduId + ".txt");
+        return readFile(Path.of(RootFolder.toString(), appId, aduId + ".adu").toString());
     }
 
     public File getADUFile(String appId, String aduId) {
-        return new File(RootFolder + "/" + appId + "/" + aduId + ".txt");
+        return RootFolder.resolve(Path.of(appId, aduId + ".adu")).toFile();
     }
 
     public void AddFile(String folder, byte data[]) throws IOException {
-        File f = new File(RootFolder + File.separator + MESSAGES_DIR);
+        File f = RootFolder.resolve(MESSAGES_DIR).toFile();
 
         if (f.isFile()) {
             throw new IOException(f.getPath() + " is a file");
@@ -100,12 +101,12 @@ public class FileStoreHelper {
         File dataFile;
         if (!f.isDirectory()) {
             f.mkdirs();
-            dataFile = new File(RootFolder + "/" + folder + "/1.txt");
+            dataFile = RootFolder.resolve(Path.of(folder, "1.adu")).toFile();
         } else {
             Log.d("deepak", RootFolder + "/" + folder + " is a directory");
             int noOfMessages = f.list().length + 1;
             Log.d("deepak", "noOfMessages-" + noOfMessages);
-            dataFile = new File(RootFolder + "/" + folder + "/" + noOfMessages + ".txt");
+            dataFile = new File(RootFolder + "/" + folder + "/" + noOfMessages + ".adu");
         }
 
         dataFile.createNewFile();
@@ -115,7 +116,7 @@ public class FileStoreHelper {
     }
 
     public void deleteFile(String fileName) {
-        File file = new File(RootFolder + "/" + fileName);
+        File file = RootFolder.resolve(fileName).toFile();
         file.delete();
     }
 }

@@ -19,6 +19,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -92,7 +93,7 @@ public class BundleUtils {
     }
 
     public static void writeUncompressedPayload(UncompressedPayload uncompressedPayload, File targetDirectory,
-                                                String bundleFileName) {
+                                                String bundleFileName) throws IOException {
         String bundleId = uncompressedPayload.getBundleId();
         Path bundleFilePath = targetDirectory.toPath().resolve(bundleId);
 
@@ -121,12 +122,13 @@ public class BundleUtils {
         List<ADU> adus = uncompressedPayload.getADUs();
 
         if (!adus.isEmpty()) {
-            File aduDirectory = aduPath.toFile();
-            if (!aduDirectory.exists()) {
-                aduDirectory.mkdirs();
+            if (!Files.exists(aduPath)) {
+                Files.createDirectories(aduPath);
             }
+
             try {
-                ADUUtils.writeADUs(uncompressedPayload.getADUs(), aduDirectory);
+                logger.log(INFO, "[BundleUtils] Writing ADUs to " + aduPath);
+                ADUUtils.writeADUs(uncompressedPayload.getADUs(), aduPath);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
