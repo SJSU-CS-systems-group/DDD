@@ -1,37 +1,38 @@
 package net.discdd.server.applicationdatamanager;
 
+import net.discdd.model.ADU;
 import net.discdd.server.config.BundleServerConfig;
 import net.discdd.server.repository.LargestAduIdDeliveredRepository;
 import net.discdd.server.repository.LargestAduIdReceivedRepository;
 import net.discdd.server.repository.LargestBundleIdReceivedRepository;
 import net.discdd.server.repository.LastBundleIdSentRepository;
+import net.discdd.server.repository.RegisteredAppAdapterRepository;
 import net.discdd.server.repository.SentAduDetailsRepository;
 import net.discdd.server.repository.SentBundleDetailsRepository;
 import net.discdd.server.repository.entity.RegisteredAppAdapter;
 import net.discdd.utils.StoreADUs;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
-
-import static org.mockito.Mockito.*;
-
-import net.discdd.server.repository.RegisteredAppAdapterRepository;
-import net.discdd.model.ADU;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.AutoConfigureDataJpa;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import java.io.File;
-import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.List;
 
+/**
+ * These tests are designed to run in order. The test names are such that the dependent tests will run
+ * after their dependencies.
+ * <p/>
+ * Also, these tests use H2 database for testing
+ */
 @DataJpaTest
-class ApplicationDataManagerTest {
+@TestMethodOrder(MethodOrderer.MethodName.class)
+public class ApplicationDataManagerTest {
     @Autowired
     private LargestAduIdReceivedRepository largestAduIdReceivedRepository; // = mock(LargestAduIdReceivedRepository.class);
     @Autowired
@@ -50,9 +51,11 @@ class ApplicationDataManagerTest {
     private BundleServerConfig bundleServerConfig; // = mock(BundleServerConfig.class);
     private StoreADUs receiveADUsStorage;
     private StoreADUs sendADUsStorage;
+    @TempDir
+    Path tempRootDir;
 
-    @BeforeEach
-    void setUp(@TempDir Path tempRootDir) throws Exception {
+    @Test
+    public void test1SetupEverything() throws Exception {
         registeredAppAdapterRepository.save(new RegisteredAppAdapter("app1", "localhost:88888"));
         bundleServerConfig = new BundleServerConfig();
         bundleServerConfig.getApplicationDataManager().setAppDataSizeLimit(100_000_000L);
@@ -66,10 +69,13 @@ class ApplicationDataManagerTest {
     }
 
     @Test
-    void noop() {}
-
+    public void test2QuickCheck() {
+        Assertions.assertNotNull(applicationDataManager);
+        Assertions.assertNotNull(receiveADUsStorage);
+        Assertions.assertNotNull(sendADUsStorage);
+    }
     @Test
-    void testPersistADUsForServer() throws Exception {
+    public void test3PersistADUsForServer() throws Exception {
         // Setup
         String clientId = "client1";
         String appId = "app1";
@@ -80,7 +86,6 @@ class ApplicationDataManagerTest {
             adus.add(new ADU(tempFile, appId, i, tempFile.length(), clientId));
         }
         applicationDataManager.storeReceivedADUs(clientId, "client1", adus);
-        var sendMetadata = sendADUsStorage.getMetadata(clientId, appId);
         var receiveMetadata = receiveADUsStorage.getMetadata(clientId, appId);
         Assertions.assertEquals((long)adus.size(), receiveMetadata.lastReceivedMessageId);
         var fetchedAdus = receiveADUsStorage.getAppData(clientId, appId);

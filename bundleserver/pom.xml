@@ -205,6 +205,11 @@
 				<artifactId>maven-assembly-plugin</artifactId>
 				<version>3.4.2</version>
 			</dependency>
+			<dependency>
+				<groupId>org.junit.jupiter</groupId>
+				<artifactId>junit-jupiter-engine</artifactId>
+				<version>5.4.0</version>
+			</dependency>
 		</dependencies>
 	</dependencyManagement>
 	<build>
