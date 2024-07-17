@@ -19,11 +19,12 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
+
     compileSdk 34
 
     defaultConfig {
         applicationId "net.discdd.bundleclient"
-        minSdk 26
+        minSdk 34 // Required at least 34 for JDK 17 -> enable BufferedInputStream transferTo in BundleCore
         targetSdk 34
         versionCode 1
         versionName "1.0"
