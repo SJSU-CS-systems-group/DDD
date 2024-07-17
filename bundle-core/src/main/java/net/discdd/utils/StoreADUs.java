@@ -96,10 +96,10 @@ public class StoreADUs {
 
     public record ClientApp(String clientId, String appId) {}
     public Stream<ClientApp> getAllClientApps() {
-        return Stream.of(rootFolder.listFiles())
+        return Stream.of(rootFolder.toFile().listFiles())
                 .filter(File::isDirectory)
                 .map(File::getName)
-                .flatMap(clientId -> Stream.of(new File(rootFolder, clientId).listFiles())
+                .flatMap(clientId -> Stream.of(rootFolder.resolve(clientId).toFile().listFiles())
                         .filter(File::isDirectory)
                         .map(File::getName)
                         .map(appId -> new ClientApp(clientId, appId)));
