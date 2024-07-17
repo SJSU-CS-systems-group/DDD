@@ -214,10 +214,15 @@ public class ServerSecurity {
         clientDataPath.toFile().mkdirs();
         logger.log(FINE, "[ServerSecurity]:Client Data Path = " + clientDataPath);
         try {
-            Files.copy(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY),
-                       clientDataPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
-            Files.copy(clientKeyPath.resolve(SecurityUtils.CLIENT_BASE_KEY),
-                       clientDataPath.resolve(SecurityUtils.CLIENT_BASE_KEY));
+            if (!Files.exists(clientDataPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY))) {
+                Files.copy(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY),
+                           clientDataPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
+            }
+
+            if (!Files.exists(clientDataPath.resolve(SecurityUtils.CLIENT_BASE_KEY))) {
+                Files.copy(clientKeyPath.resolve(SecurityUtils.CLIENT_BASE_KEY),
+                           clientDataPath.resolve(SecurityUtils.CLIENT_BASE_KEY));
+            }
         } catch (IOException e) {
             logger.log(SEVERE,
                        "[ServerSecurity] INFO: Client Keys already exist Client Data Path for client ID " + clientID,
