@@ -58,7 +58,7 @@ public class BundleTransmission {
     private final BundleRouting bundleRouting;
     private final BundleUtils bundleUtils;
     private final ServerWindowService serverWindowService;
-    private final int WINDOW_LENGTH = 3;
+    private static final int WINDOW_LENGTH = 3;
 
     public BundleTransmission(BundleSecurity bundleSecurity, ApplicationDataManager applicationDataManager,
                               BundleRouting bundleRouting,
@@ -149,8 +149,8 @@ public class BundleTransmission {
 
         this.applicationDataManager.processAcknowledgement(clientId, uncompressedPayload.getAckRecord().getBundleId());
         if (!uncompressedPayload.getADUs().isEmpty()) {
-            this.applicationDataManager.storeADUs(clientId, uncompressedPayload.getBundleId(),
-                                                  uncompressedPayload.getADUs());
+            this.applicationDataManager.storeReceivedADUs(clientId, uncompressedPayload.getBundleId(),
+                                                          uncompressedPayload.getADUs());
         }
     }
 
@@ -193,7 +193,7 @@ public class BundleTransmission {
     }
 
     private UncompressedPayload.Builder generatePayloadBuilder(String clientId) {
-        List<ADU> ADUs = this.applicationDataManager.fetchADUs(0L, clientId);
+        List<ADU> ADUs = this.applicationDataManager.fetchADUsToSend(0L, clientId);
 
         UncompressedPayload.Builder builder = new UncompressedPayload.Builder();
 
