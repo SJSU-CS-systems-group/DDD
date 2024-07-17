@@ -39,6 +39,7 @@ import java.util.logging.Logger;
 
 public class BundleClientActivity extends AppCompatActivity implements WifiDirectStateListener {
 
+    private static final int PERMISSIONS_REQUEST_CODE_NEARBY_WIFI_DEVICES = 1003;
     // Wifi Direct set up
     private WifiDirectManager wifiDirectManager;
     public static final int PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION = 1001;
@@ -195,7 +196,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     }
 
     public void connectTransport() {
-//        connectButton.setEnabled(true);
+        connectButton.setEnabled(true);
         wifiDirectResponseText.setText("Starting connection...\n");
         logger.log(FINE, "connecting to transport");
         // we need to check and request for necessary permissions
@@ -203,6 +204,13 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
             logger.log(FINE, "requesting permission");
             requestPermissions(new String[] { Manifest.permission.ACCESS_FINE_LOCATION },
                                BundleClientActivity.PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION);
+            logger.log(WARNING, "Permission granted");
+        }
+
+        if (checkSelfPermission(Manifest.permission.NEARBY_WIFI_DEVICES) != PackageManager.PERMISSION_GRANTED) {
+            logger.log(FINE, "requesting nearby devices permission");
+            requestPermissions(new String[] { Manifest.permission.NEARBY_WIFI_DEVICES },
+                    BundleClientActivity.PERMISSIONS_REQUEST_CODE_NEARBY_WIFI_DEVICES);
             logger.log(WARNING, "Permission granted");
         }
 
