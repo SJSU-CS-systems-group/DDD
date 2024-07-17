@@ -162,8 +162,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
             e.printStackTrace();
         }
 
-
-
         connectButton.setOnClickListener(v -> {
             connectTransport();
         });
