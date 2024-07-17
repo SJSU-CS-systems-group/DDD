@@ -89,7 +89,6 @@ public class ApplicationDataManager {
 
     @PostConstruct
     private void init() {
-
         this.sendADUsStorage = new StoreADUs(new File(rootDataDir, "send"), true);
         this.receiveADUsStorage = new StoreADUs(new File(rootDataDir, "receive"), false);
     }

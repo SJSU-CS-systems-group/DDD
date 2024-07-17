@@ -1,5 +1,6 @@
 package net.discdd.utils;
 
+import com.google.protobuf.MapEntry;
 import net.discdd.model.ADU;
 import net.discdd.model.Metadata;
 import com.google.gson.Gson;
@@ -16,7 +17,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 import static java.util.logging.Level.*;
 import static java.util.logging.Level.INFO;
@@ -91,6 +94,17 @@ public class StoreADUs {
         return appDataList;
     }
 
+    public record ClientApp(String clientId, String appId) {}
+    public Stream<ClientApp> getAllClientApps() {
+        return Stream.of(rootFolder.listFiles())
+                .filter(File::isDirectory)
+                .map(File::getName)
+                .flatMap(clientId -> Stream.of(new File(rootFolder, clientId).listFiles())
+                        .filter(File::isDirectory)
+                        .map(File::getName)
+                        .map(appId -> new ClientApp(clientId, appId)));
+    }
+
     public List<byte[]> getAllAppData(String appId) throws IOException {
         List<byte[]> dataList = new ArrayList<>();
         Metadata metadata = getIfNotCreateMetadata(null, appId);
@@ -125,7 +139,7 @@ public class StoreADUs {
         metadata.lastSentMessageId = aduId;
     }
 
-    public byte[] getADU(String clientId, String appId, String aduId) throws IOException {
+    public byte[] getADU(String clientId, String appId, Long aduId) throws IOException {
         var appFolder = getAppFolder(clientId, appId);
         var adu = Files.readAllBytes(appFolder.resolve(aduId + ".txt"));
         return adu;
@@ -175,5 +189,9 @@ public class StoreADUs {
     public long getLastADUIdReceived(String clientId, String appId) throws IOException {
         Metadata metadata = getMetadata(clientId, appId);
         return metadata.lastReceivedMessageId;
+    }
+    public long getLastADUIdSent(String clientId, String appId) throws IOException {
+        Metadata metadata = getMetadata(clientId, appId);
+        return metadata.lastSentMessageId;
     }
 }
