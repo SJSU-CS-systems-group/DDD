@@ -11,7 +11,7 @@ import android.os.Build;
 
 import net.discdd.model.ADU;
 import net.discdd.utils.StoreADUs;
-import net.discdd.bundleclient.HelloworldActivity;
+import net.discdd.bundleclient.BundleClientActivity;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -43,7 +43,7 @@ public class DataStoreAdaptor {
         byte[] data = Files.readAllBytes(adu.getSource().toPath());
         logger.log(FINE, new String(data) + ", Source:" + adu.getSource());
         intent.putExtra(Intent.EXTRA_TEXT, data);
-        applicationContext = HelloworldActivity.ApplicationContext;
+        applicationContext = BundleClientActivity.ApplicationContext;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             applicationContext.startForegroundService(intent);
         } else {
