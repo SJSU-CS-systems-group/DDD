@@ -32,8 +32,8 @@ public class DataStoreAdaptor {
     private StoreADUs receiveADUsStorage;
 
     public DataStoreAdaptor(String appRootDataDirectory) {
-        this.sendADUsStorage = new StoreADUs(new File(appRootDataDirectory, "send"), true);
-        this.receiveADUsStorage = new StoreADUs(new File(appRootDataDirectory, "receive"), false);
+        this.sendADUsStorage = new StoreADUs(new File(appRootDataDirectory, "send").toPath(), true);
+        this.receiveADUsStorage = new StoreADUs(new File(appRootDataDirectory, "receive").toPath(), false);
     }
 
     public void deleteADUs(String clientId, String appId, Long aduIdEnd) throws IOException {
