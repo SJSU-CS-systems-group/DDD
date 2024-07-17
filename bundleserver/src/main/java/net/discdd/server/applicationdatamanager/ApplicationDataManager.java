@@ -14,17 +14,17 @@ import net.discdd.server.repository.entity.LargestAduIdDelivered;
 import net.discdd.server.repository.entity.LargestAduIdReceived;
 import net.discdd.server.repository.entity.LargestBundleIdReceived;
 import net.discdd.server.repository.entity.LastBundleIdSent;
-import net.discdd.server.repository.entity.RegisteredAppAdapter;
 import net.discdd.server.repository.entity.SentAduDetails;
 import net.discdd.server.repository.entity.SentBundleDetails;
 import net.discdd.utils.BundleUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import net.discdd.utils.StoreADUs;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Files;
 import java.util.ArrayList;
@@ -37,8 +37,6 @@ import java.util.Set;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
 
 @Service
 public class ApplicationDataManager {
@@ -48,12 +46,12 @@ public class ApplicationDataManager {
 
     private static final Logger logger = Logger.getLogger(ApplicationDataManager.class.getName());
 
-    private DataStoreAdaptor dataStoreAdaptor;
-
     private final BundleServerConfig bundleServerConfig;
 
     @Value("${bundle-server.bundle-store-root}")
     private Path rootDataDir;
+
+    AduDeliveredListener aduDeliveredListener;
 
     AduDeliveredListener aduDeliveredListener;
 
