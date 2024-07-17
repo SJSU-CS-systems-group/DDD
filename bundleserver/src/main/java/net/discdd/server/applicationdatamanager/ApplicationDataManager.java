@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,8 +33,6 @@ import java.util.Optional;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
 
 @Service
 public class ApplicationDataManager {
@@ -45,7 +44,7 @@ public class ApplicationDataManager {
     private final BundleServerConfig bundleServerConfig;
 
     @Value("${bundle-server.bundle-store-root}")
-    private String rootDataDir;
+    private Path rootDataDir;
 
     private final LargestAduIdReceivedRepository largestAduIdReceivedRepository;
 

@@ -3,15 +3,16 @@ package net.discdd.server.applicationdatamanager;
 import net.discdd.model.ADU;
 import net.discdd.server.AppData;
 import net.discdd.server.api.ServiceAdapterClient;
+import net.discdd.server.repository.RegisteredAppAdapterRepository;
 import net.discdd.server.repository.entity.RegisteredAppAdapter;
 import net.discdd.utils.StoreADUs;
 import org.springframework.beans.factory.annotation.Autowired;
-import net.discdd.server.repository.RegisteredAppAdapterRepository;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -31,9 +32,9 @@ public class DataStoreAdaptor {
     private StoreADUs sendADUsStorage;
     private StoreADUs receiveADUsStorage;
 
-    public DataStoreAdaptor(String appRootDataDirectory) {
-        this.sendADUsStorage = new StoreADUs(new File(appRootDataDirectory, "send"), true);
-        this.receiveADUsStorage = new StoreADUs(new File(appRootDataDirectory, "receive"), false);
+    public DataStoreAdaptor(Path appRootDataDirectory) {
+        this.sendADUsStorage = new StoreADUs(appRootDataDirectory.resolve("send"), true);
+        this.receiveADUsStorage = new StoreADUs(appRootDataDirectory.resolve("receive"), false);
     }
 
     public void deleteADUs(String clientId, String appId, Long aduIdEnd) throws IOException {

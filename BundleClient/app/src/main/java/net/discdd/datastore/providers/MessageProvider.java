@@ -12,6 +12,8 @@ import android.net.Uri;
 import android.os.Binder;
 
 import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
@@ -76,8 +78,13 @@ public class MessageProvider extends ContentProvider {
     public boolean onCreate() {
         DBHelper dbHelper = new DBHelper(getContext());
         sqlDB = dbHelper.getWritableDatabase();
-        sendADUsStorage = new StoreADUs(new File(getContext().getApplicationInfo().dataDir, "/send"), true);
-        receiveADUsStorage = new StoreADUs(new File(getContext().getApplicationInfo().dataDir, "/receive"), false);
+        var appRootDataDir = Paths.get(getContext().getApplicationInfo().dataDir);
+
+        sendADUsStorage = new StoreADUs(appRootDataDir.resolve("send"), true);
+        receiveADUsStorage = new StoreADUs(appRootDataDir.resolve("receive"), false);
+
+        logger.log(INFO, "Receive path " + appRootDataDir.resolve("receive").toString());
+
         if (sqlDB != null) return true;
         return false;
     }
