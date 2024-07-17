@@ -6,10 +6,10 @@
     <uses-feature android:name="android.hardware.telephony" />
 
     <uses-permission
-        android:name="com.ddd.bundleclient.permission.MESSAGE_PROVIDER_READ"
+        android:name="net.discdd.bundleclient.permission.MESSAGE_PROVIDER_READ"
         android:protectionLevel="normal" />
     <uses-permission
-        android:name="com.ddd.bundleclient.permission.MESSAGE_PROVIDER_WRITE"
+        android:name="net.discdd.bundleclient.permission.MESSAGE_PROVIDER_WRITE"
         android:protectionLevel="normal" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -17,7 +17,7 @@
     <uses-permission android:name="android.permission.READ_SMS" />
 
     <queries>
-        <provider android:authorities="com.ddd.provider.datastoreprovider" />
+        <provider android:authorities="net.discdd.provider.datastoreprovider" />
     </queries>
 
     <application
