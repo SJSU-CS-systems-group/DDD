@@ -19,7 +19,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,6 +38,7 @@ public class BundleUtils {
     private static final String BUNDLE_EXTENSION = ".bundle";
 
     public static UncompressedBundle extractBundle(Bundle bundle, Path extractDirPath) {
+
         String bundleFileName = bundle.getSource().getName();
         logger.log(INFO, "Extracting bundle for bundle name: " + bundleFileName);
         Path extractedBundlePath = extractDirPath.resolve(bundleFileName.substring(0, bundleFileName.lastIndexOf('.')));
@@ -51,20 +51,15 @@ public class BundleUtils {
                                        null, extractedBundlePath.toFile(), null, encryptedPayload, payloadSign);
     }
 
-    public static UncompressedPayload extractPayload(Payload payload, Path extractDirPath) throws IOException {
-        var extractedPayloadPath = extractDirPath.resolve("extracted-payload");
-
-        if (!Files.exists(extractedPayloadPath)) {
-            Files.createDirectories(extractedPayloadPath);
-        }
-
+    public static UncompressedPayload extractPayload(Payload payload, Path extractDirPath) {
+        Path extractedPayloadPath = extractDirPath.resolve("extracted-payload");
         logger.log(INFO, "Extracting payload for payload path: " + extractedPayloadPath);
         JarUtils.jarToDir(payload.getSource().getAbsolutePath(), extractedPayloadPath.toString());
 
         Path ackPath = extractedPayloadPath.resolve(Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME);
         Path aduPath = extractedPayloadPath.resolve(Constants.BUNDLE_ADU_DIRECTORY_NAME);
 
-        logger.log(INFO, "ADU Path" + aduPath);
+        logger.log(INFO, "[BundleGeneratorService] ADU Path" + aduPath);
 
         UncompressedPayload.Builder builder = new UncompressedPayload.Builder();
 
@@ -97,7 +92,7 @@ public class BundleUtils {
     }
 
     public static void writeUncompressedPayload(UncompressedPayload uncompressedPayload, File targetDirectory,
-                                                String bundleFileName) throws IOException {
+                                                String bundleFileName) {
         String bundleId = uncompressedPayload.getBundleId();
         Path bundleFilePath = targetDirectory.toPath().resolve(bundleId);
 
@@ -123,17 +118,15 @@ public class BundleUtils {
 
         Path aduPath = bundleFilePath.resolve(Constants.BUNDLE_ADU_DIRECTORY_NAME);
 
-
         List<ADU> adus = uncompressedPayload.getADUs();
 
         if (!adus.isEmpty()) {
-            if (!Files.exists(aduPath)) {
-                Files.createDirectories(aduPath);
+            File aduDirectory = aduPath.toFile();
+            if (!aduDirectory.exists()) {
+                aduDirectory.mkdirs();
             }
-
             try {
-                logger.log(INFO, "[BundleUtils] Writing ADUs to " + aduPath);
-                ADUUtils.writeADUs(uncompressedPayload.getADUs(), aduPath);
+                ADUUtils.writeADUs(uncompressedPayload.getADUs(), aduDirectory);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

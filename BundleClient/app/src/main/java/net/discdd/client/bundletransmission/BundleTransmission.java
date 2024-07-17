@@ -171,14 +171,12 @@ public class BundleTransmission {
 
         List<ADU> ADUs = this.applicationDataManager.fetchADUs(ackRecord.getSize(), null);
 
-        logger.log(INFO, "[UncompressedPayloadBuilder] ADUs: " + ADUs.size());
-
         builder.setADUs(ADUs);
 
         return builder;
     }
 
-    private BundleDTO generateNewBundle(Path targetDir) throws RoutingExceptions.ClientMetaDataFileException,
+    private BundleDTO generateNewBundle(File targetDir) throws RoutingExceptions.ClientMetaDataFileException,
             IOException, InvalidKeyException, GeneralSecurityException {
         UncompressedPayload.Builder builder = this.generateBundleBuilder();
         String bundleId = this.bundleSecurity.generateNewBundleId();
@@ -186,7 +184,7 @@ public class BundleTransmission {
         return generateNewBundle(builder, targetDir, bundleId);
     }
 
-    private BundleDTO generateNewBundle(UncompressedPayload.Builder builder, Path targetDir, String bundleId) throws RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException {
+    private BundleDTO generateNewBundle(UncompressedPayload.Builder builder, File targetDir, String bundleId) throws RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException {
         builder.setBundleId(bundleId);
         File uncompressedBundleFile =
                 this.ROOT_DIR.resolve(Paths.get(BUNDLE_GENERATION_DIRECTORY, UNCOMPRESSED_PAYLOAD)).toFile();
@@ -201,7 +199,7 @@ public class BundleTransmission {
         UncompressedBundle uncompressedBundle = this.bundleSecurity.encryptPayload(payload, this.ROOT_DIR.resolve(
                 Paths.get(BUNDLE_GENERATION_DIRECTORY, ENCRYPTED_PAYLOAD)));
 
-        Bundle toSend = BundleUtils.compressBundle(uncompressedBundle, targetDir);
+        Bundle toSend = BundleUtils.compressBundle(uncompressedBundle, targetDir.toPath());
         this.applicationDataManager.notifyBundleSent(toSendBundlePayload);
         System.out.println("[BT] Generated new bundle for transmission with bundle id: " + bundleId);
         return new BundleDTO(bundleId, toSend);
@@ -210,7 +208,7 @@ public class BundleTransmission {
     public BundleDTO generateBundleForTransmission() throws RoutingExceptions.ClientMetaDataFileException,
             IOException, InvalidKeyException, GeneralSecurityException {
         logger.log(FINE, "Started process of generating bundle");
-        Path toSendDir = this.ROOT_DIR.resolve(Paths.get(BUNDLE_GENERATION_DIRECTORY, TO_SEND_DIRECTORY));
+        File toSendDir = this.ROOT_DIR.resolve(Paths.get(BUNDLE_GENERATION_DIRECTORY, TO_SEND_DIRECTORY)).toFile();
 
         BundleDTO toSend = null;
         Optional<UncompressedPayload.Builder> optional = this.applicationDataManager.getLastSentBundleBuilder();

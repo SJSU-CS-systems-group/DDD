@@ -39,13 +39,13 @@ class StateManager {
     private static final Logger logger = Logger.getLogger(StateManager.class.getName());
 
     /* Database tables */
-    private static String SENT_BUNDLE_DETAILS = "Shared/DB/SENT_BUNDLE_DETAILS.json";
+    private static String SENT_BUNDLE_DETAILS = "/Shared/DB/SENT_BUNDLE_DETAILS.json";
 
-    private static String LARGEST_ADU_ID_RECEIVED = "Shared/DB/LARGEST_ADU_ID_RECEIVED.json";
+    private static String LARGEST_ADU_ID_RECEIVED = "/Shared/DB/LARGEST_ADU_ID_RECEIVED.json";
 
-    private static String LARGEST_ADU_ID_DELIVERED = "Shared/DB/LARGEST_ADU_ID_DELIVERED.json";
+    private static String LARGEST_ADU_ID_DELIVERED = "/Shared/DB/LARGEST_ADU_ID_DELIVERED.json";
 
-    private static String LAST_SENT_BUNDLE_STRUCTURE = "Shared/DB/LAST_SENT_BUNDLE_STRUCTURE.json";
+    private static String LAST_SENT_BUNDLE_STRUCTURE = "/Shared/DB/LAST_SENT_BUNDLE_STRUCTURE.json";
 
     final private Path ROOT_DIR;
 
@@ -53,16 +53,17 @@ class StateManager {
         ROOT_DIR = rootFolder;
         this.dataStoreAdaptor = new DataStoreAdaptor(rootFolder);
         try {
-            File sentBundleDetails = ROOT_DIR.resolve(SENT_BUNDLE_DETAILS).toFile();
+            File sentBundleDetails = new File(ROOT_DIR + SENT_BUNDLE_DETAILS);
+            sentBundleDetails.getParentFile().mkdirs();
             sentBundleDetails.createNewFile();
-
-            File largestADUIdReceived = ROOT_DIR.resolve(LARGEST_ADU_ID_DELIVERED).toFile();
+            File largestADUIdReceived = new File(ROOT_DIR + LARGEST_ADU_ID_DELIVERED);
+            largestADUIdReceived.getParentFile().mkdirs();
             largestADUIdReceived.createNewFile();
-
-            File largestADUIdDelivered = ROOT_DIR.resolve(LARGEST_ADU_ID_RECEIVED).toFile();
+            File largestADUIdDelivered = new File(ROOT_DIR + LARGEST_ADU_ID_RECEIVED);
+            largestADUIdDelivered.getParentFile().mkdirs();
             largestADUIdDelivered.createNewFile();
-
-            File lastSentBundleStructure = ROOT_DIR.resolve(LAST_SENT_BUNDLE_STRUCTURE).toFile();
+            File lastSentBundleStructure = new File(ROOT_DIR + LAST_SENT_BUNDLE_STRUCTURE);
+            lastSentBundleStructure.getParentFile().mkdirs();
             lastSentBundleStructure.createNewFile();
         } catch (IOException e) {
             e.printStackTrace();
@@ -76,7 +77,7 @@ class StateManager {
         Map<String, Long> ret = null;
         try {
             Type mapType = new TypeToken<Map<String, Long>>() {}.getType();
-            ret = gson.fromJson(new FileReader(ROOT_DIR.resolve(LARGEST_ADU_ID_RECEIVED).toFile()), mapType);
+            ret = gson.fromJson(new FileReader(ROOT_DIR + LARGEST_ADU_ID_RECEIVED), mapType);
             if (ret == null) {
                 ret = new HashMap<>();
             }
@@ -93,7 +94,7 @@ class StateManager {
     private void writeLargestADUIdReceivedDetails(Map<String, Long> largestADUIdReceivedDetails) {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         String jsonString = gson.toJson(largestADUIdReceivedDetails);
-        try (FileWriter writer = new FileWriter(ROOT_DIR.resolve(LARGEST_ADU_ID_RECEIVED).toFile())) {
+        try (FileWriter writer = new FileWriter(new File(ROOT_DIR + LARGEST_ADU_ID_RECEIVED))) {
             writer.write(jsonString);
         } catch (IOException e) {
             e.printStackTrace();
@@ -116,7 +117,7 @@ class StateManager {
     private void writeLargestADUIdDeliveredDetails(Map<String, Long> largestADUIdDeliveredDetails) {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         String jsonString = gson.toJson(largestADUIdDeliveredDetails);
-        try (FileWriter writer = new FileWriter(ROOT_DIR.resolve(LARGEST_ADU_ID_DELIVERED).toFile())) {
+        try (FileWriter writer = new FileWriter(new File(ROOT_DIR + LARGEST_ADU_ID_DELIVERED))) {
             writer.write(jsonString);
         } catch (IOException e) {
             e.printStackTrace();
@@ -128,7 +129,7 @@ class StateManager {
         Map<String, Long> ret = new HashMap<>();
         try {
             Type mapType = new TypeToken<Map<String, Long>>() {}.getType();
-            ret = gson.fromJson(new FileReader(ROOT_DIR.resolve(LARGEST_ADU_ID_DELIVERED).toFile()), mapType);
+            ret = gson.fromJson(new FileReader(ROOT_DIR + LARGEST_ADU_ID_DELIVERED), mapType);
             if (ret == null) {
                 ret = new HashMap<>();
             }
@@ -153,7 +154,7 @@ class StateManager {
         Map<String, Map<String, Long>> ret = new HashMap<>();
         try {
             Type mapType = new TypeToken<Map<String, Map<String, Long>>>() {}.getType();
-            ret = gson.fromJson(new FileReader(ROOT_DIR.resolve(SENT_BUNDLE_DETAILS).toFile()), mapType);
+            ret = gson.fromJson(new FileReader(new File(ROOT_DIR + SENT_BUNDLE_DETAILS)), mapType);
             if (ret == null) {
                 ret = new HashMap<>();
             }
@@ -170,7 +171,7 @@ class StateManager {
     private void writeSentBundleDetails(Map<String, Map<String, Long>> sentBundleDetails) {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         String jsonString = gson.toJson(sentBundleDetails);
-        try (FileWriter writer = new FileWriter(ROOT_DIR.resolve(SENT_BUNDLE_DETAILS).toFile())) {
+        try (FileWriter writer = new FileWriter(new File(ROOT_DIR + SENT_BUNDLE_DETAILS))) {
             writer.write(jsonString);
         } catch (IOException e) {
             e.printStackTrace();
@@ -178,7 +179,7 @@ class StateManager {
     }
 
     private void writeLastSentBundleStructure(UncompressedPayload lastSentBundle) {
-        BundleUtils.writeBundleStructureToJson(lastSentBundle, ROOT_DIR.resolve(LAST_SENT_BUNDLE_STRUCTURE).toFile());
+        BundleUtils.writeBundleStructureToJson(lastSentBundle, new File(ROOT_DIR + LAST_SENT_BUNDLE_STRUCTURE));
     }
 
     public void registerSentBundleDetails(UncompressedPayload sentBundle) {
@@ -225,7 +226,7 @@ class StateManager {
     }
 
     public Optional<UncompressedPayload.Builder> getLastSentBundleBuilder() {
-        return BundleUtils.jsonToBundleBuilder(ROOT_DIR.resolve(LAST_SENT_BUNDLE_STRUCTURE).toFile());
+        return BundleUtils.jsonToBundleBuilder(new File(ROOT_DIR + LAST_SENT_BUNDLE_STRUCTURE));
     }
 }
 
@@ -239,7 +240,7 @@ public class ApplicationDataManager {
 
     private Long APP_DATA_SIZE_LIMIT = 1000000000L;
 
-    private static List<String> REGISTER_APP_IDS = List.of("com.example.mysignal", "com.fsck.k9.debug");
+    private static String REGISTERED_APP_IDS = "/Shared/REGISTERED_APP_IDS.txt";
 
     private final Path ROOT_DIR;
 
@@ -249,8 +250,20 @@ public class ApplicationDataManager {
         this.dataStoreAdaptor = new DataStoreAdaptor(rootDir);
     }
 
-    public List<String> getRegisteredAppIds() throws IOException {
-        return REGISTER_APP_IDS;
+    public List<String> getRegisteredAppIds() {
+        List<String> registeredAppIds = new ArrayList<>();
+        try (BufferedReader bufferedReader = new BufferedReader(
+                new FileReader(new File(ROOT_DIR + REGISTERED_APP_IDS)))) {
+            String line = "";
+            while ((line = bufferedReader.readLine()) != null) {
+                String appId = line.trim();
+                logger.log(INFO, "Registered " + appId);
+                registeredAppIds.add(appId);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return registeredAppIds;
     }
 
     public void processAcknowledgement(String bundleId) {
@@ -284,7 +297,7 @@ public class ApplicationDataManager {
         }
     }
 
-    public List<ADU> fetchADUs(long initialSize, String clientId) throws IOException {
+    public List<ADU> fetchADUs(long initialSize, String clientId) {
         long cumulativeSize = initialSize;
         List<ADU> res = new ArrayList<>();
         boolean exceededSize = false;

@@ -87,7 +87,7 @@ class GrpcReceiveTask {
         activity.runOnUiThread(() -> resultText.append("Starting File Receive...\n"));
         try {
             var bundleTransmission = new BundleTransmission(Paths.get(applicationContext.getApplicationInfo().dataDir));
-            bundleRequests = BundleClientActivity.clientWindow.getWindow(
+            bundleRequests = HelloworldActivity.clientWindow.getWindow(
                     bundleTransmission.getBundleSecurity().getClientSecurity());
         } catch (RuntimeException e) {
             logger.log(WARNING, "{BR}: Failed to get Window: " + e);

@@ -8,8 +8,6 @@ import android.util.Log;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 /**
  * An {@link IntentService} subclass for handling asynchronous task requests in
@@ -57,7 +55,7 @@ public class ReceiveIntentService extends IntentService {
         values.put("data", message.getBytes());
         values.put("appName", getApplicationContext().getPackageName());
 
-        FileStoreHelper fileStoreHelper = new FileStoreHelper(Paths.get(getApplicationContext().getApplicationInfo().dataDir));
+        FileStoreHelper fileStoreHelper = new FileStoreHelper(getApplicationContext().getApplicationInfo().dataDir);
         try {
             fileStoreHelper.AddFile("ReceivedData", message.getBytes(StandardCharsets.UTF_8));
         } catch (IOException e) {
