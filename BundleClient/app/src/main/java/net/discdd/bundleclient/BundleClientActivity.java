@@ -42,7 +42,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     // Wifi Direct set up
     private WifiDirectManager wifiDirectManager;
     public static final int PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION = 1001;
-    public static final int PERMISSIONS_REQUEST_CODE_ACCESS_NEARBY_WIFI_DEVICES = 1003;
+    public static final int PERMISSIONS_REQUEST_CODE_ACCESS_NEARBY_WIFI_DEVICES = 1002;
     // gRPC set up
     private Button connectButton;
     private Button exchangeButton;
