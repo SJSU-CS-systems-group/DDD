@@ -11,7 +11,7 @@ import android.os.Build;
 
 import net.discdd.model.ADU;
 import net.discdd.utils.StoreADUs;
-import net.discdd.bundleclient.HelloworldActivity;
+import net.discdd.bundleclient.BundleClientActivity;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -31,8 +31,8 @@ public class DataStoreAdaptor {
     private Context applicationContext;
 
     public DataStoreAdaptor(Path appRootDataDirectory) {
-        sendADUsStorage = new StoreADUs(new File(appRootDataDirectory.toFile(), "send"), true);
-        receiveADUsStorage = new StoreADUs(new File(appRootDataDirectory.toFile(), "receive"), false);
+        sendADUsStorage = new StoreADUs(appRootDataDirectory.resolve("send"), true);
+        receiveADUsStorage = new StoreADUs(appRootDataDirectory.resolve("receive"), false);
     }
 
     private void sendDataToApp(ADU adu) throws IOException {
@@ -43,7 +43,7 @@ public class DataStoreAdaptor {
         byte[] data = Files.readAllBytes(adu.getSource().toPath());
         logger.log(FINE, new String(data) + ", Source:" + adu.getSource());
         intent.putExtra(Intent.EXTRA_TEXT, data);
-        applicationContext = HelloworldActivity.ApplicationContext;
+        applicationContext = BundleClientActivity.ApplicationContext;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             applicationContext.startForegroundService(intent);
         } else {
@@ -69,7 +69,7 @@ public class DataStoreAdaptor {
 
     private ADU fetchADU(String appId, long aduId) {
         try {
-            File file = sendADUsStorage.getADUFile(null, appId, aduId + "");
+            File file = sendADUsStorage.getADUFile(null, appId, String.valueOf(aduId));
             FileInputStream fis = new FileInputStream(file);
             int fileSize = fis.available();
             logger.log(FINER, "Size:" + fileSize);
