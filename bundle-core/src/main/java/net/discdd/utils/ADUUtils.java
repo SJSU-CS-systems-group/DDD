@@ -6,35 +6,45 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 import net.discdd.model.ADU;
+import static java.util.logging.Level.INFO;
+
 
 public class ADUUtils {
 
-    public static void writeADU(ADU adu, File targetDirectory) throws IOException {
+    private static final Logger logger = Logger.getLogger(BundleUtils.class.getName());
+
+    public static void writeADU(ADU adu, Path targetDirectory) throws IOException {
         String aduFileName = adu.getAppId() + "-" + adu.getADUId();
-        var aduFile = new File(targetDirectory, aduFileName);
+        var aduFile = targetDirectory.resolve(aduFileName + ".adu").toFile();
         try (BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(
                 adu.getSource())); BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(
-                new FileOutputStream(aduFile));) {
+                new FileOutputStream(aduFile))) {
             bufferedInputStream.transferTo(bufferedOutputStream);
         }
     }
 
-    public static void writeADUs(List<ADU> adus, File targetDirectory) throws IOException {
+    public static void writeADUs(List<ADU> adus, Path targetDirectory) throws IOException {
         if (adus.isEmpty()) {
             return;
         }
         for (final ADU adu : adus) {
             String appId = adu.getAppId();
-            var appDirectory = new File(targetDirectory, appId);
-            if (!appDirectory.exists()) {
-                appDirectory.mkdirs();
+            var appDirectory = targetDirectory.resolve(appId);
+
+            if (!Files.exists(appDirectory)) {
+                Files.createDirectories(appDirectory);
             }
             writeADU(adu, appDirectory);
         }
+
+        logger.log(INFO, "ADUs written to " + targetDirectory);
     }
 
     public static List<ADU> readADUs(File aduDirectory) {
