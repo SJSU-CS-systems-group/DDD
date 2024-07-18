@@ -42,7 +42,7 @@
     <TextView
         android:id="@+id/wifidirect_response_text"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="74dp"
         android:paddingTop="12dp"
         android:paddingBottom="12dp"
         android:textSize="16sp" />

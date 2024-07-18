@@ -7,7 +7,9 @@ import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
 import android.Manifest;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -15,18 +17,23 @@ import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.storage.StorageManager;
 import android.os.storage.StorageVolume;
+import android.provider.DocumentsContract;
 import android.text.method.ScrollingMovementMethod;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.documentfile.provider.DocumentFile;
 
 import net.discdd.client.bundlerouting.ClientWindow;
 import net.discdd.client.bundlesecurity.BundleSecurity;
@@ -36,6 +43,7 @@ import net.discdd.wifidirect.WifiDirectStateListener;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
@@ -83,10 +91,18 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
 
     private static final String usbDirName = "/DDD_transport";
     public static boolean usbConnected = false;
+    private PendingIntent mPermissionsIntent = null;
+    private UsbManager mUsbManager = null;
+    private static final String ACTION_USB_PERMISSION = "com.android.example.USB_PERMISSION";
+    boolean usbPermission = false;
     BroadcastReceiver mUsbReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
+
+            //UsbManager usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
+            //usbManager.requestPermission(intent);
+
             if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
                 usbExchangeButton.setEnabled(false);
                 usbConnectionText.setText("No USB connection detected\n");
@@ -94,6 +110,10 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
                 usbConnected = false;
                 showUsbDetachedToast();
             } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
+                UsbDevice usbDevice = (UsbDevice) intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+                if (mUsbManager != null && usbDevice != null) {
+                    mUsbManager.requestPermission(usbDevice, mPermissionsIntent);
+                }
                 if (usbDirExists()) {
                     usbExchangeButton.setEnabled(true);
                     usbConnectionText.setText("USB connection detected\n");
@@ -107,6 +127,7 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
                     usbConnected = false;
                     showUsbAttachedToast();
                 }
+                //usbPermission = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false);
             }
         }
     };
@@ -143,6 +164,7 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
         wifiDirectResponseText = findViewById(R.id.wifidirect_response_text);
         usbConnectionText = findViewById(R.id.usbconnection_response_text);
         resultText.setMovementMethod(new ScrollingMovementMethod());
+        wifiDirectResponseText.setMovementMethod(new ScrollingMovementMethod());
 
         // set up wifi direct
         wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle(), this,
@@ -181,11 +203,15 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
             exchangeMessage();
         });
 
+        mUsbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
+        mPermissionsIntent = PendingIntent.getBroadcast(this, 0, new Intent(ACTION_USB_PERMISSION), PendingIntent.FLAG_IMMUTABLE);
         //Registers USB receiver for device attachment and detachment
         IntentFilter filter = new IntentFilter();
+        //IntentFilter permFilter = new IntentFilter(ACTION_USB_PERMISSION);
         filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
         filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
-        registerReceiver(mUsbReceiver, filter);
+        //registerReceiver(permReceiver, permFilter);
+        registerReceiver(mUsbReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
         checkUsbConnection();//used to check if usb connected before app has been started.
     }
 
@@ -311,27 +337,31 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
      * Checks if the /DDD_transport root directory exists in the connected usb fob.
      */
     private boolean usbDirExists() {
-        // UsbDevice usbDevice = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
-        // String usbDevicePath = usbDevice.getDeviceName();
+         //UsbDevice usbDevice = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+         //String usbDevicePath = usbDevice.getDeviceName();
         //"/mnt/media/[uuid](getSerialNumber()?)/DDD_transport
         StorageManager storageManager = (StorageManager) getSystemService(STORAGE_SERVICE);
-//        File usbStorage = storageManager.getSpecialFolder(StorageManager.SPECIAL_FOLDER_USB_STORAGE);
-
         List<StorageVolume> storageVolumeList = storageManager.getStorageVolumes();
-        resultText.append("Checkpoint 1");
+        resultText.append("Checkpoint 1\n");
         for(StorageVolume storageVolume: storageVolumeList) {
-            resultText.append("checkpoint 2");
+            resultText.append("checkpoint 2\n");
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                resultText.append("checkpoint 3");
-                File fileUsb = new File(storageVolume.getDirectory().getAbsolutePath() + usbDirName);
+                resultText.append("checkpoint 3\n");
+                boolean isRemovable = storageVolume.isRemovable();
+                String state = storageVolume.getState();
+                resultText.append("StorageVolume: " + storageVolume.getDescription(this) + "\n");
+                resultText.append("Is Removable: " + isRemovable + "\n");
+                resultText.append("State: " + state + "\n");
+                resultText.append("..." + storageVolumeList.size() + "\n");
+                File fileUsb = new File(storageVolume.getDirectory().getPath() + usbDirName);
                 resultText.append(fileUsb.toString());
                 //our next if statement is not passing
-                if(storageVolume.isRemovable() && storageVolume.getState().equals((Environment.MEDIA_MOUNTED))) {
-                    resultText.append("checkpoint 4");
+                if(storageVolume.isRemovable() || storageVolume.getState().equals((Environment.MEDIA_MOUNTED))) {
+                    resultText.append("checkpoint 4\n");
                     //File fileUsb = new File(storageVolume.getDirectory().getPath() + usbDirName); // returns /storage/emulated/0/DDD_transport
                     resultText.append(fileUsb.toString());
                     if(fileUsb.exists()) {
-                        resultText.append("checkpoint 5");
+                        resultText.append("checkpoint 5\n");
                         usbConnectionText.setText("File exists: " + fileUsb.toString() + "\n");
                         return true;
                     }
@@ -350,8 +380,8 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
      */
     private void checkUsbConnection() {
         UsbManager usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
-        HashMap<String, UsbDevice> deviceList = usbManager.getDeviceList();
-        if (!deviceList.isEmpty()) {
+        //HashMap<String, UsbDevice> deviceList = usbManager.getDeviceList();
+        if (!usbManager.getDeviceList().isEmpty()) {
             //resultText.append(usbDevice.getDeviceName());
             if (usbDirExists()) {
                 usbConnected = true;
@@ -368,9 +398,26 @@ public class HelloworldActivity extends AppCompatActivity implements WifiDirectS
             }
         } else {
             usbExchangeButton.setEnabled(false);
-            usbConnectionText.setText("Usb device not connected\n");
+            usbConnectionText.setText("No USB connection detected\n");
             usbConnectionText.setTextColor(Color.RED);
         }
+
+//        public void openDirectory(Uri uriToLoad) {
+//            // Choose a directory using the system's file picker.
+//            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+//
+//            // Optionally, specify a URI for the directory that should be opened in
+//            // the system file picker when it loads.
+//            intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, uriToLoad);
+//
+//            startActivityForResult(intent, 1005);
+//        }
+
+//        private void requestUsbPermission(UsbDevice device) {
+//            mUsbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
+//            mPermissionsIntent = PendingIntent.getBroadcast(this, 0, new Intent(ACTION_USB_PERMISSION), PendingIntent.FLAG_IMMUTABLE);
+//            usbManager.requestPermission(device, mPermissionsIntent);
+//        }
     }
 }
 
