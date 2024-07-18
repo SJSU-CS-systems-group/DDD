@@ -1,6 +1,5 @@
 package net.discdd.bundleclient;
 
-import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
@@ -15,15 +14,24 @@ import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkInfo;
+import android.net.NetworkRequest;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.text.method.ScrollingMovementMethod;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import net.discdd.bundlerouting.service.ServerManager;
 import net.discdd.client.bundlerouting.ClientWindow;
 import net.discdd.client.bundlesecurity.BundleSecurity;
 import net.discdd.client.bundletransmission.BundleTransmission;
@@ -55,6 +63,16 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     private TextView wifiDirectResponseText;
     private TextView usbConnectionText;
     private static String RECEIVE_PATH = "Shared/received-bundles";
+
+    private String serverDomain;
+    private String serverPort;
+    private EditText domainInput;
+    private EditText portInput;
+    private Button connectServerBtn;
+    private ConnectivityManager connectivityManager;
+    private ConnectivityManager.NetworkCallback serverConnectNetworkCallback;
+
+
     //  private BundleDeliveryAgent agent;
     // context
     public static Context ApplicationContext;
@@ -137,7 +155,9 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         wifiDirectResponseText = findViewById(R.id.wifidirect_response_text);
         usbConnectionText = findViewById(R.id.usbconnection_response_text);
         resultText.setMovementMethod(new ScrollingMovementMethod());
-
+        domainInput = findViewById(R.id.domain_input);
+        portInput = findViewById(R.id.port_input);
+        connectServerBtn = findViewById(R.id.btn_connect_bundle_server);
         // set up wifi direct
         wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle(), this,
                                                   this.getString(R.string.tansport_host));
@@ -175,6 +195,49 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
             exchangeMessage();
         });
 
+        domainInput.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (s.length() > 0 && portInput.getText().toString().length() > 0) {
+                    connectServerBtn.setEnabled(true);
+                } else {
+                    connectServerBtn.setEnabled(false);
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+
+            }
+        });
+
+        portInput.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (s.length() > 0 && domainInput.getText().toString().length() > 0) {
+                    connectServerBtn.setEnabled(true);
+                } else {
+                    connectServerBtn.setEnabled(false);
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+
+            }
+        });
+
+        // register network listeners
+        createAndRegisterConnectivityManager();
+
         //Registers USB receiver for device attachment and detachment
         IntentFilter filter = new IntentFilter();
         filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
@@ -186,7 +249,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     public void exchangeMessage() {
         // connect to transport
         exchangeButton.setEnabled(false);
-        //Log.d(TAG, "connection complete");
         logger.log(INFO, "connection complete");
         new GrpcReceiveTask(this).executeInBackground("192.168.49.1", "7777");
         //changed from execute to executeInBackground
@@ -337,6 +399,64 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
             usbExchangeButton.setEnabled(false);
             usbConnectionText.setText("Usb device not connected\n");
             usbConnectionText.setTextColor(Color.RED);
+        }
+    }
+
+
+    private void createAndRegisterConnectivityManager() {
+        connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkRequest networkRequest =
+                new NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                        .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR).build();
+
+        serverConnectNetworkCallback = new ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onAvailable(Network network) {
+                logger.log(INFO, "Available network: " + network.toString());
+                logger.log(INFO, "Initiating automatic connection to server");
+                connectToServer();
+            }
+
+            @Override
+            public void onLost(Network network) {
+                logger.log(WARNING, "Lost network connectivity");
+                connectServerBtn.setEnabled(false);
+            }
+
+            @Override
+            public void onUnavailable() {
+                logger.log(WARNING, "Unavailable network connectivity");
+                connectServerBtn.setEnabled(false);
+            }
+
+            @Override
+            public void onBlockedStatusChanged(Network network, boolean blocked) {
+                logger.log(WARNING, "Blocked network connectivity");
+                connectServerBtn.setEnabled(false);
+
+            }
+        };
+
+        connectivityManager.registerNetworkCallback(networkRequest, serverConnectNetworkCallback);
+
+        NetworkInfo activeNetwork = connectivityManager.getActiveNetworkInfo();
+        if (activeNetwork == null || !activeNetwork.isConnectedOrConnecting()) {
+            connectServerBtn.setEnabled(false);
+        }
+    }
+
+    private void connectToServer() {
+
+        serverDomain = domainInput.getText().toString();
+        serverPort = portInput.getText().toString();
+        if (!serverDomain.isEmpty() && !serverPort.isEmpty()) {
+            logger.log(INFO, "Sending to " + serverDomain + ":" + serverPort);
+
+            new GrpcReceiveTask(this).executeInBackground(serverDomain, serverPort);
+
+        } else {
+            Toast.makeText(BundleClientActivity.this, "Enter the domain and port", Toast.LENGTH_SHORT).show();
         }
     }
 }

@@ -46,12 +46,12 @@ class GrpcSendTask {
         this.applicationContext = activity.getApplicationContext();
     }
 
-    public void executeInBackground(String port, String host) {
+    public void executeInBackground(String host, String port) {
         executor.execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    inBackground(port, host);
+                    inBackground(host, port);
                 } catch (Exception e) {
                     // Handle any exceptions
                     logger.log(WARNING, "executeInBackground failed");

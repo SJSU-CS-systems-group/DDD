@@ -47,6 +47,41 @@
         android:paddingBottom="12dp"
         android:textSize="16sp" />
 
+    <EditText
+        android:id="@+id/domain_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="BundleServer Domain"
+        android:textAlignment="center"
+        android:padding="10dp"
+        android:layout_marginTop="10dp"
+        />
+
+    <EditText
+        android:id="@+id/port_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="BundleServer Port"
+        android:textAlignment="center"
+        android:padding="10dp"
+        android:layout_marginTop="10dp"
+        android:inputType="number"
+        />
+
+    <Button
+        android:id="@+id/save_domain_port"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Save Domain and Port"
+        />
+
+    <Button
+        android:id="@+id/btn_connect_bundle_server"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="connect to bundle server"
+        android:layout_marginTop="10dp"/>
+
     <Button
         android:id="@+id/exchange_button"
         android:layout_width="match_parent"

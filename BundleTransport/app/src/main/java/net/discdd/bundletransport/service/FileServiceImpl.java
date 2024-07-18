@@ -1,8 +1,8 @@
 package net.discdd.bundletransport.service;
 
 import android.content.Context;
-import android.os.Build;
 
+import net.discdd.bundlerouting.BundleSender;
 import net.discdd.bundletransport.MainActivity;
 
 import com.google.protobuf.ByteString;
@@ -34,20 +34,12 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
     public FileServiceImpl(Context context) {
         this.context = context;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            this.SERVER_BASE_PATH = Paths.get(context.getExternalFilesDir(null) + "/BundleTransmission");
-        }
-        File toServer = null;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            toServer = new File(String.valueOf(SERVER_BASE_PATH.resolve("server")));
-            toServer.mkdirs();
-        }
+        this.SERVER_BASE_PATH = Paths.get(context.getExternalFilesDir(null) + "/BundleTransmission");
+        File toServer = new File(String.valueOf(SERVER_BASE_PATH.resolve("server")));
+        toServer.mkdirs();
 
-        File toClient = null;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            toClient = new File(String.valueOf(SERVER_BASE_PATH.resolve("client")));
-            toClient.mkdirs();
-        }
+        File toClient = new File(String.valueOf(SERVER_BASE_PATH.resolve("client")));
+        toClient.mkdirs();
     }
 
     @Override
@@ -91,11 +83,8 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
     private OutputStream getFilePath(FileUploadRequest request) throws IOException {
         String fileName = request.getMetadata().getName() + "." + request.getMetadata().getType();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            return Files.newOutputStream(SERVER_BASE_PATH.resolve("server").resolve(fileName),
+        return Files.newOutputStream(SERVER_BASE_PATH.resolve("server").resolve(fileName),
                                          StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-        }
-        return null;
     }
 
     private void writeFile(OutputStream writer, ByteString content) throws IOException {
@@ -113,13 +102,8 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
     @Override
     public void downloadFile(ReqFilePath request, StreamObserver<Bytes> responseObserver) {
-        String requestedPath = null;
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            requestedPath = String.valueOf(SERVER_BASE_PATH.resolve("client").resolve(request.getValue()));
-//            requestedPath = String.valueOf(SERVER_BASE_PATH.resolve("client").resolve("payload.zip"));
-        }
+        String requestedPath = String.valueOf(SERVER_BASE_PATH.resolve("client").resolve(request.getValue()));
         logger.log(FINE, "Downloading " + requestedPath);
-        assert requestedPath != null;
         File file = new File(requestedPath);
         InputStream in;
         try {
@@ -131,7 +115,7 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
         StreamHandler handler = new StreamHandler(in);
         Exception ex = handler.handle(bytes -> {
             responseObserver.onNext(
-                    Bytes.newBuilder().setValue(bytes).setTransportId(MainActivity.transportID).build());
+                    Bytes.newBuilder().setValue(bytes).setSenderId(MainActivity.transportID).setSender(BundleSender.Transport.name()).build());
         });
         if (ex != null) ex.printStackTrace();
 
