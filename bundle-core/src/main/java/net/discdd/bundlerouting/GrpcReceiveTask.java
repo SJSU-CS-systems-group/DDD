@@ -18,8 +18,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-import static java.util.logging.Level.*;
+import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.WARNING;
 
 public class GrpcReceiveTask {
     private static final Logger logger = Logger.getLogger(GrpcReceiveTask.class.getName());

@@ -32,15 +32,15 @@ public class FileUtils {
         createFileWithDefaultIfNeeded(path, new byte[0]);
     }
 
-    public static OutputStream getFilePath(BundleDownloadResponse response, String Receive_Directory) throws IOException {
+    public static OutputStream getFilePath(BundleDownloadResponse response, String receive_Directory) throws IOException {
         String fileName = response.getMetadata().getBid();
-        File directoryReceive = new File(Receive_Directory + File.separator + response.getMetadata().getTransportId());
+        File directoryReceive = new File(receive_Directory + File.separator + response.getMetadata().getTransportId());
         if (!directoryReceive.exists()) {
             directoryReceive.mkdirs();
         }
 
         return Files.newOutputStream(Paths.get(
-                Receive_Directory + File.separator + response.getMetadata().getTransportId() + File.separator +
+                receive_Directory + File.separator + response.getMetadata().getTransportId() + File.separator +
                         fileName), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
     }
 
