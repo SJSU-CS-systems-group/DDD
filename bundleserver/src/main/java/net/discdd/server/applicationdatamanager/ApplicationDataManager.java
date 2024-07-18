@@ -18,13 +18,11 @@ import net.discdd.server.repository.entity.SentAduDetails;
 import net.discdd.server.repository.entity.SentBundleDetails;
 import net.discdd.utils.BundleUtils;
 import net.discdd.utils.StoreADUs;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -46,8 +44,6 @@ public class ApplicationDataManager {
 
     private final BundleServerConfig bundleServerConfig;
 
-    @Value("${bundle-server.bundle-store-root}")
-    private Path rootDataDir;
 
     AduDeliveredListener aduDeliveredListener;
 
@@ -67,7 +63,7 @@ public class ApplicationDataManager {
     private StoreADUs receiveADUsStorage;
     private StoreADUs sendADUsStorage;
 
-    public ApplicationDataManager(@Value("${bundle-server.bundle-store-root}") Path rootDataDir,
+    public ApplicationDataManager(AduStores aduStores,
                                   AduDeliveredListener aduDeliveredListener,
                                   LargestAduIdReceivedRepository largestAduIdReceivedRepository,
                                   LargestAduIdDeliveredRepository largestAduIdDeliveredRepository,
@@ -77,7 +73,6 @@ public class ApplicationDataManager {
                                   SentAduDetailsRepository sentAduDetailsRepository,
                                   RegisteredAppAdapterRepository registeredAppAdapterRepository,
                                   BundleServerConfig bundleServerConfig) {
-        this.rootDataDir = rootDataDir;
         this.aduDeliveredListener = aduDeliveredListener;
         this.largestAduIdReceivedRepository = largestAduIdReceivedRepository;
         this.largestAduIdDeliveredRepository = largestAduIdDeliveredRepository;
@@ -87,8 +82,8 @@ public class ApplicationDataManager {
         this.sentAduDetailsRepository = sentAduDetailsRepository;
         this.bundleServerConfig = bundleServerConfig;
         this.registeredAppAdapterRepository = registeredAppAdapterRepository;
-        this.sendADUsStorage = new StoreADUs(rootDataDir.resolve("send"), true);
-        this.receiveADUsStorage = new StoreADUs(rootDataDir.resolve("receive"), false);
+        this.sendADUsStorage = aduStores.getSendADUsStorage();
+        this.receiveADUsStorage = aduStores.getReceiveADUsStorage();
     }
 
     public List<String> getRegisteredAppIds() {
