@@ -22,7 +22,6 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.storage.StorageManager;
 import android.os.storage.StorageVolume;
-import android.provider.DocumentsContract;
 import android.text.method.ScrollingMovementMethod;
 import android.widget.Button;
 import android.widget.TextView;
@@ -33,7 +32,6 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import androidx.documentfile.provider.DocumentFile;
 
 import net.discdd.client.bundlerouting.ClientWindow;
 import net.discdd.client.bundlesecurity.BundleSecurity;
@@ -404,23 +402,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
             usbConnectionText.setText("No USB connection detected\n");
             usbConnectionText.setTextColor(Color.RED);
         }
-
-//        public void openDirectory(Uri uriToLoad) {
-//            // Choose a directory using the system's file picker.
-//            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-//
-//            // Optionally, specify a URI for the directory that should be opened in
-//            // the system file picker when it loads.
-//            intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, uriToLoad);
-//
-//            startActivityForResult(intent, 1005);
-//        }
-
-//        private void requestUsbPermission(UsbDevice device) {
-//            mUsbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
-//            mPermissionsIntent = PendingIntent.getBroadcast(this, 0, new Intent(ACTION_USB_PERMISSION), PendingIntent.FLAG_IMMUTABLE);
-//            usbManager.requestPermission(device, mPermissionsIntent);
-//        }
     }
 }
 
