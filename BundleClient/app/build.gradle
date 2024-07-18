@@ -45,7 +45,6 @@ android {
         disable 'GoogleAppIndexingWarning', 'HardcodedText', 'InvalidPackage'
         textOutput file('stdout')
         textReport true
-        textOutput "stdout"
     }
 
     namespace 'net.discdd.bundleclient'
