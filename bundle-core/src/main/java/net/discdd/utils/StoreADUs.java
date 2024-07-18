@@ -1,9 +1,8 @@
 package net.discdd.utils;
 
-import com.google.protobuf.MapEntry;
+import com.google.gson.Gson;
 import net.discdd.model.ADU;
 import net.discdd.model.Metadata;
-import com.google.gson.Gson;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -17,12 +16,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
-import static java.util.logging.Level.*;
+import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 public class StoreADUs {
     public Path rootFolder;
@@ -96,13 +96,19 @@ public class StoreADUs {
 
     public record ClientApp(String clientId, String appId) {}
     public Stream<ClientApp> getAllClientApps() {
-        return Stream.of(rootFolder.toFile().listFiles())
-                .filter(File::isDirectory)
-                .map(File::getName)
-                .flatMap(clientId -> Stream.of(rootFolder.resolve(clientId).toFile().listFiles())
-                        .filter(File::isDirectory)
-                        .map(File::getName)
-                        .map(appId -> new ClientApp(clientId, appId)));
+        try (var topPaths = Files.list(rootFolder)){
+            return topPaths.filter(p -> p.toFile().isDirectory()).flatMap(clientIdPath -> {
+                try (var bottomPaths = Files.list(clientIdPath)) {
+                    return bottomPaths.map(Path::toFile).filter(File::isDirectory).map(File::getName)
+                            .map(appId -> new ClientApp(clientIdPath.toFile().getName(), appId));
+                } catch (IOException e) {
+                    return Stream.empty();
+                }
+            });
+        } catch (IOException e) {
+            logger.log(WARNING, "Nothing found in rootFolder: " + rootFolder);
+            return Stream.empty();
+        }
     }
 
     public List<byte[]> getAllAppData(String appId) throws IOException {
