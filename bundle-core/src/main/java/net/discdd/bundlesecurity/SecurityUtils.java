@@ -87,9 +87,13 @@ public class SecurityUtils {
     }
 
     public static void createEncodedPublicKeyFile(ECPublicKey publicKey, Path path) throws IOException {
-        Files.write(path, (PUB_KEY_HEADER + "\n" + Base64.getUrlEncoder().encodeToString(publicKey.serialize()) + "\n" +
-                PUB_KEY_FOOTER).getBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        Files.write(path, createEncodedPublicKeyBytes(publicKey), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
+    }
+
+    private static byte[] createEncodedPublicKeyBytes(ECPublicKey publicKey) {
+        return (PUB_KEY_HEADER + "\n" + Base64.getUrlEncoder().encodeToString(publicKey.serialize()) + "\n" +
+                PUB_KEY_FOOTER).getBytes();
     }
 
     public static byte[] decodePublicKeyfromFile(Path path) throws IOException, InvalidKeyException {

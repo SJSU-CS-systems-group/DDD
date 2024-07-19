@@ -13,6 +13,7 @@ import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
 import net.discdd.model.UncompressedPayload;
 import net.discdd.utils.BundleUtils;
+import net.discdd.utils.DDDJarFileCreator;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -29,13 +30,17 @@ import org.whispersystems.libsignal.ratchet.AliceSignalProtocolParameters;
 import org.whispersystems.libsignal.ratchet.RatchetingSession;
 import org.whispersystems.libsignal.state.SessionRecord;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.List;
+import java.util.jar.JarFile;
 import java.util.logging.Logger;
 
 import static net.discdd.bundlesecurity.DDDPEMEncoder.ECPrivateKeyType;
@@ -84,29 +89,31 @@ public class ADUEnd2EndTest {
 
     @Test
     void test2UploadBundle(@TempDir Path bundleDir) throws NoSuchAlgorithmException, IOException, InvalidKeyException {
-        ECKeyPair indentityPubKeyPair = Curve.generateKeyPair();
-        IdentityKeyPair identityKeyPair = new IdentityKeyPair(new IdentityKey(indentityPubKeyPair.getPublicKey()), indentityPubKeyPair.getPrivateKey());
+        ByteArrayOutputStream payload = new ByteArrayOutputStream();
+        DDDJarFileCreator innerJar = new DDDJarFileCreator(payload);
+
+        // create the keypairs for the client
+        ECKeyPair identityPubKeyPair = Curve.generateKeyPair();
+        IdentityKeyPair identityKeyPair = new IdentityKeyPair(new IdentityKey(identityPubKeyPair.getPublicKey()), identityPubKeyPair.getPrivateKey());
         ECKeyPair baseKeyPair = Curve.generateKeyPair();
-
-        Acknowledgement ackRecord = new Acknowledgement("HB");
-        List<ADU> adus = List.of();
         String clientId = SecurityUtils.generateID(identityKeyPair.getPublicKey().getPublicKey().serialize());
-        String bundleId = BundleIDGenerator.generateBundleID(clientId, 1, BundleIDGenerator.UPSTREAM);
-        File bundleFile = bundleDir.resolve(bundleId).toFile();
-        UncompressedPayload uncompressedPayload =
-                new UncompressedPayload(bundleId, ackRecord, adus, bundleFile);
-        BundleUtils.writeUncompressedPayload(uncompressedPayload, bundleDir.toFile(), "inner-jar");
 
-        Path compressPayload = bundleDir;
-        Payload payload = BundleUtils.compressPayload(uncompressedPayload, compressPayload);
 
-        Path innerStagingDir = bundleDir.resolve("inner-staging");
-        Path innerPayloadDir = innerStagingDir.resolve(PAYLOAD_DIR);
-        Path innerSignatureDir = innerStagingDir.resolve(SIGNATURE_DIR);
-        innerStagingDir.toFile().mkdirs();
+        // add the records to the inner jar
+        Acknowledgement ackRecord = new Acknowledgement("HB");
+        innerJar.createEntry("/acknowledgement.txt").write(ackRecord.toString().getBytes());
+        innerJar.createEntry("/routing.metadata").write("{}".getBytes());
+        innerJar.close();
 
-        String payloadSignature = Base64.getUrlEncoder().encodeToString(Curve.calculateSignature(identityKeyPair.getPrivateKey(), Files.readAllBytes(compressPayload)));
-        Files.writeString(innerSignatureDir.resolve(PAYLOAD_FILENAME + 1 + SIGNATURE_FILENAME), payloadSignature);
+        // create the signed outer jar
+        DDDJarFileCreator outerJar = new DDDJarFileCreator(Files.newOutputStream(bundleDir.resolve("outer-jar.jar")));
+        byte[] payloadBytes = payload.toByteArray();
+
+        // now sign the payload
+        String payloadSignature = Base64.getUrlEncoder().encodeToString(Curve.calculateSignature(identityKeyPair.getPrivateKey(),payloadBytes));
+        outerJar.createEntry(Path.of(PAYLOAD_DIR, PAYLOAD_FILENAME + i + SIGNATURE_FILENAME)).write(payloadSignature.getBytes());
+
+        // encrypt the payload
         SessionRecord sessionRecord = new SessionRecord();
         SignalProtocolAddress address = new SignalProtocolAddress(clientId, 1);
         var sessionStore = SecurityUtils.createInMemorySignalProtocolStore();
@@ -120,11 +127,16 @@ public class ADUEnd2EndTest {
                 .setTheirIdentityKey(serverIdentity.getPublicKey())
                 .create();
         RatchetingSession.initializeSession(sessionRecord.getSessionState(), parameters);
-        CiphertextMessage cipherTextMessage = sessionCipher.encrypt(Files.readAllBytes(compressPayload));
+        CiphertextMessage cipherTextMessage = sessionCipher.encrypt(payloadBytes);
         var cipherTextBytes = cipherTextMessage.serialize();
-        Files.write(innerPayloadDir.resolve(PAYLOAD_FILENAME + 1), cipherTextBytes);
-        Files.write(innerStagingDir.resolve(SecurityUtils.BUNDLEID_FILENAME), bundleId.getBytes());
 
+        // store the encrypted payload
+        outerJar.createEntry(Path.of(PAYLOAD_DIR, PAYLOAD_FILENAME + 1 + SIGNATURE_FILENAME)).write(cipherTextBytes);
+        // store the bundleId
+        outerJar.createEntry(SecurityUtils.BUNDLEID_FILENAME).write(bundleId.getBytes());
+
+        // store the keys
+        outerJar.createEntry(SecurityUtils.CLIENT_IDENTITY_KEY).write(identityKeyPair.serialize());
         Path clientIdentityKeyPath = innerStagingDir.resolve(SecurityUtils.CLIENT_IDENTITY_KEY);
         Path clientBaseKeyPath = innerStagingDir.resolve(SecurityUtils.CLIENT_BASE_KEY);
         Path serverIdentityKeyPath = innerStagingDir.resolve(SecurityUtils.SERVER_IDENTITY_KEY);
