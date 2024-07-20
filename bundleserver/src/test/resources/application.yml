@@ -1,8 +1,8 @@
 grpc:
   server:
-    port: 8080
+    port: 8780
 server:
-  port: 8081
+  port: 8781
 bundle-server:
   #  bundle-store-root: <add directory path containing key files in external properties file>
   bundle-store-shared: "${bundle-server.bundle-store-root}Shared"

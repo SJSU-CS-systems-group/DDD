@@ -175,7 +175,7 @@ public class BundleTransmission {
                     this.processReceivedBundle(transportId, bundle);
                 } catch (Exception e) {
                     logger.log(SEVERE, "[BundleTransmission] Failed to process received bundle from transportId: " +
-                            transportId + ", error: " + e.getMessage());
+                            transportId, e);
                 } finally {
                     try {
                         FileUtils.delete(bundleFile);

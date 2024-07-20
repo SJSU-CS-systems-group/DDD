@@ -2,7 +2,6 @@ package net.discdd.utils;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
@@ -15,7 +14,7 @@ import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 
 public class DDDJarFileCreator {
-    private static final Object SHA256_ATTRIBUTE_NAME = ;
+    private static final String SHA256_ATTRIBUTE_NAME = "SHA-256-Digest";
     final private JarOutputStream jarOutputStream;
     final private Manifest manifest = new Manifest();
     final private HashMap<String, MessageDigest> digestOutputStreams = new HashMap<>();
@@ -32,6 +31,7 @@ public class DDDJarFileCreator {
         return digestOutputStream;
     }
 
+    @SuppressWarnings("resource")
     public OutputStream createEntry(Path path) throws IOException, NoSuchAlgorithmException {
         return createEntry(path.toString());
     }
@@ -42,9 +42,11 @@ public class DDDJarFileCreator {
             var digest = entry.getValue();
             var name = entry.getKey();
             var attributes = new Attributes();
-            attributes.put(SHA256_ATTRIBUTE_NAME, Base64.getEncoder().encodeToString(digest.digest()));
+            attributes.putValue(SHA256_ATTRIBUTE_NAME, Base64.getEncoder().encodeToString(digest.digest()));
             manifest.getEntries().put(name, attributes);
         }
+        jarOutputStream.putNextEntry(new JarEntry("META-INF/MANIFEST.MF"));
+        manifest.write(jarOutputStream);
         jarOutputStream.close();
     }
 }
