@@ -94,7 +94,7 @@ public class BundleTransmission {
         var largestBundleId = this.applicationDataManager.getLargestRecvdBundleId(clientId);
 
         if (largestBundleId != null &&
-                (this.bundleSecurity.isNewerBundle(uncompressedBundle.getSource().toPath(), largestBundleId) >= 0)) {
+                (this.bundleSecurity.isNewerBundle(uncompressedBundle.getSource().toPath(), largestBundleId) < 0)) {
             logger.log(WARNING,
                        "[BundleTransmission] Skipping bundle " + bundle.getSource().getName() + " as it is outdated");
             return;

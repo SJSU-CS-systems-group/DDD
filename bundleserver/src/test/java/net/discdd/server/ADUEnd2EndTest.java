@@ -12,15 +12,14 @@ import net.discdd.bundletransport.service.BundleUploadRequest;
 import net.discdd.bundletransport.service.BundleUploadResponse;
 import net.discdd.bundletransport.service.Status;
 import net.discdd.model.Acknowledgement;
-import net.discdd.server.repository.RegisteredAppAdapterRepository;
-import net.discdd.server.repository.entity.RegisteredAppAdapter;
 import net.discdd.utils.Constants;
 import net.discdd.utils.DDDJarFileCreator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.io.TempDir;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.whispersystems.libsignal.IdentityKey;
@@ -36,18 +35,24 @@ import org.whispersystems.libsignal.ratchet.RatchetingSession;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.impl.InMemorySignalProtocolStore;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 
 import static java.util.Objects.requireNonNull;
@@ -60,6 +65,7 @@ import static net.discdd.bundlesecurity.SecurityUtils.SIGNATURE_FILENAME;
 import static net.discdd.bundlesecurity.SecurityUtils.createEncodedPublicKeyBytes;
 
 @SpringBootTest
+@TestMethodOrder(MethodOrderer.MethodName.class)
 public class ADUEnd2EndTest {
     private static final Logger logger = Logger.getLogger(ADUEnd2EndTest.class.getName());
     private static final String testAppId = "testAppId";
@@ -68,15 +74,12 @@ public class ADUEnd2EndTest {
     private static IdentityKeyPair serverIdentity;
     private static String clientId;
     private static ECKeyPair baseKeyPair;
-    private static IdentityKeyPair identityKeyPair;
     private static SessionCipher clientSessionCipher;
+    private static IdentityKeyPair clientIdentity;
     @Value("${grpc.server.port}")
     private int grpcPort;
-
-    ADUEnd2EndTest(@Autowired RegisteredAppAdapterRepository registeredAppAdapterRepository) {
-        registeredAppAdapterRepository.save(new RegisteredAppAdapter(testAppId, "localhost:6666"));
-        System.out.println("**** registering " + testAppId);
-    }
+    // we don't really need the atomicity part, but we need a way to pass around a mutable long
+    private final static AtomicLong currentTestAppAduId = new AtomicLong(1);
 
     @BeforeAll
     static void setup() throws IOException, NoSuchAlgorithmException, InvalidKeyException {
@@ -103,18 +106,18 @@ public class ADUEnd2EndTest {
 
         // set up the client keys
         // create the keypairs for the client
-        ECKeyPair identityPubKeyPair = Curve.generateKeyPair();
-        identityKeyPair = new IdentityKeyPair(new IdentityKey(identityPubKeyPair.getPublicKey()),
-                                              identityPubKeyPair.getPrivateKey());
+        var clientIdentityPubKeyPair = Curve.generateKeyPair();
+        clientIdentity = new IdentityKeyPair(new IdentityKey(clientIdentityPubKeyPair.getPublicKey()),
+                                             clientIdentityPubKeyPair.getPrivateKey());
         baseKeyPair = Curve.generateKeyPair();
-        clientId = SecurityUtils.generateID(identityKeyPair.getPublicKey().getPublicKey().serialize());
+        clientId = SecurityUtils.generateID(clientIdentity.getPublicKey().getPublicKey().serialize());
 
         SessionRecord sessionRecord = new SessionRecord();
         SignalProtocolAddress address = new SignalProtocolAddress(clientId, 1);
         InMemorySignalProtocolStore clientSessionStore = SecurityUtils.createInMemorySignalProtocolStore();
 
         AliceSignalProtocolParameters aliceSignalProtocolParameters =
-                AliceSignalProtocolParameters.newBuilder().setOurBaseKey(baseKeyPair).setOurIdentityKey(identityKeyPair)
+                AliceSignalProtocolParameters.newBuilder().setOurBaseKey(baseKeyPair).setOurIdentityKey(clientIdentity)
                         .setTheirOneTimePreKey(org.whispersystems.libsignal.util.guava.Optional.absent())
                         .setTheirRatchetKey(serverRatchetKey.getPublicKey())
                         .setTheirSignedPreKey(serverSignedPreKey.getPublicKey())
@@ -125,9 +128,21 @@ public class ADUEnd2EndTest {
 
     }
 
-    private static long createBundleForAdus(List<String> adus, long currentAduId, String bundleId,
-                                            Path bundleJarPath) throws IOException, NoSuchAlgorithmException,
-            InvalidKeyException {
+    private static String encryptBundleID(String bundleID) throws InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeySpecException, BadPaddingException, java.security.InvalidKeyException {
+        byte[] agreement =
+                Curve.calculateAgreement(serverIdentity.getPublicKey().getPublicKey(), clientIdentity.getPrivateKey());
+
+        String secretKey = Base64.getUrlEncoder().encodeToString(agreement);
+
+        return SecurityUtils.encryptAesCbcPkcs5(secretKey, bundleID);
+
+    }
+
+    private static Path createBundleForAdus(List<String> adus, AtomicLong currentAduId, String clientId, int bundleCount, Path targetDir) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, InvalidKeySpecException, BadPaddingException, java.security.InvalidKeyException {
+        String bundleId = BundleIDGenerator.generateBundleID(clientId, bundleCount, BundleIDGenerator.UPSTREAM);
+        String encryptedBundleID = encryptBundleID(bundleId);
+        Path bundleJarPath = targetDir.resolve(encryptedBundleID + ".bundle");
+
         ByteArrayOutputStream payload = new ByteArrayOutputStream();
         DDDJarFileCreator innerJar = new DDDJarFileCreator(payload);
 
@@ -145,9 +160,9 @@ public class ADUEnd2EndTest {
 
         for (String adu : adus) {
             innerJar.createEntry(
-                    Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, testAppId, testAppId + "-" + currentAduId + ".adu"),
+                    Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, testAppId, testAppId + "-" + currentAduId),
                     adu.getBytes());
-            currentAduId++;
+            currentAduId.incrementAndGet();
         }
         innerJar.close();
 
@@ -157,7 +172,7 @@ public class ADUEnd2EndTest {
 
         // now sign the payload
         String payloadSignature = Base64.getUrlEncoder()
-                .encodeToString(Curve.calculateSignature(identityKeyPair.getPrivateKey(), payloadBytes));
+                .encodeToString(Curve.calculateSignature(clientIdentity.getPrivateKey(), payloadBytes));
         outerJar.createEntry(Path.of(SIGNATURE_DIR, PAYLOAD_FILENAME + 1 + SIGNATURE_FILENAME),
                              payloadSignature.getBytes());
 
@@ -169,18 +184,18 @@ public class ADUEnd2EndTest {
         // store the encrypted payload
         outerJar.createEntry(Path.of(PAYLOAD_DIR, PAYLOAD_FILENAME + 1), cipherTextBytes);
         // store the bundleId
-        outerJar.createEntry(SecurityUtils.BUNDLEID_FILENAME, bundleId.getBytes());
+        outerJar.createEntry(SecurityUtils.BUNDLEID_FILENAME, encryptedBundleID.getBytes());
 
         // store the keys
         outerJar.createEntry(SecurityUtils.CLIENT_IDENTITY_KEY,
-                             createEncodedPublicKeyBytes(identityKeyPair.getPublicKey().getPublicKey()));
+                             createEncodedPublicKeyBytes(clientIdentity.getPublicKey().getPublicKey()));
         outerJar.createEntry(SecurityUtils.CLIENT_BASE_KEY, createEncodedPublicKeyBytes(baseKeyPair.getPublicKey()));
         outerJar.createEntry(SecurityUtils.SERVER_IDENTITY_KEY,
                              createEncodedPublicKeyBytes(serverIdentity.getPublicKey().getPublicKey()));
 
         // bundle is ready
         outerJar.close();
-        return currentAduId;
+        return bundleJarPath;
     }
 
     @SuppressWarnings("BusyWait")
@@ -202,21 +217,35 @@ public class ADUEnd2EndTest {
 
     @Test
     void test2UploadBundle(@TempDir Path bundleDir) throws Throwable {
-        String bundleId = BundleIDGenerator.generateBundleID(clientId, 1, BundleIDGenerator.UPSTREAM);
-
         var adus = List.of("ADU1", "ADU2", "ADU3");
-        var currentAduId = 1L;
 
-        Path bundleJarPath = bundleDir.resolve("outer-jar.jar");
-        currentAduId = createBundleForAdus(adus, currentAduId, bundleId, bundleJarPath);
-        sendBundle(bundleId, bundleJarPath);
+        Path bundleJarPath = createBundleForAdus(adus, currentTestAppAduId, clientId, 1, bundleDir);
+        sendBundle(bundleJarPath);
 
         // check if the files are there
         HashSet<String> expectedFileList = new HashSet<>(Arrays.asList("1.adu", "2.adu", "3.adu", "metadata.json"));
         checkReceivedFiles(expectedFileList);
     }
 
-    private void sendBundle(String bundleId, Path bundleJarPath) throws Throwable {
+    @Test
+    void test3UploadMoreBundle(@TempDir Path bundleDir) throws Throwable {
+        var adus = List.of("ADU3", "ADU4", "ADU5", "ADU6");
+        // we are resending 3, so rewind the counter by one
+        currentTestAppAduId.decrementAndGet();
+
+        Path bundleJarPath = bundleDir.resolve("outer-jar.jar");
+        bundleJarPath = createBundleForAdus(adus, currentTestAppAduId, clientId, 2, bundleDir);
+        sendBundle(bundleJarPath);
+
+        // check if the files are there
+
+        HashSet<String> expectedFileList = new HashSet<>(List.of("metadata.json"));
+        for (int i = 1; i < currentTestAppAduId.get(); i++) expectedFileList.add(i + ".adu");
+        checkReceivedFiles(expectedFileList);
+    }
+
+
+    private void sendBundle(Path bundleJarPath) throws Throwable {
         var stub = BundleServiceGrpc.newStub(
                 ManagedChannelBuilder.forAddress("localhost", grpcPort).usePlaintext().build());
 
@@ -225,7 +254,7 @@ public class ADUEnd2EndTest {
         BundleUploadResponseStreamObserver response = new BundleUploadResponseStreamObserver();
         var request = stub.uploadBundle(response);
         request.onNext(BundleUploadRequest.newBuilder().setMetadata(
-                BundleMetaData.newBuilder().setBid(bundleId + ".bundle").setTransportId("8675309").build()).build());
+                BundleMetaData.newBuilder().setBid(bundleJarPath.toFile().getName()).setTransportId("8675309").build()).build());
         request.onNext(BundleUploadRequest.newBuilder().setFile(net.discdd.bundletransport.service.File.newBuilder()
                                                                         .setContent(ByteString.copyFrom(
                                                                                 Files.readAllBytes(bundleJarPath)))
@@ -239,6 +268,9 @@ public class ADUEnd2EndTest {
         if (response.response == null) throw new IllegalStateException("No response received");
         var bundleUploadResponse = response.response;
         Assertions.assertEquals(Status.SUCCESS, bundleUploadResponse.getStatus());
+
+        // TODO: it doesn't look like the bundle ID is being returned. we should remove from the proto
+        // Assertions.assertEquals(bundleJarPath.toFile().getName(), bundleUploadResponse.getBid());
     }
 
     private static class BundleUploadResponseStreamObserver implements StreamObserver<BundleUploadResponse> {
