@@ -56,18 +56,18 @@ import static net.discdd.bundlesecurity.SecurityUtils.createEncodedPublicKeyByte
 @SpringBootTest
 public class ADUEnd2EndTest {
     private static final Logger logger = Logger.getLogger(ADUEnd2EndTest.class.getName());
-
+    private static final String testAppId = "testAppId";
     @TempDir
     static Path tempRootDir;
-
     private static IdentityKeyPair serverIdentity;
     private static ECKeyPair serverSignedPreKey;
     private static ECKeyPair serverRatchetKey;
-
-    private static final String testAppId = "testAppId";
-
     @Value("${grpc.server.port}")
     private int grpcPort;
+
+    ADUEnd2EndTest(@Autowired RegisteredAppAdapterRepository registeredAppAdapterRepository) {
+        registeredAppAdapterRepository.save(new RegisteredAppAdapter(testAppId, "localhost:6666"));
+    }
 
     @BeforeAll
     static void setup() throws IOException {
@@ -79,23 +79,22 @@ public class ADUEnd2EndTest {
         serverIdentity = new IdentityKeyPair(new IdentityKey(keyPair.getPublicKey()), keyPair.getPrivateKey());
         serverSignedPreKey = Curve.generateKeyPair();
         serverRatchetKey = Curve.generateKeyPair();
-        Files.writeString(keysDir.resolve(SecurityUtils.SERVER_IDENTITY_KEY), DDDPEMEncoder.encode(serverIdentity.getPublicKey().serialize(), ECPublicKeyType));
-        Files.writeString(keysDir.resolve(SecurityUtils.SERVER_IDENTITY_PRIVATE_KEY), DDDPEMEncoder.encode(serverIdentity.serialize(), ECPrivateKeyType));
-        Files.writeString(keysDir.resolve(SecurityUtils.SERVER_SIGNEDPRE_KEY), DDDPEMEncoder.encode(
-                serverSignedPreKey.getPublicKey().serialize(), ECPublicKeyType));
-        Files.writeString(keysDir.resolve(SecurityUtils.SERVER_SIGNEDPRE_PRIVATE_KEY), DDDPEMEncoder.encode(
-                serverSignedPreKey.getPrivateKey().serialize(), ECPrivateKeyType));
-        Files.writeString(keysDir.resolve(SecurityUtils.SERVER_RATCHET_KEY), DDDPEMEncoder.encode(serverRatchetKey.getPublicKey().serialize(), ECPublicKeyType));
-        Files.writeString(keysDir.resolve(SecurityUtils.SERVER_RATCHET_PRIVATE_KEY), DDDPEMEncoder.encode(
-                serverRatchetKey.getPrivateKey().serialize(), ECPrivateKeyType));
+        Files.writeString(keysDir.resolve(SecurityUtils.SERVER_IDENTITY_KEY),
+                          DDDPEMEncoder.encode(serverIdentity.getPublicKey().serialize(), ECPublicKeyType));
+        Files.writeString(keysDir.resolve(SecurityUtils.SERVER_IDENTITY_PRIVATE_KEY),
+                          DDDPEMEncoder.encode(serverIdentity.serialize(), ECPrivateKeyType));
+        Files.writeString(keysDir.resolve(SecurityUtils.SERVER_SIGNEDPRE_KEY),
+                          DDDPEMEncoder.encode(serverSignedPreKey.getPublicKey().serialize(), ECPublicKeyType));
+        Files.writeString(keysDir.resolve(SecurityUtils.SERVER_SIGNEDPRE_PRIVATE_KEY),
+                          DDDPEMEncoder.encode(serverSignedPreKey.getPrivateKey().serialize(), ECPrivateKeyType));
+        Files.writeString(keysDir.resolve(SecurityUtils.SERVER_RATCHET_KEY),
+                          DDDPEMEncoder.encode(serverRatchetKey.getPublicKey().serialize(), ECPublicKeyType));
+        Files.writeString(keysDir.resolve(SecurityUtils.SERVER_RATCHET_PRIVATE_KEY),
+                          DDDPEMEncoder.encode(serverRatchetKey.getPrivateKey().serialize(), ECPrivateKeyType));
     }
 
-    ADUEnd2EndTest(@Autowired  RegisteredAppAdapterRepository registeredAppAdapterRepository) {
-        registeredAppAdapterRepository.save(new RegisteredAppAdapter(testAppId, "localhost:6666"));
-    }
     @Test
     void test1ContextLoads() {}
-
 
     @Test
     void test2UploadBundle(@TempDir Path bundleDir) throws Throwable {
@@ -104,7 +103,8 @@ public class ADUEnd2EndTest {
 
         // create the keypairs for the client
         ECKeyPair identityPubKeyPair = Curve.generateKeyPair();
-        IdentityKeyPair identityKeyPair = new IdentityKeyPair(new IdentityKey(identityPubKeyPair.getPublicKey()), identityPubKeyPair.getPrivateKey());
+        IdentityKeyPair identityKeyPair = new IdentityKeyPair(new IdentityKey(identityPubKeyPair.getPublicKey()),
+                                                              identityPubKeyPair.getPrivateKey());
         ECKeyPair baseKeyPair = Curve.generateKeyPair();
         String clientId = SecurityUtils.generateID(identityKeyPair.getPublicKey().getPublicKey().serialize());
 
@@ -116,13 +116,17 @@ public class ADUEnd2EndTest {
         innerJar.createEntry("/routing.metadata").write("{}".getBytes());
 
         // TODO: ***
-        // TODO: *** there is ALOT unexpected here! the server does NOT expect and .adu suffix. the client is also putting the appId before
+        // TODO: *** there is ALOT unexpected here! the server does NOT expect and .adu suffix. the client is also
+        //  putting the appId before
         // TODO: *** the ADU id, but the server ignores what is before the -.
         // TODO: ***
         // add a couple of ADUs
-        innerJar.createEntry(Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, testAppId, testAppId + "-1")).write("ADU1".getBytes());
-        innerJar.createEntry(Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, testAppId, testAppId + "-2")).write("ADU2".getBytes());
-        innerJar.createEntry(Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, testAppId, testAppId + "-3")).write("ADU3".getBytes());
+        innerJar.createEntry(Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, testAppId, testAppId + "-1"))
+                .write("ADU1".getBytes());
+        innerJar.createEntry(Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, testAppId, testAppId + "-2"))
+                .write("ADU2".getBytes());
+        innerJar.createEntry(Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, testAppId, testAppId + "-3"))
+                .write("ADU3".getBytes());
         innerJar.close();
 
         // create the signed outer jar
@@ -131,22 +135,22 @@ public class ADUEnd2EndTest {
         byte[] payloadBytes = payload.toByteArray();
 
         // now sign the payload
-        String payloadSignature = Base64.getUrlEncoder().encodeToString(Curve.calculateSignature(identityKeyPair.getPrivateKey(),payloadBytes));
-        outerJar.createEntry(Path.of(SIGNATURE_DIR, PAYLOAD_FILENAME + 1 + SIGNATURE_FILENAME)).write(payloadSignature.getBytes());
+        String payloadSignature = Base64.getUrlEncoder()
+                .encodeToString(Curve.calculateSignature(identityKeyPair.getPrivateKey(), payloadBytes));
+        outerJar.createEntry(Path.of(SIGNATURE_DIR, PAYLOAD_FILENAME + 1 + SIGNATURE_FILENAME))
+                .write(payloadSignature.getBytes());
 
         // encrypt the payload
         SessionRecord sessionRecord = new SessionRecord();
         SignalProtocolAddress address = new SignalProtocolAddress(clientId, 1);
         var sessionStore = SecurityUtils.createInMemorySignalProtocolStore();
 
-        AliceSignalProtocolParameters parameters = AliceSignalProtocolParameters.newBuilder()
-                .setOurBaseKey(baseKeyPair)
-                .setOurIdentityKey(identityKeyPair)
-                .setTheirOneTimePreKey(org.whispersystems.libsignal.util.guava.Optional.absent())
-                .setTheirRatchetKey(serverRatchetKey.getPublicKey())
-                .setTheirSignedPreKey(serverSignedPreKey.getPublicKey())
-                .setTheirIdentityKey(serverIdentity.getPublicKey())
-                .create();
+        AliceSignalProtocolParameters parameters =
+                AliceSignalProtocolParameters.newBuilder().setOurBaseKey(baseKeyPair).setOurIdentityKey(identityKeyPair)
+                        .setTheirOneTimePreKey(org.whispersystems.libsignal.util.guava.Optional.absent())
+                        .setTheirRatchetKey(serverRatchetKey.getPublicKey())
+                        .setTheirSignedPreKey(serverSignedPreKey.getPublicKey())
+                        .setTheirIdentityKey(serverIdentity.getPublicKey()).create();
         RatchetingSession.initializeSession(sessionRecord.getSessionState(), parameters);
         sessionStore.storeSession(address, sessionRecord);
         SessionCipher sessionCipher = new SessionCipher(sessionStore, address);
@@ -160,14 +164,18 @@ public class ADUEnd2EndTest {
         outerJar.createEntry(SecurityUtils.BUNDLEID_FILENAME).write(bundleId.getBytes());
 
         // store the keys
-        outerJar.createEntry(SecurityUtils.CLIENT_IDENTITY_KEY).write(createEncodedPublicKeyBytes(identityKeyPair.getPublicKey().getPublicKey()));
-        outerJar.createEntry(SecurityUtils.CLIENT_BASE_KEY).write(createEncodedPublicKeyBytes(baseKeyPair.getPublicKey()));
-        outerJar.createEntry(SecurityUtils.SERVER_IDENTITY_KEY).write(createEncodedPublicKeyBytes(serverIdentity.getPublicKey().getPublicKey()));
+        outerJar.createEntry(SecurityUtils.CLIENT_IDENTITY_KEY)
+                .write(createEncodedPublicKeyBytes(identityKeyPair.getPublicKey().getPublicKey()));
+        outerJar.createEntry(SecurityUtils.CLIENT_BASE_KEY)
+                .write(createEncodedPublicKeyBytes(baseKeyPair.getPublicKey()));
+        outerJar.createEntry(SecurityUtils.SERVER_IDENTITY_KEY)
+                .write(createEncodedPublicKeyBytes(serverIdentity.getPublicKey().getPublicKey()));
 
         // bundle is ready
         outerJar.close();
 
-       var stub = BundleServiceGrpc.newStub(ManagedChannelBuilder.forAddress("localhost", grpcPort).usePlaintext().build());
+        var stub = BundleServiceGrpc.newStub(
+                ManagedChannelBuilder.forAddress("localhost", grpcPort).usePlaintext().build());
 
         // carefull! this is all backwards: we pass an object to receive the response and we get an object back to send
         // requests to the server
@@ -175,27 +183,33 @@ public class ADUEnd2EndTest {
         var request = stub.uploadBundle(response);
         request.onNext(BundleUploadRequest.newBuilder().setMetadata(
                 BundleMetaData.newBuilder().setBid(bundleId + ".bundle").setTransportId("8675309").build()).build());
-        request.onNext(BundleUploadRequest.newBuilder().setFile(
-                net.discdd.bundletransport.service.File.newBuilder().setContent(
-                        ByteString.copyFrom(Files.readAllBytes(bundleJarPath))).build()).build());
+        request.onNext(BundleUploadRequest.newBuilder().setFile(net.discdd.bundletransport.service.File.newBuilder()
+                                                                        .setContent(ByteString.copyFrom(
+                                                                                Files.readAllBytes(bundleJarPath)))
+                                                                        .build()).build());
         request.onCompleted();
 
         // let's see if it worked...
-        Assertions.assertTrue(response.waitForCompletion(Duration.of(30, ChronoUnit.SECONDS)), "Timed out waiting for bundle upload RPC");
+        Assertions.assertTrue(response.waitForCompletion(Duration.of(30, ChronoUnit.SECONDS)),
+                              "Timed out waiting for bundle upload RPC");
         if (response.throwable != null) throw response.throwable;
         if (response.response == null) throw new IllegalStateException("No response received");
         var bundleUploadResponse = response.response;
         Assertions.assertEquals(Status.SUCCESS, bundleUploadResponse.getStatus());
-        var receivedFiles = new HashSet<>(Arrays.asList(tempRootDir.resolve(Path.of("receive", clientId, testAppId)).toFile().list()));
+        var receivedFiles = new HashSet<>(
+                Arrays.asList(tempRootDir.resolve(Path.of("receive", clientId, testAppId)).toFile().list()));
 
-        Assertions.assertEquals(4, receivedFiles.size());
-        Assertions.assertEquals(new HashSet<>(Arrays.asList("1.adu", "2.adu", "3.adu", "metadata.json")), receivedFiles);
+        // i hate myself for the following line :'( but we need to wait a sec for the server to process everything
+        Thread.sleep(2000);
+        Assertions.assertEquals(new HashSet<>(Arrays.asList("1.adu", "2.adu", "3.adu", "metadata.json")),
+                                receivedFiles);
     }
 
     private static class BundleUploadResponseStreamObserver implements StreamObserver<BundleUploadResponse> {
         public boolean completed = false;
         public BundleUploadResponse response;
         public Throwable throwable;
+
         @Override
         public void onNext(BundleUploadResponse bundleUploadResponse) {
             this.response = bundleUploadResponse;
