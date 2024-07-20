@@ -35,6 +35,7 @@ import org.whispersystems.libsignal.ratchet.RatchetingSession;
 import org.whispersystems.libsignal.state.SessionRecord;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -45,6 +46,7 @@ import java.util.Base64;
 import java.util.HashSet;
 import java.util.logging.Logger;
 
+import static java.util.Objects.requireNonNull;
 import static net.discdd.bundlesecurity.DDDPEMEncoder.ECPrivateKeyType;
 import static net.discdd.bundlesecurity.DDDPEMEncoder.ECPublicKeyType;
 import static net.discdd.bundlesecurity.SecurityUtils.PAYLOAD_DIR;
@@ -97,6 +99,7 @@ public class ADUEnd2EndTest {
     void test1ContextLoads() {}
 
     @Test
+    @SuppressWarnings("BusyWait")
     void test2UploadBundle(@TempDir Path bundleDir) throws Throwable {
         ByteArrayOutputStream payload = new ByteArrayOutputStream();
         DDDJarFileCreator innerJar = new DDDJarFileCreator(payload);
@@ -112,8 +115,8 @@ public class ADUEnd2EndTest {
 
         // add the records to the inner jar
         Acknowledgement ackRecord = new Acknowledgement("HB");
-        innerJar.createEntry("/acknowledgement.txt").write(ackRecord.getBundleId().getBytes());
-        innerJar.createEntry("/routing.metadata").write("{}".getBytes());
+        innerJar.createEntry("/acknowledgement.txt", ackRecord.getBundleId().getBytes());
+        innerJar.createEntry("/routing.metadata", "{}".getBytes());
 
         // TODO: ***
         // TODO: *** there is ALOT unexpected here! the server does NOT expect and .adu suffix. the client is also
@@ -121,12 +124,9 @@ public class ADUEnd2EndTest {
         // TODO: *** the ADU id, but the server ignores what is before the -.
         // TODO: ***
         // add a couple of ADUs
-        innerJar.createEntry(Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, testAppId, testAppId + "-1"))
-                .write("ADU1".getBytes());
-        innerJar.createEntry(Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, testAppId, testAppId + "-2"))
-                .write("ADU2".getBytes());
-        innerJar.createEntry(Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, testAppId, testAppId + "-3"))
-                .write("ADU3".getBytes());
+        innerJar.createEntry(Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, testAppId, testAppId + "-1"), "ADU1".getBytes());
+        innerJar.createEntry(Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, testAppId, testAppId + "-2"), "ADU2".getBytes());
+        innerJar.createEntry(Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, testAppId, testAppId + "-3"), "ADU3".getBytes());
         innerJar.close();
 
         // create the signed outer jar
@@ -137,8 +137,7 @@ public class ADUEnd2EndTest {
         // now sign the payload
         String payloadSignature = Base64.getUrlEncoder()
                 .encodeToString(Curve.calculateSignature(identityKeyPair.getPrivateKey(), payloadBytes));
-        outerJar.createEntry(Path.of(SIGNATURE_DIR, PAYLOAD_FILENAME + 1 + SIGNATURE_FILENAME))
-                .write(payloadSignature.getBytes());
+        outerJar.createEntry(Path.of(SIGNATURE_DIR, PAYLOAD_FILENAME + 1 + SIGNATURE_FILENAME), payloadSignature.getBytes());
 
         // encrypt the payload
         SessionRecord sessionRecord = new SessionRecord();
@@ -159,17 +158,14 @@ public class ADUEnd2EndTest {
         var cipherTextBytes = cipherTextMessage.serialize();
 
         // store the encrypted payload
-        outerJar.createEntry(Path.of(PAYLOAD_DIR, PAYLOAD_FILENAME + 1)).write(cipherTextBytes);
+        outerJar.createEntry(Path.of(PAYLOAD_DIR, PAYLOAD_FILENAME + 1), cipherTextBytes);
         // store the bundleId
-        outerJar.createEntry(SecurityUtils.BUNDLEID_FILENAME).write(bundleId.getBytes());
+        outerJar.createEntry(SecurityUtils.BUNDLEID_FILENAME, bundleId.getBytes());
 
         // store the keys
-        outerJar.createEntry(SecurityUtils.CLIENT_IDENTITY_KEY)
-                .write(createEncodedPublicKeyBytes(identityKeyPair.getPublicKey().getPublicKey()));
-        outerJar.createEntry(SecurityUtils.CLIENT_BASE_KEY)
-                .write(createEncodedPublicKeyBytes(baseKeyPair.getPublicKey()));
-        outerJar.createEntry(SecurityUtils.SERVER_IDENTITY_KEY)
-                .write(createEncodedPublicKeyBytes(serverIdentity.getPublicKey().getPublicKey()));
+        outerJar.createEntry(SecurityUtils.CLIENT_IDENTITY_KEY, createEncodedPublicKeyBytes(identityKeyPair.getPublicKey().getPublicKey()));
+        outerJar.createEntry(SecurityUtils.CLIENT_BASE_KEY, createEncodedPublicKeyBytes(baseKeyPair.getPublicKey()));
+        outerJar.createEntry(SecurityUtils.SERVER_IDENTITY_KEY, createEncodedPublicKeyBytes(serverIdentity.getPublicKey().getPublicKey()));
 
         // bundle is ready
         outerJar.close();
@@ -196,13 +192,20 @@ public class ADUEnd2EndTest {
         if (response.response == null) throw new IllegalStateException("No response received");
         var bundleUploadResponse = response.response;
         Assertions.assertEquals(Status.SUCCESS, bundleUploadResponse.getStatus());
-        var receivedFiles = new HashSet<>(
-                Arrays.asList(tempRootDir.resolve(Path.of("receive", clientId, testAppId)).toFile().list()));
 
-        // i hate myself for the following line :'( but we need to wait a sec for the server to process everything
-        Thread.sleep(2000);
-        Assertions.assertEquals(new HashSet<>(Arrays.asList("1.adu", "2.adu", "3.adu", "metadata.json")),
-                                receivedFiles);
+        // check if the files are there
+        HashSet<String> receivedFiles;
+        HashSet<String> expectedFileList = new HashSet<>(Arrays.asList("1.adu", "2.adu", "3.adu", "metadata.json"));
+        File aduDir = tempRootDir.resolve(Path.of("receive", clientId, testAppId)).toFile();
+        // try for up to 10 seconds to see if the files have arrived
+        for (int tries = 0;
+                !(receivedFiles = new HashSet<>(Arrays.asList(requireNonNull(aduDir.list())))).equals(expectedFileList)
+                        && tries < 20;
+                tries++) {
+            Thread.sleep(500);
+        }
+
+        Assertions.assertEquals(expectedFileList, receivedFiles);
     }
 
     private static class BundleUploadResponseStreamObserver implements StreamObserver<BundleUploadResponse> {
@@ -221,10 +224,9 @@ public class ADUEnd2EndTest {
         }
 
         synchronized public boolean waitForCompletion(Duration waitTime) {
-            while (!completed) {
+            if (!completed) {
                 try {
                     wait(waitTime.toMillis());
-                    return completed;
                 } catch (InterruptedException e) {
                     logger.warning("Interrupted while waiting for completion");
                 }

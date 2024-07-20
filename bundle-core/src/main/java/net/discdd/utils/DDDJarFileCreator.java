@@ -1,5 +1,6 @@
 package net.discdd.utils;
 
+import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Path;
@@ -18,23 +19,32 @@ public class DDDJarFileCreator {
     final private JarOutputStream jarOutputStream;
     final private Manifest manifest = new Manifest();
     final private HashMap<String, MessageDigest> digestOutputStreams = new HashMap<>();
-    private DigestOutputStream previousDigestStream = null;
+    private final DigestOutputStream previousDigestStream = null;
     public DDDJarFileCreator(OutputStream os) throws IOException {
         jarOutputStream = new JarOutputStream(os);
     }
-    @SuppressWarnings("resource")
+
     public OutputStream createEntry(String name) throws IOException, NoSuchAlgorithmException {
         jarOutputStream.putNextEntry(new JarEntry(name));
         if (previousDigestStream != null) previousDigestStream.flush();
         var digest = MessageDigest.getInstance("SHA-256");
         var digestOutputStream = new DigestOutputStream(jarOutputStream, digest);
         digestOutputStreams.put(name, digest);
-        return digestOutputStream;
+        return new UncloseableOutputStream(digestOutputStream);
     }
 
-    @SuppressWarnings("resource")
     public OutputStream createEntry(Path path) throws IOException, NoSuchAlgorithmException {
         return createEntry(path.toString());
+    }
+
+    public void createEntry(String name, byte[] bytes) throws IOException, NoSuchAlgorithmException {
+        try (var os = createEntry(name)) {
+            os.write(bytes);
+        }
+    }
+
+    public void createEntry(Path path, byte[] bytes) throws IOException, NoSuchAlgorithmException {
+        createEntry(path.toString(), bytes);
     }
 
     public void close() throws IOException {
@@ -49,5 +59,17 @@ public class DDDJarFileCreator {
         jarOutputStream.putNextEntry(new JarEntry("META-INF/MANIFEST.MF"));
         manifest.write(jarOutputStream);
         jarOutputStream.close();
+    }
+
+    private class UncloseableOutputStream extends FilterOutputStream {
+        public UncloseableOutputStream(OutputStream out) {
+            super(out);
+        }
+
+        @Override
+        public void close() throws IOException {
+            // we don't want to close, but we would like to flush
+            flush();
+        }
     }
 }
