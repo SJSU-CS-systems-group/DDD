@@ -25,6 +25,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.SessionCipher;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.ecc.Curve;
@@ -33,17 +34,20 @@ import org.whispersystems.libsignal.protocol.CiphertextMessage;
 import org.whispersystems.libsignal.ratchet.AliceSignalProtocolParameters;
 import org.whispersystems.libsignal.ratchet.RatchetingSession;
 import org.whispersystems.libsignal.state.SessionRecord;
+import org.whispersystems.libsignal.state.impl.InMemorySignalProtocolStore;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashSet;
+import java.util.List;
 import java.util.logging.Logger;
 
 import static java.util.Objects.requireNonNull;
@@ -62,25 +66,28 @@ public class ADUEnd2EndTest {
     @TempDir
     static Path tempRootDir;
     private static IdentityKeyPair serverIdentity;
-    private static ECKeyPair serverSignedPreKey;
-    private static ECKeyPair serverRatchetKey;
+    private static String clientId;
+    private static ECKeyPair baseKeyPair;
+    private static IdentityKeyPair identityKeyPair;
+    private static SessionCipher clientSessionCipher;
     @Value("${grpc.server.port}")
     private int grpcPort;
 
     ADUEnd2EndTest(@Autowired RegisteredAppAdapterRepository registeredAppAdapterRepository) {
         registeredAppAdapterRepository.save(new RegisteredAppAdapter(testAppId, "localhost:6666"));
+        System.out.println("**** registering " + testAppId);
     }
 
     @BeforeAll
-    static void setup() throws IOException {
+    static void setup() throws IOException, NoSuchAlgorithmException, InvalidKeyException {
         System.setProperty("bundle-server.bundle-store-root", tempRootDir.toString() + '/');
         var keysDir = tempRootDir.resolve(Path.of("BundleSecurity", "Keys", "Server", "Server_Keys"));
         Assertions.assertTrue(keysDir.toFile().mkdirs());
         System.setProperty("bundle-server.keys-dir", keysDir.toString());
         ECKeyPair keyPair = Curve.generateKeyPair();
         serverIdentity = new IdentityKeyPair(new IdentityKey(keyPair.getPublicKey()), keyPair.getPrivateKey());
-        serverSignedPreKey = Curve.generateKeyPair();
-        serverRatchetKey = Curve.generateKeyPair();
+        ECKeyPair serverSignedPreKey = Curve.generateKeyPair();
+        ECKeyPair serverRatchetKey = Curve.generateKeyPair();
         Files.writeString(keysDir.resolve(SecurityUtils.SERVER_IDENTITY_KEY),
                           DDDPEMEncoder.encode(serverIdentity.getPublicKey().serialize(), ECPublicKeyType));
         Files.writeString(keysDir.resolve(SecurityUtils.SERVER_IDENTITY_PRIVATE_KEY),
@@ -93,25 +100,36 @@ public class ADUEnd2EndTest {
                           DDDPEMEncoder.encode(serverRatchetKey.getPublicKey().serialize(), ECPublicKeyType));
         Files.writeString(keysDir.resolve(SecurityUtils.SERVER_RATCHET_PRIVATE_KEY),
                           DDDPEMEncoder.encode(serverRatchetKey.getPrivateKey().serialize(), ECPrivateKeyType));
-    }
 
-    @Test
-    void test1ContextLoads() {}
-
-    @Test
-    @SuppressWarnings("BusyWait")
-    void test2UploadBundle(@TempDir Path bundleDir) throws Throwable {
-        ByteArrayOutputStream payload = new ByteArrayOutputStream();
-        DDDJarFileCreator innerJar = new DDDJarFileCreator(payload);
-
+        // set up the client keys
         // create the keypairs for the client
         ECKeyPair identityPubKeyPair = Curve.generateKeyPair();
-        IdentityKeyPair identityKeyPair = new IdentityKeyPair(new IdentityKey(identityPubKeyPair.getPublicKey()),
-                                                              identityPubKeyPair.getPrivateKey());
-        ECKeyPair baseKeyPair = Curve.generateKeyPair();
-        String clientId = SecurityUtils.generateID(identityKeyPair.getPublicKey().getPublicKey().serialize());
+        identityKeyPair = new IdentityKeyPair(new IdentityKey(identityPubKeyPair.getPublicKey()),
+                                              identityPubKeyPair.getPrivateKey());
+        baseKeyPair = Curve.generateKeyPair();
+        clientId = SecurityUtils.generateID(identityKeyPair.getPublicKey().getPublicKey().serialize());
 
-        String bundleId = BundleIDGenerator.generateBundleID(clientId, 1, BundleIDGenerator.UPSTREAM);
+        SessionRecord sessionRecord = new SessionRecord();
+        SignalProtocolAddress address = new SignalProtocolAddress(clientId, 1);
+        InMemorySignalProtocolStore clientSessionStore = SecurityUtils.createInMemorySignalProtocolStore();
+
+        AliceSignalProtocolParameters aliceSignalProtocolParameters =
+                AliceSignalProtocolParameters.newBuilder().setOurBaseKey(baseKeyPair).setOurIdentityKey(identityKeyPair)
+                        .setTheirOneTimePreKey(org.whispersystems.libsignal.util.guava.Optional.absent())
+                        .setTheirRatchetKey(serverRatchetKey.getPublicKey())
+                        .setTheirSignedPreKey(serverSignedPreKey.getPublicKey())
+                        .setTheirIdentityKey(serverIdentity.getPublicKey()).create();
+        RatchetingSession.initializeSession(sessionRecord.getSessionState(), aliceSignalProtocolParameters);
+        clientSessionStore.storeSession(address, sessionRecord);
+        clientSessionCipher = new SessionCipher(clientSessionStore, address);
+
+    }
+
+    private static long createBundleForAdus(List<String> adus, long currentAduId, String bundleId,
+                                            Path bundleJarPath) throws IOException, NoSuchAlgorithmException,
+            InvalidKeyException {
+        ByteArrayOutputStream payload = new ByteArrayOutputStream();
+        DDDJarFileCreator innerJar = new DDDJarFileCreator(payload);
 
         // add the records to the inner jar
         Acknowledgement ackRecord = new Acknowledgement("HB");
@@ -124,37 +142,28 @@ public class ADUEnd2EndTest {
         // TODO: *** the ADU id, but the server ignores what is before the -.
         // TODO: ***
         // add a couple of ADUs
-        innerJar.createEntry(Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, testAppId, testAppId + "-1"), "ADU1".getBytes());
-        innerJar.createEntry(Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, testAppId, testAppId + "-2"), "ADU2".getBytes());
-        innerJar.createEntry(Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, testAppId, testAppId + "-3"), "ADU3".getBytes());
+
+        for (String adu : adus) {
+            innerJar.createEntry(
+                    Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, testAppId, testAppId + "-" + currentAduId + ".adu"),
+                    adu.getBytes());
+            currentAduId++;
+        }
         innerJar.close();
 
         // create the signed outer jar
-        Path bundleJarPath = bundleDir.resolve("outer-jar.jar");
         DDDJarFileCreator outerJar = new DDDJarFileCreator(Files.newOutputStream(bundleJarPath));
         byte[] payloadBytes = payload.toByteArray();
 
         // now sign the payload
         String payloadSignature = Base64.getUrlEncoder()
                 .encodeToString(Curve.calculateSignature(identityKeyPair.getPrivateKey(), payloadBytes));
-        outerJar.createEntry(Path.of(SIGNATURE_DIR, PAYLOAD_FILENAME + 1 + SIGNATURE_FILENAME), payloadSignature.getBytes());
+        outerJar.createEntry(Path.of(SIGNATURE_DIR, PAYLOAD_FILENAME + 1 + SIGNATURE_FILENAME),
+                             payloadSignature.getBytes());
 
         // encrypt the payload
-        SessionRecord sessionRecord = new SessionRecord();
-        SignalProtocolAddress address = new SignalProtocolAddress(clientId, 1);
-        var sessionStore = SecurityUtils.createInMemorySignalProtocolStore();
 
-        AliceSignalProtocolParameters parameters =
-                AliceSignalProtocolParameters.newBuilder().setOurBaseKey(baseKeyPair).setOurIdentityKey(identityKeyPair)
-                        .setTheirOneTimePreKey(org.whispersystems.libsignal.util.guava.Optional.absent())
-                        .setTheirRatchetKey(serverRatchetKey.getPublicKey())
-                        .setTheirSignedPreKey(serverSignedPreKey.getPublicKey())
-                        .setTheirIdentityKey(serverIdentity.getPublicKey()).create();
-        RatchetingSession.initializeSession(sessionRecord.getSessionState(), parameters);
-        sessionStore.storeSession(address, sessionRecord);
-        SessionCipher sessionCipher = new SessionCipher(sessionStore, address);
-
-        CiphertextMessage cipherTextMessage = sessionCipher.encrypt(payloadBytes);
+        CiphertextMessage cipherTextMessage = clientSessionCipher.encrypt(payloadBytes);
         var cipherTextBytes = cipherTextMessage.serialize();
 
         // store the encrypted payload
@@ -163,13 +172,51 @@ public class ADUEnd2EndTest {
         outerJar.createEntry(SecurityUtils.BUNDLEID_FILENAME, bundleId.getBytes());
 
         // store the keys
-        outerJar.createEntry(SecurityUtils.CLIENT_IDENTITY_KEY, createEncodedPublicKeyBytes(identityKeyPair.getPublicKey().getPublicKey()));
+        outerJar.createEntry(SecurityUtils.CLIENT_IDENTITY_KEY,
+                             createEncodedPublicKeyBytes(identityKeyPair.getPublicKey().getPublicKey()));
         outerJar.createEntry(SecurityUtils.CLIENT_BASE_KEY, createEncodedPublicKeyBytes(baseKeyPair.getPublicKey()));
-        outerJar.createEntry(SecurityUtils.SERVER_IDENTITY_KEY, createEncodedPublicKeyBytes(serverIdentity.getPublicKey().getPublicKey()));
+        outerJar.createEntry(SecurityUtils.SERVER_IDENTITY_KEY,
+                             createEncodedPublicKeyBytes(serverIdentity.getPublicKey().getPublicKey()));
 
         // bundle is ready
         outerJar.close();
+        return currentAduId;
+    }
 
+    @SuppressWarnings("BusyWait")
+    private static void checkReceivedFiles(HashSet<String> expectedFileList) throws InterruptedException {
+        HashSet<String> receivedFiles;
+        File aduDir = tempRootDir.resolve(Path.of("receive", clientId, testAppId)).toFile();
+        // try for up to 10 seconds to see if the files have arrived
+        for (int tries = 0;
+             !(receivedFiles = new HashSet<>(Arrays.asList(requireNonNull(aduDir.list())))).equals(expectedFileList) &&
+                     tries < 20; tries++) {
+            Thread.sleep(500);
+        }
+
+        Assertions.assertEquals(expectedFileList, receivedFiles);
+    }
+
+    @Test
+    void test1ContextLoads() {}
+
+    @Test
+    void test2UploadBundle(@TempDir Path bundleDir) throws Throwable {
+        String bundleId = BundleIDGenerator.generateBundleID(clientId, 1, BundleIDGenerator.UPSTREAM);
+
+        var adus = List.of("ADU1", "ADU2", "ADU3");
+        var currentAduId = 1L;
+
+        Path bundleJarPath = bundleDir.resolve("outer-jar.jar");
+        currentAduId = createBundleForAdus(adus, currentAduId, bundleId, bundleJarPath);
+        sendBundle(bundleId, bundleJarPath);
+
+        // check if the files are there
+        HashSet<String> expectedFileList = new HashSet<>(Arrays.asList("1.adu", "2.adu", "3.adu", "metadata.json"));
+        checkReceivedFiles(expectedFileList);
+    }
+
+    private void sendBundle(String bundleId, Path bundleJarPath) throws Throwable {
         var stub = BundleServiceGrpc.newStub(
                 ManagedChannelBuilder.forAddress("localhost", grpcPort).usePlaintext().build());
 
@@ -192,20 +239,6 @@ public class ADUEnd2EndTest {
         if (response.response == null) throw new IllegalStateException("No response received");
         var bundleUploadResponse = response.response;
         Assertions.assertEquals(Status.SUCCESS, bundleUploadResponse.getStatus());
-
-        // check if the files are there
-        HashSet<String> receivedFiles;
-        HashSet<String> expectedFileList = new HashSet<>(Arrays.asList("1.adu", "2.adu", "3.adu", "metadata.json"));
-        File aduDir = tempRootDir.resolve(Path.of("receive", clientId, testAppId)).toFile();
-        // try for up to 10 seconds to see if the files have arrived
-        for (int tries = 0;
-                !(receivedFiles = new HashSet<>(Arrays.asList(requireNonNull(aduDir.list())))).equals(expectedFileList)
-                        && tries < 20;
-                tries++) {
-            Thread.sleep(500);
-        }
-
-        Assertions.assertEquals(expectedFileList, receivedFiles);
     }
 
     private static class BundleUploadResponseStreamObserver implements StreamObserver<BundleUploadResponse> {

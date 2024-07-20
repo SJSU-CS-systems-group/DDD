@@ -19,7 +19,7 @@ public class DDDJarFileCreator {
     final private JarOutputStream jarOutputStream;
     final private Manifest manifest = new Manifest();
     final private HashMap<String, MessageDigest> digestOutputStreams = new HashMap<>();
-    private final DigestOutputStream previousDigestStream = null;
+    private DigestOutputStream previousDigestStream = null;
     public DDDJarFileCreator(OutputStream os) throws IOException {
         jarOutputStream = new JarOutputStream(os);
     }
@@ -30,6 +30,7 @@ public class DDDJarFileCreator {
         var digest = MessageDigest.getInstance("SHA-256");
         var digestOutputStream = new DigestOutputStream(jarOutputStream, digest);
         digestOutputStreams.put(name, digest);
+        previousDigestStream = digestOutputStream;
         return new UncloseableOutputStream(digestOutputStream);
     }
 
@@ -61,7 +62,7 @@ public class DDDJarFileCreator {
         jarOutputStream.close();
     }
 
-    private class UncloseableOutputStream extends FilterOutputStream {
+    static private class UncloseableOutputStream extends FilterOutputStream {
         public UncloseableOutputStream(OutputStream out) {
             super(out);
         }
