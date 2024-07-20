@@ -38,7 +38,7 @@ public class ServerWindowService {
     }
 
     private static final Logger logger = Logger.getLogger(ServerWindowService.class.getName());
-    HashMap<String, CircularBuffer> clientWindowMap = null;
+    HashMap<String, CircularBuffer> clientWindowMap = new HashMap<>();
     ServerSecurity serverSecurity = null;
 
     @PostConstruct

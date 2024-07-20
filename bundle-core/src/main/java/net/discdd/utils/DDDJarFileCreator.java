@@ -22,6 +22,7 @@ public class DDDJarFileCreator {
     public DDDJarFileCreator(OutputStream os) throws IOException {
         jarOutputStream = new JarOutputStream(os);
     }
+    @SuppressWarnings("resource")
     public OutputStream createEntry(String name) throws IOException, NoSuchAlgorithmException {
         jarOutputStream.putNextEntry(new JarEntry(name));
         if (previousDigestStream != null) previousDigestStream.flush();

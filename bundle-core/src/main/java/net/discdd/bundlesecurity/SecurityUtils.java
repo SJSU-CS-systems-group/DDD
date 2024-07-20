@@ -91,7 +91,7 @@ public class SecurityUtils {
 
     }
 
-    private static byte[] createEncodedPublicKeyBytes(ECPublicKey publicKey) {
+    public static byte[] createEncodedPublicKeyBytes(ECPublicKey publicKey) {
         return (PUB_KEY_HEADER + "\n" + Base64.getUrlEncoder().encodeToString(publicKey.serialize()) + "\n" +
                 PUB_KEY_FOOTER).getBytes();
     }
