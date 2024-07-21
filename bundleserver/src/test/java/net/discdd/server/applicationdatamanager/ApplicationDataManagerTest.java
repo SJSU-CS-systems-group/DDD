@@ -75,7 +75,7 @@ public class ApplicationDataManagerTest {
         }
         applicationDataManager.storeReceivedADUs(clientId, "client1", adus);
         var receiveMetadata = receiveADUsStorage.getMetadata(clientId, appId);
-        Assertions.assertEquals((long)adus.size(), receiveMetadata.lastReceivedMessageId);
+        Assertions.assertEquals(adus.size(), receiveMetadata.lastReceivedMessageId);
         var fetchedAdus = receiveADUsStorage.getAppData(clientId, appId);
         Assertions.assertArrayEquals(adus.toArray(), fetchedAdus.toArray());
     }

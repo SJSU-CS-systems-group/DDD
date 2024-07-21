@@ -17,7 +17,7 @@ public class UncompressedPayload {
 
     private final List<ADU> ADUs;
 
-    public UncompressedPayload(String bundleId, Acknowledgement ackRecord, List<ADU> ADUs, File source) {
+    private UncompressedPayload(String bundleId, Acknowledgement ackRecord, List<ADU> ADUs, File source) {
         this.bundleId = bundleId;
         this.ackRecord = ackRecord;
         this.ADUs = ADUs;

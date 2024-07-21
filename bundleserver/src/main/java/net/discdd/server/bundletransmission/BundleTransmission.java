@@ -94,7 +94,7 @@ public class BundleTransmission {
         var largestBundleId = this.applicationDataManager.getLargestRecvdBundleId(clientId);
 
         if (largestBundleId != null &&
-                (this.bundleSecurity.isNewerBundle(uncompressedBundle.getSource().toPath(), largestBundleId) >= 0)) {
+                (this.bundleSecurity.isNewerBundle(uncompressedBundle.getSource().toPath(), largestBundleId) < 0)) {
             logger.log(WARNING,
                        "[BundleTransmission] Skipping bundle " + bundle.getSource().getName() + " as it is outdated");
             return;
@@ -175,7 +175,7 @@ public class BundleTransmission {
                     this.processReceivedBundle(transportId, bundle);
                 } catch (Exception e) {
                     logger.log(SEVERE, "[BundleTransmission] Failed to process received bundle from transportId: " +
-                            transportId + ", error: " + e.getMessage());
+                            transportId, e);
                 } finally {
                     try {
                         FileUtils.delete(bundleFile);
