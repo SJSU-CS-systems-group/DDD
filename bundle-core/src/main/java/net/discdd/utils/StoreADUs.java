@@ -89,7 +89,12 @@ public class StoreADUs {
         var folder = getAppFolder(clientId, appId);
         Metadata metadata = getMetadata(clientId, appId);
         for (long i = metadata.lastProcessedMessageId + 1; i <= metadata.lastReceivedMessageId; i++) {
-            appDataList.add(new ADU(rootFolder.resolve(folder.resolve(i + ".adu")).toFile(), appId, i, 0, clientId));
+            File aduFile = rootFolder.resolve(folder.resolve(i + ".adu")).toFile();
+            if (!aduFile.exists()) {
+                logger.log(WARNING, "Could not find ADU " + i + " in: " + aduFile);
+                continue;
+            }
+            appDataList.add(new ADU(aduFile, appId, i, aduFile.length(), clientId));
         }
         return appDataList;
     }
@@ -131,23 +136,31 @@ public class StoreADUs {
 
     public void deleteAllFilesUpTo(String clientId, String appId, long aduId) throws IOException {
         //check if there are enough files
-        var folder = clientId == null ? Paths.get(appId) : Paths.get(clientId, appId);
-        Metadata metadata = getIfNotCreateMetadata(clientId, appId);
-        if (metadata.lastSentMessageId >= aduId) {
-            logger.log(INFO, "[FileStoreHelper.deleteAllFilesUpTo] Data already deleted.");
-            return;
+        var folder = getAppFolder(clientId, appId);
+        Files.list(folder)
+                .filter(p -> p.toFile().getName().endsWith(".adu"))
+                .filter(p-> Long.parseLong(p.toFile().getName().split("\\.")[0]) <= aduId)
+                .peek(p -> logger.log(INFO, "Deleting file " + p))
+                .forEach(p -> {
+                    try {
+                        Files.delete(p);
+                    } catch (IOException e) {
+                        logger.log(SEVERE, "Failed to delete file " + p, e);
+                    }
+                });
+        var metadata = getMetadata(clientId, appId);
+        if (forSending && metadata.lastSentMessageId < aduId) {
+            metadata.lastSentMessageId = aduId;
+            setMetadata(clientId, appId, metadata);
+        } else if (!forSending && metadata.lastProcessedMessageId < aduId) {
+            metadata.lastProcessedMessageId = aduId;
+            setMetadata(clientId, appId, metadata);
         }
-        for (long i = metadata.lastSentMessageId + 1; i <= aduId; i++) {
-            deleteFile(i + ".adu");
-            logger.log(INFO, i + ".adu deleted");
-        }
-
-        metadata.lastSentMessageId = aduId;
     }
 
     public byte[] getADU(String clientId, String appId, Long aduId) throws IOException {
         var appFolder = getAppFolder(clientId, appId);
-        var adu = Files.readAllBytes(appFolder.resolve(aduId + ".adu "));
+        var adu = Files.readAllBytes(appFolder.resolve(aduId + ".adu"));
         return adu;
     }
 
@@ -201,5 +214,9 @@ public class StoreADUs {
     public long getLastADUIdSent(String clientId, String appId) throws IOException {
         Metadata metadata = getMetadata(clientId, appId);
         return metadata.lastSentMessageId;
+    }
+    public long getLastADUIdProcessed(String clientId, String appId) throws IOException {
+        Metadata metadata = getMetadata(clientId, appId);
+        return metadata.lastProcessedMessageId;
     }
 }

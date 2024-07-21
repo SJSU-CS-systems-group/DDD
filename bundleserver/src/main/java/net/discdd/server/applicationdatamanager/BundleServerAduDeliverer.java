@@ -45,15 +45,27 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
         this.registeredAppAdapterRepository = registeredAppAdapterRepository;
     }
 
+    private void revalidateApps() {
+        var foundApps = new HashSet<String>();
+        registeredAppAdapterRepository.findAll().forEach(appAdapter -> {
+            foundApps.add(appAdapter.getAppId());
+            // TODO: we should also check if the location matches
+            if (!apps.containsKey(appAdapter.getAppId())) {
+                var stub = ServiceAdapterGrpc.newBlockingStub(
+                        ManagedChannelBuilder.forTarget(appAdapter.getAddress()).usePlaintext().build());
+                apps.put(appAdapter.getAppId(),
+                         new AppState(appAdapter.getAppId(), Executors.newSingleThreadExecutor(), new HashSet<>(),
+                                      stub));
+            }
+        });
+        // remove any apps that went away
+        apps.keySet().removeIf(appId -> !foundApps.contains(appId));
+    }
+
     @PostConstruct
     public void init() {
+        revalidateApps();
         sendFolder.getAllClientApps().forEach(e -> addAppWithPendingData(e.appId(), e.appId()));
-        registeredAppAdapterRepository.findAll().forEach(appAdapter -> {
-            var stub = ServiceAdapterGrpc.newBlockingStub(
-                    ManagedChannelBuilder.forTarget(appAdapter.getAddress()).usePlaintext().build());
-            apps.put(appAdapter.getAppId(),
-                     new AppState(appAdapter.getAppId(), Executors.newSingleThreadExecutor(), new HashSet<>(), stub));
-        });
     }
 
     private synchronized void removeAppWithPendingData(String appId, String clientId) {
@@ -66,6 +78,8 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
     }
 
     private synchronized void addAppWithPendingData(String appId, String clientId) {
+        // if the app isn't registered, check to see if something changed
+        if (!apps.containsKey(appId)) revalidateApps();
         final var appState = apps.get(appId);
         if (appState == null) {
             logger.log(SEVERE, appId + " is not a registered App! This isn't going to work");
@@ -85,7 +99,7 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
         try {
             removeAppWithPendingData(appId, clientId);
             AppData.Builder appData = AppData.newBuilder().setClientId(clientId)
-                    .setLastADUIdReceived(receiveFolder.getLastADUIdReceived(clientId, appId));
+                    .setLastADUIdReceived(sendFolder.getLastADUIdReceived(clientId, appId));
             long lastAduIdSent = 0;
             for (var adu : receiveFolder.getAppData(clientId, appId)) {
                 long aduId = adu.getADUId();

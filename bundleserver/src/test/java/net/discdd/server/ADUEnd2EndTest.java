@@ -2,6 +2,7 @@ package net.discdd.server;
 
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
 import net.discdd.bundlesecurity.BundleIDGenerator;
 import net.discdd.bundlesecurity.DDDPEMEncoder;
@@ -12,6 +13,9 @@ import net.discdd.bundletransport.service.BundleUploadRequest;
 import net.discdd.bundletransport.service.BundleUploadResponse;
 import net.discdd.bundletransport.service.Status;
 import net.discdd.model.Acknowledgement;
+import net.discdd.server.ServiceAdapterGrpc.ServiceAdapterImplBase;
+import net.discdd.server.repository.RegisteredAppAdapterRepository;
+import net.discdd.server.repository.entity.RegisteredAppAdapter;
 import net.discdd.utils.Constants;
 import net.discdd.utils.DDDJarFileCreator;
 import org.junit.jupiter.api.Assertions;
@@ -21,7 +25,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Configuration;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -52,7 +59,11 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 import java.util.logging.Logger;
 
 import static java.util.Objects.requireNonNull;
@@ -64,11 +75,54 @@ import static net.discdd.bundlesecurity.SecurityUtils.SIGNATURE_DIR;
 import static net.discdd.bundlesecurity.SecurityUtils.SIGNATURE_FILENAME;
 import static net.discdd.bundlesecurity.SecurityUtils.createEncodedPublicKeyBytes;
 
-@SpringBootTest
+@SpringBootTest(classes = {BundleServerApplication.class, ADUEnd2EndTest.ADUEnd2EndTestInitializer.class})
 @TestMethodOrder(MethodOrderer.MethodName.class)
 public class ADUEnd2EndTest {
     private static final Logger logger = Logger.getLogger(ADUEnd2EndTest.class.getName());
-    private static final String testAppId = "testAppId";
+
+    public static final String TEST_APPID = "testAppId";
+    @Configuration
+    static public class ADUEnd2EndTestInitializer implements ApplicationRunner {
+        private RegisteredAppAdapterRepository registeredAppAdapterRepository;
+
+        public ADUEnd2EndTestInitializer(RegisteredAppAdapterRepository registeredAppAdapterRepository) {
+            this.registeredAppAdapterRepository = registeredAppAdapterRepository;
+        }
+
+        @Override
+        public void run(ApplicationArguments args) throws Exception {
+            logger.info("Registering the testAppId");
+            registeredAppAdapterRepository.save(new RegisteredAppAdapter(TEST_APPID, "localhost:6666"));
+        }
+    }
+
+    public static class TestAppServiceAdapter extends ServiceAdapterImplBase {
+        record HandlerFuture(CompletableFuture<AppData> requestFuture, CompletableFuture<AppData> responseFuture) {}
+        ArrayBlockingQueue<HandlerFuture> handlerFutures = new ArrayBlockingQueue<HandlerFuture>(1);
+
+        public void handleRequest(Function<AppData, AppData> handler) throws InterruptedException {
+            var handlerFuture = handlerFutures.poll(5, TimeUnit.SECONDS);
+            if (handlerFuture == null) throw new IllegalStateException("No request received");
+            handlerFuture.responseFuture.complete(handler.apply(handlerFuture.requestFuture.orTimeout(10, TimeUnit.SECONDS).join()));
+        }
+
+        private AppData waitForResponse(AppData request) throws InterruptedException {
+            var handlerFuture = new HandlerFuture(new CompletableFuture<>(), new CompletableFuture<>());
+            handlerFutures.put(handlerFuture);
+            handlerFuture.requestFuture.complete(request);
+            return handlerFuture.responseFuture.join();
+        }
+
+        @Override
+        public void saveData(AppData request, StreamObserver<AppData> responseObserver) {
+            try {
+                responseObserver.onNext(waitForResponse(request));
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            responseObserver.onCompleted();
+        }
+    }
     @TempDir
     static Path tempRootDir;
     private static IdentityKeyPair serverIdentity;
@@ -80,6 +134,7 @@ public class ADUEnd2EndTest {
     private int grpcPort;
     // we don't really need the atomicity part, but we need a way to pass around a mutable long
     private final static AtomicLong currentTestAppAduId = new AtomicLong(1);
+    private final static TestAppServiceAdapter testAppServiceAdapter = new TestAppServiceAdapter();
 
     @BeforeAll
     static void setup() throws IOException, NoSuchAlgorithmException, InvalidKeyException {
@@ -126,6 +181,12 @@ public class ADUEnd2EndTest {
         clientSessionStore.storeSession(address, sessionRecord);
         clientSessionCipher = new SessionCipher(clientSessionStore, address);
 
+        // start up the gRPC server
+
+        var server = NettyServerBuilder.forPort(6666).addService(testAppServiceAdapter).build();
+        server.start();
+
+
     }
 
     private static String encryptBundleID(String bundleID) throws InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeySpecException, BadPaddingException, java.security.InvalidKeyException {
@@ -160,7 +221,7 @@ public class ADUEnd2EndTest {
 
         for (String adu : adus) {
             innerJar.createEntry(
-                    Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, testAppId, testAppId + "-" + currentAduId),
+                    Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, TEST_APPID, TEST_APPID + "-" + currentAduId),
                     adu.getBytes());
             currentAduId.incrementAndGet();
         }
@@ -201,7 +262,8 @@ public class ADUEnd2EndTest {
     @SuppressWarnings("BusyWait")
     private static void checkReceivedFiles(HashSet<String> expectedFileList) throws InterruptedException {
         HashSet<String> receivedFiles;
-        File aduDir = tempRootDir.resolve(Path.of("receive", clientId, testAppId)).toFile();
+        File aduDir = tempRootDir.resolve(Path.of("receive", clientId, TEST_APPID)).toFile();
+        logger.info("Checking for files in " + aduDir);
         // try for up to 10 seconds to see if the files have arrived
         for (int tries = 0;
              !(receivedFiles = new HashSet<>(Arrays.asList(requireNonNull(aduDir.list())))).equals(expectedFileList) &&
@@ -225,6 +287,22 @@ public class ADUEnd2EndTest {
         // check if the files are there
         HashSet<String> expectedFileList = new HashSet<>(Arrays.asList("1.adu", "2.adu", "3.adu", "metadata.json"));
         checkReceivedFiles(expectedFileList);
+
+        // check the gRPC
+        testAppServiceAdapter.handleRequest(appData -> {
+            Assertions.assertEquals(0, appData.getLastADUIdReceived());
+            Assertions.assertEquals(clientId, appData.getClientId());
+            Assertions.assertEquals(3, appData.getDataListCount());
+            for (int i = 0; i < 3; i++) {
+                Assertions.assertEquals(adus.get(i), appData.getDataList(i).getData().toStringUtf8());
+            }
+            return AppData.newBuilder().setLastADUIdReceived(3).build();
+        });
+
+        // everything should disappear
+        expectedFileList = new HashSet<>(List.of("metadata.json"));
+        checkReceivedFiles(expectedFileList);
+
     }
 
     @Test
@@ -240,8 +318,20 @@ public class ADUEnd2EndTest {
         // check if the files are there
 
         HashSet<String> expectedFileList = new HashSet<>(List.of("metadata.json"));
-        for (int i = 1; i < currentTestAppAduId.get(); i++) expectedFileList.add(i + ".adu");
+        for (int i = 4; i < currentTestAppAduId.get(); i++) expectedFileList.add(i + ".adu");
         checkReceivedFiles(expectedFileList);
+
+        // check the gRPC
+        testAppServiceAdapter.handleRequest(appData -> {
+            Assertions.assertEquals(0, appData.getLastADUIdReceived());
+            Assertions.assertEquals(clientId, appData.getClientId());
+            Assertions.assertEquals(3, appData.getDataListCount());
+            for (int i = 4; i <= 6; i++) {
+                Assertions.assertEquals("ADU"+i, appData.getDataList(i-4).getData().toStringUtf8());
+                Assertions.assertEquals(i, appData.getDataList(i-4).getAduId());
+            }
+            return AppData.newBuilder().setLastADUIdReceived(6).build();
+        });
     }
 
 
