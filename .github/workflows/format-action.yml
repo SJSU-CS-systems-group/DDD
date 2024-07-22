@@ -3,30 +3,29 @@ name: Code Formatter
 on:
   push:
     branches: main
-    
+
 jobs:
   code-format:
     runs-on: ubuntu-latest
-  
     steps:
       - name: Print previous commit author
         run: echo "Previous ${{ needs.changes.outputs.commit-author }}"
-  
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
            ref: ${{ github.event.pull_request.head.ref }}
            token: ${{ secrets.GITHUB_TOKEN }}
-  
+
       - name: Install IntelliJ IDEA
         run: |
           wget -q -O idea.tar.gz https://download.jetbrains.com/idea/ideaIC-2024.1.1.tar.gz
           tar -xzf idea.tar.gz
-  
+
       - name: Format code
         run: |
           ./*/bin/format.sh -m *.java -r .
-  
+
       - name: Commit changes
         run: |
            git config user.name 'github-actions[bot]'
@@ -34,4 +33,5 @@ jobs:
            if ! git diff --exit-code > /dev/null
            then
              git commit -a -m "reformat"
+             git push
            fi
