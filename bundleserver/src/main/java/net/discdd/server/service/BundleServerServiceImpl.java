@@ -168,8 +168,8 @@ public class BundleServerServiceImpl extends BundleServiceGrpc.BundleServiceImpl
             if (bundleTransferDTO.getBundles().isEmpty()) {
                 responseObserver.onNext(BundleDownloadResponse.newBuilder().setStatus(Status.SUCCESS).build());
             } else {
-                BundleDownloadResponse response = BundleDownloadResponse.newBuilder().setBundleList(
-                                BundleList.newBuilder().addAllBundleList(bundleTransferDTO.getDeletionSet()))
+                BundleDownloadResponse response = BundleDownloadResponse.newBuilder()
+                        .setBundleList(BundleList.newBuilder().addAllBundleList(bundleTransferDTO.getDeletionSet()))
                         .build();
                 logger.log(WARNING,
                            "[BundleServerService] Sending " + String.join(", ", bundleTransferDTO.getDeletionSet()) +

@@ -75,12 +75,13 @@ import static net.discdd.bundlesecurity.SecurityUtils.SIGNATURE_DIR;
 import static net.discdd.bundlesecurity.SecurityUtils.SIGNATURE_FILENAME;
 import static net.discdd.bundlesecurity.SecurityUtils.createEncodedPublicKeyBytes;
 
-@SpringBootTest(classes = {BundleServerApplication.class, ADUEnd2EndTest.ADUEnd2EndTestInitializer.class})
+@SpringBootTest(classes = { BundleServerApplication.class, ADUEnd2EndTest.ADUEnd2EndTestInitializer.class })
 @TestMethodOrder(MethodOrderer.MethodName.class)
 public class ADUEnd2EndTest {
     private static final Logger logger = Logger.getLogger(ADUEnd2EndTest.class.getName());
 
     public static final String TEST_APPID = "testAppId";
+
     @Configuration
     static public class ADUEnd2EndTestInitializer implements ApplicationRunner {
         private RegisteredAppAdapterRepository registeredAppAdapterRepository;
@@ -98,12 +99,14 @@ public class ADUEnd2EndTest {
 
     public static class TestAppServiceAdapter extends ServiceAdapterImplBase {
         record HandlerFuture(CompletableFuture<AppData> requestFuture, CompletableFuture<AppData> responseFuture) {}
+
         ArrayBlockingQueue<HandlerFuture> handlerFutures = new ArrayBlockingQueue<HandlerFuture>(1);
 
         public void handleRequest(Function<AppData, AppData> handler) throws InterruptedException {
             var handlerFuture = handlerFutures.poll(5, TimeUnit.SECONDS);
             if (handlerFuture == null) throw new IllegalStateException("No request received");
-            handlerFuture.responseFuture.complete(handler.apply(handlerFuture.requestFuture.orTimeout(10, TimeUnit.SECONDS).join()));
+            handlerFuture.responseFuture.complete(
+                    handler.apply(handlerFuture.requestFuture.orTimeout(10, TimeUnit.SECONDS).join()));
         }
 
         private AppData waitForResponse(AppData request) throws InterruptedException {
@@ -123,6 +126,7 @@ public class ADUEnd2EndTest {
             responseObserver.onCompleted();
         }
     }
+
     @TempDir
     static Path tempRootDir;
     private static IdentityKeyPair serverIdentity;
@@ -186,10 +190,11 @@ public class ADUEnd2EndTest {
         var server = NettyServerBuilder.forPort(6666).addService(testAppServiceAdapter).build();
         server.start();
 
-
     }
 
-    private static String encryptBundleID(String bundleID) throws InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeySpecException, BadPaddingException, java.security.InvalidKeyException {
+    private static String encryptBundleID(String bundleID) throws InvalidKeyException,
+            InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException,
+            NoSuchAlgorithmException, InvalidKeySpecException, BadPaddingException, java.security.InvalidKeyException {
         byte[] agreement =
                 Curve.calculateAgreement(serverIdentity.getPublicKey().getPublicKey(), clientIdentity.getPrivateKey());
 
@@ -199,7 +204,11 @@ public class ADUEnd2EndTest {
 
     }
 
-    private static Path createBundleForAdus(List<String> adus, AtomicLong currentAduId, String clientId, int bundleCount, Path targetDir) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, InvalidKeySpecException, BadPaddingException, java.security.InvalidKeyException {
+    private static Path createBundleForAdus(List<String> adus, AtomicLong currentAduId, String clientId,
+                                            int bundleCount, Path targetDir) throws IOException,
+            NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException
+            , IllegalBlockSizeException, InvalidKeySpecException, BadPaddingException,
+            java.security.InvalidKeyException {
         String bundleId = BundleIDGenerator.generateBundleID(clientId, bundleCount, BundleIDGenerator.UPSTREAM);
         String encryptedBundleID = encryptBundleID(bundleId);
         Path bundleJarPath = targetDir.resolve(encryptedBundleID + ".bundle");
@@ -327,13 +336,12 @@ public class ADUEnd2EndTest {
             Assertions.assertEquals(clientId, appData.getClientId());
             Assertions.assertEquals(3, appData.getDataListCount());
             for (int i = 4; i <= 6; i++) {
-                Assertions.assertEquals("ADU"+i, appData.getDataList(i-4).getData().toStringUtf8());
-                Assertions.assertEquals(i, appData.getDataList(i-4).getAduId());
+                Assertions.assertEquals("ADU" + i, appData.getDataList(i - 4).getData().toStringUtf8());
+                Assertions.assertEquals(i, appData.getDataList(i - 4).getAduId());
             }
             return AppData.newBuilder().setLastADUIdReceived(6).build();
         });
     }
-
 
     private void sendBundle(Path bundleJarPath) throws Throwable {
         var stub = BundleServiceGrpc.newStub(
@@ -344,7 +352,8 @@ public class ADUEnd2EndTest {
         BundleUploadResponseStreamObserver response = new BundleUploadResponseStreamObserver();
         var request = stub.uploadBundle(response);
         request.onNext(BundleUploadRequest.newBuilder().setMetadata(
-                BundleMetaData.newBuilder().setBid(bundleJarPath.toFile().getName()).setTransportId("8675309").build()).build());
+                        BundleMetaData.newBuilder().setBid(bundleJarPath.toFile().getName()).setTransportId("8675309").build())
+                               .build());
         request.onNext(BundleUploadRequest.newBuilder().setFile(net.discdd.bundletransport.service.File.newBuilder()
                                                                         .setContent(ByteString.copyFrom(
                                                                                 Files.readAllBytes(bundleJarPath)))

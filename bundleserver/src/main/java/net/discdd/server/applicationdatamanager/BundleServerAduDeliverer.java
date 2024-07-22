@@ -38,8 +38,7 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
     private final HashMap<String, AppState> apps = new HashMap<>();
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
-    BundleServerAduDeliverer(AduStores aduStores,
-                             RegisteredAppAdapterRepository registeredAppAdapterRepository) {
+    BundleServerAduDeliverer(AduStores aduStores, RegisteredAppAdapterRepository registeredAppAdapterRepository) {
         this.sendFolder = aduStores.getSendADUsStorage();
         this.receiveFolder = aduStores.getReceiveADUsStorage();
         this.registeredAppAdapterRepository = registeredAppAdapterRepository;

@@ -123,7 +123,6 @@ public class BundleUtils {
 
         Path aduPath = bundleFilePath.resolve(Constants.BUNDLE_ADU_DIRECTORY_NAME);
 
-
         List<ADU> adus = uncompressedPayload.getADUs();
 
         if (!adus.isEmpty()) {

@@ -19,8 +19,11 @@ public class ServerRouting {
     @Column(name = "score", columnDefinition = "VARCHAR(256)")
     private String score;
 
-    /** this constructor is used by JPA */
+    /**
+     * this constructor is used by JPA
+     */
     private ServerRouting() {}
+
     public ServerRouting(String transportId, String clientId, String score) {
         this.serverRoutingId = new ServerRoutingId();
         this.serverRoutingId.setTransportID(transportId);

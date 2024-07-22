@@ -100,8 +100,9 @@ public class StoreADUs {
     }
 
     public record ClientApp(String clientId, String appId) {}
+
     public Stream<ClientApp> getAllClientApps() {
-        try (var topPaths = Files.list(rootFolder)){
+        try (var topPaths = Files.list(rootFolder)) {
             return topPaths.filter(p -> p.toFile().isDirectory()).flatMap(clientIdPath -> {
                 try (var bottomPaths = Files.list(clientIdPath)) {
                     return bottomPaths.map(Path::toFile).filter(File::isDirectory).map(File::getName)
@@ -137,11 +138,9 @@ public class StoreADUs {
     public void deleteAllFilesUpTo(String clientId, String appId, long aduId) throws IOException {
         //check if there are enough files
         var folder = getAppFolder(clientId, appId);
-        Files.list(folder)
-                .filter(p -> p.toFile().getName().endsWith(".adu"))
-                .filter(p-> Long.parseLong(p.toFile().getName().split("\\.")[0]) <= aduId)
-                .peek(p -> logger.log(INFO, "Deleting file " + p))
-                .forEach(p -> {
+        Files.list(folder).filter(p -> p.toFile().getName().endsWith(".adu"))
+                .filter(p -> Long.parseLong(p.toFile().getName().split("\\.")[0]) <= aduId)
+                .peek(p -> logger.log(INFO, "Deleting file " + p)).forEach(p -> {
                     try {
                         Files.delete(p);
                     } catch (IOException e) {
@@ -165,8 +164,7 @@ public class StoreADUs {
     }
 
     private Path getAppFolder(String clientId, String appId) {
-        return clientId == null ? rootFolder.resolve(appId) :
-                rootFolder.resolve(Paths.get(clientId, appId));
+        return clientId == null ? rootFolder.resolve(appId) : rootFolder.resolve(Paths.get(clientId, appId));
     }
 
     public File getADUFile(String clientId, String appId, String aduId) {
@@ -211,10 +209,12 @@ public class StoreADUs {
         Metadata metadata = getMetadata(clientId, appId);
         return metadata.lastReceivedMessageId;
     }
+
     public long getLastADUIdSent(String clientId, String appId) throws IOException {
         Metadata metadata = getMetadata(clientId, appId);
         return metadata.lastSentMessageId;
     }
+
     public long getLastADUIdProcessed(String clientId, String appId) throws IOException {
         Metadata metadata = getMetadata(clientId, appId);
         return metadata.lastProcessedMessageId;

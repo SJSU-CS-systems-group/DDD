@@ -206,10 +206,9 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         if (checkSelfPermission(Manifest.permission.NEARBY_WIFI_DEVICES) != PackageManager.PERMISSION_GRANTED) {
             logger.log(INFO, "requesting nearby wifi devices permission");
             requestPermissions(new String[] { Manifest.permission.NEARBY_WIFI_DEVICES },
-                    BundleClientActivity.PERMISSIONS_REQUEST_CODE_ACCESS_NEARBY_WIFI_DEVICES);
+                               BundleClientActivity.PERMISSIONS_REQUEST_CODE_ACCESS_NEARBY_WIFI_DEVICES);
             logger.log(INFO, "Permission granted");
         }
-
 
         wifiDirectExecutor.execute(wifiDirectManager);
     }

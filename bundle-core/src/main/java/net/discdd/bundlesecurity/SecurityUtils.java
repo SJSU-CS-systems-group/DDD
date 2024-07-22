@@ -87,7 +87,8 @@ public class SecurityUtils {
     }
 
     public static void createEncodedPublicKeyFile(ECPublicKey publicKey, Path path) throws IOException {
-        Files.write(path, createEncodedPublicKeyBytes(publicKey), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        Files.write(path, createEncodedPublicKeyBytes(publicKey), StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING);
 
     }
 

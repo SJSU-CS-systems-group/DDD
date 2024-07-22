@@ -20,6 +20,7 @@ public class DDDJarFileCreator {
     final private Manifest manifest = new Manifest();
     final private HashMap<String, MessageDigest> digestOutputStreams = new HashMap<>();
     private DigestOutputStream previousDigestStream = null;
+
     public DDDJarFileCreator(OutputStream os) throws IOException {
         jarOutputStream = new JarOutputStream(os);
     }

@@ -14,8 +14,8 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import net.discdd.model.ADU;
-import static java.util.logging.Level.INFO;
 
+import static java.util.logging.Level.INFO;
 
 public class ADUUtils {
 

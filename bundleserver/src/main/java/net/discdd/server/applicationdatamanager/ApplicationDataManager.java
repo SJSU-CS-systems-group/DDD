@@ -44,7 +44,6 @@ public class ApplicationDataManager {
 
     private final BundleServerConfig bundleServerConfig;
 
-
     AduDeliveredListener aduDeliveredListener;
 
     private final LargestAduIdReceivedRepository largestAduIdReceivedRepository;
@@ -63,8 +62,7 @@ public class ApplicationDataManager {
     private StoreADUs receiveADUsStorage;
     private StoreADUs sendADUsStorage;
 
-    public ApplicationDataManager(AduStores aduStores,
-                                  AduDeliveredListener aduDeliveredListener,
+    public ApplicationDataManager(AduStores aduStores, AduDeliveredListener aduDeliveredListener,
                                   LargestAduIdReceivedRepository largestAduIdReceivedRepository,
                                   LargestAduIdDeliveredRepository largestAduIdDeliveredRepository,
                                   LastBundleIdSentRepository lastBundleIdSentRepository,
@@ -128,7 +126,8 @@ public class ApplicationDataManager {
         }
         for (String appId : appIdToADUMap.keySet()) {
             List<ADU> aduList = appIdToADUMap.get(appId);
-            long largestAduIdReceived = largestAduIdReceivedRepository.findByClientIdAndAppId(clientId, appId).map(LargestAduIdReceived::getAduId).orElse(-1L);
+            long largestAduIdReceived = largestAduIdReceivedRepository.findByClientIdAndAppId(clientId, appId)
+                    .map(LargestAduIdReceived::getAduId).orElse(-1L);
             long largestAduSeen = -1;
             for (var it = aduList.iterator(); it.hasNext(); ) {
                 ADU adu = it.next();
@@ -146,7 +145,8 @@ public class ApplicationDataManager {
         List<ADU> res = new ArrayList<>();
         for (String appId : this.getRegisteredAppIds()) {
             Long ret = null;
-            Optional<LargestAduIdDelivered> opt = largestAduIdDeliveredRepository.findByClientIdAndAppId(clientId, appId);
+            Optional<LargestAduIdDelivered> opt =
+                    largestAduIdDeliveredRepository.findByClientIdAndAppId(clientId, appId);
             if (opt.isPresent()) {
                 LargestAduIdDelivered record = opt.get();
                 ret = record.getAduId();
@@ -176,15 +176,15 @@ public class ApplicationDataManager {
 
     public void receiveADUs(String clientId, String appId, List<ADU> adus) throws IOException {
         var affectedAppIds = new HashSet<String>();
-        for (var adu: adus) {
+        for (var adu : adus) {
             receiveADUsStorage.addADU(clientId, adu.getAppId(), Files.readAllBytes(adu.getSource().toPath()),
-                                           adu.getADUId());
+                                      adu.getADUId());
             affectedAppIds.add(adu.getAppId());
         }
         aduDeliveredListener.onAduDelivered(clientId, affectedAppIds);
     }
 
-    public ADU fetchSentADU(String clientId, String appId, long aduId)  {
+    public ADU fetchSentADU(String clientId, String appId, long aduId) {
         File file = sendADUsStorage.getADUFile(clientId, appId, Long.toString(aduId));
         return file.isFile() ? new ADU(file, appId, aduId, file.length(), clientId) : null;
     }
@@ -218,8 +218,7 @@ public class ApplicationDataManager {
 
         for (String appId : aduRangeMap.keySet()) {
             Long[] minmax = aduRangeMap.get(appId);
-            SentAduDetails sentAduDetails =
-                    new SentAduDetails(bundle.getBundleId(), appId, minmax[0], minmax[1]);
+            SentAduDetails sentAduDetails = new SentAduDetails(bundle.getBundleId(), appId, minmax[0], minmax[1]);
             sentAduDetailsRepository.save(sentAduDetails);
         }
     }
@@ -259,7 +258,8 @@ public class ApplicationDataManager {
     }
 
     public String getLargestRecvdBundleId(String clientId) {
-        return largestBundleIdReceivedRepository.findByClientId(clientId).map(LargestBundleIdReceived::getBundleId).orElse(null);
+        return largestBundleIdReceivedRepository.findByClientId(clientId).map(LargestBundleIdReceived::getBundleId)
+                .orElse(null);
     }
 
     public String getClientIdFromSentBundleId(String bundleId) {
