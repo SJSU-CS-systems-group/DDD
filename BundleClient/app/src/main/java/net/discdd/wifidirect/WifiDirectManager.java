@@ -448,7 +448,7 @@ public class WifiDirectManager
          */
         @Override
         public void onResume(@NonNull LifecycleOwner owner) {
-            this.manager.getContext().registerReceiver(this.manager.getReceiver(), this.manager.getIntentFilter(), Context.RECEIVER_NOT_EXPORTED);
+            this.manager.getContext().registerReceiver(this.manager.getReceiver(), this.manager.getIntentFilter());
         }
 
         /**
