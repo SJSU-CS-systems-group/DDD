@@ -34,5 +34,5 @@ jobs:
            if ! git diff --exit-code > /dev/null
            then
              git commit --amend --no-edit
-             git push
+             git push --force
            fi
