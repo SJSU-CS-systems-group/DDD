@@ -33,6 +33,5 @@ jobs:
            git config user.email "github-actions[bot]@users.noreply.github.com"
            if ! git diff --exit-code > /dev/null
            then
-             git commit --amend --no-edit
-             git push --force
+             git commit -a -m "reformat"
            fi
