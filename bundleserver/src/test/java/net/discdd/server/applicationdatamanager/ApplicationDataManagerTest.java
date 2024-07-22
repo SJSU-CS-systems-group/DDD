@@ -29,19 +29,19 @@ import java.util.ArrayList;
 public class ApplicationDataManagerTest {
     @Autowired
     private LargestAduIdReceivedRepository largestAduIdReceivedRepository;
-            // = mock(LargestAduIdReceivedRepository.class);
+    // = mock(LargestAduIdReceivedRepository.class);
     @Autowired
     private RegisteredAppAdapterRepository registeredAppAdapterRepository;
-            // = mock(RegisteredAppAdapterRepository.class);
+    // = mock(RegisteredAppAdapterRepository.class);
     private ApplicationDataManager applicationDataManager;
     @Autowired
     private LargestAduIdDeliveredRepository largestAduDeliveredRepository;
-            // = mock(LargestAduIdDeliveredRepository.class);
+    // = mock(LargestAduIdDeliveredRepository.class);
     @Autowired
     private LastBundleIdSentRepository lastBundleIdSentRepository; // = mock(LastBundleIdSentRepository.class);
     @Autowired
     private LargestBundleIdReceivedRepository largestBundleIdReceivedRepository;
-            // = mock(LargestBundleIdReceivedRepository.class);
+    // = mock(LargestBundleIdReceivedRepository.class);
     @Autowired
     private SentBundleDetailsRepository sentBundleDetailsRepository; // = mock(SentBundleDetailsRepository.class);
     @Autowired
