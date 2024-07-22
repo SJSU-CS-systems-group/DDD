@@ -8,6 +8,7 @@ import androidx.test.rule.GrantPermissionRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
 import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
 import static androidx.test.espresso.matcher.ViewMatchers.withText;
@@ -24,11 +25,13 @@ public class BundleClientActivityTest {
     public ActivityScenarioRule<BundleClientActivity> activityRule =
             new ActivityScenarioRule<>(BundleClientActivity.class);
     @Rule
-    public GrantPermissionRule neededPermissions = GrantPermissionRule.grant(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES);
+    public GrantPermissionRule neededPermissions = GrantPermissionRule.grant(Manifest.permission.ACCESS_FINE_LOCATION,
+                                                                             Manifest.permission.NEARBY_WIFI_DEVICES);
 
     @Test
     public void testConnectButton() {
 
-        onView(withId(R.id.wifidirect_response_text)).check(matches(withText(containsString("Starting connection...\n"))));
+        onView(withId(R.id.wifidirect_response_text)).check(
+                matches(withText(containsString("Starting connection...\n"))));
     }
 }
