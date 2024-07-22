@@ -102,9 +102,11 @@ public class StoreADUs {
     public record ClientApp(String clientId, String appId) {}
 
     public Stream<ClientApp> getAllClientApps() {
-        try (var topPaths = Files.list(rootFolder)) {
+        try {
+            var topPaths = Files.list(rootFolder);
             return topPaths.filter(p -> p.toFile().isDirectory()).flatMap(clientIdPath -> {
-                try (var bottomPaths = Files.list(clientIdPath)) {
+                try {
+                    var bottomPaths = Files.list(clientIdPath);
                     return bottomPaths.map(Path::toFile).filter(File::isDirectory).map(File::getName)
                             .map(appId -> new ClientApp(clientIdPath.toFile().getName(), appId));
                 } catch (IOException e) {

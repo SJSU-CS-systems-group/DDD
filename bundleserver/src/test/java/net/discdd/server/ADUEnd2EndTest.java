@@ -50,6 +50,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
@@ -190,6 +191,7 @@ public class ADUEnd2EndTest {
         var server = NettyServerBuilder.forPort(6666).addService(testAppServiceAdapter).build();
         server.start();
 
+        tempRootDir.resolve(Paths.get("send", clientId, TEST_APPID)).toFile().mkdirs();
     }
 
     private static String encryptBundleID(String bundleID) throws InvalidKeyException,
