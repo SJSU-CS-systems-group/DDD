@@ -179,7 +179,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         IntentFilter filter = new IntentFilter();
         filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
         filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
-        registerReceiver(mUsbReceiver, filter);
+        registerReceiver(mUsbReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
         checkUsbConnection();//used to check if usb connected before app has been started.
     }
 
@@ -267,7 +267,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     @Override
     public void onResume() {
         super.onResume();
-        registerReceiver(wifiDirectManager.createReceiver(), wifiDirectManager.getIntentFilter());
+        registerReceiver(wifiDirectManager.createReceiver(), wifiDirectManager.getIntentFilter(), Context.RECEIVER_NOT_EXPORTED);
     }
 
     @Override
