@@ -41,7 +41,7 @@ public class K9DDDAdapter extends ServiceAdapterGrpc.ServiceAdapterImplBase {
     private void processADUsToSend(AppDataUnit adu) throws IOException {
         var toAddressList = MailUtils.getToAddresses(adu.getData().toByteArray());
         for (var clientId : toAddressList) {
-            sendADUsStorage.addADU(clientId, appId, adu.toByteArray(), -1);
+            sendADUsStorage.addADU(MailUtils.getLocalAddress(clientId), appId, adu.toByteArray(), -1);
         }
     }
 

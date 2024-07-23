@@ -38,7 +38,7 @@ public class K9Application {
         app.addInitializers((actx) -> {
             var bundleServerURL = args[0];
             var myGrpcUrl = actx.getEnvironment().getProperty("my.grpc.url");
-            var appName = actx.getApplicationName();
+            var appName = actx.getEnvironment().getProperty("spring.application.name");
             if (myGrpcUrl == null) {
                 logger.log(SEVERE, "my.grpc.url is not set in application.properties");
                 System.exit(1);
