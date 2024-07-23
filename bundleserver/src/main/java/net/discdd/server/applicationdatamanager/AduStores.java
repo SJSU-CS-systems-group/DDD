@@ -12,8 +12,8 @@ public class AduStores {
     private final StoreADUs sendADUsStorage;
 
     public AduStores(@Value("${bundle-server.bundle-store-root}") Path rootDataDir) {
-        this.sendADUsStorage = new StoreADUs(rootDataDir.resolve("send").toFile().toPath(), true);
-        this.receiveADUsStorage = new StoreADUs(rootDataDir.resolve("receive").toFile().toPath(), false);
+        this.sendADUsStorage = new StoreADUs(rootDataDir.resolve("send"), true);
+        this.receiveADUsStorage = new StoreADUs(rootDataDir.resolve("receive"), false);
     }
 
     public StoreADUs getReceiveADUsStorage() {
