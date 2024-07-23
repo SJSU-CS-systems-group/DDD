@@ -50,7 +50,8 @@ public class EchoApplication {
                     logger.log(WARNING, String.format("Could not connect to %s %s", bundleServerURL, channelState));
                 } else {
                     var rsp = ServiceAdapterRegistryServiceGrpc.newBlockingStub(managedChannel)
-                            .checkAdapterRegistration(ConnectionData.newBuilder().setAppName("echo").setUrl(myGrpcUrl).build());
+                            .checkAdapterRegistration(
+                                    ConnectionData.newBuilder().setAppName("echo").setUrl(myGrpcUrl).build());
                     if (rsp.getCode() != 0) {
                         logger.log(WARNING,
                                    String.format("Could not register with BundleServer: rc = %d %s", rsp.getCode(),

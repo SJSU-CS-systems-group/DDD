@@ -24,11 +24,8 @@ public class EchoDDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServ
     @Override
     public void exchangeADUs(ExchangeADUsRequest request, StreamObserver<ExchangeADUsResponse> responseObserver) {
         LinkedList<AppDataUnit> dataList = new LinkedList<>();
-        request.getAdusList().forEach(data -> dataList.add(AppDataUnit.newBuilder().setAduId(data.getAduId())
-                                                                       .setData(data.getData()
-                                                                                        .concat(ByteString.copyFromUtf8(
-                                                                                                " was received")))
-                                                                       .build()));
+        request.getAdusList().forEach(data -> dataList.add(AppDataUnit.newBuilder().setAduId(data.getAduId()).setData(
+                data.getData().concat(ByteString.copyFromUtf8(" was received"))).build()));
         if (!dataList.isEmpty()) {
             var lastADUId = dataList.getLast().getAduId();
             clientLastADUId.compute(request.getClientId(), (k, v) -> v == null || v < lastADUId ? lastADUId : v);

@@ -100,7 +100,8 @@ public class ADUEnd2EndTest {
     }
 
     public static class TestAppServiceAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServiceImplBase {
-        record AdapterRequestResponse (ExchangeADUsRequest request, StreamObserver<ExchangeADUsResponse> response) {}
+        record AdapterRequestResponse(ExchangeADUsRequest request, StreamObserver<ExchangeADUsResponse> response) {}
+
         ArrayBlockingQueue<AdapterRequestResponse> incomingRequests = new ArrayBlockingQueue<>(1);
 
         public void handleRequest(BiConsumer<ExchangeADUsRequest, StreamObserver<ExchangeADUsResponse>> handler) throws InterruptedException {
@@ -320,7 +321,7 @@ public class ADUEnd2EndTest {
         checkReceivedFiles(expectedFileList);
 
         // check the gRPC
-        testAppServiceAdapter.handleRequest((req,rsp) -> {
+        testAppServiceAdapter.handleRequest((req, rsp) -> {
             Assertions.assertEquals(0, req.getLastADUIdReceived());
             Assertions.assertEquals(clientId, req.getClientId());
             Assertions.assertEquals(3, req.getAdusCount());

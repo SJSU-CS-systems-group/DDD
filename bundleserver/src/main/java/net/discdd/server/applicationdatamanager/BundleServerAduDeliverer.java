@@ -105,8 +105,7 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
                 }
                 var data = receiveFolder.getADU(clientId, appId, aduId);
 
-                appData.addAdus(
-                        AppDataUnit.newBuilder().setData(ByteString.copyFrom(data)).setAduId(aduId).build());
+                appData.addAdus(AppDataUnit.newBuilder().setData(ByteString.copyFrom(data)).setAduId(aduId).build());
             }
             var recvData = appState.stub.exchangeADUs(appData.build());
             receiveFolder.deleteAllFilesUpTo(clientId, appId, lastAduIdSent);

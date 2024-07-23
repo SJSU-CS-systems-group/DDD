@@ -12,7 +12,8 @@ import java.util.logging.Logger;
 import static java.util.logging.Level.INFO;
 
 @GrpcService
-public class ServiceAdapterRegistryService extends ServiceAdapterRegistryServiceGrpc.ServiceAdapterRegistryServiceImplBase {
+public class ServiceAdapterRegistryService
+        extends ServiceAdapterRegistryServiceGrpc.ServiceAdapterRegistryServiceImplBase {
     private static final Logger logger = Logger.getLogger(ServiceAdapterRegistryService.class.getName());
     final private RegisteredAppAdapterRepository registeredAppAdapterRepository;
 
@@ -21,7 +22,8 @@ public class ServiceAdapterRegistryService extends ServiceAdapterRegistryService
     }
 
     @Override
-    public void checkAdapterRegistration(ConnectionData connectionData, StreamObserver<ResponseStatus> responseObserver) {
+    public void checkAdapterRegistration(ConnectionData connectionData,
+                                         StreamObserver<ResponseStatus> responseObserver) {
         logger.log(INFO, String.format("Checking %s to %s", connectionData.getAppName(), connectionData.getUrl()));
         var registeredApp = registeredAppAdapterRepository.findByAppId(connectionData.getAppName());
         if (registeredApp.isPresent()) {
