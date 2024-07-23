@@ -17,6 +17,7 @@ import static java.util.logging.Level.WARNING;
 
 public class MailUtils {
     final static Logger logger = Logger.getLogger(MailUtils.class.getName());
+
     public static List<String> getToAddresses(byte[] rawEmail) {
         List<String> toAddressList = new ArrayList<>();
         try {
@@ -30,7 +31,7 @@ public class MailUtils {
             // Get the "to" address
             Address[] toAddresses = message.getRecipients(MimeMessage.RecipientType.TO);
             if (toAddresses != null && toAddresses.length > 0) {
-                for (Address address: toAddresses) {
+                for (Address address : toAddresses) {
                     toAddressList.add(((InternetAddress) address).getAddress());
                 }
             }

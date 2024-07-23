@@ -24,7 +24,6 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
-
 @GrpcService
 public class K9DDDAdapter extends ServiceAdapterGrpc.ServiceAdapterImplBase {
     final static Logger logger = Logger.getLogger(K9DDDAdapter.class.getName());
@@ -62,7 +61,9 @@ public class K9DDDAdapter extends ServiceAdapterGrpc.ServiceAdapterImplBase {
         try {
             sendADUsStorage.deleteAllFilesUpTo(clientId, appId, lastADUIdRecvd);
         } catch (IOException e) {
-            logger.log(SEVERE, String.format("Error while deleting ADUs for client: {} app: {} till AduId: {}",clientId, appId, lastADUIdRecvd), e);
+            logger.log(SEVERE,
+                       String.format("Error while deleting ADUs for client: {} app: {} till AduId: {}", clientId, appId,
+                                     lastADUIdRecvd), e);
         }
 
         List<AppDataUnit> dataListToReturn = new ArrayList<>();
@@ -78,15 +79,15 @@ public class K9DDDAdapter extends ServiceAdapterGrpc.ServiceAdapterImplBase {
             for (var adu : aduListToReturn) {
                 long aduId = adu.getADUId();
                 var data = sendADUsStorage.getADU(clientId, appId, aduId);
-                dataListToReturn.add(AppDataUnit.newBuilder().setData(ByteString.copyFrom(data))
-                        .setAduId(aduId).build());
+                dataListToReturn.add(
+                        AppDataUnit.newBuilder().setData(ByteString.copyFrom(data)).setAduId(aduId).build());
             }
         } catch (Exception e) {
             logger.log(SEVERE, "Error while building response data for clientId: " + clientId, e);
         }
 
-        responseObserver.onNext(AppData.newBuilder().setClientId(request.getClientId())
-                .addAllDataList(dataListToReturn).build());
+        responseObserver.onNext(
+                AppData.newBuilder().setClientId(request.getClientId()).addAllDataList(dataListToReturn).build());
         responseObserver.onCompleted();
     }
 

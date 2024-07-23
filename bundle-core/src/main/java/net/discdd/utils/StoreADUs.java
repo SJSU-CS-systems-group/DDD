@@ -109,8 +109,6 @@ public class StoreADUs {
         return appDataList;
     }
 
-
-
     public record ClientApp(String clientId, String appId) {}
 
     public Stream<ClientApp> getAllClientApps() {
