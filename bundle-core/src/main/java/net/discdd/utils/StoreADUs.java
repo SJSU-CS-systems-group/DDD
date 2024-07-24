@@ -35,6 +35,11 @@ public class StoreADUs {
         this.forSending = forSending;
     }
 
+    public StoreADUs(Path rootFolder) {
+        this(rootFolder, false);
+    }
+
+
     public static String convertStreamToString(InputStream is) throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(is));
         StringBuilder sb = new StringBuilder();

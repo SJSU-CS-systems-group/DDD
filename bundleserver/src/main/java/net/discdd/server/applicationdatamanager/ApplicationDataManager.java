@@ -119,7 +119,7 @@ public class ApplicationDataManager {
         LargestBundleIdReceived largestBundleIdReceived = new LargestBundleIdReceived(clientId, bundleId);
         this.largestBundleIdReceivedRepository.save(largestBundleIdReceived);
 
-        logger.log(INFO, "[StateManager]] Registered bundle identifier: " + bundleId + " of client " + clientId);
+        logger.log(INFO, "[StateManager] Registered bundle identifier: " + bundleId + " of client " + clientId);
         Map<String, List<ADU>> appIdToADUMap = new HashMap<>();
         for (var adu : adus) {
             appIdToADUMap.computeIfAbsent(adu.getAppId(), k -> new ArrayList<>()).add(adu);
