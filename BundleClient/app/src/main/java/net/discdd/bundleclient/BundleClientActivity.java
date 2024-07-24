@@ -1,6 +1,5 @@
 package net.discdd.bundleclient;
 
-import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
@@ -41,39 +40,36 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
 
     // Wifi Direct set up
     private WifiDirectManager wifiDirectManager;
-    public static final int PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION = 1001;
-    public static final int PERMISSIONS_REQUEST_CODE_ACCESS_NEARBY_WIFI_DEVICES = 1002;
-    // gRPC set up
-    private Button connectButton;
-    private Button exchangeButton;
-    private Button usbExchangeButton;
-    private Button detectTransportButton;
-    private Button receiveFromTransportButton;
-    private FileChooserFragment fragment;
-    private TextView resultText;
-    private TextView connectedDevicesText;
-    private TextView wifiDirectResponseText;
-    private TextView usbConnectionText;
-    private static String RECEIVE_PATH = "Shared/received-bundles";
-    //  private BundleDeliveryAgent agent;
-    // context
-    public static Context ApplicationContext;
-
-    // instantiate window for bundles
-    public static ClientWindow clientWindow;
-
     private ExecutorService wifiDirectExecutor = Executors.newFixedThreadPool(1);
 
-    private int WINDOW_LENGTH = 3;
-    // bundle transmitter set up
-    BundleTransmission bundleTransmission;
+    //constant
+    public static final String TAG = "bundleclient";
+    private static final Logger logger = Logger.getLogger(BundleClientActivity.class.getName());
+    public static final int PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION = 1001;
+    public static final int PERMISSIONS_REQUEST_CODE_ACCESS_NEARBY_WIFI_DEVICES = 1002;
+    public static Context ApplicationContext;
+
+    private static String RECEIVE_PATH = "Shared/received-bundles";
 
     String currentTransportId;
     String BundleExtension = ".bundle";
 
-    public static final String TAG = "bundleclient";
+    // bundle transmitter set up
+    BundleTransmission bundleTransmission;
 
-    private static final Logger logger = Logger.getLogger(BundleClientActivity.class.getName());
+    // instantiate window for bundles
+    public static ClientWindow clientWindow;
+    private int WINDOW_LENGTH = 3;
+
+    // gRPC set up moved to -- MainPageFragment -- //
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.oncreate(savedInstanceState);
+
+        //set up view
+        setContentView(R.layout.activity_helloworld);
+    }
 
     private static final String usbDirName = "DDD_transport";
     public static boolean usbConnected = false;
