@@ -321,7 +321,7 @@ public class ADUEnd2EndTest {
         sendBundle(bundleJarPath);
 
         // check if the files are there
-        HashSet<String> expectedFileList = new HashSet<>(Arrays.asList("1.adu", "2.adu", "3.adu", "metadata.json"));
+        HashSet<String> expectedFileList = new HashSet<>(Arrays.asList("1", "2", "3", "metadata.json"));
         checkReceivedFiles(expectedFileList);
 
         // check the gRPC
@@ -339,7 +339,7 @@ public class ADUEnd2EndTest {
 
         // everything should disappear
         checkReceivedFiles(new HashSet<String>(List.of("metadata.json")));
-        checkToSendFiles(new HashSet<>(List.of("1.adu", "metadata.json")));
+        checkToSendFiles(new HashSet<>(List.of("1", "metadata.json")));
     }
 
     @Test
@@ -354,7 +354,7 @@ public class ADUEnd2EndTest {
         // check if the files are there
 
         HashSet<String> expectedFileList = new HashSet<>(List.of("metadata.json"));
-        for (int i = 4; i < currentTestAppAduId.get(); i++) expectedFileList.add(i + ".adu");
+        for (int i = 4; i < currentTestAppAduId.get(); i++) expectedFileList.add(String.valueOf(i));
         checkReceivedFiles(expectedFileList);
 
         // check the gRPC
@@ -370,7 +370,7 @@ public class ADUEnd2EndTest {
                     AppDataUnit.newBuilder().setAduId(2).setData(ByteString.copyFromUtf8("SA2")).build()).build());
             rsp.onCompleted();
         });
-        checkToSendFiles(new HashSet<>(List.of("1.adu", "2.adu", "metadata.json")));
+        checkToSendFiles(new HashSet<>(List.of("1", "2", "metadata.json")));
     }
 
     @Test
@@ -384,7 +384,7 @@ public class ADUEnd2EndTest {
                     AppDataUnit.newBuilder().setAduId(3).setData(ByteString.copyFromUtf8("SA3")).build()).build());
             rsp.onCompleted();
         });
-        checkToSendFiles(new HashSet<>(List.of("1.adu", "2.adu", "3.adu", "metadata.json")));
+        checkToSendFiles(new HashSet<>(List.of("1", "2", "3", "metadata.json")));
     }
 
     private void sendBundle(Path bundleJarPath) throws Throwable {

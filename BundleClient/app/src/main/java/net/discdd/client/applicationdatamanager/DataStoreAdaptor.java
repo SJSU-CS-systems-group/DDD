@@ -69,7 +69,7 @@ public class DataStoreAdaptor {
 
     private ADU fetchADU(String appId, long aduId) {
         try {
-            File file = sendADUsStorage.getADUFile(null, appId, String.valueOf(aduId));
+            File file = sendADUsStorage.getADUFile(null, appId, aduId);
             FileInputStream fis = new FileInputStream(file);
             int fileSize = fis.available();
             logger.log(FINER, "Size:" + fileSize);

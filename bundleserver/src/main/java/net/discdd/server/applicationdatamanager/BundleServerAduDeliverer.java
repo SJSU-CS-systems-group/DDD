@@ -128,7 +128,7 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
                 appState.pendingClients.remove(clientId);
             }
             var appData = ExchangeADUsRequest.newBuilder().setClientId(clientId)
-                    .setLastADUIdReceived(sendFolder.getMetadata(clientId, appId).lastAddedMessageId);
+                    .setLastADUIdReceived(sendFolder.getLastADUIdAdded(clientId, appId));
             long lastAduIdSent = 0;
             for (var adu : receiveFolder.getAppData(clientId, appId)) {
                 long aduId = adu.getADUId();
