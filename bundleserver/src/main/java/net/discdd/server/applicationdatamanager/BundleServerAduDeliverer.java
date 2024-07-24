@@ -2,9 +2,9 @@ package net.discdd.server.applicationdatamanager;
 
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannelBuilder;
-import net.discdd.server.AppData;
-import net.discdd.server.AppDataUnit;
-import net.discdd.server.ServiceAdapterGrpc;
+import net.discdd.grpc.AppDataUnit;
+import net.discdd.grpc.ExchangeADUsRequest;
+import net.discdd.grpc.ServiceAdapterServiceGrpc;
 import net.discdd.server.repository.RegisteredAppAdapterRepository;
 import net.discdd.utils.StoreADUs;
 import org.springframework.stereotype.Component;
@@ -50,7 +50,7 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
             foundApps.add(appAdapter.getAppId());
             // TODO: we should also check if the location matches
             if (!apps.containsKey(appAdapter.getAppId())) {
-                var stub = ServiceAdapterGrpc.newBlockingStub(
+                var stub = ServiceAdapterServiceGrpc.newBlockingStub(
                         ManagedChannelBuilder.forTarget(appAdapter.getAddress()).usePlaintext().build());
                 apps.put(appAdapter.getAppId(),
                          new AppState(appAdapter.getAppId(), Executors.newSingleThreadExecutor(), new HashSet<>(),
@@ -88,16 +88,14 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
             logger.log(FINE, "Client " + clientId + " is already pending for " + appId);
             return;
         }
-        appState.executor.execute(() -> {
-            contactServiceAdapterForClient(clientId, appState);
-        });
+        appState.executor.execute(() -> contactServiceAdapterForClient(clientId, appState));
     }
 
     private void contactServiceAdapterForClient(String clientId, AppState appState) {
         String appId = appState.appId;
         try {
             removeAppWithPendingData(appId, clientId);
-            AppData.Builder appData = AppData.newBuilder().setClientId(clientId)
+            var appData = ExchangeADUsRequest.newBuilder().setClientId(clientId)
                     .setLastADUIdReceived(sendFolder.getLastADUIdReceived(clientId, appId));
             long lastAduIdSent = 0;
             for (var adu : receiveFolder.getAppData(clientId, appId)) {
@@ -107,12 +105,11 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
                 }
                 var data = receiveFolder.getADU(clientId, appId, aduId);
 
-                appData.addDataList(
-                        AppDataUnit.newBuilder().setData(ByteString.copyFrom(data)).setAduId(aduId).build());
+                appData.addAdus(AppDataUnit.newBuilder().setData(ByteString.copyFrom(data)).setAduId(aduId).build());
             }
-            var recvData = appState.stub.saveData(appData.build());
+            var recvData = appState.stub.exchangeADUs(appData.build());
             receiveFolder.deleteAllFilesUpTo(clientId, appId, lastAduIdSent);
-            for (var dataUnit : recvData.getDataListList()) {
+            for (var dataUnit : recvData.getAdusList()) {
                 sendFolder.addADU(clientId, appId, dataUnit.getData().toByteArray(), dataUnit.getAduId());
             }
 
@@ -128,5 +125,5 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
     }
 
     record AppState(String appId, Executor executor, HashSet<String> pendingClients,
-                    ServiceAdapterGrpc.ServiceAdapterBlockingStub stub) {}
+                    ServiceAdapterServiceGrpc.ServiceAdapterServiceBlockingStub stub) {}
 }
