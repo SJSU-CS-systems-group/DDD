@@ -31,8 +31,8 @@ public class DataStoreAdaptor {
     private Context applicationContext;
 
     public DataStoreAdaptor(Path appRootDataDirectory) {
-        sendADUsStorage = new StoreADUs(appRootDataDirectory.resolve("send"), true);
-        receiveADUsStorage = new StoreADUs(appRootDataDirectory.resolve("receive"), false);
+        sendADUsStorage = new StoreADUs(appRootDataDirectory.resolve("send"));
+        receiveADUsStorage = new StoreADUs(appRootDataDirectory.resolve("receive"));
     }
 
     private void sendDataToApp(ADU adu) throws IOException {
@@ -69,7 +69,7 @@ public class DataStoreAdaptor {
 
     private ADU fetchADU(String appId, long aduId) {
         try {
-            File file = sendADUsStorage.getADUFile(null, appId, String.valueOf(aduId));
+            File file = sendADUsStorage.getADUFile(null, appId, aduId);
             FileInputStream fis = new FileInputStream(file);
             int fileSize = fis.available();
             logger.log(FINER, "Size:" + fileSize);

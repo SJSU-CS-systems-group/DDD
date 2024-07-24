@@ -192,7 +192,7 @@ public class BundleTransmission {
                 .resolve(Path.of(clientId, Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME)).toString();
     }
 
-    private UncompressedPayload.Builder generatePayloadBuilder(String clientId) {
+    private UncompressedPayload.Builder generatePayloadBuilder(String clientId) throws IOException {
         List<ADU> ADUs = this.applicationDataManager.fetchADUsToSend(0L, clientId);
 
         UncompressedPayload.Builder builder = new UncompressedPayload.Builder();
