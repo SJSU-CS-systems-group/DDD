@@ -39,7 +39,10 @@ import net.discdd.wifidirect.WifiDirectStateListener;
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Logger;
@@ -83,7 +86,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         //Set up ViewPager and TabLayout
         ViewPager2 viewPager = findViewById(R.id.view_pager);
         TabLayout tabLayout = findViewById(R.id.tab_layout);
-        ViewPageAdapter adapter = new ViewPageAdapter(this);
+        ViewPagerAdapter adapter = new ViewPagerAdapter(this);
         viewPager.setAdapter(adapter);
 
         new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
@@ -253,7 +256,9 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     private void updateConnectedDevices() {
         MainPageFragment fragment = getMainPageFragment();
         if (fragment != null) {
-            fragment.updateConnectedDevicesText(wifiDirectManager.getDevicesFound());
+            Set<String> devicesFound = wifiDirectManager.getDevicesFound();
+            List<String> devicesList = new ArrayList<>(devicesFound);
+            fragment.updateConnectedDevicesText(devicesList);
         }
     }
 
@@ -521,3 +526,11 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
 //    }
 //}
 
+
+//    // Method to update connected devices text
+//    private void updateConnectedDevices() {
+//        MainPageFragment fragment = getMainPageFragment();
+//        if (fragment != null) {
+//            fragment.updateConnectedDevicesText(wifiDirectManager.getDevicesFound());
+//        }
+//    }

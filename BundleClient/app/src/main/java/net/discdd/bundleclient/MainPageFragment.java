@@ -143,7 +143,6 @@ public class MainPageFragment extends Fragment {
         usbConnectionText.setTextColor(color);
     }
 
-    //Method to update connected devices text
     // Method to update connected devices text
     public void updateConnectedDevicesText(List<String> devices) {
         connectedDevicesText.setText("");

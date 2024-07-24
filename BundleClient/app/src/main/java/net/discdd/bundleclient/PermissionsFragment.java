@@ -37,7 +37,7 @@ public class PermissionsFragment extends Fragment{
             String[] permissionsArray = getResources().getStringArray(R.array.permissions_array);
 
             //Initialize the adapter
-            permissionsAdapter = new PermissionsAdapter(permissionsArray, getContext());
+            permissionsAdapter = new PermissionsAdapter(permissionsArray);
 
             //set the adapter to the RecyclerView
             permissionsRecyclerView.setAdapter(permissionsAdapter);
