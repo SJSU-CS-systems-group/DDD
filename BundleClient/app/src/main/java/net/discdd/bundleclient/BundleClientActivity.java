@@ -20,8 +20,12 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.fragment.app.Fragment;
+
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.google.android.material.tabs.TabLayout;
@@ -256,6 +260,29 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     // Helper method to get the MainPageFragment instance
     private MainPageFragment getMainPageFragment() {
         return (MainPageFragment) getSupportFragmentManager().findFragmentByTag("f0");
+    }
+
+    // ViewPagerAdapter class for managing fragments in the ViewPager
+    private static class ViewPagerAdapter extends FragmentStateAdapter {
+
+        public ViewPagerAdapter(@NonNull AppCompatActivity fragmentActivity) {
+            super(fragmentActivity);
+        }
+
+        @NonNull
+        @Override
+        public Fragment createFragment(int position) {
+            if (position == 0) {
+                return new MainPageFragment();
+            } else {
+                return new PermissionsFragment();
+            }
+        }
+
+        @Override
+        public int getItemCount() {
+            return 2;
+        }
     }
 }
 

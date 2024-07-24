@@ -104,13 +104,13 @@ public class MainPageFragment extends Fragment {
             BundleClientActivity.usbConnected = false;
             showUsbDetachedToast();
         }
-
         else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
             if (usbDirExists()) {
                 updateUsbStatus(true, "USB connection detected\n", Color.GREEN);
                 BundleClientActivity.usbConnected = true;
                 showUsbAttachedToast();
-            } else {
+            }
+            else {
                 updateUsbStatus(false, "USB was connected, but /DDD_transport directory was not detected\n", Color.RED);
                 BundleClientActivity.usbConnected = false;
                 showUsbAttachedToast();
