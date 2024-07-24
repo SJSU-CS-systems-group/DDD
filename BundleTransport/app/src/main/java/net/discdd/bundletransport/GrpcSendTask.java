@@ -27,7 +27,7 @@ public class GrpcSendTask {
 
     private static final Logger logger = Logger.getLogger(GrpcSendTask.class.getName());
 
-    private String host,transportId;
+    private String host, transportId;
     private Path serverPath;
     private int port;
     private ManagedChannel channel;

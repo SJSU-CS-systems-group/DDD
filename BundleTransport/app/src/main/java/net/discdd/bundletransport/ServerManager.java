@@ -25,10 +25,10 @@ public class ServerManager implements Runnable {
         this.sendCallback = sendCallback;
         this.receiveCallback = receiveCallback;
         this.connectComplete = connectComplete;
-        this.sendTask =
-                new GrpcSendTask(host, Integer.parseInt(port), transportId, filePath.resolve("BundleTransmission/server"));
-        this.receiveTask =
-                new GrpcReceiveTask(host, Integer.parseInt(port), transportId, filePath.resolve("BundleTransmission/client"));
+        this.sendTask = new GrpcSendTask(host, Integer.parseInt(port), transportId,
+                                         filePath.resolve("BundleTransmission/server"));
+        this.receiveTask = new GrpcReceiveTask(host, Integer.parseInt(port), transportId,
+                                               filePath.resolve("BundleTransmission/client"));
     }
 
     @Override
