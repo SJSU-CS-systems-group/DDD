@@ -10,6 +10,7 @@ import com.google.protobuf.ByteString;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 import java.util.logging.Logger;
@@ -26,16 +27,17 @@ public class GrpcSendTask {
 
     private static final Logger logger = Logger.getLogger(GrpcSendTask.class.getName());
 
-    private String host, serverDir, transportId;
+    private String host,transportId;
+    private Path serverPath;
     private int port;
     private ManagedChannel channel;
 
-    public GrpcSendTask(String host, int port, String transportId, String serverDir) {
+    public GrpcSendTask(String host, int port, String transportId, Path serverPath) {
         logger.log(INFO, "initializing grpcsendtask...");
         this.host = host;
         this.port = port;
         this.transportId = transportId;
-        this.serverDir = serverDir;
+        this.serverPath = serverPath;
     }
 
     public Exception run() {
@@ -61,7 +63,7 @@ public class GrpcSendTask {
         channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
         BundleServiceGrpc.BundleServiceStub stub = BundleServiceGrpc.newStub(channel);
         StreamObserver<BundleUploadRequest> streamObserver = stub.uploadBundle(new BundleUploadObserver());
-        File sendDir = new File(serverDir);
+        File sendDir = serverPath.toFile();
         logger.log(FINE, "received the stream observer: " + streamObserver);
         //get transport ID
         if (sendDir.exists()) {
