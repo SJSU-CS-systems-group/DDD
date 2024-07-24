@@ -104,7 +104,8 @@ public class ADUEnd2EndTest {
     }
 
     public static class TestAppServiceAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServiceImplBase {
-        record AdapterRequestResponse (ExchangeADUsRequest request, StreamObserver<ExchangeADUsResponse> response) {}
+        record AdapterRequestResponse(ExchangeADUsRequest request, StreamObserver<ExchangeADUsResponse> response) {}
+
         ConcurrentHashMap<String, String> clientsWithData = new ConcurrentHashMap<>();
         ArrayBlockingQueue<AdapterRequestResponse> incomingRequests = new ArrayBlockingQueue<>(1);
 
@@ -115,7 +116,8 @@ public class ADUEnd2EndTest {
         }
 
         @Override
-        public void pendingDataCheck(PendingDataCheckRequest request, StreamObserver<PendingDataCheckResponse> responseObserver) {
+        public void pendingDataCheck(PendingDataCheckRequest request,
+                                     StreamObserver<PendingDataCheckResponse> responseObserver) {
             PendingDataCheckResponse pendingClients =
                     PendingDataCheckResponse.newBuilder().addAllClientId(clientsWithData.keySet()).build();
             logger.info("Returning from pendingDataCheck: " + pendingClients);
@@ -330,7 +332,8 @@ public class ADUEnd2EndTest {
             for (int i = 0; i < 3; i++) {
                 Assertions.assertEquals(adus.get(i), req.getAdus(i).getData().toStringUtf8());
             }
-            rsp.onNext(ExchangeADUsResponse.newBuilder().setLastADUIdReceived(3).addAdus(AppDataUnit.newBuilder().setAduId(1).setData(ByteString.copyFromUtf8("SA1")).build()).build());
+            rsp.onNext(ExchangeADUsResponse.newBuilder().setLastADUIdReceived(3).addAdus(
+                    AppDataUnit.newBuilder().setAduId(1).setData(ByteString.copyFromUtf8("SA1")).build()).build());
             rsp.onCompleted();
         });
 
@@ -355,7 +358,7 @@ public class ADUEnd2EndTest {
         checkReceivedFiles(expectedFileList);
 
         // check the gRPC
-        testAppServiceAdapter.handleRequest((req,rsp) -> {
+        testAppServiceAdapter.handleRequest((req, rsp) -> {
             Assertions.assertEquals(1, req.getLastADUIdReceived());
             Assertions.assertEquals(clientId, req.getClientId());
             Assertions.assertEquals(3, req.getAdusCount());
@@ -363,7 +366,8 @@ public class ADUEnd2EndTest {
                 Assertions.assertEquals("ADU" + i, req.getAdus(i - 4).getData().toStringUtf8());
                 Assertions.assertEquals(i, req.getAdus(i - 4).getAduId());
             }
-            rsp.onNext(ExchangeADUsResponse.newBuilder().setLastADUIdReceived(6).addAdus(AppDataUnit.newBuilder().setAduId(2).setData(ByteString.copyFromUtf8("SA2")).build()).build());
+            rsp.onNext(ExchangeADUsResponse.newBuilder().setLastADUIdReceived(6).addAdus(
+                    AppDataUnit.newBuilder().setAduId(2).setData(ByteString.copyFromUtf8("SA2")).build()).build());
             rsp.onCompleted();
         });
         checkToSendFiles(new HashSet<>(List.of("1.adu", "2.adu", "metadata.json")));
@@ -376,7 +380,8 @@ public class ADUEnd2EndTest {
             Assertions.assertEquals(2, req.getLastADUIdReceived());
             Assertions.assertEquals(clientId, req.getClientId());
             Assertions.assertEquals(0, req.getAdusCount());
-            rsp.onNext(ExchangeADUsResponse.newBuilder().setLastADUIdReceived(6).addAdus(AppDataUnit.newBuilder().setAduId(3).setData(ByteString.copyFromUtf8("SA3")).build()).build());
+            rsp.onNext(ExchangeADUsResponse.newBuilder().setLastADUIdReceived(6).addAdus(
+                    AppDataUnit.newBuilder().setAduId(3).setData(ByteString.copyFromUtf8("SA3")).build()).build());
             rsp.onCompleted();
         });
         checkToSendFiles(new HashSet<>(List.of("1.adu", "2.adu", "3.adu", "metadata.json")));

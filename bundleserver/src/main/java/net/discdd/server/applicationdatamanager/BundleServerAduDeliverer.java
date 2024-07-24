@@ -40,7 +40,7 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
     // TODO: This should adapt to changes in the registered app adapters repository. currently it's only checked at
     //  startup
     private final ConcurrentHashMap<String, AppState> apps = new ConcurrentHashMap<>();
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool( 5);
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
     private final Duration dataCheckInterval;
     private long grpcTimeout = 20_000 /* milliseconds */;
 
@@ -123,32 +123,32 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
 
     private void contactServiceAdapterForClient(String clientId, AppState appState) {
         String appId = appState.appId;
-            try {
-                synchronized (appState.pendingClients) {
-                    appState.pendingClients.remove(clientId);
-                }
-                var appData = ExchangeADUsRequest.newBuilder().setClientId(clientId)
-                        .setLastADUIdReceived(sendFolder.getMetadata(clientId, appId).lastAddedMessageId);
-                long lastAduIdSent = 0;
-                for (var adu : receiveFolder.getAppData(clientId, appId)) {
-                    long aduId = adu.getADUId();
-                    if (aduId > lastAduIdSent) {
-                        lastAduIdSent = aduId;
-                    }
-                    var data = receiveFolder.getADU(clientId, appId, aduId);
-                    appData.addAdus(
-                            AppDataUnit.newBuilder().setData(ByteString.copyFrom(data)).setAduId(aduId).build());
-                }
-                var recvData = appState.stub.withDeadlineAfter(grpcTimeout, TimeUnit.MILLISECONDS).exchangeADUs(appData.build());
-                receiveFolder.deleteAllFilesUpTo(clientId, appId, lastAduIdSent);
-                for (var dataUnit : recvData.getAdusList()) {
-                    sendFolder.addADU(clientId, appId, dataUnit.getData().toByteArray(), dataUnit.getAduId());
-                }
-            } catch (Exception e) {
-                logger.log(SEVERE, "Failed to contact " + appId + " for " + clientId, e);
-                scheduler.schedule(() -> addAppWithPendingData(appState, clientId), dataCheckInterval.toMillis(),
-                                   java.util.concurrent.TimeUnit.MILLISECONDS);
+        try {
+            synchronized (appState.pendingClients) {
+                appState.pendingClients.remove(clientId);
             }
+            var appData = ExchangeADUsRequest.newBuilder().setClientId(clientId)
+                    .setLastADUIdReceived(sendFolder.getMetadata(clientId, appId).lastAddedMessageId);
+            long lastAduIdSent = 0;
+            for (var adu : receiveFolder.getAppData(clientId, appId)) {
+                long aduId = adu.getADUId();
+                if (aduId > lastAduIdSent) {
+                    lastAduIdSent = aduId;
+                }
+                var data = receiveFolder.getADU(clientId, appId, aduId);
+                appData.addAdus(AppDataUnit.newBuilder().setData(ByteString.copyFrom(data)).setAduId(aduId).build());
+            }
+            var recvData =
+                    appState.stub.withDeadlineAfter(grpcTimeout, TimeUnit.MILLISECONDS).exchangeADUs(appData.build());
+            receiveFolder.deleteAllFilesUpTo(clientId, appId, lastAduIdSent);
+            for (var dataUnit : recvData.getAdusList()) {
+                sendFolder.addADU(clientId, appId, dataUnit.getData().toByteArray(), dataUnit.getAduId());
+            }
+        } catch (Exception e) {
+            logger.log(SEVERE, "Failed to contact " + appId + " for " + clientId, e);
+            scheduler.schedule(() -> addAppWithPendingData(appState, clientId), dataCheckInterval.toMillis(),
+                               java.util.concurrent.TimeUnit.MILLISECONDS);
+        }
     }
 
     @Override
