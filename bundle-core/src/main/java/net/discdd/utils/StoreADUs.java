@@ -29,6 +29,11 @@ public class StoreADUs {
         this.rootFolder = rootFolder;
     }
 
+    // TODO: remove this constructor after everything has been converted
+    public StoreADUs(Path rootFolder, boolean ignore) {
+        this(rootFolder);
+    }
+
     public Metadata getMetadata(String clientId, String appId) throws IOException {
         Path metadataPath = getAppFolder(clientId, appId).resolve("metadata.json");
         try {
@@ -68,9 +73,11 @@ public class StoreADUs {
     }
 
     public List<ADU> getAppData(String clientId, String appId) throws IOException {
+        getIfNotCreateMetadata(clientId, appId);
         var folder = getAppFolder(clientId, appId);
         try (var fileList = Files.list(folder)) {
-            return fileList.map(path -> new ADU(path.toFile(), appId, Long.parseLong(path.toFile().getName().split("\\.")[0]),
+            return fileList.filter(path -> path.endsWith("metadata"))
+                    .map(path -> new ADU(path.toFile(), appId, Long.parseLong(path.toFile().getName().split("\\.")[0]),
                                         path.toFile().length(), clientId)).collect(Collectors.toList());
         }
     }
@@ -96,6 +103,7 @@ public class StoreADUs {
     }
 
     public List<byte[]> getAllAppData(String appId) throws IOException {
+        getIfNotCreateMetadata(null, appId);
         var folder = rootFolder.resolve(appId);
         return Files.list(folder).map(path -> {
                 try {
