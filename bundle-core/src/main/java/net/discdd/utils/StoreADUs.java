@@ -184,6 +184,16 @@ public class StoreADUs {
         return appFolder.resolve(aduId + ".adu").toFile();
     }
 
+    public long getLastADUIdAdded(String clientId, String appId) throws IOException {
+        Metadata metadata = getMetadata(clientId, appId);
+        return metadata.lastAddedMessageId;
+    }
+
+    public long getLastADUIdDeleted(String clientId, String appId) throws IOException {
+        Metadata metadata = getMetadata(clientId, appId);
+        return metadata.lastAduDeleted;
+    }
+
     /**
      * @param clientId
      * @param appId
