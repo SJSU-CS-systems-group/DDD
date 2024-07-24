@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity(name = "ServerWindow")
@@ -13,6 +14,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @AllArgsConstructor
+@NoArgsConstructor
 public class ServerWindow {
     @Id
     @Column(name = "clientID", nullable = false, columnDefinition = "VARCHAR(256)")

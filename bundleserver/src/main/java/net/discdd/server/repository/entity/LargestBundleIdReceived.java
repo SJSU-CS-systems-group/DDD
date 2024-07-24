@@ -15,15 +15,11 @@ import jakarta.validation.constraints.NotBlank;
 public class LargestBundleIdReceived {
 
     @Id
-    @UuidGenerator
-    @Column(name = "id", updatable = false, nullable = false)
-    private UUID id;
-
-    @Column(name = "client_id", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "client_id", nullable = false, columnDefinition = "VARCHAR(255)")
     @NotBlank
     private String clientId;
 
-    @Column(name = "bundle_id", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "bundle_id", nullable = false, columnDefinition = "VARCHAR(255)")
     @NotBlank
     private String bundleId;
 
@@ -32,14 +28,6 @@ public class LargestBundleIdReceived {
     public LargestBundleIdReceived(String clientId, String bundleId) {
         this.clientId = clientId;
         this.bundleId = bundleId;
-    }
-
-    public String getId() {
-        return this.id.toString();
-    }
-
-    public void setId(String id) {
-        this.id = UUID.fromString(id);
     }
 
     public String getClientId() {
