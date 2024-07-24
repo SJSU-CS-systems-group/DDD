@@ -1,0 +1,292 @@
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\java\net\discdd\wifidirect\WifiDirectBroadcastReceiver.java:83: Error: Missing permissions required by WifiP2pManager.requestPeers: android.permission.NEARBY_WIFI_DEVICES [MissingPermission]
+                    manager.getManager().requestPeers(manager.getChannel(), manager);
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "MissingPermission":
+   This check scans through your code and libraries and looks at the APIs
+   being used, and checks this against the set of permissions required to
+   access those APIs. If the code using those APIs is called at runtime, then
+   the program will crash.
+
+   Furthermore, for permissions that are revocable (with targetSdkVersion 23),
+   client code must also be prepared to handle the calls throwing an exception
+   if the user rejects the request for permission at runtime.
+
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\AndroidManifest.xml:5: Error: If you need access to FINE location, you must request both ACCESS_FINE_LOCATION and ACCESS_COARSE_LOCATION [CoarseFineLocation]
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "CoarseFineLocation":
+   If your app requires access to FINE location, on Android 12 and higher you
+   must now request both FINE and COARSE. Users will have the option to grant
+   only COARSE location. Ensure your app can work with just COARSE location.
+
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\java\net\discdd\wifidirect\WifiDirectManager.java:446: Warning: this.manager.getReceiver() is missing RECEIVER_EXPORTED or RECEIVER_NOT_EXPORTED flag for unprotected broadcasts registered for an IntentFilter that cannot be inspected by lint [UnspecifiedRegisterReceiverFlag]
+            this.manager.getContext().registerReceiver(this.manager.getReceiver(), this.manager.getIntentFilter());
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "UnspecifiedRegisterReceiverFlag":
+   In Android U, all receivers registering for non-system broadcasts are
+   required to include a flag indicating the receiver's exported state. Apps
+   registering for non-system broadcasts should use the
+   ContextCompat#registerReceiver APIs with flags set to either
+   RECEIVER_EXPORTED or RECEIVER_NOT_EXPORTED.
+
+   If you are not expecting broadcasts from other apps on the device, register
+   your receiver with RECEIVER_NOT_EXPORTED to protect your receiver on all
+   platform releases.
+
+   https://developer.android.com/reference/androidx/core/content/ContextCompat#registerReceiver(android.content.Context,android.content.BroadcastReceiver,android.content.IntentFilter,int)
+
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\build.gradle:58: Warning: A newer version of com.google.protobuf:protobuf-java than 3.23.4 is available: 3.24.0 [GradleDependency]
+    implementation 'com.google.protobuf:protobuf-java:3.23.4'
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\build.gradle:70: Warning: A newer version of androidx.work:work-runtime than 2.7.0 is available: 2.9.0 [GradleDependency]
+    implementation "androidx.work:work-runtime:$work_version"
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\build.gradle:72: Warning: A newer version of androidx.appcompat:appcompat than 1.3.1 is available: 1.7.0 [GradleDependency]
+    implementation 'androidx.appcompat:appcompat:1.3.1'
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\build.gradle:73: Warning: A newer version of com.google.android.material:material than 1.4.0 is available: 1.12.0 [GradleDependency]
+    implementation 'com.google.android.material:material:1.4.0'
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\build.gradle:74: Warning: A newer version of androidx.constraintlayout:constraintlayout than 2.1.1 is available: 2.1.4 [GradleDependency]
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.1'
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\build.gradle:75: Warning: A newer version of androidx.lifecycle:lifecycle-common-java8 than 2.3.1 is available: 2.8.3 [GradleDependency]
+    implementation 'androidx.lifecycle:lifecycle-common-java8:2.3.1'
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\build.gradle:78: Warning: A newer version of androidx.test.ext:junit than 1.1.3 is available: 1.2.1 [GradleDependency]
+    androidTestImplementation 'androidx.test.ext:junit:1.1.3'
+                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "GradleDependency":
+   This detector looks for usages of libraries where the version you are using
+   is not the current stable release. Using older versions is fine, and there
+   are cases where you deliberately want to stick with an older version.
+   However, you may simply not be aware that a more recent version is
+   available, and that is what this lint check helps find.
+
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\build.gradle:77: Warning: Avoid using + in version numbers; can lead to unpredictable and unrepeatable builds (junit:junit:4.+) [GradleDynamicVersion]
+    testImplementation 'junit:junit:4.+'
+                       ~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "GradleDynamicVersion":
+   Using + in dependencies lets you automatically pick up the latest available
+   version rather than a specific, named version. However, this is not
+   recommended; your builds are not repeatable; you may have tested with a
+   slightly different version than what the build server used. (Using a
+   dynamic version as the major version number is more problematic than using
+   it in the minor version position.)
+
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\res\layout\activity_main.xml:90: Warning: Should use "sp" instead of "dp" for text sizes [SpUsage]
+                android:textSize="20dp"
+                ~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "SpUsage":
+   When setting text sizes, you should normally use sp, or "scale-independent
+   pixels". This is like the dp unit, but it is also scaled by the user's font
+   size preference. It is recommend you use this unit when specifying font
+   sizes, so they will be adjusted for both the screen density and the user's
+   preference.
+
+   There are cases where you might need to use dp; typically this happens when
+   the text is in a container with a specific dp-size. This will prevent the
+   text from spilling outside the container. Note however that this means that
+   the user's font size settings are not respected, so consider adjusting the
+   layout itself to be more flexible.
+
+   https://developer.android.com/training/multiscreen/screendensities.html
+
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\AndroidManifest.xml:23: Warning: The attribute android:allowBackup is deprecated from Android 12 and the default allows backup [DataExtractionRules]
+        android:allowBackup="true"
+                             ~~~~
+
+   Explanation for issues of type "DataExtractionRules":
+   Before Android 12, the attributes android:allowBackup and
+   android:fullBackupContent were used to configure all forms of backup,
+   including cloud backups, device-to-device transfers and adb backup.
+
+   In Android 12 and higher, these attributes have been deprecated and will
+   only apply to cloud backups. You should instead use the attribute
+   android:dataExtractionRules, specifying an @xml resource that configures
+   which files to back up, for cloud backups and for device-to-device
+   transfers, separately. If your minSdkVersion supports older versions,
+   you'll still want to specify an android:fullBackupContent resource if the
+   default behavior is not right for your app.
+
+   https://developer.android.com/about/versions/12/backup-restore#xml-changes
+   https://goo.gle/DataExtractionRules
+
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\java\net\discdd\bundletransport\service\FileServiceImpl.java:37: Warning: Unnecessary; SDK_INT is always >= 34 [ObsoleteSdkInt]
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\java\net\discdd\bundletransport\service\FileServiceImpl.java:41: Warning: Unnecessary; SDK_INT is always >= 34 [ObsoleteSdkInt]
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\java\net\discdd\bundletransport\service\FileServiceImpl.java:47: Warning: Unnecessary; SDK_INT is always >= 34 [ObsoleteSdkInt]
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\java\net\discdd\bundletransport\service\FileServiceImpl.java:94: Warning: Unnecessary; SDK_INT is always >= 34 [ObsoleteSdkInt]
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\java\net\discdd\bundletransport\service\FileServiceImpl.java:117: Warning: Unnecessary; SDK_INT is always >= 34 [ObsoleteSdkInt]
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\java\net\discdd\bundletransport\utils\FileUtils.java:33: Warning: Unnecessary; SDK_INT is always >= 34 [ObsoleteSdkInt]
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\java\net\discdd\wifidirect\WifiDirectManager.java:108: Warning: Unnecessary; SDK_INT is always >= 34 [ObsoleteSdkInt]
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\java\net\discdd\wifidirect\WifiDirectManager.java:198: Warning: Unnecessary; SDK_INT is always >= 29 [ObsoleteSdkInt]
+    @RequiresApi(api = Build.VERSION_CODES.Q)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\java\net\discdd\wifidirect\WifiDirectManager.java:229: Warning: Unnecessary; SDK_INT is always >= 29 [ObsoleteSdkInt]
+    @RequiresApi(api = Build.VERSION_CODES.Q)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\res\drawable-v24: Warning: This folder configuration (v24) is unnecessary; minSdkVersion is 34. Merge all the resources in this folder into drawable. [ObsoleteSdkInt]
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\res\mipmap-anydpi-v26: Warning: This folder configuration (v26) is unnecessary; minSdkVersion is 34. Merge all the resources in this folder into mipmap-anydpi. [ObsoleteSdkInt]
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\res\values-night\themes.xml:13: Warning: Unnecessary; SDK_INT is always >= 21 [ObsoleteSdkInt]
+        <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
+                                            ~~~~~~~~~~~~~~~~~~~
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\res\values\themes.xml:13: Warning: Unnecessary; SDK_INT is always >= 21 [ObsoleteSdkInt]
+        <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
+                                            ~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "ObsoleteSdkInt":
+   This check flags version checks that are not necessary, because the
+   minSdkVersion (or surrounding known API level) is already at least as high
+   as the version checked for.
+
+   Similarly, it also looks for resources in -vNN folders, such as values-v14
+   where the version qualifier is less than or equal to the minSdkVersion,
+   where the contents should be merged into the best folder.
+
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\res\layout\list_item.xml:2: Warning: The resource R.layout.list_item appears to be unused [UnusedResources]
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+^
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\res\values\strings.xml:3: Warning: The resource R.string.bundle_server_host appears to be unused [UnusedResources]
+    <string name="bundle_server_host">trique.homeofcode.com</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\res\values\strings.xml:4: Warning: The resource R.string.select appears to be unused [UnusedResources]
+    <string name="select">Select Item</string>
+            ~~~~~~~~~~~~~
+
+   Explanation for issues of type "UnusedResources":
+   Unused resources make applications larger and slow down builds.
+
+
+   The unused resource check can ignore tests. If you want to include
+   resources that are only referenced from tests, consider packaging them in a
+   test source set instead.
+
+   You can include test sources in the unused resource check by setting the
+   system property lint.unused-resources.include-tests =true, and to exclude
+   them (usually for performance reasons), use
+   lint.unused-resources.exclude-tests =true.
+   ,
+
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\res\layout\activity_main.xml:15: Warning: This ScrollView layout or its LinearLayout parent is unnecessary [UselessParent]
+    <ScrollView
+     ~~~~~~~~~~
+
+   Explanation for issues of type "UselessParent":
+   A layout with children that has no siblings, is not a scrollview or a root
+   layout, and does not have a background, can be removed and have its
+   children moved directly into the parent for a flatter and more efficient
+   layout hierarchy.
+
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\res\mipmap-anydpi-v26\ic_launcher.xml:2: Warning: The application adaptive icon is missing a monochrome tag [MonochromeLauncherIcon]
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+^
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\res\mipmap-anydpi-v26\ic_launcher_round.xml:2: Warning: The application adaptive roundIcon is missing a monochrome tag [MonochromeLauncherIcon]
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+^
+
+   Explanation for issues of type "MonochromeLauncherIcon":
+   If android:roundIcon and android:icon are both in your manifest, you must
+   either remove the reference to android:roundIcon if it is not needed; or,
+   supply the monochrome icon in the drawable defined by the android:roundIcon
+   and android:icon attribute.
+
+   For example, if android:roundIcon and android:icon are both in the
+   manifest, a launcher might choose to use android:roundIcon over
+   android:icon to display the adaptive app icon. Therefore, your themed
+   application iconwill not show if your monochrome attribute is not also
+   specified in android:roundIcon.
+
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\res\layout\activity_main.xml:51: Warning: This text field does not specify an inputType [TextFields]
+            <EditText
+             ~~~~~~~~
+
+   Explanation for issues of type "TextFields":
+   Providing an inputType attribute on a text field improves usability because
+   depending on the data to be input, optimized keyboards can be shown to the
+   user (such as just digits and parentheses for a phone number). 
+
+   The lint detector also looks at the id of the view, and if the id offers a
+   hint of the purpose of the field (for example, the id contains the phrase
+   phone or email), then lint will also ensure that the inputType contains the
+   corresponding type attributes.
+
+   If you really want to keep the text field generic, you can suppress this
+   warning by setting inputType="text".
+
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\res\layout\activity_main.xml:51: Warning: Missing autofillHints attribute [Autofill]
+            <EditText
+             ~~~~~~~~
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\res\layout\activity_main.xml:61: Warning: Missing autofillHints attribute [Autofill]
+            <EditText
+             ~~~~~~~~
+
+   Explanation for issues of type "Autofill":
+   Specify an autofillHints attribute when targeting SDK version 26 or higher
+   or explicitly specify that the view is not important for autofill. Your app
+   can help an autofill service classify the data correctly by providing the
+   meaning of each view that could be autofillable, such as views representing
+   usernames, passwords, credit card fields, email addresses, etc.
+
+   The hints can have any value, but it is recommended to use predefined
+   values like 'username' for a username or 'creditCardNumber' for a credit
+   card number. For a list of all predefined autofill hint constants, see the
+   AUTOFILL_HINT_ constants in the View reference at
+   https://developer.android.com/reference/android/view/View.html.
+
+   You can mark a view unimportant for autofill by specifying an
+   importantForAutofill attribute on that view or a parent view. See
+   https://developer.android.com/reference/android/view/View.html#setImportant
+   ForAutofill(int).
+
+   https://developer.android.com/guide/topics/text/autofill.html
+
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\java\net\discdd\bundletransport\MainActivity.java:138: Warning: String literal in setText can not be translated. Use Android resources instead. [SetTextI18n]
+                grpcServerState.setText("GRPC Server State: RUNNING");
+                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\java\net\discdd\bundletransport\MainActivity.java:142: Warning: String literal in setText can not be translated. Use Android resources instead. [SetTextI18n]
+                grpcServerState.setText("GRPC Server State: PENDING");
+                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\java\net\discdd\bundletransport\MainActivity.java:146: Warning: String literal in setText can not be translated. Use Android resources instead. [SetTextI18n]
+                grpcServerState.setText("GRPC Server State: SHUTDOWN");
+                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\java\net\discdd\bundletransport\MainActivity.java:175: Warning: Do not concatenate text displayed with setText. Use resource string with placeholders. [SetTextI18n]
+                        "Initiating server exchange to " + serverDomain + ":" + serverPort + "...\n");
+                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\User\Desktop\DDD-main\DDD\BundleTransport\app\src\main\java\net\discdd\bundletransport\MainActivity.java:175: Warning: String literal in setText can not be translated. Use Android resources instead. [SetTextI18n]
+                        "Initiating server exchange to " + serverDomain + ":" + serverPort + "...\n");
+                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "SetTextI18n":
+   When calling TextView#setText
+   * Never call Number#toString() to format numbers; it will not handle
+   fraction separators and locale-specific digits properly. Consider using
+   String#format with proper format specifications (%d or %f) instead.
+   * Do not pass a string literal (e.g. "Hello") to display text. Hardcoded
+   text can not be properly translated to other languages. Consider using
+   Android resource strings instead.
+   * Do not build messages by concatenating text chunks. Such messages can not
+   be properly translated.
+
+   https://developer.android.com/guide/topics/resources/localization.html
+
+2 errors, 38 warnings
