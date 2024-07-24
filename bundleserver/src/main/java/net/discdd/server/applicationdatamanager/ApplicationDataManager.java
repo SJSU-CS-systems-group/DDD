@@ -43,6 +43,7 @@ public class ApplicationDataManager {
     AduDeliveredListener aduDeliveredListener;
     private final StoreADUs receiveADUsStorage;
     private final StoreADUs sendADUsStorage;
+
     public ApplicationDataManager(AduStores aduStores, AduDeliveredListener aduDeliveredListener,
                                   LastBundleIdSentRepository lastBundleIdSentRepository,
                                   LargestBundleIdReceivedRepository largestBundleIdReceivedRepository,
@@ -107,22 +108,24 @@ public class ApplicationDataManager {
 
     static class SizeLimiter implements Predicate<Long> {
         long remaining;
+
         SizeLimiter(long dataSizeLimit) {
             remaining = dataSizeLimit;
         }
+
         @Override
         public boolean test(Long size) {
             remaining -= size;
             return remaining >= 0;
         }
     }
+
     public List<ADU> fetchADUsToSend(long initialSize, String clientId) throws IOException {
         List<ADU> adusToSend = new ArrayList<>();
         final long dataSizeLimit = this.bundleServerConfig.getApplicationDataManager().getAppDataSizeLimit();
         var sizeLimiter = new SizeLimiter(dataSizeLimit - initialSize);
         for (String appId : this.getRegisteredAppIds()) {
-            sendADUsStorage.getADUs(clientId, appId)
-                    .takeWhile(a -> sizeLimiter.test(a.getSize()))
+            sendADUsStorage.getADUs(clientId, appId).takeWhile(a -> sizeLimiter.test(a.getSize()))
                     .forEach(adusToSend::add);
         }
         return adusToSend;
