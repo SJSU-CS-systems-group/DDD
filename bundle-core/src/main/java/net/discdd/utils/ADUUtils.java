@@ -23,7 +23,7 @@ public class ADUUtils {
 
     public static void writeADU(ADU adu, Path targetDirectory) throws IOException {
         String aduFileName = adu.getAppId() + "-" + adu.getADUId();
-        var aduFile = targetDirectory.resolve(aduFileName + ".adu").toFile();
+        var aduFile = targetDirectory.resolve(aduFileName).toFile();
         try (BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(
                 adu.getSource())); BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(
                 new FileOutputStream(aduFile))) {

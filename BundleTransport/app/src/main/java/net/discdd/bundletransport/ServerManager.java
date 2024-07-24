@@ -1,6 +1,7 @@
 package net.discdd.bundletransport;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.function.Function;
 
 import java.util.logging.Logger;
@@ -18,16 +19,16 @@ public class ServerManager implements Runnable {
     private GrpcSendTask sendTask;
     private GrpcReceiveTask receiveTask;
 
-    public ServerManager(File fileDir, String host, String port, String transportId,
+    public ServerManager(Path filePath, String host, String port, String transportId,
                          Function<Exception, Void> sendCallback, Function<Exception, Void> receiveCallback,
                          Function<Void, Void> connectComplete) {
         this.sendCallback = sendCallback;
         this.receiveCallback = receiveCallback;
         this.connectComplete = connectComplete;
-        this.sendTask =
-                new GrpcSendTask(host, Integer.parseInt(port), transportId, fileDir + "/BundleTransmission/server");
-        this.receiveTask =
-                new GrpcReceiveTask(host, Integer.parseInt(port), transportId, fileDir + "/BundleTransmission/client");
+        this.sendTask = new GrpcSendTask(host, Integer.parseInt(port), transportId,
+                                         filePath.resolve("BundleTransmission/server"));
+        this.receiveTask = new GrpcReceiveTask(host, Integer.parseInt(port), transportId,
+                                               filePath.resolve("BundleTransmission/client"));
     }
 
     @Override

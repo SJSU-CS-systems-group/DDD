@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -31,17 +32,18 @@ public class GrpcReceiveTask {
 
     private static final Logger logger = Logger.getLogger(GrpcReceiveTask.class.getName());
 
-    private String host, receiveDir, transportId;
+    private String host, transportId;
+    private Path clientPath;
     private int port;
     private boolean receiveBundles, statusComplete;
     private ManagedChannel channel;
 
-    public GrpcReceiveTask(String host, int port, String transportId, String receiveDir) {
+    public GrpcReceiveTask(String host, int port, String transportId, Path clientPath) {
         logger.log(INFO, "initializing grpcreceivetask...");
         this.host = host;
         this.port = port;
         this.transportId = transportId;
-        this.receiveDir = receiveDir;
+        this.clientPath = clientPath;
     }
 
     public Exception run() {
@@ -84,7 +86,7 @@ public class GrpcReceiveTask {
                     List<String> toDelete =
                             Arrays.asList(response.getBundleList().getBundleListList().toArray(new String[0]));
                     if (!toDelete.isEmpty()) {
-                        File clientDir = new File(receiveDir);
+                        File clientDir = clientPath.toFile();
                         for (File bundle : clientDir.listFiles()) {
                             if (toDelete.contains(bundle.getName())) {
                                 logger.log(INFO, "Deleting file: " + bundle.getName());
@@ -100,7 +102,7 @@ public class GrpcReceiveTask {
                 } else if (response.hasMetadata()) {
                     try {
                         logger.log(INFO, "Downloading chunk of: " + response.getMetadata().getBid());
-                        writer = FileUtils.getFilePath(response, receiveDir);
+                        writer = FileUtils.getFilePath(response, clientPath.toString());
                     } catch (IOException e) {
                         logger.log(WARNING,
                                    "/GrpcReceiveTask.java -> executeTask() -> onNext() IOException: " + e.getMessage());
@@ -146,7 +148,7 @@ public class GrpcReceiveTask {
             if (statusComplete) {
                 logger.log(INFO, "/GrpcReceiveTask.java -> executeTask() receiveBundles = " + receiveBundles);
 
-                File dir = new File(receiveDir);
+                File dir = clientPath.toFile();
                 List<String> files = Arrays.stream(dir.listFiles(f -> f.length() > 0)).map(File::getName)
                         .collect(Collectors.toList());
                 BundleDownloadRequest request =
@@ -158,7 +160,7 @@ public class GrpcReceiveTask {
                 statusComplete = false;
             }
         }
-        logger.log(SEVERE, "Error thrown: ", thrown[0]);
+        logger.log(SEVERE, "Error during receiving bundles: ", thrown[0]);
         if (thrown[0] != null) {
             throw new Exception(thrown[0].getMessage());
         }
