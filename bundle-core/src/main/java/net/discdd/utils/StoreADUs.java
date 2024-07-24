@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Comparator;
 import java.util.List;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -22,6 +23,8 @@ import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
 public class StoreADUs {
+    public static final String METADATA_FILENAME = "metadata.json";
+    private static final Path METADATA_PATH = Path.of(METADATA_FILENAME);
     public Path rootFolder;
     private static final Logger logger = Logger.getLogger(StoreADUs.class.getName());
     public StoreADUs(Path rootFolder) {
@@ -34,8 +37,8 @@ public class StoreADUs {
         this(rootFolder);
     }
 
-    public Metadata getMetadata(String clientId, String appId) throws IOException {
-        Path metadataPath = getAppFolder(clientId, appId).resolve("metadata.json");
+    private Metadata getMetadata(String clientId, String appId) throws IOException {
+        Path metadataPath = getAppFolder(clientId, appId).resolve(METADATA_FILENAME);
         try {
             String data = new String(Files.readAllBytes(metadataPath));
             logger.log(INFO, "metadata path " + metadataPath);
@@ -53,7 +56,7 @@ public class StoreADUs {
         Gson gson = new Gson();
         String metadataString = gson.toJson(metadata);
         Path folder = getAppFolder(clientId, appId);
-        File file = folder.resolve("metadata.json").toFile();
+        File file = folder.resolve(METADATA_PATH).toFile();
 
         logger.log(INFO, "[Set] metadata path " + file);
 
@@ -73,13 +76,16 @@ public class StoreADUs {
     }
 
     public List<ADU> getAppData(String clientId, String appId) throws IOException {
+        return getADUs(clientId, appId).collect(Collectors.toList());
+
+    }
+
+    public Stream<ADU> getADUs(String clientId, String appId) throws IOException {
         getIfNotCreateMetadata(clientId, appId);
-        var folder = getAppFolder(clientId, appId);
-        try (var fileList = Files.list(folder)) {
-            return fileList.filter(path -> path.endsWith("metadata"))
-                    .map(path -> new ADU(path.toFile(), appId, Long.parseLong(path.toFile().getName().split("\\.")[0]),
-                                        path.toFile().length(), clientId)).collect(Collectors.toList());
-        }
+        return Files.list(getAppFolder(clientId, appId)).filter(p -> !p.endsWith(METADATA_PATH))
+                .map(Path::toFile)
+                .map(f -> new ADU(f, appId, Long.parseLong(f.getName()), f.length(), clientId))
+                .sorted(Comparator.comparingLong(ADU::getADUId));
     }
 
     public record ClientApp(String clientId, String appId) {}
@@ -116,18 +122,10 @@ public class StoreADUs {
     }
 
     public void deleteAllFilesUpTo(String clientId, String appId, long aduId) throws IOException {
-        //check if there are enough files
-        var folder = getAppFolder(clientId, appId);
-        Files.list(folder).filter(p -> p.toFile().getName().endsWith(".adu"))
-                .filter(p -> Long.parseLong(p.toFile().getName().split("\\.")[0]) <= aduId)
-                .peek(p -> logger.log(INFO, "Deleting file " + p)).forEach(p -> {
-                    try {
-                        Files.delete(p);
-                    } catch (IOException e) {
-                        logger.log(SEVERE, "Failed to delete file " + p, e);
-                    }
-                });
         var metadata = getMetadata(clientId, appId);
+        getADUs(clientId, appId).takeWhile(adu -> adu.getADUId() <= aduId).forEach(adu -> {
+                if (!adu.getSource().delete()) logger.log(SEVERE, "Failed to delete file " + adu);
+        });
         if (metadata.lastAduDeleted < aduId) {
             metadata.lastAduDeleted = aduId;
             setMetadata(clientId, appId, metadata);
@@ -136,17 +134,16 @@ public class StoreADUs {
 
     public byte[] getADU(String clientId, String appId, Long aduId) throws IOException {
         var appFolder = getAppFolder(clientId, appId);
-        var adu = Files.readAllBytes(appFolder.resolve(aduId + ".adu"));
-        return adu;
+        return Files.readAllBytes(appFolder.resolve(Long.toString(aduId)));
     }
 
     private Path getAppFolder(String clientId, String appId) {
         return clientId == null ? rootFolder.resolve(appId) : rootFolder.resolve(Paths.get(clientId, appId));
     }
 
-    public File getADUFile(String clientId, String appId, String aduId) {
+    public File getADUFile(String clientId, String appId, long aduId) {
         var appFolder = getAppFolder(clientId, appId);
-        return appFolder.resolve(aduId + ".adu").toFile();
+        return appFolder.resolve(Long.toString(aduId)).toFile();
     }
 
     public long getLastADUIdAdded(String clientId, String appId) throws IOException {
@@ -169,26 +166,23 @@ public class StoreADUs {
      */
     public File addADU(String clientId, String appId, byte[] data, long aduId) throws IOException {
         var appFolder = getAppFolder(clientId, appId);
-        var folder = appFolder.toFile();
 
         Metadata metadata = getIfNotCreateMetadata(clientId, appId);
-        var lastAduId = metadata.lastAduAdded;
+        var lastAduDeleted = metadata.lastAduDeleted;
+        var lastAduAdded = metadata.lastAduAdded;
         if (aduId == -1L) {
-            aduId = ++lastAduId;
-        } else if (aduId <= lastAduId) {
+            aduId = lastAduAdded+1;
+        } else if (aduId <= lastAduDeleted) {
             return null;
         }
 
-        if (metadata.lastAduAdded < lastAduId) {
+        if (metadata.lastAduAdded < aduId) {
             metadata.lastAduAdded = aduId;
+            setMetadata(clientId, appId, metadata);
         }
 
-        setMetadata(clientId, appId, metadata);
-        var file = new File(folder, aduId + ".adu");
-        FileOutputStream oFile = new FileOutputStream(file);
-        oFile.write(data);
-        oFile.close();
-
-        return file;
+        Path aduPath = appFolder.resolve(Long.toString(aduId));
+        Files.write(aduPath, data);
+        return aduPath.toFile();
     }
 }
