@@ -27,6 +27,7 @@ public class StoreADUs {
     private static final Path METADATA_PATH = Path.of(METADATA_FILENAME);
     public Path rootFolder;
     private static final Logger logger = Logger.getLogger(StoreADUs.class.getName());
+
     public StoreADUs(Path rootFolder) {
         logger.log(FINE, "bundlecore", "rootFolder: " + rootFolder);
         this.rootFolder = rootFolder;
@@ -82,8 +83,7 @@ public class StoreADUs {
 
     public Stream<ADU> getADUs(String clientId, String appId) throws IOException {
         getIfNotCreateMetadata(clientId, appId);
-        return Files.list(getAppFolder(clientId, appId)).filter(p -> !p.endsWith(METADATA_PATH))
-                .map(Path::toFile)
+        return Files.list(getAppFolder(clientId, appId)).filter(p -> !p.endsWith(METADATA_PATH)).map(Path::toFile)
                 .map(f -> new ADU(f, appId, Long.parseLong(f.getName()), f.length(), clientId))
                 .sorted(Comparator.comparingLong(ADU::getADUId));
     }
@@ -112,19 +112,19 @@ public class StoreADUs {
         getIfNotCreateMetadata(null, appId);
         var folder = rootFolder.resolve(appId);
         return Files.list(folder).map(path -> {
-                try {
-                    return Files.readAllBytes(path);
-                } catch (IOException e) {
-                    logger.log(SEVERE, "Failed to read file " + path, e);
-                    return new byte[0];
-                }
-            }).collect(Collectors.toList());
+            try {
+                return Files.readAllBytes(path);
+            } catch (IOException e) {
+                logger.log(SEVERE, "Failed to read file " + path, e);
+                return new byte[0];
+            }
+        }).collect(Collectors.toList());
     }
 
     public void deleteAllFilesUpTo(String clientId, String appId, long aduId) throws IOException {
         var metadata = getMetadata(clientId, appId);
         getADUs(clientId, appId).takeWhile(adu -> adu.getADUId() <= aduId).forEach(adu -> {
-                if (!adu.getSource().delete()) logger.log(SEVERE, "Failed to delete file " + adu);
+            if (!adu.getSource().delete()) logger.log(SEVERE, "Failed to delete file " + adu);
         });
         if (metadata.lastAduDeleted < aduId) {
             metadata.lastAduDeleted = aduId;
@@ -171,7 +171,7 @@ public class StoreADUs {
         var lastAduDeleted = metadata.lastAduDeleted;
         var lastAduAdded = metadata.lastAduAdded;
         if (aduId == -1L) {
-            aduId = lastAduAdded+1;
+            aduId = lastAduAdded + 1;
         } else if (aduId <= lastAduDeleted) {
             return null;
         }
