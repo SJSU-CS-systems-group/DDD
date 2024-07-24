@@ -4,6 +4,12 @@ public class Metadata {
     //last messageId added by the app
     public long lastAddedMessageId;
 
+    // last ADU id added
+    public long lastAduAdded;
+
+    // last ADU id deleted
+    public long lastAduDeleted;
+
     //last messageId sent successfully via DTN
     public long lastSentMessageId;
 

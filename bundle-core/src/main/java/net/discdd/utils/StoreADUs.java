@@ -142,11 +142,6 @@ public class StoreADUs {
         return dataList;
     }
 
-    private void deleteFile(String fileName) {
-        File file = rootFolder.resolve(fileName).toFile();
-        file.delete();
-    }
-
     public void deleteAllFilesUpTo(String clientId, String appId, long aduId) throws IOException {
         //check if there are enough files
         var folder = getAppFolder(clientId, appId);
@@ -160,6 +155,11 @@ public class StoreADUs {
                     }
                 });
         var metadata = getMetadata(clientId, appId);
+        if (metadata.lastAduDeleted < aduId) {
+            metadata.lastAduDeleted = aduId;
+            setMetadata(clientId, appId, metadata);
+        }
+
         if (forSending && metadata.lastSentMessageId < aduId) {
             metadata.lastSentMessageId = aduId;
             setMetadata(clientId, appId, metadata);
@@ -197,17 +197,23 @@ public class StoreADUs {
         var folder = appFolder.toFile();
 
         Metadata metadata = getIfNotCreateMetadata(clientId, appId);
-        var lastAduId = forSending ? metadata.lastAddedMessageId : metadata.lastReceivedMessageId;
+        var lastAduId = metadata.lastAduAdded;
         if (aduId == -1L) {
             aduId = ++lastAduId;
         } else if (aduId <= lastAduId) {
             return null;
         }
+
         if (forSending) {
             metadata.lastAddedMessageId = aduId;
         } else {
             metadata.lastReceivedMessageId = aduId;
         }
+
+        if (metadata.lastAduAdded < lastAduId) {
+            metadata.lastAduAdded = aduId;
+        }
+
         setMetadata(clientId, appId, metadata);
         var file = new File(folder, aduId + ".adu");
         FileOutputStream oFile = new FileOutputStream(file);
