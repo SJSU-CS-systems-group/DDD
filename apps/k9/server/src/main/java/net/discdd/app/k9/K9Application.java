@@ -1,9 +1,9 @@
-package net.discdd.app.echo;
+package net.discdd.app.k9;
 
 import io.grpc.ConnectivityState;
 import io.grpc.ManagedChannelBuilder;
-import net.discdd.grpc.ConnectionData;
-import net.discdd.grpc.ServiceAdapterRegistryServiceGrpc;
+import net.discdd.server.ConnectionData;
+import net.discdd.server.ServiceAdapterRegistryGrpc;
 import org.springframework.boot.Banner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -22,8 +22,8 @@ import static java.util.logging.Level.WARNING;
  * the GrpcService annotation.
  */
 @SpringBootApplication
-public class EchoApplication {
-    final static Logger logger = Logger.getLogger(EchoApplication.class.getName());
+public class K9Application {
+    final static Logger logger = Logger.getLogger(K9Application.class.getName());
 
     public static void main(String[] args) {
         if (args.length < 1) {
@@ -31,13 +31,14 @@ public class EchoApplication {
             System.exit(1);
         }
 
-        var app = new SpringApplication(EchoApplication.class);
+        var app = new SpringApplication(K9Application.class);
         app.setBannerMode(Banner.Mode.OFF);
         // we need to register with the BundleServer in an application initializer so that
         // the logging will be set up correctly
         app.addInitializers((actx) -> {
             var bundleServerURL = args[0];
             var myGrpcUrl = actx.getEnvironment().getProperty("my.grpc.url");
+            var appName = actx.getEnvironment().getProperty("spring.application.name");
             if (myGrpcUrl == null) {
                 logger.log(SEVERE, "my.grpc.url is not set in application.properties");
                 System.exit(1);
@@ -49,9 +50,8 @@ public class EchoApplication {
                 if (false && channelState != ConnectivityState.READY) {
                     logger.log(WARNING, String.format("Could not connect to %s %s", bundleServerURL, channelState));
                 } else {
-                    var rsp = ServiceAdapterRegistryServiceGrpc.newBlockingStub(managedChannel)
-                            .checkAdapterRegistration(
-                                    ConnectionData.newBuilder().setAppName("echo").setUrl(myGrpcUrl).build());
+                    var rsp = ServiceAdapterRegistryGrpc.newBlockingStub(managedChannel)
+                            .registerAdapter(ConnectionData.newBuilder().setAppName(appName).setUrl(myGrpcUrl).build());
                     if (rsp.getCode() != 0) {
                         logger.log(WARNING,
                                    String.format("Could not register with BundleServer: rc = %d %s", rsp.getCode(),

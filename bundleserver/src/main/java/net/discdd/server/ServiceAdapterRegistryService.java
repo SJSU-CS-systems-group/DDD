@@ -2,19 +2,18 @@ package net.discdd.server;
 
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
+import net.discdd.grpc.ConnectionData;
+import net.discdd.grpc.ResponseStatus;
+import net.discdd.grpc.ServiceAdapterRegistryServiceGrpc;
 import net.discdd.server.repository.RegisteredAppAdapterRepository;
-import net.discdd.server.repository.entity.RegisteredAppAdapter;
-import org.springframework.beans.factory.annotation.Value;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
 
 @GrpcService
-public class ServiceAdapterRegistryService extends ServiceAdapterRegistryGrpc.ServiceAdapterRegistryImplBase {
+public class ServiceAdapterRegistryService
+        extends ServiceAdapterRegistryServiceGrpc.ServiceAdapterRegistryServiceImplBase {
     private static final Logger logger = Logger.getLogger(ServiceAdapterRegistryService.class.getName());
     final private RegisteredAppAdapterRepository registeredAppAdapterRepository;
 
@@ -23,7 +22,8 @@ public class ServiceAdapterRegistryService extends ServiceAdapterRegistryGrpc.Se
     }
 
     @Override
-    public void registerAdapter(ConnectionData connectionData, StreamObserver<ResponseStatus> responseObserver) {
+    public void checkAdapterRegistration(ConnectionData connectionData,
+                                         StreamObserver<ResponseStatus> responseObserver) {
         logger.log(INFO, String.format("Checking %s to %s", connectionData.getAppName(), connectionData.getUrl()));
         var registeredApp = registeredAppAdapterRepository.findByAppId(connectionData.getAppName());
         if (registeredApp.isPresent()) {

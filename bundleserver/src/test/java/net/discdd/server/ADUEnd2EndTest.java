@@ -12,8 +12,10 @@ import net.discdd.bundletransport.service.BundleServiceGrpc;
 import net.discdd.bundletransport.service.BundleUploadRequest;
 import net.discdd.bundletransport.service.BundleUploadResponse;
 import net.discdd.bundletransport.service.Status;
+import net.discdd.grpc.ExchangeADUsRequest;
+import net.discdd.grpc.ExchangeADUsResponse;
+import net.discdd.grpc.ServiceAdapterServiceGrpc;
 import net.discdd.model.Acknowledgement;
-import net.discdd.server.ServiceAdapterGrpc.ServiceAdapterImplBase;
 import net.discdd.server.repository.RegisteredAppAdapterRepository;
 import net.discdd.server.repository.entity.RegisteredAppAdapter;
 import net.discdd.utils.Constants;
@@ -61,10 +63,9 @@ import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
+import java.util.function.BiConsumer;
 import java.util.logging.Logger;
 
 import static java.util.Objects.requireNonNull;
@@ -85,46 +86,33 @@ public class ADUEnd2EndTest {
 
     @Configuration
     static public class ADUEnd2EndTestInitializer implements ApplicationRunner {
-        private RegisteredAppAdapterRepository registeredAppAdapterRepository;
+        final private RegisteredAppAdapterRepository registeredAppAdapterRepository;
 
         public ADUEnd2EndTestInitializer(RegisteredAppAdapterRepository registeredAppAdapterRepository) {
             this.registeredAppAdapterRepository = registeredAppAdapterRepository;
         }
 
         @Override
-        public void run(ApplicationArguments args) throws Exception {
+        public void run(ApplicationArguments args) {
             logger.info("Registering the testAppId");
             registeredAppAdapterRepository.save(new RegisteredAppAdapter(TEST_APPID, "localhost:6666"));
         }
     }
 
-    public static class TestAppServiceAdapter extends ServiceAdapterImplBase {
-        record HandlerFuture(CompletableFuture<AppData> requestFuture, CompletableFuture<AppData> responseFuture) {}
+    public static class TestAppServiceAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServiceImplBase {
+        record AdapterRequestResponse(ExchangeADUsRequest request, StreamObserver<ExchangeADUsResponse> response) {}
 
-        ArrayBlockingQueue<HandlerFuture> handlerFutures = new ArrayBlockingQueue<HandlerFuture>(1);
+        ArrayBlockingQueue<AdapterRequestResponse> incomingRequests = new ArrayBlockingQueue<>(1);
 
-        public void handleRequest(Function<AppData, AppData> handler) throws InterruptedException {
-            var handlerFuture = handlerFutures.poll(5, TimeUnit.SECONDS);
+        public void handleRequest(BiConsumer<ExchangeADUsRequest, StreamObserver<ExchangeADUsResponse>> handler) throws InterruptedException {
+            var handlerFuture = incomingRequests.poll(5, TimeUnit.SECONDS);
             if (handlerFuture == null) throw new IllegalStateException("No request received");
-            handlerFuture.responseFuture.complete(
-                    handler.apply(handlerFuture.requestFuture.orTimeout(10, TimeUnit.SECONDS).join()));
-        }
-
-        private AppData waitForResponse(AppData request) throws InterruptedException {
-            var handlerFuture = new HandlerFuture(new CompletableFuture<>(), new CompletableFuture<>());
-            handlerFutures.put(handlerFuture);
-            handlerFuture.requestFuture.complete(request);
-            return handlerFuture.responseFuture.join();
+            handler.accept(handlerFuture.request, handlerFuture.response);
         }
 
         @Override
-        public void saveData(AppData request, StreamObserver<AppData> responseObserver) {
-            try {
-                responseObserver.onNext(waitForResponse(request));
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-            responseObserver.onCompleted();
+        public void exchangeADUs(ExchangeADUsRequest request, StreamObserver<ExchangeADUsResponse> responseObserver) {
+            incomingRequests.add(new AdapterRequestResponse(request, responseObserver));
         }
     }
 
@@ -300,14 +288,15 @@ public class ADUEnd2EndTest {
         checkReceivedFiles(expectedFileList);
 
         // check the gRPC
-        testAppServiceAdapter.handleRequest(appData -> {
-            Assertions.assertEquals(0, appData.getLastADUIdReceived());
-            Assertions.assertEquals(clientId, appData.getClientId());
-            Assertions.assertEquals(3, appData.getDataListCount());
+        testAppServiceAdapter.handleRequest((req, rsp) -> {
+            Assertions.assertEquals(0, req.getLastADUIdReceived());
+            Assertions.assertEquals(clientId, req.getClientId());
+            Assertions.assertEquals(3, req.getAdusCount());
             for (int i = 0; i < 3; i++) {
-                Assertions.assertEquals(adus.get(i), appData.getDataList(i).getData().toStringUtf8());
+                Assertions.assertEquals(adus.get(i), req.getAdus(i).getData().toStringUtf8());
             }
-            return AppData.newBuilder().setLastADUIdReceived(3).build();
+            rsp.onNext(ExchangeADUsResponse.newBuilder().setLastADUIdReceived(3).build());
+            rsp.onCompleted();
         });
 
         // everything should disappear
@@ -322,8 +311,7 @@ public class ADUEnd2EndTest {
         // we are resending 3, so rewind the counter by one
         currentTestAppAduId.decrementAndGet();
 
-        Path bundleJarPath = bundleDir.resolve("outer-jar.jar");
-        bundleJarPath = createBundleForAdus(adus, currentTestAppAduId, clientId, 2, bundleDir);
+        Path bundleJarPath = createBundleForAdus(adus, currentTestAppAduId, clientId, 2, bundleDir);
         sendBundle(bundleJarPath);
 
         // check if the files are there
@@ -333,15 +321,16 @@ public class ADUEnd2EndTest {
         checkReceivedFiles(expectedFileList);
 
         // check the gRPC
-        testAppServiceAdapter.handleRequest(appData -> {
-            Assertions.assertEquals(0, appData.getLastADUIdReceived());
-            Assertions.assertEquals(clientId, appData.getClientId());
-            Assertions.assertEquals(3, appData.getDataListCount());
+        testAppServiceAdapter.handleRequest((req, rsp) -> {
+            Assertions.assertEquals(0, req.getLastADUIdReceived());
+            Assertions.assertEquals(clientId, req.getClientId());
+            Assertions.assertEquals(3, req.getAdusCount());
             for (int i = 4; i <= 6; i++) {
-                Assertions.assertEquals("ADU" + i, appData.getDataList(i - 4).getData().toStringUtf8());
-                Assertions.assertEquals(i, appData.getDataList(i - 4).getAduId());
+                Assertions.assertEquals("ADU" + i, req.getAdus(i - 4).getData().toStringUtf8());
+                Assertions.assertEquals(i, req.getAdus(i - 4).getAduId());
             }
-            return AppData.newBuilder().setLastADUIdReceived(6).build();
+            rsp.onNext(ExchangeADUsResponse.newBuilder().setLastADUIdReceived(6).build());
+            rsp.onCompleted();
         });
     }
 

@@ -99,6 +99,16 @@ public class StoreADUs {
         return appDataList;
     }
 
+    public List<ADU> getAllADUsToSend(String clientId, String appId) throws IOException {
+        List<ADU> appDataList = new ArrayList<>();
+        var folder = getAppFolder(clientId, appId);
+        Metadata metadata = getMetadata(clientId, appId);
+        for (long i = metadata.lastSentMessageId + 1; i <= metadata.lastAddedMessageId; i++) {
+            appDataList.add(new ADU(rootFolder.resolve(folder.resolve(i + ".adu")).toFile(), appId, i, 0, clientId));
+        }
+        return appDataList;
+    }
+
     public record ClientApp(String clientId, String appId) {}
 
     public Stream<ClientApp> getAllClientApps() {
