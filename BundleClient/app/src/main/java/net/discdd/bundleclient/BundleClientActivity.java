@@ -58,8 +58,10 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     String currentTransportId;
     String BundleExtension = ".bundle";
 
-    // bundle transmitter set up
+    // bundle transmission set up
     BundleTransmission bundleTransmission;
+    private static final String usbDirName = "DDD_transport";
+    public static boolean usbConnected = false;
 
     // instantiate window for bundles
     public static ClientWindow clientWindow;
@@ -100,8 +102,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
             BundleSecurity.initializeKeyPaths(ApplicationContext.getResources(),
                                               ApplicationContext.getApplicationInfo().dataDir);
         } catch (IOException e) {
-            logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys");
-            e.printStackTrace();
+            logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
         }
 
         //Initialize bundle transmission
@@ -115,36 +116,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         }
 
     }
-
-//    private static final String usbDirName = "DDD_transport";
-//    public static boolean usbConnected = false;
-//    BroadcastReceiver mUsbReceiver = new BroadcastReceiver() {
-//        @Override
-//        public void onReceive(Context context, Intent intent) {
-//            String action = intent.getAction();
-//            if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
-//                usbExchangeButton.setEnabled(false);
-//                usbConnectionText.setText("No USB connection detected\n");
-//                usbConnectionText.setTextColor(Color.RED);
-//                usbConnected = false;
-//                showUsbDetachedToast();
-//            } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
-//                if (usbDirExists()) {
-//                    usbExchangeButton.setEnabled(true);
-//                    usbConnectionText.setText("USB connection detected\n");
-//                    usbConnectionText.setTextColor(Color.GREEN);
-//                    usbConnected = true;
-//                    showUsbAttachedToast();
-//                } else {
-//                    usbExchangeButton.setEnabled(false);
-//                    usbConnectionText.setText("USB was connected, but /DDD_transport directory was not detected\n");
-//                    usbConnectionText.setTextColor(Color.RED);
-//                    usbConnected = false;
-//                    showUsbAttachedToast();
-//                }
-//            }
-//        }
-//    };
 
     /**
      * check for location permissions manually, will give a prompt
@@ -286,8 +257,55 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     private MainPageFragment getMainPageFragment() {
         return (MainPageFragment) getSupportFragmentManager().findFragmentByTag("f0");
     }
-
 }
+
+
+//    private static final String usbDirName = "DDD_transport";
+//    public static boolean usbConnected = false;
+//    BroadcastReceiver mUsbReceiver = new BroadcastReceiver() {
+//        @Override
+//        public void onReceive(Context context, Intent intent) {
+//            String action = intent.getAction();
+//            if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
+//                usbExchangeButton.setEnabled(false);
+//                usbConnectionText.setText("No USB connection detected\n");
+//                usbConnectionText.setTextColor(Color.RED);
+//                usbConnected = false;
+//                showUsbDetachedToast();
+//            } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
+//                if (usbDirExists()) {
+//                    usbExchangeButton.setEnabled(true);
+//                    usbConnectionText.setText("USB connection detected\n");
+//                    usbConnectionText.setTextColor(Color.GREEN);
+//                    usbConnected = true;
+//                    showUsbAttachedToast();
+//                } else {
+//                    usbExchangeButton.setEnabled(false);
+//                    usbConnectionText.setText("USB was connected, but /DDD_transport directory was not detected\n");
+//                    usbConnectionText.setTextColor(Color.RED);
+//                    usbConnected = false;
+//                    showUsbAttachedToast();
+//                }
+//            }
+//        }
+//    };
+
+
+
+
+//    @Override
+//    public void onDestroy() {
+//        super.onDestroy();
+//        wifiDirectExecutor.shutdown();
+////        wifiDirectExecutor.shutdown();
+////        unregisterReceiver(mUsbReceiver);
+//    }
+
+
+
+
+
+
     //        connectButton.setEnabled(true);
 //        wifiDirectResponseText.setText("Starting connection...\n");
 //        logger.log(INFO, "connecting to transport");
