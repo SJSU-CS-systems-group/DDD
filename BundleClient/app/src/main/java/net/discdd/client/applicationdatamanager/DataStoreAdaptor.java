@@ -31,8 +31,8 @@ public class DataStoreAdaptor {
     private Context applicationContext;
 
     public DataStoreAdaptor(Path appRootDataDirectory) {
-        sendADUsStorage = new StoreADUs(appRootDataDirectory.resolve("send"), true);
-        receiveADUsStorage = new StoreADUs(appRootDataDirectory.resolve("receive"), false);
+        sendADUsStorage = new StoreADUs(appRootDataDirectory.resolve("send"));
+        receiveADUsStorage = new StoreADUs(appRootDataDirectory.resolve("receive"));
     }
 
     private void sendDataToApp(ADU adu) throws IOException {
