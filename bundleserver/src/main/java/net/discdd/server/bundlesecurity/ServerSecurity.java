@@ -435,7 +435,10 @@ public class ServerSecurity {
         var bundlePath = encPath.resolve(bundleID);
 
         /* Create Directory if it does not exist */
-        Files.createDirectories(bundlePath);
+        if (!Files.exists(bundlePath)) {
+            Files.createDirectories(bundlePath);
+        }
+
         /* Create Bundle ID File */
         createBundleIDFile(bundleID, client, bundlePath);
 
@@ -462,7 +465,7 @@ public class ServerSecurity {
 
     public void createBundleIDFile(String bundleID, ClientSession client, Path bundlePath) throws IOException {
         var bundleIDPath = bundlePath.resolve(SecurityUtils.BUNDLEID_FILENAME);
-        Files.write(bundlePath, bundleID.getBytes());
+        Files.write(bundleIDPath, bundleID.getBytes());
     }
 
     public String decryptBundleID(String encryptedBundleID, String clientID) throws InvalidClientIDException,
