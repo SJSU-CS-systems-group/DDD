@@ -24,28 +24,25 @@
         android:text="Connect" />
 
     <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingTop="12dp"
-        android:paddingBottom="12dp"
-        android:text="Connected Device Addresses:"
-        android:textSize="16sp" />
+            android:id="@+id/connected_device_address"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:textSize="16sp"
+            android:visibility="visible"
+            android:text="My address"
+            tools:text="My address" />
 
     <TextView
-        android:id="@+id/connected_device_address"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingTop="12dp"
-        android:paddingBottom="12dp"
-        android:textSize="16sp" />
-
-    <TextView
-        android:id="@+id/wifidirect_response_text"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingTop="12dp"
-        android:paddingBottom="12dp"
-        android:textSize="16sp" />
+            android:id="@+id/wifidirect_response_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:textSize="16sp"
+            android:visibility="visible"
+            android:text="Wifi text" />
 
     <Button
         android:id="@+id/exchange_button"

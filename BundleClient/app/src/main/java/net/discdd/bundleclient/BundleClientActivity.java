@@ -6,6 +6,12 @@ import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.hardware.usb.UsbDevice;
+import android.hardware.usb.UsbManager;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -26,7 +32,7 @@ import net.discdd.wifidirect.WifiDirectStateListener;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.LinkedList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -48,6 +54,19 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     public static final int PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION = 1001;
     public static final int PERMISSIONS_REQUEST_CODE_ACCESS_NEARBY_WIFI_DEVICES = 1002;
     public static Context ApplicationContext;
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        if (wifiDirectManager == null) {
+            // set up wifi direct
+            wifiDirectManager =
+                    new WifiDirectManager(this.getApplication(), this.getLifecycle(), this,
+                                          this.getString(R.string.tansport_host), false);
+            wifiDirectManager.initialize();
+        }
+    }
 
     private static String RECEIVE_PATH = "Shared/received-bundles";
 
@@ -108,9 +127,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
             tab.setText(labels[position]);
         }).attach();
 
-        // set up wifi direct
-        wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle(), this,
-                                                  this.getString(R.string.tansport_host));
 
         //Application context
         ApplicationContext = getApplicationContext();
@@ -136,39 +152,21 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     }
 
     @Override
-    public void onReceiveAction(WifiDirectManager.WIFI_DIRECT_ACTIONS action) {
+    public void onReceiveAction(WifiDirectManager.WifiDirectEvent action) {
         runOnUiThread(() -> handleWifiDirectAction(action));
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        registerReceiver(wifiDirectManager.createReceiver(), wifiDirectManager.getIntentFilter());
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-        try {
-            unregisterReceiver(wifiDirectManager.getReceiver());
-        } catch (IllegalArgumentException e) {
-            logger.log(WARNING, "WifiDirect receiver unregistered before registered");
-        }
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
         wifiDirectExecutor.shutdown();
-//        wifiDirectExecutor.shutdown();
-//        unregisterReceiver(mUsbReceiver);
     }
 
     //Method with cases to handle Wifi Direct actions
-    private void handleWifiDirectAction(WifiDirectManager.WIFI_DIRECT_ACTIONS action) {
+    private void handleWifiDirectAction(WifiDirectManager.WifiDirectEvent action) {
         MainPageFragment fragment = getMainPageFragment();
         if (fragment != null) {
-            switch (action) {
+            switch (action.type()) {
                 case WIFI_DIRECT_MANAGER_INITIALIZATION_FAILED:
                     fragment.updateWifiDirectResponse("Manager initialization failed\n");
                     logger.log(WARNING, "Manager initialization failed\n");
@@ -213,6 +211,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
                     fragment.setConnectButtonEnabled(true);
                     break;
             }
+            if (action.message() != null) fragment.updateWifiDirectResponse(action.message());
         }
     }
 
@@ -226,7 +225,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         logger.log(INFO, "Connecting to transport");
 
         wifiDirectExecutor.execute(wifiDirectManager);
-
     }
 
     public void exchangeMessage() {

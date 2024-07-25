@@ -1,5 +1,10 @@
 package net.discdd.bundletransport;
 
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
+
 import android.Manifest;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -14,7 +19,6 @@ import android.net.wifi.p2p.WifiP2pGroup;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
-
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -40,13 +44,7 @@ import java.util.HashSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 import java.util.logging.Logger;
-
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.WARNING;
-import static java.util.logging.Level.SEVERE;
 
 public class MainActivity extends AppCompatActivity implements RpcServerStateListener, WifiDirectStateListener {
 
@@ -279,7 +277,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         String SERVER_BASE_PATH = this.getExternalFilesDir(null) + "/BundleTransmission";
         Receive_Directory = SERVER_BASE_PATH + "/client";
         Server_Directory = SERVER_BASE_PATH + "/server";
-        wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle(), this);
+        wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle(), this, "ddd_transport", true);
         wifiDirectManager.initialize();
 
         grpcServer = RpcServer.getInstance(this);
@@ -443,12 +441,12 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
     }
 
     @Override
-    public void onReceiveAction(WifiDirectManager.WIFI_DIRECT_ACTIONS action) {
+    public void onReceiveAction(WifiDirectManager.WifiDirectEvent action) {
         runOnUiThread(() -> {
-            if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_PEERS_CHANGED == action) {
+            if (WifiDirectManager.WifiDirectEventType.WIFI_DIRECT_MANAGER_PEERS_CHANGED == action.type()) {
                 updateNearbyDevices();
-            } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL ==
-                    action) {
+            } else if (WifiDirectManager.WifiDirectEventType.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL ==
+                    action.type()) {
                 updateConnectedDevices();
             }
         });

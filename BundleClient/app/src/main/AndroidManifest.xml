@@ -16,7 +16,6 @@
     <permission android:name="net.discdd.bundleclient.permission.MESSAGE_PROVIDER_WRITE" android:protectionLevel="normal" />
     <permission android:name="net.discdd.bundleclient.permission.MESSAGE_PROVIDER_READ" android:protectionLevel="normal" />
     <uses-feature android:name="android.hardware.usb.host" />
-
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"

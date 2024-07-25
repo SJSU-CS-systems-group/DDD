@@ -1,14 +1,19 @@
 package net.discdd.wifidirect;
 
+import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION;
+import static net.discdd.wifidirect.WifiDirectManager.WifiDirectEventType.WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL;
+import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.INFO;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.net.NetworkInfo;
+import android.net.wifi.p2p.WifiP2pGroup;
+import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 
 import java.util.logging.Logger;
-
-import static java.util.logging.Level.FINER;
 
 /**
  * A BroadcastReceiver that notifies of important wifi p2p events.
@@ -53,10 +58,10 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
             int state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1);
             if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
                 logger.log(FINER, "WifiDirect enabled");
-                manager.setWifiDirectEnabled(true);
+                manager.wifiDirectEnabled(true);
             } else {
                 logger.log(FINER, "WifiDirect not enabled");
-                manager.setWifiDirectEnabled(false);
+                manager.wifiDirectEnabled(false);
             }
 
         }
@@ -78,31 +83,33 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
 //         Another extra EXTRA_NETWORK_INFO provides the network info in the form of a NetworkInfo.
 //         A third extra provides the details of the EXTRA_WIFI_P2P_GROUP and may contain a null
         else if (WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {
-            if (manager == null) {
-                return;
-            }
+            if (manager == null) return;
 
-            // Gets the wifiP2pGroup
-            // Not needed at this time
-            // WifiP2pGroup group = (WifiP2pGroup)  intent.
-            //getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP);
-
-            NetworkInfo networkInfo = (NetworkInfo) intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
+            WifiP2pInfo wifiP2pInfo = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_INFO, WifiP2pInfo.class);
+            NetworkInfo networkInfo = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_INFO, NetworkInfo.class);
+            WifiP2pGroup wifiP2pGroup = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP, WifiP2pGroup.class);
 
             if (networkInfo.isConnected()) {
                 // we are connected, request connection
                 // info to find group owner IP
-                //this.manager.setConnected(true);
-                this.manager.getManager().requestConnectionInfo(this.manager.getChannel(), this.manager);
-            }
-            /*else {
+                this.manager.setConnected(true);
+                logger.log(INFO, "WIFI_P2P_CONNECTION_CHANGED_ACTION connected");
+
+                if (wifiP2pGroup != null) {
+                    logger.log(INFO, "WifiP2pGroup client list changed");
+                    this.manager.setConnectedPeers(wifiP2pGroup.getClientList());
+                    this.manager.notifyActionToListeners(WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL);
+                }
+            } else {
                 // It's a disconnect
                 this.manager.setConnected(false);
-                logger.log(INFO,
-                        "WIFI_P2P_CONNECTION_CHANGED_ACTION disconnected");
+                logger.log(INFO, "WIFI_P2P_CONNECTION_CHANGED_ACTION disconnected");
             }
-             */
-        } else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
+
+
+
+
+        } else if (WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
             // unneeded
             // was a UI update in the orginal WifiDirect example
         }
