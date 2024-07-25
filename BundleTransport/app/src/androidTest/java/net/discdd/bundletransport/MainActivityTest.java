@@ -23,15 +23,14 @@ import android.Manifest;
 public class MainActivityTest {
 
     @Rule
-    public ActivityScenarioRule<MainActivity> activityRule =
-            new ActivityScenarioRule<>(MainActivity.class);
+    public ActivityScenarioRule<MainActivity> activityRule = new ActivityScenarioRule<>(MainActivity.class);
     @Rule
-    public GrantPermissionRule neededPermissions = GrantPermissionRule.grant(
-            Manifest.permission.ACCESS_FINE_LOCATION);
+    public GrantPermissionRule neededPermissions = GrantPermissionRule.grant(Manifest.permission.ACCESS_FINE_LOCATION);
 
     @Test
     public void testGrpcServerState() {
         // Wait for the GRPC server state to be updated in the UI
-        onView(ViewMatchers.withId(R.id.grpc_server_state)).check(matches(withText(containsString("GRPC Server State"))));
+        onView(ViewMatchers.withId(R.id.grpc_server_state)).check(
+                matches(withText(containsString("GRPC Server State"))));
     }
 }
