@@ -139,7 +139,8 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
                 appData.addAdus(AppDataUnit.newBuilder().setData(ByteString.copyFrom(data)).setAduId(aduId).build());
             }
 
-            logger.log(INFO, "Sending " + appData.getAdusCount() + " ADUs to " + appId + " for " + clientId + " on " + appState.stub.getChannel().authority());
+            logger.log(INFO, "Sending " + appData.getAdusCount() + " ADUs to " + appId + " for " + clientId + " on " +
+                    appState.stub.getChannel().authority());
 
             var recvData =
                     appState.stub.withDeadlineAfter(grpcTimeout, TimeUnit.MILLISECONDS).exchangeADUs(appData.build());

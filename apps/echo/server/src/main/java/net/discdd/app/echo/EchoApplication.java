@@ -52,8 +52,8 @@ public class EchoApplication {
                 if (false && channelState != ConnectivityState.READY) {
                     logger.log(WARNING, String.format("Could not connect to %s %s", bundleServerURL, channelState));
                 } else {
-                    var rsp = ServiceAdapterRegistryServiceGrpc.newBlockingStub(managedChannel).withDeadlineAfter(5, TimeUnit.SECONDS)
-                            .checkAdapterRegistration(
+                    var rsp = ServiceAdapterRegistryServiceGrpc.newBlockingStub(managedChannel)
+                            .withDeadlineAfter(5, TimeUnit.SECONDS).checkAdapterRegistration(
                                     ConnectionData.newBuilder().setAppName("echo").setUrl(myGrpcUrl).build());
                     if (rsp.getCode() != 0) {
                         logger.log(WARNING,
