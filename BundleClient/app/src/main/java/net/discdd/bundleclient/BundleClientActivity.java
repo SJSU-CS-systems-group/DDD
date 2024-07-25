@@ -230,12 +230,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         }
         logger.log(INFO, "Connecting to transport");
 
-        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            logger.log(INFO, "requesting fine location permission....");
-            requestPermissions(new String[] { Manifest.permission.NEARBY_WIFI_DEVICES },
-                               PERMISSIONS_REQUEST_CODE_ACCESS_NEARBY_WIFI_DEVICES);
-        }
-
         wifiDirectExecutor.execute(wifiDirectManager);
 
     }
