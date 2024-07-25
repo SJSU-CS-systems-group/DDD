@@ -140,7 +140,8 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
                 appData.addAdus(AppDataUnit.newBuilder().setData(ByteString.copyFrom(data)).setAduId(aduId).build());
             }
             var recvData =
-                    appState.stub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).exchangeADUs(appData.build());            receiveFolder.deleteAllFilesUpTo(clientId, appId, lastAduIdSent);
+                    appState.stub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).exchangeADUs(appData.build());
+            receiveFolder.deleteAllFilesUpTo(clientId, appId, lastAduIdSent);
             for (var dataUnit : recvData.getAdusList()) {
                 sendFolder.addADU(clientId, appId, dataUnit.getData().toByteArray(), dataUnit.getAduId());
             }

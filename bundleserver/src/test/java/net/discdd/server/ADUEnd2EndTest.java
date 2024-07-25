@@ -394,7 +394,7 @@ public class ADUEnd2EndTest {
         // carefull! this is all backwards: we pass an object to receive the response and we get an object back to send
         // requests to the server
         BundleUploadResponseStreamObserver response = new BundleUploadResponseStreamObserver();
-        var request = stub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS).uploadBundle(response);
+        var request = stub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).uploadBundle(response);
         request.onNext(BundleUploadRequest.newBuilder().setMetadata(
                         BundleMetaData.newBuilder().setBid(bundleJarPath.toFile().getName()).setTransportId("8675309").build())
                                .build());

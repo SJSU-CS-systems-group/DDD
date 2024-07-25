@@ -52,7 +52,7 @@ public class BundleUploader implements CommandLineRunner, Callable<Integer> {
         BundleServiceGrpc.BundleServiceStub stub = BundleServiceGrpc.newStub(channel);
         CountDownLatch latch = new CountDownLatch(1);
         StreamObserver<BundleUploadRequest> streamObserver =
-                stub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS).uploadBundle(new StreamObserver<BundleUploadResponse>() {
+                stub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).uploadBundle(new StreamObserver<BundleUploadResponse>() {
 
                     @Override
                     public void onNext(BundleUploadResponse bundleUploadResponse) {
