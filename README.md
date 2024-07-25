@@ -1,12 +1,20 @@
 # DDD
 
 this repo is for the different parts of the disconnection data distribution project.
-there should be an outline of the different modules, how they relate, and how they are run.
 
-unfortunately, this layout doesn't interact well with IDEs that like to see projects at the root of the repo, so you will want to clone the DDD repo and then add the relevant subdirectories as projects in your IDE.
+there are several parts to this project, including:
 
-for example, BundleClient and BundleTransport are android projects that are used with android studio.
-bundleserver is a maven project.
+* the core Android apps: BundleClient and BundleTransport
+* the core server app: bundleserver
+* library modules used by the core apps: bundle-core and serviceadapter-core
+* the apps that run on top of the server are under the apps directory.
+  the apps will have a client component and a server component (called the ServiceAdapter).
+
+the server apps are build with maven, and the android apps are built with gradle.
+we recommend using intellij and android studio for development.
+check out this repo directly into the relevant IDE. the IDE will automatically recognize the gradle and maven projects.
+
+**for the Android apps, you will first need to run maven install to get the bundle-core library into your local maven repository.**
 
 for more description about the project, here is a paper [EUC_2023_paper-3.pdf](https://github.com/SJSU-CS-systems-group/DDD/files/14874085/EUC_2023_paper-3.pdf) published in EUC 2023.
 the following Master's reports relate to this project:

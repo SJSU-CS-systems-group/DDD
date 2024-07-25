@@ -138,6 +138,10 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
                 var data = receiveFolder.getADU(clientId, appId, aduId);
                 appData.addAdus(AppDataUnit.newBuilder().setData(ByteString.copyFrom(data)).setAduId(aduId).build());
             }
+
+            logger.log(INFO, "Sending " + appData.getAdusCount() + " ADUs to " + appId + " for " + clientId + " on " +
+                    appState.stub.getChannel().authority());
+
             var recvData =
                     appState.stub.withDeadlineAfter(grpcTimeout, TimeUnit.MILLISECONDS).exchangeADUs(appData.build());
             receiveFolder.deleteAllFilesUpTo(clientId, appId, lastAduIdSent);
