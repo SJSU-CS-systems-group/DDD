@@ -7,6 +7,7 @@ import net.discdd.bundletransport.service.BundleMetaData;
 import net.discdd.bundletransport.service.BundleServiceGrpc;
 import net.discdd.bundletransport.service.BundleUploadRequest;
 import net.discdd.bundletransport.service.BundleUploadResponse;
+import net.discdd.utils.Constants;
 import org.springframework.boot.CommandLineRunner;
 import picocli.CommandLine;
 
@@ -14,6 +15,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
@@ -50,7 +52,7 @@ public class BundleUploader implements CommandLineRunner, Callable<Integer> {
         BundleServiceGrpc.BundleServiceStub stub = BundleServiceGrpc.newStub(channel);
         CountDownLatch latch = new CountDownLatch(1);
         StreamObserver<BundleUploadRequest> streamObserver =
-                stub.uploadBundle(new StreamObserver<BundleUploadResponse>() {
+                stub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS).uploadBundle(new StreamObserver<BundleUploadResponse>() {
 
                     @Override
                     public void onNext(BundleUploadResponse bundleUploadResponse) {

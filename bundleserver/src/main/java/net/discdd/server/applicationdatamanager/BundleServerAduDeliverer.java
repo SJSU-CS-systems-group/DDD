@@ -7,6 +7,7 @@ import net.discdd.grpc.ExchangeADUsRequest;
 import net.discdd.grpc.PendingDataCheckRequest;
 import net.discdd.grpc.ServiceAdapterServiceGrpc;
 import net.discdd.server.repository.RegisteredAppAdapterRepository;
+import net.discdd.utils.Constants;
 import net.discdd.utils.StoreADUs;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -139,8 +140,7 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
                 appData.addAdus(AppDataUnit.newBuilder().setData(ByteString.copyFrom(data)).setAduId(aduId).build());
             }
             var recvData =
-                    appState.stub.withDeadlineAfter(grpcTimeout, TimeUnit.MILLISECONDS).exchangeADUs(appData.build());
-            receiveFolder.deleteAllFilesUpTo(clientId, appId, lastAduIdSent);
+                    appState.stub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).exchangeADUs(appData.build());            receiveFolder.deleteAllFilesUpTo(clientId, appId, lastAduIdSent);
             for (var dataUnit : recvData.getAdusList()) {
                 sendFolder.addADU(clientId, appId, dataUnit.getData().toByteArray(), dataUnit.getAduId());
             }
