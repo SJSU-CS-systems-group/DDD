@@ -154,7 +154,8 @@ public class GrpcReceiveTask {
                 BundleDownloadRequest request =
                         BundleDownloadRequest.newBuilder().setTransportId(transportId).addAllBundleList(files).build();
 
-                stub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).downloadBundle(request, downloadObserver);
+                stub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                        .downloadBundle(request, downloadObserver);
 
                 logger.log(FINE, "Receive task complete");
                 statusComplete = false;

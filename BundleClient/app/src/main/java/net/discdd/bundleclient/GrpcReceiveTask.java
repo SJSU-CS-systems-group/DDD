@@ -113,7 +113,8 @@ class GrpcReceiveTask {
             logger.log(INFO, "Downloading file: " + bundleName);
             var downloadObserver = new DownloadObserver(FILE_PATH, bundleName);
 
-            var responses = stub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).downloadFile(request);
+            var responses =
+                    stub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).downloadFile(request);
 
             try {
                 final FileOutputStream fileOutputStream =

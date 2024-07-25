@@ -71,7 +71,9 @@ class GrpcSendTask {
         try {
             channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
             FileServiceGrpc.FileServiceStub stub = FileServiceGrpc.newStub(channel);
-            StreamObserver<FileUploadRequest> streamObserver = stub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS).uploadFile(new FileUploadObserver());
+            StreamObserver<FileUploadRequest> streamObserver =
+                    stub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                            .uploadFile(new FileUploadObserver());
             BundleTransmission bundleTransmission;
             bundleTransmission = new BundleTransmission(Paths.get(applicationContext.getApplicationInfo().dataDir));
             BundleDTO toSend = bundleTransmission.generateBundleForTransmission();
