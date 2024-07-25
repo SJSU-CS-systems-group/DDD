@@ -22,7 +22,6 @@ import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
 
-
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
@@ -114,8 +113,8 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
 
         //Initialize bundle transmission
         try {
-            bundleTransmission = new BundleTransmission(
-                    Paths.get(getApplicationContext().getApplicationInfo().dataDir));
+            bundleTransmission =
+                    new BundleTransmission(Paths.get(getApplicationContext().getApplicationInfo().dataDir));
             clientWindow = bundleTransmission.getBundleSecurity().getClientWindow();
             logger.log(WARNING, "{MC} - got clientwindow " + clientWindow);
         } catch (Exception e) {
@@ -130,8 +129,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
 
     @Override
     public void onRequestPermissionsResult(int requestCode,
-                                           @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
+                                           @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         logger.log(INFO, "checking permissions...." + grantResults.length);
         if (requestCode == PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION) {
@@ -232,8 +230,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         }
         logger.log(INFO, "Connecting to transport");
 
-        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) !=
-                PackageManager.PERMISSION_GRANTED) {
+        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             logger.log(INFO, "requesting fine location permission....");
             requestPermissions(new String[] { Manifest.permission.NEARBY_WIFI_DEVICES },
                                PERMISSIONS_REQUEST_CODE_ACCESS_NEARBY_WIFI_DEVICES);
@@ -291,7 +288,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     }
 }
 
-
 //    private static final String usbDirName = "DDD_transport";
 //    public static boolean usbConnected = false;
 //    BroadcastReceiver mUsbReceiver = new BroadcastReceiver() {
@@ -322,9 +318,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
 //        }
 //    };
 
-
-
-
 //    @Override
 //    public void onDestroy() {
 //        super.onDestroy();
@@ -333,12 +326,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
 ////        unregisterReceiver(mUsbReceiver);
 //    }
 
-
-
-
-
-
-    //        connectButton.setEnabled(true);
+//        connectButton.setEnabled(true);
 //        wifiDirectResponseText.setText("Starting connection...\n");
 //        logger.log(INFO, "connecting to transport");
 //        // we need to check and request for necessary permissions
@@ -427,14 +415,14 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
 //        checkUsbConnection();//used to check if usb connected before app has been started.
 //    }
 
-
 //    @Override
 //    public void onReceiveAction(WifiDirectManager.WIFI_DIRECT_ACTIONS action) {
 //        runOnUiThread(() -> {
 //            if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_INITIALIZATION_FAILED == action) {
 //                wifiDirectResponseText.append("Manager initialization failed\n");
 //                logger.log(WARNING, "Manager initialization failed\n");
-//            } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL == action) {
+//            } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL ==
+//            action) {
 //                logger.log(FINER, "Manager initialization successful\n");
 //                connectTransport();
 //            } else if (WifiDirectManager.WIFI_DIRECT_ACTIONS.WIFI_DIRECT_MANAGER_DISCOVERY_SUCCESSFUL == action) {
@@ -471,7 +459,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
 //            }
 //        });
 //    }
-
 
 //    //Usb connection methods
 //
@@ -525,7 +512,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
 //        }
 //    }
 //}
-
 
 //    // Method to update connected devices text
 //    private void updateConnectedDevices() {

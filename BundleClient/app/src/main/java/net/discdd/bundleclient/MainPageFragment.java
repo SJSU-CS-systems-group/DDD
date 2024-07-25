@@ -39,10 +39,10 @@ public class MainPageFragment extends Fragment {
     private UsbManager usbManager;
     private BroadcastReceiver mUsbReceiver;
 
-
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+    public View onCreateView(
+            @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.activity_helloworld, container, false);
 
         //Initialize UI elements and buttons
@@ -103,14 +103,12 @@ public class MainPageFragment extends Fragment {
             updateUsbStatus(false, "No USB connection detected\n", Color.RED);
             BundleClientActivity.usbConnected = false;
             showUsbDetachedToast();
-        }
-        else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
+        } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
             if (usbDirExists()) {
                 updateUsbStatus(true, "USB connection detected\n", Color.GREEN);
                 BundleClientActivity.usbConnected = true;
                 showUsbAttachedToast();
-            }
-            else {
+            } else {
                 updateUsbStatus(false, "USB was connected, but /DDD_transport directory was not detected\n", Color.RED);
                 BundleClientActivity.usbConnected = false;
                 showUsbAttachedToast();
