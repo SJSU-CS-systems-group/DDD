@@ -19,6 +19,7 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 import static java.util.logging.Level.SEVERE;
 
+import net.discdd.utils.Constants;
 import net.discdd.bundletransport.service.BundleDownloadRequest;
 import net.discdd.bundletransport.service.BundleDownloadResponse;
 import net.discdd.bundletransport.service.BundleServiceGrpc;
@@ -153,7 +154,7 @@ public class GrpcReceiveTask {
                 BundleDownloadRequest request =
                         BundleDownloadRequest.newBuilder().setTransportId(transportId).addAllBundleList(files).build();
 
-                stub.downloadBundle(request, downloadObserver);
+                stub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).downloadBundle(request, downloadObserver);
 
                 logger.log(FINE, "Receive task complete");
                 statusComplete = false;
