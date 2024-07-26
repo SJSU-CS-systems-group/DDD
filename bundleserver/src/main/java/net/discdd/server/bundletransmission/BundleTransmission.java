@@ -370,12 +370,10 @@ public class BundleTransmission {
 
         for (String clientId : clientIds) {
             File recvTransportSubDir = this.config.getBundleTransmission().getToSendDirectory().toFile();
-            File[] bundleFilesForClientId = recvTransportSubDir.listFiles(new FileFilter() {
-                @Override
-                public boolean accept(File file) {
-                    return !file.isHidden() && clientId.equals(getClientIdFromBundleFile(file));
-                }
-            });
+
+            File[] bundleFilesForClientId =
+                    recvTransportSubDir.listFiles(file -> !file.isHidden() && clientId.equals(getClientIdFromBundleFile(file)));
+
             if (null != bundleFilesForClientId)
                 bundles.addAll(List.of(Objects.requireNonNull(bundleFilesForClientId)));
         }

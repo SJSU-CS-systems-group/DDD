@@ -106,7 +106,7 @@ public class GrpcReceiveTask {
                 } else if (response.hasMetadata()) {
                     try {
                         logger.log(INFO, "Downloading chunk of: " + response.getMetadata().getBid());
-                        writer = FileUtils.getFilePath(response, clientPath.toString());
+                        writer = FileUtils.getFilePath(response, clientPath);
                     } catch (IOException e) {
                         logger.log(WARNING,
                                 "/GrpcReceiveTask.java -> executeTask() -> onNext() IOException: " + e.getMessage());

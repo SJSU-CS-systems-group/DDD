@@ -28,6 +28,7 @@ import org.whispersystems.libsignal.NoSessionException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.net.InetSocketAddress;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.util.List;
@@ -62,12 +63,12 @@ class GrpcReceiveTask {
         this.activity = activity;
     }
 
-    public void executeInBackground(String host, String port) {
+    public void executeInBackground(InetSocketAddress address) {
         executor.execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    inBackground(host, port);
+                    inBackground(address);
                 } catch (Exception e) {
                     // Handle any exceptions
                     logger.log(WARNING, "executeInBackground failed", e);
@@ -76,13 +77,12 @@ class GrpcReceiveTask {
         });
     }
 
-    private void inBackground(String... params) throws Exception {
-        String host = params[0];
-        String portStr = params[1];
+    private void inBackground(InetSocketAddress inetSocketAddress) throws Exception {
+        String host = inetSocketAddress.getHostName();
+        int port = inetSocketAddress.getPort();
         String FILE_PATH = applicationContext.getApplicationInfo().dataDir + "/Shared/received-bundles";
         java.io.File file = new java.io.File(FILE_PATH);
         file.mkdirs();
-        int port = Integer.parseInt(portStr);
         channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
         var stub = FileServiceGrpc.newBlockingStub(channel);
         List<String> bundleRequests = null;
@@ -196,7 +196,6 @@ class GrpcReceiveTask {
                 }
                 fileOutputStream.write(fileContent.getValue().toByteArray());
                 currentSenderId = fileContent.getSenderId();
-                fileContent.getSender();
                 if (!fileContent.getSender().isBlank())
                     currentSender = BundleSender.valueOf(fileContent.getSender());
             } catch (IOException e) {

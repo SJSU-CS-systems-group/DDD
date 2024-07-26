@@ -35,7 +35,7 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
     protected BundleSender sender;
     protected String senderId;
     protected String uploadingTo;
-    protected String downloadingTo;
+    protected String downloadingFrom;
     protected BundleProcessingInterface processBundle;
 
     public FileServiceImpl(File externalFilesDir, BundleSender sender, String senderId) {
@@ -49,7 +49,7 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
         File toClient = new File(String.valueOf(SERVER_BASE_PATH.resolve("client")));
         toClient.mkdirs();
 
-        downloadingTo = "client";
+        downloadingFrom = "client";
         uploadingTo = "server";
     }
 
@@ -117,7 +117,7 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
     @Override
     public void downloadFile(ReqFilePath request, StreamObserver<Bytes> responseObserver) {
-        String requestedPath = String.valueOf(SERVER_BASE_PATH.resolve(downloadingTo).resolve(request.getValue()));
+        String requestedPath = String.valueOf(SERVER_BASE_PATH.resolve(downloadingFrom).resolve(request.getValue()));
         logger.log(FINE, "Downloading " + requestedPath);
         File file = new File(requestedPath);
         InputStream in;

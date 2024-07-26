@@ -29,7 +29,7 @@ public class ClientFileServiceImpl extends FileServiceImpl {
         this.SERVER_BASE_PATH = Path.of(serverBasePath);
         this.sender = BundleSender.Server;
         this.senderId = serverSecurity.getServerId();
-        this.downloadingTo = "send";
+        this.downloadingFrom = "send";
         this.uploadingTo = "receive";
         this.setProcessBundle(this::settingProcessBundle);
     }
