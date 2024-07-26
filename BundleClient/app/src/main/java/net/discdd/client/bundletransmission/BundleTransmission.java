@@ -125,7 +125,7 @@ public class BundleTransmission {
 
         ClientBundleGenerator clientBundleGenerator = this.bundleSecurity.getClientBundleGenerator();
         boolean isLatestBundleId = (!StringUtils.isBlank(largestBundleIdReceived) &&
-                clientBundleGenerator.compareBundleIDs(bundleId, largestBundleIdReceived,
+                clientBundleGenerator.compareBundleIDs(bundleId, Long.parseLong(largestBundleIdReceived),
                                                        BundleIDGenerator.DOWNSTREAM) == 1);
 
         if (isLatestBundleId) {
