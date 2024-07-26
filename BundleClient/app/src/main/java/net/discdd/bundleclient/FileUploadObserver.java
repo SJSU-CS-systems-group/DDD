@@ -4,12 +4,11 @@ import java.util.Calendar;
 import java.util.Date;
 
 import io.grpc.stub.StreamObserver;
-
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.FINE;
-
 import net.discdd.bundletransport.service.FileUploadResponse;
+
+import static java.util.logging.Level.FINE;
 
 class FileUploadObserver implements StreamObserver<FileUploadResponse> {
 

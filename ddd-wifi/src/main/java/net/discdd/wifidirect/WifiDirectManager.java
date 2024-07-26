@@ -412,6 +412,7 @@ public class WifiDirectManager
     public HashSet<WifiP2pDevice> getPeerList() { return discoveredPeers; }
 
     public void wifiDirectEnabled(boolean enabled) {
+
         notifyActionToListeners(enabled ? WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL : WIFI_DIRECT_MANAGER_INITIALIZATION_FAILED, "wifi enabled " + enabled);
     }
 
