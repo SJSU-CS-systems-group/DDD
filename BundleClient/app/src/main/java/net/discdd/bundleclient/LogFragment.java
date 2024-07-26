@@ -22,8 +22,8 @@ public class LogFragment extends Fragment implements Consumer<String> {
     }
 
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable
-    Bundle savedInstanceState) {
+    public View onCreateView(
+            @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         var layout = inflater.inflate(R.layout.log_fragment, container, false);
         logMsgs = layout.findViewById(R.id.logmsgs);
         logMsgs.setText(activity.subscribeToLogs(this));
@@ -35,7 +35,7 @@ public class LogFragment extends Fragment implements Consumer<String> {
         logMsgs.append(newLog);
         if (logMsgs.getLineCount() > 200) {
             int nl = logMsgs.getText().toString().indexOf('\n');
-            logMsgs.getEditableText().delete(0, nl+1);
+            logMsgs.getEditableText().delete(0, nl + 1);
         }
     }
 }
