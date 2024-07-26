@@ -104,7 +104,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         viewPager.setAdapter(adapter);
 
         new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
-            final String[] labels = {"Home", "Permissions", "Logs"};
+            final String[] labels = { "Home", "Permissions", "Logs" };
             tab.setText(labels[position]);
         }).attach();
 
@@ -273,9 +273,9 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         @Override
         public Fragment createFragment(int position) {
             return switch (position) {
-            case 0 -> new MainPageFragment();
-            case 1 -> permissionsFragment = new PermissionsFragment();
-            default -> logFragment = new LogFragment(bundleClientActivity);
+                case 0 -> new MainPageFragment();
+                case 1 -> new PermissionsFragment();
+                default -> logFragment = new LogFragment(bundleClientActivity);
             };
         }
 
