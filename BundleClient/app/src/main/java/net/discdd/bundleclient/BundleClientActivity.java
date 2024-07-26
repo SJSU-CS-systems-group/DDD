@@ -5,25 +5,13 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
-import android.Manifest;
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
-import android.hardware.usb.UsbDevice;
-import android.hardware.usb.UsbManager;
 import android.os.Bundle;
-import android.text.method.ScrollingMovementMethod;
-import android.widget.Button;
-import android.widget.TextView;
-import android.widget.Toast;
-
-import androidx.fragment.app.Fragment;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.Fragment;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.viewpager2.widget.ViewPager2;
 
@@ -39,11 +27,14 @@ import net.discdd.wifidirect.WifiDirectStateListener;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
 public class BundleClientActivity extends AppCompatActivity implements WifiDirectStateListener {
@@ -72,12 +63,37 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     // instantiate window for bundles
     public static ClientWindow clientWindow;
     private int WINDOW_LENGTH = 3;
+    private LinkedList<String> logRecords;
+    private Consumer<String> logConsumer;
 
     // gRPC set up moved to -- MainPageFragment -- //
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (logRecords == null) {
+            logRecords = new LinkedList<>();
+            Logger.getLogger("").addHandler(new Handler() {
+                @Override
+                public void publish(LogRecord logRecord) {
+                    // get the last part of the logger name
+                    var loggerNameParts = logRecord.getLoggerName().split("\\.");
+                    var loggerName = loggerNameParts[loggerNameParts.length - 1];
+                    if (logRecords.size() > 100) logRecords.remove(0);
+                    String entry = String.format("[%s] %s", loggerName, logRecord.getMessage());
+                    logRecords.add(entry);
+                    if (logConsumer != null) logConsumer.accept(entry + '\n');
+                }
+
+                @Override
+                public void flush() {
+                }
+
+                @Override
+                public void close() throws SecurityException {
+                }
+            });
+        }
 
         //set up view
         setContentView(R.layout.activity_bundle_client);
@@ -89,11 +105,8 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         viewPager.setAdapter(adapter);
 
         new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
-            if (position == 0) {
-                tab.setText("Home");
-            } else if (position == 1) {
-                tab.setText("Permissions");
-            }
+            final String[] labels = {"Home", "Permissions", "Logs"};
+            tab.setText(labels[position]);
         }).attach();
 
         // set up wifi direct
@@ -258,26 +271,35 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         return (MainPageFragment) getSupportFragmentManager().findFragmentByTag("f0");
     }
 
+    public String subscribeToLogs(Consumer<String> logConsumer) {
+        this.logConsumer = logConsumer;
+        return String.join("\n", logRecords);
+    }
+
     // ViewPagerAdapter class for managing fragments in the ViewPager
     private static class ViewPagerAdapter extends FragmentStateAdapter {
 
-        public ViewPagerAdapter(@NonNull AppCompatActivity fragmentActivity) {
+        private final BundleClientActivity bundleClientActivity;
+        private LogFragment logFragment;
+
+        public ViewPagerAdapter(@NonNull BundleClientActivity fragmentActivity) {
             super(fragmentActivity);
+            this.bundleClientActivity = fragmentActivity;
         }
 
         @NonNull
         @Override
         public Fragment createFragment(int position) {
-            if (position == 0) {
-                return new MainPageFragment();
-            } else {
-                return new PermissionsFragment();
-            }
+            return switch (position) {
+            case 0 -> new MainPageFragment();
+            case 1 -> new PermissionsFragment();
+            default -> logFragment = new LogFragment(bundleClientActivity);
+            };
         }
 
         @Override
         public int getItemCount() {
-            return 2;
+            return 3;
         }
     }
 }
