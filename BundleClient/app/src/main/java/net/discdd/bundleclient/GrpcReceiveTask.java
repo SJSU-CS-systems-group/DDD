@@ -100,7 +100,7 @@ class GrpcReceiveTask {
         }
         if (bundleRequests == null) {
             logger.log(FINE, "BUNDLE REQuests is NUll / ");
-///        throw new Exception("bundle request is null");
+
             postExecute("Incomplete", host, String.valueOf(port));
         } else if (bundleRequests.size() == 0) {
             logger.log(FINE, "BUNDLE REQuests has size 0 / ");

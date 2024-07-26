@@ -144,8 +144,8 @@ public class GrpcReceiveTask {
                 List<String> files = Arrays.stream(dir.listFiles(f -> f.length() > 0)).map(File::getName).collect(
                         Collectors.toList());
                 BundleDownloadRequest request =
-                        BundleDownloadRequest.newBuilder().setTransportId(transportId).addAllBundleList(files)
-                                .build();
+                        BundleDownloadRequest.newBuilder().setSenderId(transportId).setSender(BundleSender.Transport.name())
+                                .addAllBundleList(files).build();
 
                 stub.downloadBundle(request, downloadObserver);
 

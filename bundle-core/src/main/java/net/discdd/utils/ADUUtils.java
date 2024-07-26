@@ -14,6 +14,7 @@ import java.util.logging.Logger;
 
 import net.discdd.model.ADU;
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.FINE;
 
 
 public class ADUUtils {
@@ -48,6 +49,7 @@ public class ADUUtils {
     }
 
     public static List<ADU> readADUs(File aduDirectory) {
+        logger.log(FINE, "reading ADUs from aduDirectory");
         List<ADU> ret = new ArrayList<>();
         File[] aduFiles = aduDirectory.listFiles();
         if (aduFiles == null) {
@@ -57,7 +59,7 @@ public class ADUUtils {
             String appId = appSubDirectory.getName();
             for (final File aduFile : appSubDirectory.listFiles(file -> !file.isHidden())) {
                 String aduFileName = aduFile.getName();
-                long aduId = Long.valueOf(aduFileName.split("-")[1]);
+                long aduId = Long.parseLong((aduFileName.split("-")[1]).replace(".adu",""));
                 long size = aduFile.length();
                 ret.add(new ADU(aduFile, appId, aduId, size));
             }

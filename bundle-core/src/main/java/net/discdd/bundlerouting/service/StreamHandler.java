@@ -1,4 +1,4 @@
-package net.discdd.bundletransport.service;
+package net.discdd.bundlerouting.service;
 
 import com.google.protobuf.ByteString;
 
@@ -6,8 +6,6 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
-
-import net.discdd.bundletransport.service.StreamCallback;
 
 public class StreamHandler {
     private final static int BUFFER_SIZE = 4096;
@@ -39,3 +37,4 @@ public class StreamHandler {
         }
     }
 }
+

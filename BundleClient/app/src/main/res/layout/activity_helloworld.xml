@@ -79,8 +79,7 @@
         android:id="@+id/btn_connect_bundle_server"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="connect to bundle server"
-        android:layout_marginTop="10dp"/>
+        android:text="connect to bundle server"/>
 
     <Button
         android:id="@+id/exchange_button"

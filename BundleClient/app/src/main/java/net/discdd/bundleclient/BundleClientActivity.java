@@ -186,6 +186,10 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
             connectTransport();
         });
 
+        connectServerBtn.setOnClickListener(view -> {
+            connectToServer();
+        });
+
         exchangeButton.setOnClickListener(v -> {
             if (wifiDirectManager.getDevicesFound().isEmpty()) {
                 resultText.append("Not connected to any devices\n");

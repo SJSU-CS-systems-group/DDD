@@ -1,10 +1,6 @@
-package net.discdd.bundletransport.service;
-
-import android.content.Context;
+package net.discdd.bundlerouting.service;
 
 import net.discdd.bundlerouting.BundleSender;
-import net.discdd.bundletransport.MainActivity;
-
 import com.google.protobuf.ByteString;
 
 import java.io.File;
@@ -24,22 +20,37 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
 import io.grpc.stub.StreamObserver;
+import net.discdd.bundletransport.service.Bytes;
+import net.discdd.bundletransport.service.FileServiceGrpc;
+import net.discdd.bundletransport.service.FileUploadRequest;
+import net.discdd.bundletransport.service.FileUploadResponse;
+import net.discdd.bundletransport.service.ReqFilePath;
+import net.discdd.bundletransport.service.Status;
 
 public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
     private static final Logger logger = Logger.getLogger(FileServiceImpl.class.getName());
 
-    private android.content.Context context;
-    private Path SERVER_BASE_PATH;
+    protected Path SERVER_BASE_PATH;
+    protected BundleSender sender;
+    protected String senderId;
+    protected String uploadingTo;
+    protected String downloadingTo;
+    protected BundleProcessingInterface processBundle;
 
-    public FileServiceImpl(Context context) {
-        this.context = context;
-        this.SERVER_BASE_PATH = Paths.get(context.getExternalFilesDir(null) + "/BundleTransmission");
+    public FileServiceImpl(File externalFilesDir, BundleSender sender, String senderId) {
+        this.SERVER_BASE_PATH = Paths.get(externalFilesDir + "/BundleTransmission");
+        this.sender = sender;
+        this.senderId = senderId;
+        this.processBundle = null;
         File toServer = new File(String.valueOf(SERVER_BASE_PATH.resolve("server")));
         toServer.mkdirs();
 
         File toClient = new File(String.valueOf(SERVER_BASE_PATH.resolve("client")));
         toClient.mkdirs();
+
+        downloadingTo = "client";
+        uploadingTo = "server";
     }
 
     @Override
@@ -51,6 +62,7 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
             @Override
             public void onNext(FileUploadRequest fileUploadRequest) {
+                logger.log(INFO, "Received request to write file to: " + sender.name());
                 try {
                     if (fileUploadRequest.hasMetadata()) {
                         writer = getFilePath(fileUploadRequest);
@@ -71,10 +83,13 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
             @Override
             public void onCompleted() {
-                logger.log(INFO, "Complete");
+                logger.log(INFO, "File Upload Complete");
                 closeFile(writer);
                 status = Status.IN_PROGRESS.equals(status) ? Status.SUCCESS : status;
                 FileUploadResponse response = FileUploadResponse.newBuilder().setStatus(status).build();
+                if (null != processBundle){
+                    processBundle.execute();
+                }
                 responseObserver.onNext(response);
                 responseObserver.onCompleted();
             }
@@ -83,7 +98,7 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
     private OutputStream getFilePath(FileUploadRequest request) throws IOException {
         String fileName = request.getMetadata().getName() + "." + request.getMetadata().getType();
-        return Files.newOutputStream(SERVER_BASE_PATH.resolve("server").resolve(fileName),
+        return Files.newOutputStream(SERVER_BASE_PATH.resolve(uploadingTo).resolve(fileName),
                                          StandardOpenOption.CREATE, StandardOpenOption.APPEND);
     }
 
@@ -102,7 +117,7 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
     @Override
     public void downloadFile(ReqFilePath request, StreamObserver<Bytes> responseObserver) {
-        String requestedPath = String.valueOf(SERVER_BASE_PATH.resolve("client").resolve(request.getValue()));
+        String requestedPath = String.valueOf(SERVER_BASE_PATH.resolve(downloadingTo).resolve(request.getValue()));
         logger.log(FINE, "Downloading " + requestedPath);
         File file = new File(requestedPath);
         InputStream in;
@@ -115,11 +130,15 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
         StreamHandler handler = new StreamHandler(in);
         Exception ex = handler.handle(bytes -> {
             responseObserver.onNext(
-                    Bytes.newBuilder().setValue(bytes).setSenderId(MainActivity.transportID).setSender(BundleSender.Transport.name()).build());
+                    Bytes.newBuilder().setValue(bytes).setSenderId(senderId).setSender(sender.name()).build());
         });
         if (ex != null) ex.printStackTrace();
 
         responseObserver.onCompleted();
         logger.log(INFO, "Complete " + requestedPath);
+    }
+
+    protected void setProcessBundle(BundleProcessingInterface bundleProcessingImpl){
+        this.processBundle = bundleProcessingImpl;
     }
 }

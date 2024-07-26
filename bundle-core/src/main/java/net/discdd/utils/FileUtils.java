@@ -34,14 +34,13 @@ public class FileUtils {
 
     public static OutputStream getFilePath(BundleDownloadResponse response, String receive_Directory) throws IOException {
         String fileName = response.getMetadata().getBid();
-        File directoryReceive = new File(receive_Directory + File.separator + response.getMetadata().getTransportId());
+        File directoryReceive = new File(receive_Directory + File.separator + response.getMetadata().getSenderId());
         if (!directoryReceive.exists()) {
             directoryReceive.mkdirs();
         }
 
-        return Files.newOutputStream(Paths.get(
-                receive_Directory + File.separator + response.getMetadata().getTransportId() + File.separator +
-                        fileName), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        return Files.newOutputStream(Paths.get(receive_Directory, response.getMetadata().getSenderId(), fileName),
+                StandardOpenOption.CREATE, StandardOpenOption.APPEND);
     }
 
     public static void writeFile(OutputStream writer, ByteString content) throws IOException {

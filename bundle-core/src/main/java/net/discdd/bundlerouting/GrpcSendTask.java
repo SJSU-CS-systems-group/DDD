@@ -64,8 +64,8 @@ public class GrpcSendTask {
             if (bundles != null) {
                 for (File bundle : bundles) {
                     BundleUploadRequest metadata = BundleUploadRequest.newBuilder().setMetadata(
-                                    BundleMetaData.newBuilder().setBid(bundle.getName()).setTransportId(transportId).build())
-                            .build();
+                                    BundleMetaData.newBuilder().setBid(bundle.getName()).setSenderId(transportId)
+                                            .setSender(BundleSender.Transport.name()).build()).build();
                     streamObserver.onNext(metadata);
 
                     // upload file as chunk

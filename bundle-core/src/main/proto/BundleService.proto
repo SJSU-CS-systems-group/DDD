@@ -11,7 +11,8 @@ import "FileService.proto";
 
 message BundleMetaData {
   string bid = 1;
-  string transportId = 2;
+  string senderId = 2;
+  string sender = 3;
 }
 
 message BundleList{
@@ -33,7 +34,8 @@ message BundleUploadResponse {
 
 message BundleDownloadRequest {
   repeated string bundleList = 1;
-  string transportId = 2; // senderId, identifier for client/transport
+  string senderId = 2;
+  string sender = 3;
 }
 
 message BundleDownloadResponse{

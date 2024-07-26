@@ -28,6 +28,11 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
+    packagingOptions {
+        exclude("META-INF/*")
+        exclude("META-INF/*/*")
+    }
+
     buildTypes {
         debug {
             minifyEnabled false
