@@ -1,4 +1,9 @@
 <resources>
+    <string name="android.permission.ACCESS_FINE_LOCATION">Fine location access</string>
+    <string name="android.permission.ACCESS_WIFI_STATE">Check Wifi Status</string>
+    <string name="android.permission.CHANGE_WIFI_STATE">Change Wifi</string>
+    <string name="android.permission.INTERNET">Use the Network</string>
+    <string name="android.permission.NEARBY_WIFI_DEVICES">Find nearby Wifi devices</string>
     <string name="app_name">BundleClient</string>
     <string name="tansport_host">ddd_transport</string>
     <!-- TODO: Remove or change this placeholder text -->
