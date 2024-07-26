@@ -85,7 +85,7 @@ public class BundleUploader implements CommandLineRunner, Callable<Integer> {
         while ((size = inputStream.read(bytes)) != -1) {
             logger.log(WARNING, "Sending chunk size: " + size);
             BundleUploadRequest uploadRequest = BundleUploadRequest.newBuilder().setFile(
-                   net.discdd.bundletransport.service.File.newBuilder().setContent(ByteString.copyFrom(bytes, 0, size))
+                    net.discdd.bundletransport.service.File.newBuilder().setContent(ByteString.copyFrom(bytes, 0, size))
                             .build()).build();
             streamObserver.onNext(uploadRequest);
         }

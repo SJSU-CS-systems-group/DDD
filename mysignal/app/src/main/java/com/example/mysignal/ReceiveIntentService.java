@@ -57,7 +57,8 @@ public class ReceiveIntentService extends IntentService {
         values.put("data", message.getBytes());
         values.put("appName", getApplicationContext().getPackageName());
 
-        FileStoreHelper fileStoreHelper = new FileStoreHelper(Paths.get(getApplicationContext().getApplicationInfo().dataDir));
+        FileStoreHelper fileStoreHelper =
+                new FileStoreHelper(Paths.get(getApplicationContext().getApplicationInfo().dataDir));
         try {
             fileStoreHelper.AddFile("ReceivedData", message.getBytes(StandardCharsets.UTF_8));
         } catch (IOException e) {

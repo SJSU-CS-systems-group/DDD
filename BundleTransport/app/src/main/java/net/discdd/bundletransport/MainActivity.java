@@ -177,7 +177,7 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
             });
 
             ServerManager serverManager =
-                    new ServerManager(this.getExternalFilesDir(null), serverDomain, serverPort, transportID,
+                    new ServerManager(this.getExternalFilesDir(null).toPath(), serverDomain, serverPort, transportID,
                                       this::sendTask, this::receiveTask, this::connectToServerComplete);
             executor.execute(serverManager);
         } else {

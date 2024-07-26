@@ -1,5 +1,41 @@
-jdbc.driverClassName=org.h2.Driver
-jdbc.url=jdbc:h2:mem:myDb;DB_CLOSE_DELAY=-1;NON_KEYWORDS=KEY,VALUE
+grpc:
+  server:
+    port: 8780
+server:
+  port: 8781
+bundle-server:
+  #  bundle-store-root: <add directory path containing key files in external properties file>
+  bundle-store-shared: "${bundle-server.bundle-store-root}Shared"
+  registered-app-ids: "${bundle-server.bundle-store-root}Shared/REGISTERED_APP_IDS.txt"
+  bundle-transmission:
+    bundle-size-limit: 104857600
+    bundle-received-location: "${bundle-server.bundle-store-root}Shared/receive"
+    bundle-generation-directory: "${bundle-server.bundle-store-root}BundleTransmission/bundle-generation"
+    to-be-bundled-directory: "${bundle-server.bundle-store-root}BundleTransmission/bundle-generation/to-be-bundled"
+    to-send-directory: "${bundle-server.bundle-store-root}BundleTransmission/bundle-generation/to-send"
+    received-processing-directory: "${bundle-server.bundle-store-root}BundleTransmission/received-processing"
+    uncompressed-payload-directory: "${bundle-server.bundle-store-root}BundleTransmission/bundle-generation/uncompressed-payload"
+    compressed-payload-directory: "${bundle-server.bundle-store-root}BundleTransmission/bundle-generation/compressed-payload"
+    encrypted-payload-directory: "${bundle-server.bundle-store-root}BundleTransmission/bundle-generation/encrypted-payload"
+  application-data-manager:
+    app-data-size-limit: 31457280
+    state-manager:
+      largest-adu-id-received: "${bundle-server.bundle-store-root}Shared/DB/LARGEST_ADU_ID_RECEIVED.json"
+      sent-bundle-details: "${bundle-server.bundle-store-root}Shared/DB/SENT_BUNDLE_DETAILS.json"
+      largest-adu-id-delivered: "${bundle-server.bundle-store-root}Shared/DB/LARGEST_ADU_ID_DELIVERED.json"
+      last-sent-bundle-structure: "${bundle-server.bundle-store-root}Shared/DB/LARGEST_ADU_ID_RECEIVED.json"
+      bundle-id-next-counter: "${bundle-server.bundle-store-root}Shared/DB/BUNDLE_ID_NEXT_COUNTER.json"
+    data-store-adaptor:
+      app-data-root: "${bundle-server.bundle-store-root}"
+  bundle-security:
+    server-key-path: "${bundle-server.bundle-store-root}BundleSecurity/Keys/Server"
+    server-serverkeys-path: "${bundle-server.bundle-store-root}BundleSecurity/Keys/Server/Server_Keys"
 
-hibernate.dialect=org.hibernate.dialect.H2Dialect
-hibernate.hbm2ddl.auto=create
+jdbc:
+  driverClassName: org.h2.Driver
+  url: jdbc:h2:mem:myDb;DB_CLOSE_DELAY=-1;NON_KEYWORDS=KEY,VALUE
+
+hibernate:
+  dialect: org.hibernate.dialect.H2Dialect
+  hbm2ddl:
+    auto: create

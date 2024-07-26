@@ -96,7 +96,7 @@ public class BundleTransmission {
         var largestBundleId = this.applicationDataManager.getLargestRecvdBundleId(clientId);
 
         if (largestBundleId != null &&
-                (this.bundleSecurity.isNewerBundle(uncompressedBundle.getSource().toPath(), largestBundleId) >= 0)) {
+                (this.bundleSecurity.isNewerBundle(uncompressedBundle.getSource().toPath(), largestBundleId) < 0)) {
             logger.log(WARNING,
                        "[BundleTransmission] Skipping bundle " + bundle.getSource().getName() + " as it is outdated");
             return;
@@ -186,7 +186,7 @@ public class BundleTransmission {
             this.processReceivedBundle(sender, senderId, bundle);
         } catch (Exception e) {
             logger.log(SEVERE, "[BundleTransmission] Failed to process received bundle from: " + sender +
-                    " with Id: " + senderId + ", error: " + e.getMessage());
+                    " with Id: " + senderId, e);
         } finally {
             try {
                 FileUtils.delete(bundleFile);
@@ -347,7 +347,6 @@ public class BundleTransmission {
             Set<String> bundleIds = clientIdToBundleIds.getOrDefault(clientId, new HashSet<>());
             bundleIds.add(bundleId);
             clientIdToBundleIds.put(clientId, bundleIds);
-            //check if this can be removed, we should not need to this client-bundle mapping for already sent bundles
         }
         for (String clientId : clientIds) {
             BundleTransferDTO dtoForClient;

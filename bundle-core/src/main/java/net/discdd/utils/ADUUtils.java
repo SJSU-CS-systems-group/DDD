@@ -9,13 +9,14 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.logging.Logger;
 
 import net.discdd.model.ADU;
+
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.FINE;
-
 
 public class ADUUtils {
 
@@ -23,7 +24,7 @@ public class ADUUtils {
 
     public static void writeADU(ADU adu, Path targetDirectory) throws IOException {
         String aduFileName = adu.getAppId() + "-" + adu.getADUId();
-        var aduFile = targetDirectory.resolve(aduFileName + ".adu").toFile();
+        var aduFile = targetDirectory.resolve(aduFileName).toFile();
         try (BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(
                 adu.getSource())); BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(
                 new FileOutputStream(aduFile))) {
@@ -64,6 +65,7 @@ public class ADUUtils {
                 ret.add(new ADU(aduFile, appId, aduId, size));
             }
         }
+        ret.sort(Comparator.comparingLong(ADU::getADUId));
         return ret;
     }
 

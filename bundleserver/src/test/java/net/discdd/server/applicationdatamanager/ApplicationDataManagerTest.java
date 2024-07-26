@@ -2,8 +2,6 @@ package net.discdd.server.applicationdatamanager;
 
 import net.discdd.model.ADU;
 import net.discdd.server.config.BundleServerConfig;
-import net.discdd.server.repository.LargestAduIdDeliveredRepository;
-import net.discdd.server.repository.LargestAduIdReceivedRepository;
 import net.discdd.server.repository.LargestBundleIdReceivedRepository;
 import net.discdd.server.repository.LastBundleIdSentRepository;
 import net.discdd.server.repository.RegisteredAppAdapterRepository;
@@ -28,16 +26,13 @@ import java.util.ArrayList;
 @DataJpaTest
 public class ApplicationDataManagerTest {
     @Autowired
-    private LargestAduIdReceivedRepository largestAduIdReceivedRepository; // = mock(LargestAduIdReceivedRepository.class);
-    @Autowired
-    private RegisteredAppAdapterRepository registeredAppAdapterRepository; // = mock(RegisteredAppAdapterRepository.class);
+    private RegisteredAppAdapterRepository registeredAppAdapterRepository;
     private ApplicationDataManager applicationDataManager;
-    @Autowired
-    private LargestAduIdDeliveredRepository largestAduDeliveredRepository; // = mock(LargestAduIdDeliveredRepository.class);
     @Autowired
     private LastBundleIdSentRepository lastBundleIdSentRepository; // = mock(LastBundleIdSentRepository.class);
     @Autowired
-    private LargestBundleIdReceivedRepository largestBundleIdReceivedRepository; // = mock(LargestBundleIdReceivedRepository.class);
+    private LargestBundleIdReceivedRepository largestBundleIdReceivedRepository;
+    // = mock(LargestBundleIdReceivedRepository.class);
     @Autowired
     private SentBundleDetailsRepository sentBundleDetailsRepository; // = mock(SentBundleDetailsRepository.class);
     @Autowired
@@ -53,7 +48,11 @@ public class ApplicationDataManagerTest {
         registeredAppAdapterRepository.save(new RegisteredAppAdapter("app1", "localhost:88888"));
         bundleServerConfig = new BundleServerConfig();
         bundleServerConfig.getApplicationDataManager().setAppDataSizeLimit(100_000_000L);
-        applicationDataManager = new ApplicationDataManager(new AduStores(tempRootDir), (a,b) -> System.out.println("hello"),largestAduIdReceivedRepository, largestAduDeliveredRepository, lastBundleIdSentRepository, largestBundleIdReceivedRepository, sentBundleDetailsRepository, sentAduDetailsRepository, registeredAppAdapterRepository, bundleServerConfig);
+        applicationDataManager =
+                new ApplicationDataManager(new AduStores(tempRootDir), (a, b) -> System.out.println("hello"),
+                                           lastBundleIdSentRepository, largestBundleIdReceivedRepository,
+                                           sentBundleDetailsRepository, sentAduDetailsRepository,
+                                           registeredAppAdapterRepository, bundleServerConfig);
         var receiveADUsStorageField = ApplicationDataManager.class.getDeclaredField("receiveADUsStorage");
         receiveADUsStorageField.setAccessible(true);
         receiveADUsStorage = (StoreADUs) receiveADUsStorageField.get(applicationDataManager);
@@ -74,8 +73,7 @@ public class ApplicationDataManagerTest {
             adus.add(new ADU(tempFile, appId, i, tempFile.length(), clientId));
         }
         applicationDataManager.storeReceivedADUs(clientId, "client1", adus);
-        var receiveMetadata = receiveADUsStorage.getMetadata(clientId, appId);
-        Assertions.assertEquals((long)adus.size(), receiveMetadata.lastReceivedMessageId);
+        Assertions.assertEquals(adus.size(), receiveADUsStorage.getLastADUIdAdded(clientId, appId));
         var fetchedAdus = receiveADUsStorage.getAppData(clientId, appId);
         Assertions.assertArrayEquals(adus.toArray(), fetchedAdus.toArray());
     }

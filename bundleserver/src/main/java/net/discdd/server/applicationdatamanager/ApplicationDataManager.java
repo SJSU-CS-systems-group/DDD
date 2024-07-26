@@ -3,15 +3,11 @@ package net.discdd.server.applicationdatamanager;
 import net.discdd.model.ADU;
 import net.discdd.model.UncompressedPayload;
 import net.discdd.server.config.BundleServerConfig;
-import net.discdd.server.repository.LargestAduIdDeliveredRepository;
-import net.discdd.server.repository.LargestAduIdReceivedRepository;
 import net.discdd.server.repository.LargestBundleIdReceivedRepository;
 import net.discdd.server.repository.LastBundleIdSentRepository;
 import net.discdd.server.repository.RegisteredAppAdapterRepository;
 import net.discdd.server.repository.SentAduDetailsRepository;
 import net.discdd.server.repository.SentBundleDetailsRepository;
-import net.discdd.server.repository.entity.LargestAduIdDelivered;
-import net.discdd.server.repository.entity.LargestAduIdReceived;
 import net.discdd.server.repository.entity.LargestBundleIdReceived;
 import net.discdd.server.repository.entity.LastBundleIdSent;
 import net.discdd.server.repository.entity.SentAduDetails;
@@ -30,43 +26,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
 
 @Service
 public class ApplicationDataManager {
-    public interface AduDeliveredListener {
-        void onAduDelivered(String clientId, Set<String> appId);
-    }
-
     private static final Logger logger = Logger.getLogger(ApplicationDataManager.class.getName());
-
     private final BundleServerConfig bundleServerConfig;
-
-
-    AduDeliveredListener aduDeliveredListener;
-
-    private final LargestAduIdReceivedRepository largestAduIdReceivedRepository;
-
-    private final LargestAduIdDeliveredRepository largestAduIdDeliveredRepository;
-
     private final LastBundleIdSentRepository lastBundleIdSentRepository;
-
     private final LargestBundleIdReceivedRepository largestBundleIdReceivedRepository;
-
     private final SentBundleDetailsRepository sentBundleDetailsRepository;
-
     private final SentAduDetailsRepository sentAduDetailsRepository;
-
     private final RegisteredAppAdapterRepository registeredAppAdapterRepository;
-    private StoreADUs receiveADUsStorage;
-    private StoreADUs sendADUsStorage;
+    AduDeliveredListener aduDeliveredListener;
+    private final StoreADUs receiveADUsStorage;
+    private final StoreADUs sendADUsStorage;
 
-    public ApplicationDataManager(AduStores aduStores,
-                                  AduDeliveredListener aduDeliveredListener,
-                                  LargestAduIdReceivedRepository largestAduIdReceivedRepository,
-                                  LargestAduIdDeliveredRepository largestAduIdDeliveredRepository,
+    public ApplicationDataManager(AduStores aduStores, AduDeliveredListener aduDeliveredListener,
                                   LastBundleIdSentRepository lastBundleIdSentRepository,
                                   LargestBundleIdReceivedRepository largestBundleIdReceivedRepository,
                                   SentBundleDetailsRepository sentBundleDetailsRepository,
@@ -74,8 +52,6 @@ public class ApplicationDataManager {
                                   RegisteredAppAdapterRepository registeredAppAdapterRepository,
                                   BundleServerConfig bundleServerConfig) {
         this.aduDeliveredListener = aduDeliveredListener;
-        this.largestAduIdReceivedRepository = largestAduIdReceivedRepository;
-        this.largestAduIdDeliveredRepository = largestAduIdDeliveredRepository;
         this.lastBundleIdSentRepository = lastBundleIdSentRepository;
         this.largestBundleIdReceivedRepository = largestBundleIdReceivedRepository;
         this.sentBundleDetailsRepository = sentBundleDetailsRepository;
@@ -103,10 +79,6 @@ public class ApplicationDataManager {
             sendADUsStorage.deleteAllFilesUpTo(clientId, appId, lastAduIdForAppId);
             logger.log(INFO, "[DataStoreAdaptor] Deleted ADUs for application " + appId + " with id upto " +
                     lastAduIdForAppId);
-            var opt = largestAduIdDeliveredRepository.findByClientIdAndAppId(clientId, appId);
-            if (opt.isEmpty() || opt.get().getAduId() < lastAduIdForAppId) {
-                largestAduIdDeliveredRepository.save(new LargestAduIdDelivered(clientId, appId, lastAduIdForAppId));
-            }
         }
 
         sentAduDetailsRepository.deleteByBundleId(bundleId);
@@ -121,71 +93,46 @@ public class ApplicationDataManager {
         LargestBundleIdReceived largestBundleIdReceived = new LargestBundleIdReceived(clientId, bundleId);
         this.largestBundleIdReceivedRepository.save(largestBundleIdReceived);
 
-        logger.log(INFO, "[StateManager]] Registered bundle identifier: " + bundleId + " of client " + clientId);
+        logger.log(INFO, "[StateManager] Registered bundle identifier: " + bundleId + " of client " + clientId);
+        var affectedAppIds = new HashSet<String>();
+
         Map<String, List<ADU>> appIdToADUMap = new HashMap<>();
         for (var adu : adus) {
-            appIdToADUMap.computeIfAbsent(adu.getAppId(), k -> new ArrayList<>()).add(adu);
-        }
-        for (String appId : appIdToADUMap.keySet()) {
-            List<ADU> aduList = appIdToADUMap.get(appId);
-            long largestAduIdReceived = largestAduIdReceivedRepository.findByClientIdAndAppId(clientId, appId).map(LargestAduIdReceived::getAduId).orElse(-1L);
-            long largestAduSeen = -1;
-            for (var it = aduList.iterator(); it.hasNext(); ) {
-                ADU adu = it.next();
-                if (adu.getADUId() <= largestAduIdReceived) it.remove();
-                if (adu.getADUId() > largestAduSeen) largestAduSeen = adu.getADUId();
-            }
-            receiveADUs(clientId, appId, aduList);
-            if (largestAduSeen > largestAduIdReceived) {
-                largestAduIdReceivedRepository.save(new LargestAduIdReceived(clientId, appId, largestAduSeen));
-            }
-        }
-    }
-
-    public List<ADU> fetchADUsToSend(long initialSize, String clientId) {
-        List<ADU> res = new ArrayList<>();
-        for (String appId : this.getRegisteredAppIds()) {
-            Long ret = null;
-            Optional<LargestAduIdDelivered> opt = largestAduIdDeliveredRepository.findByClientIdAndAppId(clientId, appId);
-            if (opt.isPresent()) {
-                LargestAduIdDelivered record = opt.get();
-                ret = record.getAduId();
-            }
-            Long largestAduIdDelivered = ret;
-            long aduIdStart = (largestAduIdDelivered != null) ? (largestAduIdDelivered + 1) : 1;
-            ADU adu1;
-            List<ADU> ret1 = new ArrayList<>();
-            long aduId = aduIdStart;
-            while ((adu1 = fetchSentADU(clientId, appId, aduId)) != null) {
-                ret1.add(adu1);
-                aduId++;
-            }
-            List<ADU> adus = ret1;
-            long cumulativeSize = initialSize;
-            for (ADU adu : adus) {
-                if (adu.getSize() + cumulativeSize >
-                        this.bundleServerConfig.getApplicationDataManager().getAppDataSizeLimit()) {
-                    break;
-                }
-                res.add(adu);
-                cumulativeSize += adu.getSize();
-            }
-        }
-        return res;
-    }
-
-    public void receiveADUs(String clientId, String appId, List<ADU> adus) throws IOException {
-        var affectedAppIds = new HashSet<String>();
-        for (var adu: adus) {
-            receiveADUsStorage.addADU(clientId, adu.getAppId(), Files.readAllBytes(adu.getSource().toPath()),
-                                           adu.getADUId());
-            affectedAppIds.add(adu.getAppId());
+            var addedFile =
+                    receiveADUsStorage.addADU(clientId, adu.getAppId(), Files.readAllBytes(adu.getSource().toPath()),
+                                              adu.getADUId());
+            if (addedFile != null) affectedAppIds.add(adu.getAppId());
         }
         aduDeliveredListener.onAduDelivered(clientId, affectedAppIds);
     }
 
-    public ADU fetchSentADU(String clientId, String appId, long aduId)  {
-        File file = sendADUsStorage.getADUFile(clientId, appId, Long.toString(aduId));
+    static class SizeLimiter implements Predicate<Long> {
+        long remaining;
+
+        SizeLimiter(long dataSizeLimit) {
+            remaining = dataSizeLimit;
+        }
+
+        @Override
+        public boolean test(Long size) {
+            remaining -= size;
+            return remaining >= 0;
+        }
+    }
+
+    public List<ADU> fetchADUsToSend(long initialSize, String clientId) throws IOException {
+        List<ADU> adusToSend = new ArrayList<>();
+        final long dataSizeLimit = this.bundleServerConfig.getApplicationDataManager().getAppDataSizeLimit();
+        var sizeLimiter = new SizeLimiter(dataSizeLimit - initialSize);
+        for (String appId : this.getRegisteredAppIds()) {
+            sendADUsStorage.getADUs(clientId, appId).takeWhile(a -> sizeLimiter.test(a.getSize()))
+                    .forEach(adusToSend::add);
+        }
+        return adusToSend;
+    }
+
+    public ADU fetchSentADU(String clientId, String appId, long aduId) {
+        File file = sendADUsStorage.getADUFile(clientId, appId, aduId);
         return file.isFile() ? new ADU(file, appId, aduId, file.length(), clientId) : null;
     }
 
@@ -218,8 +165,7 @@ public class ApplicationDataManager {
 
         for (String appId : aduRangeMap.keySet()) {
             Long[] minmax = aduRangeMap.get(appId);
-            SentAduDetails sentAduDetails =
-                    new SentAduDetails(bundle.getBundleId(), appId, minmax[0], minmax[1]);
+            SentAduDetails sentAduDetails = new SentAduDetails(bundle.getBundleId(), appId, minmax[0], minmax[1]);
             sentAduDetailsRepository.save(sentAduDetails);
         }
     }
@@ -259,10 +205,15 @@ public class ApplicationDataManager {
     }
 
     public String getLargestRecvdBundleId(String clientId) {
-        return largestBundleIdReceivedRepository.findByClientId(clientId).map(LargestBundleIdReceived::getBundleId).orElse(null);
+        return largestBundleIdReceivedRepository.findByClientId(clientId).map(LargestBundleIdReceived::getBundleId)
+                .orElse(null);
     }
 
     public String getClientIdFromSentBundleId(String bundleId) {
         return sentBundleDetailsRepository.findByBundleId(bundleId).map(SentBundleDetails::getClientId).orElse(null);
+    }
+
+    public interface AduDeliveredListener {
+        void onAduDelivered(String clientId, Set<String> appId);
     }
 }

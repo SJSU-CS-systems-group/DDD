@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+// This is the service that is used to exchange data between
+// BundleServer and the ServiceAdapters
+
+option java_multiple_files = true;
+option java_package = "net.discdd.grpc";
+
+service ServiceAdapterService {
+  // exchangeADUs sends ADUs received by the BundleServer to the ServiceAdapter and
+  // the same time receives ADUs to send back to clients as the
+  // return value.
+  rpc exchangeADUs(ExchangeADUsRequest) returns (ExchangeADUsResponse) {}
+  // check if the ServiceAdapter has any pending data to send to the BundleServer
+  // Note: The ServiceAdapter should may say that it has data for a client, but the BundleServer
+  //       may decide not to request anything. The reason for not requesting will probably be that
+  //       the client send window is full.
+  rpc pendingDataCheck(PendingDataCheckRequest) returns (PendingDataCheckResponse) {}
+}
+
+message PendingDataCheckRequest {
+    // Nothing here for now...
+}
+
+message PendingDataCheckResponse {
+    // The clientIds of the clients that have pending data
+    repeated string clientId = 1;
+}
+
+message ExchangeADUsRequest {
+  // The clientId of the client that sent the ADUs
+  string clientId = 1;
+  // ADUs being sent
+  repeated AppDataUnit adus = 2;
+  // This is the id of the ADU that was received by the BundleServer from the service adapter
+  int64 lastADUIdReceived = 3;
+}
+
+message ExchangeADUsResponse {
+  // ADUs returned from the ServiceAdapter for the clientId in the request
+  repeated AppDataUnit adus = 1;
+  //    This is the id of the ADU that was received by the adapter from the BundleServer
+  int64 lastADUIdReceived = 2;
+}
+
+message AppDataUnit{
+  int64 aduId = 1;
+  bytes data = 2;
+}
+
+enum StatusCode {
+  SUCCESS = 0;
+  FAIL = 1;
+  CLIENT_NOT_REGISTERED = 2;
+}

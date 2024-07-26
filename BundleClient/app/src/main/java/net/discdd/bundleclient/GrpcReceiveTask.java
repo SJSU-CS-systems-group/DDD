@@ -9,6 +9,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.widget.TextView;
 
+import net.discdd.utils.Constants;
 import net.discdd.bundlerouting.BundleSender;
 import net.discdd.bundlerouting.RoutingExceptions;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
@@ -114,7 +115,8 @@ class GrpcReceiveTask {
             logger.log(INFO, "Downloading file: " + bundleName);
             var downloadObserver = new DownloadObserver(FILE_PATH, bundleName);
 
-            var responses = stub.downloadFile(request);
+            var responses =
+                    stub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).downloadFile(request);
 
             try {
                 final FileOutputStream fileOutputStream =

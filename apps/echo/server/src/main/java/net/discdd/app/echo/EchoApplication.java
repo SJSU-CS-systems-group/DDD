@@ -2,13 +2,15 @@ package net.discdd.app.echo;
 
 import io.grpc.ConnectivityState;
 import io.grpc.ManagedChannelBuilder;
-import net.discdd.server.ConnectionData;
-import net.discdd.server.ServiceAdapterRegistryGrpc;
+import net.discdd.grpc.ConnectionData;
+import net.discdd.grpc.ServiceAdapterRegistryServiceGrpc;
 import org.springframework.boot.Banner;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
@@ -32,6 +34,7 @@ public class EchoApplication {
         }
 
         var app = new SpringApplication(EchoApplication.class);
+        app.setWebApplicationType(WebApplicationType.NONE);
         app.setBannerMode(Banner.Mode.OFF);
         // we need to register with the BundleServer in an application initializer so that
         // the logging will be set up correctly
@@ -49,8 +52,9 @@ public class EchoApplication {
                 if (false && channelState != ConnectivityState.READY) {
                     logger.log(WARNING, String.format("Could not connect to %s %s", bundleServerURL, channelState));
                 } else {
-                    var rsp = ServiceAdapterRegistryGrpc.newBlockingStub(managedChannel)
-                            .registerAdapter(ConnectionData.newBuilder().setAppName("echo").setUrl(myGrpcUrl).build());
+                    var rsp = ServiceAdapterRegistryServiceGrpc.newBlockingStub(managedChannel)
+                            .withDeadlineAfter(5, TimeUnit.SECONDS).checkAdapterRegistration(
+                                    ConnectionData.newBuilder().setAppName("echo").setUrl(myGrpcUrl).build());
                     if (rsp.getCode() != 0) {
                         logger.log(WARNING,
                                    String.format("Could not register with BundleServer: rc = %d %s", rsp.getCode(),
