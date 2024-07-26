@@ -4,6 +4,7 @@ import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
+import net.discdd.bundlerouting.BundleSender;
 import net.discdd.bundlesecurity.BundleIDGenerator;
 import net.discdd.bundlesecurity.DDDPEMEncoder;
 import net.discdd.bundlesecurity.SecurityUtils;
@@ -396,7 +397,7 @@ public class ADUEnd2EndTest {
         BundleUploadResponseStreamObserver response = new BundleUploadResponseStreamObserver();
         var request = stub.uploadBundle(response);
         request.onNext(BundleUploadRequest.newBuilder().setMetadata(
-                        BundleMetaData.newBuilder().setBid(bundleJarPath.toFile().getName()).setTransportId("8675309").build())
+                        BundleMetaData.newBuilder().setBid(bundleJarPath.toFile().getName()).setSender(BundleSender.Transport.name()).setSenderId("8675309").build())
                                .build());
         request.onNext(BundleUploadRequest.newBuilder().setFile(net.discdd.bundletransport.service.File.newBuilder()
                                                                         .setContent(ByteString.copyFrom(
