@@ -86,10 +86,10 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
             if (manager == null) return;
 
             WifiP2pInfo wifiP2pInfo = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_INFO, WifiP2pInfo.class);
-            NetworkInfo networkInfo = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_INFO, NetworkInfo.class);
+            NetworkInfo networkInfo = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE, NetworkInfo.class);
             WifiP2pGroup wifiP2pGroup = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP, WifiP2pGroup.class);
 
-            if (networkInfo.isConnected()) {
+            if (networkInfo != null && networkInfo.isConnected()) {
                 // we are connected, request connection
                 // info to find group owner IP
                 this.manager.setConnected(true);

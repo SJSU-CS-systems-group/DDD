@@ -6,7 +6,6 @@ import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -42,8 +41,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     //constant
     public static final String TAG = "bundleclient";
     private static final Logger logger = Logger.getLogger(BundleClientActivity.class.getName());
-    public static final int PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION = 1001;
-    public static final int PERMISSIONS_REQUEST_CODE_ACCESS_NEARBY_WIFI_DEVICES = 1002;
     public static Context ApplicationContext;
 
     @Override
