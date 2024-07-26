@@ -246,4 +246,8 @@ public class MainPageFragment extends Fragment {
         // Implement your directory check logic here
         return false;
     }
+
+    public void setConnectServerBtn(boolean isEnabled){
+        connectServerBtn.setEnabled(isEnabled);
+    }
 }

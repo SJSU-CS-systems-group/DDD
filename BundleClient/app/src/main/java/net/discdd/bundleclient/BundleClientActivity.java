@@ -313,23 +313,26 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
                 connectToServer(serverDomain, serverPort);
             }
 
+            MainPageFragment fragment = getMainPageFragment();
+
             @Override
             public void onLost(Network network) {
                 logger.log(WARNING, "Lost network connectivity");
-//                connectServerBtn.setEnabled(false);
+                if (null != fragment)
+                    fragment.setConnectServerBtn(false);
             }
 
             @Override
             public void onUnavailable() {
                 logger.log(WARNING, "Unavailable network connectivity");
-//                connectServerBtn.setEnabled(false);
-            }
+                if (null != fragment)
+                    fragment.setConnectServerBtn(false);            }
 
             @Override
             public void onBlockedStatusChanged(Network network, boolean blocked) {
                 logger.log(WARNING, "Blocked network connectivity");
-//                connectServerBtn.setEnabled(false);
-
+                if (null != fragment)
+                    fragment.setConnectServerBtn(false);
             }
         };
 
@@ -337,8 +340,9 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
 
         NetworkInfo activeNetwork = connectivityManager.getActiveNetworkInfo();
         if (activeNetwork == null || !activeNetwork.isConnectedOrConnecting()) {
-//            connectServerBtn.setEnabled(false);
-        }
+            MainPageFragment fragment = getMainPageFragment();
+            if (null != fragment)
+                fragment.setConnectServerBtn(false);        }
     }
 
     void connectToServer(String serverDomain, String serverPort) {
