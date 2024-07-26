@@ -33,9 +33,8 @@ public class PermissionsAdapter extends RecyclerView.Adapter<PermissionsAdapter.
         String permission = permissions[position];
         // we are going to use the string translations keyed on the permission name to get
         // the description of the permission
-        int resid = permissionsFragment.getResources().getIdentifier(permission, "string",
-                                                                      permissionsFragment.getContext()
-                                                                              .getPackageName());
+        int resid = permissionsFragment.getResources()
+                .getIdentifier(permission, "string", permissionsFragment.getContext().getPackageName());
         holder.permissionCaption.setText(resid == 0 ? permission : permissionsFragment.getString(resid));
         permissionsFragment.checkPermission(permission, holder);
     }
