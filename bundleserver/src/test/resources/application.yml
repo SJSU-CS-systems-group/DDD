@@ -20,10 +20,8 @@ bundle-server:
   application-data-manager:
     app-data-size-limit: 31457280
     state-manager:
-      largest-adu-id-received: "${bundle-server.bundle-store-root}Shared/DB/LARGEST_ADU_ID_RECEIVED.json"
       sent-bundle-details: "${bundle-server.bundle-store-root}Shared/DB/SENT_BUNDLE_DETAILS.json"
-      largest-adu-id-delivered: "${bundle-server.bundle-store-root}Shared/DB/LARGEST_ADU_ID_DELIVERED.json"
-      last-sent-bundle-structure: "${bundle-server.bundle-store-root}Shared/DB/LARGEST_ADU_ID_RECEIVED.json"
+      last-sent-bundle-structure: "${bundle-server.bundle-store-root}Shared/DB/LAST_SENT_BUNDLE_STRUCTURE.json"
       bundle-id-next-counter: "${bundle-server.bundle-store-root}Shared/DB/BUNDLE_ID_NEXT_COUNTER.json"
     data-store-adaptor:
       app-data-root: "${bundle-server.bundle-store-root}"

@@ -140,7 +140,7 @@ public class BundleTransmission {
         String ackedBundleId = uncompressedPayload.getAckRecord().getBundleId();
 
         this.applicationDataManager.processAcknowledgement(ackedBundleId);
-        this.applicationDataManager.storeADUs(null, null, uncompressedPayload.getADUs());
+        this.applicationDataManager.storeReceivedADUs(null, null, uncompressedPayload.getADUs());
 
     }
 
@@ -169,7 +169,7 @@ public class BundleTransmission {
         Acknowledgement ackRecord = AckRecordUtils.readAckRecordFromFile(ackRecordPath.toFile());
         builder.setAckRecord(ackRecord);
 
-        List<ADU> ADUs = this.applicationDataManager.fetchADUs(ackRecord.getSize(), null);
+        List<ADU> ADUs = this.applicationDataManager.fetchADUsToSend(ackRecord.getSize(), null);
 
         logger.log(INFO, "[UncompressedPayloadBuilder] ADUs: " + ADUs.size());
 
