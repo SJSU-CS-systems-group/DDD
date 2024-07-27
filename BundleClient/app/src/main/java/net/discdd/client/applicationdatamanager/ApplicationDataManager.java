@@ -1,14 +1,20 @@
 package net.discdd.client.applicationdatamanager;
 
 import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
+import android.content.Context;
+import android.content.Intent;
+import android.os.Build;
+
+import net.discdd.bundleclient.BundleClientActivity;
 import net.discdd.model.ADU;
 import net.discdd.model.UncompressedPayload;
 
 import net.discdd.utils.BundleUtils;
+import net.discdd.utils.StoreADUs;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -24,43 +30,45 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.logging.Logger;
 
-class StateManager {
+public class ApplicationDataManager {
 
-    private DataStoreAdaptor dataStoreAdaptor;
+    private static final Logger logger = Logger.getLogger(ApplicationDataManager.class.getName());
 
-    private static final Logger logger = Logger.getLogger(StateManager.class.getName());
+    private StoreADUs sendADUsStorage;
+    private StoreADUs receiveADUsStorage;
+
+    private Context applicationContext;
 
     /* Database tables */
     private static String SENT_BUNDLE_DETAILS = "Shared/DB/SENT_BUNDLE_DETAILS.json";
 
-    private static String LARGEST_ADU_ID_RECEIVED = "Shared/DB/LARGEST_ADU_ID_RECEIVED.json";
-
-    private static String LARGEST_ADU_ID_DELIVERED = "Shared/DB/LARGEST_ADU_ID_DELIVERED.json";
 
     private static String LAST_SENT_BUNDLE_STRUCTURE = "Shared/DB/LAST_SENT_BUNDLE_STRUCTURE.json";
 
-    final private Path ROOT_DIR;
+    private Long APP_DATA_SIZE_LIMIT = 1000000000L;
 
-    public StateManager(Path rootFolder) {
-        ROOT_DIR = rootFolder;
-        this.dataStoreAdaptor = new DataStoreAdaptor(rootFolder);
+    private static List<String> REGISTER_APP_IDS = List.of("com.example.mysignal", "com.fsck.k9.debug");
+
+    private final Path ROOT_DIR;
+
+    public ApplicationDataManager(Path rootDir) {
+        ROOT_DIR = rootDir;
+        sendADUsStorage = new StoreADUs(rootDir.resolve("send"));
+        receiveADUsStorage = new StoreADUs(rootDir.resolve("receive"));
+
         try {
             File sentBundleDetails = ROOT_DIR.resolve(SENT_BUNDLE_DETAILS).toFile();
             sentBundleDetails.createNewFile();
-
-            File largestADUIdReceived = ROOT_DIR.resolve(LARGEST_ADU_ID_DELIVERED).toFile();
-            largestADUIdReceived.createNewFile();
-
-            File largestADUIdDelivered = ROOT_DIR.resolve(LARGEST_ADU_ID_RECEIVED).toFile();
-            largestADUIdDelivered.createNewFile();
 
             File lastSentBundleStructure = ROOT_DIR.resolve(LAST_SENT_BUNDLE_STRUCTURE).toFile();
             lastSentBundleStructure.createNewFile();
@@ -69,84 +77,127 @@ class StateManager {
         }
     }
 
-    /* Largest ADU ID received */
-
-    private Map<String, Long> getLargestADUIdReceivedDetails() {
-        Gson gson = new Gson();
-        Map<String, Long> ret = null;
-        try {
-            Type mapType = new TypeToken<Map<String, Long>>() {}.getType();
-            ret = gson.fromJson(new FileReader(ROOT_DIR.resolve(LARGEST_ADU_ID_RECEIVED).toFile()), mapType);
-            if (ret == null) {
-                ret = new HashMap<>();
-            }
-        } catch (JsonSyntaxException e) {
-            e.printStackTrace();
-        } catch (JsonIOException e) {
-            e.printStackTrace();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-        return ret;
+    public List<String> getRegisteredAppIds() throws IOException {
+        return REGISTER_APP_IDS;
     }
 
-    private void writeLargestADUIdReceivedDetails(Map<String, Long> largestADUIdReceivedDetails) {
+    public void processAcknowledgement(String bundleId) {
+        logger.log(FINE, "[ADM] Processing acknowledgement for sent bundle id: " + bundleId);
+        if ("HB".equals(bundleId)) {
+            logger.log(INFO, "[ADM] This is a heartbeat message.");
+            return;
+        }
+
+        System.out.println("[ADM-SM] Registering acknowledgement for sent bundle id: " + bundleId);
+        Map<String, Map<String, Long>> sentBundleDetails = this.getSentBundleDetails();
+        Map<String, Long> details = sentBundleDetails.getOrDefault(bundleId, new HashMap<>());
+        for (String appId : details.keySet()) {
+            Long aduId = details.get(appId);
+            try {
+                sendADUsStorage.deleteAllFilesUpTo(null, appId, aduId);
+
+            } catch (IOException e) {
+                logger.log(WARNING, "Could not delete ADUs up to adu: " + aduId, e);
+                continue;
+            }
+        }
+    }
+
+    public void storeReceivedADUs(String clientId, String bundleId, List<ADU> adus) {
+        System.out.println("[ADM] Storing ADUs in the Data Store, Size:" + adus.size());
+
+        for (final ADU adu : adus) {
+
+            try {
+                receiveADUsStorage.addADU(null, adu.getAppId(), Files.readAllBytes(adu.getSource().toPath()), adu.getADUId());
+                sendDataToApp(adu);
+                logger.log(FINE, "[ADM] Updated Largest ADU id: " + adu.getADUId() + "," + adu.getSource());
+            } catch (IOException e) {
+                logger.log(WARNING, "Could not persist adu: " + adu.getADUId(), e);
+            }
+        }
+    }
+
+    private void sendDataToApp(ADU adu) throws IOException {
+        //notify app that someone sent data for the app
+        Intent intent = new Intent("android.intent.dtn.SEND_DATA");
+        intent.setPackage(adu.getAppId());
+        intent.setType("text/plain");
+        byte[] data = Files.readAllBytes(adu.getSource().toPath());
+        logger.log(FINE, new String(data) + ", Source:" + adu.getSource());
+        intent.putExtra(Intent.EXTRA_TEXT, data);
+        applicationContext = BundleClientActivity.ApplicationContext;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            applicationContext.startForegroundService(intent);
+        } else {
+            logger.log(SEVERE, "[Failed] to send to application. Upgrade Android SDK to 26 or greater");
+        }
+    }
+
+    public List<ADU> fetchADUsToSend(long initialSize, String clientId) throws IOException {
+        List<ADU> adusToSend = new ArrayList<>();
+        final long dataSizeLimit = this.APP_DATA_SIZE_LIMIT;
+        var sizeLimiter = new SizeLimiter(dataSizeLimit - initialSize);
+        for (String appId : this.getRegisteredAppIds()) {
+            sendADUsStorage.getADUs(clientId, appId).takeWhile(a -> sizeLimiter.test(a.getSize()))
+                    .forEach(adusToSend::add);
+        }
+        return adusToSend;
+    }
+
+    public void notifyBundleSent(UncompressedPayload bundle) {
+        if (bundle.getADUs().isEmpty()) {
+            return;
+        }
+        Map<String, Map<String, Long>> sentBundleDetails = this.getSentBundleDetails();
+        if (sentBundleDetails.containsKey(bundle.getBundleId())) {
+            return;
+        }
+        Map<String, Long> bundleDetails = new HashMap<>();
+        for (ADU adu : bundle.getADUs()) {
+            String appId = adu.getAppId();
+            Long aduId = adu.getADUId();
+
+            if (!bundleDetails.containsKey(appId) || bundleDetails.get(appId) < aduId) {
+                bundleDetails.put(appId, aduId);
+            }
+        }
+        sentBundleDetails.put(bundle.getBundleId(), bundleDetails);
+        this.writeSentBundleDetails(sentBundleDetails);
+        this.writeLastSentBundleStructure(bundle);
+    }
+
+    public Optional<UncompressedPayload.Builder> getLastSentBundleBuilder() {
+        return BundleUtils.jsonToBundleBuilder(ROOT_DIR.resolve(LAST_SENT_BUNDLE_STRUCTURE).toFile());
+    }
+
+    private void writeLastSentBundleStructure(UncompressedPayload lastSentBundle) {
+        BundleUtils.writeBundleStructureToJson(lastSentBundle, ROOT_DIR.resolve(LAST_SENT_BUNDLE_STRUCTURE).toFile());
+    }
+
+    private void writeSentBundleDetails(Map<String, Map<String, Long>> sentBundleDetails) {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        String jsonString = gson.toJson(largestADUIdReceivedDetails);
-        try (FileWriter writer = new FileWriter(ROOT_DIR.resolve(LARGEST_ADU_ID_RECEIVED).toFile())) {
+        String jsonString = gson.toJson(sentBundleDetails);
+        try (FileWriter writer = new FileWriter(ROOT_DIR.resolve(SENT_BUNDLE_DETAILS).toFile())) {
             writer.write(jsonString);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public Long getLargestADUIdReceived(String appId) {
-        Map<String, Long> receivedADUIds = this.getLargestADUIdReceivedDetails();
-        return receivedADUIds.get(appId);
-    }
+    static class SizeLimiter implements Predicate<Long> {
+        long remaining;
 
-    public void updateLargestADUIdReceived(String appId, Long aduId) {
-        Map<String, Long> largestADUIdReceivedDetails = this.getLargestADUIdReceivedDetails();
-        largestADUIdReceivedDetails.put(appId, aduId);
-        logger.log(FINE, "[ADM] (In Progress) Updating Largest ADU id: " + aduId);
-        this.writeLargestADUIdReceivedDetails(largestADUIdReceivedDetails);
-    }
+        SizeLimiter(long dataSizeLimit) {
+            remaining = dataSizeLimit;
+        }
 
-    /* Largest ADU ID Delivered Details*/
-    private void writeLargestADUIdDeliveredDetails(Map<String, Long> largestADUIdDeliveredDetails) {
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        String jsonString = gson.toJson(largestADUIdDeliveredDetails);
-        try (FileWriter writer = new FileWriter(ROOT_DIR.resolve(LARGEST_ADU_ID_DELIVERED).toFile())) {
-            writer.write(jsonString);
-        } catch (IOException e) {
-            e.printStackTrace();
+        @Override
+        public boolean test(Long size) {
+            remaining -= size;
+            return remaining >= 0;
         }
     }
-
-    private Map<String, Long> getLargestADUIdDeliveredDetails() {
-        Gson gson = new Gson();
-        Map<String, Long> ret = new HashMap<>();
-        try {
-            Type mapType = new TypeToken<Map<String, Long>>() {}.getType();
-            ret = gson.fromJson(new FileReader(ROOT_DIR.resolve(LARGEST_ADU_ID_DELIVERED).toFile()), mapType);
-            if (ret == null) {
-                ret = new HashMap<>();
-            }
-        } catch (JsonSyntaxException e) {
-            e.printStackTrace();
-        } catch (JsonIOException e) {
-            e.printStackTrace();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-        return ret;
-    }
-
-    public Long getLargestADUIdDeliveredByAppId(String appId) {
-        return this.getLargestADUIdDeliveredDetails().get(appId);
-    }
-
-    /* Sent bundle Details*/
 
     private Map<String, Map<String, Long>> getSentBundleDetails() {
         Gson gson = new Gson();
@@ -165,156 +216,5 @@ class StateManager {
             e.printStackTrace();
         }
         return ret;
-    }
-
-    private void writeSentBundleDetails(Map<String, Map<String, Long>> sentBundleDetails) {
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        String jsonString = gson.toJson(sentBundleDetails);
-        try (FileWriter writer = new FileWriter(ROOT_DIR.resolve(SENT_BUNDLE_DETAILS).toFile())) {
-            writer.write(jsonString);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void writeLastSentBundleStructure(UncompressedPayload lastSentBundle) {
-        BundleUtils.writeBundleStructureToJson(lastSentBundle, ROOT_DIR.resolve(LAST_SENT_BUNDLE_STRUCTURE).toFile());
-    }
-
-    public void registerSentBundleDetails(UncompressedPayload sentBundle) {
-        if (sentBundle.getADUs().isEmpty()) {
-            return;
-        }
-        Map<String, Map<String, Long>> sentBundleDetails = this.getSentBundleDetails();
-        if (sentBundleDetails.containsKey(sentBundle.getBundleId())) {
-            return;
-        }
-        Map<String, Long> bundleDetails = new HashMap<>();
-        for (ADU adu : sentBundle.getADUs()) {
-            String appId = adu.getAppId();
-            Long aduId = adu.getADUId();
-
-            if (!bundleDetails.containsKey(appId) || bundleDetails.get(appId) < aduId) {
-                bundleDetails.put(appId, aduId);
-            }
-        }
-        sentBundleDetails.put(sentBundle.getBundleId(), bundleDetails);
-        this.writeSentBundleDetails(sentBundleDetails);
-        this.writeLastSentBundleStructure(sentBundle);
-    }
-
-    public void processAcknowledgement(String bundleId) {
-        System.out.println("[ADM-SM] Registering acknowledgement for sent bundle id: " + bundleId);
-        Map<String, Map<String, Long>> sentBundleDetails = this.getSentBundleDetails();
-        Map<String, Long> details = sentBundleDetails.getOrDefault(bundleId, new HashMap<>());
-        Map<String, Long> largestADUIdDeliveredDetails = this.getLargestADUIdDeliveredDetails();
-        for (String appId : details.keySet()) {
-            Long aduId = details.get(appId);
-            try {
-                this.dataStoreAdaptor.deleteADUs(appId, aduId);
-            } catch (IOException e) {
-                logger.log(WARNING, "Could not delete ADUs up to adu: " + aduId, e);
-                continue;
-            }
-
-            if (!largestADUIdDeliveredDetails.containsKey(appId) || aduId > largestADUIdDeliveredDetails.get(appId)) {
-                largestADUIdDeliveredDetails.put(appId, aduId);
-            }
-        }
-        this.writeLargestADUIdDeliveredDetails(largestADUIdDeliveredDetails);
-    }
-
-    public Optional<UncompressedPayload.Builder> getLastSentBundleBuilder() {
-        return BundleUtils.jsonToBundleBuilder(ROOT_DIR.resolve(LAST_SENT_BUNDLE_STRUCTURE).toFile());
-    }
-}
-
-public class ApplicationDataManager {
-
-    private static final Logger logger = Logger.getLogger(ApplicationDataManager.class.getName());
-
-    private StateManager stateManager;
-
-    private DataStoreAdaptor dataStoreAdaptor;
-
-    private Long APP_DATA_SIZE_LIMIT = 1000000000L;
-
-    private static List<String> REGISTER_APP_IDS = List.of("com.example.mysignal", "com.fsck.k9.debug");
-
-    private final Path ROOT_DIR;
-
-    public ApplicationDataManager(Path rootDir) {
-        ROOT_DIR = rootDir;
-        this.stateManager = new StateManager(rootDir);
-        this.dataStoreAdaptor = new DataStoreAdaptor(rootDir);
-    }
-
-    public List<String> getRegisteredAppIds() throws IOException {
-        return REGISTER_APP_IDS;
-    }
-
-    public void processAcknowledgement(String bundleId) {
-        logger.log(FINE, "[ADM] Processing acknowledgement for sent bundle id: " + bundleId);
-        if ("HB".equals(bundleId)) {
-            logger.log(INFO, "[ADM] This is a heartbeat message.");
-            return;
-        }
-        this.stateManager.processAcknowledgement(bundleId);
-    }
-
-    public void storeADUs(String clientId, String bundleId, List<ADU> adus) {
-        System.out.println("[ADM] Storing ADUs in the Data Store, Size:" + adus.size());
-
-        for (final ADU adu : adus) {
-            Long largestAduIdReceived = this.stateManager.getLargestADUIdReceived(adu.getAppId());
-            logger.log(FINE, "[ADM] Largest id for ADUs received for application " + adu.getAppId() + " is " +
-                    largestAduIdReceived);
-            if (largestAduIdReceived != null && adu.getADUId() <= largestAduIdReceived) {
-                continue;
-            }
-
-            try {
-                this.dataStoreAdaptor.persistADU(adu);
-                logger.log(FINE, "[ADM] Updating Largest ADU id: " + adu.getADUId() + "," + adu.getSource());
-                this.stateManager.updateLargestADUIdReceived(adu.getAppId(), adu.getADUId());
-                logger.log(FINE, "[ADM] Updated Largest ADU id: " + adu.getADUId() + "," + adu.getSource());
-            } catch (IOException e) {
-                logger.log(WARNING, "Could not persist adu: " + adu.getADUId(), e);
-            }
-        }
-    }
-
-    public List<ADU> fetchADUs(long initialSize, String clientId) throws IOException {
-        long cumulativeSize = initialSize;
-        List<ADU> res = new ArrayList<>();
-        boolean exceededSize = false;
-        for (String appId : this.getRegisteredAppIds()) {
-            Long largestAduIdDelivered = this.stateManager.getLargestADUIdDeliveredByAppId(appId);
-            Long aduIdStart = (largestAduIdDelivered != null) ? (largestAduIdDelivered + 1) : 1;
-            List<ADU> adus = this.dataStoreAdaptor.fetchADUs(appId, aduIdStart);
-            for (ADU adu : adus) {
-                if (adu.getSize() + cumulativeSize > this.APP_DATA_SIZE_LIMIT) {
-                    logger.log(FINER, "max data size exceeded");
-                    logger.log(INFO, "Unable to add ADUs with id: " + adu.getAppId() + File.separator + adu.getADUId() +
-                            " and after into the bundle");
-                    exceededSize = true;
-                    break;
-                }
-                res.add(adu);
-                logger.log(FINE, "Added ADU: " + adu.getAppId() + File.separator + adu.getADUId() + " to the bundle");
-                cumulativeSize += adu.getSize();
-            }
-
-            if (exceededSize) break;
-        }
-        return res;
-    }
-
-    public void notifyBundleSent(UncompressedPayload bundle) {
-        this.stateManager.registerSentBundleDetails(bundle);
-    }
-
-    public Optional<UncompressedPayload.Builder> getLastSentBundleBuilder() {
-        return this.stateManager.getLastSentBundleBuilder();
     }
 }
