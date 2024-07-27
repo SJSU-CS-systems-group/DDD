@@ -2,5 +2,9 @@
 <resources>
     <string-array name= "permissions_array">
         <item>android.permission.ACCESS_FINE_LOCATION</item>
+        <item>android.permission.ACCESS_WIFI_STATE</item>
+        <item>android.permission.CHANGE_WIFI_STATE</item>
+        <item>android.permission.INTERNET</item>
+        <item>android.permission.NEARBY_WIFI_DEVICES</item>
     </string-array>
 </resources>

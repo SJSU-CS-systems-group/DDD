@@ -89,7 +89,7 @@ public class JarUtils {
             if (dir.isDirectory()) {
                 File[] files = dir.listFiles();
                 for (File childFile : files) {
-                    addFilesToJar(childFile, jos, "/", manifest);
+                    addFilesToJar(childFile, jos, "", manifest);
                 }
             }
 
