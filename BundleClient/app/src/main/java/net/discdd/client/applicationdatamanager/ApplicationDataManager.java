@@ -52,7 +52,6 @@ public class ApplicationDataManager {
     /* Database tables */
     private static String SENT_BUNDLE_DETAILS = "Shared/DB/SENT_BUNDLE_DETAILS.json";
 
-
     private static String LAST_SENT_BUNDLE_STRUCTURE = "Shared/DB/LAST_SENT_BUNDLE_STRUCTURE.json";
 
     private Long APP_DATA_SIZE_LIMIT = 1000000000L;
@@ -109,7 +108,8 @@ public class ApplicationDataManager {
         for (final ADU adu : adus) {
 
             try {
-                receiveADUsStorage.addADU(null, adu.getAppId(), Files.readAllBytes(adu.getSource().toPath()), adu.getADUId());
+                receiveADUsStorage.addADU(null, adu.getAppId(), Files.readAllBytes(adu.getSource().toPath()),
+                                          adu.getADUId());
                 sendDataToApp(adu);
                 logger.log(FINE, "[ADM] Updated Largest ADU id: " + adu.getADUId() + "," + adu.getSource());
             } catch (IOException e) {
