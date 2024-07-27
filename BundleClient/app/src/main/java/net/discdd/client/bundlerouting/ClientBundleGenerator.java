@@ -70,12 +70,12 @@ public class ClientBundleGenerator {
         return clientSecurity.encryptBundleID(plainBundleID);
     }
 
-    public int compareBundleIDs(String id1, String id2, boolean direction) throws GeneralSecurityException,
+    public int compareBundleIDs(String id1, long id2, boolean direction) throws GeneralSecurityException,
             InvalidKeyException {
         String decryptedBundleID1 = clientSecurity.decryptBundleID(id1);
-        String decryptedBundleID2 = clientSecurity.decryptBundleID(id2);
+        var foo = BundleIDGenerator.getCounterFromBundleID(decryptedBundleID1, direction);
 
-        return BundleIDGenerator.compareBundleIDs(decryptedBundleID1, decryptedBundleID2, direction);
+        return Long.compare(foo, id2);
     }
 
     public long getCounterFromBundleID(String bundleID, boolean direction) throws GeneralSecurityException,
