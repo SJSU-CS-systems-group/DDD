@@ -26,9 +26,18 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.Fragment;
+import androidx.viewpager2.adapter.FragmentStateAdapter;
+import androidx.viewpager2.widget.ViewPager2;
 
+import com.google.android.material.tabs.TabLayout;
+import com.google.android.material.tabs.TabLayoutMediator;
+
+import net.discdd.android.util.util.LogFragment;
+import net.discdd.android.util.util.PermissionsFragment;
 import net.discdd.bundletransport.utils.FileUtils;
 import net.discdd.bundletransport.utils.SecurityUtils;
+import net.discdd.ddd_wifi.WifiDirectFragment;
 import net.discdd.wifidirect.WifiDirectManager;
 import net.discdd.wifidirect.WifiDirectStateListener;
 
@@ -39,8 +48,10 @@ import java.io.File;
 import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -78,6 +89,18 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
     private Button connectServerBtn;
     private ConnectivityManager connectivityManager;
     private ConnectivityManager.NetworkCallback serverConnectNetworkCallback;
+    private WifiDirectFragment wifiDirectFragment;
+    private Set<String> wifiDirectFragmentRequiredPermissions = Set.of("android.permission.ACCESS_FINE_LOCATION",
+                                                                       "android.permission.ACCESS_WIFI_STATE",
+                                                                       "android.permission.CHANGE_WIFI_STATE",
+                                                                       "android.permission.NEARBY_WIFI_DEVICES");;
+    private LogFragment logFragment;
+    private PermissionsFragment permissionsFragment;
+    private ViewPagerAdapter adapter;
+    private TabLayout tabLayout;
+
+    record TabInfo(String label, Fragment fragment) {}
+    private ArrayList<TabInfo> tabs = new ArrayList<>();
 
     @Override
     public void onRequestPermissionsResult(int requestCode,
@@ -256,128 +279,185 @@ public class MainActivity extends AppCompatActivity implements RpcServerStateLis
         return null;
     }
 
+    // ViewPagerAdapter class for managing fragments in the ViewPager
+    class ViewPagerAdapter extends FragmentStateAdapter {
+        public ViewPagerAdapter(@NonNull MainActivity fragmentActivity) {
+            super(fragmentActivity);
+        }
+
+        @NonNull
+        @Override
+        public Fragment createFragment(int position) {
+            return tabs.get(position).fragment;
+        }
+
+        @Override
+        public int getItemCount() {
+            return tabs.size();
+        }
+
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        startGRPCServerBtn = findViewById(R.id.btn_start_rpc_server);
-        stopGRPCServerBtn = findViewById(R.id.btn_stop_rpc_server);
-        domainInput = findViewById(R.id.domain_input);
-        portInput = findViewById(R.id.port_input);
-        serverConnectStatus = findViewById(R.id.server_connection_status);
-        connectServerBtn = findViewById(R.id.btn_connect_bundle_server);
-        connectedPeersText = findViewById(R.id.connected_peers);
-        nearByPeersText = findViewById(R.id.nearby_peers);
 
-        // retrieve domain and port from shared preferences
-        // populate text inputs if data is retrieved
-        sharedPref = getSharedPreferences("server_endpoint", MODE_PRIVATE);
-        restoreDomainPort();
+        //set up view
+        setContentView(R.layout.activity_bundle_transport);
 
-        String SERVER_BASE_PATH = this.getExternalFilesDir(null) + "/BundleTransmission";
-        Receive_Directory = SERVER_BASE_PATH + "/client";
-        Server_Directory = SERVER_BASE_PATH + "/server";
-        wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle(), this, "ddd_transport", true);
-        wifiDirectManager.initialize();
+        // get the fragments ready
+        wifiDirectFragment = WifiDirectFragment.newInstance(true);
+        logFragment = new LogFragment();
+        permissionsFragment = new PermissionsFragment();
 
-        grpcServer = RpcServer.getInstance(this);
-        startRpcServer();
+        // Initially we only have the permissions and log
+        tabs.add(new TabInfo("Permissions", permissionsFragment));
+        tabs.add(new TabInfo("Logs", logFragment));
 
-        domainInput.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
+        //Set up ViewPager and TabLayout
+        ViewPager2 viewPager = findViewById(R.id.view_pager);
+        adapter = new ViewPagerAdapter(this);
+        viewPager.setAdapter(adapter);
+        tabLayout = findViewById(R.id.tab_layout);
+        var mediator = new TabLayoutMediator(tabLayout, viewPager,
+                                             (tab, position) -> tab.setText(tabs.get(position).label));
+        mediator.attach();
 
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                if (s.length() > 0 && portInput.getText().toString().length() > 0) {
-                    connectServerBtn.setEnabled(true);
-                } else {
-                    connectServerBtn.setEnabled(false);
-                }
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-
+        permissionsFragment.registerPermissionsWatcher(permissions -> {
+            if (tabs.stream().noneMatch(t -> t.fragment == wifiDirectFragment) &&
+                    permissions.containsAll(wifiDirectFragmentRequiredPermissions)) {
+                tabs.add(1, new TabInfo("Wi-fi Direct", wifiDirectFragment));
+                tabLayout.addTab(tabLayout.newTab().setText("Wi-fi Direct"), 1);
+                viewPager.post(() -> adapter.notifyItemInserted(1));
             }
         });
 
-        portInput.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
+        if (false) {
+            setContentView(R.layout.activity_main);
+            startGRPCServerBtn = findViewById(R.id.btn_start_rpc_server);
+            stopGRPCServerBtn = findViewById(R.id.btn_stop_rpc_server);
+            domainInput = findViewById(R.id.domain_input);
+            portInput = findViewById(R.id.port_input);
+            serverConnectStatus = findViewById(R.id.server_connection_status);
+            connectServerBtn = findViewById(R.id.btn_connect_bundle_server);
+            connectedPeersText = findViewById(R.id.connected_peers);
+            nearByPeersText = findViewById(R.id.nearby_peers);
 
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                if (s.length() > 0 && domainInput.getText().toString().length() > 0) {
-                    connectServerBtn.setEnabled(true);
-                } else {
-                    connectServerBtn.setEnabled(false);
-                }
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-
-            }
-        });
-
-        // set up transport Id
-        tidPath = getApplicationContext().getApplicationInfo().dataDir + "/transportIdentity.pub";
-        File tid = new File(tidPath);
-        if (!tid.exists()) {
-            ECKeyPair identityKeyPair = Curve.generateKeyPair();
-            try {
-                SecurityUtils.createEncodedPublicKeyFile(identityKeyPair.getPublicKey(), tidPath);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } else {
-            try {
-                transportID = SecurityUtils.generateID(tidPath);
-                logger.log(FINE, "Transport ID : " + transportID);
-            } catch (IOException | InvalidKeyException | NoSuchAlgorithmException e) {
-                e.printStackTrace();
-            }
-        }
-
-        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[] { Manifest.permission.ACCESS_FINE_LOCATION },
-                               MainActivity.PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION);
-        }
-
-        // register network listeners
-        createAndRegisterConnectivityManager();
-
-        startGRPCServerBtn.setOnClickListener(v -> {
-            startRpcServer();
-        });
-
-        stopGRPCServerBtn.setOnClickListener(v -> {
-            stopRpcServer();
-        });
-
-        findViewById(R.id.btn_clear_storage).setOnClickListener(v -> {
-            FileUtils.deleteBundles(Receive_Directory);
-            FileUtils.deleteBundles(Server_Directory);
-        });
-
-        // connect to server
-        connectServerBtn.setOnClickListener(view -> {
-            connectToServer();
-        });
-
-        // save the domain and port inputs
-        findViewById(R.id.save_domain_port).setOnClickListener(view -> {
-            saveDomainPort();
-            Toast.makeText(MainActivity.this, "Saved", Toast.LENGTH_SHORT).show();
-        });
-
-        // set saved domain and port to inputs
-        findViewById(R.id.restore_domain_port).setOnClickListener(view -> {
+            // retrieve domain and port from shared preferences
+            // populate text inputs if data is retrieved
+            sharedPref = getSharedPreferences("server_endpoint", MODE_PRIVATE);
             restoreDomainPort();
-        });
+
+            String SERVER_BASE_PATH = this.getExternalFilesDir(null) + "/BundleTransmission";
+            Receive_Directory = SERVER_BASE_PATH + "/client";
+            Server_Directory = SERVER_BASE_PATH + "/server";
+            wifiDirectManager =
+                    new WifiDirectManager(this.getApplication(), this.getLifecycle(), this,
+                                          "ddd_transport", true);
+            wifiDirectManager.initialize();
+
+            grpcServer = RpcServer.getInstance(this);
+            startRpcServer();
+
+            domainInput.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    if (s.length() > 0 && portInput.getText().toString().length() > 0) {
+                        connectServerBtn.setEnabled(true);
+                    } else {
+                        connectServerBtn.setEnabled(false);
+                    }
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {
+
+                }
+            });
+
+            portInput.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    if (s.length() > 0 && domainInput.getText().toString().length() > 0) {
+                        connectServerBtn.setEnabled(true);
+                    } else {
+                        connectServerBtn.setEnabled(false);
+                    }
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {
+
+                }
+            });
+
+            // set up transport Id
+            tidPath =
+                    getApplicationContext().getApplicationInfo().dataDir + "/transportIdentity.pub";
+            File tid = new File(tidPath);
+            if (!tid.exists()) {
+                ECKeyPair identityKeyPair = Curve.generateKeyPair();
+                try {
+                    SecurityUtils.createEncodedPublicKeyFile(identityKeyPair.getPublicKey(),
+                                                             tidPath);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                try {
+                    transportID = SecurityUtils.generateID(tidPath);
+                    logger.log(FINE, "Transport ID : " + transportID);
+                } catch (IOException | InvalidKeyException | NoSuchAlgorithmException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) !=
+                    PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[] { Manifest.permission.ACCESS_FINE_LOCATION },
+                                   MainActivity.PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION);
+            }
+
+            // register network listeners
+            createAndRegisterConnectivityManager();
+
+            startGRPCServerBtn.setOnClickListener(v -> {
+                startRpcServer();
+            });
+
+            stopGRPCServerBtn.setOnClickListener(v -> {
+                stopRpcServer();
+            });
+
+            findViewById(R.id.btn_clear_storage).setOnClickListener(v -> {
+                FileUtils.deleteBundles(Receive_Directory);
+                FileUtils.deleteBundles(Server_Directory);
+            });
+
+            // connect to server
+            connectServerBtn.setOnClickListener(view -> {
+                connectToServer();
+            });
+
+            // save the domain and port inputs
+            findViewById(R.id.save_domain_port).setOnClickListener(view -> {
+                saveDomainPort();
+                Toast.makeText(MainActivity.this, "Saved", Toast.LENGTH_SHORT).show();
+            });
+
+            // set saved domain and port to inputs
+            findViewById(R.id.restore_domain_port).setOnClickListener(view -> {
+                restoreDomainPort();
+            });
+        }
     }
 
     private void restoreDomainPort() {

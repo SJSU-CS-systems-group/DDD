@@ -1,6 +1,5 @@
 package net.discdd.bundleclient;
 
-import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
@@ -17,44 +16,33 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
+import net.discdd.android.util.util.LogFragment;
+import net.discdd.android.util.util.PermissionsFragment;
 import net.discdd.client.bundlerouting.ClientWindow;
 import net.discdd.client.bundlesecurity.BundleSecurity;
 import net.discdd.client.bundletransmission.BundleTransmission;
-import net.discdd.wifidirect.WifiDirectManager;
-import net.discdd.wifidirect.WifiDirectStateListener;
+import net.discdd.ddd_wifi.WifiDirectFragment;
 
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
-public class BundleClientActivity extends AppCompatActivity implements WifiDirectStateListener {
+public class BundleClientActivity extends AppCompatActivity {
 
-    // Wifi Direct set up
-    private WifiDirectManager wifiDirectManager;
-    private ExecutorService wifiDirectExecutor = Executors.newFixedThreadPool(1);
+    private LogFragment logFragment;
+    private PermissionsFragment permissionsFragment;
+    private Set<String> mainPageFragmentRequiredPermissions;
+    private WifiDirectFragment wifiDirectFragment;
+    private MainPageFragment mainPageFragment;
+    private Set<String> wifiDirectFragmentRequiredPermissions;
+    private TabLayout tabLayout;
 
-    //constant
-    public static final String TAG = "bundleclient";
+    record TabInfo(String label, Fragment fragment) {}
+    private ArrayList<TabInfo> tabs = new ArrayList<>();
     private static final Logger logger = Logger.getLogger(BundleClientActivity.class.getName());
     public static Context ApplicationContext;
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-
-        if (wifiDirectManager == null) {
-            // set up wifi direct
-            wifiDirectManager =
-                    new WifiDirectManager(this.getApplication(), this.getLifecycle(), this,
-                                          this.getString(R.string.tansport_host), false);
-            wifiDirectManager.initialize();
-        }
-    }
 
     private static String RECEIVE_PATH = "Shared/received-bundles";
 
@@ -69,52 +57,54 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     // instantiate window for bundles
     public static ClientWindow clientWindow;
     private int WINDOW_LENGTH = 3;
-    private LinkedList<String> logRecords;
-    private Consumer<String> logConsumer;
-
+    ViewPagerAdapter adapter;
     // gRPC set up moved to -- MainPageFragment -- //
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (logRecords == null) {
-            logRecords = new LinkedList<>();
-            Logger.getLogger("").addHandler(new Handler() {
-                @Override
-                public void publish(LogRecord logRecord) {
-                    // get the last part of the logger name
-                    var loggerNameParts = logRecord.getLoggerName().split("\\.");
-                    var loggerName = loggerNameParts[loggerNameParts.length - 1];
-                    if (logRecords.size() > 100) logRecords.remove(0);
-                    String entry = String.format("[%s] %s", loggerName, logRecord.getMessage());
-                    logRecords.add(entry);
-                    if (logConsumer != null) logConsumer.accept(entry + '\n');
-                }
-
-                @Override
-                public void flush() {
-                }
-
-                @Override
-                public void close() throws SecurityException {
-                }
-            });
-        }
 
         //set up view
         setContentView(R.layout.activity_bundle_client);
 
+        // get the fragments ready
+        mainPageFragment = new MainPageFragment();
+        mainPageFragmentRequiredPermissions = Set.of("android.permission.ACCESS_FINE_LOCATION",
+                                                         "android.permission.ACCESS_WIFI_STATE",
+                                                         "android.permission.CHANGE_WIFI_STATE",
+                                                         "android.permission.NEARBY_WIFI_DEVICES");
+        wifiDirectFragment = WifiDirectFragment.newInstance(false);
+        wifiDirectFragmentRequiredPermissions = mainPageFragmentRequiredPermissions;
+        logFragment = new LogFragment();
+        permissionsFragment = new PermissionsFragment();
+
+        // Initially we only have the permissions and log
+        tabs.add(new TabInfo("Permissions", permissionsFragment));
+        tabs.add(new TabInfo("Logs", logFragment));
+
         //Set up ViewPager and TabLayout
         ViewPager2 viewPager = findViewById(R.id.view_pager);
-        TabLayout tabLayout = findViewById(R.id.tab_layout);
-        ViewPagerAdapter adapter = new ViewPagerAdapter(this);
+        adapter = new ViewPagerAdapter(this);
         viewPager.setAdapter(adapter);
+        tabLayout = findViewById(R.id.tab_layout);
+        var mediator = new TabLayoutMediator(tabLayout, viewPager,
+                                             (tab, position) -> tab.setText(tabs.get(position).label));
+        mediator.attach();
 
-        new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
-            final String[] labels = { "Home", "Permissions", "Logs" };
-            tab.setText(labels[position]);
-        }).attach();
-
+        permissionsFragment.registerPermissionsWatcher(permissions -> {
+            if (!tabs.stream().anyMatch(t -> t.fragment == mainPageFragment) &&
+                    permissions.containsAll(mainPageFragmentRequiredPermissions)) {
+                tabs.add(0, new TabInfo("Main", mainPageFragment));
+                tabLayout.addTab(tabLayout.newTab().setText("Main"), 0);
+                viewPager.post(() -> adapter.notifyItemInserted(0));
+            }
+            if (!tabs.stream().anyMatch(t -> t.fragment == wifiDirectFragment) &&
+                    permissions.containsAll(wifiDirectFragmentRequiredPermissions)) {
+                tabs.add(1, new TabInfo("Wi-fi Direct", wifiDirectFragment));
+                tabLayout.addTab(tabLayout.newTab().setText("Wi-fi Direct"), 1);
+                viewPager.post(() -> adapter.notifyItemInserted(1));
+            }
+        });
 
         //Application context
         ApplicationContext = getApplicationContext();
@@ -135,72 +125,20 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
             logger.log(WARNING, "{MC} - got clientwindow " + clientWindow);
         } catch (Exception e) {
             logger.log(SEVERE, "Failed to initialize bundle transmission", e);
-        }
 
+        }
     }
 
     @Override
-    public void onReceiveAction(WifiDirectManager.WifiDirectEvent action) {
-        runOnUiThread(() -> handleWifiDirectAction(action));
+    protected void onStart() {
+        super.onStart();
+
+
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        wifiDirectExecutor.shutdown();
-    }
-
-    //Method with cases to handle Wifi Direct actions
-    private void handleWifiDirectAction(WifiDirectManager.WifiDirectEvent action) {
-        MainPageFragment fragment = getMainPageFragment();
-        if (fragment != null) {
-            switch (action.type()) {
-                case WIFI_DIRECT_MANAGER_INITIALIZATION_FAILED:
-                    fragment.updateWifiDirectResponse("Manager initialization failed\n");
-                    logger.log(WARNING, "Manager initialization failed\n");
-                    break;
-                case WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL:
-                    logger.log(FINER, "Manager initialization successful\n");
-                    connectTransport();
-                    break;
-                case WIFI_DIRECT_MANAGER_DISCOVERY_SUCCESSFUL:
-                    fragment.updateWifiDirectResponse("Discovery initiation successful\n");
-                    logger.log(FINER, "Discovery initiation successful\n");
-                    break;
-                case WIFI_DIRECT_MANAGER_DISCOVERY_FAILED:
-                    fragment.updateWifiDirectResponse("Discovery initiation failed\n");
-                    logger.log(WARNING, "Discovery initiation failed\n");
-                    fragment.setConnectButtonEnabled(true);
-                    break;
-                case WIFI_DIRECT_MANAGER_PEERS_CHANGED:
-                    fragment.updateWifiDirectResponse("Peers changed\n");
-                    logger.log(WARNING, "Peers changed\n");
-                    updateConnectedDevices();
-                    break;
-                case WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_FAILED:
-                    fragment.updateWifiDirectResponse("Device connection initiation failed\n");
-                    logger.log(WARNING, "Device connection initiation failed\n");
-                    fragment.setConnectButtonEnabled(true);
-                    break;
-                case WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_SUCCESSFUL:
-                    fragment.updateWifiDirectResponse("Device connection initiation successful\n");
-                    logger.log(FINER, "Device connection initiation successful\n");
-                    break;
-                case WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL:
-                    fragment.updateWifiDirectResponse("Device connected to transport\n");
-                    logger.log(FINER, "Device connected to transport\n");
-                    updateConnectedDevices();
-                    fragment.setConnectButtonEnabled(true);
-                    exchangeMessage();
-                    break;
-                case WIFI_DIRECT_MANAGER_FORMED_CONNECTION_FAILED:
-                    fragment.updateWifiDirectResponse("Device failed to connect to transport\n");
-                    logger.log(WARNING, "Device failed to connect to transport\n");
-                    fragment.setConnectButtonEnabled(true);
-                    break;
-            }
-            if (action.message() != null) fragment.updateWifiDirectResponse(action.message());
-        }
     }
 
     //Method to connect to transport
@@ -210,9 +148,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
             fragment.setConnectButtonEnabled(false);
             fragment.updateWifiDirectResponse("Starting connection.....\n");
         }
-        logger.log(INFO, "Connecting to transport");
-
-        wifiDirectExecutor.execute(wifiDirectManager);
     }
 
     public void exchangeMessage() {
@@ -224,50 +159,27 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         new GrpcReceiveTask(this).executeInBackground("192.168.49.1", "7777");
     }
 
-    // Method to update connected devices text
-    private void updateConnectedDevices() {
-        MainPageFragment fragment = getMainPageFragment();
-        if (fragment != null) {
-            Set<String> devicesFound = wifiDirectManager.getDevicesFound();
-            List<String> devicesList = new ArrayList<>(devicesFound);
-            fragment.updateConnectedDevicesText(devicesList);
-        }
-    }
-
     // Helper method to get the MainPageFragment instance
     private MainPageFragment getMainPageFragment() {
         return (MainPageFragment) getSupportFragmentManager().findFragmentByTag("f0");
     }
 
-    public String subscribeToLogs(Consumer<String> logConsumer) {
-        this.logConsumer = logConsumer;
-        return String.join("\n", logRecords);
-    }
-
     // ViewPagerAdapter class for managing fragments in the ViewPager
-    private static class ViewPagerAdapter extends FragmentStateAdapter {
-        private final BundleClientActivity bundleClientActivity;
-        private LogFragment logFragment;
-        private PermissionsFragment permissionsFragment;
-
+    class ViewPagerAdapter extends FragmentStateAdapter {
         public ViewPagerAdapter(@NonNull BundleClientActivity fragmentActivity) {
             super(fragmentActivity);
-            this.bundleClientActivity = fragmentActivity;
         }
 
         @NonNull
         @Override
         public Fragment createFragment(int position) {
-            return switch (position) {
-                case 0 -> new MainPageFragment();
-                case 1 -> new PermissionsFragment();
-                default -> logFragment = new LogFragment(bundleClientActivity);
-            };
+            return tabs.get(position).fragment;
         }
 
         @Override
         public int getItemCount() {
-            return 3;
+            return tabs.size();
         }
+
     }
 }
