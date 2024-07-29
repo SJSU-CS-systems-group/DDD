@@ -1,4 +1,4 @@
-package net.discdd.android.util.util;
+package net.discdd.android.util.fragments;
 
 import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;

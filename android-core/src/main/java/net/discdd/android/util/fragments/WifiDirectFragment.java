@@ -1,4 +1,4 @@
-package net.discdd.ddd_wifi;
+package net.discdd.android.util.fragments;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -12,6 +12,7 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import net.discdd.ddd_wifi.R;
 import net.discdd.wifidirect.WifiDirectManager;
 import net.discdd.wifidirect.WifiDirectManager.WifiDirectEvent;
 import net.discdd.wifidirect.WifiDirectStateListener;

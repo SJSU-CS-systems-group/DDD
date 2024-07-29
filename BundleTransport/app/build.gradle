@@ -56,7 +56,7 @@ dependencies {
     implementation 'io.grpc:grpc-okhttp:1.58.0'
     implementation 'com.google.firebase:firebase-crashlytics-buildtools:3.0.2'
     implementation 'com.google.protobuf:protobuf-java:3.23.4'
-    implementation project(':ddd-wifi')
+    implementation project(':android-core')
     compileOnly 'org.apache.tomcat:annotations-api:6.0.53' // necessary for Java 9+
 
     // Exclude protobuf-java from signal-protocol-android to avoid conflicts

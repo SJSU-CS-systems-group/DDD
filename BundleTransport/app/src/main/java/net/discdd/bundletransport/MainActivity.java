@@ -33,11 +33,11 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
-import net.discdd.android.util.util.LogFragment;
-import net.discdd.android.util.util.PermissionsFragment;
+import net.discdd.android.util.fragments.LogFragment;
+import net.discdd.android.util.fragments.PermissionsFragment;
 import net.discdd.bundletransport.utils.FileUtils;
 import net.discdd.bundletransport.utils.SecurityUtils;
-import net.discdd.ddd_wifi.WifiDirectFragment;
+import net.discdd.android.util.fragments.WifiDirectFragment;
 import net.discdd.wifidirect.WifiDirectManager;
 import net.discdd.wifidirect.WifiDirectStateListener;
 
