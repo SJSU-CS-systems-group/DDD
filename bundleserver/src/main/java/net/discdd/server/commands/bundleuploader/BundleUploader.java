@@ -3,6 +3,7 @@ package net.discdd.server.commands.bundleuploader;
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
+import net.discdd.bundlerouting.BundleSender;
 import net.discdd.bundletransport.service.BundleMetaData;
 import net.discdd.bundletransport.service.BundleServiceGrpc;
 import net.discdd.bundletransport.service.BundleUploadRequest;
@@ -71,7 +72,7 @@ public class BundleUploader implements CommandLineRunner, Callable<Integer> {
                     }
                 });
         BundleUploadRequest metadata = BundleUploadRequest.newBuilder()
-                .setMetadata(BundleMetaData.newBuilder().setBid(bundle.getName()).setTransportId("CLI").build())
+                .setMetadata(BundleMetaData.newBuilder().setBid(bundle.getName()).setSenderId("CLI").setSender(BundleSender.Transport.name()).build())
                 .build();
         streamObserver.onNext(metadata);
 

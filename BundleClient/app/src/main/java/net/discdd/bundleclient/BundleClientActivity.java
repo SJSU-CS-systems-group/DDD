@@ -6,7 +6,13 @@ import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
 import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkInfo;
+import android.net.NetworkRequest;
 import android.os.Bundle;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -17,6 +23,7 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
+import net.discdd.bundlerouting.service.ServerManager;
 import net.discdd.client.bundlerouting.ClientWindow;
 import net.discdd.client.bundlesecurity.BundleSecurity;
 import net.discdd.client.bundletransmission.BundleTransmission;
@@ -24,6 +31,7 @@ import net.discdd.wifidirect.WifiDirectManager;
 import net.discdd.wifidirect.WifiDirectStateListener;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -47,6 +55,12 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     private static final Logger logger = Logger.getLogger(BundleClientActivity.class.getName());
     public static final int PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION = 1001;
     public static final int PERMISSIONS_REQUEST_CODE_ACCESS_NEARBY_WIFI_DEVICES = 1002;
+    private ConnectivityManager connectivityManager;
+    private ConnectivityManager.NetworkCallback serverConnectNetworkCallback;
+
+
+    //  private BundleDeliveryAgent agent;
+    // context
     public static Context ApplicationContext;
 
     private static String RECEIVE_PATH = "Shared/received-bundles";
@@ -235,7 +249,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
             fragment.setExchangeButtonEnabled(false);
         }
         logger.log(INFO, "connection complete!");
-        new GrpcReceiveTask(this).executeInBackground("192.168.49.1", "7777");
+        new GrpcReceiveTask(this).executeInBackground("192.168.49.1", 7777);
     }
 
     // Method to update connected devices text
@@ -282,6 +296,62 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         @Override
         public int getItemCount() {
             return 3;
+        }
+    }
+
+
+    void createAndRegisterConnectivityManager(String serverDomain, String serverPort) {
+        connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkRequest networkRequest =
+                new NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                        .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR).build();
+
+        serverConnectNetworkCallback = new ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onAvailable(Network network) {
+                logger.log(INFO, "Available network: " + network.toString());
+                logger.log(INFO, "Initiating automatic connection to server");
+                connectToServer(serverDomain, serverPort);
+            }
+
+            MainPageFragment fragment = getMainPageFragment();
+
+            @Override
+            public void onLost(Network network) {
+                logger.log(WARNING, "Lost network connectivity");
+                if (null != fragment)
+                    fragment.setConnectServerBtn(false);
+            }
+
+            @Override
+            public void onUnavailable() {
+                logger.log(WARNING, "Unavailable network connectivity");
+                if (null != fragment)
+                    fragment.setConnectServerBtn(false);            }
+
+            @Override
+            public void onBlockedStatusChanged(Network network, boolean blocked) {
+                logger.log(WARNING, "Blocked network connectivity");
+                if (null != fragment)
+                    fragment.setConnectServerBtn(false);
+            }
+        };
+
+        connectivityManager.registerNetworkCallback(networkRequest, serverConnectNetworkCallback);
+
+        NetworkInfo activeNetwork = connectivityManager.getActiveNetworkInfo();
+        if (activeNetwork == null || !activeNetwork.isConnectedOrConnecting()) {
+            MainPageFragment fragment = getMainPageFragment();
+            if (null != fragment)
+                fragment.setConnectServerBtn(false);        }
+    }
+
+    void connectToServer(String serverDomain, String serverPort) {
+        if (!serverDomain.isEmpty() && !serverPort.isEmpty()) {
+            logger.log(INFO, "Sending to " + serverDomain + ":" + serverPort);
+            new GrpcReceiveTask(this).executeInBackground(serverDomain, Integer.parseInt(serverPort));
+
         }
     }
 }

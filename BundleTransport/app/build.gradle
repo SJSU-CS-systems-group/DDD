@@ -31,6 +31,11 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    packagingOptions {
+        exclude("META-INF/*")
+        exclude("META-INF/*/*")
+    }
+
     buildTypes {
         debug { minifyEnabled false }
         release {

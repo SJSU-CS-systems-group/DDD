@@ -1,6 +1,12 @@
-package net.discdd.bundletransport;
+package net.discdd.bundlerouting;
 
-import net.discdd.bundletransport.utils.FileUtils;
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
+import io.grpc.stub.StreamObserver;
+import net.discdd.bundletransport.service.BundleDownloadRequest;
+import net.discdd.bundletransport.service.BundleDownloadResponse;
+import net.discdd.bundletransport.service.BundleServiceGrpc;
+import net.discdd.utils.FileUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -10,7 +16,6 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -29,7 +34,6 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
 public class GrpcReceiveTask {
-
     private static final Logger logger = Logger.getLogger(GrpcReceiveTask.class.getName());
 
     private String host, transportId;
@@ -39,7 +43,7 @@ public class GrpcReceiveTask {
     private ManagedChannel channel;
 
     public GrpcReceiveTask(String host, int port, String transportId, Path clientPath) {
-        logger.log(INFO, "initializing grpcreceivetask...");
+        logger.log(INFO, "initializing GrpcReceiveTask...");
         this.host = host;
         this.port = port;
         this.transportId = transportId;
@@ -65,7 +69,7 @@ public class GrpcReceiveTask {
     }
 
     private void executeTask() throws Exception {
-        logger.log(INFO, "executing grpcreceivetask...");
+        logger.log(INFO, "Executing GrpcReceiveTask...");
 
         channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
         BundleServiceGrpc.BundleServiceStub stub = BundleServiceGrpc.newStub(channel);
@@ -102,17 +106,17 @@ public class GrpcReceiveTask {
                 } else if (response.hasMetadata()) {
                     try {
                         logger.log(INFO, "Downloading chunk of: " + response.getMetadata().getBid());
-                        writer = FileUtils.getFilePath(response, clientPath.toString());
+                        writer = FileUtils.getFilePath(response, clientPath);
                     } catch (IOException e) {
                         logger.log(WARNING,
-                                   "/GrpcReceiveTask.java -> executeTask() -> onNext() IOException: " + e.getMessage());
+                                "/GrpcReceiveTask.java -> executeTask() -> onNext() IOException: " + e.getMessage());
                     }
                 } else {
                     try {
                         FileUtils.writeFile(writer, response.getFile().getContent());
                     } catch (IOException e) {
                         logger.log(WARNING,
-                                   "/GrpcReceiveTask.java -> executeTask() -> onNext() IOException: " + e.getMessage());
+                                "/GrpcReceiveTask.java -> executeTask() -> onNext() IOException: " + e.getMessage());
                     }
                 }
             }
@@ -152,7 +156,8 @@ public class GrpcReceiveTask {
                 List<String> files = Arrays.stream(dir.listFiles(f -> f.length() > 0)).map(File::getName)
                         .collect(Collectors.toList());
                 BundleDownloadRequest request =
-                        BundleDownloadRequest.newBuilder().setTransportId(transportId).addAllBundleList(files).build();
+                        BundleDownloadRequest.newBuilder().setSenderId(transportId).setSender(BundleSender.Transport.name())
+                                .addAllBundleList(files).build();
 
                 stub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                         .downloadBundle(request, downloadObserver);

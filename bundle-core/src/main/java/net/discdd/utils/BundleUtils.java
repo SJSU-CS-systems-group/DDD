@@ -64,7 +64,7 @@ public class BundleUtils {
         Path ackPath = extractedPayloadPath.resolve(Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME);
         Path aduPath = extractedPayloadPath.resolve(Constants.BUNDLE_ADU_DIRECTORY_NAME);
 
-        logger.log(INFO, "ADU Path" + aduPath);
+        logger.log(INFO, "ADU Path: " + aduPath);
 
         UncompressedPayload.Builder builder = new UncompressedPayload.Builder();
 

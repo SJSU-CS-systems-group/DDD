@@ -1,4 +1,4 @@
-package net.discdd.bundletransport.service;
+package net.discdd.bundlerouting.service;
 
 import com.google.protobuf.ByteString;
 

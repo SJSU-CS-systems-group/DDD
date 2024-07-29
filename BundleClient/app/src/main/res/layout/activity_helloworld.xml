@@ -16,6 +16,32 @@
     <!--        android:layout_marginEnd="16dp"-->
     <!--        android:layout_marginRight="16dp"-->
     <!--        tools:layout="@layout/fragment_file_chooser" />-->
+    <EditText
+        android:id="@+id/domain_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="BundleServer Domain"
+        android:textAlignment="center"
+        android:padding="10dp"
+        android:layout_marginTop="10dp"
+        />
+
+    <EditText
+        android:id="@+id/port_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="BundleServer Port"
+        android:textAlignment="center"
+        android:padding="10dp"
+        android:layout_marginTop="10dp"
+        android:inputType="number"
+        />
+
+    <Button
+        android:id="@+id/btn_connect_bundle_server"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="connect to bundle server"/>
 
     <Button
         android:id="@+id/connect_button"
@@ -46,6 +72,10 @@
         android:paddingTop="12dp"
         android:paddingBottom="12dp"
         android:textSize="16sp" />
+
+
+
+
 
     <Button
         android:id="@+id/exchange_button"

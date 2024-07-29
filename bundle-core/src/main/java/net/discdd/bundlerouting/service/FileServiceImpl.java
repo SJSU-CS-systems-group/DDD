@@ -1,10 +1,6 @@
-package net.discdd.bundletransport.service;
+package net.discdd.bundlerouting.service;
 
-import android.content.Context;
-import android.os.Build;
-
-import net.discdd.bundletransport.MainActivity;
-
+import net.discdd.bundlerouting.BundleSender;
 import com.google.protobuf.ByteString;
 
 import java.io.File;
@@ -24,30 +20,37 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
 import io.grpc.stub.StreamObserver;
+import net.discdd.bundletransport.service.Bytes;
+import net.discdd.bundletransport.service.FileServiceGrpc;
+import net.discdd.bundletransport.service.FileUploadRequest;
+import net.discdd.bundletransport.service.FileUploadResponse;
+import net.discdd.bundletransport.service.ReqFilePath;
+import net.discdd.bundletransport.service.Status;
 
 public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
     private static final Logger logger = Logger.getLogger(FileServiceImpl.class.getName());
 
-    private android.content.Context context;
-    private Path SERVER_BASE_PATH;
+    protected Path SERVER_BASE_PATH;
+    protected BundleSender sender;
+    protected String senderId;
+    protected String uploadingTo;
+    protected String downloadingFrom;
+    protected BundleProcessingInterface processBundle;
 
-    public FileServiceImpl(Context context) {
-        this.context = context;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            this.SERVER_BASE_PATH = Paths.get(context.getExternalFilesDir(null) + "/BundleTransmission");
-        }
-        File toServer = null;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            toServer = new File(String.valueOf(SERVER_BASE_PATH.resolve("server")));
-            toServer.mkdirs();
-        }
+    public FileServiceImpl(File externalFilesDir, BundleSender sender, String senderId) {
+        this.SERVER_BASE_PATH = Paths.get(externalFilesDir + "/BundleTransmission");
+        this.sender = sender;
+        this.senderId = senderId;
+        this.processBundle = null;
+        File toServer = new File(String.valueOf(SERVER_BASE_PATH.resolve("server")));
+        toServer.mkdirs();
 
-        File toClient = null;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            toClient = new File(String.valueOf(SERVER_BASE_PATH.resolve("client")));
-            toClient.mkdirs();
-        }
+        File toClient = new File(String.valueOf(SERVER_BASE_PATH.resolve("client")));
+        toClient.mkdirs();
+
+        downloadingFrom = "client";
+        uploadingTo = "server";
     }
 
     @Override
@@ -59,6 +62,7 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
             @Override
             public void onNext(FileUploadRequest fileUploadRequest) {
+                logger.log(INFO, "Received request to write file to: " + sender.name());
                 try {
                     if (fileUploadRequest.hasMetadata()) {
                         writer = getFilePath(fileUploadRequest);
@@ -79,10 +83,13 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
             @Override
             public void onCompleted() {
-                logger.log(INFO, "Complete");
+                logger.log(INFO, "File Upload Complete");
                 closeFile(writer);
                 status = Status.IN_PROGRESS.equals(status) ? Status.SUCCESS : status;
                 FileUploadResponse response = FileUploadResponse.newBuilder().setStatus(status).build();
+                if (null != processBundle){
+                    processBundle.execute();
+                }
                 responseObserver.onNext(response);
                 responseObserver.onCompleted();
             }
@@ -91,11 +98,8 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
     private OutputStream getFilePath(FileUploadRequest request) throws IOException {
         String fileName = request.getMetadata().getName() + "." + request.getMetadata().getType();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            return Files.newOutputStream(SERVER_BASE_PATH.resolve("server").resolve(fileName),
+        return Files.newOutputStream(SERVER_BASE_PATH.resolve(uploadingTo).resolve(fileName),
                                          StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-        }
-        return null;
     }
 
     private void writeFile(OutputStream writer, ByteString content) throws IOException {
@@ -113,13 +117,8 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
     @Override
     public void downloadFile(ReqFilePath request, StreamObserver<Bytes> responseObserver) {
-        String requestedPath = null;
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            requestedPath = String.valueOf(SERVER_BASE_PATH.resolve("client").resolve(request.getValue()));
-//            requestedPath = String.valueOf(SERVER_BASE_PATH.resolve("client").resolve("payload.zip"));
-        }
+        String requestedPath = String.valueOf(SERVER_BASE_PATH.resolve(downloadingFrom).resolve(request.getValue()));
         logger.log(FINE, "Downloading " + requestedPath);
-        assert requestedPath != null;
         File file = new File(requestedPath);
         InputStream in;
         try {
@@ -131,11 +130,15 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
         StreamHandler handler = new StreamHandler(in);
         Exception ex = handler.handle(bytes -> {
             responseObserver.onNext(
-                    Bytes.newBuilder().setValue(bytes).setTransportId(MainActivity.transportID).build());
+                    Bytes.newBuilder().setValue(bytes).setSenderId(senderId).setSender(sender.name()).build());
         });
         if (ex != null) ex.printStackTrace();
 
         responseObserver.onCompleted();
         logger.log(INFO, "Complete " + requestedPath);
+    }
+
+    protected void setProcessBundle(BundleProcessingInterface bundleProcessingImpl){
+        this.processBundle = bundleProcessingImpl;
     }
 }
