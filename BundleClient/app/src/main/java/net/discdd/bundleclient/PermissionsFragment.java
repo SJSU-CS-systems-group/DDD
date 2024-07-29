@@ -28,7 +28,7 @@ public class PermissionsFragment extends Fragment {
     @Override
     public View onCreateView(
             @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.permissions_fragment, container, false);
+        return inflater.inflate(R.layout.permissions_page, container, false);
     }
 
     @Override
