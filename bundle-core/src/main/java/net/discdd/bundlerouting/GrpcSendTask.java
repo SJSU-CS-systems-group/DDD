@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.*;
+
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
@@ -66,8 +67,8 @@ public class GrpcSendTask {
             if (bundles != null) {
                 for (File bundle : bundles) {
                     BundleUploadRequest metadata = BundleUploadRequest.newBuilder().setMetadata(
-                                    BundleMetaData.newBuilder().setBid(bundle.getName()).setSenderId(transportId)
-                                            .setSender(BundleSender.Transport.name()).build()).build();
+                            BundleMetaData.newBuilder().setBid(bundle.getName()).setSenderId(transportId)
+                                    .setSender(BundleSender.Transport.name()).build()).build();
                     streamObserver.onNext(metadata);
 
                     // upload file as chunk

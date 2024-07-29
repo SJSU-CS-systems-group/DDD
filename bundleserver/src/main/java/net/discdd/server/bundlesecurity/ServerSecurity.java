@@ -522,11 +522,11 @@ public class ServerSecurity {
         return BundleIDGenerator.compareBundleIDs(receivedBundleID, latestBundleID, BundleIDGenerator.UPSTREAM);
     }
 
-    public String getServerId(){
+    public String getServerId() {
         String serverId = null;
         try {
             serverId = SecurityUtils.generateID(ourIdentityKeyPair.getPublicKey().serialize());
-        }catch (NoSuchAlgorithmException e){
+        } catch (NoSuchAlgorithmException e) {
             logger.log(WARNING, "Unable to generate Server Id");
         }
         return serverId;

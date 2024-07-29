@@ -397,8 +397,8 @@ public class ADUEnd2EndTest {
         BundleUploadResponseStreamObserver response = new BundleUploadResponseStreamObserver();
         var request = stub.uploadBundle(response);
         request.onNext(BundleUploadRequest.newBuilder().setMetadata(
-                        BundleMetaData.newBuilder().setBid(bundleJarPath.toFile().getName()).setSender(BundleSender.Transport.name()).setSenderId("8675309").build())
-                               .build());
+                BundleMetaData.newBuilder().setBid(bundleJarPath.toFile().getName())
+                        .setSender(BundleSender.Transport.name()).setSenderId("8675309").build()).build());
         request.onNext(BundleUploadRequest.newBuilder().setFile(net.discdd.bundletransport.service.File.newBuilder()
                                                                         .setContent(ByteString.copyFrom(
                                                                                 Files.readAllBytes(bundleJarPath)))

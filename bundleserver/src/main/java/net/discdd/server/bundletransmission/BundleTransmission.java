@@ -62,7 +62,8 @@ public class BundleTransmission {
     private static final int WINDOW_LENGTH = 3;
 
     public BundleTransmission(BundleSecurity bundleSecurity, ApplicationDataManager applicationDataManager,
-                              BundleRouting bundleRouting, BundleServerConfig config, ServerWindowService serverWindowService) {
+                              BundleRouting bundleRouting, BundleServerConfig config,
+                              ServerWindowService serverWindowService) {
         this.bundleSecurity = bundleSecurity;
         this.applicationDataManager = applicationDataManager;
         this.config = config;
@@ -166,27 +167,28 @@ public class BundleTransmission {
             if (BundleSender.Transport.equals(sender) && !senderId.equals(transportDir.getName())) {
                 continue;
             }
-            if (BundleSender.Transport.equals(sender)){
+            if (BundleSender.Transport.equals(sender)) {
                 List<String> reachableClients = new ArrayList<>();
                 reachableClients = bundleRouting.getClients(senderId);
             }
 
-            if (transportDir.isDirectory()){
+            if (transportDir.isDirectory()) {
                 for (final File bundleFile : transportDir.listFiles()) {
                     processBundleFile(bundleFile, sender, senderId);
                 }
-            }else if (transportDir.isFile()){
-                processBundleFile(transportDir, sender, senderId);}
+            } else if (transportDir.isFile()) {
+                processBundleFile(transportDir, sender, senderId);
+            }
         }
     }
 
-    private void processBundleFile(File bundleFile, BundleSender sender, String senderId){
+    private void processBundleFile(File bundleFile, BundleSender sender, String senderId) {
         Bundle bundle = new Bundle(bundleFile);
         try {
             this.processReceivedBundle(sender, senderId, bundle);
         } catch (Exception e) {
-            logger.log(SEVERE, "[BundleTransmission] Failed to process received bundle from: " + sender +
-                    " with Id: " + senderId, e);
+            logger.log(SEVERE, "[BundleTransmission] Failed to process received bundle from: " + sender + " with Id: " +
+                    senderId, e);
         } finally {
             try {
                 FileUtils.delete(bundleFile);
@@ -358,32 +360,31 @@ public class BundleTransmission {
     }
 
     public List<File> getBundlesForTransmission(String sender, String senderId) {
-        logger.log(INFO,
-                   "[BundleTransmission] Inside getBundlesForTransmission method for "+  sender + " with id: " + senderId);
+        logger.log(INFO, "[BundleTransmission] Inside getBundlesForTransmission method for " + sender + " with id: " +
+                senderId);
         List<File> bundles = new ArrayList<>();
         List<String> clientIds = new ArrayList<>();
         if (null != sender && sender.equals(BundleSender.Client.name())) {
             clientIds.add(senderId);
-        }else {
+        } else {
             clientIds.addAll(bundleRouting.getClients(senderId));
         }
 
         for (String clientId : clientIds) {
             File recvTransportSubDir = this.config.getBundleTransmission().getToSendDirectory().toFile();
 
-            File[] bundleFilesForClientId =
-                    recvTransportSubDir.listFiles(file -> !file.isHidden() && clientId.equals(getClientIdFromBundleFile(file)));
+            File[] bundleFilesForClientId = recvTransportSubDir.listFiles(
+                    file -> !file.isHidden() && clientId.equals(getClientIdFromBundleFile(file)));
 
-            if (null != bundleFilesForClientId)
-                bundles.addAll(List.of(Objects.requireNonNull(bundleFilesForClientId)));
+            if (null != bundleFilesForClientId) bundles.addAll(List.of(Objects.requireNonNull(bundleFilesForClientId)));
         }
 
         logger.log(INFO, "[BundleTransmission] Found " + bundles.size() + " bundles to deliver through " + sender +
-                           " with Id: " + senderId);
+                " with Id: " + senderId);
         return bundles;
     }
 
-    public String getClientIdFromBundleFile(File bundle){
+    public String getClientIdFromBundleFile(File bundle) {
         //TO Do
         return "";
     }

@@ -40,7 +40,7 @@ public class FileUtils {
         }
 
         return Files.newOutputStream(Paths.get(response.toString(), response.getMetadata().getSenderId(), fileName),
-                StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                                     StandardOpenOption.CREATE, StandardOpenOption.APPEND);
     }
 
     public static void writeFile(OutputStream writer, ByteString content) throws IOException {

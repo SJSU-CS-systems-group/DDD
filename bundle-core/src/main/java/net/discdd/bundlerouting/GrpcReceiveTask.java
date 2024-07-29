@@ -109,14 +109,14 @@ public class GrpcReceiveTask {
                         writer = FileUtils.getFilePath(response, clientPath);
                     } catch (IOException e) {
                         logger.log(WARNING,
-                                "/GrpcReceiveTask.java -> executeTask() -> onNext() IOException: " + e.getMessage());
+                                   "/GrpcReceiveTask.java -> executeTask() -> onNext() IOException: " + e.getMessage());
                     }
                 } else {
                     try {
                         FileUtils.writeFile(writer, response.getFile().getContent());
                     } catch (IOException e) {
                         logger.log(WARNING,
-                                "/GrpcReceiveTask.java -> executeTask() -> onNext() IOException: " + e.getMessage());
+                                   "/GrpcReceiveTask.java -> executeTask() -> onNext() IOException: " + e.getMessage());
                     }
                 }
             }
@@ -155,9 +155,8 @@ public class GrpcReceiveTask {
                 File dir = clientPath.toFile();
                 List<String> files = Arrays.stream(dir.listFiles(f -> f.length() > 0)).map(File::getName)
                         .collect(Collectors.toList());
-                BundleDownloadRequest request =
-                        BundleDownloadRequest.newBuilder().setSenderId(transportId).setSender(BundleSender.Transport.name())
-                                .addAllBundleList(files).build();
+                BundleDownloadRequest request = BundleDownloadRequest.newBuilder().setSenderId(transportId)
+                        .setSender(BundleSender.Transport.name()).addAllBundleList(files).build();
 
                 stub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                         .downloadBundle(request, downloadObserver);

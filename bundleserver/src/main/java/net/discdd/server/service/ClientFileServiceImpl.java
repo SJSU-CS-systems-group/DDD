@@ -15,7 +15,7 @@ import java.util.logging.Logger;
 
 @GrpcService
 public class ClientFileServiceImpl extends FileServiceImpl {
-     @Value("${bundle-server.bundle-store-shared}")
+    @Value("${bundle-server.bundle-store-shared}")
     private String serverBasePath;
     @Autowired
     private ServerSecurity serverSecurity;
@@ -23,9 +23,9 @@ public class ClientFileServiceImpl extends FileServiceImpl {
     BundleTransmission bundleTransmission;
     private static final Logger logger = Logger.getLogger(ClientFileServiceImpl.class.getName());
 
-   @PostConstruct
-    private void init(){
-       logger.log(Level.INFO, "inside ClientFileServiceImpl init method");
+    @PostConstruct
+    private void init() {
+        logger.log(Level.INFO, "inside ClientFileServiceImpl init method");
         this.SERVER_BASE_PATH = Path.of(serverBasePath);
         this.sender = BundleSender.Server;
         this.senderId = serverSecurity.getServerId();
@@ -38,7 +38,7 @@ public class ClientFileServiceImpl extends FileServiceImpl {
         super(null, null, null);
     }
 
-    public void settingProcessBundle(){
-       bundleTransmission.processReceivedBundles(BundleSender.Client, null);
+    public void settingProcessBundle() {
+        bundleTransmission.processReceivedBundles(BundleSender.Client, null);
     }
 }

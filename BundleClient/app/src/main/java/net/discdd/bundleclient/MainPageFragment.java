@@ -85,7 +85,8 @@ public class MainPageFragment extends Fragment {
 
         connectServerBtn.setOnClickListener(v -> {
             if (getActivity() instanceof BundleClientActivity) {
-                ((BundleClientActivity) getActivity()).connectToServer(domainInput.getText().toString(), portInput.getText().toString());
+                ((BundleClientActivity) getActivity()).connectToServer(domainInput.getText().toString(),
+                                                                       portInput.getText().toString());
             }
         });
 
@@ -130,10 +131,10 @@ public class MainPageFragment extends Fragment {
         });
 
         // register network listeners
-        if (getActivity() instanceof BundleClientActivity
-                && !domainInput.getText().toString().isEmpty() && !portInput.getText().toString().isEmpty()) {
-            ((BundleClientActivity) getActivity())
-                    .createAndRegisterConnectivityManager(domainInput.getText().toString(), portInput.getText().toString());
+        if (getActivity() instanceof BundleClientActivity && !domainInput.getText().toString().isEmpty() &&
+                !portInput.getText().toString().isEmpty()) {
+            ((BundleClientActivity) getActivity()).createAndRegisterConnectivityManager(
+                    domainInput.getText().toString(), portInput.getText().toString());
         }
         usbManager = (UsbManager) getActivity().getSystemService(Context.USB_SERVICE);
         mUsbReceiver = new BroadcastReceiver() {
@@ -236,7 +237,7 @@ public class MainPageFragment extends Fragment {
         resultText.setText(text);
     }
 
-    public void appendResultText(String text){
+    public void appendResultText(String text) {
         requireActivity().runOnUiThread(() -> resultText.append(text));
     }
 
@@ -256,7 +257,7 @@ public class MainPageFragment extends Fragment {
         return false;
     }
 
-    public void setConnectServerBtn(boolean isEnabled){
+    public void setConnectServerBtn(boolean isEnabled) {
         connectServerBtn.setEnabled(isEnabled);
     }
 }

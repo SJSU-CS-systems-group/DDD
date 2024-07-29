@@ -57,7 +57,9 @@ public class RpcServer {
 
         SocketAddress address = new InetSocketAddress(inetSocketAddressIP, port);
         notifyStateChange(ServerState.PENDING);
-        server = NettyServerBuilder.forAddress(address).addService(new FileServiceImpl(context.getExternalFilesDir(null), BundleSender.Transport, MainActivity.transportID)).build();
+        server = NettyServerBuilder.forAddress(address).addService(
+                new FileServiceImpl(context.getExternalFilesDir(null), BundleSender.Transport,
+                                    MainActivity.transportID)).build();
 
         logger.log(INFO, "Starting rpc server at: " + server.toString());
 

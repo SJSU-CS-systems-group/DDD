@@ -58,7 +58,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     private ConnectivityManager connectivityManager;
     private ConnectivityManager.NetworkCallback serverConnectNetworkCallback;
 
-
     //  private BundleDeliveryAgent agent;
     // context
     public static Context ApplicationContext;
@@ -299,7 +298,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         }
     }
 
-
     void createAndRegisterConnectivityManager(String serverDomain, String serverPort) {
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkRequest networkRequest =
@@ -320,21 +318,19 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
             @Override
             public void onLost(Network network) {
                 logger.log(WARNING, "Lost network connectivity");
-                if (null != fragment)
-                    fragment.setConnectServerBtn(false);
+                if (null != fragment) fragment.setConnectServerBtn(false);
             }
 
             @Override
             public void onUnavailable() {
                 logger.log(WARNING, "Unavailable network connectivity");
-                if (null != fragment)
-                    fragment.setConnectServerBtn(false);            }
+                if (null != fragment) fragment.setConnectServerBtn(false);
+            }
 
             @Override
             public void onBlockedStatusChanged(Network network, boolean blocked) {
                 logger.log(WARNING, "Blocked network connectivity");
-                if (null != fragment)
-                    fragment.setConnectServerBtn(false);
+                if (null != fragment) fragment.setConnectServerBtn(false);
             }
         };
 
@@ -343,8 +339,8 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         NetworkInfo activeNetwork = connectivityManager.getActiveNetworkInfo();
         if (activeNetwork == null || !activeNetwork.isConnectedOrConnecting()) {
             MainPageFragment fragment = getMainPageFragment();
-            if (null != fragment)
-                fragment.setConnectServerBtn(false);        }
+            if (null != fragment) fragment.setConnectServerBtn(false);
+        }
     }
 
     void connectToServer(String serverDomain, String serverPort) {

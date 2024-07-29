@@ -10,6 +10,7 @@ import java.util.function.Function;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
+
 public class ServerManager implements Runnable {
 
     private static final Logger logger = Logger.getLogger(ServerManager.class.getName());

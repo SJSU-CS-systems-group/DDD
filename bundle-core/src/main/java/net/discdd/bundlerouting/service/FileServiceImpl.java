@@ -87,7 +87,7 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
                 closeFile(writer);
                 status = Status.IN_PROGRESS.equals(status) ? Status.SUCCESS : status;
                 FileUploadResponse response = FileUploadResponse.newBuilder().setStatus(status).build();
-                if (null != processBundle){
+                if (null != processBundle) {
                     processBundle.execute();
                 }
                 responseObserver.onNext(response);
@@ -98,8 +98,8 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
     private OutputStream getFilePath(FileUploadRequest request) throws IOException {
         String fileName = request.getMetadata().getName() + "." + request.getMetadata().getType();
-        return Files.newOutputStream(SERVER_BASE_PATH.resolve(uploadingTo).resolve(fileName),
-                                         StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        return Files.newOutputStream(SERVER_BASE_PATH.resolve(uploadingTo).resolve(fileName), StandardOpenOption.CREATE,
+                                     StandardOpenOption.APPEND);
     }
 
     private void writeFile(OutputStream writer, ByteString content) throws IOException {
@@ -138,7 +138,7 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
         logger.log(INFO, "Complete " + requestedPath);
     }
 
-    protected void setProcessBundle(BundleProcessingInterface bundleProcessingImpl){
+    protected void setProcessBundle(BundleProcessingInterface bundleProcessingImpl) {
         this.processBundle = bundleProcessingImpl;
     }
 }

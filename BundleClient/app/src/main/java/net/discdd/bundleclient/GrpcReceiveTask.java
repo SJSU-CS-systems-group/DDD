@@ -130,8 +130,7 @@ class GrpcReceiveTask {
                         fileOutputStream.write(r.getValue().toByteArray());
                         currentSenderId = r.getSenderId();
                         r.getSender();
-                        if (!r.getSender().isBlank())
-                            currentSender = BundleSender.valueOf(r.getSender());
+                        if (!r.getSender().isBlank()) currentSender = BundleSender.valueOf(r.getSender());
                     } catch (IOException e) {
                         errorOccurred[0] = true;
                         logger.log(SEVERE, "Cannot write bytes ", e);
@@ -150,10 +149,10 @@ class GrpcReceiveTask {
         executor.shutdown();
     }
 
-    protected void postExecute(String result, String host, String port) throws NoSessionException, InvalidMessageException,
-            WindowExceptions.BufferOverflow, DuplicateMessageException, RoutingExceptions.ClientMetaDataFileException
-            , IOException, LegacyMessageException, InvalidKeyException, WindowExceptions.InvalidLength,
-            GeneralSecurityException {
+    protected void postExecute(String result, String host, String port) throws NoSessionException,
+            InvalidMessageException, WindowExceptions.BufferOverflow, DuplicateMessageException,
+            RoutingExceptions.ClientMetaDataFileException, IOException, LegacyMessageException, InvalidKeyException,
+            WindowExceptions.InvalidLength, GeneralSecurityException {
         if (result.equals("Incomplete")) {
             activity.runOnUiThread(() -> resultText.append(result + "\n"));
             return;
@@ -199,8 +198,7 @@ class GrpcReceiveTask {
                 }
                 fileOutputStream.write(fileContent.getValue().toByteArray());
                 currentSenderId = fileContent.getSenderId();
-                if (!fileContent.getSender().isBlank())
-                    currentSender = BundleSender.valueOf(fileContent.getSender());
+                if (!fileContent.getSender().isBlank()) currentSender = BundleSender.valueOf(fileContent.getSender());
             } catch (IOException e) {
                 onError(e);
             }

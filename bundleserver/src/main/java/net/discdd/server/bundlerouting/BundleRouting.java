@@ -57,7 +57,7 @@ public class BundleRouting {
      * payloadPath: path of received payload where routing metadata file exists
      */
     public void processClientMetaData(String payloadPath, String transportID, String clientID) throws RoutingExceptions.ClientMetaDataFileException, SQLException {
-        logger.log(FINE, "processing client metadata, for transportId: "+transportID, ",clientID: "+clientID);
+        logger.log(FINE, "processing client metadata, for transportId: " + transportID, ",clientID: " + clientID);
         String clientMetaDataPath = payloadPath + File.separator + METADATAFILE;
         HashMap<String, Long> clientMap = null;
         ObjectMapper mapper = new ObjectMapper();

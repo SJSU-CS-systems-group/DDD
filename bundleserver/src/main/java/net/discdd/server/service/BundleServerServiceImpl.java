@@ -141,15 +141,17 @@ public class BundleServerServiceImpl extends BundleServiceGrpc.BundleServiceImpl
     @Override
     public void downloadBundle(BundleDownloadRequest request, StreamObserver<BundleDownloadResponse> responseObserver) {
         logger.log(INFO, "[BundleServerService] bundles on sender" + request.getBundleListList());
-        logger.log(INFO, "[BundleServerService] Request from " + request.getSender() + " with id: " + request.getSenderId());
+        logger.log(INFO,
+                   "[BundleServerService] Request from " + request.getSender() + " with id: " + request.getSenderId());
         Set<String> filesOnTransportSet = new HashSet<>(request.getBundleListList());
-        List<File> bundlesList = bundleTransmission.getBundlesForTransmission(request.getSender(), request.getSenderId());
+        List<File> bundlesList =
+                bundleTransmission.getBundlesForTransmission(request.getSender(), request.getSenderId());
         logger.log(FINE, "Downloaded " + bundleTransmission);
         if (bundlesList.isEmpty()) {
             BundleTransferDTO bundleToDelete = null;
             try {
-                bundleToDelete = bundleTransmission.generateBundlesForTransmission(request.getSenderId(),
-                                                                                      filesOnTransportSet);
+                bundleToDelete =
+                        bundleTransmission.generateBundlesForTransmission(request.getSenderId(), filesOnTransportSet);
             } catch (Exception e) {
                 logger.log(WARNING, "[BundleServerService] Error generating bundles for transmission", e);
                 responseObserver.onError(e);
@@ -159,8 +161,8 @@ public class BundleServerServiceImpl extends BundleServiceGrpc.BundleServiceImpl
             if (bundleToDelete.getBundles().isEmpty()) {
                 responseObserver.onNext(BundleDownloadResponse.newBuilder().setStatus(Status.SUCCESS).build());
             } else {
-                BundleDownloadResponse response = BundleDownloadResponse.newBuilder().setBundleList(
-                                BundleList.newBuilder().addAllBundleList(bundleToDelete.getDeletionSet()))
+                BundleDownloadResponse response = BundleDownloadResponse.newBuilder()
+                        .setBundleList(BundleList.newBuilder().addAllBundleList(bundleToDelete.getDeletionSet()))
                         .build();
                 logger.log(WARNING,
                            "[BundleServerService] Sending " + String.join(", ", bundleToDelete.getDeletionSet()) +
@@ -168,12 +170,14 @@ public class BundleServerServiceImpl extends BundleServiceGrpc.BundleServiceImpl
                 responseObserver.onNext(response);
             }
             responseObserver.onCompleted();
-        } else { // can be removed by removing transport directories {remove the if else check only, we still need these bundles to send and delete as well}
+        } else { // can be removed by removing transport directories {remove the if else check only, we still need
+            // these bundles to send and delete as well}
 
             for (File bundle : bundlesList) {
                 if (!filesOnTransportSet.contains(bundle.getName())) {
-                    logger.log(WARNING, "[BundleServerService]Downloading " + bundle.getName() + " to " + request.getSender() +
-                            " with id :" + request.getSenderId());
+                    logger.log(WARNING,
+                               "[BundleServerService]Downloading " + bundle.getName() + " to " + request.getSender() +
+                                       " with id :" + request.getSenderId());
                     BundleMetaData bundleMetaData = BundleMetaData.newBuilder().setBid(bundle.getName()).build();
                     responseObserver.onNext(BundleDownloadResponse.newBuilder().setMetadata(bundleMetaData).build());
                     InputStream in;
