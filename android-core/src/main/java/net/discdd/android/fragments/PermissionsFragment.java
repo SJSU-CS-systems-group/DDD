@@ -64,26 +64,30 @@ public class PermissionsFragment extends Fragment {
         }
     }
 
-    private ActivityResultLauncher<String[]> activityResultLauncher = registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), new ActivityResultCallback<Map<String, Boolean>>() {
-        @Override
-        public void onActivityResult(Map<String, Boolean> results) {
-            // go through the permissions and result pairs
-            results.forEach((p, r) -> {
-                logger.log(Level.INFO, p + " " + (r ? "granted" : "denied"));
-                var view = neededPermissions.remove(p);
-                if (view != null) {
-                    view.permissionCheckbox.setChecked(r);
-                }
-            });
-            if (neededPermissions.isEmpty()) {
-                promptPending = false;
-            } else {
-                String[] permissionsToRequest = neededPermissions.keySet().toArray(new String[0]);
-                logger.info("Requesting " + Arrays.toString(permissionsToRequest));
-                activityResultLauncher.launch(permissionsToRequest);
-            }
-        }
-    });;
+    private ActivityResultLauncher<String[]> activityResultLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(),
+                                      new ActivityResultCallback<Map<String, Boolean>>() {
+                                          @Override
+                                          public void onActivityResult(Map<String, Boolean> results) {
+                                              // go through the permissions and result pairs
+                                              results.forEach((p, r) -> {
+                                                  logger.log(Level.INFO, p + " " + (r ? "granted" : "denied"));
+                                                  var view = neededPermissions.remove(p);
+                                                  if (view != null) {
+                                                      view.permissionCheckbox.setChecked(r);
+                                                  }
+                                              });
+                                              if (neededPermissions.isEmpty()) {
+                                                  promptPending = false;
+                                              } else {
+                                                  String[] permissionsToRequest =
+                                                          neededPermissions.keySet().toArray(new String[0]);
+                                                  logger.info("Requesting " + Arrays.toString(permissionsToRequest));
+                                                  activityResultLauncher.launch(permissionsToRequest);
+                                              }
+                                          }
+                                      });
+    ;
 
     // TODO: in the future, we should enable removing from this set
     HashSet<String> grantedPermissions = new HashSet<>();

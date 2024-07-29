@@ -67,8 +67,7 @@ public class WifiDirectFragment extends Fragment implements WifiDirectStateListe
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         var layout = inflater.inflate(R.layout.wifidirect_fragment, container, false);
         this.initializedIndicator = layout.findViewById(R.id.WifiDirectInitializedIndicator);
         this.status = layout.findViewById(R.id.WifiDirectStatus);
@@ -86,8 +85,7 @@ public class WifiDirectFragment extends Fragment implements WifiDirectStateListe
         this.listAdapter = new WifiPeerViewHolderAdapter();
         logger.info("************ adding adapter to list");
         this.peersList.setAdapter(listAdapter);
-        wifiDirectManager = new WifiDirectManager(getContext(), getLifecycle(), this, "random_name",
-                                                  isGroupOwner);
+        wifiDirectManager = new WifiDirectManager(getContext(), getLifecycle(), this, "random_name", isGroupOwner);
         wifiDirectManager.initialize();
         return layout;
     }
@@ -153,9 +151,8 @@ public class WifiDirectFragment extends Fragment implements WifiDirectStateListe
         @NonNull
         @Override
         public WifiPeerViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            return new WifiPeerViewHolder(WifiDirectFragment.this.getLayoutInflater()
-                                                  .inflate(R.layout.wifidirect_listitem, parent,
-                                                           false));
+            return new WifiPeerViewHolder(
+                    WifiDirectFragment.this.getLayoutInflater().inflate(R.layout.wifidirect_listitem, parent, false));
         }
 
         @Override
@@ -196,7 +193,7 @@ public class WifiDirectFragment extends Fragment implements WifiDirectStateListe
             notifyDataSetChanged();
         }
 
-        public void setEmptyMessages(String emptyMessage) { this.emptyMessage = emptyMessage; }
+        public void setEmptyMessages(String emptyMessage) {this.emptyMessage = emptyMessage;}
 
         record WifiPeer(String name, String type) {}
     }

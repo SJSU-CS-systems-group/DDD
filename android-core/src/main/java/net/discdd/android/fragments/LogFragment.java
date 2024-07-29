@@ -28,6 +28,7 @@ public class LogFragment extends Fragment implements Consumer<String> {
     {
         LogFragment.registerLoggerHandler();
     }
+
     @Override
     public View onCreateView(
             @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -47,7 +48,6 @@ public class LogFragment extends Fragment implements Consumer<String> {
             }
         });
     }
-
 
     private static String subscribeToLogs(Consumer<String> logConsumer) {
         LogFragment.logConsumer = logConsumer;

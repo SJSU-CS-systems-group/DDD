@@ -67,11 +67,11 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
         // Broadcast intent action indicating that the available peer list has changed.
         // This can be sent as a result of peers being found, lost or updated.
         else if (WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)) {
-                try {
-                    manager.requestPeers();
-                } catch (SecurityException e) {
-                    logger.log(SEVERE, "SecurityException in requestPeers", e);
-                }
+            try {
+                manager.requestPeers();
+            } catch (SecurityException e) {
+                logger.log(SEVERE, "SecurityException in requestPeers", e);
+            }
         }
 //         Broadcast intent action indicating that the state of Wi-Fi p2p
 //         connectivity has changed.
@@ -80,8 +80,10 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
 //         A third extra provides the details of the EXTRA_WIFI_P2P_GROUP and may contain a null
         else if (WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {
             WifiP2pInfo wifiP2pInfo = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_INFO, WifiP2pInfo.class);
-            NetworkInfo networkInfo = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE, NetworkInfo.class);
-            WifiP2pGroup wifiP2pGroup = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP, WifiP2pGroup.class);
+            NetworkInfo networkInfo =
+                    intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE, NetworkInfo.class);
+            WifiP2pGroup wifiP2pGroup =
+                    intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP, WifiP2pGroup.class);
 
             if (networkInfo != null && networkInfo.isConnected()) {
                 // we are connected, request connection

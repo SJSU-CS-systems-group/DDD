@@ -39,8 +39,7 @@ import java.util.logging.Logger;
  * Main WifiDirect class
  * Contains wrapper methods around common WifiDirect tasks
  */
-public class WifiDirectManager
-        implements WifiP2pManager.ConnectionInfoListener, WifiP2pManager.PeerListListener {
+public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener, WifiP2pManager.PeerListListener {
     private static final Logger logger = Logger.getLogger(WifiDirectManager.class.getName());
     private final IntentFilter intentFilter = new IntentFilter();
     private final Context context;
@@ -68,8 +67,8 @@ public class WifiDirectManager
      *                  AppCompatActivity.getLifeCycle() call in
      *                  your main activity
      */
-    public WifiDirectManager(Context context, Lifecycle lifeCycle,
-                             WifiDirectStateListener listener, String deviceName, boolean isOwner) {
+    public WifiDirectManager(Context context, Lifecycle lifeCycle, WifiDirectStateListener listener,
+                             String deviceName, boolean isOwner) {
         this.context = context;
         this.lifeCycle = lifeCycle;
         listeners.add(listener);
@@ -103,9 +102,8 @@ public class WifiDirectManager
         } else {
             notifyActionToListeners(WIFI_DIRECT_MANAGER_INFO, "trying to initialize");
             this.channel = this.manager.initialize(this.context, this.context.getMainLooper(),
-                                                   () -> notifyActionToListeners(
-                                                           WIFI_DIRECT_MANAGER_INFO,
-                                                           "Channel disconnected"));
+                                                   () -> notifyActionToListeners(WIFI_DIRECT_MANAGER_INFO,
+                                                                                 "Channel disconnected"));
             if (channel == null) {
                 logger.log(WARNING, "Cannot initialize Wi-Fi Direct");
             }
@@ -145,9 +143,8 @@ public class WifiDirectManager
 
             @Override
             public void onSuccess() {
-                notifyActionToListeners(
-                        WifiDirectEventType.WIFI_DIRECT_MANAGER_DISCOVERY_SUCCESSFUL,
-                        "Peer discovery successful");
+                notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_DISCOVERY_SUCCESSFUL,
+                                        "Peer discovery successful");
             }
 
             @Override
@@ -200,8 +197,10 @@ public class WifiDirectManager
         logger.severe("@@@@@@@@@@@@@@@@@ creating group !!!!!!!!!!!!!!!!!!!!!!!!!!");
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             config.setDeviceAddress(MacAddress.fromString("02:00:00:00:06:66"));
-            config.enablePersistentMode(true).setGroupClientIpProvisioningMode(WifiP2pConfig.GROUP_CLIENT_IP_PROVISIONING_MODE_IPV6_LINK_LOCAL);
-        };
+            config.enablePersistentMode(true)
+                    .setGroupClientIpProvisioningMode(WifiP2pConfig.GROUP_CLIENT_IP_PROVISIONING_MODE_IPV6_LINK_LOCAL);
+        }
+        ;
         this.manager.createGroup(this.channel, config.build(), new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
@@ -217,6 +216,7 @@ public class WifiDirectManager
             }
         });
     }
+
     /**
      * Build a WifiDirect group config allowing us to setup our
      * group name and password
@@ -403,17 +403,16 @@ public class WifiDirectManager
     public HashSet<WifiP2pDevice> getPeerList() {return discoveredPeers;}
 
     public void wifiDirectEnabled(boolean enabled) {
-          notifyActionToListeners(enabled ? WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL :
-                                        WIFI_DIRECT_MANAGER_INITIALIZATION_FAILED,
-                                "wifi enabled " + enabled);
+        notifyActionToListeners(
+                enabled ? WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL : WIFI_DIRECT_MANAGER_INITIALIZATION_FAILED,
+                "wifi enabled " + enabled);
     }
 
     public enum WifiDirectEventType {
         WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL, WIFI_DIRECT_MANAGER_INITIALIZATION_FAILED,
         WIFI_DIRECT_MANAGER_DISCOVERY_SUCCESSFUL, WIFI_DIRECT_MANAGER_DISCOVERY_FAILED,
         WIFI_DIRECT_MANAGER_PEERS_CHANGED, WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_FAILED,
-        WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_SUCCESSFUL,
-        WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL,
+        WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_SUCCESSFUL, WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL,
         WIFI_DIRECT_MANAGER_FORMED_CONNECTION_FAILED, WIFI_DIRECT_MANAGER_INFO,
     }
 
@@ -444,8 +443,7 @@ public class WifiDirectManager
          */
         @Override
         public void onResume(@NonNull LifecycleOwner owner) {
-            this.manager.getContext()
-                    .registerReceiver(this.manager.getReceiver(), this.manager.getIntentFilter());
+            this.manager.getContext().registerReceiver(this.manager.getReceiver(), this.manager.getIntentFilter());
         }
 
         /**
