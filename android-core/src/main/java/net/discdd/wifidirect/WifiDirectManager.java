@@ -9,12 +9,12 @@ import static net.discdd.wifidirect.WifiDirectManager.WifiDirectEventType.WIFI_D
 import static net.discdd.wifidirect.WifiDirectManager.WifiDirectEventType.WIFI_DIRECT_MANAGER_INITIALIZATION_FAILED;
 import static net.discdd.wifidirect.WifiDirectManager.WifiDirectEventType.WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL;
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.IntentFilter;
-import android.net.MacAddress;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
@@ -28,6 +28,8 @@ import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleOwner;
 
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -193,18 +195,27 @@ public class WifiDirectManager
         return cFuture;
     }
 
+    public CompletableFuture<WifiP2pGroup> requestGroupInfo() {
+        var completableFuture = new CompletableFuture<WifiP2pGroup>();
+        this.manager.requestGroupInfo(channel, groupInfo -> {
+            var networkName = groupInfo.getInterface();
+            try {
+                var iface = NetworkInterface.getByName(networkName);
+                if (iface != null) logger.log(INFO, "Started group on " + iface.getInterfaceAddresses());
+            } catch(SocketException e) {
+                logger.log(SEVERE, "Could not get interface for " + networkName);
+            }
+            completableFuture.complete(groupInfo);
+        });
+        return completableFuture;
+    }
     public void createGroup() {
-        WifiP2pConfig.Builder config = new WifiP2pConfig.Builder();
-        logger.severe("@@@@@@@@@@@@@@@@@ creating group !!!!!!!!!!!!!!!!!!!!!!!!!!");
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            config.setDeviceAddress(MacAddress.fromString("02:00:00:00:06:66"));
-            config.enablePersistentMode(true).setGroupClientIpProvisioningMode(WifiP2pConfig.GROUP_CLIENT_IP_PROVISIONING_MODE_IPV6_LINK_LOCAL);
-        };
-        this.manager.createGroup(this.channel, config.build(), new WifiP2pManager.ActionListener() {
+        this.manager.createGroup(this.channel, new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
                 notifyActionToListeners(WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL,
                                         "Group created for " + deviceName);
+                requestGroupInfo();
             }
 
             @Override
@@ -212,6 +223,7 @@ public class WifiDirectManager
                 notifyActionToListeners(WIFI_DIRECT_MANAGER_FORMED_CONNECTION_FAILED,
                                         "Could not create group for " + deviceName + " rc = " + reasonCode);
                 logger.log(WARNING, "Failed to create a group with reasonCode: " + reasonCode);
+                requestGroupInfo();
             }
         });
     }
@@ -257,18 +269,6 @@ public class WifiDirectManager
                 cFuture.complete(false);
             }
         });
-        return cFuture;
-    }
-
-    /**
-     * Get the GroupInfo of current WifiDirect devices connected to this group.
-     *
-     * @return WifiP2PGroup object containing list of connected devices.
-     */
-    @SuppressLint("MissingPermission")
-    public CompletableFuture<WifiP2pGroup> requestGroupInfo() {
-        CompletableFuture<WifiP2pGroup> cFuture = new CompletableFuture<>();
-        this.manager.requestGroupInfo(channel, cFuture::complete);
         return cFuture;
     }
 

@@ -164,7 +164,7 @@ public class WifiDirectFragment extends Fragment implements WifiDirectStateListe
             if (peers.isEmpty()) {
                 holder.deviceName.setText(emptyMessage);
                 holder.deviceType.setText("");
-                holder.deviceAction.setVisibility(View.INVISIBLE);
+                holder.deviceAction.setText("Exchange Data");
                 return;
             }
             holder.deviceName.setText(peers.get(position).name());
