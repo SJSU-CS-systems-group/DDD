@@ -22,7 +22,7 @@ public class PermissionsAdapter extends RecyclerView.Adapter<PermissionsAdapter.
     @NonNull
     @Override
     public PermissionViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.permissions_list, parent, false);
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.permissions_listitem, parent, false);
         var viewHolder = new PermissionViewHolder(view);
 
         return viewHolder;
