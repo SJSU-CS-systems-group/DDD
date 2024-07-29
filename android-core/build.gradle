@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace 'net.discdd.ddd_wifi'
+    namespace 'net.discdd.android_core'
     compileSdk 34
 
     defaultConfig {

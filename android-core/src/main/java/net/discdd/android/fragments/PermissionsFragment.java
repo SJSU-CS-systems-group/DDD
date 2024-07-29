@@ -1,4 +1,4 @@
-package net.discdd.android.util.fragments;
+package net.discdd.android.fragments;
 
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
@@ -19,7 +19,7 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import net.discdd.ddd_wifi.R;
+import net.discdd.android_core.R;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -41,7 +41,7 @@ public class PermissionsFragment extends Fragment {
     @Override
     public View onCreateView(
             @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.permissions_page, container, false);
+        return inflater.inflate(R.layout.permissions_fragment, container, false);
     }
 
     @Override
@@ -157,7 +157,7 @@ public class PermissionsFragment extends Fragment {
         @NonNull
         @Override
         public PermissionViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.permissions_list, parent, false);
+            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.permissions_listitem, parent, false);
             var viewHolder = new PermissionViewHolder(view);
             return viewHolder;
         }

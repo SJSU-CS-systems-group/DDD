@@ -1,5 +1,6 @@
-package net.discdd.android.util.fragments;
+package net.discdd.android.fragments;
 
+import android.net.wifi.p2p.WifiP2pDevice;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -12,7 +13,8 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import net.discdd.ddd_wifi.R;
+import net.discdd.android_core.R;
+
 import net.discdd.wifidirect.WifiDirectManager;
 import net.discdd.wifidirect.WifiDirectManager.WifiDirectEvent;
 import net.discdd.wifidirect.WifiDirectStateListener;
@@ -68,7 +70,7 @@ public class WifiDirectFragment extends Fragment implements WifiDirectStateListe
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        var layout = inflater.inflate(R.layout.fragment_wifi_direct, container, false);
+        var layout = inflater.inflate(R.layout.wifidirect_fragment, container, false);
         this.initializedIndicator = layout.findViewById(R.id.WifiDirectInitializedIndicator);
         this.status = layout.findViewById(R.id.WifiDirectStatus);
         this.peersList = layout.findViewById(R.id.WifiDirectLayout);
@@ -120,10 +122,10 @@ public class WifiDirectFragment extends Fragment implements WifiDirectStateListe
             case WIFI_DIRECT_MANAGER_INFO:
                 break;
             case WIFI_DIRECT_MANAGER_PEERS_CHANGED:
-                logger.info("New list of peers: " + wifiDirectManager.getDevicesFound());
+                logger.info("New list of peers: " + wifiDirectManager.getPeerList());
                 getActivity().runOnUiThread(() -> {
-                    listAdapter.updatePeers(wifiDirectManager.getDevicesFound());
-                    status.setText(wifiDirectManager.getDevicesFound().size() + " peers found");
+                    listAdapter.updatePeers(wifiDirectManager.getPeerList());
+                    status.setText(wifiDirectManager.getPeerList().size() + " peers found");
                 });
                 break;
             case WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_FAILED:
@@ -153,7 +155,7 @@ public class WifiDirectFragment extends Fragment implements WifiDirectStateListe
         @Override
         public WifiPeerViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             return new WifiPeerViewHolder(WifiDirectFragment.this.getLayoutInflater()
-                                                  .inflate(R.layout.listitem_wifi_direct, parent,
+                                                  .inflate(R.layout.wifidirect_listitem, parent,
                                                            false));
         }
 
@@ -176,7 +178,7 @@ public class WifiDirectFragment extends Fragment implements WifiDirectStateListe
             return peers.isEmpty() ? 1 : peers.size();
         }
 
-        void updatePeers(HashSet<String> deviceSet) {
+        void updatePeers(HashSet<WifiP2pDevice> deviceSet) {
             // remove peers that are not in the deviceSet
             var peersIterator = peers.iterator();
             while (peersIterator.hasNext()) {
@@ -190,7 +192,7 @@ public class WifiDirectFragment extends Fragment implements WifiDirectStateListe
             // add peers that are still left in the deviceSet to the beginning
             // of the peers list
             for (var device : deviceSet) {
-                peers.add(0, new WifiPeer(device, "Peer"));
+                peers.add(0, new WifiPeer(device.deviceName, device.primaryDeviceType));
             }
             notifyDataSetChanged();
         }

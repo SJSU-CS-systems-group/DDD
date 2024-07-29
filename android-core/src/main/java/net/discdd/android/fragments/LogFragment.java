@@ -1,4 +1,4 @@
-package net.discdd.android.util.fragments;
+package net.discdd.android.fragments;
 
 import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
@@ -11,7 +11,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import net.discdd.ddd_wifi.R;
+import net.discdd.android_core.R;
 
 import java.util.LinkedList;
 import java.util.function.Consumer;

@@ -54,7 +54,6 @@ public class WifiDirectManager
     private WifiDirectBroadcastReceiver receiver;
     private String wifiDirectGroupHostIP;
     private String groupHostInfo;
-    private HashSet<String> devicesFound;
     private boolean isConnected;
     private HashSet<WifiP2pDevice> discoveredPeers = new HashSet<>();
 
@@ -116,7 +115,6 @@ public class WifiDirectManager
         WifiDirectLifeCycleObserver lifeCycleObserver = new WifiDirectLifeCycleObserver(this);
         this.lifeCycle.addObserver(lifeCycleObserver);
 
-        this.devicesFound = new HashSet<>();
         this.wifiDirectGroupHostIP = "";
         this.groupHostInfo = "";
         this.isConnected = false;
@@ -294,7 +292,6 @@ public class WifiDirectManager
 
             @Override
             public void onFailure(int reasonCode) {
-                devicesFound.remove(config.deviceAddress);
                 notifyActionToListeners(WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_FAILED);
             }
         });
@@ -380,10 +377,6 @@ public class WifiDirectManager
      * @return the app context
      */
     public Context getContext() {return this.context;}
-
-    public HashSet<String> getDevicesFound() {
-        return devicesFound;
-    }
 
     public void addListener(WifiDirectStateListener listener) {
         listeners.add(listener);

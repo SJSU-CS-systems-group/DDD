@@ -16,12 +16,12 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
-import net.discdd.android.util.fragments.LogFragment;
-import net.discdd.android.util.fragments.PermissionsFragment;
+import net.discdd.android.fragments.LogFragment;
+import net.discdd.android.fragments.PermissionsFragment;
 import net.discdd.client.bundlerouting.ClientWindow;
 import net.discdd.client.bundlesecurity.BundleSecurity;
 import net.discdd.client.bundletransmission.BundleTransmission;
-import net.discdd.android.util.fragments.WifiDirectFragment;
+import net.discdd.android.fragments.WifiDirectFragment;
 
 import java.io.IOException;
 import java.nio.file.Paths;
