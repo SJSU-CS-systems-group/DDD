@@ -60,7 +60,10 @@ public class ADUUtils {
             String appId = appSubDirectory.getName();
             for (final File aduFile : appSubDirectory.listFiles(file -> !file.isHidden())) {
                 String aduFileName = aduFile.getName();
-                long aduId = Long.parseLong((aduFileName.split("-")[1]).replace(".adu",""));
+                long aduId;
+                if (aduFileName.contains("-"))
+                    aduId = Long.parseLong((aduFileName.split("-")[1]).replace(".adu",""));
+                else aduId = Long.parseLong(aduFileName.replace(".adu", ""));
                 long size = aduFile.length();
                 ret.add(new ADU(aduFile, appId, aduId, size));
             }

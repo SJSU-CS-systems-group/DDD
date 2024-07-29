@@ -249,7 +249,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
             fragment.setExchangeButtonEnabled(false);
         }
         logger.log(INFO, "connection complete!");
-        new GrpcReceiveTask(this).executeInBackground(new InetSocketAddress("192.168.49.1", 7777));
+        new GrpcReceiveTask(this).executeInBackground("192.168.49.1", 7777);
     }
 
     // Method to update connected devices text
@@ -350,10 +350,8 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     void connectToServer(String serverDomain, String serverPort) {
         if (!serverDomain.isEmpty() && !serverPort.isEmpty()) {
             logger.log(INFO, "Sending to " + serverDomain + ":" + serverPort);
-            new GrpcReceiveTask(this).executeInBackground(new InetSocketAddress(serverDomain, Integer.parseInt(serverPort)));
+            new GrpcReceiveTask(this).executeInBackground(serverDomain, Integer.parseInt(serverPort));
 
-        } else {
-            Toast.makeText(BundleClientActivity.this, "Enter the domain and port", Toast.LENGTH_SHORT).show();
         }
     }
 }

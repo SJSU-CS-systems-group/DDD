@@ -63,11 +63,13 @@ class GrpcReceiveTask {
         this.activity = activity;
     }
 
-    public void executeInBackground(InetSocketAddress address) {
+    public void executeInBackground(String domain, int port) {
         executor.execute(new Runnable() {
             @Override
             public void run() {
                 try {
+                    logger.log(INFO, "Inside GrpcReceiveTask executeInBackground.run");
+                    InetSocketAddress address = new InetSocketAddress(domain, port);
                     inBackground(address);
                 } catch (Exception e) {
                     // Handle any exceptions
@@ -80,6 +82,7 @@ class GrpcReceiveTask {
     private void inBackground(InetSocketAddress inetSocketAddress) throws Exception {
         String host = inetSocketAddress.getHostName();
         int port = inetSocketAddress.getPort();
+        logger.log(INFO, "Inside GrpcReceiveTask inBackground");
         String FILE_PATH = applicationContext.getApplicationInfo().dataDir + "/Shared/received-bundles";
         java.io.File file = new java.io.File(FILE_PATH);
         file.mkdirs();

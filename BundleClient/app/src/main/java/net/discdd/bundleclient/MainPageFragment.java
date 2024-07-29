@@ -1,5 +1,7 @@
 package net.discdd.bundleclient;
 
+import static java.util.logging.Level.INFO;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -23,8 +25,11 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
+import java.util.logging.Logger;
 
 public class MainPageFragment extends Fragment {
 
@@ -41,11 +46,10 @@ public class MainPageFragment extends Fragment {
     private TextView usbConnectionText;
     private UsbManager usbManager;
     private BroadcastReceiver mUsbReceiver;
-    private String serverDomain;
-    private String serverPort;
     private EditText domainInput;
     private EditText portInput;
     private Button connectServerBtn;
+    private static final Logger logger = Logger.getLogger(BundleClientActivity.class.getName());
 
     @Nullable
     @Override
@@ -126,7 +130,8 @@ public class MainPageFragment extends Fragment {
         });
 
         // register network listeners
-        if (getActivity() instanceof BundleClientActivity) {
+        if (getActivity() instanceof BundleClientActivity
+                && !domainInput.getText().toString().isEmpty() && !portInput.getText().toString().isEmpty()) {
             ((BundleClientActivity) getActivity())
                     .createAndRegisterConnectivityManager(domainInput.getText().toString(), portInput.getText().toString());
         }
@@ -229,6 +234,10 @@ public class MainPageFragment extends Fragment {
     // Method to set result text
     public void setResultText(String text) {
         resultText.setText(text);
+    }
+
+    public void appendResultText(String text){
+        requireActivity().runOnUiThread(() -> resultText.append(text));
     }
 
     // Method to show USB detached toast
