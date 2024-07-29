@@ -20,6 +20,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.logging.Logger;
 
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.WARNING;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
@@ -80,6 +82,7 @@ public class BundleSecurity {
     }
 
     public Payload decryptPayload(UncompressedBundle uncompressedBundle) {
+        logger.log(INFO, "[BundleSecurity] Decrypting payload");
         String bundleId = "";
         File decryptedPayloadJar =
                 uncompressedBundle.getSource().toPath().resolve(Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar")
@@ -89,6 +92,7 @@ public class BundleSecurity {
             try {
                 this.serverSecurity.decrypt(uncompressedBundle.getSource().toPath(),
                                             uncompressedBundle.getSource().toPath());
+                logger.log(FINE, "[BundleSecurity] decrypted payload");
             } catch (Exception e) {
                 // TODO
                 logger.log(SEVERE, "[BundleSecurity] Failed to decrypt payload");
@@ -98,7 +102,9 @@ public class BundleSecurity {
 
             try {
                 bundleId = this.serverSecurity.getBundleIDFromFile(uncompressedBundle.getSource().toPath());
+                logger.log(FINE, "[BundleSecurity] Got bundleId from File");
             } catch (Exception e) {
+                logger.log(WARNING, "[BundleSecurity] Unable to get bundleId from File");
                 e.printStackTrace();
             }
             File decryptedPayload = uncompressedBundle.getSource().toPath().resolve(bundleId + ".decrypted").toFile();

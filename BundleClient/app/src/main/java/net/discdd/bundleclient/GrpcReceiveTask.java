@@ -10,6 +10,7 @@ import android.content.Context;
 import android.widget.TextView;
 
 import net.discdd.utils.Constants;
+import net.discdd.bundlerouting.BundleSender;
 import net.discdd.bundlerouting.RoutingExceptions;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
 import net.discdd.client.bundletransmission.BundleTransmission;
@@ -27,6 +28,7 @@ import org.whispersystems.libsignal.NoSessionException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.net.InetSocketAddress;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.util.List;
@@ -50,7 +52,8 @@ class GrpcReceiveTask {
     private ManagedChannel channel;
     private final TextView resultText;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    String currentTransportId;
+    String currentSenderId;
+    BundleSender currentSender;
     private final Activity activity;
 
     GrpcReceiveTask(Activity activity) {
@@ -60,12 +63,14 @@ class GrpcReceiveTask {
         this.activity = activity;
     }
 
-    public void executeInBackground(String port, String host) {
+    public void executeInBackground(String domain, int port) {
         executor.execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    inBackground(port, host);
+                    logger.log(INFO, "Inside GrpcReceiveTask executeInBackground.run");
+                    InetSocketAddress address = new InetSocketAddress(domain, port);
+                    inBackground(address);
                 } catch (Exception e) {
                     // Handle any exceptions
                     logger.log(WARNING, "executeInBackground failed", e);
@@ -74,13 +79,13 @@ class GrpcReceiveTask {
         });
     }
 
-    private void inBackground(String... params) throws Exception {
-        String host = params[0];
-        String portStr = params[1];
+    private void inBackground(InetSocketAddress inetSocketAddress) throws Exception {
+        String host = inetSocketAddress.getHostName();
+        int port = inetSocketAddress.getPort();
+        logger.log(INFO, "Inside GrpcReceiveTask inBackground");
         String FILE_PATH = applicationContext.getApplicationInfo().dataDir + "/Shared/received-bundles";
         java.io.File file = new java.io.File(FILE_PATH);
         file.mkdirs();
-        int port = Integer.parseInt(portStr);
         channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
         var stub = FileServiceGrpc.newBlockingStub(channel);
         List<String> bundleRequests = null;
@@ -99,8 +104,8 @@ class GrpcReceiveTask {
         }
         if (bundleRequests == null) {
             logger.log(FINE, "BUNDLE REQuests is NUll / ");
-///        throw new Exception("bundle request is null");
-            postExecute("Incomplete");
+
+            postExecute("Incomplete", host, String.valueOf(port));
         } else if (bundleRequests.size() == 0) {
             logger.log(FINE, "BUNDLE REQuests has size 0 / ");
         }
@@ -123,7 +128,9 @@ class GrpcReceiveTask {
                 responses.forEachRemaining(r -> {
                     try {
                         fileOutputStream.write(r.getValue().toByteArray());
-                        currentTransportId = r.getTransportId();
+                        currentSenderId = r.getSenderId();
+                        r.getSender();
+                        if (!r.getSender().isBlank()) currentSender = BundleSender.valueOf(r.getSender());
                     } catch (IOException e) {
                         errorOccurred[0] = true;
                         logger.log(SEVERE, "Cannot write bytes ", e);
@@ -135,21 +142,17 @@ class GrpcReceiveTask {
 
             break;
         }
-        postExecute(errorOccurred[0] ? "Failed" : "Completed");
+        postExecute(errorOccurred[0] ? "Failed" : "Completed", host, String.valueOf(port));
     }
 
     public void shutdownExecutor() {
         executor.shutdown();
     }
 
-    //    @Override
-//    protected String doInBackground(String... params) {
-//      //code has been moved
-//    }
-    protected void postExecute(String result) throws NoSessionException, InvalidMessageException,
-            WindowExceptions.BufferOverflow, DuplicateMessageException, RoutingExceptions.ClientMetaDataFileException
-            , IOException, LegacyMessageException, InvalidKeyException, WindowExceptions.InvalidLength,
-            GeneralSecurityException {
+    protected void postExecute(String result, String host, String port) throws NoSessionException,
+            InvalidMessageException, WindowExceptions.BufferOverflow, DuplicateMessageException,
+            RoutingExceptions.ClientMetaDataFileException, IOException, LegacyMessageException, InvalidKeyException,
+            WindowExceptions.InvalidLength, GeneralSecurityException {
         if (result.equals("Incomplete")) {
             activity.runOnUiThread(() -> resultText.append(result + "\n"));
             return;
@@ -159,15 +162,14 @@ class GrpcReceiveTask {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
-//        new HelloworldActivity.GrpcSendTask(HelloworldActivity.this)
-//        new GrpcSendTask.executeInBackground("192.168.49.1", "1778");
+
         GrpcSendTask sendTask = new GrpcSendTask(activity);
-        sendTask.executeInBackground("192.168.49.1", "7777");
+        sendTask.executeInBackground(host, port);
 
         String FILE_PATH = applicationContext.getApplicationInfo().dataDir + "/Shared/received-bundles";
         BundleTransmission bundleTransmission =
                 new BundleTransmission(Paths.get(applicationContext.getApplicationInfo().dataDir));
-        bundleTransmission.processReceivedBundles(currentTransportId, FILE_PATH);
+        bundleTransmission.processReceivedBundles(currentSenderId, currentSender, FILE_PATH);
 
         Activity activity = activityReference.get();
         if (activity == null) {
@@ -195,7 +197,8 @@ class GrpcReceiveTask {
                     fileOutputStream = new FileOutputStream(FILE_PATH + "/" + bundleName);
                 }
                 fileOutputStream.write(fileContent.getValue().toByteArray());
-                currentTransportId = fileContent.getTransportId();
+                currentSenderId = fileContent.getSenderId();
+                if (!fileContent.getSender().isBlank()) currentSender = BundleSender.valueOf(fileContent.getSender());
             } catch (IOException e) {
                 onError(e);
             }

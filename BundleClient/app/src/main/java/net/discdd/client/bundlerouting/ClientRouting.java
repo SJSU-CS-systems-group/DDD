@@ -2,6 +2,7 @@ package net.discdd.client.bundlerouting;
 
 import static java.util.logging.Level.INFO;
 
+import net.discdd.bundlerouting.BundleSender;
 import net.discdd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -77,21 +78,21 @@ public class ClientRouting {
      * Returns:
      * None
      */
-    public void updateMetaData(String transportID) throws ClientMetaDataFileException {
+    public void updateMetaData(String senderId) throws ClientMetaDataFileException {
         long count = 1;
 
-        if (metadata.containsKey(transportID)) {
-            count += metadata.get(transportID);
-            metadata.put(transportID, count);
+        if (metadata.containsKey(senderId)) {
+            count += metadata.get(senderId);
+            metadata.put(senderId, count);
         } else {
-            metadata.put(transportID, count);
+            metadata.put(senderId, count);
         }
 
         ObjectMapper mapper = new ObjectMapper();
         try {
             File metadataFile = metaDataPath.toFile();
             JsonNode rootNode = mapper.readTree(metadataFile);
-            ((ObjectNode) rootNode).put(transportID, count);
+            ((ObjectNode) rootNode).put(senderId, count);
             mapper.writeValue(metadataFile, rootNode);
         } catch (Exception e) {
             throw new ClientMetaDataFileException("Error updating Routing Meta Data:" + e);

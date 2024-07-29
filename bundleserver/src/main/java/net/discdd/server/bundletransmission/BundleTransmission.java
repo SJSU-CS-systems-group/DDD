@@ -1,5 +1,6 @@
 package net.discdd.server.bundletransmission;
 
+import net.discdd.bundlerouting.BundleSender;
 import net.discdd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions.ClientWindowNotFound;
 import net.discdd.bundlesecurity.BundleIDGenerator;
@@ -19,7 +20,6 @@ import net.discdd.server.bundlesecurity.BundleSecurity;
 import net.discdd.server.bundlesecurity.InvalidClientIDException;
 import net.discdd.server.bundlesecurity.InvalidClientSessionException;
 import net.discdd.server.config.BundleServerConfig;
-import net.discdd.server.repository.LargestBundleIdReceivedRepository;
 import net.discdd.utils.AckRecordUtils;
 import net.discdd.utils.BundleUtils;
 import net.discdd.utils.Constants;
@@ -35,15 +35,16 @@ import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
 
+import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
@@ -61,9 +62,8 @@ public class BundleTransmission {
     private static final int WINDOW_LENGTH = 3;
 
     public BundleTransmission(BundleSecurity bundleSecurity, ApplicationDataManager applicationDataManager,
-                              BundleRouting bundleRouting,
-                              LargestBundleIdReceivedRepository largestBundleIdReceivedRepository,
-                              BundleServerConfig config, ServerWindowService serverWindowService) {
+                              BundleRouting bundleRouting, BundleServerConfig config,
+                              ServerWindowService serverWindowService) {
         this.bundleSecurity = bundleSecurity;
         this.applicationDataManager = applicationDataManager;
         this.config = config;
@@ -73,9 +73,12 @@ public class BundleTransmission {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void processReceivedBundle(String transportId, Bundle bundle) throws Exception {
-        Path bundleRecvProcDir =
-                this.config.getBundleTransmission().getReceivedProcessingDirectory().resolve(transportId);
+    public void processReceivedBundle(BundleSender sender, String senderId, Bundle bundle) throws Exception {
+        logger.log(INFO, "Processing received bundle: " + bundle.getSource().getName());
+        Path bundleRecvProcDir;
+        if (BundleSender.Transport.equals(sender))
+            bundleRecvProcDir = this.config.getBundleTransmission().getReceivedProcessingDirectory().resolve(senderId);
+        else bundleRecvProcDir = this.config.getBundleTransmission().getReceivedProcessingDirectory();
 
         bundleRecvProcDir.toFile().mkdirs();
 
@@ -107,6 +110,7 @@ public class BundleTransmission {
 
         UncompressedPayload uncompressedPayload =
                 this.bundleUtils.extractPayload(payload, uncompressedBundle.getSource().toPath());
+        logger.log(FINE, "[BundleTransmission] extracted payload from uncompressed bundle");
 
         File ackRecordFile = new File(this.getAckRecordLocation(clientId));
         ackRecordFile.getParentFile().mkdirs();
@@ -140,7 +144,7 @@ public class BundleTransmission {
         }
 
         try {
-            this.bundleRouting.processClientMetaData(uncompressedPayload.getSource().getAbsolutePath(), transportId,
+            this.bundleRouting.processClientMetaData(uncompressedPayload.getSource().getAbsolutePath(), senderId,
                                                      clientId);
         } catch (ClientMetaDataFileException | SQLException e) {
             // TODO Auto-generated catch block
@@ -154,35 +158,42 @@ public class BundleTransmission {
         }
     }
 
-    public void processReceivedBundles(String transportId) {
-        if (transportId == null) {
+    public void processReceivedBundles(BundleSender sender, String senderId) {
+        if (BundleSender.Transport.equals(sender) && senderId == null) {
             return;
         }
         File receivedBundlesDirectory = this.config.getBundleTransmission().getBundleReceivedLocation().toFile();
         for (final File transportDir : receivedBundlesDirectory.listFiles()) {
-            if (!transportId.equals(transportDir.getName())) {
+            if (BundleSender.Transport.equals(sender) && !senderId.equals(transportDir.getName())) {
                 continue;
             }
-            List<String> reachableClients = new ArrayList<>();
-            try {
-                reachableClients = bundleRouting.getClients(transportId);
-            } catch (SQLException e1) {
-                e1.printStackTrace();
+            if (BundleSender.Transport.equals(sender)) {
+                List<String> reachableClients = new ArrayList<>();
+                reachableClients = bundleRouting.getClients(senderId);
             }
-            for (final File bundleFile : transportDir.listFiles()) {
-                Bundle bundle = new Bundle(bundleFile);
-                try {
-                    this.processReceivedBundle(transportId, bundle);
-                } catch (Exception e) {
-                    logger.log(SEVERE, "[BundleTransmission] Failed to process received bundle from transportId: " +
-                            transportId, e);
-                } finally {
-                    try {
-                        FileUtils.delete(bundleFile);
-                    } catch (IOException e) {
-                        logger.log(SEVERE, "e");
-                    }
+
+            if (transportDir.isDirectory()) {
+                for (final File bundleFile : transportDir.listFiles()) {
+                    processBundleFile(bundleFile, sender, senderId);
                 }
+            } else if (transportDir.isFile()) {
+                processBundleFile(transportDir, sender, senderId);
+            }
+        }
+    }
+
+    private void processBundleFile(File bundleFile, BundleSender sender, String senderId) {
+        Bundle bundle = new Bundle(bundleFile);
+        try {
+            this.processReceivedBundle(sender, senderId, bundle);
+        } catch (Exception e) {
+            logger.log(SEVERE, "[BundleTransmission] Failed to process received bundle from: " + sender + " with Id: " +
+                    senderId, e);
+        } finally {
+            try {
+                FileUtils.delete(bundleFile);
+            } catch (IOException e) {
+                logger.log(SEVERE, "e");
             }
         }
     }
@@ -348,29 +359,34 @@ public class BundleTransmission {
         return new BundleTransferDTO(deletionSet, bundlesToSend);
     }
 
-    public List<File> getBundlesForTransmission(String transportId) {
-        logger.log(INFO,
-                   "[BundleTransmission] Inside getBundlesForTransmission method for transport id: " + transportId);
+    public List<File> getBundlesForTransmission(String sender, String senderId) {
+        logger.log(INFO, "[BundleTransmission] Inside getBundlesForTransmission method for " + sender + " with id: " +
+                senderId);
         List<File> bundles = new ArrayList<>();
-        File recvTransportSubDir =
-                this.config.getBundleTransmission().getToSendDirectory().resolve(transportId).toFile();
-        File[] recvTransport = recvTransportSubDir.listFiles(new FileFilter() {
-            @Override
-            public boolean accept(File file) {
-                return !file.isHidden();
-            }
-        });
-
-        if (recvTransport == null || recvTransport.length == 0) {
-            logger.log(INFO, "[BundleTransmission] No bundles to deliver through transport " + transportId);
-            return bundles;
+        List<String> clientIds = new ArrayList<>();
+        if (null != sender && sender.equals(BundleSender.Client.name())) {
+            clientIds.add(senderId);
+        } else {
+            clientIds.addAll(bundleRouting.getClients(senderId));
         }
 
-        logger.log(INFO,
-                   "[BundleTransmission] Found " + recvTransport.length + " bundles to deliver through transport " +
-                           transportId);
-        Collections.addAll(bundles, recvTransport);
+        for (String clientId : clientIds) {
+            File recvTransportSubDir = this.config.getBundleTransmission().getToSendDirectory().toFile();
+
+            File[] bundleFilesForClientId = recvTransportSubDir.listFiles(
+                    file -> !file.isHidden() && clientId.equals(getClientIdFromBundleFile(file)));
+
+            if (null != bundleFilesForClientId) bundles.addAll(List.of(Objects.requireNonNull(bundleFilesForClientId)));
+        }
+
+        logger.log(INFO, "[BundleTransmission] Found " + bundles.size() + " bundles to deliver through " + sender +
+                " with Id: " + senderId);
         return bundles;
+    }
+
+    public String getClientIdFromBundleFile(File bundle) {
+        //TO Do
+        return "";
     }
 
     public void notifyBundleSent(BundleDTO bundleDTO) {

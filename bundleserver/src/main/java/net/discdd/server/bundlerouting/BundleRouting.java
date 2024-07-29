@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
+import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.WARNING;
 
 @Service
@@ -26,7 +27,7 @@ public class BundleRouting {
     @Autowired
     ServerRoutingRepository serverRoutingRepository;
 
-    public List<String> getClients(String transportId) throws SQLException {
+    public List<String> getClients(String transportId) {
         List<ServerRouting> serverRoutings = serverRoutingRepository.findByServerRoutingIdTransportID(transportId);
         List<String> clientIDs = new ArrayList<>();
         if (serverRoutings != null) {
@@ -38,6 +39,8 @@ public class BundleRouting {
     }
 
     private void updateEntry(String transportID, String clientID, long score) {
+        logger.log(FINE, "Updating transport-client mapping entry in serverRoutingRepository");
+        if (null == transportID) return;
         ServerRouting serverRouting =
                 serverRoutingRepository.findByServerRoutingIdClientIDAndServerRoutingIdTransportID(clientID,
                                                                                                    transportID);
@@ -47,13 +50,14 @@ public class BundleRouting {
             serverRouting.setScore(String.valueOf(score));
         }
         serverRoutingRepository.save(serverRouting);
+        logger.log(FINE, "Updating transport-client mapping entry in serverRoutingRepository");
     }
 
     /*
      * payloadPath: path of received payload where routing metadata file exists
      */
     public void processClientMetaData(String payloadPath, String transportID, String clientID) throws RoutingExceptions.ClientMetaDataFileException, SQLException {
-
+        logger.log(FINE, "processing client metadata, for transportId: " + transportID, ",clientID: " + clientID);
         String clientMetaDataPath = payloadPath + File.separator + METADATAFILE;
         HashMap<String, Long> clientMap = null;
         ObjectMapper mapper = new ObjectMapper();

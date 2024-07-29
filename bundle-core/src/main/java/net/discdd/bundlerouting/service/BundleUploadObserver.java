@@ -1,4 +1,7 @@
-package net.discdd.bundletransport.service;
+package net.discdd.bundlerouting.service;
+
+import io.grpc.stub.StreamObserver;
+import net.discdd.bundletransport.service.BundleUploadResponse;
 
 import java.util.logging.Logger;
 
@@ -7,8 +10,6 @@ import static java.util.logging.Level.SEVERE;
 
 import java.util.Calendar;
 import java.util.Date;
-
-import io.grpc.stub.StreamObserver;
 
 public class BundleUploadObserver implements StreamObserver<BundleUploadResponse> {
 

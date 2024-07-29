@@ -3,6 +3,7 @@ package net.discdd.server.service;
 import com.google.protobuf.ByteString;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
+import net.discdd.bundlerouting.BundleSender;
 import net.discdd.bundletransport.service.BundleDownloadRequest;
 import net.discdd.bundletransport.service.BundleDownloadResponse;
 import net.discdd.bundletransport.service.BundleList;
@@ -48,18 +49,6 @@ public class BundleServerServiceImpl extends BundleServiceGrpc.BundleServiceImpl
     @Autowired
     private BundleTransmission bundleTransmission;
 
-    // public BundleServerServiceImpl() {
-    //     java.io.File directoryReceive = new java.io.File(ReceiveDir);
-    //     if (!directoryReceive.exists()) {
-    //         directoryReceive.mkdirs();
-    //     }
-
-    //     java.io.File directorySend = new java.io.File(SendDir);
-    //     if (!directorySend.exists()) {
-    //         directorySend.mkdirs();
-    //     }
-    // }
-
     @PostConstruct
     private void init() {
         java.io.File directoryReceive = new java.io.File(ReceiveDir);
@@ -85,16 +74,18 @@ public class BundleServerServiceImpl extends BundleServiceGrpc.BundleServiceImpl
             // upload context variables
             OutputStream writer;
             Status status = Status.IN_PROGRESS;
-            String transportID;
+            String senderId;
+            BundleSender sender;
 
             @Override
-            public void onNext(BundleUploadRequest BundleUploadRequest) {
+            public void onNext(BundleUploadRequest bundleUploadRequest) {
                 try {
-                    if (BundleUploadRequest.hasMetadata()) {
-                        transportID = BundleUploadRequest.getMetadata().getTransportId();
-                        writer = getFilePath(BundleUploadRequest);
+                    if (bundleUploadRequest.hasMetadata()) {
+                        senderId = bundleUploadRequest.getMetadata().getSenderId();
+                        sender = BundleSender.valueOf(bundleUploadRequest.getMetadata().getSender());
+                        writer = getFilePath(bundleUploadRequest);
                     } else {
-                        writeFile(writer, BundleUploadRequest.getFile().getContent());
+                        writeFile(writer, bundleUploadRequest.getFile().getContent());
                     }
                 } catch (IOException e) {
                     this.onError(e);
@@ -119,7 +110,7 @@ public class BundleServerServiceImpl extends BundleServiceGrpc.BundleServiceImpl
                 status = Status.IN_PROGRESS.equals(status) ? Status.SUCCESS : status;
                 BundleUploadResponse response = BundleUploadResponse.newBuilder().setStatus(status).build();
                 responseObserver.onNext(response);
-                bundleTransmission.processReceivedBundles(transportID);
+                bundleTransmission.processReceivedBundles(BundleSender.Transport, senderId);
                 responseObserver.onCompleted();
             }
         };
@@ -127,12 +118,12 @@ public class BundleServerServiceImpl extends BundleServiceGrpc.BundleServiceImpl
 
     private OutputStream getFilePath(BundleUploadRequest request) throws IOException {
         String fileName = request.getMetadata().getBid();
-        File directoryReceive = Path.of(ReceiveDir, request.getMetadata().getTransportId()).toFile();
+        File directoryReceive = Path.of(ReceiveDir, request.getMetadata().getSenderId()).toFile();
         if (!directoryReceive.exists()) {
             directoryReceive.mkdirs();
         }
         return Files.newOutputStream(
-                Paths.get(ReceiveDir).resolve(request.getMetadata().getTransportId()).resolve(fileName),
+                Paths.get(ReceiveDir).resolve(request.getMetadata().getSenderId()).resolve(fileName),
                 StandardOpenOption.CREATE, StandardOpenOption.APPEND);
     }
 
@@ -149,40 +140,44 @@ public class BundleServerServiceImpl extends BundleServiceGrpc.BundleServiceImpl
 
     @Override
     public void downloadBundle(BundleDownloadRequest request, StreamObserver<BundleDownloadResponse> responseObserver) {
-        logger.log(INFO, "[BundleServerService] bundles on transport" + request.getBundleListList());
-        logger.log(INFO, "[BundleServerService]Request from Transport id :" + request.getTransportId());
+        logger.log(INFO, "[BundleServerService] bundles on sender" + request.getBundleListList());
+        logger.log(INFO,
+                   "[BundleServerService] Request from " + request.getSender() + " with id: " + request.getSenderId());
         Set<String> filesOnTransportSet = new HashSet<>(request.getBundleListList());
-        List<File> bundlesList = bundleTransmission.getBundlesForTransmission(request.getTransportId());
+        List<File> bundlesList =
+                bundleTransmission.getBundlesForTransmission(request.getSender(), request.getSenderId());
         logger.log(FINE, "Downloaded " + bundleTransmission);
         if (bundlesList.isEmpty()) {
-            BundleTransferDTO bundleTransferDTO = null;
+            BundleTransferDTO bundleToDelete = null;
             try {
-                bundleTransferDTO = bundleTransmission.generateBundlesForTransmission(request.getTransportId(),
-                                                                                      filesOnTransportSet);
+                bundleToDelete =
+                        bundleTransmission.generateBundlesForTransmission(request.getSenderId(), filesOnTransportSet);
             } catch (Exception e) {
                 logger.log(WARNING, "[BundleServerService] Error generating bundles for transmission", e);
                 responseObserver.onError(e);
                 responseObserver.onCompleted();
                 return;
             }
-            if (bundleTransferDTO.getBundles().isEmpty()) {
+            if (bundleToDelete.getBundles().isEmpty()) {
                 responseObserver.onNext(BundleDownloadResponse.newBuilder().setStatus(Status.SUCCESS).build());
             } else {
                 BundleDownloadResponse response = BundleDownloadResponse.newBuilder()
-                        .setBundleList(BundleList.newBuilder().addAllBundleList(bundleTransferDTO.getDeletionSet()))
+                        .setBundleList(BundleList.newBuilder().addAllBundleList(bundleToDelete.getDeletionSet()))
                         .build();
                 logger.log(WARNING,
-                           "[BundleServerService] Sending " + String.join(", ", bundleTransferDTO.getDeletionSet()) +
-                                   " to delete on Transport id :" + request.getTransportId());
+                           "[BundleServerService] Sending " + String.join(", ", bundleToDelete.getDeletionSet()) +
+                                   " to delete on Transport id :" + request.getSenderId());
                 responseObserver.onNext(response);
             }
             responseObserver.onCompleted();
-        } else {
+        } else { // can be removed by removing transport directories {remove the if else check only, we still need
+            // these bundles to send and delete as well}
 
             for (File bundle : bundlesList) {
                 if (!filesOnTransportSet.contains(bundle.getName())) {
-                    logger.log(WARNING, "[BundleServerService]Downloading " + bundle.getName() + " to Transport id :" +
-                            request.getTransportId());
+                    logger.log(WARNING,
+                               "[BundleServerService]Downloading " + bundle.getName() + " to " + request.getSender() +
+                                       " with id :" + request.getSenderId());
                     BundleMetaData bundleMetaData = BundleMetaData.newBuilder().setBid(bundle.getName()).build();
                     responseObserver.onNext(BundleDownloadResponse.newBuilder().setMetadata(bundleMetaData).build());
                     InputStream in;

@@ -47,6 +47,11 @@ android {
         textOutput file('stdout')
         textReport true
     }
+
+    packagingOptions {
+        exclude("META-INF/*")
+        exclude("META-INF/*/*")
+    }
 }
 
 dependencies {

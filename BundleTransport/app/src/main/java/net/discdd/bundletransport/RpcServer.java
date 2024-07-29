@@ -1,6 +1,7 @@
 package net.discdd.bundletransport;
 
-import net.discdd.bundletransport.service.FileServiceImpl;
+import net.discdd.bundlerouting.BundleSender;
+import net.discdd.bundlerouting.service.FileServiceImpl;
 
 import android.content.Context;
 
@@ -56,7 +57,9 @@ public class RpcServer {
 
         SocketAddress address = new InetSocketAddress(inetSocketAddressIP, port);
         notifyStateChange(ServerState.PENDING);
-        server = NettyServerBuilder.forAddress(address).addService(new FileServiceImpl(context)).build();
+        server = NettyServerBuilder.forAddress(address).addService(
+                new FileServiceImpl(context.getExternalFilesDir(null), BundleSender.Transport,
+                                    MainActivity.transportID)).build();
 
         logger.log(INFO, "Starting rpc server at: " + server.toString());
 
