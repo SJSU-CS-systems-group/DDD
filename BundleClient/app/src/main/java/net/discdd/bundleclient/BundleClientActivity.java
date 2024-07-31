@@ -11,8 +11,9 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.net.NetworkRequest;
+import android.net.wifi.p2p.WifiP2pDevice;
 import android.os.Bundle;
-import android.widget.Toast;
+import android.widget.Button;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -23,7 +24,8 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
-import net.discdd.bundlerouting.service.ServerManager;
+import net.discdd.android.fragments.LogFragment;
+import net.discdd.android.fragments.PermissionsFragment;
 import net.discdd.client.bundlerouting.ClientWindow;
 import net.discdd.client.bundlesecurity.BundleSecurity;
 import net.discdd.client.bundletransmission.BundleTransmission;
@@ -31,12 +33,9 @@ import net.discdd.wifidirect.WifiDirectManager;
 import net.discdd.wifidirect.WifiDirectStateListener;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.file.Paths;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -69,7 +68,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
 
     // bundle transmission set up
     BundleTransmission bundleTransmission;
-    private static final String usbDirName = "DDD_transport";
     public static boolean usbConnected = false;
 
     // instantiate window for bundles
@@ -121,9 +119,12 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
             tab.setText(labels[position]);
         }).attach();
 
-        // set up wifi direct
-        wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle(), this,
-                                                  this.getString(R.string.tansport_host));
+        if (wifiDirectManager == null) {
+            // set up wifi direct
+            wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle(), this,
+                                                      this.getString(R.string.tansport_host), false);
+            wifiDirectManager.initialize();
+        }
 
         //Application context
         ApplicationContext = getApplicationContext();
@@ -149,24 +150,13 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     }
 
     @Override
-    public void onReceiveAction(WifiDirectManager.WIFI_DIRECT_ACTIONS action) {
-        runOnUiThread(() -> handleWifiDirectAction(action));
-    }
-
-    @Override
     public void onResume() {
         super.onResume();
-        registerReceiver(wifiDirectManager.createReceiver(), wifiDirectManager.getIntentFilter());
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        try {
-            unregisterReceiver(wifiDirectManager.getReceiver());
-        } catch (IllegalArgumentException e) {
-            logger.log(WARNING, "WifiDirect receiver unregistered before registered");
-        }
     }
 
     @Override
@@ -177,18 +167,18 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
 //        unregisterReceiver(mUsbReceiver);
     }
 
-    //Method with cases to handle Wifi Direct actions
-    private void handleWifiDirectAction(WifiDirectManager.WIFI_DIRECT_ACTIONS action) {
+    @Override
+    public void onReceiveAction(WifiDirectManager.WifiDirectEvent action) {
         MainPageFragment fragment = getMainPageFragment();
         if (fragment != null) {
-            switch (action) {
+            switch (action.type()) {
                 case WIFI_DIRECT_MANAGER_INITIALIZATION_FAILED:
                     fragment.updateWifiDirectResponse("Manager initialization failed\n");
                     logger.log(WARNING, "Manager initialization failed\n");
                     break;
                 case WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL:
                     logger.log(FINER, "Manager initialization successful\n");
-                    connectTransport();
+                    wifiDirectManager.discoverPeers();
                     break;
                 case WIFI_DIRECT_MANAGER_DISCOVERY_SUCCESSFUL:
                     fragment.updateWifiDirectResponse("Discovery initiation successful\n");
@@ -197,7 +187,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
                 case WIFI_DIRECT_MANAGER_DISCOVERY_FAILED:
                     fragment.updateWifiDirectResponse("Discovery initiation failed\n");
                     logger.log(WARNING, "Discovery initiation failed\n");
-                    fragment.setConnectButtonEnabled(true);
                     break;
                 case WIFI_DIRECT_MANAGER_PEERS_CHANGED:
                     fragment.updateWifiDirectResponse("Peers changed\n");
@@ -207,7 +196,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
                 case WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_FAILED:
                     fragment.updateWifiDirectResponse("Device connection initiation failed\n");
                     logger.log(WARNING, "Device connection initiation failed\n");
-                    fragment.setConnectButtonEnabled(true);
                     break;
                 case WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_SUCCESSFUL:
                     fragment.updateWifiDirectResponse("Device connection initiation successful\n");
@@ -217,47 +205,32 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
                     fragment.updateWifiDirectResponse("Device connected to transport\n");
                     logger.log(FINER, "Device connected to transport\n");
                     updateConnectedDevices();
-                    fragment.setConnectButtonEnabled(true);
-                    exchangeMessage();
                     break;
                 case WIFI_DIRECT_MANAGER_FORMED_CONNECTION_FAILED:
                     fragment.updateWifiDirectResponse("Device failed to connect to transport\n");
                     logger.log(WARNING, "Device failed to connect to transport\n");
-                    fragment.setConnectButtonEnabled(true);
                     break;
             }
         }
     }
 
-    //Method to connect to transport
-    public void connectTransport() {
-        MainPageFragment fragment = getMainPageFragment();
-        if (fragment != null) {
-            fragment.setConnectButtonEnabled(false);
-            fragment.updateWifiDirectResponse("Starting connection.....\n");
-        }
-        logger.log(INFO, "Connecting to transport");
-
-        wifiDirectExecutor.execute(wifiDirectManager);
-
-    }
-
-    public void exchangeMessage() {
-        MainPageFragment fragment = getMainPageFragment();
-        if (fragment != null) {
-            fragment.setExchangeButtonEnabled(false);
-        }
-        logger.log(INFO, "connection complete!");
-        new GrpcReceiveTask(this).executeInBackground("192.168.49.1", 7777);
+    public void exchangeMessage(WifiP2pDevice device, Button exchangeButton) {
+        runOnUiThread(() -> exchangeButton.setEnabled(false));
+        wifiDirectManager.connect(device).thenAccept(c -> {
+            new GrpcReceiveTask(this).executeInBackground("192.168.49.1", 7777).thenAccept(result -> {
+                logger.log(INFO, "connection complete!");
+                runOnUiThread(() -> exchangeButton.setEnabled(true));
+                wifiDirectManager.disconnect(device);
+            });
+        });
     }
 
     // Method to update connected devices text
     private void updateConnectedDevices() {
         MainPageFragment fragment = getMainPageFragment();
         if (fragment != null) {
-            Set<String> devicesFound = wifiDirectManager.getDevicesFound();
-            List<String> devicesList = new ArrayList<>(devicesFound);
-            fragment.updateConnectedDevicesText(devicesList);
+            HashSet<WifiP2pDevice> peerList = wifiDirectManager.getPeerList();
+            fragment.updateConnectedDevices(peerList);
         }
     }
 
@@ -287,8 +260,8 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         public Fragment createFragment(int position) {
             return switch (position) {
                 case 0 -> new MainPageFragment();
-                case 1 -> new PermissionsFragment();
-                default -> logFragment = new LogFragment(bundleClientActivity);
+                case 1 -> permissionsFragment = new PermissionsFragment();
+                default -> logFragment = new LogFragment();
             };
         }
 
