@@ -47,11 +47,15 @@ android {
         textOutput file('stdout')
         textReport true
     }
-
     packagingOptions {
-        exclude("META-INF/*")
-        exclude("META-INF/*/*")
+        jniLibs {
+            excludes += ['META-INF/*', 'META-INF/*/*']
+        }
+        resources {
+            excludes += ['META-INF/*', 'META-INF/*/*']
+        }
     }
+
 }
 
 dependencies {
