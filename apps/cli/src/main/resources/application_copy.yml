@@ -1,0 +1,6 @@
+bundle-server:
+  bundle-transmission:
+    received-processing-directory: "${bundle-server.bundle-store-root}BundleTransmission/received-processing"
+  bundle-security:
+    server-key-path: "${bundle-server.bundle-store-root}BundleSecurity/Keys/Server"
+    server-serverkeys-path: "${bundle-server.bundle-store-root}BundleSecurity/Keys/Server/Server_Keys"
