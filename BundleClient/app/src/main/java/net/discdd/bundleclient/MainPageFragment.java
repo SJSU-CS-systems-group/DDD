@@ -190,18 +190,19 @@ public class MainPageFragment extends Fragment {
     //Method to check intial USB connection
     private void checkUsbConnection(int tries) {
         BundleClientActivity.usbConnected = !usbManager.getDeviceList().isEmpty() && usbDirExists();
-        getActivity().getMainExecutor().execute(()-> {
+        getActivity().getMainExecutor().execute(() -> {
             if (!usbManager.getDeviceList().isEmpty()) {
                 if (usbDirExists()) {
                     updateUsbStatus(true, "USB connection detected\n", Color.GREEN);
                 } else {
-                    updateUsbStatus(false, "USB was connected, but /DDD_transport directory was not detected\n", Color.RED);
+                    updateUsbStatus(false, "USB was connected, but /DDD_transport directory was not detected\n",
+                                    Color.RED);
                 }
             } else {
                 updateUsbStatus(false, "Usb device not connected\n", Color.RED);
             }
         });
-        if(tries > 0 && !BundleClientActivity.usbConnected) {
+        if (tries > 0 && !BundleClientActivity.usbConnected) {
             scheduledExecutor.schedule(() -> checkUsbConnection(tries - 1), 1, TimeUnit.SECONDS);
         }
     }
@@ -258,10 +259,10 @@ public class MainPageFragment extends Fragment {
     // Method to check if /DDD_transport directory exists
     private boolean usbDirExists() {
         List<StorageVolume> storageVolumeList = storageManager.getStorageVolumes();
-        for(StorageVolume storageVolume: storageVolumeList) {
-            if(storageVolume.isRemovable()) {
+        for (StorageVolume storageVolume : storageVolumeList) {
+            if (storageVolume.isRemovable()) {
                 File fileUsb = new File(storageVolume.getDirectory().getPath() + usbDirName);
-                if(fileUsb.exists()) {
+                if (fileUsb.exists()) {
                     return true;
                 }
             }
