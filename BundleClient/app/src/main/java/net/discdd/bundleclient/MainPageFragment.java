@@ -84,10 +84,8 @@ public class MainPageFragment extends Fragment {
         peersList.setAdapter(new RecyclerView.Adapter() {
             @NonNull
             @Override
-            public RecyclerView.ViewHolder onCreateViewHolder(
-                    @NonNull ViewGroup parent, int viewType) {
-                return new RecyclerView.ViewHolder(inflater.inflate(R.layout.peers_list_element, parent, false)) {
-                };
+            public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                return new RecyclerView.ViewHolder(inflater.inflate(R.layout.peers_list_element, parent, false)) {};
             }
 
             @Override
@@ -243,8 +241,7 @@ public class MainPageFragment extends Fragment {
             var removedNames = new HashSet<String>(currentPeers.keySet());
             removedNames.removeAll(discoveredPeers.keySet());
             peers.removeIf(device -> removedNames.contains(device.deviceName));
-            peers.addAll(newNames.stream().map(discoveredPeers::get)
-                                 .collect(Collectors.toCollection(ArrayList::new)));
+            peers.addAll(newNames.stream().map(discoveredPeers::get).collect(Collectors.toCollection(ArrayList::new)));
             peersList.getAdapter().notifyDataSetChanged();
         });
     }
@@ -253,6 +250,7 @@ public class MainPageFragment extends Fragment {
     public void updateWifiDirectResponse(String text) {
         requireActivity().runOnUiThread(() -> wifiDirectResponseText.setText(text));
     }
+
     // Method to set result text
     public void setResultText(String text) {
         resultText.setText(text);

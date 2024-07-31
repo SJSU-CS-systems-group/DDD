@@ -121,9 +121,8 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
 
         if (wifiDirectManager == null) {
             // set up wifi direct
-            wifiDirectManager =
-                    new WifiDirectManager(this.getApplication(), this.getLifecycle(), this,
-                                          this.getString(R.string.tansport_host), false);
+            wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle(), this,
+                                                      this.getString(R.string.tansport_host), false);
             wifiDirectManager.initialize();
         }
 
@@ -167,7 +166,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
 //        wifiDirectExecutor.shutdown();
 //        unregisterReceiver(mUsbReceiver);
     }
-
 
     @Override
     public void onReceiveAction(WifiDirectManager.WifiDirectEvent action) {
@@ -215,15 +213,15 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
             }
         }
     }
+
     public void exchangeMessage(WifiP2pDevice device, Button exchangeButton) {
         runOnUiThread(() -> exchangeButton.setEnabled(false));
         wifiDirectManager.connect(device).thenAccept(c -> {
-            new GrpcReceiveTask(this).executeInBackground("192.168.49.1", 7777)
-                    .thenAccept(result -> {
-                        logger.log(INFO, "connection complete!");
-                        runOnUiThread(() -> exchangeButton.setEnabled(true));
-                        wifiDirectManager.disconnect(device);
-                    });
+            new GrpcReceiveTask(this).executeInBackground("192.168.49.1", 7777).thenAccept(result -> {
+                logger.log(INFO, "connection complete!");
+                runOnUiThread(() -> exchangeButton.setEnabled(true));
+                wifiDirectManager.disconnect(device);
+            });
         });
     }
 
@@ -245,6 +243,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         this.logConsumer = logConsumer;
         return String.join("\n", logRecords);
     }
+
     // ViewPagerAdapter class for managing fragments in the ViewPager
     private static class ViewPagerAdapter extends FragmentStateAdapter {
         private final BundleClientActivity bundleClientActivity;

@@ -121,8 +121,8 @@ public class WifiDirectFragment extends Fragment implements WifiDirectStateListe
             case WIFI_DIRECT_MANAGER_PEERS_CHANGED:
                 logger.info("New list of peers: " + wifiDirectManager.getPeerList());
                 getActivity().runOnUiThread(() -> {
-                    listAdapter.updatePeers(wifiDirectManager.getPeerList().stream().map(m -> m.deviceName).collect(
-                            Collectors.toCollection(HashSet::new)));
+                    listAdapter.updatePeers(wifiDirectManager.getPeerList().stream().map(m -> m.deviceName)
+                                                    .collect(Collectors.toCollection(HashSet::new)));
                     status.setText(wifiDirectManager.getPeerList().size() + " peers found");
                 });
                 break;

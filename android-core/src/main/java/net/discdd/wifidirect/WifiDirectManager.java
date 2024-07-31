@@ -399,7 +399,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
                 "wifi enabled " + enabled);
     }
 
-    public void setDeviceName(String deviceName) { this.deviceName = deviceName; }
+    public void setDeviceName(String deviceName) {this.deviceName = deviceName;}
 
     public void disconnect(WifiP2pDevice device) {
         manager.removeGroup(channel, new WifiP2pManager.ActionListener() {
