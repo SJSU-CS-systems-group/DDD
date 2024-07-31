@@ -20,11 +20,11 @@ android {
     }
 
 
-    compileSdk 33
+    compileSdk 34
 
     defaultConfig {
         applicationId "net.discdd.bundletransport"
-        minSdk 34 // Required at least 34 for JDK 17 -> enable BufferedInputStream transferTo in BundleCore
+        minSdk 33 // Required at least 34 for JDK 17 -> enable BufferedInputStream transferTo in BundleCore
         targetSdk 34
         versionCode 1
         versionName "1.0"
@@ -56,6 +56,9 @@ android {
         textOutput file('stdout')
         textReport true
     }
+    buildFeatures {
+        viewBinding true
+    }
 }
 
 dependencies {
@@ -65,6 +68,7 @@ dependencies {
     implementation 'io.grpc:grpc-okhttp:1.58.0'
     implementation 'com.google.firebase:firebase-crashlytics-buildtools:3.0.2'
     implementation 'com.google.protobuf:protobuf-java:3.23.4'
+    implementation project(':android-core')
     compileOnly 'org.apache.tomcat:annotations-api:6.0.53' // necessary for Java 9+
 
     // Exclude protobuf-java from signal-protocol-android to avoid conflicts
@@ -75,13 +79,25 @@ dependencies {
     // Assuming net.discdd:bundle-core depends on protobuf-java
     implementation 'net.discdd:bundle-core:0.0.2'
 
-    def work_version = "2.7.0"
-    implementation "androidx.work:work-runtime:$work_version"
+    implementation "androidx.work:work-runtime:2.9.0"
 
-    implementation 'androidx.appcompat:appcompat:1.3.1'
-    implementation 'com.google.android.material:material:1.4.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.1'
-    implementation 'androidx.lifecycle:lifecycle-common-java8:2.3.1'
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation 'androidx.viewpager2:viewpager2:1.1.0'
+    implementation 'androidx.recyclerview:recyclerview:1.3.2'
+    implementation 'androidx.fragment:fragment-ktx:1.8.2'
+    implementation 'com.google.android.material:material:1.12.0'
+    /*
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.lifecycle:lifecycle-common-java8:2.8.4:2.8.4'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel:2.8.4'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4'
+    implementation 'androidx.lifecycle:lifecycle-livedata:2.8.4'
+    implementation 'androidx.lifecycle:lifecycle-process:2.8.4'
+    implementation 'androidx.lifecycle:lifecycle-runtime:2.8.4'
+
+    */
 
     testImplementation 'junit:junit:4.+'
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'
