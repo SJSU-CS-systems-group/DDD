@@ -28,13 +28,11 @@ public class UsbFragment extends Fragment {
     private UsbManager usbManager;
     private BroadcastReceiver mUsbReceiver;
     public static boolean usbConnected = false;
-    private static final Logger logger =
-            Logger.getLogger(UsbFragment.class.getName());
+    private static final Logger logger = Logger.getLogger(UsbFragment.class.getName());
 
     @Override
     public View onCreateView(
-            @NonNull LayoutInflater inflater,
-            @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+            @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.usb_fragment, container, false);
 
         usbExchangeButton = view.findViewById(R.id.usb_exchange_button);
@@ -81,9 +79,7 @@ public class UsbFragment extends Fragment {
                 UsbFragment.usbConnected = true;
                 showUsbAttachedToast();
             } else {
-                updateUsbStatus(false,
-                                "USB was connected, but /DDD_transport directory was not detected\n",
-                                Color.RED);
+                updateUsbStatus(false, "USB was connected, but /DDD_transport directory was not detected\n", Color.RED);
                 UsbFragment.usbConnected = false;
                 showUsbAttachedToast();
             }
@@ -100,9 +96,7 @@ public class UsbFragment extends Fragment {
                 showUsbAttachedToast();
             } else {
                 UsbFragment.usbConnected = false;
-                updateUsbStatus(false,
-                                "USB was connected, but /DDD_transport directory was not detected\n",
-                                Color.RED);
+                updateUsbStatus(false, "USB was connected, but /DDD_transport directory was not detected\n", Color.RED);
                 showUsbAttachedToast();
             }
         } else {

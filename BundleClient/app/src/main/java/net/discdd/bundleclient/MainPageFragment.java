@@ -186,7 +186,6 @@ public class MainPageFragment extends Fragment {
         requireActivity().runOnUiThread(() -> resultText.append(text));
     }
 
-
     public void setConnectServerBtn(boolean isEnabled) {
         connectServerBtn.setEnabled(isEnabled);
     }
