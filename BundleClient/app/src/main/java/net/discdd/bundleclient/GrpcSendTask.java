@@ -5,19 +5,17 @@ import static java.util.logging.Level.WARNING;
 
 import android.app.Activity;
 import android.content.Context;
-import android.os.Build;
-import android.widget.Button;
 import android.widget.TextView;
 
-import net.discdd.utils.Constants;
-import net.discdd.client.bundletransmission.BundleTransmission;
+import com.google.protobuf.ByteString;
+
 import net.discdd.bundletransport.service.File;
 import net.discdd.bundletransport.service.FileServiceGrpc;
 import net.discdd.bundletransport.service.FileUploadRequest;
 import net.discdd.bundletransport.service.MetaData;
-
+import net.discdd.client.bundletransmission.BundleTransmission;
 import net.discdd.model.BundleDTO;
-import com.google.protobuf.ByteString;
+import net.discdd.utils.Constants;
 
 import java.io.FileInputStream;
 import java.io.PrintWriter;
@@ -118,9 +116,7 @@ class GrpcSendTask {
             @Override
             public void run() {
                 TextView resultText = activity.findViewById(R.id.grpc_response_text);
-                Button exchangeButton = activity.findViewById(R.id.exchange_button);
                 resultText.setText(result);
-                exchangeButton.setEnabled(true);
             }
         });
         //call UI thread

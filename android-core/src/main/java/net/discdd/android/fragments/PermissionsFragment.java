@@ -1,7 +1,6 @@
 package net.discdd.android.fragments;
 
 import android.content.pm.PackageManager;
-import android.content.res.Resources;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -37,7 +36,6 @@ public class PermissionsFragment extends Fragment {
     private boolean promptPending;
     private Consumer<HashSet<String>> permissionWatcher;
 
-    @Nullable
     @Override
     public View onCreateView(
             @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -56,7 +54,7 @@ public class PermissionsFragment extends Fragment {
             String[] permissions = getResources().getStringArray(R.array.permissions_array);
 
             //Initialize the adapter
-            permissionsAdapter = new PermissionsAdapter(this, permissions);
+            permissionsAdapter = new PermissionsAdapter(permissions);
 
             //set the adapter to the RecyclerView
             permissionsRecyclerView.setAdapter(permissionsAdapter);
@@ -148,14 +146,12 @@ public class PermissionsFragment extends Fragment {
         }
     }
 
-    static class PermissionsAdapter extends RecyclerView.Adapter<PermissionsAdapter.PermissionViewHolder> {
+    class PermissionsAdapter extends RecyclerView.Adapter<PermissionsAdapter.PermissionViewHolder> {
 
         final String[] permissions;
-        private final PermissionsFragment permissionsFragment;
 
-        public PermissionsAdapter(PermissionsFragment permissionsFragment, String[] permissions) {
+        public PermissionsAdapter(String[] permissions) {
             this.permissions = permissions;
-            this.permissionsFragment = permissionsFragment;
         }
 
         @NonNull
@@ -171,10 +167,10 @@ public class PermissionsFragment extends Fragment {
             String permission = permissions[position];
             // we are going to use the string translations keyed on the permission name to get
             // the description of the permission
-            Resources resources = permissionsFragment.getResources();
-            int resid = resources.getIdentifier(permission, "string", "net.discdd.ddd_wifi");
-            holder.permissionCaption.setText(resid == 0 ? permission : permissionsFragment.getString(resid));
-            permissionsFragment.checkPermission(permission, holder);
+
+            int resid = getResources().getIdentifier(permission, "string", getActivity().getPackageName());
+            holder.permissionCaption.setText(resid == 0 ? permission : getString(resid));
+            checkPermission(permission, holder);
         }
 
         @Override
