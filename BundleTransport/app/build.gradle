@@ -20,7 +20,7 @@ android {
     }
 
 
-    compileSdk 34
+    compileSdk 33
 
     defaultConfig {
         applicationId "net.discdd.bundletransport"
