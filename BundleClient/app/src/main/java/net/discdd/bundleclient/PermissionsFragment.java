@@ -54,6 +54,12 @@ public class PermissionsFragment extends Fragment {
     /**
      * The Main activity uses this to call us back with the results of permission requests
      */
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        processPermissionResults(permissions, grantResults);
+    }
+
     public void processPermissionResults(String[] permissions, int[] grantResults) {
         logger.log(Level.INFO, "Permission request results:");
         for (var i = 0; i < permissions.length; i++) {
@@ -72,14 +78,14 @@ public class PermissionsFragment extends Fragment {
     }
 
     public void checkPermission(String permission, PermissionsAdapter.PermissionViewHolder holder) {
-        if (getActivity().checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
+        if (getActivity().checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED) {
             holder.permissionCheckbox.setChecked(true);
         } else {
             neededPermissions.put(permission, holder);
             holder.permissionCheckbox.setChecked(false);
             if (!promptPending) {
                 promptPending = true;
-                getActivity().requestPermissions(neededPermissions.keySet().toArray(new String[0]), 8675309);
+                requestPermissions(neededPermissions.keySet().toArray(new String[0]), 8675309);
             }
         }
     }

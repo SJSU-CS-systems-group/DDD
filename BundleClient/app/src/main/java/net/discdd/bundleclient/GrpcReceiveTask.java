@@ -32,6 +32,7 @@ import java.net.InetSocketAddress;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -63,7 +64,8 @@ class GrpcReceiveTask {
         this.activity = activity;
     }
 
-    public void executeInBackground(String domain, int port) {
+    public CompletableFuture<Boolean> executeInBackground(String domain, int port) {
+        final CompletableFuture<Boolean> completableFuture = new CompletableFuture<>();
         executor.execute(new Runnable() {
             @Override
             public void run() {
@@ -71,12 +73,15 @@ class GrpcReceiveTask {
                     logger.log(INFO, "Inside GrpcReceiveTask executeInBackground.run");
                     InetSocketAddress address = new InetSocketAddress(domain, port);
                     inBackground(address);
+                    completableFuture.complete(true);
                 } catch (Exception e) {
                     // Handle any exceptions
                     logger.log(WARNING, "executeInBackground failed", e);
+                    completableFuture.complete(false);
                 }
             }
         });
+        return completableFuture;
     }
 
     private void inBackground(InetSocketAddress inetSocketAddress) throws Exception {

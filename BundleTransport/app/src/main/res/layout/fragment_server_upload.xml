@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:context=".ServerUploadFragment">
+    <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+    <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btn_connect_bundle_server"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="connect to bundle server"
+            android:layout_marginTop="10dp"/>
+
+    <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btn_clear_storage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Free up Space"
+            android:layout_marginTop="10dp"/>
+
+    <EditText
+            android:id="@+id/domain_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Domain"
+            android:lines="1"
+            android:textAlignment="center"
+            android:padding="10dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/border"
+            />
+
+    <EditText
+            android:id="@+id/port_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Port"
+            android:lines="1"
+            android:textAlignment="center"
+            android:padding="10dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/border"
+            android:inputType="number"
+            />
+    <Button
+            android:id="@+id/save_domain_port"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Save Domain and Port"
+            />
+
+    <Button
+            android:id="@+id/restore_domain_port"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Restore Domain and Port"
+            />
+        <TextView
+            android:id="@+id/server_upload_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+            />
+
+    </LinearLayout>
+</FrameLayout>

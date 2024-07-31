@@ -172,7 +172,7 @@ public class PermissionsFragment extends Fragment {
             // we are going to use the string translations keyed on the permission name to get
             // the description of the permission
             Resources resources = permissionsFragment.getResources();
-            int resid = resources.getIdentifier(permission, "string", "net.discdd.ddd_wifi");
+            int resid = resources.getIdentifier(permission, "string", "net.discdd.android_core");
             holder.permissionCaption.setText(resid == 0 ? permission : permissionsFragment.getString(resid));
             permissionsFragment.checkPermission(permission, holder);
         }

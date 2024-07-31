@@ -2,5 +2,10 @@
     <string name="app_name">BundleTransport</string>
     <string name="bundle_server_host">trique.homeofcode.com</string>
     <string name="select">Select Item</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="title_activity_bundle_transport">BundleTransportActivity</string>
+    <string name="tab_text_1">Tab 1</string>
+    <string name="tab_text_2">Tab 2</string>
 
 </resources>

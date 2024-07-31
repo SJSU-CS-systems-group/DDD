@@ -24,7 +24,7 @@ android {
 
     defaultConfig {
         applicationId "net.discdd.bundleclient"
-        minSdk 34 // Required at least 34 for JDK 17 -> enable BufferedInputStream transferTo in BundleCore
+        minSdk 33 // Required at least 34 for JDK 17 -> enable BufferedInputStream transferTo in BundleCore
         targetSdk 34
         versionCode 1
         versionName "1.0"
@@ -57,6 +57,7 @@ android {
 dependencies {
     implementation 'io.grpc:grpc-protobuf:1.58.0'
     implementation 'io.grpc:grpc-stub:1.58.0'
+    implementation project(':android-core')
     compileOnly 'org.apache.tomcat:annotations-api:6.0.53' // necessary for Java 9+
     implementation 'io.grpc:grpc-okhttp:1.58.0' // CURRENT_GRPC_VERSION
 
