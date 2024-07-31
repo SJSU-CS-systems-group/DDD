@@ -69,7 +69,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
 
     // bundle transmission set up
     BundleTransmission bundleTransmission;
-    private static final String usbDirName = "DDD_transport";
     public static boolean usbConnected = false;
 
     // instantiate window for bundles
