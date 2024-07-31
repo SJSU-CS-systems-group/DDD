@@ -34,17 +34,18 @@ class EncryptBundleTest {
         //create appProps
         clientId = "1EKo0fp8EKHarKiWehyAXCihSqs=";
     }
+
     @Test
     void testEncryptBundle() throws Exception {
         appProps = TestUtils.createResource("bundle-server.bundle-store-root = " + baseDirPath + File.separator);
-        String expectedOutput =
-                "Encrypting bundle\n" +
-                        "Finished encrypting\n";
+        String expectedOutput = "Encrypting bundle\n" + "Finished encrypting\n";
         StringBuilder sb = new StringBuilder();
         String errText = SystemLambda.tapSystemErr(() -> {
             String outText = SystemLambda.tapSystemOutNormalized(() -> {
-                new CommandLine(new EncryptBundle()).execute("--decrypted-bundle=" + bundlePath, "--clientId=" + clientId,
-                                                             "--applicationYaml=" + applicationYml, "--appProps=" + appProps);
+                new CommandLine(new EncryptBundle()).execute("--decrypted-bundle=" + bundlePath,
+                                                             "--clientId=" + clientId,
+                                                             "--applicationYaml=" + applicationYml,
+                                                             "--appProps=" + appProps);
             });
             sb.append(outText);
         });

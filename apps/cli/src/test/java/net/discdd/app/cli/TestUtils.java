@@ -16,14 +16,14 @@ import java.util.stream.Stream;
 public class TestUtils {
     /**
      * ├── BundleSecurity
-     *      ├── Keys/Server/
-     *          ├── Server_Keys copy
-     *              ├── (6 expected keys)
-     *          ├── Clients
-     *              ├── 1EKo0fp8EKHarKiWehyAXCihSqs=
-     *                  ├── clientBase.pub
-     *                  ├── clientIdentity.pub
-     *                  ├── Session.store
+     * ├── Keys/Server/
+     * ├── Server_Keys copy
+     * ├── (6 expected keys)
+     * ├── Clients
+     * ├── 1EKo0fp8EKHarKiWehyAXCihSqs=
+     * ├── clientBase.pub
+     * ├── clientIdentity.pub
+     * ├── Session.store
      */
     public static String makeEncryptsTempDirs() throws URISyntaxException {
         Path tempDir;
@@ -61,9 +61,9 @@ public class TestUtils {
      * ├──BundleTransmission/(for getReceivedProcessingDirectory)
      * │
      * ├──BundleSecurity
-     *      ├──Keys/Server/
-     *          ├── Server_Keys copy
-     *              ├──(6 expected keys)
+     * ├──Keys/Server/
+     * ├── Server_Keys copy
+     * ├──(6 expected keys)
      *
      * @return String baseDirPath the mock bundle-server.bundle-store-root
      */
@@ -121,7 +121,7 @@ public class TestUtils {
      *
      * @return String resource
      */
-    public static String getFromResources (String res) throws URISyntaxException {
+    public static String getFromResources(String res) throws URISyntaxException {
         ClassLoader cl = TestUtils.class.getClassLoader();
         URL resource = cl.getResource(res);
         if (resource == null) {
@@ -139,7 +139,7 @@ public class TestUtils {
      * @return filePath
      * @throws IOException
      */
-    public static String createResource (String content) throws IOException {
+    public static String createResource(String content) throws IOException {
         Path tempFile = Files.createTempFile("test-properties", ".yml");
         Files.write(tempFile, content.getBytes(), StandardOpenOption.WRITE);
         String filePath = String.valueOf(tempFile.toAbsolutePath());
@@ -178,7 +178,7 @@ public class TestUtils {
     }
 
     public static String trimMessage(String log) {
-            String s = "";
+        String s = "";
         if (log.contains("Encrypting bundle") && log.contains("Finished encrypting")) {
             s = "Encrypting bundle" + "\n" + "Finished encrypting" + "\n";
         } else {

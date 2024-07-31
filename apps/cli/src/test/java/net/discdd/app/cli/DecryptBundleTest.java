@@ -29,6 +29,7 @@ public class DecryptBundleTest {
             "net.discdd.bundlesecurity.SecurityUtils unzip\n" + "INFO: Unzipped to: \n";
     public String expectedOutText = "Decrypting bundle\n" + "Finished decrypting \n";
     String baseDirPath;
+
     @BeforeEach
     public void setUp() throws URISyntaxException, IOException {
         //get applicationYaml from resources
@@ -40,6 +41,7 @@ public class DecryptBundleTest {
         //create appProps
         appProps = TestUtils.createResource("bundle-server.bundle-store-root = " + baseDirPath + File.separator);
     }
+
     @Test
     void testDecryptBundle() throws Exception {
         //executes CLI command
@@ -47,7 +49,8 @@ public class DecryptBundleTest {
         String errText = SystemLambda.tapSystemErr(() -> {
             String outText = SystemLambda.tapSystemOutNormalized(() -> {
                 new CommandLine(new DecryptBundle()).execute("--bundle=" + bundlePath,
-                                                             "--applicationYaml=" + applicationYml, "--appProps=" + appProps);
+                                                             "--applicationYaml=" + applicationYml,
+                                                             "--appProps=" + appProps);
             });
             sb.append(outText);
         });
