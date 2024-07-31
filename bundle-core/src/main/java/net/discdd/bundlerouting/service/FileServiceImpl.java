@@ -36,7 +36,9 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
     protected String senderId;
     protected String uploadingTo;
     protected String downloadingFrom;
+    protected String bundleToDownload;
     protected BundleProcessingInterface processBundle;
+    protected BundleProcessingInterface generateBundle;
 
     public FileServiceImpl(File externalFilesDir, BundleSender sender, String senderId) {
         this.SERVER_BASE_PATH = Paths.get(externalFilesDir + "/BundleTransmission");
@@ -117,6 +119,11 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
     @Override
     public void downloadFile(ReqFilePath request, StreamObserver<Bytes> responseObserver) {
+        if (null != generateBundle) {
+            this.bundleToDownload = request.getValue();
+            generateBundle.execute();
+        }
+
         String requestedPath = String.valueOf(SERVER_BASE_PATH.resolve(downloadingFrom).resolve(request.getValue()));
         logger.log(FINE, "Downloading " + requestedPath);
         File file = new File(requestedPath);
@@ -140,5 +147,9 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
     protected void setProcessBundle(BundleProcessingInterface bundleProcessingImpl) {
         this.processBundle = bundleProcessingImpl;
+    }
+
+    protected void setGenerateBundle(BundleProcessingInterface bundleProcessingImpl){
+        this.generateBundle = bundleProcessingImpl;
     }
 }

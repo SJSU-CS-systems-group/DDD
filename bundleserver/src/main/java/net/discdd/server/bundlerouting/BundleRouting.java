@@ -27,7 +27,7 @@ public class BundleRouting {
     @Autowired
     ServerRoutingRepository serverRoutingRepository;
 
-    public List<String> getClients(String transportId) {
+    public List<String> getClientsForTransportId(String transportId) {
         List<ServerRouting> serverRoutings = serverRoutingRepository.findByServerRoutingIdTransportID(transportId);
         List<String> clientIDs = new ArrayList<>();
         if (serverRoutings != null) {
