@@ -5,17 +5,6 @@
     android:orientation="vertical"
     tools:context=".BundleClientActivity">
 
-    <!--    <fragment-->
-    <!--        android:id="@+id/fragment_fileChooser"-->
-    <!--        android:name="com.ddd.bundleclient.FileChooserFragment"-->
-    <!--        android:layout_width="match_parent"-->
-    <!--        android:layout_height="45dp"-->
-    <!--        android:layout_marginStart="16dp"-->
-    <!--        android:layout_marginLeft="16dp"-->
-    <!--        android:layout_marginTop="16dp"-->
-    <!--        android:layout_marginEnd="16dp"-->
-    <!--        android:layout_marginRight="16dp"-->
-    <!--        tools:layout="@layout/fragment_file_chooser" />-->
     <EditText
         android:id="@+id/domain_input"
         android:layout_width="match_parent"
@@ -80,17 +69,11 @@
         android:text="Response:"
         android:textSize="16sp" />
 
-    <!--    <Button-->
-    <!--        android:id="@+id/detect_transport_button"-->
-    <!--        android:layout_width="match_parent"-->
-    <!--        android:layout_height="wrap_content"-->
-    <!--        android:text="Detect Transport" />-->
-
-    <!--    <Button-->
-    <!--        android:id="@+id/receive_from_transport_button"-->
-    <!--        android:layout_width="match_parent"-->
-    <!--        android:layout_height="wrap_content"-->
-    <!--        android:text="Receive From Transport" />-->
+    <Button
+            android:id="@+id/exchange_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Exchange Data" />
 
     <TextView
         android:id="@+id/grpc_response_text"
@@ -98,21 +81,5 @@
         android:layout_height="282dp"
         android:scrollbars="vertical"
         android:textSize="16sp" />
-
-    <Button
-        android:id="@+id/usb_exchange_button"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="EXCHANGE USB DATA" />
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="USB connection status:" />
-
-    <TextView
-        android:id="@+id/usbconnection_response_text"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
 
 </LinearLayout>

@@ -34,8 +34,11 @@ import net.discdd.wifidirect.WifiDirectStateListener;
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -68,7 +71,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
 
     // bundle transmission set up
     BundleTransmission bundleTransmission;
-    public static boolean usbConnected = false;
 
     // instantiate window for bundles
     public static ClientWindow clientWindow;
@@ -115,7 +117,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         viewPager.setAdapter(adapter);
 
         new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
-            final String[] labels = { "Home", "Permissions", "Logs" };
+            final String[] labels = { "Home", "Permissions", "Usb", "Logs" };
             tab.setText(labels[position]);
         }).attach();
 
@@ -249,6 +251,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         private final BundleClientActivity bundleClientActivity;
         private LogFragment logFragment;
         private PermissionsFragment permissionsFragment;
+        private UsbFragment usbFragment;
 
         public ViewPagerAdapter(@NonNull BundleClientActivity fragmentActivity) {
             super(fragmentActivity);
@@ -261,13 +264,14 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
             return switch (position) {
                 case 0 -> new MainPageFragment();
                 case 1 -> permissionsFragment = new PermissionsFragment();
+                case 2 -> new UsbFragment();
                 default -> logFragment = new LogFragment();
             };
         }
 
         @Override
         public int getItemCount() {
-            return 3;
+            return 4;
         }
     }
 
