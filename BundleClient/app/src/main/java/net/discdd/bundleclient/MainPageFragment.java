@@ -10,6 +10,8 @@ import android.graphics.Color;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
+import android.os.storage.StorageManager;
+import android.os.storage.StorageVolume;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.text.method.ScrollingMovementMethod;
@@ -25,10 +27,13 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import java.io.File;
 import java.net.InetSocketAddress;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 public class MainPageFragment extends Fragment {
@@ -49,7 +54,10 @@ public class MainPageFragment extends Fragment {
     private EditText domainInput;
     private EditText portInput;
     private Button connectServerBtn;
+    private StorageManager storageManager;
+    private static final String usbDirName = "/DDD_transport";
     private static final Logger logger = Logger.getLogger(BundleClientActivity.class.getName());
+    private ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
 
     @Nullable
     @Override
@@ -144,6 +152,7 @@ public class MainPageFragment extends Fragment {
             }
         };
 
+        storageManager = (StorageManager) getActivity().getSystemService(Context.STORAGE_SERVICE);
         //Register USB broadcast receiver
         IntentFilter filter = new IntentFilter();
         filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
@@ -151,7 +160,7 @@ public class MainPageFragment extends Fragment {
         getActivity().registerReceiver(mUsbReceiver, filter);
 
         // Check initial USB connection
-        checkUsbConnection();
+        checkUsbConnection(1);
 
         return view;
     }
@@ -172,33 +181,28 @@ public class MainPageFragment extends Fragment {
             BundleClientActivity.usbConnected = false;
             showUsbDetachedToast();
         } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
-            if (usbDirExists()) {
-                updateUsbStatus(true, "USB connection detected\n", Color.GREEN);
-                BundleClientActivity.usbConnected = true;
-                showUsbAttachedToast();
-            } else {
-                updateUsbStatus(false, "USB was connected, but /DDD_transport directory was not detected\n", Color.RED);
-                BundleClientActivity.usbConnected = false;
-                showUsbAttachedToast();
-            }
+            updateUsbStatus(false, "USB device attached. Checking for storage volumes.\n", Color.BLUE);
+            scheduledExecutor.schedule(() -> checkUsbConnection(1), 1, TimeUnit.SECONDS);
+            showUsbAttachedToast();
         }
     }
 
     //Method to check intial USB connection
-    private void checkUsbConnection() {
-        HashMap<String, UsbDevice> deviceList = usbManager.getDeviceList();
-        if (!deviceList.isEmpty()) {
-            if (usbDirExists()) {
-                BundleClientActivity.usbConnected = true;
-                updateUsbStatus(true, "USB connection detected\n", Color.GREEN);
-                showUsbAttachedToast();
+    private void checkUsbConnection(int tries) {
+        BundleClientActivity.usbConnected = !usbManager.getDeviceList().isEmpty() && usbDirExists();
+        getActivity().getMainExecutor().execute(()-> {
+            if (!usbManager.getDeviceList().isEmpty()) {
+                if (usbDirExists()) {
+                    updateUsbStatus(true, "USB connection detected\n", Color.GREEN);
+                } else {
+                    updateUsbStatus(false, "USB was connected, but /DDD_transport directory was not detected\n", Color.RED);
+                }
             } else {
-                BundleClientActivity.usbConnected = false;
-                updateUsbStatus(false, "USB was connected, but /DDD_transport directory was not detected\n", Color.RED);
-                showUsbAttachedToast();
+                updateUsbStatus(false, "Usb device not connected\n", Color.RED);
             }
-        } else {
-            updateUsbStatus(false, "Usb device not connected\n", Color.RED);
+        });
+        if(tries > 0 && !BundleClientActivity.usbConnected) {
+            scheduledExecutor.schedule(() -> checkUsbConnection(tries - 1), 1, TimeUnit.SECONDS);
         }
     }
 
@@ -251,9 +255,17 @@ public class MainPageFragment extends Fragment {
         Toast.makeText(getActivity(), "USB device attached", Toast.LENGTH_SHORT).show();
     }
 
-    // Method to check if the USB directory exists
+    // Method to check if /DDD_transport directory exists
     private boolean usbDirExists() {
-        // Implement your directory check logic here
+        List<StorageVolume> storageVolumeList = storageManager.getStorageVolumes();
+        for(StorageVolume storageVolume: storageVolumeList) {
+            if(storageVolume.isRemovable()) {
+                File fileUsb = new File(storageVolume.getDirectory().getPath() + usbDirName);
+                if(fileUsb.exists()) {
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
