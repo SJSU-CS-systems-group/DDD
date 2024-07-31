@@ -1,7 +1,5 @@
 package net.discdd.bundleclient;
 
-import static java.util.logging.Level.INFO;
-
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -9,6 +7,7 @@ import android.content.IntentFilter;
 import android.graphics.Color;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
+import android.net.wifi.p2p.WifiP2pDevice;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -17,28 +16,27 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.EditText;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
-import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Objects;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class MainPageFragment extends Fragment {
 
     // gRPC set up
-    private Button connectButton;
-    private Button exchangeButton;
     private Button usbExchangeButton;
-    private Button detectTransportButton;
-    private Button receiveFromTransportButton;
     private FileChooserFragment fragment;
     private TextView resultText;
     private TextView connectedDevicesText;
@@ -50,6 +48,8 @@ public class MainPageFragment extends Fragment {
     private EditText portInput;
     private Button connectServerBtn;
     private static final Logger logger = Logger.getLogger(BundleClientActivity.class.getName());
+    private RecyclerView peersList;
+    private ArrayList<WifiP2pDevice> peers = new ArrayList<>();
 
     @Nullable
     @Override
@@ -58,8 +58,6 @@ public class MainPageFragment extends Fragment {
         View view = inflater.inflate(R.layout.activity_helloworld, container, false);
 
         //Initialize UI elements and buttons
-        connectButton = view.findViewById(R.id.connect_button);
-        exchangeButton = view.findViewById(R.id.exchange_button);
         usbExchangeButton = view.findViewById(R.id.usb_exchange_button);
         resultText = view.findViewById(R.id.grpc_response_text);
         connectedDevicesText = view.findViewById(R.id.connected_device_address);
@@ -69,17 +67,32 @@ public class MainPageFragment extends Fragment {
         domainInput = view.findViewById(R.id.domain_input);
         portInput = view.findViewById(R.id.port_input);
         connectServerBtn = view.findViewById(R.id.btn_connect_bundle_server);
-
-        //set button click listeners to interact with the activity
-        connectButton.setOnClickListener(v -> {
-            if (getActivity() instanceof BundleClientActivity) {
-                ((BundleClientActivity) getActivity()).connectTransport();
+        peersList = view.findViewById(R.id.peers_list);
+        peersList.setLayoutManager(new LinearLayoutManager(getContext()));
+        peersList.setAdapter(new RecyclerView.Adapter() {
+            @NonNull
+            @Override
+            public RecyclerView.ViewHolder onCreateViewHolder(
+                    @NonNull ViewGroup parent, int viewType) {
+                return new RecyclerView.ViewHolder(inflater.inflate(R.layout.peers_list_element, parent, false)) {
+                };
             }
-        });
 
-        exchangeButton.setOnClickListener(v -> {
-            if (getActivity() instanceof BundleClientActivity) {
-                ((BundleClientActivity) getActivity()).exchangeMessage();
+            @Override
+            public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+                TextView name = holder.itemView.findViewById(R.id.peer_name);
+                name.setText(peers.get(position).deviceName);
+                Button action = holder.itemView.findViewById(R.id.peer_exchange);
+                action.setOnClickListener(click -> {
+                    if (getActivity() instanceof BundleClientActivity) {
+                        ((BundleClientActivity) getActivity()).exchangeMessage(peers.get(position), action);
+                    }
+                });
+            }
+
+            @Override
+            public int getItemCount() {
+                return peers.size();
             }
         });
 
@@ -210,28 +223,27 @@ public class MainPageFragment extends Fragment {
     }
 
     // Method to update connected devices text
-    public void updateConnectedDevicesText(List<String> devices) {
-        connectedDevicesText.setText("");
-        for (String device : devices) {
-            connectedDevicesText.append(device + "\n");
-        }
+    public void updateConnectedDevices(HashSet<WifiP2pDevice> devices) {
+        requireActivity().runOnUiThread(() -> {
+            Map<String, WifiP2pDevice> discoveredPeers =
+                    devices.stream().collect(Collectors.toMap(d -> d.deviceName, d -> d));
+            Map<String, WifiP2pDevice> currentPeers =
+                    peers.stream().collect(Collectors.toMap(d -> d.deviceName, d -> d));
+            var newNames = new HashSet<>(discoveredPeers.keySet());
+            newNames.removeAll(currentPeers.keySet());
+            var removedNames = new HashSet<String>(currentPeers.keySet());
+            removedNames.removeAll(discoveredPeers.keySet());
+            peers.removeIf(device -> removedNames.contains(device.deviceName));
+            peers.addAll(newNames.stream().map(discoveredPeers::get)
+                                 .collect(Collectors.toCollection(ArrayList::new)));
+            peersList.getAdapter().notifyDataSetChanged();
+        });
     }
 
     // Method to update Wifi Direct response text
     public void updateWifiDirectResponse(String text) {
-        wifiDirectResponseText.append(text);
+        requireActivity().runOnUiThread(() -> wifiDirectResponseText.setText(text));
     }
-
-    // Method to enable/disable connect button
-    public void setConnectButtonEnabled(boolean isEnabled) {
-        connectButton.setEnabled(isEnabled);
-    }
-
-    // Method to enable/disable exchange button
-    public void setExchangeButtonEnabled(boolean isEnabled) {
-        exchangeButton.setEnabled(isEnabled);
-    }
-
     // Method to set result text
     public void setResultText(String text) {
         resultText.setText(text);

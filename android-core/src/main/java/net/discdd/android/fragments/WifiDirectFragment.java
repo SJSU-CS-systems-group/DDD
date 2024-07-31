@@ -13,7 +13,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import net.discdd.android_core.R;
-
 import net.discdd.wifidirect.WifiDirectManager;
 import net.discdd.wifidirect.WifiDirectManager.WifiDirectEvent;
 import net.discdd.wifidirect.WifiDirectStateListener;
@@ -22,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -119,10 +119,11 @@ public class WifiDirectFragment extends Fragment implements WifiDirectStateListe
             case WIFI_DIRECT_MANAGER_INFO:
                 break;
             case WIFI_DIRECT_MANAGER_PEERS_CHANGED:
-                logger.info("New list of peers: " + wifiDirectManager.getDevicesFound());
+                logger.info("New list of peers: " + wifiDirectManager.getPeerList());
                 getActivity().runOnUiThread(() -> {
-                    listAdapter.updatePeers(wifiDirectManager.getDevicesFound());
-                    status.setText(wifiDirectManager.getDevicesFound().size() + " peers found");
+                    listAdapter.updatePeers(wifiDirectManager.getPeerList().stream().map(m -> m.deviceName).collect(
+                            Collectors.toCollection(HashSet::new)));
+                    status.setText(wifiDirectManager.getPeerList().size() + " peers found");
                 });
                 break;
             case WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_FAILED:
