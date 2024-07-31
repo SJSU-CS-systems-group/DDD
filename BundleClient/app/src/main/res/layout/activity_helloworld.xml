@@ -80,6 +80,12 @@
         android:text="Response:"
         android:textSize="16sp" />
 
+    <Button
+            android:id="@+id/exchange_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Exchange Data" />
+
     <!--    <Button-->
     <!--        android:id="@+id/detect_transport_button"-->
     <!--        android:layout_width="match_parent"-->
@@ -99,20 +105,20 @@
         android:scrollbars="vertical"
         android:textSize="16sp" />
 
-    <Button
-        android:id="@+id/usb_exchange_button"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="EXCHANGE USB DATA" />
+<!--    <Button-->
+<!--        android:id="@+id/usb_exchange_button"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="EXCHANGE USB DATA" />-->
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="USB connection status:" />
+<!--    <TextView-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="USB connection status:" />-->
 
-    <TextView
-        android:id="@+id/usbconnection_response_text"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+<!--    <TextView-->
+<!--        android:id="@+id/usbconnection_response_text"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="match_parent" />-->
 
 </LinearLayout>
