@@ -17,6 +17,7 @@ import java.nio.file.Paths;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
 import androidx.annotation.NonNull;
@@ -43,6 +44,7 @@ public class MessageProvider extends ContentProvider {
     public static final String message = "message";
     public static final String appName = "appName";
     public static final int uriCode = 1;
+    public static final int uriMailCode = 2;
 
     private static HashMap<String, String> values;
     static final UriMatcher uriMatcher;
@@ -59,6 +61,7 @@ public class MessageProvider extends ContentProvider {
     static {
         uriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
         uriMatcher.addURI(PROVIDER_NAME, "messages", uriCode);
+        uriMatcher.addURI(PROVIDER_NAME, "mails", uriMailCode);
     }
 
     private SQLiteDatabase sqlDB;
@@ -99,12 +102,25 @@ public class MessageProvider extends ContentProvider {
 
         try {
             String appId = getCallerAppId();
-            List<byte[]> datalist = receiveADUsStorage.getAllAppData(appId);
             cursor = new MatrixCursor(new String[] { "data" });
-            if (selectionArgs != null && selectionArgs.length != 0 && "clientId".equals(selectionArgs[0])) {
-                cursor.newRow().add("data", ClientSecurity.getInstance().getClientID());
-                return cursor;
+            if (selection != null) {
+                String clientId = ClientSecurity.getInstance().getClientID();
+                if ("clientId".equals(selection)) {
+                    cursor.newRow().add("data", clientId);
+                    return cursor;
+                } else if ("aduIds".equals(selection)) {
+                    List<Long> aduIds = receiveADUsStorage.getAllADUIds(appId);
+                    for (long id : aduIds) {
+                        cursor.newRow().add("data", id);
+                    }
+                    return cursor;
+                } else if ("aduData".equals(selection)) {
+                    assert selectionArgs != null;
+                    cursor.newRow().add("data", receiveADUsStorage.getADU(appId, Long.parseLong(selectionArgs[0])));
+                    return cursor;
+                }
             } else {
+                List<byte[]> datalist = receiveADUsStorage.getAllAppData(appId);
                 for (byte[] data : datalist) {
                     cursor.newRow().add("data", new String(data));
                 }
@@ -144,12 +160,29 @@ public class MessageProvider extends ContentProvider {
     @Override
     public int delete(@NonNull Uri uri, @Nullable String selection, @Nullable String[] selectionArgs) {
         int rowsDeleted = 0;
-
+        String appName = null;
+        try {
+            appName = getCallerAppId();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         // Used to match uris with Content Providers
         switch (uriMatcher.match(uri)) {
             case uriCode:
                 rowsDeleted = sqlDB.delete(TABLE_NAME, selection, selectionArgs);
                 break;
+            case uriMailCode:
+                try {
+                    if ("deleteAllADUsUpto".equals(selection) && selectionArgs != null && selectionArgs.length == 1) {
+                        long lastProcessedADUId = Long.parseLong(selectionArgs[0]);
+                        receiveADUsStorage.deleteAllFilesUpTo(null, appName, lastProcessedADUId);
+                        return 1;
+                    }
+                    return 0;
+                } catch (Exception e) {
+                    logger.log(SEVERE, "Error while deleting processed ADUs for app: " + appName, e);
+                    return 0;
+                }
             default:
                 throw new IllegalArgumentException("Unknown URI " + uri);
         }
@@ -169,7 +202,6 @@ public class MessageProvider extends ContentProvider {
         // Used to match uris with Content Providers
         switch (uriMatcher.match(uri)) {
             case uriCode:
-
                 // Update the row or rows of data
                 rowsUpdated = sqlDB.update(TABLE_NAME, contentValues, selection, selectionArgs);
                 break;
