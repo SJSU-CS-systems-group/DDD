@@ -30,11 +30,15 @@ android {
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
-
     packagingOptions {
-        exclude("META-INF/*")
-        exclude("META-INF/*/*")
+        jniLibs {
+            excludes += ['META-INF/*', 'META-INF/*/*']
+        }
+        resources {
+            excludes += ['META-INF/*', 'META-INF/*/*']
+        }
     }
+
 
     buildTypes {
         debug { minifyEnabled false }
