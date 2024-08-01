@@ -25,8 +25,8 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
     final static Logger logger = Logger.getLogger(K9DDDAdapter.class.getName());
     private StoreADUs sendADUsStorage;
 
-    private final String  APP_ID = "com.fsck.k9.debug";
-    private final String  RAVLY_DOMAIN = "ravlykmail.com";
+    private final String APP_ID = "com.fsck.k9.debug";
+    private final String RAVLY_DOMAIN = "ravlykmail.com";
 
     public K9DDDAdapter(@Value("${k9-server.root-dir}") Path rootDir) {
         sendADUsStorage = new StoreADUs(rootDir.resolve("send"), true);
@@ -42,7 +42,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
                 logger.log(INFO, "Completed processing ADU Id: " + adu.getAduId());
             } else {
                 //TO_DO : Process messages for other domains
-                logger.log(WARNING, "Unable to process ADU Id: " + adu.getAduId()+ " with domain: " + domain);
+                logger.log(WARNING, "Unable to process ADU Id: " + adu.getAduId() + " with domain: " + domain);
             }
 
         }
@@ -57,7 +57,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         for (AppDataUnit adu : aduListRecvd) {
             try {
                 processADUsToSend(adu);
-                if(lastProcessedADUId < adu.getAduId()) {
+                if (lastProcessedADUId < adu.getAduId()) {
                     lastProcessedADUId = adu.getAduId();
                 }
             } catch (IOException e) {
@@ -70,8 +70,8 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
             logger.log(INFO, "Deleted all ADUs till Id:" + lastADUIdRecvd);
         } catch (IOException e) {
             logger.log(SEVERE,
-                       String.format("Error while deleting ADUs for client: {} app: {} till AduId: {}", clientId, APP_ID,
-                                     lastADUIdRecvd), e);
+                       String.format("Error while deleting ADUs for client: {} app: {} till AduId: {}", clientId,
+                                     APP_ID, lastADUIdRecvd), e);
         }
 
         List<AppDataUnit> dataListToReturn = new ArrayList<>();
@@ -88,17 +88,14 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
                 long aduId = adu.getADUId();
                 var data = sendADUsStorage.getADU(clientId, APP_ID, aduId);
                 dataListToReturn.add(
-                        AppDataUnit.newBuilder().setData(ByteString.copyFrom(data)).
-                                setAduId(aduId).
-                                build());
+                        AppDataUnit.newBuilder().setData(ByteString.copyFrom(data)).setAduId(aduId).build());
             }
         } catch (Exception e) {
             logger.log(SEVERE, "Error while building response data for clientId: " + clientId, e);
         }
 
         responseObserver.onNext(
-                ExchangeADUsResponse.newBuilder().addAllAdus(dataListToReturn)
-                        .setLastADUIdReceived(lastProcessedADUId)
+                ExchangeADUsResponse.newBuilder().addAllAdus(dataListToReturn).setLastADUIdReceived(lastProcessedADUId)
                         .build());
 
         responseObserver.onCompleted();

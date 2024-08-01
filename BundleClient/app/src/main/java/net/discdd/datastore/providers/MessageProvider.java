@@ -110,14 +110,13 @@ public class MessageProvider extends ContentProvider {
                     return cursor;
                 } else if ("aduIds".equals(selection)) {
                     List<Long> aduIds = receiveADUsStorage.getAllADUIds(appId);
-                    for(long id: aduIds) {
+                    for (long id : aduIds) {
                         cursor.newRow().add("data", id);
                     }
                     return cursor;
                 } else if ("aduData".equals(selection)) {
                     assert selectionArgs != null;
-                    cursor.newRow().add("data",
-                            receiveADUsStorage.getADU(appId, Long.parseLong(selectionArgs[0])));
+                    cursor.newRow().add("data", receiveADUsStorage.getADU(appId, Long.parseLong(selectionArgs[0])));
                     return cursor;
                 }
             } else {

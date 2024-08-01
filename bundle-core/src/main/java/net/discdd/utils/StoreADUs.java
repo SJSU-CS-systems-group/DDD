@@ -124,8 +124,8 @@ public class StoreADUs {
     public List<Long> getAllADUIds(String appId) throws IOException {
         getIfNotCreateMetadata(null, appId);
         var folder = rootFolder.resolve(appId);
-        return Files.list(folder).map(path -> path.getFileName().toString()).filter(fileName -> !fileName.equals(METADATA_FILENAME))
-                .map(Long::parseLong)
+        return Files.list(folder).map(path -> path.getFileName().toString())
+                .filter(fileName -> !fileName.equals(METADATA_FILENAME)).map(Long::parseLong)
                 .collect(Collectors.toList());
     }
 
