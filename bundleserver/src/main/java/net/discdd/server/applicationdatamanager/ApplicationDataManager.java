@@ -14,7 +14,9 @@ import net.discdd.server.repository.entity.SentAduDetails;
 import net.discdd.server.repository.entity.SentBundleDetails;
 import net.discdd.utils.BundleUtils;
 import net.discdd.utils.StoreADUs;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,6 +40,8 @@ public class ApplicationDataManager {
     private final LastBundleIdSentRepository lastBundleIdSentRepository;
     private final LargestBundleIdReceivedRepository largestBundleIdReceivedRepository;
     private final SentBundleDetailsRepository sentBundleDetailsRepository;
+
+    @Autowired
     private final SentAduDetailsRepository sentAduDetailsRepository;
     private final RegisteredAppAdapterRepository registeredAppAdapterRepository;
     AduDeliveredListener aduDeliveredListener;
@@ -66,6 +70,7 @@ public class ApplicationDataManager {
         return registeredAppAdapterRepository.findAllAppIds().stream().toList();
     }
 
+    @Transactional
     public void processAcknowledgement(String clientId, String bundleId) throws IOException {
         if ("HB".equals(bundleId)) {
             return;

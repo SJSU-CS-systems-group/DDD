@@ -112,6 +112,9 @@ public class BundleSecurity {
                 decryptedPayload.renameTo(decryptedPayloadJar);
             }
         }
+        logger.log(INFO, "[BS] Payload - BundleId: " + bundleId);
+        logger.log(INFO, "[BS] Payload - decryptedPayload: " + decryptedPayloadJar);
+
         return new Payload(bundleId, decryptedPayloadJar);
     }
 

@@ -109,7 +109,7 @@ public class ApplicationDataManager {
 
             try {
                 receiveADUsStorage.addADU(null, adu.getAppId(), Files.readAllBytes(adu.getSource().toPath()),
-                                          adu.getADUId());
+                        adu.getADUId());
                 sendDataToApp(adu);
                 logger.log(FINE, "[ADM] Updated Largest ADU id: " + adu.getADUId() + "," + adu.getSource());
             } catch (IOException e) {
