@@ -4,8 +4,6 @@ import android.content.BroadcastReceiver;
 import android.hardware.usb.UsbManager;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.os.Bundle;
-import android.os.storage.StorageManager;
-import android.os.storage.StorageVolume;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.text.method.ScrollingMovementMethod;
@@ -15,7 +13,6 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
 import android.widget.EditText;
 
 import androidx.annotation.NonNull;
@@ -24,17 +21,11 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import java.io.File;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -50,12 +41,9 @@ public class MainPageFragment extends Fragment {
     private EditText domainInput;
     private EditText portInput;
     private Button connectServerBtn;
-    private StorageManager storageManager;
-    private static final String usbDirName = "/DDD_transport";
     private static final Logger logger = Logger.getLogger(BundleClientActivity.class.getName());
     private RecyclerView peersList;
     private ArrayList<WifiP2pDevice> peers = new ArrayList<>();
-    private ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
 
     @Nullable
     @Override
