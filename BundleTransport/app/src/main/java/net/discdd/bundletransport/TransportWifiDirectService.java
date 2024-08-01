@@ -24,19 +24,26 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.logging.Logger;
 
+/**
+ * This service handles the Wifi Direct group and the gRPC server.
+ * It runs in the background and is designed to stay running even if the
+ * app goes away.
+ * Wifi Direct function calls from the App are passed through to this
+ * service to handle using the TransportWifiDirectServiceBinder which
+ * returns a reference to this service.
+ */
 public class TransportWifiDirectService extends Service
         implements WifiDirectStateListener, RpcServerStateListener,
         FileServiceImpl.FileServiceEventListener {
-    private static final Logger logger = Logger.getLogger(TransportWifiDirectService.class.getName());
     public static final String NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION =
             "net.discdd.bundletransport.CLIENT_LOG";
     public static final String NET_DISCDD_BUNDLETRANSPORT_WIFI_EVENT_ACTION =
             "net.discdd.bundletransport.WIFI_EVENT";
-
+    private static final Logger logger =
+            Logger.getLogger(TransportWifiDirectService.class.getName());
     private final IBinder binder = new TransportWifiDirectServiceBinder();
-    private WifiDirectManager wifiDirectManager;
-
     RpcServer grpcServer = new RpcServer(this);
+    private WifiDirectManager wifiDirectManager;
 
     public TransportWifiDirectService() {
     }
@@ -44,31 +51,30 @@ public class TransportWifiDirectService extends Service
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         int rc = super.onStartCommand(intent, flags, startId);
-        logger.log(INFO, "Starting " + TransportWifiDirectService.class.getName() + " with flags " + flags + " and startId " + startId);
+        logger.log(INFO, "Starting " + TransportWifiDirectService.class.getName() + " with flags " +
+                flags + " and startId " + startId);
         startForeground();
-        logger.log(INFO, "Started " + TransportWifiDirectService.class.getName() + " with flags " + flags + " and startId " + startId);
+        logger.log(INFO, "Started " + TransportWifiDirectService.class.getName() + " with flags " +
+                flags + " and startId " + startId);
         return START_STICKY;
     }
 
     private void startForeground() {
         try {
-            NotificationChannel channel = new NotificationChannel("DDD-Transport", "DDD Bundle Transport", NotificationManager.IMPORTANCE_HIGH);
+            NotificationChannel channel =
+                    new NotificationChannel("DDD-Transport", "DDD Bundle Transport",
+                                            NotificationManager.IMPORTANCE_HIGH);
             channel.setDescription("DDD Transport Service");
 
             var notificationManager = getSystemService(NotificationManager.class);
             notificationManager.createNotificationChannel(channel);
 
             Notification notification =
-                    new NotificationCompat.Builder(this, "DDD-Transport")
-                            .setContentTitle("DDD Bundle Transport")
-                            .build();
-            int type = ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC | ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION;
-            ServiceCompat.startForeground(
-                    /* service = */ this,
-                    /* id = */ 1, // Cannot be 0
-                    /* notification = */ notification,
-                    /* foregroundServiceType = */ type
-            );
+                    new NotificationCompat.Builder(this, "DDD-Transport").setContentTitle(
+                            "DDD Bundle Transport").build();
+            int type = ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC |
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION;
+            ServiceCompat.startForeground(this, 1, notification, type);
         } catch (Exception e) {
             logger.log(SEVERE, "Failed to start foreground service", e);
         }
@@ -77,7 +83,6 @@ public class TransportWifiDirectService extends Service
         wifiDirectManager.initialize();
         wifiDirectManager.createGroup();
     }
-
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -104,23 +109,16 @@ public class TransportWifiDirectService extends Service
         return wifiDirectManager.requestP2pState();
     }
 
-    public class TransportWifiDirectServiceBinder extends Binder {
-        TransportWifiDirectService getService() {
-            return TransportWifiDirectService.this;
-        }
-    }
-
     @Override
     public void onReceiveAction(WifiDirectManager.WifiDirectEvent action) {
         switch (action.type()) {
             case WIFI_DIRECT_MANAGER_FORMED_CONNECTION_FAILED -> {
                 startRpcServer();
             }
-            case WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL-> startRpcServer();
+            case WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL -> startRpcServer();
         }
         broadcastWifiEvent(action);
     }
-
 
     private void startRpcServer() {
         synchronized (grpcServer) {
@@ -163,5 +161,11 @@ public class TransportWifiDirectService extends Service
         intent.putExtra("type", event.type());
         intent.putExtra("message", event.message());
         sendBroadcast(intent);
+    }
+
+    public class TransportWifiDirectServiceBinder extends Binder {
+        TransportWifiDirectService getService() {
+            return TransportWifiDirectService.this;
+        }
     }
 }
