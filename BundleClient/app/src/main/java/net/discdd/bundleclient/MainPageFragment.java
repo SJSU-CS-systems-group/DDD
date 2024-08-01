@@ -89,7 +89,7 @@ public class MainPageFragment extends Fragment {
         });
 
         refreshPeersBtn = view.findViewById(R.id.refresh_peers_button);
-        refreshPeersBtn.setOnClickListener(v -> ((BundleClientActivity)getActivity()).refreshPeers());
+        refreshPeersBtn.setOnClickListener(v -> ((BundleClientActivity) getActivity()).refreshPeers());
         connectServerBtn.setOnClickListener(v -> {
             if (getActivity() instanceof BundleClientActivity) {
                 ((BundleClientActivity) getActivity()).connectToServer(domainInput.getText().toString(),
