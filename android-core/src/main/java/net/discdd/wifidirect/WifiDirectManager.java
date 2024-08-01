@@ -9,6 +9,7 @@ import static net.discdd.wifidirect.WifiDirectManager.WifiDirectEventType.WIFI_D
 import static net.discdd.wifidirect.WifiDirectManager.WifiDirectEventType.WIFI_DIRECT_MANAGER_INITIALIZATION_FAILED;
 import static net.discdd.wifidirect.WifiDirectManager.WifiDirectEventType.WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL;
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
 import android.annotation.SuppressLint;
@@ -27,11 +28,14 @@ import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleOwner;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.logging.Logger;
 
 /**
@@ -109,13 +113,42 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
         }
 
         this.receiver = new WifiDirectBroadcastReceiver(this);
-        getContext().registerReceiver(getReceiver(), getIntentFilter());
-        WifiDirectLifeCycleObserver lifeCycleObserver = new WifiDirectLifeCycleObserver(this);
-        this.lifeCycle.addObserver(lifeCycleObserver);
+        registerWifiIntentReceiver();
+        if (lifeCycle != null) {
+            WifiDirectLifeCycleObserver lifeCycleObserver = new WifiDirectLifeCycleObserver(this);
+            this.lifeCycle.addObserver(lifeCycleObserver);
+        }
 
         this.wifiDirectGroupHostIP = "";
         this.groupHostInfo = "";
         this.isConnected = false;
+    }
+
+    public CompletableFuture<Boolean> internalSetDeviceName(String name) {
+        var completableFuture = new CompletableFuture<Boolean>();
+        var paramTypes = new Class[] { WifiP2pManager.Channel.class, String.class, WifiP2pManager.ActionListener.class };
+        Object[] argList = new Object[] { channel, name, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+                completableFuture.complete(true);
+            }
+            @Override
+            public void onFailure(int reason) {
+                completableFuture.complete(false);
+                logger.log(SEVERE, "SetDeviceName to " + name + " failed rc = " + reason);
+            }
+        }};
+
+        try {
+            Method setDeviceNameMethod = WifiP2pManager.class.getMethod("setDeviceName", paramTypes);
+            setDeviceNameMethod.setAccessible(true);
+            setDeviceNameMethod.invoke(manager, argList);
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException |
+                 IllegalArgumentException e) {
+            logger.log(SEVERE, "SetDeviceName to " + name + " failed", e);
+            completableFuture.complete(false);
+        }
+        return completableFuture;
     }
 
     /**
@@ -268,12 +301,6 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
         return cFuture;
     }
 
-    /**
-     * Directly connect to a device with this WifiP2pConfig
-     *
-     * @param config Config of device to connect to
-     * @return Future containing true if WifiDirect connection successful false if not
-     */
     public CompletableFuture<Boolean> connect(WifiP2pDevice device) {
         CompletableFuture<Boolean> completableFuture = new CompletableFuture<>();
         var config = new WifiP2pConfig();
@@ -394,6 +421,9 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
     public HashSet<WifiP2pDevice> getPeerList() {return discoveredPeers;}
 
     public void wifiDirectEnabled(boolean enabled) {
+        if (enabled) {
+            internalSetDeviceName(deviceName);
+        }
         notifyActionToListeners(
                 enabled ? WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL : WIFI_DIRECT_MANAGER_INITIALIZATION_FAILED,
                 "wifi enabled " + enabled);
@@ -406,6 +436,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
             @Override
             public void onSuccess() {
                 logger.info("Disconnected from " + device.deviceName);
+                discoverPeers();
             }
 
             @Override
@@ -414,6 +445,14 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
             }
         });
         discoverPeers();
+    }
+
+    public CompletionStage<Boolean> requestP2pState() {
+        var completableFuture = new CompletableFuture<Boolean>();
+        manager.requestConnectionInfo(channel, info -> {
+            completableFuture.complete(info.groupFormed);
+        });
+        return completableFuture;
     }
 
     public enum WifiDirectEventType {
@@ -451,7 +490,7 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
          */
         @Override
         public void onResume(@NonNull LifecycleOwner owner) {
-            this.manager.getContext().registerReceiver(this.manager.getReceiver(), this.manager.getIntentFilter());
+            registerWifiIntentReceiver();
         }
 
         /**
@@ -459,8 +498,14 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
          */
         @Override
         public void onPause(@NonNull LifecycleOwner owner) {
-            this.manager.getContext().unregisterReceiver(receiver);
+            unregisterWifiIntentReceiver();
         }
+    }
+    public void unregisterWifiIntentReceiver() {
+        getContext().unregisterReceiver(receiver);
+    }
+    public void registerWifiIntentReceiver() {
+        getContext().registerReceiver(receiver, intentFilter);
     }
 }
 
