@@ -30,37 +30,27 @@ import java.util.stream.Collectors;
 public class TransportWifiDirectFragment extends Fragment {
     private static final Logger logger =
             Logger.getLogger(TransportWifiDirectFragment.class.getName());
-
+    private final BundleTransportWifiEvent bundleTransportWifiEvent =
+            new BundleTransportWifiEvent();
+    private final IntentFilter intentFilter = new IntentFilter();
     private SharedPreferences sharedPref;
     private EditText deviceNameView;
     private TextView myWifiInfoView;
     private TextView clientLogView;
     private TransportWifiDirectService btService;
     private String deviceName;
-    private final BundleTransportWifiEvent bundleTransportWifiEvent = new BundleTransportWifiEvent();
-    private final IntentFilter intentFilter = new IntentFilter();
-
-    public TransportWifiDirectFragment() {
-        intentFilter.addAction(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_WIFI_EVENT_ACTION);
-        intentFilter.addAction(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION);
-    }
-
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        Intent intent = new Intent(getActivity(), TransportWifiDirectService.class);
-        getActivity().bindService(intent, connection, Context.BIND_AUTO_CREATE);
-        getActivity().registerReceiver(bundleTransportWifiEvent, intentFilter, Context.RECEIVER_NOT_EXPORTED);
-    }
-
-    private ServiceConnection connection = new ServiceConnection() {
+    private final ServiceConnection connection = new ServiceConnection() {
 
         @Override
-        public void onServiceConnected(ComponentName className,
-                                       IBinder service) {
+        public void onServiceConnected(ComponentName className, IBinder service) {
             // We've bound to LocalService, cast the IBinder and get LocalService instance.
             var binder = (TransportWifiDirectService.TransportWifiDirectServiceBinder) service;
             btService = binder.getService();
+            btService.requestP2PState().thenAccept(state -> {
+                getActivity().runOnUiThread(() ->
+                myWifiInfoView.setText(state ? "Wifi Ready" : "Wifi not ready"));
+            });
+            updateGroupInfo();
         }
 
         @Override
@@ -69,10 +59,23 @@ public class TransportWifiDirectFragment extends Fragment {
         }
     };
 
+    public TransportWifiDirectFragment() {
+        intentFilter.addAction(
+                TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_WIFI_EVENT_ACTION);
+        intentFilter.addAction(
+                TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION);
+    }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+    }
+
     @Override
     public void onResume() {
         super.onResume();
-        getActivity().registerReceiver(bundleTransportWifiEvent, intentFilter);
+        getActivity().registerReceiver(bundleTransportWifiEvent, intentFilter,
+                                       Context.RECEIVER_NOT_EXPORTED);
 
     }
 
@@ -92,7 +95,7 @@ public class TransportWifiDirectFragment extends Fragment {
         deviceNameView = rootView.findViewById(R.id.device_name);
         sharedPref = getContext().getSharedPreferences("wifi_direct", Context.MODE_PRIVATE);
         deviceName = sharedPref.getString("device_name", "BundleTransport");
-        myWifiInfoView.setText("Wifi not initialized");
+        myWifiInfoView.setText("Wifi state pending...");
 
         deviceNameView.setText(deviceName);
         Button saveDeviceName = rootView.findViewById(R.id.save_device_name);
@@ -132,51 +135,33 @@ public class TransportWifiDirectFragment extends Fragment {
 
             }
         });
+
+        Intent intent = new Intent(getActivity(), TransportWifiDirectService.class);
+        getContext().bindService(intent, connection, Context.BIND_AUTO_CREATE);
+        getContext().registerReceiver(bundleTransportWifiEvent, intentFilter,
+                                      Context.RECEIVER_NOT_EXPORTED);
         return rootView;
     }
 
-    class BundleTransportWifiEvent extends BroadcastReceiver {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (intent.getAction().equals(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION)) {
-                String message = intent.getStringExtra("message");
-                appendToClientLog(message);
-            } else {
-                var actionType = intent.getSerializableExtra("action", WifiDirectManager.WifiDirectEventType.class);
-                var actionMessage = intent.getStringExtra("message");
-                switch (actionType) {
-                    case WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL -> {
-                        appendToClientLog("Wifi Direct initialized");
-                        logger.info("Wifi Direct initialized");
-                        btService.requestGroupInfo().thenAccept(gi -> {
-                            logger.info("Group info: " + gi);
-                            requireActivity().runOnUiThread(() -> {
-                                String addresses;
-                                try {
-                                    NetworkInterface ni = NetworkInterface.getByName(gi.getInterface());
-                                    addresses = ni.getInterfaceAddresses().stream()
-                                            .map(ia -> ia.getAddress().getHostAddress())
-                                            .collect(Collectors.joining(", "));
-                                } catch (SocketException e) {
-                                    addresses = "unknown";
-                                }
-                                String info = "SSID: " + gi.getNetworkName() + '\n' + "Passphrase: " +
-                                        gi.getPassphrase() + '\n' + "Is Group Owner: " + gi.isGroupOwner() +
-                                        '\n' + "Group Owner Address: " + addresses + '\n';
-                                myWifiInfoView.setText(info);
-                            });
-                        });
-                    }
-                    case WIFI_DIRECT_MANAGER_FORMED_CONNECTION_FAILED -> {
-                        appendToClientLog("Wifi Direct connection initiation failed");
-                    }
-                    case WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL-> {
-                        appendToClientLog("Wifi Direct connection initiation successful");
-                    }
+    private void updateGroupInfo() {
+        btService.requestGroupInfo().thenAccept(gi -> {
+            logger.info("Group info: " + gi);
+            requireActivity().runOnUiThread(() -> {
+                String addresses;
+                try {
+                    NetworkInterface ni = NetworkInterface.getByName(gi.getInterface());
+                    addresses = ni.getInterfaceAddresses().stream()
+                            .map(ia -> ia.getAddress().getHostAddress())
+                            .collect(Collectors.joining(", "));
+                } catch (SocketException e) {
+                    addresses = "unknown";
                 }
-            }
-
-        }
+                String info = "SSID: " + gi.getNetworkName() + '\n' + "Passphrase: " +
+                        gi.getPassphrase() + '\n' + "Is Group Owner: " + gi.isGroupOwner() + '\n' +
+                        "Group Owner Address: " + addresses + '\n';
+                myWifiInfoView.setText(info);
+            });
+        });
     }
 
     private void appendToClientLog(String message) {
@@ -187,5 +172,35 @@ public class TransportWifiDirectFragment extends Fragment {
             }
             clientLogView.append(message + '\n');
         });
+    }
+
+    class BundleTransportWifiEvent extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent.getAction()
+                    .equals(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION)) {
+                String message = intent.getStringExtra("message");
+                appendToClientLog(message);
+            } else {
+                var actionType = intent.getSerializableExtra("action",
+                                                             WifiDirectManager.WifiDirectEventType.class);
+                var actionMessage = intent.getStringExtra("message");
+                switch (actionType) {
+                    case WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL -> {
+                        appendToClientLog("Wifi Direct initialized");
+                        logger.info("Wifi Direct initialized");
+                        updateGroupInfo();
+                    }
+                    case WIFI_DIRECT_MANAGER_FORMED_CONNECTION_FAILED -> {
+                        appendToClientLog("Wifi Direct connection initiation failed");
+                    }
+                    case WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL -> {
+                        appendToClientLog("Wifi Direct connection initiation successful");
+                    }
+                }
+            }
+
+        }
+
     }
 }

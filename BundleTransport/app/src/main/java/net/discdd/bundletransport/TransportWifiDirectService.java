@@ -8,7 +8,6 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.os.Binder;
@@ -16,13 +15,13 @@ import android.os.IBinder;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
-import androidx.core.content.ContextCompat;
 
 import net.discdd.bundlerouting.service.FileServiceImpl;
 import net.discdd.wifidirect.WifiDirectManager;
 import net.discdd.wifidirect.WifiDirectStateListener;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.logging.Logger;
 
 public class TransportWifiDirectService extends Service
@@ -52,19 +51,6 @@ public class TransportWifiDirectService extends Service
     }
 
     private void startForeground() {
-        // Before starting the service as foreground check that the app has the
-        // appropriate runtime permissions. In this case, verify that the user
-        // has granted the CAMERA permission.
-        int cameraPermission =
-                ContextCompat.checkSelfPermission(this, "android.permission.ACCESS_FINE_LOCATION");
-        if (cameraPermission == PackageManager.PERMISSION_DENIED) {
-            // Without camera permissions the service cannot run in the
-            // foreground. Consider informing user or updating your app UI if
-            // visible.
-            stopSelf();
-            return;
-        }
-
         try {
             NotificationChannel channel = new NotificationChannel("DDD-Transport", "DDD Bundle Transport", NotificationManager.IMPORTANCE_HIGH);
             channel.setDescription("DDD Transport Service");
@@ -114,6 +100,9 @@ public class TransportWifiDirectService extends Service
         return wifiDirectManager.requestGroupInfo();
     }
 
+    public CompletionStage<Boolean> requestP2PState() {
+        return wifiDirectManager.requestP2pState();
+    }
 
     public class TransportWifiDirectServiceBinder extends Binder {
         TransportWifiDirectService getService() {
@@ -124,9 +113,12 @@ public class TransportWifiDirectService extends Service
     @Override
     public void onReceiveAction(WifiDirectManager.WifiDirectEvent action) {
         switch (action.type()) {
-            case WIFI_DIRECT_MANAGER_FORMED_CONNECTION_FAILED -> startRpcServer();
+            case WIFI_DIRECT_MANAGER_FORMED_CONNECTION_FAILED -> {
+                startRpcServer();
+            }
             case WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL-> startRpcServer();
         }
+        broadcastWifiEvent(action);
     }
 
 
@@ -147,7 +139,6 @@ public class TransportWifiDirectService extends Service
                 grpcServer.shutdownServer();
             }
         }
-
     }
 
     @Override
@@ -160,14 +151,14 @@ public class TransportWifiDirectService extends Service
     }
 
     private void appendToClientLog(String message) {
-        var intent = new Intent();
+        var intent = new Intent(getApplicationContext(), TransportWifiDirectFragment.class);
         intent.setAction(NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION);
         intent.putExtra("message", message);
         sendBroadcast(intent);
     }
 
-    private void wifiEvent(WifiDirectManager.WifiDirectEvent event) {
-        var intent = new Intent();
+    private void broadcastWifiEvent(WifiDirectManager.WifiDirectEvent event) {
+        var intent = new Intent(getApplicationContext(), TransportWifiDirectFragment.class);
         intent.setAction(NET_DISCDD_BUNDLETRANSPORT_WIFI_EVENT_ACTION);
         intent.putExtra("type", event.type());
         intent.putExtra("message", event.message());

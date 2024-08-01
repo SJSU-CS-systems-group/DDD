@@ -1,5 +1,7 @@
 package net.discdd.bundletransport;
 
+import static java.util.logging.Level.WARNING;
+
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
@@ -19,7 +21,6 @@ import com.google.android.material.tabs.TabLayoutMediator;
 
 import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
-import net.discdd.bundletransport.databinding.ActivityBundleTransportBinding;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,15 +29,15 @@ import java.util.logging.Logger;
 
 public class BundleTransportActivity extends AppCompatActivity {
     Logger logger = Logger.getLogger(BundleTransportActivity.class.getName());
+    private TitledFragment serverUploadFragment;
+    private TitledFragment transportWifiFragment;
+
     record ConnectivityEvent(boolean internetAvailable) {}
-   SubmissionPublisher<ConnectivityEvent> connectivityEventPublisher = new SubmissionPublisher<>();
+    private final SubmissionPublisher<ConnectivityEvent> connectivityEventPublisher = new SubmissionPublisher<>();
     private ViewPager2 viewPager2;
     private FragmentStateAdapter viewPager2Adapter;
     private PermissionsFragment permissionsFragment;
     record TitledFragment(String title, Fragment fragment) {}
-    private final TitledFragment serverUploadFragment = new TitledFragment("Upload", new ServerUploadFragment(connectivityEventPublisher));
-    private final TitledFragment transportWifiFragment = new TitledFragment("Local Wifi", new TransportWifiDirectFragment());
-    private ActivityBundleTransportBinding binding;
     ArrayList<TitledFragment> fragments = new ArrayList<>();
     private static final List<String> wifiDirectPermissions = List.of(
             "android.permission.ACCESS_WIFI_STATE",
@@ -50,10 +51,19 @@ public class BundleTransportActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        var c = getApplicationContext().startForegroundService(new Intent(this, TransportWifiDirectService.class));
+        try {
+            getApplicationContext().startForegroundService(new Intent(this, TransportWifiDirectService.class));
+        } catch (Exception e) {
+            logger.log(WARNING, "Failed to start TransportWifiDirectService", e);
+        }
+
         setContentView(R.layout.activity_bundle_transport);
 
         LogFragment.registerLoggerHandler();
+
+        serverUploadFragment = new TitledFragment("Upload", new ServerUploadFragment(connectivityEventPublisher));
+        transportWifiFragment = new TitledFragment("Local Wifi", new TransportWifiDirectFragment());
+
         permissionsFragment = new PermissionsFragment();
         fragments.add(serverUploadFragment);
         fragments.add(transportWifiFragment);

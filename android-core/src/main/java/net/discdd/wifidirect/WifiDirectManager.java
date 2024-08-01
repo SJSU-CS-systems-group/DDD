@@ -35,6 +35,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.logging.Logger;
 
 /**
@@ -444,6 +445,14 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
             }
         });
         discoverPeers();
+    }
+
+    public CompletionStage<Boolean> requestP2pState() {
+        var completableFuture = new CompletableFuture<Boolean>();
+        manager.requestConnectionInfo(channel, info -> {
+            completableFuture.complete(info.groupFormed);
+        });
+        return completableFuture;
     }
 
     public enum WifiDirectEventType {
