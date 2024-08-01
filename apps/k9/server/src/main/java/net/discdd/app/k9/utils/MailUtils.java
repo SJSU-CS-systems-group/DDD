@@ -18,8 +18,8 @@ import static java.util.logging.Level.WARNING;
 public class MailUtils {
     final static Logger logger = Logger.getLogger(MailUtils.class.getName());
 
-    public static List<String> getToAddresses(byte[] rawEmail) {
-        List<String> toAddressList = new ArrayList<>();
+    public static List<String> getToCCBccAddresses(byte[] rawEmail) {
+        List<String> addressList = new ArrayList<>();
         try {
             // Set up a mail session with default properties
             Properties props = new Properties();
@@ -30,15 +30,24 @@ public class MailUtils {
 
             // Get the "to" address
             Address[] toAddresses = message.getRecipients(MimeMessage.RecipientType.TO);
-            if (toAddresses != null && toAddresses.length > 0) {
-                for (Address address : toAddresses) {
-                    toAddressList.add(((InternetAddress) address).getAddress());
-                }
-            }
+            Address[] ccAddresses = message.getRecipients(MimeMessage.RecipientType.CC);
+            Address[] bccAddresses = message.getRecipients(MimeMessage.RecipientType.BCC);
+            addressArrayToStringList(toAddresses, addressList);
+            addressArrayToStringList(ccAddresses, addressList);
+            addressArrayToStringList(bccAddresses, addressList);
+
         } catch (Exception e) {
-            logger.log(SEVERE, "Error parsing mail to fetch To-Addresses", e);
+            logger.log(SEVERE, "Error parsing mail to fetch To, CC and BCCAddresses", e);
         }
-        return toAddressList;
+        return addressList;
+    }
+
+    private static void addressArrayToStringList(Address[] addresses, List<String> addStrList) {
+        if (addresses != null && addresses.length > 0) {
+            for (Address address : addresses) {
+                addStrList.add(((InternetAddress) address).getAddress());
+            }
+        }
     }
 
     public static String getLocalAddress(String address) {
