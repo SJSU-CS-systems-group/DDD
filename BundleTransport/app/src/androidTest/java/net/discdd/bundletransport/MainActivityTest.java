@@ -22,14 +22,14 @@ import org.junit.runner.RunWith;
 public class MainActivityTest {
 
     @Rule
-    public ActivityScenarioRule<BundleTransportActivity> activityRule = new ActivityScenarioRule<>(BundleTransportActivity.class);
+    public ActivityScenarioRule<BundleTransportActivity> activityRule =
+            new ActivityScenarioRule<>(BundleTransportActivity.class);
     @Rule
     public GrantPermissionRule neededPermissions = GrantPermissionRule.grant(Manifest.permission.ACCESS_FINE_LOCATION);
 
     @Test
     public void testGrpcServerState() {
         // Wait for the GRPC server state to be updated in the UI
-        onView(ViewMatchers.withId(R.id.title)).check(
-                matches(withText(containsString("BundleTransport"))));
+        onView(ViewMatchers.withId(R.id.title)).check(matches(withText(containsString("BundleTransport"))));
     }
 }

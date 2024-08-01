@@ -27,11 +27,9 @@ import static java.util.logging.Level.SEVERE;
 
 public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
     public enum FileServiceEvent {
-        UPLOAD_STARTED,
-        DOWNLOAD_STARTED,
-        UPLOAD_FINISHED,
-        DOWNLOAD_FINISHED
+        UPLOAD_STARTED, DOWNLOAD_STARTED, UPLOAD_FINISHED, DOWNLOAD_FINISHED
     }
+
     public interface FileServiceEventListener {
         void onFileServiceEvent(FileServiceEvent event);
     }
@@ -50,7 +48,8 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
         this(externalFilesDir, sender, senderId, null);
     }
 
-    public FileServiceImpl(File externalFilesDir, BundleSender sender, String senderId, FileServiceEventListener listener) {
+    public FileServiceImpl(File externalFilesDir, BundleSender sender, String senderId,
+                           FileServiceEventListener listener) {
         this.listener = listener;
         this.SERVER_BASE_PATH = Paths.get(externalFilesDir + "/BundleTransmission");
         this.sender = sender;

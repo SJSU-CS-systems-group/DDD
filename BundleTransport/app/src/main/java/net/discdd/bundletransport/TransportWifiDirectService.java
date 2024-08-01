@@ -33,14 +33,10 @@ import java.util.logging.Logger;
  * returns a reference to this service.
  */
 public class TransportWifiDirectService extends Service
-        implements WifiDirectStateListener, RpcServerStateListener,
-        FileServiceImpl.FileServiceEventListener {
-    public static final String NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION =
-            "net.discdd.bundletransport.CLIENT_LOG";
-    public static final String NET_DISCDD_BUNDLETRANSPORT_WIFI_EVENT_ACTION =
-            "net.discdd.bundletransport.WIFI_EVENT";
-    private static final Logger logger =
-            Logger.getLogger(TransportWifiDirectService.class.getName());
+        implements WifiDirectStateListener, RpcServerStateListener, FileServiceImpl.FileServiceEventListener {
+    public static final String NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION = "net.discdd.bundletransport.CLIENT_LOG";
+    public static final String NET_DISCDD_BUNDLETRANSPORT_WIFI_EVENT_ACTION = "net.discdd.bundletransport.WIFI_EVENT";
+    private static final Logger logger = Logger.getLogger(TransportWifiDirectService.class.getName());
     private final IBinder binder = new TransportWifiDirectServiceBinder();
     RpcServer grpcServer = new RpcServer(this);
     private WifiDirectManager wifiDirectManager;
@@ -51,29 +47,29 @@ public class TransportWifiDirectService extends Service
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         int rc = super.onStartCommand(intent, flags, startId);
-        logger.log(INFO, "Starting " + TransportWifiDirectService.class.getName() + " with flags " +
-                flags + " and startId " + startId);
+        logger.log(INFO,
+                   "Starting " + TransportWifiDirectService.class.getName() + " with flags " + flags + " and startId " +
+                           startId);
         startForeground();
-        logger.log(INFO, "Started " + TransportWifiDirectService.class.getName() + " with flags " +
-                flags + " and startId " + startId);
+        logger.log(INFO,
+                   "Started " + TransportWifiDirectService.class.getName() + " with flags " + flags + " and startId " +
+                           startId);
         return START_STICKY;
     }
 
     private void startForeground() {
         try {
-            NotificationChannel channel =
-                    new NotificationChannel("DDD-Transport", "DDD Bundle Transport",
-                                            NotificationManager.IMPORTANCE_HIGH);
+            NotificationChannel channel = new NotificationChannel("DDD-Transport", "DDD Bundle Transport",
+                                                                  NotificationManager.IMPORTANCE_HIGH);
             channel.setDescription("DDD Transport Service");
 
             var notificationManager = getSystemService(NotificationManager.class);
             notificationManager.createNotificationChannel(channel);
 
             Notification notification =
-                    new NotificationCompat.Builder(this, "DDD-Transport").setContentTitle(
-                            "DDD Bundle Transport").build();
-            int type = ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC |
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION;
+                    new NotificationCompat.Builder(this, "DDD-Transport").setContentTitle("DDD Bundle Transport")
+                            .build();
+            int type = ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC | ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION;
             ServiceCompat.startForeground(this, 1, notification, type);
         } catch (Exception e) {
             logger.log(SEVERE, "Failed to start foreground service", e);

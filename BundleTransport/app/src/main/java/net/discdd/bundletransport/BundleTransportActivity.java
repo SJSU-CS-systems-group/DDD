@@ -33,19 +33,19 @@ public class BundleTransportActivity extends AppCompatActivity {
     private TitledFragment transportWifiFragment;
 
     record ConnectivityEvent(boolean internetAvailable) {}
+
     private final SubmissionPublisher<ConnectivityEvent> connectivityEventPublisher = new SubmissionPublisher<>();
     private ViewPager2 viewPager2;
     private FragmentStateAdapter viewPager2Adapter;
     private PermissionsFragment permissionsFragment;
+
     record TitledFragment(String title, Fragment fragment) {}
+
     ArrayList<TitledFragment> fragments = new ArrayList<>();
-    private static final List<String> wifiDirectPermissions = List.of(
-            "android.permission.ACCESS_WIFI_STATE",
-            "android.permission.CHANGE_WIFI_STATE",
-            "android.permission.INTERNET",
-            "android.permission.ACCESS_FINE_LOCATION",
-            "android.permission.NEARBY_WIFI_DEVICES"
-            );
+    private static final List<String> wifiDirectPermissions =
+            List.of("android.permission.ACCESS_WIFI_STATE", "android.permission.CHANGE_WIFI_STATE",
+                    "android.permission.INTERNET", "android.permission.ACCESS_FINE_LOCATION",
+                    "android.permission.NEARBY_WIFI_DEVICES");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,15 +79,14 @@ public class BundleTransportActivity extends AppCompatActivity {
             }
 
             @Override
-           public int getItemCount() {
+            public int getItemCount() {
                 return fragments.size();
             }
         };
         viewPager2.setAdapter(viewPager2Adapter);
-        var mediator = new TabLayoutMediator(tabLayout,
-                                             viewPager2,
-                                             (tab, position) -> {
-            tab.setText(fragments.get(position).title);});
+        var mediator = new TabLayoutMediator(tabLayout, viewPager2, (tab, position) -> {
+            tab.setText(fragments.get(position).title);
+        });
         mediator.attach();
     }
 
@@ -103,6 +102,7 @@ public class BundleTransportActivity extends AppCompatActivity {
         });
 
     }
+
     @Override
     protected void onPause() {
         unmonitorUploadTab();
@@ -128,7 +128,7 @@ public class BundleTransportActivity extends AppCompatActivity {
             logger.info("Enabling fragment " + titledFragment.title);
             if (fragments.stream().noneMatch(tf -> tf.fragment == titledFragment.fragment)) {
                 fragments.add(0, titledFragment);
-                viewPager2Adapter.notifyItemRangeChanged(0, fragments.size()-1);
+                viewPager2Adapter.notifyItemRangeChanged(0, fragments.size() - 1);
             }
         });
     }
@@ -141,34 +141,37 @@ public class BundleTransportActivity extends AppCompatActivity {
             for (int i = 0; i < fragments.size(); i++) {
                 if (fragments.get(i).fragment == titledFragment.fragment) {
                     fragments.remove(i);
-                    final var  indexToRemove = i;
-                        viewPager2Adapter.notifyDataSetChanged();
+                    final var indexToRemove = i;
+                    viewPager2Adapter.notifyDataSetChanged();
                     break;
                 }
             }
         });
     }
 
-    private final ConnectivityManager.NetworkCallback uploadTabMonitorCallback = new ConnectivityManager.NetworkCallback() {
-        @Override
-        public void onAvailable(@NonNull Network network) {
-            logger.info("Network available");
-            enableFragment(serverUploadFragment);
-            connectivityEventPublisher.submit(new ConnectivityEvent(true));
-        }
-        @Override
-        public void onLost(Network ni) {
-            logger.info("Network unavailable");
-            disableFragment(serverUploadFragment);
-            connectivityEventPublisher.submit(new ConnectivityEvent(false));
-        }
-        @Override
-        public void onUnavailable() {
-            logger.info("Network unavailable");
-            disableFragment(serverUploadFragment);
-            connectivityEventPublisher.submit(new ConnectivityEvent(false));
-        }
-    };
+    private final ConnectivityManager.NetworkCallback uploadTabMonitorCallback =
+            new ConnectivityManager.NetworkCallback() {
+                @Override
+                public void onAvailable(@NonNull Network network) {
+                    logger.info("Network available");
+                    enableFragment(serverUploadFragment);
+                    connectivityEventPublisher.submit(new ConnectivityEvent(true));
+                }
+
+                @Override
+                public void onLost(Network ni) {
+                    logger.info("Network unavailable");
+                    disableFragment(serverUploadFragment);
+                    connectivityEventPublisher.submit(new ConnectivityEvent(false));
+                }
+
+                @Override
+                public void onUnavailable() {
+                    logger.info("Network unavailable");
+                    disableFragment(serverUploadFragment);
+                    connectivityEventPublisher.submit(new ConnectivityEvent(false));
+                }
+            };
 
     private void unmonitorUploadTab() {
         var connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);

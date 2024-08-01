@@ -28,10 +28,8 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class TransportWifiDirectFragment extends Fragment {
-    private static final Logger logger =
-            Logger.getLogger(TransportWifiDirectFragment.class.getName());
-    private final BundleTransportWifiEvent bundleTransportWifiEvent =
-            new BundleTransportWifiEvent();
+    private static final Logger logger = Logger.getLogger(TransportWifiDirectFragment.class.getName());
+    private final BundleTransportWifiEvent bundleTransportWifiEvent = new BundleTransportWifiEvent();
     private final IntentFilter intentFilter = new IntentFilter();
     private SharedPreferences sharedPref;
     private EditText deviceNameView;
@@ -47,8 +45,7 @@ public class TransportWifiDirectFragment extends Fragment {
             var binder = (TransportWifiDirectService.TransportWifiDirectServiceBinder) service;
             btService = binder.getService();
             btService.requestP2PState().thenAccept(state -> {
-                getActivity().runOnUiThread(() ->
-                myWifiInfoView.setText(state ? "Wifi Ready" : "Wifi not ready"));
+                getActivity().runOnUiThread(() -> myWifiInfoView.setText(state ? "Wifi Ready" : "Wifi not ready"));
             });
             updateGroupInfo();
         }
@@ -60,10 +57,8 @@ public class TransportWifiDirectFragment extends Fragment {
     };
 
     public TransportWifiDirectFragment() {
-        intentFilter.addAction(
-                TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_WIFI_EVENT_ACTION);
-        intentFilter.addAction(
-                TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION);
+        intentFilter.addAction(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_WIFI_EVENT_ACTION);
+        intentFilter.addAction(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION);
     }
 
     @Override
@@ -74,8 +69,7 @@ public class TransportWifiDirectFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        getActivity().registerReceiver(bundleTransportWifiEvent, intentFilter,
-                                       Context.RECEIVER_NOT_EXPORTED);
+        getActivity().registerReceiver(bundleTransportWifiEvent, intentFilter, Context.RECEIVER_NOT_EXPORTED);
 
     }
 
@@ -86,8 +80,7 @@ public class TransportWifiDirectFragment extends Fragment {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View rootView = inflater.inflate(R.layout.fragment_transport_wifi_direct, container, false);
         myWifiInfoView = rootView.findViewById(R.id.my_wifi_info);
@@ -138,8 +131,7 @@ public class TransportWifiDirectFragment extends Fragment {
 
         Intent intent = new Intent(getActivity(), TransportWifiDirectService.class);
         getContext().bindService(intent, connection, Context.BIND_AUTO_CREATE);
-        getContext().registerReceiver(bundleTransportWifiEvent, intentFilter,
-                                      Context.RECEIVER_NOT_EXPORTED);
+        getContext().registerReceiver(bundleTransportWifiEvent, intentFilter, Context.RECEIVER_NOT_EXPORTED);
         return rootView;
     }
 
@@ -150,15 +142,13 @@ public class TransportWifiDirectFragment extends Fragment {
                 String addresses;
                 try {
                     NetworkInterface ni = NetworkInterface.getByName(gi.getInterface());
-                    addresses = ni.getInterfaceAddresses().stream()
-                            .map(ia -> ia.getAddress().getHostAddress())
+                    addresses = ni.getInterfaceAddresses().stream().map(ia -> ia.getAddress().getHostAddress())
                             .collect(Collectors.joining(", "));
                 } catch (SocketException e) {
                     addresses = "unknown";
                 }
-                String info = "SSID: " + gi.getNetworkName() + '\n' + "Passphrase: " +
-                        gi.getPassphrase() + '\n' + "Is Group Owner: " + gi.isGroupOwner() + '\n' +
-                        "Group Owner Address: " + addresses + '\n';
+                String info = "SSID: " + gi.getNetworkName() + '\n' + "Passphrase: " + gi.getPassphrase() + '\n' +
+                        "Is Group Owner: " + gi.isGroupOwner() + '\n' + "Group Owner Address: " + addresses + '\n';
                 myWifiInfoView.setText(info);
             });
         });
@@ -177,13 +167,11 @@ public class TransportWifiDirectFragment extends Fragment {
     class BundleTransportWifiEvent extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (intent.getAction()
-                    .equals(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION)) {
+            if (intent.getAction().equals(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION)) {
                 String message = intent.getStringExtra("message");
                 appendToClientLog(message);
             } else {
-                var actionType = intent.getSerializableExtra("action",
-                                                             WifiDirectManager.WifiDirectEventType.class);
+                var actionType = intent.getSerializableExtra("action", WifiDirectManager.WifiDirectEventType.class);
                 var actionMessage = intent.getStringExtra("message");
                 switch (actionType) {
                     case WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL -> {

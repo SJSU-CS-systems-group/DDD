@@ -38,7 +38,6 @@ public class ServerUploadFragment extends Fragment {
     private String transportID = "bundle_transport";
     private ExecutorService executor = Executors.newFixedThreadPool(2);
 
-
     public ServerUploadFragment(SubmissionPublisher<BundleTransportActivity.ConnectivityEvent> connectivityFlow) {
         this.connectivityFlow = connectivityFlow;
     }
@@ -87,8 +86,8 @@ public class ServerUploadFragment extends Fragment {
                     "Initiating server exchange to " + serverDomain + ":" + serverPort + "...\n"));
 
             ServerManager serverManager =
-                    new ServerManager(requireActivity().getExternalFilesDir(null).toPath(), serverDomain, serverPort, transportID,
-                                      this::sendTask, this::receiveTask, this::connectToServerComplete);
+                    new ServerManager(requireActivity().getExternalFilesDir(null).toPath(), serverDomain, serverPort,
+                                      transportID, this::sendTask, this::receiveTask, this::connectToServerComplete);
             executor.execute(serverManager);
         } else {
             Toast.makeText(getContext(), "Enter the domain and port", Toast.LENGTH_SHORT).show();
@@ -104,6 +103,7 @@ public class ServerUploadFragment extends Fragment {
         editor.putString("port", port);
         editor.apply();
     }
+
     private void restoreDomainPort() {
         domainInput.setText(sharedPref.getString("domain", ""));
         portInput.setText(sharedPref.getString("port", ""));

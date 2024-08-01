@@ -126,18 +126,20 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
 
     public CompletableFuture<Boolean> internalSetDeviceName(String name) {
         var completableFuture = new CompletableFuture<Boolean>();
-        var paramTypes = new Class[] { WifiP2pManager.Channel.class, String.class, WifiP2pManager.ActionListener.class };
+        var paramTypes =
+                new Class[] { WifiP2pManager.Channel.class, String.class, WifiP2pManager.ActionListener.class };
         Object[] argList = new Object[] { channel, name, new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
                 completableFuture.complete(true);
             }
+
             @Override
             public void onFailure(int reason) {
                 completableFuture.complete(false);
                 logger.log(SEVERE, "SetDeviceName to " + name + " failed rc = " + reason);
             }
-        }};
+        } };
 
         try {
             Method setDeviceNameMethod = WifiP2pManager.class.getMethod("setDeviceName", paramTypes);
@@ -501,9 +503,11 @@ public class WifiDirectManager implements WifiP2pManager.ConnectionInfoListener,
             unregisterWifiIntentReceiver();
         }
     }
+
     public void unregisterWifiIntentReceiver() {
         getContext().unregisterReceiver(receiver);
     }
+
     public void registerWifiIntentReceiver() {
         getContext().registerReceiver(receiver, intentFilter);
     }
