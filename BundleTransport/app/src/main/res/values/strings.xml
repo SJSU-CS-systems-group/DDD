@@ -2,10 +2,17 @@
     <string name="app_name">BundleTransport</string>
     <string name="bundle_server_host">trique.homeofcode.com</string>
     <string name="select">Select Item</string>
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
-    <string name="title_activity_bundle_transport">BundleTransportActivity</string>
-    <string name="tab_text_1">Tab 1</string>
-    <string name="tab_text_2">Tab 2</string>
-
+    <string name="wifi_request_groupinfo">"I request groupInfo: "</string>
+    <string name="grpc_running">GRPC Server State: RUNNING</string>
+    <string name="grpc_pending">GRPC Server State: PENDING</string>
+    <string name="grpc_shutdown">GRPC Server State: SHUTDOWN</string>
+    <string name="connecting_to_server">Initiating server exchange to %1$s :%2$s...\n</string>
+    <string name="enter_the_domain_and_port">Enter the domain and port</string>
+    <string name="bundles_upload_failed">Bundles upload failed.\n</string>
+    <string name="bundles_upload_successful">Bundles uploaded successfully.\n</string>
+    <string name="bundles_download_failed">Bundles download failed.\n</string>
+    <string name="bundles_download_successful">Bundles downloaded successfully.\n</string>
+    <string name="saved">Saved</string>
+    <string name="domain">domain</string>
+    <string name="port">port</string>
 </resources>
