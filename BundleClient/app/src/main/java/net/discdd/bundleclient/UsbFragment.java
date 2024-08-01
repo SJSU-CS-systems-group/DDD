@@ -80,7 +80,7 @@ public class UsbFragment extends Fragment {
     private void handleUsbBroadcast(Intent intent) {
         String action = intent.getAction();
         if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
-            updateUsbStatus(false, "No USB connection detected\n", Color.RED);
+            updateUsbStatus(false, getString(R.string.no_usb_connection_detected), Color.RED);
             UsbFragment.usbConnected = false;
             showUsbDetachedToast();
         } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
@@ -118,7 +118,7 @@ public class UsbFragment extends Fragment {
     }
 
     private void showUsbAttachedToast() {
-        Toast.makeText(getActivity(), "USB device attached", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getActivity(), getString(R.string.usb_device_attached), Toast.LENGTH_SHORT).show();
     }
 
     //Method to check if /DDD_transport directory exists
@@ -136,6 +136,6 @@ public class UsbFragment extends Fragment {
     }
 
     private void showUsbDetachedToast() {
-        Toast.makeText(getActivity(), "USB device detached", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getActivity(), getString(R.string.usb_device_detached), Toast.LENGTH_SHORT).show();
     }
 }
