@@ -34,11 +34,8 @@ import net.discdd.wifidirect.WifiDirectStateListener;
 
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -244,6 +241,10 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     public String subscribeToLogs(Consumer<String> logConsumer) {
         this.logConsumer = logConsumer;
         return String.join("\n", logRecords);
+    }
+
+    public void refreshPeers() {
+        wifiDirectManager.discoverPeers();
     }
 
     // ViewPagerAdapter class for managing fragments in the ViewPager
