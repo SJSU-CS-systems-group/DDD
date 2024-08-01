@@ -45,6 +45,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
 
+    <Button
+            android:id="@+id/refresh_peers_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Refresh Peers" />
     <TextView
         android:id="@+id/connected_device_address"
         android:layout_width="match_parent"
@@ -68,12 +73,6 @@
         android:paddingBottom="12dp"
         android:text="Response:"
         android:textSize="16sp" />
-
-    <Button
-            android:id="@+id/exchange_button"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Exchange Data" />
 
     <TextView
         android:id="@+id/grpc_response_text"
