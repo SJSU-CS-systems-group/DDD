@@ -6,19 +6,16 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.text.Editable;
-import android.text.TextWatcher;
+import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.EditText;
 import android.widget.TextView;
 
 import androidx.fragment.app.Fragment;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import net.discdd.wifidirect.WifiDirectManager;
 
@@ -28,15 +25,16 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class TransportWifiDirectFragment extends Fragment {
-    private static final Logger logger = Logger.getLogger(TransportWifiDirectFragment.class.getName());
-    private final BundleTransportWifiEvent bundleTransportWifiEvent = new BundleTransportWifiEvent();
+    private static final Logger logger =
+            Logger.getLogger(TransportWifiDirectFragment.class.getName());
     private final IntentFilter intentFilter = new IntentFilter();
-    private SharedPreferences sharedPref;
-    private EditText deviceNameView;
+    private BundleTransportWifiEvent bundleTransportWifiEvent;
+    private TextView deviceNameView;
     private TextView myWifiInfoView;
     private TextView clientLogView;
+    private View changeDeviceNameView;
     private TransportWifiDirectService btService;
-    private String deviceName;
+    private TextView myWifiStatusView;
     private final ServiceConnection connection = new ServiceConnection() {
 
         @Override
@@ -44,9 +42,8 @@ public class TransportWifiDirectFragment extends Fragment {
             // We've bound to LocalService, cast the IBinder and get LocalService instance.
             var binder = (TransportWifiDirectService.TransportWifiDirectServiceBinder) service;
             btService = binder.getService();
-            btService.requestP2PState().thenAccept(state -> {
-                getActivity().runOnUiThread(() -> myWifiInfoView.setText(state ? "Wifi Ready" : "Wifi not ready"));
-            });
+            btService.requestDeviceInfo()
+                    .thenAccept(TransportWifiDirectFragment.this::processDeviceInfoChange);
             updateGroupInfo();
         }
 
@@ -57,8 +54,32 @@ public class TransportWifiDirectFragment extends Fragment {
     };
 
     public TransportWifiDirectFragment() {
-        intentFilter.addAction(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_WIFI_EVENT_ACTION);
-        intentFilter.addAction(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION);
+        intentFilter.addAction(
+                TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_WIFI_EVENT_ACTION);
+        intentFilter.addAction(
+                TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION);
+    }
+
+    private void processDeviceInfoChange(Void v) {
+        requireActivity().runOnUiThread(() -> {
+            var deviceName = btService.getDeviceName();
+            deviceNameView.setText(deviceName != null ? deviceName : "Unknown");
+            // only show the changeDeviceNameView if we don't have a valid device name
+            // (transports must have device names starting with ddd_)
+            if (deviceName != null) {
+                changeDeviceNameView.setVisibility(
+                        deviceName.startsWith("ddd_") ? View.GONE : View.VISIBLE);
+            }
+            var status = btService.getStatus();
+            myWifiStatusView.setText(switch (status) {
+                case UNDEFINED -> "Unknown";
+                case CONNECTED -> "Connected";
+                case INVITED -> "Invited";
+                case FAILED -> "Failed";
+                case AVAILABLE -> "Available";
+                case UNAVAILABLE -> "Unavailable";
+            });
+        });
     }
 
     @Override
@@ -69,89 +90,78 @@ public class TransportWifiDirectFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        getActivity().registerReceiver(bundleTransportWifiEvent, intentFilter, Context.RECEIVER_NOT_EXPORTED);
-
+        registerBroadcastReceiver();
+        updateGroupInfo();
+        btService.requestDeviceInfo()
+                .thenAccept(TransportWifiDirectFragment.this::processDeviceInfoChange);
     }
 
     @Override
     public void onPause() {
-        getActivity().unregisterReceiver(bundleTransportWifiEvent);
+        unregisterBroadcastReceiver();
         super.onPause();
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View rootView = inflater.inflate(R.layout.fragment_transport_wifi_direct, container, false);
         myWifiInfoView = rootView.findViewById(R.id.my_wifi_info);
+        myWifiStatusView = rootView.findViewById(R.id.my_wifi_status);
+        changeDeviceNameView = rootView.findViewById(R.id.change_device_name);
+        rootView.findViewById(R.id.name_change_button).setOnClickListener(v -> {
+            Intent intent = new Intent(Settings.ACTION_DEVICE_INFO_SETTINGS);
+            startActivity(intent);
+        });
         clientLogView = rootView.findViewById(R.id.client_log);
         deviceNameView = rootView.findViewById(R.id.device_name);
-        sharedPref = getContext().getSharedPreferences("wifi_direct", Context.MODE_PRIVATE);
-        deviceName = sharedPref.getString("device_name", "BundleTransport");
+        deviceNameView.setText("Unknown");
         myWifiInfoView.setText("Wifi state pending...");
 
-        deviceNameView.setText(deviceName);
-        Button saveDeviceName = rootView.findViewById(R.id.save_device_name);
-        Button resetDeviceName = rootView.findViewById(R.id.reset_device_name);
-        saveDeviceName.setEnabled(false);
-        resetDeviceName.setEnabled(false);
-        saveDeviceName.setOnClickListener(v -> {
-            deviceName = deviceNameView.getText().toString();
-            sharedPref.edit().putString("device_name", deviceName).apply();
-            btService.removeGroup().thenAccept(b -> {
-                btService.setDeviceName(deviceName);
-                btService.createGroup();
-            });
-            saveDeviceName.setEnabled(false);
-            resetDeviceName.setEnabled(false);
-        });
-        resetDeviceName.setOnClickListener(v -> {
-            deviceNameView.setText(deviceName);
-            saveDeviceName.setEnabled(false);
-            resetDeviceName.setEnabled(false);
-        });
-
-        deviceNameView.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                boolean nameChanged = !deviceNameView.getText().toString().equals(deviceName);
-                saveDeviceName.setEnabled(nameChanged);
-                resetDeviceName.setEnabled(nameChanged);
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-
-            }
-        });
-
         Intent intent = new Intent(getActivity(), TransportWifiDirectService.class);
-        getContext().bindService(intent, connection, Context.BIND_AUTO_CREATE);
-        getContext().registerReceiver(bundleTransportWifiEvent, intentFilter, Context.RECEIVER_NOT_EXPORTED);
+        requireContext().bindService(intent, connection, Context.BIND_AUTO_CREATE);
+        bundleTransportWifiEvent = new BundleTransportWifiEvent();
+        registerBroadcastReceiver();
         return rootView;
     }
 
+    private void registerBroadcastReceiver() {
+        LocalBroadcastManager.getInstance(requireActivity())
+                .registerReceiver(bundleTransportWifiEvent, intentFilter);
+    }
+
+    private void unregisterBroadcastReceiver() {
+        LocalBroadcastManager.getInstance(requireActivity())
+                .unregisterReceiver(bundleTransportWifiEvent);
+    }
+
     private void updateGroupInfo() {
-        btService.requestGroupInfo().thenAccept(gi -> {
+        if (btService != null) {
+            var gi = btService.getGroupInfo();
             logger.info("Group info: " + gi);
             requireActivity().runOnUiThread(() -> {
-                String addresses;
-                try {
-                    NetworkInterface ni = NetworkInterface.getByName(gi.getInterface());
-                    addresses = ni.getInterfaceAddresses().stream().map(ia -> ia.getAddress().getHostAddress())
-                            .collect(Collectors.joining(", "));
-                } catch (SocketException e) {
-                    addresses = "unknown";
+                String info;
+                if (gi == null) {
+                    info = "Wifi Transport not active";
+                } else {
+                    String addresses;
+                    try {
+                        NetworkInterface ni = NetworkInterface.getByName(gi.getInterface());
+                        addresses = ni.getInterfaceAddresses().stream()
+                                .map(ia -> ia.getAddress().getHostAddress())
+                                .collect(Collectors.joining(", "));
+                    } catch (SocketException e) {
+                        addresses = "unknown";
+                    }
+                    info = "SSID: " + gi.getNetworkName() + '\n' + "Passphrase: " +
+                            gi.getPassphrase() + '\n' + "Is Group Owner: " + gi.isGroupOwner() +
+                            '\n' + "Group Owner Address: " + addresses + '\n';
                 }
-                String info = "SSID: " + gi.getNetworkName() + '\n' + "Passphrase: " + gi.getPassphrase() + '\n' +
-                        "Is Group Owner: " + gi.isGroupOwner() + '\n' + "Group Owner Address: " + addresses + '\n';
                 myWifiInfoView.setText(info);
             });
-        });
+        }
+
     }
 
     private void appendToClientLog(String message) {
@@ -167,23 +177,24 @@ public class TransportWifiDirectFragment extends Fragment {
     class BundleTransportWifiEvent extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (intent.getAction().equals(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION)) {
+            if (intent.getAction() != null && intent.getAction()
+                    .equals(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION)) {
                 String message = intent.getStringExtra("message");
                 appendToClientLog(message);
             } else {
-                var actionType = intent.getSerializableExtra("action", WifiDirectManager.WifiDirectEventType.class);
+                var actionType = intent.getSerializableExtra("type",
+                                                             WifiDirectManager.WifiDirectEventType.class);
                 var actionMessage = intent.getStringExtra("message");
-                switch (actionType) {
-                    case WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL -> {
-                        appendToClientLog("Wifi Direct initialized");
-                        logger.info("Wifi Direct initialized");
-                        updateGroupInfo();
-                    }
-                    case WIFI_DIRECT_MANAGER_FORMED_CONNECTION_FAILED -> {
-                        appendToClientLog("Wifi Direct connection initiation failed");
-                    }
-                    case WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL -> {
-                        appendToClientLog("Wifi Direct connection initiation successful");
+                if (actionType != null) {
+                    switch (actionType) {
+                        case WIFI_DIRECT_MANAGER_INITIALIZED:
+                        case WIFI_DIRECT_MANAGER_DEVICE_INFO_CHANGED:
+                            processDeviceInfoChange(null);
+                            updateGroupInfo();
+                            break;
+                        case WIFI_DIRECT_MANAGER_GROUP_INFO_CHANGED:
+                            updateGroupInfo();
+                            break;
                     }
                 }
             }
