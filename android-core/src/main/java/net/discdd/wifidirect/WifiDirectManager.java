@@ -1,5 +1,6 @@
 package net.discdd.wifidirect;
 
+import static android.net.wifi.p2p.WifiP2pManager.EXTRA_P2P_DEVICE_LIST;
 import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION;
 import static net.discdd.wifidirect.WifiDirectManager.WifiDirectEventType.WIFI_DIRECT_MANAGER_DEVICE_INFO_CHANGED;
 import static net.discdd.wifidirect.WifiDirectManager.WifiDirectEventType.WIFI_DIRECT_MANAGER_INITIALIZED;
@@ -16,6 +17,7 @@ import android.net.NetworkInfo;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
+import android.net.wifi.p2p.WifiP2pDeviceList;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
@@ -190,18 +192,9 @@ public class WifiDirectManager {
         return completableFuture;
     }
 
-    // for use by the transports
-    public void createGroup() {
-        createGroup(deviceName);
-    }
-
-    public CompletableFuture<WifiP2pGroup> createGroup(String targetDevice) {
+    public CompletableFuture<WifiP2pGroup> createGroup() {
         var completableFuture = new CompletableFuture<WifiP2pGroup>();
-        WifiP2pConfig.Builder config = new WifiP2pConfig.Builder();
-        config.setNetworkName("DIRECT-DDD-" + targetDevice);
-        // the transports are not trusted. secrets are meaningless
-        config.setPassphrase("DDDme-NOTSECRET!");
-        this.manager.createGroup(this.channel, config.build(), new WifiP2pManager.ActionListener() {
+        this.manager.createGroup(this.channel, new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
                 requestGroupInfo().thenAccept(completableFuture::complete);
@@ -412,7 +405,11 @@ public class WifiDirectManager {
             // This can be sent as a result of peers being found, lost or updated.
             else if (WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)) {
                 try {
-                    requestPeers();
+                    var newPeerList = intent.getParcelableExtra(EXTRA_P2P_DEVICE_LIST, WifiP2pDeviceList.class);
+                    if (newPeerList != null) {
+                        discoveredPeers = new HashSet<>(newPeerList.getDeviceList());
+                    }
+                    notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_PEERS_CHANGED);
                 } catch (SecurityException e) {
                     logger.log(SEVERE, "SecurityException in requestPeers", e);
                 }

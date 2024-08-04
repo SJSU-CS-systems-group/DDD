@@ -1,5 +1,6 @@
 package net.discdd.bundletransport;
 
+import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -19,8 +20,10 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import net.discdd.wifidirect.WifiDirectManager;
 
+import java.net.Inet4Address;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.util.ArrayList;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -108,6 +111,17 @@ public class TransportWifiDirectFragment extends Fragment {
         // Inflate the layout for this fragment
         View rootView = inflater.inflate(R.layout.fragment_transport_wifi_direct, container, false);
         myWifiInfoView = rootView.findViewById(R.id.my_wifi_info);
+        myWifiInfoView.setOnClickListener(v -> {
+            var gi = btService.getGroupInfo();
+            final var connectedPeers = new ArrayList<String>();
+            if (gi != null) {
+                gi.getClientList().forEach(c -> connectedPeers.add(c.deviceName));
+            }
+            AlertDialog.Builder builder = new AlertDialog.Builder(requireContext())
+                    .setTitle("Connected clients")
+                    .setItems(connectedPeers.toArray(new String[0]), null);
+            builder.create().show();
+        });
         myWifiStatusView = rootView.findViewById(R.id.my_wifi_status);
         changeDeviceNameView = rootView.findViewById(R.id.change_device_name);
         rootView.findViewById(R.id.name_change_button).setOnClickListener(v -> {
@@ -149,14 +163,14 @@ public class TransportWifiDirectFragment extends Fragment {
                     try {
                         NetworkInterface ni = NetworkInterface.getByName(gi.getInterface());
                         addresses = ni.getInterfaceAddresses().stream()
+                                .filter(ia -> ia.getAddress() instanceof Inet4Address)
                                 .map(ia -> ia.getAddress().getHostAddress())
                                 .collect(Collectors.joining(", "));
                     } catch (SocketException e) {
                         addresses = "unknown";
                     }
-                    info = "SSID: " + gi.getNetworkName() + '\n' + "Passphrase: " +
-                            gi.getPassphrase() + '\n' + "Is Group Owner: " + gi.isGroupOwner() +
-                            '\n' + "Group Owner Address: " + addresses + '\n';
+                    info = String.format("SSID: %s\nPassword: %s\nAddress: %s\nConnected devices: %d",
+                                         gi.getNetworkName(), gi.getPassphrase(), addresses, gi.getClientList().size());
                 }
                 myWifiInfoView.setText(info);
             });
