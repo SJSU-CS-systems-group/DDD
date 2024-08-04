@@ -146,12 +146,10 @@ public class MainPageFragment extends Fragment {
     // Method to update connected devices text
     public void updateConnectedDevices(HashSet<WifiP2pDevice> devices) {
         requireActivity().runOnUiThread(() -> {
-            Map<String, WifiP2pDevice> discoveredPeers =
-                    devices.stream()
-                            // we are only looking for bundle transports, and their names start
-                            // with ddd_
-                            .filter(d->d.deviceName.startsWith("ddd_"))
-                            .collect(Collectors.toMap(d -> d.deviceName, d -> d));
+            Map<String, WifiP2pDevice> discoveredPeers = devices.stream()
+                    // we are only looking for bundle transports, and their names start
+                    // with ddd_
+                    .filter(d -> d.deviceName.startsWith("ddd_")).collect(Collectors.toMap(d -> d.deviceName, d -> d));
             Map<String, WifiP2pDevice> currentPeers =
                     peers.stream().collect(Collectors.toMap(d -> d.deviceName, d -> d));
             var newNames = new HashSet<>(discoveredPeers.keySet());
@@ -187,8 +185,8 @@ public class MainPageFragment extends Fragment {
     public void updateOwnerAndGroupInfo(InetAddress groupOwnerAddress, WifiP2pGroup groupInfo) {
         // the groupOwnerAddress doesn't seem to be coming through and the groupInfo owner device
         // name doesn't seem to come through either.
-        var ownerNameAndAddress = groupInfo == null || groupInfo.getOwner() == null ? "Not connected" :
-                "Connected to transport";
+        var ownerNameAndAddress =
+                groupInfo == null || groupInfo.getOwner() == null ? "Not connected" : "Connected to transport";
         connectedDeviceText.setText(ownerNameAndAddress);
     }
 

@@ -28,8 +28,7 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class TransportWifiDirectFragment extends Fragment {
-    private static final Logger logger =
-            Logger.getLogger(TransportWifiDirectFragment.class.getName());
+    private static final Logger logger = Logger.getLogger(TransportWifiDirectFragment.class.getName());
     private final IntentFilter intentFilter = new IntentFilter();
     private BundleTransportWifiEvent bundleTransportWifiEvent;
     private TextView deviceNameView;
@@ -45,8 +44,7 @@ public class TransportWifiDirectFragment extends Fragment {
             // We've bound to LocalService, cast the IBinder and get LocalService instance.
             var binder = (TransportWifiDirectService.TransportWifiDirectServiceBinder) service;
             btService = binder.getService();
-            btService.requestDeviceInfo()
-                    .thenAccept(TransportWifiDirectFragment.this::processDeviceInfoChange);
+            btService.requestDeviceInfo().thenAccept(TransportWifiDirectFragment.this::processDeviceInfoChange);
             updateGroupInfo();
         }
 
@@ -57,10 +55,8 @@ public class TransportWifiDirectFragment extends Fragment {
     };
 
     public TransportWifiDirectFragment() {
-        intentFilter.addAction(
-                TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_WIFI_EVENT_ACTION);
-        intentFilter.addAction(
-                TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION);
+        intentFilter.addAction(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_WIFI_EVENT_ACTION);
+        intentFilter.addAction(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION);
     }
 
     private void processDeviceInfoChange(Void v) {
@@ -70,8 +66,7 @@ public class TransportWifiDirectFragment extends Fragment {
             // only show the changeDeviceNameView if we don't have a valid device name
             // (transports must have device names starting with ddd_)
             if (deviceName != null) {
-                changeDeviceNameView.setVisibility(
-                        deviceName.startsWith("ddd_") ? View.GONE : View.VISIBLE);
+                changeDeviceNameView.setVisibility(deviceName.startsWith("ddd_") ? View.GONE : View.VISIBLE);
             }
             var status = btService.getStatus();
             myWifiStatusView.setText(switch (status) {
@@ -95,8 +90,7 @@ public class TransportWifiDirectFragment extends Fragment {
         super.onResume();
         registerBroadcastReceiver();
         updateGroupInfo();
-        btService.requestDeviceInfo()
-                .thenAccept(TransportWifiDirectFragment.this::processDeviceInfoChange);
+        btService.requestDeviceInfo().thenAccept(TransportWifiDirectFragment.this::processDeviceInfoChange);
     }
 
     @Override
@@ -106,8 +100,7 @@ public class TransportWifiDirectFragment extends Fragment {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View rootView = inflater.inflate(R.layout.fragment_transport_wifi_direct, container, false);
         myWifiInfoView = rootView.findViewById(R.id.my_wifi_info);
@@ -117,8 +110,7 @@ public class TransportWifiDirectFragment extends Fragment {
             if (gi != null) {
                 gi.getClientList().forEach(c -> connectedPeers.add(c.deviceName));
             }
-            AlertDialog.Builder builder = new AlertDialog.Builder(requireContext())
-                    .setTitle("Connected clients")
+            AlertDialog.Builder builder = new AlertDialog.Builder(requireContext()).setTitle("Connected clients")
                     .setItems(connectedPeers.toArray(new String[0]), null);
             builder.create().show();
         });
@@ -141,13 +133,11 @@ public class TransportWifiDirectFragment extends Fragment {
     }
 
     private void registerBroadcastReceiver() {
-        LocalBroadcastManager.getInstance(requireActivity())
-                .registerReceiver(bundleTransportWifiEvent, intentFilter);
+        LocalBroadcastManager.getInstance(requireActivity()).registerReceiver(bundleTransportWifiEvent, intentFilter);
     }
 
     private void unregisterBroadcastReceiver() {
-        LocalBroadcastManager.getInstance(requireActivity())
-                .unregisterReceiver(bundleTransportWifiEvent);
+        LocalBroadcastManager.getInstance(requireActivity()).unregisterReceiver(bundleTransportWifiEvent);
     }
 
     private void updateGroupInfo() {
@@ -164,8 +154,7 @@ public class TransportWifiDirectFragment extends Fragment {
                         NetworkInterface ni = NetworkInterface.getByName(gi.getInterface());
                         addresses = ni.getInterfaceAddresses().stream()
                                 .filter(ia -> ia.getAddress() instanceof Inet4Address)
-                                .map(ia -> ia.getAddress().getHostAddress())
-                                .collect(Collectors.joining(", "));
+                                .map(ia -> ia.getAddress().getHostAddress()).collect(Collectors.joining(", "));
                     } catch (SocketException e) {
                         addresses = "unknown";
                     }
@@ -196,8 +185,7 @@ public class TransportWifiDirectFragment extends Fragment {
                 String message = intent.getStringExtra("message");
                 appendToClientLog(message);
             } else {
-                var actionType = intent.getSerializableExtra("type",
-                                                             WifiDirectManager.WifiDirectEventType.class);
+                var actionType = intent.getSerializableExtra("type", WifiDirectManager.WifiDirectEventType.class);
                 var actionMessage = intent.getStringExtra("message");
                 if (actionType != null) {
                     switch (actionType) {

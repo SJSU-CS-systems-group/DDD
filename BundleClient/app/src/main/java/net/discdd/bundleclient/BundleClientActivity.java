@@ -165,7 +165,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
 //        unregisterReceiver(mUsbReceiver);
     }
 
-
     private void appendResultsMessage(String message) {
         MainPageFragment fragment = getMainPageFragment();
         if (fragment != null) {
@@ -217,31 +216,26 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
             CompletableFuture<WifiP2pGroup> connectionFuture = new CompletableFuture<>();
             connectionFuture.thenAccept(gi -> {
                 updateOwnerNameAndAddress();
-                appendResultsMessage(
-                        String.format("Starting transmission to %s", transportName));
-                new GrpcReceiveTask(this).executeInBackground("192.168.49.1", 7777)
-                        .thenAccept(result -> {
-                            logger.log(INFO, "connection complete!");
-                            runOnUiThread(() -> exchangeButton.setEnabled(true));
-                            wifiDirectManager.disconnect()
-                                    .thenAccept(rc -> {
-                                        // if we try to refreshPeers right away, nothing happens,
-                                        // so we need to wait a second
-                                        runInXMs(this::refreshPeers, 1000);
-                                        updateOwnerNameAndAddress();
-                                    });
-                        });
+                appendResultsMessage(String.format("Starting transmission to %s", transportName));
+                new GrpcReceiveTask(this).executeInBackground("192.168.49.1", 7777).thenAccept(result -> {
+                    logger.log(INFO, "connection complete!");
+                    runOnUiThread(() -> exchangeButton.setEnabled(true));
+                    wifiDirectManager.disconnect().thenAccept(rc -> {
+                        // if we try to refreshPeers right away, nothing happens,
+                        // so we need to wait a second
+                        runInXMs(this::refreshPeers, 1000);
+                        updateOwnerNameAndAddress();
+                    });
+                });
 
             });
 
             synchronized (connectionWaiters) {
-                connectionWaiters.computeIfAbsent(transportName, k -> new ArrayList<>())
-                        .add(connectionFuture);
+                connectionWaiters.computeIfAbsent(transportName, k -> new ArrayList<>()).add(connectionFuture);
             }
             WifiP2pGroup groupInfo = wifiDirectManager.getGroupInfo();
-            if (WifiDirectManager.WifiDirectStatus.CONNECTED.equals(
-                    wifiDirectManager.getStatus()) && groupInfo != null &&
-                    groupInfo.getOwner() != null &&
+            if (WifiDirectManager.WifiDirectStatus.CONNECTED.equals(wifiDirectManager.getStatus()) &&
+                    groupInfo != null && groupInfo.getOwner() != null &&
                     groupInfo.getOwner().deviceName.equals(transportName)) {
                 connectionFuture.complete(groupInfo);
             }
@@ -256,6 +250,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     private void runInXMs(Runnable runnable, long delayMs) {
         new Handler(getApplication().getMainLooper()).postDelayed(runnable, delayMs);
     }
+
     private void updateOwnerNameAndAddress() {
         runOnUiThread(() -> {
             var fragment = getMainPageFragment();
