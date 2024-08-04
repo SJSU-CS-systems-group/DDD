@@ -59,7 +59,7 @@ class GrpcSendTask {
         });
     }
 
-    private void inBackground(String... params) throws Exception {
+    void inBackground(String... params) throws Exception {
         String host = params[0];
         String portStr = params[1];
         int port = Integer.parseInt(portStr);
@@ -116,7 +116,7 @@ class GrpcSendTask {
             @Override
             public void run() {
                 TextView resultText = activity.findViewById(R.id.grpc_response_text);
-                resultText.setText(result);
+                resultText.append(String.format("Send finished: %s\n", result));
             }
         });
         //call UI thread

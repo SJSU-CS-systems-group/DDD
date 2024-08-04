@@ -9,15 +9,14 @@ import android.app.Activity;
 import android.content.Context;
 import android.widget.TextView;
 
-import net.discdd.utils.Constants;
 import net.discdd.bundlerouting.BundleSender;
 import net.discdd.bundlerouting.RoutingExceptions;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
-import net.discdd.client.bundletransmission.BundleTransmission;
-
 import net.discdd.bundletransport.service.Bytes;
 import net.discdd.bundletransport.service.FileServiceGrpc;
 import net.discdd.bundletransport.service.ReqFilePath;
+import net.discdd.client.bundletransmission.BundleTransmission;
+import net.discdd.utils.Constants;
 
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -27,7 +26,6 @@ import org.whispersystems.libsignal.NoSessionException;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.lang.ref.WeakReference;
 import java.net.InetSocketAddress;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
@@ -49,7 +47,6 @@ class GrpcReceiveTask {
     private static final Logger logger = Logger.getLogger(GrpcReceiveTask.class.getName());
 
     private Context applicationContext;
-    private final WeakReference<Activity> activityReference;
     private ManagedChannel channel;
     private final TextView resultText;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -58,7 +55,6 @@ class GrpcReceiveTask {
     private final Activity activity;
 
     GrpcReceiveTask(Activity activity) {
-        this.activityReference = new WeakReference<Activity>(activity);
         this.resultText = (TextView) activity.findViewById(R.id.grpc_response_text);
         this.applicationContext = activity.getApplicationContext();
         this.activity = activity;
@@ -158,8 +154,8 @@ class GrpcReceiveTask {
             InvalidMessageException, WindowExceptions.BufferOverflow, DuplicateMessageException,
             RoutingExceptions.ClientMetaDataFileException, IOException, LegacyMessageException, InvalidKeyException,
             WindowExceptions.InvalidLength, GeneralSecurityException {
+        activity.runOnUiThread(() -> resultText.append(String.format("Receive finished: %s\n", result)));
         if (result.equals("Incomplete")) {
-            activity.runOnUiThread(() -> resultText.append(result + "\n"));
             return;
         }
         try {
@@ -169,17 +165,18 @@ class GrpcReceiveTask {
         }
 
         GrpcSendTask sendTask = new GrpcSendTask(activity);
-        sendTask.executeInBackground(host, port);
+        try {
+            // we are already in the background, so just execute it
+            sendTask.inBackground(host, port);
+        } catch (Exception e) {
+            logger.log(SEVERE, "Problem sending bundle", e);
+        }
 
         String FILE_PATH = applicationContext.getApplicationInfo().dataDir + "/Shared/received-bundles";
         BundleTransmission bundleTransmission =
                 new BundleTransmission(Paths.get(applicationContext.getApplicationInfo().dataDir));
         bundleTransmission.processReceivedBundles(currentSenderId, currentSender, FILE_PATH);
 
-        Activity activity = activityReference.get();
-        if (activity == null) {
-            return;
-        }
     }
 
     private class DownloadObserver implements StreamObserver<Bytes> {
