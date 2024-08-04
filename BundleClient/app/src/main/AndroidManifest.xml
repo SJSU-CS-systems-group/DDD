@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:required="true" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" android:requestLegacyExternalStorage="true"/>
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" android:required="true" />
@@ -11,7 +9,8 @@
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"/>
+    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"
+            android:usesPermissionFlags="neverForLocation" />
     <uses-permission android:name="android.permission.USB_PERMISSION"/>
     <permission android:name="net.discdd.bundleclient.permission.MESSAGE_PROVIDER_WRITE" android:protectionLevel="normal" />
     <permission android:name="net.discdd.bundleclient.permission.MESSAGE_PROVIDER_READ" android:protectionLevel="normal" />

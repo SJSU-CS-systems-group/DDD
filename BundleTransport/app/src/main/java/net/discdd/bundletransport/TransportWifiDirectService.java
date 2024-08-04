@@ -15,13 +15,13 @@ import android.os.IBinder;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import net.discdd.bundlerouting.service.FileServiceImpl;
 import net.discdd.wifidirect.WifiDirectManager;
 import net.discdd.wifidirect.WifiDirectStateListener;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.logging.Logger;
 
 /**
@@ -46,7 +46,7 @@ public class TransportWifiDirectService extends Service
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        int rc = super.onStartCommand(intent, flags, startId);
+        super.onStartCommand(intent, flags, startId);
         logger.log(INFO,
                    "Starting " + TransportWifiDirectService.class.getName() + " with flags " + flags + " and startId " +
                            startId);
@@ -69,15 +69,14 @@ public class TransportWifiDirectService extends Service
             Notification notification =
                     new NotificationCompat.Builder(this, "DDD-Transport").setContentTitle("DDD Bundle Transport")
                             .build();
-            int type = ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC | ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION;
+            int type = ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC;
             ServiceCompat.startForeground(this, 1, notification, type);
         } catch (Exception e) {
             logger.log(SEVERE, "Failed to start foreground service", e);
         }
 
-        wifiDirectManager = new WifiDirectManager(this, null, this, "BundleTransport", true);
+        wifiDirectManager = new WifiDirectManager(this, null, this, true);
         wifiDirectManager.initialize();
-        wifiDirectManager.createGroup();
     }
 
     @Override
@@ -85,33 +84,19 @@ public class TransportWifiDirectService extends Service
         return binder;
     }
 
-    public CompletableFuture<Boolean> removeGroup() {
-        return wifiDirectManager.removeGroup();
-    }
-
-    public void setDeviceName(String deviceName) {
-        wifiDirectManager.setDeviceName(deviceName);
-    }
-
-    public void createGroup() {
-        wifiDirectManager.createGroup();
-    }
-
-    public CompletableFuture<WifiP2pGroup> requestGroupInfo() {
-        return wifiDirectManager.requestGroupInfo();
-    }
-
-    public CompletionStage<Boolean> requestP2PState() {
-        return wifiDirectManager.requestP2pState();
-    }
-
     @Override
     public void onReceiveAction(WifiDirectManager.WifiDirectEvent action) {
         switch (action.type()) {
-            case WIFI_DIRECT_MANAGER_FORMED_CONNECTION_FAILED -> {
-                startRpcServer();
-            }
-            case WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL -> startRpcServer();
+            case WIFI_DIRECT_MANAGER_GROUP_INFO_CHANGED:
+                var groupInfo = wifiDirectManager.getGroupInfo();
+                if (groupInfo == null || groupInfo.getClientList().isEmpty()) {
+                    appendToClientLog("No clients connected. Shutting down gRPC server");
+                    stopRpcServer();
+                } else {
+                    appendToClientLog(String.format("%d clients connected. Starting gRPC server",
+                                                    groupInfo.getClientList().size()));
+                    startRpcServer();
+                }
         }
         broadcastWifiEvent(action);
     }
@@ -148,15 +133,31 @@ public class TransportWifiDirectService extends Service
         var intent = new Intent(getApplicationContext(), TransportWifiDirectFragment.class);
         intent.setAction(NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION);
         intent.putExtra("message", message);
-        sendBroadcast(intent);
+        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
     }
 
     private void broadcastWifiEvent(WifiDirectManager.WifiDirectEvent event) {
-        var intent = new Intent(getApplicationContext(), TransportWifiDirectFragment.class);
-        intent.setAction(NET_DISCDD_BUNDLETRANSPORT_WIFI_EVENT_ACTION);
+        //var intent = new Intent(getApplicationContext(), TransportWifiDirectFragment.class);
+        var intent = new Intent(NET_DISCDD_BUNDLETRANSPORT_WIFI_EVENT_ACTION);
         intent.putExtra("type", event.type());
         intent.putExtra("message", event.message());
-        sendBroadcast(intent);
+        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+    }
+
+    public CompletableFuture<Void> requestDeviceInfo() {
+        return wifiDirectManager.requestDeviceInfo();
+    }
+
+    public String getDeviceName() {
+        return wifiDirectManager.getDeviceName();
+    }
+
+    public WifiDirectManager.WifiDirectStatus getStatus() {
+        return wifiDirectManager.getStatus();
+    }
+
+    public WifiP2pGroup getGroupInfo() {
+        return wifiDirectManager.getGroupInfo();
     }
 
     public class TransportWifiDirectServiceBinder extends Binder {
