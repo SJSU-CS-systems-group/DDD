@@ -2,8 +2,8 @@ package net.discdd.app.k9;
 
 import io.grpc.ConnectivityState;
 import io.grpc.ManagedChannelBuilder;
-import net.discdd.server.ConnectionData;
-import net.discdd.server.ServiceAdapterRegistryGrpc;
+import net.discdd.grpc.ConnectionData;
+import net.discdd.grpc.ServiceAdapterRegistryServiceGrpc;
 import org.springframework.boot.Banner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -50,8 +50,9 @@ public class K9Application {
                 if (false && channelState != ConnectivityState.READY) {
                     logger.log(WARNING, String.format("Could not connect to %s %s", bundleServerURL, channelState));
                 } else {
-                    var rsp = ServiceAdapterRegistryGrpc.newBlockingStub(managedChannel)
-                            .registerAdapter(ConnectionData.newBuilder().setAppName(appName).setUrl(myGrpcUrl).build());
+                    var rsp = ServiceAdapterRegistryServiceGrpc.newBlockingStub(managedChannel)
+                            .checkAdapterRegistration(
+                                    ConnectionData.newBuilder().setAppName(appName).setUrl(myGrpcUrl).build());
                     if (rsp.getCode() != 0) {
                         logger.log(WARNING,
                                    String.format("Could not register with BundleServer: rc = %d %s", rsp.getCode(),

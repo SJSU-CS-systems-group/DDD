@@ -1,20 +1,14 @@
 package net.discdd.bundleclient;
 
-import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
 import android.content.Context;
 import android.net.ConnectivityManager;
-import android.net.Network;
-import android.net.NetworkCapabilities;
-import android.net.NetworkInfo;
-import android.net.NetworkRequest;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.os.Bundle;
 import android.os.Handler;
-import android.widget.Button;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -49,13 +43,13 @@ import java.util.logging.Logger;
 public class BundleClientActivity extends AppCompatActivity implements WifiDirectStateListener {
 
     // Wifi Direct set up
-    private WifiDirectManager wifiDirectManager;
+    WifiDirectManager wifiDirectManager;
     private ExecutorService wifiDirectExecutor = Executors.newFixedThreadPool(1);
 
     //constant
     private static final Logger logger = Logger.getLogger(BundleClientActivity.class.getName());
-    private ConnectivityManager connectivityManager;
-    private ConnectivityManager.NetworkCallback serverConnectNetworkCallback;
+    ConnectivityManager connectivityManager;
+
     //  private BundleDeliveryAgent agent;
     // context
     public static Context ApplicationContext;
@@ -79,6 +73,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         if (logRecords == null) {
             logRecords = new LinkedList<>();
             Logger.getLogger("").addHandler(new java.util.logging.Handler() {
@@ -165,7 +160,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
 //        unregisterReceiver(mUsbReceiver);
     }
 
-    private void appendResultsMessage(String message) {
+    void appendResultsMessage(String message) {
         MainPageFragment fragment = getMainPageFragment();
         if (fragment != null) {
             fragment.appendResultText(message + "\n");
@@ -173,10 +168,11 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     }
 
     // A list of futures waiting to connect to a transport by the device name of transport
-    private final HashMap<String, ArrayList<CompletableFuture<WifiP2pGroup>>> connectionWaiters = new HashMap<>();
+    final HashMap<String, ArrayList<CompletableFuture<WifiP2pGroup>>> connectionWaiters = new HashMap<>();
 
     @Override
     public void onReceiveAction(WifiDirectManager.WifiDirectEvent action) {
+        var fragment = getMainPageFragment();
         switch (action.type()) {
             case WIFI_DIRECT_MANAGER_INITIALIZED:
                 appendResultsMessage("Wifi initialized\n");
@@ -198,10 +194,16 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
                         }
                     }
                 }
-                updateOwnerNameAndAddress();
+                if (fragment != null) {
+                    fragment.updateOwnerAndGroupInfo(wifiDirectManager.getGroupOwnerAddress(),
+                                                     wifiDirectManager.getGroupInfo());
+                }
                 break;
             case WIFI_DIRECT_MANAGER_DEVICE_INFO_CHANGED:
-                updateOwnerNameAndAddress();
+                if (fragment != null) {
+                    fragment.updateOwnerAndGroupInfo(wifiDirectManager.getGroupOwnerAddress(),
+                                                     wifiDirectManager.getGroupInfo());
+                }
                 break;
             case WIFI_DIRECT_MANAGER_CONNECTION_CHANGED:
                 refreshPeers();
@@ -209,56 +211,8 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         }
     }
 
-    public void exchangeMessage(WifiP2pDevice device, Button exchangeButton) {
-        exchangeButton.setEnabled(false);
-        wifiDirectManager.connect(device).thenAccept(c -> {
-            String transportName = device.deviceName;
-            CompletableFuture<WifiP2pGroup> connectionFuture = new CompletableFuture<>();
-            connectionFuture.thenAccept(gi -> {
-                updateOwnerNameAndAddress();
-                appendResultsMessage(String.format("Starting transmission to %s", transportName));
-                new GrpcReceiveTask(this).executeInBackground("192.168.49.1", 7777).thenAccept(result -> {
-                    logger.log(INFO, "connection complete!");
-                    runOnUiThread(() -> exchangeButton.setEnabled(true));
-                    wifiDirectManager.disconnect().thenAccept(rc -> {
-                        // if we try to refreshPeers right away, nothing happens,
-                        // so we need to wait a second
-                        runInXMs(this::refreshPeers, 1000);
-                        updateOwnerNameAndAddress();
-                    });
-                });
-
-            });
-
-            synchronized (connectionWaiters) {
-                connectionWaiters.computeIfAbsent(transportName, k -> new ArrayList<>()).add(connectionFuture);
-            }
-            WifiP2pGroup groupInfo = wifiDirectManager.getGroupInfo();
-            if (WifiDirectManager.WifiDirectStatus.CONNECTED.equals(wifiDirectManager.getStatus()) &&
-                    groupInfo != null && groupInfo.getOwner() != null &&
-                    groupInfo.getOwner().deviceName.equals(transportName)) {
-                connectionFuture.complete(groupInfo);
-            }
-
-            // stop trying after 20 seconds
-            // we should have already connected by then and the future will be stale but just in
-            // case there is a problem we don't want to hang for more than 10 seconds
-            runInXMs(() -> connectionFuture.complete(null), 10000);
-        });
-    }
-
-    private void runInXMs(Runnable runnable, long delayMs) {
+    void runInXMs(Runnable runnable, long delayMs) {
         new Handler(getApplication().getMainLooper()).postDelayed(runnable, delayMs);
-    }
-
-    private void updateOwnerNameAndAddress() {
-        runOnUiThread(() -> {
-            var fragment = getMainPageFragment();
-            if (fragment != null) {
-                fragment.updateOwnerAndGroupInfo(wifiDirectManager.getGroupOwnerAddress(),
-                                                 wifiDirectManager.getGroupInfo());
-            }
-        });
     }
 
     // Method to update connected devices text
@@ -310,59 +264,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         @Override
         public int getItemCount() {
             return 4;
-        }
-    }
-
-    void createAndRegisterConnectivityManager(String serverDomain, String serverPort) {
-        connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkRequest networkRequest =
-                new NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-                        .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR).build();
-
-        serverConnectNetworkCallback = new ConnectivityManager.NetworkCallback() {
-            @Override
-            public void onAvailable(Network network) {
-                logger.log(INFO, "Available network: " + network.toString());
-                logger.log(INFO, "Initiating automatic connection to server");
-                connectToServer(serverDomain, serverPort);
-            }
-
-            MainPageFragment fragment = getMainPageFragment();
-
-            @Override
-            public void onLost(Network network) {
-                logger.log(WARNING, "Lost network connectivity");
-                if (null != fragment) fragment.setConnectServerBtn(false);
-            }
-
-            @Override
-            public void onUnavailable() {
-                logger.log(WARNING, "Unavailable network connectivity");
-                if (null != fragment) fragment.setConnectServerBtn(false);
-            }
-
-            @Override
-            public void onBlockedStatusChanged(Network network, boolean blocked) {
-                logger.log(WARNING, "Blocked network connectivity");
-                if (null != fragment) fragment.setConnectServerBtn(false);
-            }
-        };
-
-        connectivityManager.registerNetworkCallback(networkRequest, serverConnectNetworkCallback);
-
-        NetworkInfo activeNetwork = connectivityManager.getActiveNetworkInfo();
-        if (activeNetwork == null || !activeNetwork.isConnectedOrConnecting()) {
-            MainPageFragment fragment = getMainPageFragment();
-            if (null != fragment) fragment.setConnectServerBtn(false);
-        }
-    }
-
-    void connectToServer(String serverDomain, String serverPort) {
-        if (!serverDomain.isEmpty() && !serverPort.isEmpty()) {
-            logger.log(INFO, "Sending to " + serverDomain + ":" + serverPort);
-            new GrpcReceiveTask(this).executeInBackground(serverDomain, Integer.parseInt(serverPort));
-
         }
     }
 }
