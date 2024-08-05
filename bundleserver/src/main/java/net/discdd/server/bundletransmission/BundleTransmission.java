@@ -233,7 +233,8 @@ public class BundleTransmission {
         return this.serverWindowService.getCurrentbundleID(clientId);
     }
 
-    private BundleTransferDTO generateBundleForTransmission(String sender, String clientId, Set<String> bundleIdsPresent) throws ClientWindowNotFound
+    private BundleTransferDTO generateBundleForTransmission(String sender, String clientId,
+                                                            Set<String> bundleIdsPresent) throws ClientWindowNotFound
             , SQLException, InvalidClientIDException, GeneralSecurityException, InvalidKeyException,
             InvalidClientSessionException, IOException {
         logger.log(INFO, "[BundleTransmission] Processing bundle generation request for client " + clientId);
@@ -268,7 +269,8 @@ public class BundleTransmission {
             toSendOpt = Optional.of(toSend);
             isRetransmission = true;
 
-        } else if (!generatedPayloadBuilder.getADUs().isEmpty()) { // to ensure we never send a pure ack bundle i.e. a bundle with no ADUs
+        } else if (!generatedPayloadBuilder.getADUs()
+                .isEmpty()) { // to ensure we never send a pure ack bundle i.e. a bundle with no ADUs
             if (optional.isEmpty()) { // no bundle ever sent
                 bundleId = this.generateBundleId(clientId);
             } else {
@@ -290,7 +292,8 @@ public class BundleTransmission {
 
         if (toSendOpt.isPresent()) {
             UncompressedPayload toSendBundlePayload = toSendOpt.get();
-            if (BundleSender.Transport.name().equals(sender) && bundleIdsPresent.contains(toSendBundlePayload.getBundleId())) {
+            if (BundleSender.Transport.name().equals(sender) &&
+                    bundleIdsPresent.contains(toSendBundlePayload.getBundleId())) {
                 deletionSet.addAll(bundleIdsPresent);
                 deletionSet.remove(toSendBundlePayload.getBundleId());
                 // We dont add toSend to bundlesToSend because the bundle is already on the transport.
@@ -308,8 +311,7 @@ public class BundleTransmission {
                                                                                            this.config.getBundleTransmission()
                                                                                                    .getEncryptedPayloadDirectory());
 
-                File toSendTxpDir =
-                        this.config.getBundleTransmission().getToSendDirectory().resolve(clientId).toFile();
+                File toSendTxpDir = this.config.getBundleTransmission().getToSendDirectory().resolve(clientId).toFile();
                 toSendTxpDir.mkdirs();
 
                 Bundle toSend = this.bundleUtils.compressBundle(uncompressedBundle, toSendTxpDir.toPath());
@@ -321,14 +323,17 @@ public class BundleTransmission {
         return new BundleTransferDTO(deletionSet, bundlesToSend);
     }
 
-    public BundleTransferDTO generateBundlesForTransmission(String sender, String senderId, Set<String> bundleIdsPresent) throws SQLException, ClientWindowNotFound, InvalidClientIDException, GeneralSecurityException, InvalidClientSessionException, IOException, InvalidKeyException {
+    public BundleTransferDTO generateBundlesForTransmission(String sender, String senderId,
+                                                            Set<String> bundleIdsPresent) throws SQLException,
+            ClientWindowNotFound, InvalidClientIDException, GeneralSecurityException, InvalidClientSessionException,
+            IOException, InvalidKeyException {
         List<String> clientIds = null;
         if (null != sender && BundleSender.Client.name().equals(sender))
             clientIds = Collections.singletonList(senderId);
         else clientIds = this.bundleRouting.getClientsForTransportId(senderId);
 
-        logger.log(SEVERE,
-                   "[BundleTransmission] Found " + clientIds.size() + " reachable from the sender: " + sender + " with Id: " + senderId);
+        logger.log(SEVERE, "[BundleTransmission] Found " + clientIds.size() + " reachable from the sender: " + sender +
+                " with Id: " + senderId);
         Set<String> deletionSet = new HashSet<>();
         List<BundleDTO> bundlesToSend = new ArrayList<>();
         Map<String, Set<String>> clientIdToBundleIds = new HashMap<>();
@@ -364,7 +369,8 @@ public class BundleTransmission {
         }
 
         for (String clientId : clientIds) {
-            File recvTransportSubDir = this.config.getBundleTransmission().getToSendDirectory().resolve(clientId).toFile();
+            File recvTransportSubDir =
+                    this.config.getBundleTransmission().getToSendDirectory().resolve(clientId).toFile();
 
             File[] bundleFilesForClientId = recvTransportSubDir.listFiles(file -> !file.isHidden());
 

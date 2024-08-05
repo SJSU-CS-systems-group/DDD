@@ -168,7 +168,7 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
         this.processBundle = bundleProcessingImpl;
     }
 
-    protected void setGenerateBundle(BundleProcessingInterface bundleProcessingImpl){
+    protected void setGenerateBundle(BundleProcessingInterface bundleProcessingImpl) {
         this.generateBundle = bundleProcessingImpl;
     }
 }

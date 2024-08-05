@@ -63,14 +63,16 @@ public class ClientFileServiceImpl extends FileServiceImpl {
                 }
             }
 
-                @Override public void onError (Throwable throwable){
-                    logger.log(Level.SEVERE, "Error downloading file: " + throwable.getMessage(), throwable);
-                }
+            @Override
+            public void onError(Throwable throwable) {
+                logger.log(Level.SEVERE, "Error downloading file: " + throwable.getMessage(), throwable);
+            }
 
-                @Override public void onCompleted () {
-                    logger.log(Level.INFO, "File download complete");
-                }
-            };
-        bundleServerService.downloadBundle(request,downloadObserver);
-        }
+            @Override
+            public void onCompleted() {
+                logger.log(Level.INFO, "File download complete");
+            }
+        };
+        bundleServerService.downloadBundle(request, downloadObserver);
     }
+}
