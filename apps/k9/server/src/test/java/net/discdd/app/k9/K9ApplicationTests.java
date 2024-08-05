@@ -1,8 +1,5 @@
 package net.discdd.app.k9;
 
-import io.grpc.ManagedChannelBuilder;
-import net.discdd.server.ServiceAdapterGrpc;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
