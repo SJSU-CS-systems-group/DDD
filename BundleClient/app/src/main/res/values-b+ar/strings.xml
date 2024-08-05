@@ -1,0 +1,37 @@
+<resources>
+    <string name="android.permission.ACCESS_FINE_LOCATION">الوصول إلى الموقع الدقيق</string>
+    <string name="android.permission.ACCESS_WIFI_STATE">فحص حالة الواي فاي</string>
+    <string name="android.permission.CHANGE_WIFI_STATE">تغيير الواي فاي</string>
+    <string name="android.permission.INTERNET">استخدام الشبكة</string>
+    <string name="android.permission.NEARBY_WIFI_DEVICES">البحث عن أجهزة الواي فاي القريبة</string>
+    <string name="app_name">عميلالحزم</string>
+    <string name="tansport_host">ddd_النقل</string>
+    <string name="hello_blank_fragment">مرحبا بالجزء الفارغ</string>
+    <string name="home_tab">الرئيسية</string>
+    <string name="permissions_tab">الأذونات</string>
+    <string name="usb_tab">يو إس بي</string>
+    <string name="logs_tab">السجلات</string>
+    <string name="starting_file_receive">بدء استلام الملف...\n</string>
+    <string name="incomplete_bundle_request">طلب غير مكتمل %1$ %2$</string>
+    <string name="failed">فشل</string>
+    <string name="completed">مكتمل</string>
+    <string name="incomplete">غير مكتمل</string>
+    <string name="complete">مكتمل</string>
+    <string name="failed_file_transfer">فشل... : %s</string>
+    <string name="no_usb_connection_detected">لم يتم الكشف عن اتصال يو إس بي\n</string>
+    <string name="usb_connection_detected">تم الكشف عن اتصال يو إس بي\n</string>
+    <string name="usb_transport_directory_was_not_detected">تم توصيل USB، ولكن لم يتم الكشف عن دليل /DDD_النقل\n</string>
+    <string name="usb_device_attached">تم توصيل جهاز يو إس بي</string>
+    <string name="usb_device_detached">تم فصل جهاز يو إس بي</string>
+    <string name="bundleserver_domain">مجال خادم الحزم</string>
+    <string name="bundleserver_port">منفذ خادم الحزم</string>
+    <string name="connect_to_bundle_server">الاتصال بخادم الحزم</string>
+    <string name="connected_device_addresses">عناوين الأجهزة المتصلة:</string>
+    <string name="response">الاستجابة:</string>
+    <string name="exchange_data">تبادل البيانات</string>
+    <string name="browse">تصفح</string>
+    <string name="permission_caption">شرح الأذونات</string>
+    <string name="needed_permissions">الأذونات المطلوبة</string>
+    <string name="exchange_usb_data">تبادل بيانات يو إس بي</string>
+    <string name="usb_connection_status">حالة اتصال يو إس بي:</string>
+</resources>
