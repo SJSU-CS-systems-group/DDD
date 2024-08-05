@@ -1,6 +1,5 @@
 package net.discdd.bundleclient;
 
-import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
@@ -12,7 +11,9 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.net.NetworkRequest;
 import android.net.wifi.p2p.WifiP2pDevice;
+import android.net.wifi.p2p.WifiP2pGroup;
 import android.os.Bundle;
+import android.os.Handler;
 import android.widget.Button;
 
 import androidx.annotation.NonNull;
@@ -34,12 +35,14 @@ import net.discdd.wifidirect.WifiDirectStateListener;
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
-import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
@@ -50,13 +53,9 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     private ExecutorService wifiDirectExecutor = Executors.newFixedThreadPool(1);
 
     //constant
-    public static final String TAG = "bundleclient";
     private static final Logger logger = Logger.getLogger(BundleClientActivity.class.getName());
-    public static final int PERMISSIONS_REQUEST_CODE_ACCESS_FINE_LOCATION = 1001;
-    public static final int PERMISSIONS_REQUEST_CODE_ACCESS_NEARBY_WIFI_DEVICES = 1002;
     private ConnectivityManager connectivityManager;
     private ConnectivityManager.NetworkCallback serverConnectNetworkCallback;
-
     //  private BundleDeliveryAgent agent;
     // context
     public static Context ApplicationContext;
@@ -68,7 +67,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
 
     // bundle transmission set up
     BundleTransmission bundleTransmission;
-    public static boolean usbConnected = false;
 
     // instantiate window for bundles
     public static ClientWindow clientWindow;
@@ -83,7 +81,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         super.onCreate(savedInstanceState);
         if (logRecords == null) {
             logRecords = new LinkedList<>();
-            Logger.getLogger("").addHandler(new Handler() {
+            Logger.getLogger("").addHandler(new java.util.logging.Handler() {
                 @Override
                 public void publish(LogRecord logRecord) {
                     // get the last part of the logger name
@@ -115,16 +113,17 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         viewPager.setAdapter(adapter);
 
         new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
-            final String[] labels = { "Home", "Permissions", "Logs" };
+            final String[] labels = { "Home", "Permissions", "Usb", "Logs" };
             tab.setText(labels[position]);
         }).attach();
 
         if (wifiDirectManager == null) {
             // set up wifi direct
-            wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle(), this,
-                                                      this.getString(R.string.tansport_host), false);
+            wifiDirectManager = new WifiDirectManager(this.getApplication(), this.getLifecycle(), this, false);
             wifiDirectManager.initialize();
         }
+
+        refreshPeers();
 
         //Application context
         ApplicationContext = getApplicationContext();
@@ -163,65 +162,102 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     public void onDestroy() {
         super.onDestroy();
         wifiDirectExecutor.shutdown();
-//        wifiDirectExecutor.shutdown();
 //        unregisterReceiver(mUsbReceiver);
     }
 
-    @Override
-    public void onReceiveAction(WifiDirectManager.WifiDirectEvent action) {
+    private void appendResultsMessage(String message) {
         MainPageFragment fragment = getMainPageFragment();
         if (fragment != null) {
-            switch (action.type()) {
-                case WIFI_DIRECT_MANAGER_INITIALIZATION_FAILED:
-                    fragment.updateWifiDirectResponse("Manager initialization failed\n");
-                    logger.log(WARNING, "Manager initialization failed\n");
-                    break;
-                case WIFI_DIRECT_MANAGER_INITIALIZATION_SUCCESSFUL:
-                    logger.log(FINER, "Manager initialization successful\n");
-                    wifiDirectManager.discoverPeers();
-                    break;
-                case WIFI_DIRECT_MANAGER_DISCOVERY_SUCCESSFUL:
-                    fragment.updateWifiDirectResponse("Discovery initiation successful\n");
-                    logger.log(FINER, "Discovery initiation successful\n");
-                    break;
-                case WIFI_DIRECT_MANAGER_DISCOVERY_FAILED:
-                    fragment.updateWifiDirectResponse("Discovery initiation failed\n");
-                    logger.log(WARNING, "Discovery initiation failed\n");
-                    break;
-                case WIFI_DIRECT_MANAGER_PEERS_CHANGED:
-                    fragment.updateWifiDirectResponse("Peers changed\n");
-                    logger.log(WARNING, "Peers changed\n");
-                    updateConnectedDevices();
-                    break;
-                case WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_FAILED:
-                    fragment.updateWifiDirectResponse("Device connection initiation failed\n");
-                    logger.log(WARNING, "Device connection initiation failed\n");
-                    break;
-                case WIFI_DIRECT_MANAGER_CONNECTION_INITIATION_SUCCESSFUL:
-                    fragment.updateWifiDirectResponse("Device connection initiation successful\n");
-                    logger.log(FINER, "Device connection initiation successful\n");
-                    break;
-                case WIFI_DIRECT_MANAGER_FORMED_CONNECTION_SUCCESSFUL:
-                    fragment.updateWifiDirectResponse("Device connected to transport\n");
-                    logger.log(FINER, "Device connected to transport\n");
-                    updateConnectedDevices();
-                    break;
-                case WIFI_DIRECT_MANAGER_FORMED_CONNECTION_FAILED:
-                    fragment.updateWifiDirectResponse("Device failed to connect to transport\n");
-                    logger.log(WARNING, "Device failed to connect to transport\n");
-                    break;
-            }
+            fragment.appendResultText(message + "\n");
+        }
+    }
+
+    // A list of futures waiting to connect to a transport by the device name of transport
+    private final HashMap<String, ArrayList<CompletableFuture<WifiP2pGroup>>> connectionWaiters = new HashMap<>();
+
+    @Override
+    public void onReceiveAction(WifiDirectManager.WifiDirectEvent action) {
+        switch (action.type()) {
+            case WIFI_DIRECT_MANAGER_INITIALIZED:
+                appendResultsMessage("Wifi initialized\n");
+                wifiDirectManager.discoverPeers();
+                break;
+            case WIFI_DIRECT_MANAGER_PEERS_CHANGED:
+                updateConnectedDevices();
+                break;
+            case WIFI_DIRECT_MANAGER_GROUP_INFO_CHANGED:
+                WifiP2pGroup groupInfo = wifiDirectManager.getGroupInfo();
+                if (groupInfo != null && groupInfo.getOwner() != null) {
+                    ArrayList<CompletableFuture<WifiP2pGroup>> list;
+                    synchronized (connectionWaiters) {
+                        list = connectionWaiters.remove(groupInfo.getOwner().deviceName);
+                    }
+                    if (list != null) {
+                        for (CompletableFuture<WifiP2pGroup> future : list) {
+                            future.complete(groupInfo);
+                        }
+                    }
+                }
+                updateOwnerNameAndAddress();
+                break;
+            case WIFI_DIRECT_MANAGER_DEVICE_INFO_CHANGED:
+                updateOwnerNameAndAddress();
+                break;
+            case WIFI_DIRECT_MANAGER_CONNECTION_CHANGED:
+                refreshPeers();
+                break;
         }
     }
 
     public void exchangeMessage(WifiP2pDevice device, Button exchangeButton) {
-        runOnUiThread(() -> exchangeButton.setEnabled(false));
+        exchangeButton.setEnabled(false);
         wifiDirectManager.connect(device).thenAccept(c -> {
-            new GrpcReceiveTask(this).executeInBackground("192.168.49.1", 7777).thenAccept(result -> {
-                logger.log(INFO, "connection complete!");
-                runOnUiThread(() -> exchangeButton.setEnabled(true));
-                wifiDirectManager.disconnect(device);
+            String transportName = device.deviceName;
+            CompletableFuture<WifiP2pGroup> connectionFuture = new CompletableFuture<>();
+            connectionFuture.thenAccept(gi -> {
+                updateOwnerNameAndAddress();
+                appendResultsMessage(String.format("Starting transmission to %s", transportName));
+                new GrpcReceiveTask(this).executeInBackground("192.168.49.1", 7777).thenAccept(result -> {
+                    logger.log(INFO, "connection complete!");
+                    runOnUiThread(() -> exchangeButton.setEnabled(true));
+                    wifiDirectManager.disconnect().thenAccept(rc -> {
+                        // if we try to refreshPeers right away, nothing happens,
+                        // so we need to wait a second
+                        runInXMs(this::refreshPeers, 1000);
+                        updateOwnerNameAndAddress();
+                    });
+                });
+
             });
+
+            synchronized (connectionWaiters) {
+                connectionWaiters.computeIfAbsent(transportName, k -> new ArrayList<>()).add(connectionFuture);
+            }
+            WifiP2pGroup groupInfo = wifiDirectManager.getGroupInfo();
+            if (WifiDirectManager.WifiDirectStatus.CONNECTED.equals(wifiDirectManager.getStatus()) &&
+                    groupInfo != null && groupInfo.getOwner() != null &&
+                    groupInfo.getOwner().deviceName.equals(transportName)) {
+                connectionFuture.complete(groupInfo);
+            }
+
+            // stop trying after 20 seconds
+            // we should have already connected by then and the future will be stale but just in
+            // case there is a problem we don't want to hang for more than 10 seconds
+            runInXMs(() -> connectionFuture.complete(null), 10000);
+        });
+    }
+
+    private void runInXMs(Runnable runnable, long delayMs) {
+        new Handler(getApplication().getMainLooper()).postDelayed(runnable, delayMs);
+    }
+
+    private void updateOwnerNameAndAddress() {
+        runOnUiThread(() -> {
+            var fragment = getMainPageFragment();
+            if (fragment != null) {
+                fragment.updateOwnerAndGroupInfo(wifiDirectManager.getGroupOwnerAddress(),
+                                                 wifiDirectManager.getGroupInfo());
+            }
         });
     }
 
@@ -244,11 +280,16 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         return String.join("\n", logRecords);
     }
 
+    public void refreshPeers() {
+        wifiDirectManager.discoverPeers();
+    }
+
     // ViewPagerAdapter class for managing fragments in the ViewPager
     private static class ViewPagerAdapter extends FragmentStateAdapter {
         private final BundleClientActivity bundleClientActivity;
         private LogFragment logFragment;
         private PermissionsFragment permissionsFragment;
+        private UsbFragment usbFragment;
 
         public ViewPagerAdapter(@NonNull BundleClientActivity fragmentActivity) {
             super(fragmentActivity);
@@ -261,13 +302,14 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
             return switch (position) {
                 case 0 -> new MainPageFragment();
                 case 1 -> permissionsFragment = new PermissionsFragment();
+                case 2 -> new UsbFragment();
                 default -> logFragment = new LogFragment();
             };
         }
 
         @Override
         public int getItemCount() {
-            return 3;
+            return 4;
         }
     }
 

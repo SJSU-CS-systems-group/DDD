@@ -4,13 +4,11 @@ import com.google.protobuf.ByteString;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
 import net.discdd.app.k9.utils.MailUtils;
+import net.discdd.grpc.AppDataUnit;
+import net.discdd.grpc.ExchangeADUsRequest;
+import net.discdd.grpc.ExchangeADUsResponse;
+import net.discdd.grpc.ServiceAdapterServiceGrpc;
 import net.discdd.model.ADU;
-import net.discdd.server.AppData;
-import net.discdd.server.AppDataUnit;
-import net.discdd.server.ClientData;
-import net.discdd.server.PrepareResponse;
-import net.discdd.server.ServiceAdapterGrpc;
-import net.discdd.server.StatusCode;
 import net.discdd.utils.StoreADUs;
 import org.springframework.beans.factory.annotation.Value;
 
@@ -20,57 +18,67 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.*;
 
 @GrpcService
-public class K9DDDAdapter extends ServiceAdapterGrpc.ServiceAdapterImplBase {
+public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServiceImplBase {
     final static Logger logger = Logger.getLogger(K9DDDAdapter.class.getName());
     private StoreADUs sendADUsStorage;
 
-    @Value("${spring.application.name}")
-    private String appId;
+    private final String APP_ID = "com.fsck.k9.debug";
+    private final String RAVLY_DOMAIN = "ravlykmail.com";
 
     public K9DDDAdapter(@Value("${k9-server.root-dir}") Path rootDir) {
-        sendADUsStorage = new StoreADUs(rootDir.resolve("send").toFile().toPath(), true);
+        sendADUsStorage = new StoreADUs(rootDir.resolve("send"), true);
     }
 
     // This method will parse the ToAddress from the mail ADUs and prepares ADUs for the respective client directories
     private void processADUsToSend(AppDataUnit adu) throws IOException {
-        var toAddressList = MailUtils.getToAddresses(adu.getData().toByteArray());
-        for (var clientId : toAddressList) {
-            sendADUsStorage.addADU(MailUtils.getLocalAddress(clientId), appId, adu.toByteArray(), -1);
+        var addressList = MailUtils.getToCCBccAddresses(adu.getData().toByteArray());
+        for (var address : addressList) {
+            String domain = MailUtils.getDomain(address);
+            if (RAVLY_DOMAIN.equals(domain)) {
+                sendADUsStorage.addADU(MailUtils.getLocalAddress(address), APP_ID, adu.toByteArray(), -1);
+                logger.log(INFO, "Completed processing ADU Id: " + adu.getAduId());
+            } else {
+                //TO_DO : Process messages for other domains
+                logger.log(WARNING, "Unable to process ADU Id: " + adu.getAduId() + " with domain: " + domain);
+            }
+
         }
     }
 
     @Override
-    public void saveData(AppData request, StreamObserver<AppData> responseObserver) {
+    public void exchangeADUs(ExchangeADUsRequest request, StreamObserver<ExchangeADUsResponse> responseObserver) {
         String clientId = request.getClientId();
         Long lastADUIdRecvd = request.getLastADUIdReceived();
-        var aduListRecvd = request.getDataListList();
-
+        var aduListRecvd = request.getAdusList();
+        Long lastProcessedADUId = 0L;
         for (AppDataUnit adu : aduListRecvd) {
             try {
                 processADUsToSend(adu);
+                if (lastProcessedADUId < adu.getAduId()) {
+                    lastProcessedADUId = adu.getAduId();
+                }
             } catch (IOException e) {
                 logger.log(SEVERE, "Error while processing aduId:" + adu.getAduId(), e);
             }
         }
 
         try {
-            sendADUsStorage.deleteAllFilesUpTo(clientId, appId, lastADUIdRecvd);
+            sendADUsStorage.deleteAllFilesUpTo(clientId, APP_ID, lastADUIdRecvd);
+            logger.log(INFO, "Deleted all ADUs till Id:" + lastADUIdRecvd);
         } catch (IOException e) {
             logger.log(SEVERE,
-                       String.format("Error while deleting ADUs for client: {} app: {} till AduId: {}", clientId, appId,
-                                     lastADUIdRecvd), e);
+                       String.format("Error while deleting ADUs for client: {} app: {} till AduId: {}", clientId,
+                                     APP_ID, lastADUIdRecvd), e);
         }
 
         List<AppDataUnit> dataListToReturn = new ArrayList<>();
         List<ADU> aduListToReturn = new ArrayList<>();
 
         try {
-            aduListToReturn = sendADUsStorage.getAllADUsToSend(clientId, appId);
+            aduListToReturn = sendADUsStorage.getAllADUsToSend(clientId, APP_ID);
         } catch (IOException e) {
             logger.log(SEVERE, "Error fetching ADUs to return for clientId: " + clientId, e);
         }
@@ -78,7 +86,7 @@ public class K9DDDAdapter extends ServiceAdapterGrpc.ServiceAdapterImplBase {
         try {
             for (var adu : aduListToReturn) {
                 long aduId = adu.getADUId();
-                var data = sendADUsStorage.getADU(clientId, appId, aduId);
+                var data = sendADUsStorage.getADU(clientId, APP_ID, aduId);
                 dataListToReturn.add(
                         AppDataUnit.newBuilder().setData(ByteString.copyFrom(data)).setAduId(aduId).build());
             }
@@ -87,13 +95,9 @@ public class K9DDDAdapter extends ServiceAdapterGrpc.ServiceAdapterImplBase {
         }
 
         responseObserver.onNext(
-                AppData.newBuilder().setClientId(request.getClientId()).addAllDataList(dataListToReturn).build());
-        responseObserver.onCompleted();
-    }
+                ExchangeADUsResponse.newBuilder().addAllAdus(dataListToReturn).setLastADUIdReceived(lastProcessedADUId)
+                        .build());
 
-    @Override
-    public void prepareData(ClientData request, StreamObserver<PrepareResponse> responseObserver) {
-        responseObserver.onNext(PrepareResponse.newBuilder().setCode(StatusCode.SUCCESS).build());
         responseObserver.onCompleted();
     }
 }
