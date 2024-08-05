@@ -4,6 +4,12 @@
         android:layout_height="match_parent"
         android:orientation="vertical"
         tools:context=".BundleClientActivity">
+    <TextView
+            android:id="@+id/client_id_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textIsSelectable="true"
+            android:text="ClientId: " />
 
     <EditText
             android:id="@+id/domain_input"
