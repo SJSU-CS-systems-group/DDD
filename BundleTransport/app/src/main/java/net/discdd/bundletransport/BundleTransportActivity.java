@@ -61,7 +61,8 @@ public class BundleTransportActivity extends AppCompatActivity {
 
         LogFragment.registerLoggerHandler();
 
-        serverUploadFragment = new TitledFragment(getString(R.string.upload), new ServerUploadFragment(connectivityEventPublisher));
+        serverUploadFragment =
+                new TitledFragment(getString(R.string.upload), new ServerUploadFragment(connectivityEventPublisher));
         transportWifiFragment = new TitledFragment(getString(R.string.local_wifi), new TransportWifiDirectFragment());
 
         permissionsFragment = new PermissionsFragment();

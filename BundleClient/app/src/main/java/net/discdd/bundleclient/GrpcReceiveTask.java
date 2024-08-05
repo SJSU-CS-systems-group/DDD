@@ -143,8 +143,8 @@ class GrpcReceiveTask {
 
             break;
         }
-        postExecute(errorOccurred[0] ? applicationContext.getString(R.string.failed) : applicationContext.getString(
-                        R.string.completed), host, String.valueOf(port));
+        postExecute(errorOccurred[0] ? applicationContext.getString(R.string.failed) :
+                            applicationContext.getString(R.string.completed), host, String.valueOf(port));
     }
 
     public void shutdownExecutor() {

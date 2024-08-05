@@ -103,8 +103,9 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         viewPager.setAdapter(adapter);
 
         new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
-            final String[] labels = { getString(R.string.home_tab), getString(R.string.permissions_tab), getString(
-                                R.string.usb_tab), getString(R.string.logs_tab) };
+            final String[] labels =
+                    { getString(R.string.home_tab), getString(R.string.permissions_tab), getString(R.string.usb_tab),
+                            getString(R.string.logs_tab) };
             tab.setText(labels[position]);
         }).attach();
 

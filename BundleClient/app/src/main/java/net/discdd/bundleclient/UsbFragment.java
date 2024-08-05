@@ -98,7 +98,8 @@ public class UsbFragment extends Fragment {
                 if (usbDirExists()) {
                     updateUsbStatus(true, getString(R.string.usb_connection_detected), Color.GREEN);
                 } else {
-                    updateUsbStatus(false, getString(R.string.usb_was_connected_but_ddd_transport_directory_was_not_detected),
+                    updateUsbStatus(false,
+                                    getString(R.string.usb_was_connected_but_ddd_transport_directory_was_not_detected),
                                     Color.RED);
                 }
             } else {
