@@ -119,12 +119,14 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
     @Override
     public void downloadFile(ReqFilePath request, StreamObserver<Bytes> responseObserver) {
+        logger.log(INFO, "Received request to download file from: " + sender.name());
         if (null != generateBundle) {
             this.bundleToDownload = request.getValue();
             generateBundle.execute();
         }
 
         String requestedPath = String.valueOf(SERVER_BASE_PATH.resolve(downloadingFrom).resolve(request.getValue()));
+        logger.log(INFO, "Bundle generation completed, now starting to download from path: " + requestedPath);
         logger.log(FINE, "Downloading " + requestedPath);
         File file = new File(requestedPath);
         InputStream in;
