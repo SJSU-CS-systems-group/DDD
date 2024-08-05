@@ -24,6 +24,7 @@
     <string name="connected_devices">Connected Devices:</string>
     <string name="domain">Domain</string>
     <string name="port">Port</string>
+<<<<<<< HEAD
     <string name="change_phone_name">Change Phone Name</string>
     <string name="interactions_with_bundleclients">Interactions with BundleClients</string>
     <string name="device_name">Device Name:</string>
@@ -40,4 +41,6 @@
     <string name="local_wifi">Local Wifi</string>
     <string name="permissions">Permissions</string>
     <string name="logs">Logs</string>
+=======
+>>>>>>> 1c6a1ce0f (adds spanish capability and fixes various missed Strings to BundleTransport)
 </resources>
