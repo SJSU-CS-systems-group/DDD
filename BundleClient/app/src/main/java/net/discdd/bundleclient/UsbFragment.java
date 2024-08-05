@@ -39,7 +39,6 @@ public class UsbFragment extends Fragment {
     private static final String usbDirName = "/DDD_transport";
     private ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
 
-
     @Override
     public View onCreateView(
             @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -95,17 +94,18 @@ public class UsbFragment extends Fragment {
     private void checkUsbConnection(int tries) {
         usbConnected = !usbManager.getDeviceList().isEmpty() && usbDirExists();
         getActivity().getMainExecutor().execute(() -> {
-            if(!usbManager.getDeviceList().isEmpty()) {
-                if(usbDirExists()) {
+            if (!usbManager.getDeviceList().isEmpty()) {
+                if (usbDirExists()) {
                     updateUsbStatus(true, "USB connection detected\n", Color.GREEN);
                 } else {
-                    updateUsbStatus(false, "USB was connected, but /DDD_transport directory was not detected\n", Color.RED);
+                    updateUsbStatus(false, "USB was connected, but /DDD_transport directory was not detected\n",
+                                    Color.RED);
                 }
             } else {
                 updateUsbStatus(false, "USB device not connected\n", Color.RED);
             }
         });
-        if(tries > 0 && !usbConnected) {
+        if (tries > 0 && !usbConnected) {
             scheduledExecutor.schedule(() -> checkUsbConnection(tries - 1), 1, TimeUnit.SECONDS);
         }
     }
@@ -124,10 +124,10 @@ public class UsbFragment extends Fragment {
     //Method to check if /DDD_transport directory exists
     private boolean usbDirExists() {
         List<StorageVolume> storageVolumeList = storageManager.getStorageVolumes();
-        for(StorageVolume storageVolume: storageVolumeList) {
-            if(storageVolume.isRemovable()) {
+        for (StorageVolume storageVolume : storageVolumeList) {
+            if (storageVolume.isRemovable()) {
                 File fileUsb = new File(storageVolume.getDirectory().getPath() + usbDirName);
-                if(fileUsb.exists()) {
+                if (fileUsb.exists()) {
                     return true;
                 }
             }
