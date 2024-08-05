@@ -51,8 +51,8 @@ public class K9Application {
                     logger.log(WARNING, String.format("Could not connect to %s %s", bundleServerURL, channelState));
                 } else {
                     var rsp = ServiceAdapterRegistryServiceGrpc.newBlockingStub(managedChannel)
-                            .checkAdapterRegistration(ConnectionData.newBuilder().setAppName(appName).setUrl(myGrpcUrl)
-                                                              .build());
+                            .checkAdapterRegistration(
+                                    ConnectionData.newBuilder().setAppName(appName).setUrl(myGrpcUrl).build());
                     if (rsp.getCode() != 0) {
                         logger.log(WARNING,
                                    String.format("Could not register with BundleServer: rc = %d %s", rsp.getCode(),
