@@ -208,6 +208,10 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         }
     }
 
+    public String getClientId() {
+        return bundleTransmission == null ? "Not set" :
+                bundleTransmission.getBundleSecurity().getClientSecurity().getClientID();
+    }
     void runInXMs(Runnable runnable, long delayMs) {
         new Handler(getApplication().getMainLooper()).postDelayed(runnable, delayMs);
     }
