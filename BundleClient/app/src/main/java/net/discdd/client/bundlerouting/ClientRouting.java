@@ -2,7 +2,6 @@ package net.discdd.client.bundlerouting;
 
 import static java.util.logging.Level.INFO;
 
-import net.discdd.bundlerouting.BundleSender;
 import net.discdd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.type.TypeReference;

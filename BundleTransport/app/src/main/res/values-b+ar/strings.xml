@@ -1,0 +1,45 @@
+<resources>
+    <string name="title_activity_bundle_transport" translatable="false">نقل الحزم</string>
+    <string name="app_name">نقل الحزم
+</string>
+    <string name="bundle_server_host">name.homeofcode.com</string>
+    <string name="select">اختر عنصر</string>
+    <string name="wifi_request_groupinfo">"أطلب groupInfo: "</string>
+    <string name="grpc_running">حالة خادم GRPC: قيد التشغيل</string>
+    <string name="grpc_pending">حالة خادم GRPC: في الانتظار</string>
+    <string name="grpc_shutdown">حالة خادم GRPC: مغلق</string>
+    <string name="connecting_to_server">بدء تبادل البيانات مع الخادم على %1$s :%2$s...\n</string>
+    <string name="enter_the_domain_and_port">أدخل النطاق والمنفذ</string>
+    <string name="bundles_upload_failed">فشل تحميل الحزم.\n</string>
+    <string name="bundles_upload_successful">تم تحميل الحزم بنجاح.\n</string>
+    <string name="bundles_download_failed">فشل تنزيل الحزم.\n</string>
+    <string name="bundles_download_successful">تم تنزيل الحزم بنجاح.\n</string>
+    <string name="saved">تم الحفظ</string>
+    <string name="start_grpc_server">بدء خادم gRPC</string>
+    <string name="stop_grpc_server">إيقاف خادم gRPC</string>
+    <string name="connect_to_bundle_server">اتصل بخادم الحزم</string>
+    <string name="free_up_space">تحرير المساحة</string>
+    <string name="save_domain_and_port">حفظ النطاق والمنفذ</string>
+    <string name="restore_domain_and_port">استعادة النطاق والمنفذ</string>
+    <string name="nearby_devices">الأجهزة القريبة:</string>
+    <string name="connected_devices">الأجهزة المتصلة:</string>
+    <string name="domain">النطاق</string>
+    <string name="port">المنفذ</string>
+    <string name="change_phone_name">تغيير اسم الهاتف</string>
+    <string name="interactions_with_bundleclients">التفاعلات مع BundleClients</string>
+    <string name="device_name">اسم الجهاز:</string>
+    <string name="phone_name_must_start_with_ddd">يجب أن يبدأ اسم الهاتف بـ ddd_</string>
+    <string name="my_wifi_info">معلوماتي عن WiFi</string>
+    <string name="wifi_transport_not_active">نقل WiFi غير مفعل</string>
+    <string name="unknown">غير معروف</string>
+    <string name="connected">متصل</string>
+    <string name="invited">مدعو</string>
+    <string name="failed">فشل</string>
+    <string name="available">متاح</string>
+    <string name="unavailable">غير متاح</string>
+    <string name="upload">تحميل</string>
+    <string name="local_wifi">واي فاي محلي</string>
+    <string name="permissions">أذونات</string>
+    <string name="logs">سجلات</string>
+
+</resources>

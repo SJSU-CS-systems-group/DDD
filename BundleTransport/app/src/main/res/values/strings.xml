@@ -1,11 +1,43 @@
 <resources>
+    <string name="title_activity_bundle_transport" translatable="false">bundle transport</string>
     <string name="app_name">BundleTransport</string>
-    <string name="bundle_server_host">trique.homeofcode.com</string>
+    <string name="bundle_server_host">name.homeofcode.com</string>
     <string name="select">Select Item</string>
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
-    <string name="title_activity_bundle_transport">BundleTransportActivity</string>
-    <string name="tab_text_1">Tab 1</string>
-    <string name="tab_text_2">Tab 2</string>
-
+    <string name="wifi_request_groupinfo">"I request groupInfo: "</string>
+    <string name="grpc_running">GRPC Server State: RUNNING</string>
+    <string name="grpc_pending">GRPC Server State: PENDING</string>
+    <string name="grpc_shutdown">GRPC Server State: SHUTDOWN</string>
+    <string name="connecting_to_server">Initiating server exchange to %1$s :%2$s...\n</string>
+    <string name="enter_the_domain_and_port">Enter the domain and port</string>
+    <string name="bundles_upload_failed">Bundles upload failed.\n</string>
+    <string name="bundles_upload_successful">Bundles uploaded successfully.\n</string>
+    <string name="bundles_download_failed">Bundles download failed.\n</string>
+    <string name="bundles_download_successful">Bundles downloaded successfully.\n</string>
+    <string name="saved">Saved</string>
+    <string name="start_grpc_server">Start gRPC Server</string>
+    <string name="stop_grpc_server">Stop gRPC Server</string>
+    <string name="connect_to_bundle_server">connect to bundle server</string>
+    <string name="free_up_space">Free up Space</string>
+    <string name="save_domain_and_port">Save Domain and Port</string>
+    <string name="restore_domain_and_port">Restore Domain and Port</string>
+    <string name="nearby_devices">Nearby Devices:</string>
+    <string name="connected_devices">Connected Devices:</string>
+    <string name="domain">Domain</string>
+    <string name="port">Port</string>
+    <string name="change_phone_name">Change Phone Name</string>
+    <string name="interactions_with_bundleclients">Interactions with BundleClients</string>
+    <string name="device_name">Device Name:</string>
+    <string name="phone_name_must_start_with_ddd">Phone name must start with ddd_</string>
+    <string name="my_wifi_info">My Wifi Info</string>
+    <string name="wifi_transport_not_active">Wifi Transport not active</string>
+    <string name="unknown">Unknown</string>
+    <string name="connected">Connected</string>
+    <string name="invited">Invited</string>
+    <string name="failed">Failed</string>
+    <string name="available">Available</string>
+    <string name="unavailable">Unavailable</string>
+    <string name="upload">Upload</string>
+    <string name="local_wifi">Local Wifi</string>
+    <string name="permissions">Permissions</string>
+    <string name="logs">Logs</string>
 </resources>

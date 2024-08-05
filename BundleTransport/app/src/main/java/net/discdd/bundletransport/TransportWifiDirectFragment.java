@@ -70,12 +70,12 @@ public class TransportWifiDirectFragment extends Fragment {
             }
             var status = btService.getStatus();
             myWifiStatusView.setText(switch (status) {
-                case UNDEFINED -> "Unknown";
-                case CONNECTED -> "Connected";
-                case INVITED -> "Invited";
-                case FAILED -> "Failed";
-                case AVAILABLE -> "Available";
-                case UNAVAILABLE -> "Unavailable";
+                case UNDEFINED -> getString(R.string.unknown);
+                case CONNECTED -> getString(R.string.connected);
+                case INVITED -> getString(R.string.invited);
+                case FAILED -> getString(R.string.failed);
+                case AVAILABLE -> getString(R.string.available);
+                case UNAVAILABLE -> getString(R.string.unavailable);
             });
         });
     }
@@ -147,7 +147,7 @@ public class TransportWifiDirectFragment extends Fragment {
             requireActivity().runOnUiThread(() -> {
                 String info;
                 if (gi == null) {
-                    info = "Wifi Transport not active";
+                    info = getString(R.string.wifi_transport_not_active);
                 } else {
                     String addresses;
                     try {

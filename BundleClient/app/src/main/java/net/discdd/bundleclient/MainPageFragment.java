@@ -194,7 +194,7 @@ public class MainPageFragment extends Fragment {
         // name doesn't seem to come through either.
         requireActivity().runOnUiThread(() -> {
             var ownerNameAndAddress =
-                    groupInfo == null || groupInfo.getOwner() == null ? "Not connected" : "Connected to transport";
+                    groupInfo == null || groupInfo.getOwner() == null ? getString(R.string.not_connected) : getString(R.string.connected_to_transport);
             connectedDeviceText.setText(ownerNameAndAddress);
         });
     }

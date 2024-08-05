@@ -54,11 +54,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     // context
     public static Context ApplicationContext;
 
-    private static String RECEIVE_PATH = "Shared/received-bundles";
-
-    String currentTransportId;
-    String BundleExtension = ".bundle";
-
     // bundle transmission set up
     BundleTransmission bundleTransmission;
 
@@ -108,7 +103,8 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         viewPager.setAdapter(adapter);
 
         new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
-            final String[] labels = { "Home", "Permissions", "Usb", "Logs" };
+            final String[] labels = { getString(R.string.home_tab), getString(R.string.permissions_tab), getString(
+                                R.string.usb_tab), getString(R.string.logs_tab) };
             tab.setText(labels[position]);
         }).attach();
 
