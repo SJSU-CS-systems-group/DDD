@@ -9,7 +9,7 @@
         android:id="@+id/domain_input"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="BundleServer Domain"
+        android:hint="@string/bundleserver_domain"
         android:textAlignment="center"
         android:padding="10dp"
         android:layout_marginTop="10dp"
@@ -19,7 +19,7 @@
         android:id="@+id/port_input"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="BundleServer Port"
+        android:hint="@string/bundleserver_port"
         android:textAlignment="center"
         android:padding="10dp"
         android:layout_marginTop="10dp"
@@ -30,7 +30,7 @@
         android:id="@+id/btn_connect_bundle_server"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="connect to bundle server"/>
+        android:text="@string/connect_to_bundle_server"/>
 
     <LinearLayout
             android:orientation="horizontal"
@@ -41,7 +41,7 @@
         android:layout_height="wrap_content"
         android:paddingTop="12dp"
         android:paddingBottom="12dp"
-        android:text="Transport: "
+        android:text="@string/connected_device_addresses"
         android:textSize="16sp" />
     <TextView
             android:id="@+id/connected_device_address"
@@ -76,13 +76,18 @@
         android:layout_height="wrap_content"
         android:paddingTop="12dp"
         android:paddingBottom="12dp"
-        android:text="Response:"
+        android:text="@string/response"
         android:textSize="16sp" />
 
     <ScrollView
             android:scrollbars="vertical"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content">
+    <Button
+            android:id="@+id/exchange_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/exchange_data" />
 
         <TextView
                 android:id="@+id/grpc_response_text"
