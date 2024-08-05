@@ -1,9 +1,13 @@
 package net.discdd.bundletransport;
 
-import net.discdd.bundlerouting.BundleSender;
-import net.discdd.bundlerouting.service.FileServiceImpl;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
 
 import android.content.Context;
+
+import net.discdd.bundlerouting.BundleSender;
+import net.discdd.bundlerouting.service.FileServiceImpl;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -11,12 +15,7 @@ import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
 import java.util.logging.Logger;
-
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.WARNING;
 
 import io.grpc.Server;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
@@ -49,7 +48,7 @@ public class RpcServer {
         return rpcServerInstance;
     }
 
-    public void startServer(Context context) {
+    public void startServer(Context context, FileServiceImpl.FileServiceEventListener listener) {
         logger.log(INFO, "Server state is : " + state.name());
         if (state == ServerState.RUNNING || state == ServerState.PENDING) {
             return;
@@ -58,8 +57,9 @@ public class RpcServer {
         SocketAddress address = new InetSocketAddress(inetSocketAddressIP, port);
         notifyStateChange(ServerState.PENDING);
         server = NettyServerBuilder.forAddress(address).addService(
-                new FileServiceImpl(context.getExternalFilesDir(null), BundleSender.Transport,
-                                    MainActivity.transportID)).build();
+                        new FileServiceImpl(context.getExternalFilesDir(null), BundleSender.Transport, "FIXME!",
+                                            listener))
+                .build();
 
         logger.log(INFO, "Starting rpc server at: " + server.toString());
 

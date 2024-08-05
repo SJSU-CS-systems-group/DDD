@@ -1,7 +1,14 @@
 package net.discdd.bundlerouting.service;
 
-import net.discdd.bundlerouting.BundleSender;
 import com.google.protobuf.ByteString;
+import io.grpc.stub.StreamObserver;
+import net.discdd.bundlerouting.BundleSender;
+import net.discdd.bundletransport.service.Bytes;
+import net.discdd.bundletransport.service.FileServiceGrpc;
+import net.discdd.bundletransport.service.FileUploadRequest;
+import net.discdd.bundletransport.service.FileUploadResponse;
+import net.discdd.bundletransport.service.ReqFilePath;
+import net.discdd.bundletransport.service.Status;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -12,22 +19,20 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
-import io.grpc.stub.StreamObserver;
-import net.discdd.bundletransport.service.Bytes;
-import net.discdd.bundletransport.service.FileServiceGrpc;
-import net.discdd.bundletransport.service.FileUploadRequest;
-import net.discdd.bundletransport.service.FileUploadResponse;
-import net.discdd.bundletransport.service.ReqFilePath;
-import net.discdd.bundletransport.service.Status;
-
 public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
+    public enum FileServiceEvent {
+        UPLOAD_STARTED, DOWNLOAD_STARTED, UPLOAD_FINISHED, DOWNLOAD_FINISHED
+    }
+
+    public interface FileServiceEventListener {
+        void onFileServiceEvent(FileServiceEvent event);
+    }
 
     private static final Logger logger = Logger.getLogger(FileServiceImpl.class.getName());
 
@@ -36,9 +41,18 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
     protected String senderId;
     protected String uploadingTo;
     protected String downloadingFrom;
+    protected String bundleToDownload;
     protected BundleProcessingInterface processBundle;
+    protected BundleProcessingInterface generateBundle;
+    protected FileServiceEventListener listener;
 
     public FileServiceImpl(File externalFilesDir, BundleSender sender, String senderId) {
+        this(externalFilesDir, sender, senderId, null);
+    }
+
+    public FileServiceImpl(File externalFilesDir, BundleSender sender, String senderId,
+                           FileServiceEventListener listener) {
+        this.listener = listener;
         this.SERVER_BASE_PATH = Paths.get(externalFilesDir + "/BundleTransmission");
         this.sender = sender;
         this.senderId = senderId;
@@ -55,6 +69,7 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
     @Override
     public StreamObserver<FileUploadRequest> uploadFile(StreamObserver<FileUploadResponse> responseObserver) {
+        if (listener != null) listener.onFileServiceEvent(FileServiceEvent.UPLOAD_STARTED);
         return new StreamObserver<FileUploadRequest>() {
             // upload context variables
             OutputStream writer;
@@ -92,6 +107,7 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
                 }
                 responseObserver.onNext(response);
                 responseObserver.onCompleted();
+                if (listener != null) listener.onFileServiceEvent(FileServiceEvent.UPLOAD_FINISHED);
             }
         };
     }
@@ -117,14 +133,23 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
     @Override
     public void downloadFile(ReqFilePath request, StreamObserver<Bytes> responseObserver) {
+        logger.log(INFO, "Received request to download file from: " + sender.name());
+        if (null != generateBundle) {
+            this.bundleToDownload = request.getValue();
+            generateBundle.execute();
+        }
+
         String requestedPath = String.valueOf(SERVER_BASE_PATH.resolve(downloadingFrom).resolve(request.getValue()));
+        logger.log(INFO, "Bundle generation completed, now starting to download from path: " + requestedPath);
         logger.log(FINE, "Downloading " + requestedPath);
+        if (listener != null) listener.onFileServiceEvent(FileServiceEvent.DOWNLOAD_STARTED);
         File file = new File(requestedPath);
         InputStream in;
         try {
             in = new FileInputStream(file);
         } catch (Exception ex) {
             responseObserver.onError(ex);
+            if (listener != null) listener.onFileServiceEvent(FileServiceEvent.DOWNLOAD_FINISHED);
             return;
         }
         StreamHandler handler = new StreamHandler(in);
@@ -136,9 +161,14 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
         responseObserver.onCompleted();
         logger.log(INFO, "Complete " + requestedPath);
+        if (listener != null) listener.onFileServiceEvent(FileServiceEvent.DOWNLOAD_FINISHED);
     }
 
     protected void setProcessBundle(BundleProcessingInterface bundleProcessingImpl) {
         this.processBundle = bundleProcessingImpl;
+    }
+
+    protected void setGenerateBundle(BundleProcessingInterface bundleProcessingImpl) {
+        this.generateBundle = bundleProcessingImpl;
     }
 }

@@ -1,9 +1,9 @@
 package net.discdd.bundleclient;
 
-import android.content.BroadcastReceiver;
-import android.hardware.usb.UsbManager;
 import android.net.wifi.p2p.WifiP2pDevice;
+import android.net.wifi.p2p.WifiP2pGroup;
 import android.os.Bundle;
+import android.os.storage.StorageManager;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.text.method.ScrollingMovementMethod;
@@ -13,7 +13,6 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.EditText;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -21,27 +20,27 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import java.net.InetSocketAddress;
+
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Objects;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class MainPageFragment extends Fragment {
+    private static final Logger logger = Logger.getLogger(BundleClientActivity.class.getName());
 
-    // gRPC set up
-    private Button detectTransportButton;
-    private Button receiveFromTransportButton;
     private FileChooserFragment fragment;
     private TextView resultText;
-    private TextView connectedDevicesText;
+    private TextView connectedDeviceText;
     private TextView wifiDirectResponseText;
     private EditText domainInput;
     private EditText portInput;
     private Button connectServerBtn;
-    private static final Logger logger = Logger.getLogger(BundleClientActivity.class.getName());
+    private Button refreshPeersBtn;
+    private StorageManager storageManager;
+    private static final String usbDirName = "/DDD_transport";
     private RecyclerView peersList;
     private ArrayList<WifiP2pDevice> peers = new ArrayList<>();
 
@@ -53,7 +52,7 @@ public class MainPageFragment extends Fragment {
 
         //Initialize UI elements and buttons
         resultText = view.findViewById(R.id.grpc_response_text);
-        connectedDevicesText = view.findViewById(R.id.connected_device_address);
+        connectedDeviceText = view.findViewById(R.id.connected_device_address);
         wifiDirectResponseText = view.findViewById(R.id.wifidirect_response_text);
         resultText.setMovementMethod(new ScrollingMovementMethod());
         domainInput = view.findViewById(R.id.domain_input);
@@ -86,6 +85,8 @@ public class MainPageFragment extends Fragment {
             }
         });
 
+        refreshPeersBtn = view.findViewById(R.id.refresh_peers_button);
+        refreshPeersBtn.setOnClickListener(v -> ((BundleClientActivity) requireActivity()).refreshPeers());
         connectServerBtn.setOnClickListener(v -> {
             if (getActivity() instanceof BundleClientActivity) {
                 ((BundleClientActivity) getActivity()).connectToServer(domainInput.getText().toString(),
@@ -146,8 +147,10 @@ public class MainPageFragment extends Fragment {
     // Method to update connected devices text
     public void updateConnectedDevices(HashSet<WifiP2pDevice> devices) {
         requireActivity().runOnUiThread(() -> {
-            Map<String, WifiP2pDevice> discoveredPeers =
-                    devices.stream().collect(Collectors.toMap(d -> d.deviceName, d -> d));
+            Map<String, WifiP2pDevice> discoveredPeers = devices.stream()
+                    // we are only looking for bundle transports, and their names start
+                    // with ddd_
+                    .filter(d -> d.deviceName.startsWith("ddd_")).collect(Collectors.toMap(d -> d.deviceName, d -> d));
             Map<String, WifiP2pDevice> currentPeers =
                     peers.stream().collect(Collectors.toMap(d -> d.deviceName, d -> d));
             var newNames = new HashSet<>(discoveredPeers.keySet());
@@ -165,16 +168,27 @@ public class MainPageFragment extends Fragment {
         requireActivity().runOnUiThread(() -> wifiDirectResponseText.setText(text));
     }
 
-    // Method to set result text
-    public void setResultText(String text) {
-        resultText.setText(text);
-    }
-
     public void appendResultText(String text) {
-        requireActivity().runOnUiThread(() -> resultText.append(text));
+        requireActivity().runOnUiThread(() -> {
+            if (resultText.getLineCount() > 20) {
+                int nl = resultText.getText().toString().indexOf('\n');
+                resultText.getEditableText().delete(0, nl + 1);
+            }
+
+            resultText.append(text);
+        });
     }
 
     public void setConnectServerBtn(boolean isEnabled) {
         connectServerBtn.setEnabled(isEnabled);
     }
+
+    public void updateOwnerAndGroupInfo(InetAddress groupOwnerAddress, WifiP2pGroup groupInfo) {
+        // the groupOwnerAddress doesn't seem to be coming through and the groupInfo owner device
+        // name doesn't seem to come through either.
+        var ownerNameAndAddress =
+                groupInfo == null || groupInfo.getOwner() == null ? "Not connected" : "Connected to transport";
+        connectedDeviceText.setText(ownerNameAndAddress);
+    }
+
 }

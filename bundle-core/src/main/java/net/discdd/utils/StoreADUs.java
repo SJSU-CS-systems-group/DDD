@@ -121,6 +121,18 @@ public class StoreADUs {
         }).collect(Collectors.toList());
     }
 
+    public List<Long> getAllADUIds(String appId) throws IOException {
+        getIfNotCreateMetadata(null, appId);
+        var folder = rootFolder.resolve(appId);
+        return Files.list(folder).map(path -> path.getFileName().toString())
+                .filter(fileName -> !fileName.equals(METADATA_FILENAME)).map(Long::parseLong)
+                .collect(Collectors.toList());
+    }
+
+    public byte[] getADU(String appId, Long aduId) throws IOException {
+        return getADU(null, appId, aduId);
+    }
+
     public void deleteAllFilesUpTo(String clientId, String appId, long aduId) throws IOException {
         var metadata = getMetadata(clientId, appId);
         getADUs(clientId, appId).takeWhile(adu -> adu.getADUId() <= aduId).forEach(adu -> {
