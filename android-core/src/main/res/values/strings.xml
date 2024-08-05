@@ -9,4 +9,5 @@
     <string name="waiting_for_permissions">Waiting For Permissions</string>
     <string name="any_emoji">*</string>
     <string name="generic_action_button">Action</string>
+    <string name="needed_permissions">Needed Permissions</string>
 </resources>

@@ -65,6 +65,8 @@ public class MainPageFragment extends Fragment {
         View view = inflater.inflate(R.layout.activity_helloworld, container, false);
 
         //Initialize UI elements and buttons
+        TextView clientIdView = view.findViewById(R.id.client_id_text);
+        clientIdView.setText(String.format("Client ID: %s", ((BundleClientActivity) requireActivity()).getClientId()));
         resultText = view.findViewById(R.id.grpc_response_text);
         connectedDeviceText = view.findViewById(R.id.connected_device_address);
         wifiDirectResponseText = view.findViewById(R.id.wifidirect_response_text);
@@ -194,7 +196,8 @@ public class MainPageFragment extends Fragment {
         // name doesn't seem to come through either.
         requireActivity().runOnUiThread(() -> {
             var ownerNameAndAddress =
-                    groupInfo == null || groupInfo.getOwner() == null ? "Not connected" : "Connected to transport";
+                    groupInfo == null || groupInfo.getOwner() == null ? getString(R.string.not_connected) :
+                            getString(R.string.connected_to_transport);
             connectedDeviceText.setText(ownerNameAndAddress);
         });
     }

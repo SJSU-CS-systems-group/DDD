@@ -13,21 +13,21 @@
             android:id="@+id/btn_connect_bundle_server"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="connect to bundle server"
+            android:text="@string/connect_to_bundle_server"
             android:layout_marginTop="10dp"/>
 
     <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/btn_clear_storage"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Free up Space"
+            android:text="@string/free_up_space"
             android:layout_marginTop="10dp"/>
 
     <EditText
             android:id="@+id/domain_input"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Domain"
+            android:hint="@string/domain"
             android:lines="1"
             android:textAlignment="center"
             android:padding="10dp"
@@ -39,7 +39,7 @@
             android:id="@+id/port_input"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Port"
+            android:hint="@string/port"
             android:lines="1"
             android:textAlignment="center"
             android:padding="10dp"
@@ -51,14 +51,14 @@
             android:id="@+id/save_domain_port"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Save Domain and Port"
+            android:text="@string/save_domain_and_port"
             />
 
     <Button
             android:id="@+id/restore_domain_port"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Restore Domain and Port"
+            android:text="@string/restore_domain_and_port"
             />
         <TextView
             android:id="@+id/server_upload_status"

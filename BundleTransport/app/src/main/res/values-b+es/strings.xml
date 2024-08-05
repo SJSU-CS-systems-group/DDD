@@ -1,0 +1,44 @@
+<resources>
+    <string name="title_activity_bundle_transport" translatable="false">transporte de paquetes</string>
+    <string name="app_name">TransporteDePaquetes</string>
+    <string name="bundle_server_host">name.homeofcode.com</string>
+    <string name="select">Seleccionar artículo</string>
+    <string name="wifi_request_groupinfo">"Solicito groupInfo: "</string>
+    <string name="grpc_running">Estado del servidor GRPC: EN EJECUCIÓN</string>
+    <string name="grpc_pending">Estado del servidor GRPC: PENDIENTE</string>
+    <string name="grpc_shutdown">Estado del servidor GRPC: APAGADO</string>
+    <string name="connecting_to_server">Iniciando intercambio con el servidor en %1$s :%2$s...\n</string>
+    <string name="enter_the_domain_and_port">Ingrese el dominio y el puerto</string>
+    <string name="bundles_upload_failed">La carga de paquetes falló.\n</string>
+    <string name="bundles_upload_successful">Paquetes cargados exitosamente.\n</string>
+    <string name="bundles_download_failed">La descarga de paquetes falló.\n</string>
+    <string name="bundles_download_successful">Paquetes descargados exitosamente.\n</string>
+    <string name="saved">Guardado</string>
+    <string name="start_grpc_server">Iniciar servidor gRPC</string>
+    <string name="stop_grpc_server">Detener servidor gRPC</string>
+    <string name="connect_to_bundle_server">conectar al servidor de paquetes</string>
+    <string name="free_up_space">Liberar espacio</string>
+    <string name="save_domain_and_port">Guardar dominio y puerto</string>
+    <string name="restore_domain_and_port">Restaurar dominio y puerto</string>
+    <string name="nearby_devices">Dispositivos cercanos:</string>
+    <string name="connected_devices">Dispositivos conectados:</string>
+    <string name="domain">Dominio</string>
+    <string name="port">Puerto</string>
+    <string name="change_phone_name">Cambiar nombre del teléfono</string>
+    <string name="interactions_with_bundleclients">Interacciones con BundleClients</string>
+    <string name="device_name">Nombre del dispositivo:</string>
+    <string name="phone_name_must_start_with_ddd">El nombre del teléfono debe comenzar con ddd_</string>
+    <string name="my_wifi_info">Mi información de Wifi</string>
+    <string name="wifi_transport_not_active">Transporte Wifi no activo</string>
+    <string name="unknown">Desconocido</string>
+    <string name="connected">Conectado</string>
+    <string name="invited">Invitado</string>
+    <string name="failed">Fallido</string>
+    <string name="available">Disponible</string>
+    <string name="unavailable">No disponible</string>
+    <string name="upload">Subir</string>
+    <string name="local_wifi">Wi-Fi Local</string>
+    <string name="permissions">Permisos</string>
+    <string name="logs">Registros</string>
+
+</resources>

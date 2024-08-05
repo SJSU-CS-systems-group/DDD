@@ -20,7 +20,8 @@
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:theme="@style/Base.V7.Theme.AppCompat.Light" >
+        android:theme="@style/Base.V7.Theme.AppCompat.Light"
+        android:supportsRtl="true">
         <activity
             android:name="net.discdd.bundleclient.BundleClientActivity"
             android:label="@string/app_name"

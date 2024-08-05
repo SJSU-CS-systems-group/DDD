@@ -92,13 +92,15 @@ class GrpcSendTask {
             inputStream.close();
             streamObserver.onCompleted();
             logger.log(INFO, "Completed file transfer");
-            postExecute("Complete");
+            postExecute(applicationContext.getString(R.string.complete));
         } catch (Exception e) {
             StringWriter sw = new StringWriter();
             PrintWriter pw = new PrintWriter(sw);
             e.printStackTrace(pw);
             pw.flush();
-            postExecute("Failed... : " + sw);
+            String s = sw.toString();
+            String result = String.format(applicationContext.getString(R.string.failed_file_transfer), s);
+            postExecute(result);
         }
     }
 

@@ -1,0 +1,43 @@
+<resources>
+    <string name="title_activity_bundle_transport" translatable="false">транспорт пакетів</string>
+    <string name="app_name">Транспортування пакетів</string>
+    <string name="bundle_server_host">name.homeofcode.com</string>
+    <string name="select">Вибрати елемент</string>
+    <string name="wifi_request_groupinfo">"Я запитую groupInfo: "</string>
+    <string name="grpc_running">Стан сервера GRPC: РОБОЧИЙ</string>
+    <string name="grpc_pending">Стан сервера GRPC: ЧЕКАЄ</string>
+    <string name="grpc_shutdown">Стан сервера GRPC: ВИМКНУТО</string>
+    <string name="connecting_to_server">Ініціювання обміну з сервером на %1$s :%2$s...\n</string>
+    <string name="enter_the_domain_and_port">Введіть домен і порт</string>
+    <string name="bundles_upload_failed">Завантаження пакетів не вдалося.\n</string>
+    <string name="bundles_upload_successful">Пакети успішно завантажено.\n</string>
+    <string name="bundles_download_failed">Завантаження пакетів не вдалося.\n</string>
+    <string name="bundles_download_successful">Пакети успішно завантажено.\n</string>
+    <string name="saved">Збережено</string>
+    <string name="start_grpc_server">Запустити сервер gRPC</string>
+    <string name="stop_grpc_server">Зупинити сервер gRPC</string>
+    <string name="connect_to_bundle_server">підключитися до сервера пакетів</string>
+    <string name="free_up_space">Звільнити місце</string>
+    <string name="save_domain_and_port">Зберегти домен і порт</string>
+    <string name="restore_domain_and_port">Відновити домен і порт</string>
+    <string name="nearby_devices">Поруч із пристрої:</string>
+    <string name="connected_devices">Підключені пристрої:</string>
+    <string name="domain">Домен</string>
+    <string name="port">Порт</string>
+    <string name="change_phone_name">Змінити ім’я телефону</string>
+    <string name="interactions_with_bundleclients">Взаємодії з BundleClients</string>
+    <string name="device_name">Ім’я пристрою:</string>
+    <string name="phone_name_must_start_with_ddd">Ім’я телефону має починатися з ddd_</string>
+    <string name="my_wifi_info">Моя інформація про WiFi</string>
+    <string name="wifi_transport_not_active">WiFi транспорт не активний</string>
+    <string name="unknown">Невідомо</string>
+    <string name="connected">Підключено</string>
+    <string name="invited">Запрошено</string>
+    <string name="failed">Не вдалося</string>
+    <string name="available">Доступний</string>
+    <string name="unavailable">Недоступний</string>
+    <string name="upload">Завантажити</string>
+    <string name="local_wifi">Місцевий Wi-Fi</string>
+    <string name="permissions">Дозволи</string>
+    <string name="logs">Журнали</string>
+</resources>
