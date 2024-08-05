@@ -84,7 +84,7 @@ public class UsbFragment extends Fragment {
             UsbFragment.usbConnected = false;
             showUsbDetachedToast();
         } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
-            updateUsbStatus(false, "USB device attached. Checking for storage volumes.\n", Color.BLUE);
+            updateUsbStatus(false, getString(R.string.usb_device_attached_checking_for_storage_volumes), Color.BLUE);
             scheduledExecutor.schedule(() -> checkUsbConnection(1), 1, TimeUnit.SECONDS);
             showUsbAttachedToast();
         }
@@ -96,13 +96,13 @@ public class UsbFragment extends Fragment {
         getActivity().getMainExecutor().execute(() -> {
             if (!usbManager.getDeviceList().isEmpty()) {
                 if (usbDirExists()) {
-                    updateUsbStatus(true, "USB connection detected\n", Color.GREEN);
+                    updateUsbStatus(true, getString(R.string.usb_connection_detected), Color.GREEN);
                 } else {
-                    updateUsbStatus(false, "USB was connected, but /DDD_transport directory was not detected\n",
+                    updateUsbStatus(false, getString(R.string.usb_was_connected_but_ddd_transport_directory_was_not_detected),
                                     Color.RED);
                 }
             } else {
-                updateUsbStatus(false, "USB device not connected\n", Color.RED);
+                updateUsbStatus(false, getString(R.string.usb_device_not_connected), Color.RED);
             }
         });
         if (tries > 0 && !usbConnected) {

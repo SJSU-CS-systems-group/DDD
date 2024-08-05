@@ -4,7 +4,7 @@
     <string name="android.permission.CHANGE_WIFI_STATE">Cambiar Wifi</string>
     <string name="android.permission.INTERNET">Usar la Red</string>
     <string name="android.permission.NEARBY_WIFI_DEVICES">Encontrar dispositivos Wifi cercanos</string>
-    <string name="app_name">Cliente De Paquetes</string>
+    <string name="app_name">ClienteDePaquetes</string>
     <string name="tansport_host">ddd_transporte</string>
     <string name="hello_blank_fragment">Hola fragmento en blanco</string>
     <string name="home_tab">Inicio</string>
@@ -34,4 +34,10 @@
     <string name="needed_permissions">Permisos necesarios</string>
     <string name="exchange_usb_data">INTERCAMBIAR DATOS USB</string>
     <string name="usb_connection_status">Estado de la conexión USB:</string>
+    <string name="not_connected">No conectado</string>
+    <string name="connected_to_transport">Conectado al transporte</string>
+    <string name="refresh_peers">Actualizar compañeros</string>
+    <string name="usb_device_not_connected">Dispositivo USB no conectado\n</string>
+    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">El USB estaba conectado, pero no se detectó el directorio /DDD_transport\n</string>
+    <string name="usb_device_attached_checking_for_storage_volumes">Dispositivo USB conectado. Verificando volúmenes de almacenamiento.\n</string>
 </resources>

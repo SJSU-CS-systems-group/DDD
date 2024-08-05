@@ -34,4 +34,10 @@
     <string name="needed_permissions">Необхідні дозволи</string>
     <string name="exchange_usb_data">ОБМІН ДАНИМИ USB</string>
     <string name="usb_connection_status">Статус USB-зєднання:</string>
+    <string name="not_connected">Не підключено</string>
+    <string name="connected_to_transport">Підключено до транспорту</string>
+    <string name="refresh_peers">Оновити співробітників</string>
+    <string name="usb_device_not_connected">USB пристрій не підключено\n</string>
+    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">USB був підключений, але директорія /DDD_transport не була виявлена\n</string>
+    <string name="usb_device_attached_checking_for_storage_volumes">USB пристрій підключено. Перевірка обсягів пам’яті.\n</string>
 </resources>

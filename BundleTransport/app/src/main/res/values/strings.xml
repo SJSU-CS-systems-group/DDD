@@ -1,4 +1,5 @@
 <resources>
+    <string name="title_activity_bundle_transport" translatable="false">bundle transport</string>
     <string name="app_name">BundleTransport</string>
     <string name="bundle_server_host">name.homeofcode.com</string>
     <string name="select">Select Item</string>
@@ -23,4 +24,16 @@
     <string name="connected_devices">Connected Devices:</string>
     <string name="domain">Domain</string>
     <string name="port">Port</string>
+    <string name="change_phone_name">Change Phone Name</string>
+    <string name="interactions_with_bundleclients">Interactions with BundleClients</string>
+    <string name="device_name">Device Name:</string>
+    <string name="phone_name_must_start_with_ddd">Phone name must start with ddd_</string>
+    <string name="my_wifi_info">My Wifi Info</string>
+    <string name="wifi_transport_not_active">Wifi Transport not active</string>
+    <string name="unknown">Unknown</string>
+    <string name="connected">Connected</string>
+    <string name="invited">Invited</string>
+    <string name="failed">Failed</string>
+    <string name="available">Available</string>
+    <string name="unavailable">Unavailable</string>
 </resources>
