@@ -78,7 +78,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         List<ADU> aduListToReturn = new ArrayList<>();
 
         try {
-            aduListToReturn = sendADUsStorage.getAllADUsToSend(clientId, APP_ID);
+            aduListToReturn = sendADUsStorage.getAppData(clientId, APP_ID);
         } catch (IOException e) {
             logger.log(SEVERE, "Error fetching ADUs to return for clientId: " + clientId, e);
         }
