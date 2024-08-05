@@ -36,4 +36,8 @@
     <string name="failed">Не вдалося</string>
     <string name="available">Доступний</string>
     <string name="unavailable">Недоступний</string>
+    <string name="upload">Завантажити</string>
+    <string name="local_wifi">Місцевий Wi-Fi</string>
+    <string name="permissions">Дозволи</string>
+    <string name="logs">Журнали</string>
 </resources>

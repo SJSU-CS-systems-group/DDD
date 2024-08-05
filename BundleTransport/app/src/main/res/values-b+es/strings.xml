@@ -36,4 +36,9 @@
     <string name="failed">Fallido</string>
     <string name="available">Disponible</string>
     <string name="unavailable">No disponible</string>
+    <string name="upload">Subir</string>
+    <string name="local_wifi">Wi-Fi Local</string>
+    <string name="permissions">Permisos</string>
+    <string name="logs">Registros</string>
+
 </resources>

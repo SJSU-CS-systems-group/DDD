@@ -37,4 +37,9 @@
     <string name="failed">فشل</string>
     <string name="available">متاح</string>
     <string name="unavailable">غير متاح</string>
+    <string name="upload">تحميل</string>
+    <string name="local_wifi">واي فاي محلي</string>
+    <string name="permissions">أذونات</string>
+    <string name="logs">سجلات</string>
+
 </resources>

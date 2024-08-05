@@ -36,4 +36,8 @@
     <string name="failed">Failed</string>
     <string name="available">Available</string>
     <string name="unavailable">Unavailable</string>
+    <string name="upload">Upload</string>
+    <string name="local_wifi">Local Wifi</string>
+    <string name="permissions">Permissions</string>
+    <string name="logs">Logs</string>
 </resources>
