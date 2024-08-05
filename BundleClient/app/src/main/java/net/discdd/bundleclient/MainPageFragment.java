@@ -98,7 +98,7 @@ public class MainPageFragment extends Fragment {
         refreshPeersBtn = view.findViewById(R.id.refresh_peers_button);
         refreshPeersBtn.setOnClickListener(v -> ((BundleClientActivity) requireActivity()).refreshPeers());
         connectServerBtn.setOnClickListener(v -> {
-                connectToServer(domainInput.getText().toString(), portInput.getText().toString());
+            connectToServer(domainInput.getText().toString(), portInput.getText().toString());
         });
 
         domainInput.addTextChangedListener(new TextWatcher() {
@@ -244,11 +244,12 @@ public class MainPageFragment extends Fragment {
     void connectToServer(String serverDomain, String serverPort) {
         if (!serverDomain.isEmpty() && !serverPort.isEmpty()) {
             logger.log(INFO, "Sending to " + serverDomain + ":" + serverPort);
-            new GrpcReceiveTask(((BundleClientActivity) requireActivity())).executeInBackground(serverDomain, Integer.parseInt(serverPort));
+            new GrpcReceiveTask(((BundleClientActivity) requireActivity())).executeInBackground(serverDomain,
+                                                                                                Integer.parseInt(
+                                                                                                        serverPort));
 
         }
     }
-
 
     public void exchangeMessage(WifiP2pDevice device, Button exchangeButton) {
         BundleClientActivity bundleClientActivity = ((BundleClientActivity) requireActivity());
@@ -260,20 +261,23 @@ public class MainPageFragment extends Fragment {
             connectionFuture.thenAccept(gi -> {
                 updateOwnerAndGroupInfo(wifiDirectManager.getGroupOwnerAddress(), wifiDirectManager.getGroupInfo());
                 bundleClientActivity.appendResultsMessage(String.format("Starting transmission to %s", transportName));
-                new GrpcReceiveTask(bundleClientActivity).executeInBackground("192.168.49.1", 7777).thenAccept(result -> {
-                    logger.log(INFO, "connection complete!");
-                    bundleClientActivity.runOnUiThread(() -> exchangeButton.setEnabled(true));
-                    wifiDirectManager.disconnect().thenAccept(rc -> {
-                        // if we try to refreshPeers right away, nothing happens,
-                        // so we need to wait a second
-                        bundleClientActivity.runInXMs(this::refreshPeers, 1000);
-                        updateOwnerAndGroupInfo(wifiDirectManager.getGroupOwnerAddress(), wifiDirectManager.getGroupInfo());
-                    });
-                });
+                new GrpcReceiveTask(bundleClientActivity).executeInBackground("192.168.49.1", 7777)
+                        .thenAccept(result -> {
+                            logger.log(INFO, "connection complete!");
+                            bundleClientActivity.runOnUiThread(() -> exchangeButton.setEnabled(true));
+                            wifiDirectManager.disconnect().thenAccept(rc -> {
+                                // if we try to refreshPeers right away, nothing happens,
+                                // so we need to wait a second
+                                bundleClientActivity.runInXMs(this::refreshPeers, 1000);
+                                updateOwnerAndGroupInfo(wifiDirectManager.getGroupOwnerAddress(),
+                                                        wifiDirectManager.getGroupInfo());
+                            });
+                        });
 
             });
 
-            HashMap<String, ArrayList<CompletableFuture<WifiP2pGroup>>> connectionWaiters = bundleClientActivity.connectionWaiters;
+            HashMap<String, ArrayList<CompletableFuture<WifiP2pGroup>>> connectionWaiters =
+                    bundleClientActivity.connectionWaiters;
             synchronized (connectionWaiters) {
                 connectionWaiters.computeIfAbsent(transportName, k -> new ArrayList<>()).add(connectionFuture);
             }
