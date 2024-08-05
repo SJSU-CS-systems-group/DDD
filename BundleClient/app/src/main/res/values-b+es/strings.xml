@@ -1,0 +1,37 @@
+<resources>
+    <string name="android.permission.ACCESS_FINE_LOCATION">Acceso a ubicación precisa</string>
+    <string name="android.permission.ACCESS_WIFI_STATE">Verificar el estado de Wifi</string>
+    <string name="android.permission.CHANGE_WIFI_STATE">Cambiar Wifi</string>
+    <string name="android.permission.INTERNET">Usar la Red</string>
+    <string name="android.permission.NEARBY_WIFI_DEVICES">Encontrar dispositivos Wifi cercanos</string>
+    <string name="app_name">Cliente De Paquetes</string>
+    <string name="tansport_host">ddd_transporte</string>
+    <string name="hello_blank_fragment">Hola fragmento en blanco</string>
+    <string name="home_tab">Inicio</string>
+    <string name="permissions_tab">Permisos</string>
+    <string name="usb_tab">Usb</string>
+    <string name="logs_tab">Registros</string>
+    <string name="starting_file_receive">Iniciando recepción de archivo...\n</string>
+    <string name="incomplete_bundle_request">Incompleto %1$ %2$</string>
+    <string name="failed">Fallido</string>
+    <string name="completed">Completado</string>
+    <string name="incomplete">Incompleto</string>
+    <string name="complete">Completo</string>
+    <string name="failed_file_transfer">Fallido... : %s</string>
+    <string name="no_usb_connection_detected">No se detectó conexión USB\n</string>
+    <string name="usb_connection_detected">Conexión USB detectada\n</string>
+    <string name="usb_transport_directory_was_not_detected">El USB estaba conectado, pero no se detectó el directorio /DDD_transport\n</string>
+    <string name="usb_device_attached">Dispositivo USB conectado</string>
+    <string name="usb_device_detached">Dispositivo USB desconectado</string>
+    <string name="bundleserver_domain">Dominio del BundleServer</string>
+    <string name="bundleserver_port">Puerto del BundleServer</string>
+    <string name="connect_to_bundle_server">conectar al servidor de paquetes</string>
+    <string name="connected_device_addresses">Direcciones de dispositivos conectados:</string>
+    <string name="response">Respuesta:</string>
+    <string name="exchange_data">Intercambiar datos</string>
+    <string name="browse">Navegar</string>
+    <string name="permission_caption">Leyenda de permiso</string>
+    <string name="needed_permissions">Permisos necesarios</string>
+    <string name="exchange_usb_data">INTERCAMBIAR DATOS USB</string>
+    <string name="usb_connection_status">Estado de la conexión USB:</string>
+</resources>
