@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">BundleTransport</string>
-    <string name="bundle_server_host">trique.homeofcode.com</string>
+    <string name="bundle_server_host">name.homeofcode.com</string>
     <string name="select">Select Item</string>
     <string name="wifi_request_groupinfo">"I request groupInfo: "</string>
     <string name="grpc_running">GRPC Server State: RUNNING</string>
@@ -13,6 +13,14 @@
     <string name="bundles_download_failed">Bundles download failed.\n</string>
     <string name="bundles_download_successful">Bundles downloaded successfully.\n</string>
     <string name="saved">Saved</string>
-    <string name="domain">domain</string>
-    <string name="port">port</string>
+    <string name="start_grpc_server">Start gRPC Server</string>
+    <string name="stop_grpc_server">Stop gRPC Server</string>
+    <string name="connect_to_bundle_server">connect to bundle server</string>
+    <string name="free_up_space">Free up Space</string>
+    <string name="save_domain_and_port">Save Domain and Port</string>
+    <string name="restore_domain_and_port">Restore Domain and Port</string>
+    <string name="nearby_devices">Nearby Devices:</string>
+    <string name="connected_devices">Connected Devices:</string>
+    <string name="domain">Domain</string>
+    <string name="port">Port</string>
 </resources>
