@@ -104,7 +104,8 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
     }
 
     @Override
-    public void pendingDataCheck(PendingDataCheckRequest request, StreamObserver<PendingDataCheckResponse> responseObserver) {
+    public void pendingDataCheck(PendingDataCheckRequest request,
+                                 StreamObserver<PendingDataCheckResponse> responseObserver) {
         List<String> pendingClients = new ArrayList<>();
 
         sendADUsStorage.getAllClientApps().filter(s -> {
