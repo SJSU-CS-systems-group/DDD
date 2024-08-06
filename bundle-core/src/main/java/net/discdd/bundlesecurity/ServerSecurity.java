@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -348,9 +349,9 @@ public class ServerSecurity {
             byte[] encryptedData = Files.readAllBytes(payloadPath.resolve(payloadName));
             byte[] serverDecryptedMessage = client.cipherSession.decrypt(new SignalMessage(encryptedData));
             updateSessionRecord(client);
-            try (FileOutputStream stream = new FileOutputStream(decryptedFile.toFile(), true)) {
-                stream.write(serverDecryptedMessage);
-            }
+
+            Files.write(decryptedFile, serverDecryptedMessage, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
+
             logger.log(FINE, "[ServerSecurity]:Decrypted Size = %d", serverDecryptedMessage.length);
 
             if (SecurityUtils.verifySignature(serverDecryptedMessage, client.IdentityKey.getPublicKey(),
