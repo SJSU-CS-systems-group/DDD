@@ -34,12 +34,9 @@ public class FileUtils {
 
     public static OutputStream getFilePath(BundleDownloadResponse response, Path receive_Directory) throws IOException {
         String fileName = response.getMetadata().getBid();
-        File directoryReceive = new File(receive_Directory.resolve(response.getMetadata().getSenderId()).toString());
-        if (!directoryReceive.exists()) {
-            directoryReceive.mkdirs();
-        }
+        var directoryReceive = receive_Directory.resolve(response.getMetadata().getSenderId());
 
-        return Files.newOutputStream(Paths.get(response.toString(), response.getMetadata().getSenderId(), fileName),
+        return Files.newOutputStream(directoryReceive.resolve(fileName),
                                      StandardOpenOption.CREATE, StandardOpenOption.APPEND);
     }
 
@@ -61,8 +58,8 @@ public class FileUtils {
         }
     }
 
-    public static void deleteBundlesFromDirectory(String directory) {
-        File deleteDir = new File(directory);
+    public static void deleteBundlesFromDirectory(Path directory) {
+        File deleteDir = directory.toFile();
         if (deleteDir.listFiles() != null) {
             for (File bundle : Objects.requireNonNull(deleteDir.listFiles())) {
                 boolean result = bundle.delete();
