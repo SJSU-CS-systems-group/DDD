@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Objects;
 import java.util.logging.Logger;
@@ -34,8 +33,8 @@ public class FileUtils {
 
     public static OutputStream getFilePath(BundleDownloadResponse response, Path receive_Directory) throws IOException {
         String fileName = response.getMetadata().getBid();
-        var directoryReceive = receive_Directory.resolve(response.getMetadata().getSenderId());
-
+        // TODO: this only works for the TRANSPORT type
+        var directoryReceive = receive_Directory.resolve(response.getMetadata().getSender().getId());
         return Files.newOutputStream(directoryReceive.resolve(fileName), StandardOpenOption.CREATE,
                                      StandardOpenOption.APPEND);
     }

@@ -9,9 +9,9 @@ import android.app.Activity;
 import android.content.Context;
 import android.widget.TextView;
 
-import net.discdd.bundlerouting.BundleSender;
 import net.discdd.bundlerouting.RoutingExceptions;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
+import net.discdd.bundletransport.service.BundleSender;
 import net.discdd.bundletransport.service.Bytes;
 import net.discdd.bundletransport.service.FileServiceGrpc;
 import net.discdd.bundletransport.service.ReqFilePath;
@@ -50,7 +50,6 @@ class GrpcReceiveTask {
     private ManagedChannel channel;
     private final TextView resultText;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    String currentSenderId;
     BundleSender currentSender;
     private final Activity activity;
 
@@ -129,9 +128,8 @@ class GrpcReceiveTask {
                 responses.forEachRemaining(r -> {
                     try {
                         fileOutputStream.write(r.getValue().toByteArray());
-                        currentSenderId = r.getSenderId();
+                        currentSender = r.getSender();
                         r.getSender();
-                        if (!r.getSender().isBlank()) currentSender = BundleSender.valueOf(r.getSender());
                     } catch (IOException e) {
                         errorOccurred[0] = true;
                         logger.log(SEVERE, "Cannot write bytes ", e);
@@ -176,7 +174,7 @@ class GrpcReceiveTask {
         String FILE_PATH = applicationContext.getApplicationInfo().dataDir + "/Shared/received-bundles";
         BundleTransmission bundleTransmission =
                 new BundleTransmission(Paths.get(applicationContext.getApplicationInfo().dataDir));
-        bundleTransmission.processReceivedBundles(currentSenderId, currentSender, FILE_PATH);
+        bundleTransmission.processReceivedBundles(currentSender, FILE_PATH);
 
     }
 
@@ -200,8 +198,7 @@ class GrpcReceiveTask {
                     fileOutputStream = new FileOutputStream(FILE_PATH + "/" + bundleName);
                 }
                 fileOutputStream.write(fileContent.getValue().toByteArray());
-                currentSenderId = fileContent.getSenderId();
-                if (!fileContent.getSender().isBlank()) currentSender = BundleSender.valueOf(fileContent.getSender());
+                currentSender = fileContent.getSender();
             } catch (IOException e) {
                 onError(e);
             }

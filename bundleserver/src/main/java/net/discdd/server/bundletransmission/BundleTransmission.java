@@ -1,10 +1,11 @@
 package net.discdd.server.bundletransmission;
 
-import net.discdd.bundlerouting.BundleSender;
 import net.discdd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions.ClientWindowNotFound;
+import net.discdd.bundlerouting.service.FileServiceImpl;
 import net.discdd.bundlesecurity.BundleIDGenerator;
 import net.discdd.bundlesecurity.SecurityUtils;
+import net.discdd.bundletransport.service.BundleSender;
 import net.discdd.model.ADU;
 import net.discdd.model.Acknowledgement;
 import net.discdd.model.Bundle;
@@ -33,13 +34,23 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
+import static net.discdd.bundletransport.service.BundleSenderType.CLIENT;
+import static net.discdd.bundletransport.service.BundleSenderType.TRANSPORT;
 
 @Service
 public class BundleTransmission {
@@ -65,12 +76,11 @@ public class BundleTransmission {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void processReceivedBundle(BundleSender sender, String senderId, Bundle bundle) throws Exception {
+    public void processReceivedBundle(BundleSender sender, Bundle bundle) throws Exception {
         logger.log(INFO, "Processing received bundle: " + bundle.getSource().getName());
-        Path bundleRecvProcDir;
-        if (BundleSender.Transport.equals(sender))
-            bundleRecvProcDir = this.config.getBundleTransmission().getReceivedProcessingDirectory().resolve(senderId);
-        else bundleRecvProcDir = this.config.getBundleTransmission().getReceivedProcessingDirectory();
+        Path bundleRecvProcDir = TRANSPORT == sender.getType() ?
+                this.config.getBundleTransmission().getReceivedProcessingDirectory().resolve(sender.getId()) :
+                this.config.getBundleTransmission().getReceivedProcessingDirectory();
 
         bundleRecvProcDir.toFile().mkdirs();
 
@@ -136,7 +146,7 @@ public class BundleTransmission {
         }
 
         try {
-            this.bundleRouting.processClientMetaData(uncompressedPayload.getSource().getAbsolutePath(), senderId,
+            this.bundleRouting.processClientMetaData(uncompressedPayload.getSource().getAbsolutePath(), sender.getId(),
                                                      clientId);
         } catch (ClientMetaDataFileException | SQLException e) {
             // TODO Auto-generated catch block
@@ -150,37 +160,33 @@ public class BundleTransmission {
         }
     }
 
-    public void processReceivedBundles(BundleSender sender, String senderId) {
-        if (BundleSender.Transport.equals(sender) && senderId == null) {
-            return;
-        }
+    public void processReceivedBundles(BundleSender sender) {
         File receivedBundlesDirectory = this.config.getBundleTransmission().getBundleReceivedLocation().toFile();
         for (final File transportDir : receivedBundlesDirectory.listFiles()) {
-            if (BundleSender.Transport.equals(sender) && !senderId.equals(transportDir.getName())) {
+            if (TRANSPORT == sender.getType() && !sender.getId().equals(transportDir.getName())) {
                 continue;
             }
-            if (BundleSender.Transport.equals(sender)) {
+            if (TRANSPORT == sender.getType()) {
                 List<String> reachableClients = new ArrayList<>();
-                reachableClients = bundleRouting.getClientsForTransportId(senderId);
+                reachableClients = bundleRouting.getClientsForTransportId(sender.getId());
             }
 
             if (transportDir.isDirectory()) {
                 for (final File bundleFile : transportDir.listFiles()) {
-                    processBundleFile(bundleFile, sender, senderId);
+                    processBundleFile(bundleFile, sender);
                 }
             } else if (transportDir.isFile()) {
-                processBundleFile(transportDir, sender, senderId);
+                processBundleFile(transportDir, sender);
             }
         }
     }
 
-    private void processBundleFile(File bundleFile, BundleSender sender, String senderId) {
+    private void processBundleFile(File bundleFile, BundleSender sender) {
         Bundle bundle = new Bundle(bundleFile);
         try {
-            this.processReceivedBundle(sender, senderId, bundle);
+            this.processReceivedBundle(sender, bundle);
         } catch (Exception e) {
-            logger.log(SEVERE, "[BundleTransmission] Failed to process received bundle from: " + sender + " with Id: " +
-                    senderId, e);
+            logger.log(SEVERE, "[BundleTransmission] Failed to process received bundle from: " + FileServiceImpl.bundleSenderToString(sender));
         } finally {
             try {
                 FileUtils.delete(bundleFile);
@@ -233,7 +239,7 @@ public class BundleTransmission {
         return this.serverWindowService.getCurrentbundleID(clientId);
     }
 
-    private BundleTransferDTO generateBundleForTransmission(String sender, String clientId,
+    private BundleTransferDTO generateBundleForTransmission(BundleSender sender, String clientId,
                                                             Set<String> bundleIdsPresent) throws ClientWindowNotFound
             , SQLException, InvalidClientIDException, GeneralSecurityException, InvalidKeyException,
             InvalidClientSessionException, IOException {
@@ -292,8 +298,7 @@ public class BundleTransmission {
 
         if (toSendOpt.isPresent()) {
             UncompressedPayload toSendBundlePayload = toSendOpt.get();
-            if (BundleSender.Transport.name().equals(sender) &&
-                    bundleIdsPresent.contains(toSendBundlePayload.getBundleId())) {
+            if (TRANSPORT == sender.getType() && bundleIdsPresent.contains(toSendBundlePayload.getBundleId())) {
                 deletionSet.addAll(bundleIdsPresent);
                 deletionSet.remove(toSendBundlePayload.getBundleId());
                 // We dont add toSend to bundlesToSend because the bundle is already on the transport.
@@ -323,17 +328,13 @@ public class BundleTransmission {
         return new BundleTransferDTO(deletionSet, bundlesToSend);
     }
 
-    public BundleTransferDTO generateBundlesForTransmission(String sender, String senderId,
-                                                            Set<String> bundleIdsPresent) throws SQLException,
+    public BundleTransferDTO generateBundlesForTransmission(BundleSender sender, Set<String> bundleIdsPresent) throws SQLException,
             ClientWindowNotFound, InvalidClientIDException, GeneralSecurityException, InvalidClientSessionException,
             IOException, InvalidKeyException {
-        List<String> clientIds = null;
-        if (null != sender && BundleSender.Client.name().equals(sender))
-            clientIds = Collections.singletonList(senderId);
-        else clientIds = this.bundleRouting.getClientsForTransportId(senderId);
+        List<String> clientIds = CLIENT == sender.getType() ? Collections.singletonList(sender.getId()) :
+                this.bundleRouting.getClientsForTransportId(sender.getId());
 
-        logger.log(SEVERE, "[BundleTransmission] Found " + clientIds.size() + " reachable from the sender: " + sender +
-                " with Id: " + senderId);
+        logger.log(SEVERE, "[BundleTransmission] Found " + clientIds.size() + " reachable from the sender: " + FileServiceImpl.bundleSenderToString(sender));
         Set<String> deletionSet = new HashSet<>();
         List<BundleDTO> bundlesToSend = new ArrayList<>();
         Map<String, Set<String>> clientIdToBundleIds = new HashMap<>();
@@ -357,15 +358,15 @@ public class BundleTransmission {
         return new BundleTransferDTO(deletionSet, bundlesToSend);
     }
 
-    public List<File> getBundlesForTransmission(String sender, String senderId) {
-        logger.log(INFO, "[BundleTransmission] Inside getBundlesForTransmission method for " + sender + " with id: " +
-                senderId);
+    public List<File> getBundlesForTransmission(BundleSender sender) {
+        logger.log(INFO, "[BundleTransmission] Inside getBundlesForTransmission method for " +
+                FileServiceImpl.bundleSenderToString(sender));
         List<File> bundles = new ArrayList<>();
         List<String> clientIds = new ArrayList<>();
-        if (null != sender && sender.equals(BundleSender.Client.name())) {
-            clientIds.add(senderId);
+        if (CLIENT == sender.getType()) {
+            clientIds.add(sender.getId());
         } else {
-            clientIds.addAll(bundleRouting.getClientsForTransportId(senderId));
+            clientIds.addAll(bundleRouting.getClientsForTransportId(sender.getId()));
         }
 
         for (String clientId : clientIds) {
@@ -377,8 +378,7 @@ public class BundleTransmission {
             if (null != bundleFilesForClientId) bundles.addAll(List.of(Objects.requireNonNull(bundleFilesForClientId)));
         }
 
-        logger.log(INFO, "[BundleTransmission] Found " + bundles.size() + " bundles to deliver through " + sender +
-                " with Id: " + senderId);
+        logger.log(INFO, "[BundleTransmission] Found " + bundles.size() + " bundles to deliver through " + FileServiceImpl.bundleSenderToString(sender));
         return bundles;
     }
 
