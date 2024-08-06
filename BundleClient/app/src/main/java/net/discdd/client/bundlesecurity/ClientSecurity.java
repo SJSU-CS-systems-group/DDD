@@ -300,7 +300,8 @@ public class ClientSecurity {
             byte[] serverDecryptedMessage = cipherSession.decrypt(new SignalMessage(encryptedData));
             updateSessionRecord();
 
-            Files.write(decryptedFile, serverDecryptedMessage, StandardOpenOption.APPEND);
+            Files.write(decryptedFile, serverDecryptedMessage, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
+
             logger.log(FINER, "Decrypted Size = %d\n", serverDecryptedMessage.length);
 
             if (SecurityUtils.verifySignature(serverDecryptedMessage, theirIdentityKey.getPublicKey(), signatureFile)) {
