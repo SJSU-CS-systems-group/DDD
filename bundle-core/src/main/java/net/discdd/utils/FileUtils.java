@@ -36,8 +36,8 @@ public class FileUtils {
         String fileName = response.getMetadata().getBid();
         var directoryReceive = receive_Directory.resolve(response.getMetadata().getSenderId());
 
-        return Files.newOutputStream(directoryReceive.resolve(fileName),
-                                     StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        return Files.newOutputStream(directoryReceive.resolve(fileName), StandardOpenOption.CREATE,
+                                     StandardOpenOption.APPEND);
     }
 
     public static void writeFile(OutputStream writer, ByteString content) throws IOException {
