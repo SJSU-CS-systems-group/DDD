@@ -1,0 +1,22 @@
+R_DEF: Internal format may change without notice
+local
+array permissions_array
+id logmsgs
+id permission_caption
+id permission_checkbox
+id permissions_recycler_view
+id title
+layout log_fragment
+layout log_listitem
+layout permissions_fragment
+layout permissions_listitem
+string android.permission.ACCESS_FINE_LOCATION
+string android.permission.ACCESS_WIFI_STATE
+string android.permission.CHANGE_WIFI_STATE
+string android.permission.INTERNET
+string android.permission.NEARBY_WIFI_DEVICES
+string any_emoji
+string generic_action_button
+string peers
+string waiting_for_permissions
+string wifidirectinitialized

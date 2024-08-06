@@ -55,12 +55,12 @@ public class BundleServerApplication {
             }
         }
         var app = new MySpringApplication(BundleServerApplication.class);
+        Properties properties = new Properties();
         if (args.length > 0) {
             Resource resource = new FileSystemResource(args[0]);
             if (resource.exists()) {
                 try {
-                    Properties properties = PropertiesLoaderUtils.loadProperties(resource);
-                    app.setDefaultProperties(properties);
+                    properties = PropertiesLoaderUtils.loadProperties(resource);
                     args = Arrays.copyOfRange(args, 1, args.length);
                 } catch (Exception e) {
                     logger.log(SEVERE, "Please enter valid properties file path!");
@@ -75,16 +75,18 @@ public class BundleServerApplication {
             System.exit(1);
         }
 
-        app.setBanner((e, s, o) -> o.println(BananaUtils.bananansi("DDD Bundle Server", Font.ANSI_SHADOW, Ansi.GREEN)));
 
         if (CommandProcessor.checkForCommand(args)) {
             // we are doing a CLI command, so don't start up like a server
             app.setWebApplicationType(WebApplicationType.NONE);
             app.setBannerMode(Banner.Mode.OFF);
             app.setLogStartupInfo(false);
+            properties.put("logging.level.root", "error");
+        } else {
+            app.setBanner((e, s, o) -> o.println(BananaUtils.bananansi("DDD Bundle Server", Font.ANSI_SHADOW, Ansi.GREEN)));
         }
         new BundleUploader().run(args);
-
+        app.setDefaultProperties(properties);
         app.run(args);
     }
 }
