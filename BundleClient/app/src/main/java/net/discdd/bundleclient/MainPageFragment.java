@@ -1,6 +1,7 @@
 package net.discdd.bundleclient;
 
 import static java.util.logging.Level.INFO;
+
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.os.Bundle;

@@ -2,7 +2,7 @@ package net.discdd.bundlerouting.service;
 
 import com.google.protobuf.ByteString;
 import io.grpc.stub.StreamObserver;
-import net.discdd.bundlerouting.BundleSender;
+import net.discdd.bundletransport.service.BundleSender;
 import net.discdd.bundletransport.service.Bytes;
 import net.discdd.bundletransport.service.FileServiceGrpc;
 import net.discdd.bundletransport.service.FileUploadRequest;
@@ -48,16 +48,14 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
     protected BundleProcessingInterface generateBundle;
     protected FileServiceEventListener listener;
 
-    public FileServiceImpl(File externalFilesDir, BundleSender sender, String senderId) {
-        this(externalFilesDir, sender, senderId, null);
+    public FileServiceImpl(File externalFilesDir, BundleSender sender) {
+        this(externalFilesDir, sender, null);
     }
 
-    public FileServiceImpl(File externalFilesDir, BundleSender sender, String senderId,
-                           FileServiceEventListener listener) {
+    public FileServiceImpl(File externalFilesDir, BundleSender sender, FileServiceEventListener listener) {
         this.listener = listener;
         this.SERVER_BASE_PATH = Paths.get(externalFilesDir + "/BundleTransmission");
         this.sender = sender;
-        this.senderId = senderId;
         this.processBundle = null;
         File toServer = new File(String.valueOf(SERVER_BASE_PATH.resolve("server")));
         toServer.mkdirs();
@@ -79,7 +77,7 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
             @Override
             public void onNext(FileUploadRequest fileUploadRequest) {
-                logger.log(INFO, "Received request to write file to: " + sender.name());
+                logger.log(INFO, "Received request to write file to: " + bundleSenderToString(sender));
                 try {
                     if (fileUploadRequest.hasMetadata()) {
                         writer = getFilePath(fileUploadRequest);
@@ -135,9 +133,8 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
     @Override
     public void downloadFile(ReqFilePath request, StreamObserver<Bytes> responseObserver) {
-        logger.log(INFO, "Received request to download file from: " + sender.name());
+        logger.log(INFO, "Received request to download file from: " + bundleSenderToString(sender));
         String requestedPath = String.valueOf(SERVER_BASE_PATH.resolve(downloadingFrom).resolve(request.getValue()));
-
         if (null != generateBundle) {
             this.bundleToDownload = request.getValue();
             this.clientId = request.getClientId();
@@ -160,8 +157,7 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
         }
         StreamHandler handler = new StreamHandler(in);
         Exception ex = handler.handle(bytes -> {
-            responseObserver.onNext(
-                    Bytes.newBuilder().setValue(bytes).setSenderId(senderId).setSender(sender.name()).build());
+            responseObserver.onNext(Bytes.newBuilder().setValue(bytes).setSender(sender).build());
         });
         if (ex != null) ex.printStackTrace();
 
@@ -176,5 +172,14 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
     protected void setGenerateBundle(BundleProcessingInterface bundleProcessingImpl) {
         this.generateBundle = bundleProcessingImpl;
+    }
+
+    public static String bundleSenderToString(BundleSender sender) {
+        return switch (sender.getType()) {
+            case CLIENT -> "client";
+            case SERVER -> "server";
+            case TRANSPORT -> "transport: " + sender.getId();
+            default -> "unknown:" + sender.getId();
+        };
     }
 }

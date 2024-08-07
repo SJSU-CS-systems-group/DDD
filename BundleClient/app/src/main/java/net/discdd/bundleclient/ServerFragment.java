@@ -37,8 +37,8 @@ public class ServerFragment extends Fragment {
 
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
-                             @Nullable Bundle savedInstanceState) {
+    public View onCreateView(
+            @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.server_fragment, container, false);
         domainInput = view.findViewById(R.id.domain_input);
         portInput = view.findViewById(R.id.port_input);
@@ -92,7 +92,6 @@ public class ServerFragment extends Fragment {
             saveDomainPort();
         });
 
-
         connectServerBtn.setOnClickListener(v -> {
             connectToServer(domainInput.getText().toString(), portInput.getText().toString());
         });
@@ -109,7 +108,9 @@ public class ServerFragment extends Fragment {
     private void connectToServer(String serverDomain, String serverPort) {
         if (!serverDomain.isEmpty() && !serverPort.isEmpty()) {
             logger.log(INFO, "Sending to " + serverDomain + ":" + serverPort);
-            new GrpcReceiveTask(((BundleClientActivity) requireActivity())).executeInBackground(serverDomain, Integer.parseInt(serverPort));
+            new GrpcReceiveTask(((BundleClientActivity) requireActivity())).executeInBackground(serverDomain,
+                                                                                                Integer.parseInt(
+                                                                                                        serverPort));
 
         }
     }

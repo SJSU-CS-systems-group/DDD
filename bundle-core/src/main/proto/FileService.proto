@@ -24,6 +24,18 @@ enum Status {
   UNAVAILABLE = 4;
 }
 
+enum BundleSenderType {
+  UNDEFINED = 0;
+  CLIENT = 1;
+  TRANSPORT = 2;
+  SERVER = 3;
+}
+
+message BundleSender {
+  string id = 1;
+  BundleSenderType type = 2;
+}
+
 message MetaData {
   string name = 1;
   string type = 2;
@@ -48,8 +60,7 @@ message FileUploadResponse {
 
 message Bytes {
   bytes value = 1;
-  string senderId =2;
-  string sender =3;
+  BundleSender sender = 4;
 }
 
 service FileService {
