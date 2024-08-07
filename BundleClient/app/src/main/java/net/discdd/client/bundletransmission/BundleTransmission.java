@@ -3,10 +3,15 @@ package net.discdd.client.bundletransmission;
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
 
-import net.discdd.bundlerouting.BundleSender;
 import net.discdd.bundlerouting.RoutingExceptions;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
+import net.discdd.bundlerouting.service.FileServiceImpl;
 import net.discdd.bundlesecurity.BundleIDGenerator;
+import net.discdd.bundletransport.service.BundleSender;
+import net.discdd.client.applicationdatamanager.ApplicationDataManager;
+import net.discdd.client.bundlerouting.ClientBundleGenerator;
+import net.discdd.client.bundlerouting.ClientRouting;
+import net.discdd.client.bundlesecurity.BundleSecurity;
 import net.discdd.model.ADU;
 import net.discdd.model.Acknowledgement;
 import net.discdd.model.Bundle;
@@ -14,13 +19,9 @@ import net.discdd.model.BundleDTO;
 import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
 import net.discdd.model.UncompressedPayload;
-import net.discdd.utils.Constants;
 import net.discdd.utils.AckRecordUtils;
-import net.discdd.client.bundlesecurity.BundleSecurity;
-import net.discdd.client.applicationdatamanager.ApplicationDataManager;
-import net.discdd.client.bundlerouting.ClientRouting;
 import net.discdd.utils.BundleUtils;
-import net.discdd.client.bundlerouting.ClientBundleGenerator;
+import net.discdd.utils.Constants;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -112,15 +113,16 @@ public class BundleTransmission {
         return bundleId.trim();
     }
 
-    private void processReceivedBundle(String senderId, BundleSender sender, Bundle bundle) throws IOException,
+    private void processReceivedBundle(BundleSender sender, Bundle bundle) throws IOException,
             RoutingExceptions.ClientMetaDataFileException, NoSessionException, InvalidMessageException,
             DuplicateMessageException, LegacyMessageException, InvalidKeyException, GeneralSecurityException {
         String largestBundleIdReceived = this.getLargestBundleIdReceived();
         UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, this.ROOT_DIR.resolve(
                 Paths.get(BUNDLE_GENERATION_DIRECTORY, RECEIVED_PROCESSING)));
         Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
-        logger.log(INFO, "Updating client routing metadata for sender:  " + sender + " with Id: " + senderId);
-        clientRouting.updateMetaData(senderId);
+        logger.log(INFO,
+                   "Updating client routing metadata for sender:  " + FileServiceImpl.bundleSenderToString(sender));
+        clientRouting.updateMetaData(sender.getId());
 
         String bundleId = payload.getBundleId();
 
@@ -145,7 +147,7 @@ public class BundleTransmission {
 
     }
 
-    public void processReceivedBundles(String senderId, BundleSender sender, String bundlesLocation) throws WindowExceptions.BufferOverflow, IOException, InvalidKeyException, RoutingExceptions.ClientMetaDataFileException, NoSessionException, InvalidMessageException, DuplicateMessageException, LegacyMessageException, GeneralSecurityException {
+    public void processReceivedBundles(BundleSender sender, String bundlesLocation) throws WindowExceptions.BufferOverflow, IOException, InvalidKeyException, RoutingExceptions.ClientMetaDataFileException, NoSessionException, InvalidMessageException, DuplicateMessageException, LegacyMessageException, GeneralSecurityException {
         File bundleStorageDirectory = new File(bundlesLocation);
         logger.log(FINE, "inside receives" + bundlesLocation);
         if (bundleStorageDirectory.listFiles() == null || bundleStorageDirectory.listFiles().length == 0) {
@@ -155,7 +157,7 @@ public class BundleTransmission {
         for (final File bundleFile : bundleStorageDirectory.listFiles()) {
             Bundle bundle = new Bundle(bundleFile);
             logger.log(INFO, "Processing: " + bundle.getSource().getName());
-            this.processReceivedBundle(senderId, sender, bundle);
+            this.processReceivedBundle(sender, bundle);
             logger.log(INFO, "Deleting Directory");
             FileUtils.deleteQuietly(bundle.getSource());
             logger.log(INFO, "Deleted Directory");

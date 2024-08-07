@@ -5,7 +5,10 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import net.discdd.bundletransport.service.BundleDownloadRequest;
 import net.discdd.bundletransport.service.BundleDownloadResponse;
+import net.discdd.bundletransport.service.BundleSender;
+import net.discdd.bundletransport.service.BundleSenderType;
 import net.discdd.bundletransport.service.BundleServiceGrpc;
+import net.discdd.utils.Constants;
 import net.discdd.utils.FileUtils;
 
 import java.io.File;
@@ -21,17 +24,8 @@ import java.util.stream.Collectors;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.WARNING;
 import static java.util.logging.Level.SEVERE;
-
-import net.discdd.utils.Constants;
-import net.discdd.bundletransport.service.BundleDownloadRequest;
-import net.discdd.bundletransport.service.BundleDownloadResponse;
-import net.discdd.bundletransport.service.BundleServiceGrpc;
-
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
-import io.grpc.stub.StreamObserver;
+import static java.util.logging.Level.WARNING;
 
 public class GrpcReceiveTask {
     private static final Logger logger = Logger.getLogger(GrpcReceiveTask.class.getName());
@@ -155,8 +149,9 @@ public class GrpcReceiveTask {
                 File dir = clientPath.toFile();
                 List<String> files = Arrays.stream(dir.listFiles(f -> f.length() > 0)).map(File::getName)
                         .collect(Collectors.toList());
-                BundleDownloadRequest request = BundleDownloadRequest.newBuilder().setSenderId(transportId)
-                        .setSender(BundleSender.Transport.name()).addAllBundleList(files).build();
+                BundleDownloadRequest request = BundleDownloadRequest.newBuilder().setSender(
+                                BundleSender.newBuilder().setType(BundleSenderType.TRANSPORT).setId(transportId).build())
+                        .addAllBundleList(files).build();
 
                 stub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                         .downloadBundle(request, downloadObserver);
