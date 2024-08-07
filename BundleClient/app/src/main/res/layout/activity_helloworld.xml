@@ -5,33 +5,6 @@
     android:orientation="vertical"
     tools:context=".BundleClientActivity">
 
-    <EditText
-        android:id="@+id/domain_input"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="BundleServer Domain"
-        android:textAlignment="center"
-        android:padding="10dp"
-        android:layout_marginTop="10dp"
-        />
-
-    <EditText
-        android:id="@+id/port_input"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="BundleServer Port"
-        android:textAlignment="center"
-        android:padding="10dp"
-        android:layout_marginTop="10dp"
-        android:inputType="number"
-        />
-
-    <Button
-        android:id="@+id/btn_connect_bundle_server"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="connect to bundle server"/>
-
     <LinearLayout
             android:orientation="horizontal"
             android:layout_width="match_parent"

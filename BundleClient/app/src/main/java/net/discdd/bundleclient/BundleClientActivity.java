@@ -108,7 +108,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         viewPager.setAdapter(adapter);
 
         new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
-            final String[] labels = { "Home", "Permissions", "Usb", "Logs" };
+            final String[] labels = { "Home", "Permissions", "Usb", "Server", "Logs" };
             tab.setText(labels[position]);
         }).attach();
 
@@ -244,6 +244,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         private LogFragment logFragment;
         private PermissionsFragment permissionsFragment;
         private UsbFragment usbFragment;
+        private ServerFragment serverFragment;
 
         public ViewPagerAdapter(@NonNull BundleClientActivity fragmentActivity) {
             super(fragmentActivity);
@@ -257,13 +258,14 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
                 case 0 -> new MainPageFragment();
                 case 1 -> permissionsFragment = new PermissionsFragment();
                 case 2 -> new UsbFragment();
+                case 3 -> serverFragment = new ServerFragment();
                 default -> logFragment = new LogFragment();
             };
         }
 
         @Override
         public int getItemCount() {
-            return 4;
+            return 5;
         }
     }
 }
