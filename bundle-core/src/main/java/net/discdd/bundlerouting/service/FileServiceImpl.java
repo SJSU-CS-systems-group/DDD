@@ -38,7 +38,6 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
 
     protected Path SERVER_BASE_PATH;
     protected BundleSender sender;
-    protected String senderId;
     protected String uploadingTo;
     protected String downloadingFrom;
     protected String bundleToDownload;

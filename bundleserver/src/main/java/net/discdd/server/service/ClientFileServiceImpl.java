@@ -2,10 +2,11 @@ package net.discdd.server.service;
 
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
-import net.discdd.bundlerouting.BundleSender;
+import net.discdd.bundletransport.service.BundleSender;
 import net.discdd.bundlerouting.service.FileServiceImpl;
 import net.discdd.bundletransport.service.BundleDownloadRequest;
 import net.discdd.bundletransport.service.BundleDownloadResponse;
+import net.discdd.bundletransport.service.BundleSenderType;
 import net.discdd.server.bundlesecurity.ServerSecurity;
 import net.discdd.server.bundletransmission.BundleTransmission;
 import org.springframework.beans.factory.annotation.Autowired;
