@@ -1,25 +1,15 @@
 package net.discdd.bundleclient;
 
 import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.WARNING;
-
-import android.net.ConnectivityManager;
-import android.net.Network;
-import android.net.NetworkCapabilities;
-import android.net.NetworkInfo;
-import android.net.NetworkRequest;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.os.Bundle;
 import android.os.storage.StorageManager;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.text.method.ScrollingMovementMethod;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -46,16 +36,11 @@ public class MainPageFragment extends Fragment {
     private TextView resultText;
     private TextView connectedDeviceText;
     private TextView wifiDirectResponseText;
-    private EditText domainInput;
-    private EditText portInput;
-    private Button connectServerBtn;
     private Button refreshPeersBtn;
     private StorageManager storageManager;
     private static final String usbDirName = "/DDD_transport";
     private RecyclerView peersList;
     private ArrayList<WifiP2pDevice> peers = new ArrayList<>();
-    private ConnectivityManager connectivityManager;
-    private ConnectivityManager.NetworkCallback serverConnectNetworkCallback;
     private WifiDirectManager wifiDirectManager;
 
     @Nullable
@@ -71,9 +56,6 @@ public class MainPageFragment extends Fragment {
         connectedDeviceText = view.findViewById(R.id.connected_device_address);
         wifiDirectResponseText = view.findViewById(R.id.wifidirect_response_text);
         resultText.setMovementMethod(new ScrollingMovementMethod());
-        domainInput = view.findViewById(R.id.domain_input);
-        portInput = view.findViewById(R.id.port_input);
-        connectServerBtn = view.findViewById(R.id.btn_connect_bundle_server);
         peersList = view.findViewById(R.id.peers_list);
         peersList.setLayoutManager(new LinearLayoutManager(getContext()));
         peersList.setAdapter(new RecyclerView.Adapter() {
@@ -99,55 +81,6 @@ public class MainPageFragment extends Fragment {
 
         refreshPeersBtn = view.findViewById(R.id.refresh_peers_button);
         refreshPeersBtn.setOnClickListener(v -> ((BundleClientActivity) requireActivity()).refreshPeers());
-        connectServerBtn.setOnClickListener(v -> {
-            connectToServer(domainInput.getText().toString(), portInput.getText().toString());
-        });
-
-        domainInput.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                if (s.length() > 0 && portInput.getText().toString().length() > 0) {
-                    connectServerBtn.setEnabled(true);
-                } else {
-                    connectServerBtn.setEnabled(false);
-                }
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-
-            }
-        });
-
-        portInput.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                if (s.length() > 0 && !domainInput.getText().toString().isEmpty()) {
-                    connectServerBtn.setEnabled(true);
-                } else {
-                    connectServerBtn.setEnabled(false);
-                }
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-
-            }
-        });
-
-        // register network listeners
-        if (getActivity() instanceof BundleClientActivity && !domainInput.getText().toString().isEmpty() &&
-                !portInput.getText().toString().isEmpty()) {
-            createAndRegisterConnectivityManager(domainInput.getText().toString(), portInput.getText().toString());
-        }
 
         return view;
     }
@@ -187,10 +120,6 @@ public class MainPageFragment extends Fragment {
         });
     }
 
-    public void setConnectServerBtn(boolean isEnabled) {
-        connectServerBtn.setEnabled(isEnabled);
-    }
-
     public void updateOwnerAndGroupInfo(InetAddress groupOwnerAddress, WifiP2pGroup groupInfo) {
         // the groupOwnerAddress doesn't seem to be coming through and the groupInfo owner device
         // name doesn't seem to come through either.
@@ -200,58 +129,6 @@ public class MainPageFragment extends Fragment {
                             getString(R.string.connected_to_transport);
             connectedDeviceText.setText(ownerNameAndAddress);
         });
-    }
-
-    void createAndRegisterConnectivityManager(String serverDomain, String serverPort) {
-        connectivityManager = ((BundleClientActivity) requireActivity()).connectivityManager;
-        NetworkRequest networkRequest =
-                new NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-                        .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR).build();
-
-        serverConnectNetworkCallback = new ConnectivityManager.NetworkCallback() {
-            @Override
-            public void onAvailable(Network network) {
-                logger.log(INFO, "Available network: " + network.toString());
-                logger.log(INFO, "Initiating automatic connection to server");
-                connectToServer(serverDomain, serverPort);
-            }
-
-            @Override
-            public void onLost(Network network) {
-                logger.log(WARNING, "Lost network connectivity");
-                setConnectServerBtn(false);
-            }
-
-            @Override
-            public void onUnavailable() {
-                logger.log(WARNING, "Unavailable network connectivity");
-                setConnectServerBtn(false);
-            }
-
-            @Override
-            public void onBlockedStatusChanged(Network network, boolean blocked) {
-                logger.log(WARNING, "Blocked network connectivity");
-                setConnectServerBtn(false);
-            }
-        };
-
-        connectivityManager.registerNetworkCallback(networkRequest, serverConnectNetworkCallback);
-
-        NetworkInfo activeNetwork = connectivityManager.getActiveNetworkInfo();
-        if (activeNetwork == null || !activeNetwork.isConnectedOrConnecting()) {
-            setConnectServerBtn(false);
-        }
-    }
-
-    void connectToServer(String serverDomain, String serverPort) {
-        if (!serverDomain.isEmpty() && !serverPort.isEmpty()) {
-            logger.log(INFO, "Sending to " + serverDomain + ":" + serverPort);
-            new GrpcReceiveTask(((BundleClientActivity) requireActivity())).executeInBackground(serverDomain,
-                                                                                                Integer.parseInt(
-                                                                                                        serverPort));
-
-        }
     }
 
     public void exchangeMessage(WifiP2pDevice device, Button exchangeButton) {

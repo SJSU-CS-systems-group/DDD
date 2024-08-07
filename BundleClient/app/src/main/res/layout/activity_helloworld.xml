@@ -11,31 +11,6 @@
             android:textIsSelectable="true"
             android:text="ClientId: " />
 
-    <EditText
-            android:id="@+id/domain_input"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="@string/bundleserver_domain"
-            android:textAlignment="center"
-            android:padding="10dp"
-            android:layout_marginTop="10dp" />
-
-    <EditText
-            android:id="@+id/port_input"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="@string/bundleserver_port"
-            android:textAlignment="center"
-            android:padding="10dp"
-            android:layout_marginTop="10dp"
-            android:inputType="number" />
-
-    <Button
-            android:id="@+id/btn_connect_bundle_server"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/connect_to_bundle_server"/>
-
     <LinearLayout
             android:orientation="horizontal"
             android:layout_width="match_parent"
