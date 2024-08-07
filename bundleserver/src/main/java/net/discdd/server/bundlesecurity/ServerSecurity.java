@@ -212,7 +212,6 @@ public class ServerSecurity {
         var clientDataPath = clientRootPath.resolve(clientID);
 
         clientDataPath.toFile().mkdirs();
-        logger.log(FINE, "[ServerSecurity]:Client Data Path = " + clientDataPath);
         try {
             if (!Files.exists(clientDataPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY))) {
                 Files.copy(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY),

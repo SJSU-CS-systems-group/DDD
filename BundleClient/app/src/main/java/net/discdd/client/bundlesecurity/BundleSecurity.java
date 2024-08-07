@@ -136,6 +136,8 @@ public class BundleSecurity {
         File decryptedPayloadJar =
                 uncompressedBundle.getSource().toPath().resolve(Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar")
                         .toFile();
+        logger.log(INFO, "decryptedPayloadJar file path: "+decryptedPayloadJar.getPath());
+        logger.log(INFO, "decryptedPayloadJar file exists: "+decryptedPayloadJar.exists());
         String bundleId = "";
         if (this.isEncryptionEnabled) {
             ClientSecurity clientSecurity = ClientSecurity.getInstance();

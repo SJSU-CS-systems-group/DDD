@@ -15,6 +15,7 @@ import net.discdd.server.repository.entity.SentBundleDetails;
 import net.discdd.utils.BundleUtils;
 import net.discdd.utils.StoreADUs;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.File;
 import java.io.IOException;
@@ -66,6 +67,7 @@ public class ApplicationDataManager {
         return registeredAppAdapterRepository.findAllAppIds().stream().toList();
     }
 
+    @Transactional
     public void processAcknowledgement(String clientId, String bundleId) throws IOException {
         if ("HB".equals(bundleId)) {
             return;

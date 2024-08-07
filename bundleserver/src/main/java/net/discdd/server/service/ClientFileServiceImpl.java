@@ -21,6 +21,10 @@ import java.util.logging.Logger;
 public class ClientFileServiceImpl extends FileServiceImpl {
     @Value("${bundle-server.bundle-store-shared}")
     private String serverBasePath;
+
+    @Value("${bundle-server.bundle-transmission.to-send-directory}")
+    private String serverDownloadPath;
+
     @Autowired
     private ServerSecurity serverSecurity;
     @Autowired
@@ -35,7 +39,7 @@ public class ClientFileServiceImpl extends FileServiceImpl {
         this.SERVER_BASE_PATH = Path.of(serverBasePath);
         this.sender = BundleSender.Server;
         this.senderId = serverSecurity.getServerId();
-        this.downloadingFrom = "send";
+        this.downloadingFrom = serverDownloadPath;
         this.uploadingTo = "receive";
         this.setProcessBundle(this::settingProcessBundle);
         this.setGenerateBundle(this::settingGenerateBundle);
@@ -51,7 +55,7 @@ public class ClientFileServiceImpl extends FileServiceImpl {
 
     public void settingGenerateBundle() {
         BundleDownloadRequest request =
-                BundleDownloadRequest.newBuilder().setSenderId(this.senderId).setSender(BundleSender.Client.name())
+                BundleDownloadRequest.newBuilder().setSenderId(this.clientId).setSender(BundleSender.Client.name())
                         .addAllBundleList(Collections.singleton(this.bundleToDownload)).build();
         StreamObserver<BundleDownloadResponse> downloadObserver = new StreamObserver<BundleDownloadResponse>() {
             @Override
