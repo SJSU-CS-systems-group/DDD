@@ -30,12 +30,8 @@ import static java.util.logging.Level.WARNING;
 @Service
 public class ServerWindowService {
 
-    private final ServerWindowRepository serverwindowrepo;
-
     @Autowired
-    public ServerWindowService(ServerWindowRepository serverWindowRepository) {
-        this.serverwindowrepo = serverWindowRepository;
-    }
+    ServerWindowRepository serverwindowrepo;
 
     private static final Logger logger = Logger.getLogger(ServerWindowService.class.getName());
     HashMap<String, CircularBuffer> clientWindowMap = new HashMap<>();

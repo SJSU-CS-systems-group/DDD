@@ -36,7 +36,7 @@ public class EncryptBundle implements Callable<Void> {
     @Override
     public Void call() {
         ServerSecurity serverSecurity = new ServerSecurity(CliUtils.getServerSecurity(applicationYml, appProps));
-        String receivedProcessingDir = CliUtils.getReceivedProcessingDirectory(applicationYml, appProps);
+        Path receivedProcessingDir = CliUtils.getReceivedProcessingDirectory(applicationYml, appProps);
 
         logger.log(INFO, "Encrypting bundle " + bundlePath);
 

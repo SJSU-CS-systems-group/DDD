@@ -191,12 +191,12 @@ public class SecurityUtils {
         return cipher.doFinal(encryptedData);
     }
 
-    public static String unzip(String zipFilePath) throws IOException {
-        File zipFile = new File(zipFilePath);
+    public static Path unzip(Path zipFilePath) throws IOException {
+        File zipFile = zipFilePath.toFile();
         String destDirPath = zipFile.getParent() + File.separator + zipFile.getName().replaceFirst("[.][^.]+$", "");
         File destDir = new File(destDirPath);
 
-        try (FileInputStream fis = new FileInputStream(zipFilePath); ZipInputStream zis = new ZipInputStream(fis)) {
+        try (FileInputStream fis = new FileInputStream(String.valueOf(zipFilePath)); ZipInputStream zis = new ZipInputStream(fis)) {
             ZipEntry entry = zis.getNextEntry();
             while (entry != null) {
                 File newFile = new File(destDir, entry.getName());
@@ -222,7 +222,7 @@ public class SecurityUtils {
 
             logger.log(INFO, "Unzipped to: " + destDir.getAbsolutePath());
 
-            return destDir.getAbsolutePath();
+            return destDir.toPath();
         }
     }
 

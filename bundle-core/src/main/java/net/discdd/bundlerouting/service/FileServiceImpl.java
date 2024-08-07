@@ -54,10 +54,10 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
         this.SERVER_BASE_PATH = Paths.get(externalFilesDir + "/BundleTransmission");
         this.sender = sender;
         this.processBundle = null;
-        File toServer = new File(String.valueOf(SERVER_BASE_PATH.resolve("server")));
+        File toServer = SERVER_BASE_PATH.resolve("server").toFile();
         toServer.mkdirs();
 
-        File toClient = new File(String.valueOf(SERVER_BASE_PATH.resolve("client")));
+        File toClient = SERVER_BASE_PATH.resolve("client").toFile();
         toClient.mkdirs();
 
         downloadingFrom = "client";

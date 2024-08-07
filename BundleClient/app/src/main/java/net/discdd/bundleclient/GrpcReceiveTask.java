@@ -174,7 +174,7 @@ class GrpcReceiveTask {
         String FILE_PATH = applicationContext.getApplicationInfo().dataDir + "/Shared/received-bundles";
         BundleTransmission bundleTransmission =
                 new BundleTransmission(Paths.get(applicationContext.getApplicationInfo().dataDir));
-        bundleTransmission.processReceivedBundles(currentSender, FILE_PATH);
+        bundleTransmission.processReceivedBundles(currentSenderId, currentSender, FILE_PATH);
 
     }
 

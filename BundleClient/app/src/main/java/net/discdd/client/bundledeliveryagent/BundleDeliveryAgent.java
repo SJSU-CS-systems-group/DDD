@@ -12,6 +12,7 @@ import org.whispersystems.libsignal.InvalidKeyException;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.NoSuchAlgorithmException;
 import java.util.logging.Logger;
@@ -21,7 +22,7 @@ public class BundleDeliveryAgent {
     private static final Logger logger = Logger.getLogger(BundleDeliveryAgent.class.getName());
 
     private static Path ROOT_FOLDER;
-    private static String RelativePath = "/Shared/received-bundles";
+    private static String RelativePath = "Shared/received-bundles";
 
     private BundleTransmission bundleTransmission;
 
@@ -29,8 +30,10 @@ public class BundleDeliveryAgent {
             WindowExceptions.BufferOverflow, RoutingExceptions.ClientMetaDataFileException, IOException,
             NoSuchAlgorithmException, InvalidKeyException {
         ROOT_FOLDER = rootFolder;
-        File receivedBundlesDir = new File(ROOT_FOLDER + RelativePath);
-        receivedBundlesDir.mkdirs();
+        var receivedBundlesDir = ROOT_FOLDER.resolve(RelativePath);
+        if (!Files.exists(receivedBundlesDir)) {
+            Files.createDirectories(receivedBundlesDir);
+        }
         bundleTransmission = new BundleTransmission(ROOT_FOLDER);
     }
 

@@ -8,7 +8,7 @@ import java.nio.file.Path;
 import java.util.Properties;
 
 public class CliUtils {
-    public static String getReceivedProcessingDirectory(File applicationYml, String appProps) {
+    public static Path getReceivedProcessingDirectory(File applicationYml, String appProps) {
         Properties prop = new Properties();
         String resultString = "";
         if (!applicationYml.exists()) {
@@ -20,10 +20,10 @@ public class CliUtils {
             String s = prop.getProperty("received-processing-directory");
             s = s.substring(1, s.length() - 1);
             resultString = s.replace("${bundle-server.bundle-store-root}", loadRoot(appProps));
-            return resultString;
+            return Path.of(resultString);
         } catch (IOException e) {
             System.out.println("No received-processing-directory found in application yaml." + e);
-            return resultString;
+            return Path.of(resultString);
         }
     }
 
@@ -52,6 +52,8 @@ public class CliUtils {
         try (FileInputStream input = new FileInputStream(appProps)) {
             properties.load(input);
             s = properties.getProperty("bundle-server.bundle-store-root");
+            System.out.println("Root " + s);
+
         } catch (IOException e) {
             e.printStackTrace();
         }

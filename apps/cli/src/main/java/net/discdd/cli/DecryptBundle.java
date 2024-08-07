@@ -20,9 +20,9 @@ public class DecryptBundle implements Callable<Void> {
     @CommandLine.Option(names = "--applicationYaml", required = true, description = "an application yaml")
     private static File applicationYml;
     @CommandLine.Option(names = "--bundle", required = true, description = "Bundle file path")
-    private String bundlePath;
+    private Path bundlePath;
     @CommandLine.Option(names = "--decrypted-path", description = "Decrypted bundle file path")
-    private String decryptedPath;
+    private Path decryptedPath;
     @CommandLine.Option(names = "--appProps", required = true, description = "Personal application properties file " +
             "path")
     private static String appProps;
@@ -31,19 +31,19 @@ public class DecryptBundle implements Callable<Void> {
     public Void call() {
         try {
             ServerSecurity serverSecurity = new ServerSecurity(CliUtils.getServerSecurity(applicationYml, appProps));
-            String receivedProcessingDir = CliUtils.getReceivedProcessingDirectory(applicationYml, appProps);
+            Path receivedProcessingDir = CliUtils.getReceivedProcessingDirectory(applicationYml, appProps);
 
             logger.log(WARNING, "Decrypting bundle" + bundlePath);
 
             bundlePath = SecurityUtils.unzip(bundlePath);
 
             if (decryptedPath == null) {
-                decryptedPath = receivedProcessingDir + File.separator + "decrypted" + File.separator;
+                decryptedPath = receivedProcessingDir.resolve("decrypted");
             }
 
-            Path fileName = serverSecurity.decrypt(Paths.get(bundlePath), Paths.get(decryptedPath));
+            Path fileName = serverSecurity.decrypt(bundlePath, decryptedPath);
 
-            String decryptedBundlePath = fileName.toString();
+            Path decryptedBundlePath = fileName;
 
             decryptedBundlePath = SecurityUtils.unzip(decryptedBundlePath);
 
