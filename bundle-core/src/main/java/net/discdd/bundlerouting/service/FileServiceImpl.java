@@ -151,8 +151,7 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
         }
         StreamHandler handler = new StreamHandler(in);
         Exception ex = handler.handle(bytes -> {
-            responseObserver.onNext(
-                    Bytes.newBuilder().setValue(bytes).setSender(sender).build());
+            responseObserver.onNext(Bytes.newBuilder().setValue(bytes).setSender(sender).build());
         });
         if (ex != null) ex.printStackTrace();
 
@@ -170,7 +169,7 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
     }
 
     public static String bundleSenderToString(BundleSender sender) {
-        return switch(sender.getType()) {
+        return switch (sender.getType()) {
             case CLIENT -> "client";
             case SERVER -> "server";
             case TRANSPORT -> "transport: " + sender.getId();

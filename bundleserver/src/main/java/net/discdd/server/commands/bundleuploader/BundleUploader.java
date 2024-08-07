@@ -73,9 +73,9 @@ public class BundleUploader implements CommandLineRunner, Callable<Integer> {
                     }
                 });
         BundleUploadRequest metadata = BundleUploadRequest.newBuilder().setMetadata(
-                BundleMetaData.newBuilder().setBid(bundle.getName())
-                        .setSender(BundleSender.newBuilder().setType(BundleSenderType.TRANSPORT)
-                                           .setId("CLI")).build()).build();
+                        BundleMetaData.newBuilder().setBid(bundle.getName())
+                                .setSender(BundleSender.newBuilder().setType(BundleSenderType.TRANSPORT).setId("CLI")).build())
+                .build();
         streamObserver.onNext(metadata);
 
         // upload file in chunks

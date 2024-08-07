@@ -120,7 +120,8 @@ public class BundleTransmission {
         UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, this.ROOT_DIR.resolve(
                 Paths.get(BUNDLE_GENERATION_DIRECTORY, RECEIVED_PROCESSING)));
         Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
-        logger.log(INFO, "Updating client routing metadata for sender:  " + FileServiceImpl.bundleSenderToString(sender));
+        logger.log(INFO,
+                   "Updating client routing metadata for sender:  " + FileServiceImpl.bundleSenderToString(sender));
         clientRouting.updateMetaData(sender.getId());
 
         String bundleId = payload.getBundleId();

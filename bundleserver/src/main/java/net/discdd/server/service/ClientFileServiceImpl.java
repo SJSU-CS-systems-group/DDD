@@ -34,7 +34,8 @@ public class ClientFileServiceImpl extends FileServiceImpl {
     private void init() {
         logger.log(Level.INFO, "inside ClientFileServiceImpl init method");
         this.SERVER_BASE_PATH = Path.of(serverBasePath);
-        this.sender = BundleSender.newBuilder().setType(BundleSenderType.SERVER).setId(serverSecurity.getServerId()).build();
+        this.sender =
+                BundleSender.newBuilder().setType(BundleSenderType.SERVER).setId(serverSecurity.getServerId()).build();
         this.downloadingFrom = "send";
         this.uploadingTo = "receive";
         this.setProcessBundle(this::settingProcessBundle);
@@ -46,13 +47,13 @@ public class ClientFileServiceImpl extends FileServiceImpl {
     }
 
     public void settingProcessBundle() {
-        bundleTransmission.processReceivedBundles(BundleSender.newBuilder().setType(BundleSenderType.CLIENT)
-                                                          .setId("noname").build());
+        bundleTransmission.processReceivedBundles(
+                BundleSender.newBuilder().setType(BundleSenderType.CLIENT).setId("noname").build());
     }
 
     public void settingGenerateBundle() {
-        BundleDownloadRequest request =
-                BundleDownloadRequest.newBuilder().setSender(sender).addAllBundleList(Collections.singleton(this.bundleToDownload)).build();
+        BundleDownloadRequest request = BundleDownloadRequest.newBuilder().setSender(sender)
+                .addAllBundleList(Collections.singleton(this.bundleToDownload)).build();
         StreamObserver<BundleDownloadResponse> downloadObserver = new StreamObserver<BundleDownloadResponse>() {
             @Override
             public void onNext(BundleDownloadResponse bundleDownloadResponse) {

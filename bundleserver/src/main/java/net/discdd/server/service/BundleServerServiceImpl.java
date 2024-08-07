@@ -149,12 +149,11 @@ public class BundleServerServiceImpl extends BundleServiceGrpc.BundleServiceImpl
     private void transmitBundles(BundleDownloadRequest request,
                                  StreamObserver<BundleDownloadResponse> responseObserver) {
         Set<String> filesOnTransportSet = new HashSet<>(request.getBundleListList());
-        List<File> bundlesToTransmitList =
-                bundleTransmission.getBundlesForTransmission(request.getSender());
+        List<File> bundlesToTransmitList = bundleTransmission.getBundlesForTransmission(request.getSender());
         for (File bundle : bundlesToTransmitList) {
             if (!filesOnTransportSet.contains(bundle.getName())) {
-                logger.log(WARNING,
-                           "[BundleServerService]Downloading " + bundle.getName() + " to " + FileServiceImpl.bundleSenderToString(request.getSender()));
+                logger.log(WARNING, "[BundleServerService]Downloading " + bundle.getName() + " to " +
+                        FileServiceImpl.bundleSenderToString(request.getSender()));
                 BundleMetaData bundleMetaData = BundleMetaData.newBuilder().setBid(bundle.getName()).build();
                 responseObserver.onNext(BundleDownloadResponse.newBuilder().setMetadata(bundleMetaData).build());
                 InputStream in;
@@ -184,8 +183,7 @@ public class BundleServerServiceImpl extends BundleServiceGrpc.BundleServiceImpl
         BundleTransferDTO bundleToDelete = null;
         try {
             bundleToDelete =
-                    bundleTransmission.generateBundlesForTransmission(request.getSender(),
-                                                                      filesOnTransportSet);
+                    bundleTransmission.generateBundlesForTransmission(request.getSender(), filesOnTransportSet);
         } catch (Exception e) {
             logger.log(WARNING, "[BundleServerService] Error generating bundles for transmission", e);
             responseObserver.onError(e);

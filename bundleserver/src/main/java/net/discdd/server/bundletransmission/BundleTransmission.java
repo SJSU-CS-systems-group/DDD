@@ -186,7 +186,8 @@ public class BundleTransmission {
         try {
             this.processReceivedBundle(sender, bundle);
         } catch (Exception e) {
-            logger.log(SEVERE, "[BundleTransmission] Failed to process received bundle from: " + FileServiceImpl.bundleSenderToString(sender));
+            logger.log(SEVERE, "[BundleTransmission] Failed to process received bundle from: " +
+                    FileServiceImpl.bundleSenderToString(sender));
         } finally {
             try {
                 FileUtils.delete(bundleFile);
@@ -328,13 +329,12 @@ public class BundleTransmission {
         return new BundleTransferDTO(deletionSet, bundlesToSend);
     }
 
-    public BundleTransferDTO generateBundlesForTransmission(BundleSender sender, Set<String> bundleIdsPresent) throws SQLException,
-            ClientWindowNotFound, InvalidClientIDException, GeneralSecurityException, InvalidClientSessionException,
-            IOException, InvalidKeyException {
+    public BundleTransferDTO generateBundlesForTransmission(BundleSender sender, Set<String> bundleIdsPresent) throws SQLException, ClientWindowNotFound, InvalidClientIDException, GeneralSecurityException, InvalidClientSessionException, IOException, InvalidKeyException {
         List<String> clientIds = CLIENT == sender.getType() ? Collections.singletonList(sender.getId()) :
                 this.bundleRouting.getClientsForTransportId(sender.getId());
 
-        logger.log(SEVERE, "[BundleTransmission] Found " + clientIds.size() + " reachable from the sender: " + FileServiceImpl.bundleSenderToString(sender));
+        logger.log(SEVERE, "[BundleTransmission] Found " + clientIds.size() + " reachable from the sender: " +
+                FileServiceImpl.bundleSenderToString(sender));
         Set<String> deletionSet = new HashSet<>();
         List<BundleDTO> bundlesToSend = new ArrayList<>();
         Map<String, Set<String>> clientIdToBundleIds = new HashMap<>();
@@ -378,7 +378,8 @@ public class BundleTransmission {
             if (null != bundleFilesForClientId) bundles.addAll(List.of(Objects.requireNonNull(bundleFilesForClientId)));
         }
 
-        logger.log(INFO, "[BundleTransmission] Found " + bundles.size() + " bundles to deliver through " + FileServiceImpl.bundleSenderToString(sender));
+        logger.log(INFO, "[BundleTransmission] Found " + bundles.size() + " bundles to deliver through " +
+                FileServiceImpl.bundleSenderToString(sender));
         return bundles;
     }
 

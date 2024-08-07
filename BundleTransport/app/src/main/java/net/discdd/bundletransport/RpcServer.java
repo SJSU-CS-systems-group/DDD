@@ -59,8 +59,8 @@ public class RpcServer {
         notifyStateChange(ServerState.PENDING);
         server = NettyServerBuilder.forAddress(address).addService(
                 new FileServiceImpl(context.getExternalFilesDir(null),
-                                    BundleSender.newBuilder().setType(BundleSenderType.TRANSPORT)
-                                            .setId("FIXME!").build(), listener)).build();
+                                    BundleSender.newBuilder().setType(BundleSenderType.TRANSPORT).setId("FIXME!")
+                                            .build(), listener)).build();
 
         logger.log(INFO, "Starting rpc server at: " + server.toString());
 
