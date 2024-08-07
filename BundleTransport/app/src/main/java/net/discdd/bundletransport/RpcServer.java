@@ -6,8 +6,9 @@ import static java.util.logging.Level.WARNING;
 
 import android.content.Context;
 
-import net.discdd.bundlerouting.BundleSender;
 import net.discdd.bundlerouting.service.FileServiceImpl;
+import net.discdd.bundletransport.service.BundleSender;
+import net.discdd.bundletransport.service.BundleSenderType;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -57,9 +58,9 @@ public class RpcServer {
         SocketAddress address = new InetSocketAddress(inetSocketAddressIP, port);
         notifyStateChange(ServerState.PENDING);
         server = NettyServerBuilder.forAddress(address).addService(
-                        new FileServiceImpl(context.getExternalFilesDir(null), BundleSender.Transport, "FIXME!",
-                                            listener))
-                .build();
+                new FileServiceImpl(context.getExternalFilesDir(null),
+                                    BundleSender.newBuilder().setType(BundleSenderType.TRANSPORT)
+                                            .setId("FIXME!").build(), listener)).build();
 
         logger.log(INFO, "Starting rpc server at: " + server.toString());
 

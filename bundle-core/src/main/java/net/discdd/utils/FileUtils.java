@@ -33,7 +33,7 @@ public class FileUtils {
 
     public static OutputStream getFilePath(BundleDownloadResponse response, Path receive_Directory) throws IOException {
         String fileName = response.getMetadata().getBid();
-        // TODO: this only works for the TRANSPORT type
+        // TODO: we are ignoring type here. It works, but we might want to rethink this.
         var directoryReceive = receive_Directory.resolve(response.getMetadata().getSender().getId());
         return Files.newOutputStream(directoryReceive.resolve(fileName), StandardOpenOption.CREATE,
                                      StandardOpenOption.APPEND);
