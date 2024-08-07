@@ -3,11 +3,12 @@ package net.discdd.server.service;
 import com.google.protobuf.ByteString;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
-import net.discdd.bundlerouting.BundleSender;
+import net.discdd.bundlerouting.service.FileServiceImpl;
 import net.discdd.bundletransport.service.BundleDownloadRequest;
 import net.discdd.bundletransport.service.BundleDownloadResponse;
 import net.discdd.bundletransport.service.BundleList;
 import net.discdd.bundletransport.service.BundleMetaData;
+import net.discdd.bundletransport.service.BundleSender;
 import net.discdd.bundletransport.service.BundleServiceGrpc;
 import net.discdd.bundletransport.service.BundleUploadRequest;
 import net.discdd.bundletransport.service.BundleUploadResponse;
@@ -27,13 +28,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
@@ -74,15 +72,13 @@ public class BundleServerServiceImpl extends BundleServiceGrpc.BundleServiceImpl
             // upload context variables
             OutputStream writer;
             Status status = Status.IN_PROGRESS;
-            String senderId;
             BundleSender sender;
 
             @Override
             public void onNext(BundleUploadRequest bundleUploadRequest) {
                 try {
                     if (bundleUploadRequest.hasMetadata()) {
-                        senderId = bundleUploadRequest.getMetadata().getSenderId();
-                        sender = BundleSender.valueOf(bundleUploadRequest.getMetadata().getSender());
+                        sender = bundleUploadRequest.getMetadata().getSender();
                         writer = getFilePath(bundleUploadRequest);
                     } else {
                         writeFile(writer, bundleUploadRequest.getFile().getContent());
@@ -110,7 +106,7 @@ public class BundleServerServiceImpl extends BundleServiceGrpc.BundleServiceImpl
                 status = Status.IN_PROGRESS.equals(status) ? Status.SUCCESS : status;
                 BundleUploadResponse response = BundleUploadResponse.newBuilder().setStatus(status).build();
                 responseObserver.onNext(response);
-                bundleTransmission.processReceivedBundles(BundleSender.Transport, senderId);
+                bundleTransmission.processReceivedBundles(sender);
                 responseObserver.onCompleted();
             }
         };
@@ -118,12 +114,12 @@ public class BundleServerServiceImpl extends BundleServiceGrpc.BundleServiceImpl
 
     private OutputStream getFilePath(BundleUploadRequest request) throws IOException {
         String fileName = request.getMetadata().getBid();
-        File directoryReceive = Path.of(ReceiveDir, request.getMetadata().getSenderId()).toFile();
+        File directoryReceive = Path.of(ReceiveDir, request.getMetadata().getSender().getId()).toFile();
         if (!directoryReceive.exists()) {
             directoryReceive.mkdirs();
         }
         return Files.newOutputStream(
-                Paths.get(ReceiveDir).resolve(request.getMetadata().getSenderId()).resolve(fileName),
+                Paths.get(ReceiveDir).resolve(request.getMetadata().getSender().getId()).resolve(fileName),
                 StandardOpenOption.CREATE, StandardOpenOption.APPEND);
     }
 
@@ -142,7 +138,7 @@ public class BundleServerServiceImpl extends BundleServiceGrpc.BundleServiceImpl
     public void downloadBundle(BundleDownloadRequest request, StreamObserver<BundleDownloadResponse> responseObserver) {
         logger.log(INFO, "[BundleServerService] bundles on sender" + request.getBundleListList());
         logger.log(INFO,
-                   "[BundleServerService] Request from " + request.getSender() + " with id: " + request.getSenderId());
+                   "[BundleServerService] Request from " + FileServiceImpl.bundleSenderToString(request.getSender()));
 
         transmitBundles(request, responseObserver);
         logger.log(FINE, "Downloaded " + bundleTransmission);
@@ -154,12 +150,11 @@ public class BundleServerServiceImpl extends BundleServiceGrpc.BundleServiceImpl
                                  StreamObserver<BundleDownloadResponse> responseObserver) {
         Set<String> filesOnTransportSet = new HashSet<>(request.getBundleListList());
         List<File> bundlesToTransmitList =
-                bundleTransmission.getBundlesForTransmission(request.getSender(), request.getSenderId());
+                bundleTransmission.getBundlesForTransmission(request.getSender());
         for (File bundle : bundlesToTransmitList) {
             if (!filesOnTransportSet.contains(bundle.getName())) {
                 logger.log(WARNING,
-                           "[BundleServerService]Downloading " + bundle.getName() + " to " + request.getSender() +
-                                   " with id :" + request.getSenderId());
+                           "[BundleServerService]Downloading " + bundle.getName() + " to " + FileServiceImpl.bundleSenderToString(request.getSender()));
                 BundleMetaData bundleMetaData = BundleMetaData.newBuilder().setBid(bundle.getName()).build();
                 responseObserver.onNext(BundleDownloadResponse.newBuilder().setMetadata(bundleMetaData).build());
                 InputStream in;
@@ -189,7 +184,7 @@ public class BundleServerServiceImpl extends BundleServiceGrpc.BundleServiceImpl
         BundleTransferDTO bundleToDelete = null;
         try {
             bundleToDelete =
-                    bundleTransmission.generateBundlesForTransmission(request.getSender(), request.getSenderId(),
+                    bundleTransmission.generateBundlesForTransmission(request.getSender(),
                                                                       filesOnTransportSet);
         } catch (Exception e) {
             logger.log(WARNING, "[BundleServerService] Error generating bundles for transmission", e);
@@ -203,7 +198,7 @@ public class BundleServerServiceImpl extends BundleServiceGrpc.BundleServiceImpl
             BundleDownloadResponse response = BundleDownloadResponse.newBuilder()
                     .setBundleList(BundleList.newBuilder().addAllBundleList(bundleToDelete.getDeletionSet())).build();
             logger.log(WARNING, "[BundleServerService] Sending " + String.join(", ", bundleToDelete.getDeletionSet()) +
-                    " to delete on Transport id :" + request.getSenderId());
+                    " to delete on " + FileServiceImpl.bundleSenderToString(request.getSender()));
             responseObserver.onNext(response);
         }
         responseObserver.onCompleted();

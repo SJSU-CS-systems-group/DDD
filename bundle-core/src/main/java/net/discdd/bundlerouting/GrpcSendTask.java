@@ -1,6 +1,15 @@
 package net.discdd.bundlerouting;
 
 import com.google.protobuf.ByteString;
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
+import io.grpc.stub.StreamObserver;
+import net.discdd.bundlerouting.service.BundleUploadObserver;
+import net.discdd.bundletransport.service.BundleMetaData;
+import net.discdd.bundletransport.service.BundleSender;
+import net.discdd.bundletransport.service.BundleSenderType;
+import net.discdd.bundletransport.service.BundleServiceGrpc;
+import net.discdd.bundletransport.service.BundleUploadRequest;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -9,15 +18,9 @@ import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.*;
-
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
-import io.grpc.stub.StreamObserver;
-import net.discdd.bundlerouting.service.BundleUploadObserver;
-import net.discdd.bundletransport.service.BundleMetaData;
-import net.discdd.bundletransport.service.BundleServiceGrpc;
-import net.discdd.bundletransport.service.BundleUploadRequest;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
 
 public class GrpcSendTask {
 
@@ -67,8 +70,9 @@ public class GrpcSendTask {
             if (bundles != null) {
                 for (File bundle : bundles) {
                     BundleUploadRequest metadata = BundleUploadRequest.newBuilder().setMetadata(
-                            BundleMetaData.newBuilder().setBid(bundle.getName()).setSenderId(transportId)
-                                    .setSender(BundleSender.Transport.name()).build()).build();
+                            BundleMetaData.newBuilder().setBid(bundle.getName()).setSender(
+                                            BundleSender.newBuilder().setId(transportId).setType(BundleSenderType.TRANSPORT))
+                                    .build()).build();
                     streamObserver.onNext(metadata);
 
                     // upload file as chunk
