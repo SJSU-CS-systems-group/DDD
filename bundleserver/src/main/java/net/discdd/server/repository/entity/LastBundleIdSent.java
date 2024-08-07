@@ -15,10 +15,6 @@ import jakarta.validation.constraints.NotBlank;
 public class LastBundleIdSent {
 
     @Id
-    @UuidGenerator
-    @Column(name = "id", updatable = false, nullable = false)
-    private UUID id;
-
     @Column(name = "client_id", nullable = false, columnDefinition = "TEXT")
     @NotBlank
     private String clientId;
@@ -32,14 +28,6 @@ public class LastBundleIdSent {
     public LastBundleIdSent(String clientId, String bundleId) {
         this.clientId = clientId;
         this.bundleId = bundleId;
-    }
-
-    public String getId() {
-        return this.id.toString();
-    }
-
-    public void setId(String id) {
-        this.id = UUID.fromString(id);
     }
 
     public String getClientId() {
