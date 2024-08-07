@@ -21,7 +21,19 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import net.discdd.bundlerouting.RoutingExceptions;
+import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
+import net.discdd.client.bundletransmission.BundleTransmission;
+import net.discdd.model.BundleDTO;
+
+import org.whispersystems.libsignal.InvalidKeyException;
+
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -38,6 +50,9 @@ public class UsbFragment extends Fragment {
     private static final Logger logger = Logger.getLogger(UsbFragment.class.getName());
     private static final String usbDirName = "/DDD_transport";
     private ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
+    private BundleTransmission bundleTransmission;
+    private File usbDirectory;
+
 
     @Override
     public View onCreateView(
@@ -64,6 +79,25 @@ public class UsbFragment extends Fragment {
 
         // Check initial USB connection
         checkUsbConnection(1);
+
+        usbExchangeButton.setOnClickListener(v -> {
+            if(usbConnected) {
+                //Bundle we want to send to usb.
+                try {
+                    bundleCreation();
+                    BundleDTO bundleDTO = bundleTransmission.generateBundleForTransmission();
+                    File bundleFile = bundleDTO.getBundle().getSource();
+                    File targetFile = new File(usbDirectory, bundleFile.getName());
+                    Files.copy(bundleFile.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                    updateUsbStatus(false, "Bundle created and transferred to USB", Color.GREEN);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    updateUsbStatus(false, "Error creating or transferring bundle", Color.RED);
+                }
+        } else {
+                Toast.makeText(getActivity(), "No bundle created as usb device not connected", Toast.LENGTH_SHORT).show();
+            }
+        });
 
         return view;
     }
@@ -127,8 +161,8 @@ public class UsbFragment extends Fragment {
         List<StorageVolume> storageVolumeList = storageManager.getStorageVolumes();
         for (StorageVolume storageVolume : storageVolumeList) {
             if (storageVolume.isRemovable()) {
-                File fileUsb = new File(storageVolume.getDirectory().getPath() + usbDirName);
-                if (fileUsb.exists()) {
+                usbDirectory = new File(storageVolume.getDirectory().getPath() + usbDirName);
+                if (usbDirectory.exists()) {
                     return true;
                 }
             }
@@ -138,5 +172,13 @@ public class UsbFragment extends Fragment {
 
     private void showUsbDetachedToast() {
         Toast.makeText(getActivity(), getString(R.string.usb_device_detached), Toast.LENGTH_SHORT).show();
+    }
+
+    private void bundleCreation () {
+        try {
+            bundleTransmission = new BundleTransmission(usbDirectory.toPath());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
