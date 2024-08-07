@@ -91,7 +91,7 @@ class GrpcReceiveTask {
         var stub = FileServiceGrpc.newBlockingStub(channel);
         List<String> bundleRequests = null;
         logger.log(FINE, "Starting File Receive");
-        activity.runOnUiThread(() -> resultText.append("Starting File Receive...\n"));
+        activity.runOnUiThread(() -> resultText.append(applicationContext.getString(R.string.starting_file_receive)));
         try {
             var bundleTransmission = new BundleTransmission(Paths.get(applicationContext.getApplicationInfo().dataDir));
             bundleRequests = BundleClientActivity.clientWindow.getWindow(
@@ -106,7 +106,7 @@ class GrpcReceiveTask {
         if (bundleRequests == null) {
             logger.log(FINE, "BUNDLE REQuests is NUll / ");
 
-            postExecute("Incomplete", host, String.valueOf(port));
+            postExecute(applicationContext.getString(R.string.incomplete_bundle_request), host, String.valueOf(port));
         } else if (bundleRequests.size() == 0) {
             logger.log(FINE, "BUNDLE REQuests has size 0 / ");
         }
@@ -143,7 +143,8 @@ class GrpcReceiveTask {
 
             break;
         }
-        postExecute(errorOccurred[0] ? "Failed" : "Completed", host, String.valueOf(port));
+        postExecute(errorOccurred[0] ? applicationContext.getString(R.string.failed) :
+                            applicationContext.getString(R.string.completed), host, String.valueOf(port));
     }
 
     public void shutdownExecutor() {

@@ -50,6 +50,8 @@ public class MainPageFragment extends Fragment {
         View view = inflater.inflate(R.layout.activity_helloworld, container, false);
 
         //Initialize UI elements and buttons
+        TextView clientIdView = view.findViewById(R.id.client_id_text);
+        clientIdView.setText(String.format("Client ID: %s", ((BundleClientActivity) requireActivity()).getClientId()));
         resultText = view.findViewById(R.id.grpc_response_text);
         connectedDeviceText = view.findViewById(R.id.connected_device_address);
         wifiDirectResponseText = view.findViewById(R.id.wifidirect_response_text);
@@ -123,7 +125,8 @@ public class MainPageFragment extends Fragment {
         // name doesn't seem to come through either.
         requireActivity().runOnUiThread(() -> {
             var ownerNameAndAddress =
-                    groupInfo == null || groupInfo.getOwner() == null ? "Not connected" : "Connected to transport";
+                    groupInfo == null || groupInfo.getOwner() == null ? getString(R.string.not_connected) :
+                            getString(R.string.connected_to_transport);
             connectedDeviceText.setText(ownerNameAndAddress);
         });
     }
@@ -138,20 +141,23 @@ public class MainPageFragment extends Fragment {
             connectionFuture.thenAccept(gi -> {
                 updateOwnerAndGroupInfo(wifiDirectManager.getGroupOwnerAddress(), wifiDirectManager.getGroupInfo());
                 bundleClientActivity.appendResultsMessage(String.format("Starting transmission to %s", transportName));
-                new GrpcReceiveTask(bundleClientActivity).executeInBackground("192.168.49.1", 7777).thenAccept(result -> {
-                    logger.log(INFO, "connection complete!");
-                    bundleClientActivity.runOnUiThread(() -> exchangeButton.setEnabled(true));
-                    wifiDirectManager.disconnect().thenAccept(rc -> {
-                        // if we try to refreshPeers right away, nothing happens,
-                        // so we need to wait a second
-                        bundleClientActivity.runInXMs(this::refreshPeers, 1000);
-                        updateOwnerAndGroupInfo(wifiDirectManager.getGroupOwnerAddress(), wifiDirectManager.getGroupInfo());
-                    });
-                });
+                new GrpcReceiveTask(bundleClientActivity).executeInBackground("192.168.49.1", 7777)
+                        .thenAccept(result -> {
+                            logger.log(INFO, "connection complete!");
+                            bundleClientActivity.runOnUiThread(() -> exchangeButton.setEnabled(true));
+                            wifiDirectManager.disconnect().thenAccept(rc -> {
+                                // if we try to refreshPeers right away, nothing happens,
+                                // so we need to wait a second
+                                bundleClientActivity.runInXMs(this::refreshPeers, 1000);
+                                updateOwnerAndGroupInfo(wifiDirectManager.getGroupOwnerAddress(),
+                                                        wifiDirectManager.getGroupInfo());
+                            });
+                        });
 
             });
 
-            HashMap<String, ArrayList<CompletableFuture<WifiP2pGroup>>> connectionWaiters = bundleClientActivity.connectionWaiters;
+            HashMap<String, ArrayList<CompletableFuture<WifiP2pGroup>>> connectionWaiters =
+                    bundleClientActivity.connectionWaiters;
             synchronized (connectionWaiters) {
                 connectionWaiters.computeIfAbsent(transportName, k -> new ArrayList<>()).add(connectionFuture);
             }

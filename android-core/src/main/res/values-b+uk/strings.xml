@@ -1,0 +1,13 @@
+<resources>
+    <string name="android.permission.ACCESS_FINE_LOCATION">Доступ до точної локації</string>
+    <string name="android.permission.ACCESS_WIFI_STATE">Перевірити стан Wi-Fi</string>
+    <string name="android.permission.CHANGE_WIFI_STATE">Змінити Wi-Fi</string>
+    <string name="android.permission.INTERNET">Використовувати мережу</string>
+    <string name="android.permission.NEARBY_WIFI_DEVICES">Знайти сусідні пристрої Wi-Fi</string>
+    <string name="wifidirectinitialized">Wi-Fi Direct ініціалізовано</string>
+    <string name="peers">Пари</string>
+    <string name="waiting_for_permissions">Очікування дозволів</string>
+    <string name="any_emoji">*</string>
+    <string name="generic_action_button">Дія</string>
+    <string name="needed_permissions">Необхідні дозволи</string>
+</resources>

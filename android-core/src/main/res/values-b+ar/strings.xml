@@ -1,0 +1,13 @@
+<resources>
+    <string name="android.permission.ACCESS_FINE_LOCATION">الوصول إلى الموقع الدقيق</string>
+    <string name="android.permission.ACCESS_WIFI_STATE">التحقق من حالة الواي فاي</string>
+    <string name="android.permission.CHANGE_WIFI_STATE">تغيير الواي فاي</string>
+    <string name="android.permission.INTERNET">استخدام الشبكة</string>
+    <string name="android.permission.NEARBY_WIFI_DEVICES">العثور على أجهزة الواي فاي القريبة</string>
+    <string name="wifidirectinitialized">تم تهيئة Wifi Direct</string>
+    <string name="peers">الأقران</string>
+    <string name="waiting_for_permissions">انتظار الأذونات</string>
+    <string name="any_emoji">*</string>
+    <string name="generic_action_button">إجراء</string>
+    <string name="needed_permissions">الأذونات المطلوبة</string>
+</resources>

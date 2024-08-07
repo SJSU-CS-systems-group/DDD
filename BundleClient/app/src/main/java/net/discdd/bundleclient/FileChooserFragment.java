@@ -90,20 +90,8 @@ public class FileChooserFragment extends Fragment {
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
 
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        //
         switch (requestCode) {
             case MY_REQUEST_CODE_PERMISSION: {
-
-                // Note: If request is cancelled, the result arrays are empty.
-                // Permissions granted (CALL_PHONE).
-//  //              if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-//
-//                    Log.i(LOG_TAG, "Permission granted!");
-//                    Toast.makeText(this.getContext(), "Permission granted!", Toast.LENGTH_SHORT).show();
-//
-//                    this.doBrowseFile();
-//                }
-
                 //Venus added
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     logger.log(Level.INFO, "Permission Granted!");
@@ -115,13 +103,6 @@ public class FileChooserFragment extends Fragment {
 
                 }
                 break;
-
-//    //            // Cancelled or denied.
-//                else {
-//                    Log.i(LOG_TAG, "Permission denied!");
-//                    Toast.makeText(this.getContext(), "Permission denied!", Toast.LENGTH_SHORT).show();
-//                }
-//                break;
             }
         }
     }

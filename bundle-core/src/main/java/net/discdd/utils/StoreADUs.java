@@ -20,7 +20,6 @@ import java.util.stream.Stream;
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
 
 public class StoreADUs {
     public static final String METADATA_FILENAME = "metadata.json";
@@ -103,7 +102,7 @@ public class StoreADUs {
                 }
             });
         } catch (IOException e) {
-            logger.log(WARNING, "Nothing found in rootFolder: " + rootFolder);
+            logger.log(INFO, "Nothing found in rootFolder: " + rootFolder);
             return Stream.empty();
         }
     }

@@ -7,6 +7,8 @@ import net.discdd.app.k9.utils.MailUtils;
 import net.discdd.grpc.AppDataUnit;
 import net.discdd.grpc.ExchangeADUsRequest;
 import net.discdd.grpc.ExchangeADUsResponse;
+import net.discdd.grpc.PendingDataCheckRequest;
+import net.discdd.grpc.PendingDataCheckResponse;
 import net.discdd.grpc.ServiceAdapterServiceGrpc;
 import net.discdd.model.ADU;
 import net.discdd.utils.StoreADUs;
@@ -98,6 +100,26 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
                 ExchangeADUsResponse.newBuilder().addAllAdus(dataListToReturn).setLastADUIdReceived(lastProcessedADUId)
                         .build());
 
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void pendingDataCheck(PendingDataCheckRequest request,
+                                 StreamObserver<PendingDataCheckResponse> responseObserver) {
+        List<String> pendingClients = new ArrayList<>();
+
+        sendADUsStorage.getAllClientApps().filter(s -> {
+            try {
+                return sendADUsStorage.getLastADUIdAdded(s.clientId(), s.appId()) >
+                        sendADUsStorage.getLastADUIdDeleted(s.clientId(), s.appId());
+            } catch (IOException e) {
+                logger.log(SEVERE,
+                           "Error while checking pending data for client: " + s.clientId() + " app: " + s.appId(), e);
+                return false;
+            }
+        }).map(StoreADUs.ClientApp::clientId).forEach(pendingClients::add);
+
+        responseObserver.onNext(PendingDataCheckResponse.newBuilder().addAllClientId(pendingClients).build());
         responseObserver.onCompleted();
     }
 }

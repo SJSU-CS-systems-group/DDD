@@ -1,0 +1,13 @@
+<resources>
+    <string name="android.permission.ACCESS_FINE_LOCATION">Acceso a ubicación precisa</string>
+    <string name="android.permission.ACCESS_WIFI_STATE">Verificar el estado de Wifi</string>
+    <string name="android.permission.CHANGE_WIFI_STATE">Cambiar Wifi</string>
+    <string name="android.permission.INTERNET">Usar la Red</string>
+    <string name="android.permission.NEARBY_WIFI_DEVICES">Encontrar dispositivos Wifi cercanos</string>
+    <string name="wifidirectinitialized">Wifi Direct inicializado</string>
+    <string name="peers">Pares</string>
+    <string name="waiting_for_permissions">Esperando permisos</string>
+    <string name="any_emoji">*</string>
+    <string name="generic_action_button">Acción</string>
+    <string name="needed_permissions">Permisos necesarios</string>
+</resources>

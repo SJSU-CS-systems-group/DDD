@@ -42,7 +42,6 @@ public class BundleSecurity {
     private static Path rootFolder;
     private final ClientWindow clientWindow;
     private final ClientBundleGenerator clientBundleGenerator;
-    private final String clientId = "client0";
     private final boolean isEncryptionEnabled = true;
     private ClientSecurity client = null;
     private int counter = 0;

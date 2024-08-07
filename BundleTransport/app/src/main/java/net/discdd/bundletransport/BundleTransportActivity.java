@@ -61,14 +61,15 @@ public class BundleTransportActivity extends AppCompatActivity {
 
         LogFragment.registerLoggerHandler();
 
-        serverUploadFragment = new TitledFragment("Upload", new ServerUploadFragment(connectivityEventPublisher));
-        transportWifiFragment = new TitledFragment("Local Wifi", new TransportWifiDirectFragment());
+        serverUploadFragment =
+                new TitledFragment(getString(R.string.upload), new ServerUploadFragment(connectivityEventPublisher));
+        transportWifiFragment = new TitledFragment(getString(R.string.local_wifi), new TransportWifiDirectFragment());
 
         permissionsFragment = new PermissionsFragment();
         fragments.add(serverUploadFragment);
         fragments.add(transportWifiFragment);
-        fragments.add(new TitledFragment("Permissions", permissionsFragment));
-        fragments.add(new TitledFragment("Logs", new LogFragment()));
+        fragments.add(new TitledFragment(getString(R.string.permissions), permissionsFragment));
+        fragments.add(new TitledFragment(getString(R.string.logs), new LogFragment()));
         TabLayout tabLayout = findViewById(R.id.tabs);
         viewPager2 = findViewById(R.id.view_pager);
         viewPager2Adapter = new FragmentStateAdapter(this) {

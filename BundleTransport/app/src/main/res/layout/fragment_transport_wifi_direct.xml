@@ -11,7 +11,7 @@
             android:id="@+id/my_wifi_info"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="My Wifi Info" />
+            android:text="@string/my_wifi_info" />
     <TextView
             android:id="@+id/my_wifi_status"
             android:layout_width="match_parent"
@@ -21,7 +21,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal">
         <TextView
-                android:text="Device Name: "
+                android:text="@string/device_name"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
         <TextView
@@ -35,19 +35,19 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
         <TextView
-                android:text="Phone name must start with ddd_"
+                android:text="@string/phone_name_must_start_with_ddd"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
         <Button
                 android:id="@+id/name_change_button"
-                android:text="Change Phone Name"
+                android:text="@string/change_phone_name"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
     </LinearLayout>
     <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Interactions with BundleClients" />
+            android:text="@string/interactions_with_bundleclients" />
 
     <ScrollView
             android:layout_width="match_parent"

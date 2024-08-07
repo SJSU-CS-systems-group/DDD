@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.logging.Logger;
 
+import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.SEVERE;
 
 @Configuration
@@ -19,7 +20,7 @@ public class ServerSecurityConfig {
     @Bean
     ServerSecurity createServerSecurityInstance() {
         try {
-            logger.log(SEVERE, "Try " + bundleStoreConfig.getBundleSecurity().getServerKeyPath());
+            logger.log(FINE, "Using keys in " + bundleStoreConfig.getBundleSecurity().getServerKeyPath());
 
             return ServerSecurity.getInstance(bundleStoreConfig.getBundleSecurity().getServerKeyPath());
         } catch (Exception e) {
