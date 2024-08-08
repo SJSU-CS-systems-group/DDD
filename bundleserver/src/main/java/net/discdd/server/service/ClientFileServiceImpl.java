@@ -2,10 +2,10 @@ package net.discdd.server.service;
 
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
+import net.discdd.bundletransport.service.BundleSender;
 import net.discdd.bundlerouting.service.FileServiceImpl;
 import net.discdd.bundletransport.service.BundleDownloadRequest;
 import net.discdd.bundletransport.service.BundleDownloadResponse;
-import net.discdd.bundletransport.service.BundleSender;
 import net.discdd.bundletransport.service.BundleSenderType;
 import net.discdd.server.bundlesecurity.ServerSecurity;
 import net.discdd.server.bundletransmission.BundleTransmission;
@@ -22,6 +22,10 @@ import java.util.logging.Logger;
 public class ClientFileServiceImpl extends FileServiceImpl {
     @Value("${bundle-server.bundle-store-shared}")
     private String serverBasePath;
+
+    @Value("${bundle-server.bundle-transmission.to-send-directory}")
+    private String serverDownloadPath;
+
     @Autowired
     private ServerSecurity serverSecurity;
     @Autowired
@@ -36,7 +40,7 @@ public class ClientFileServiceImpl extends FileServiceImpl {
         this.SERVER_BASE_PATH = Path.of(serverBasePath);
         this.sender =
                 BundleSender.newBuilder().setType(BundleSenderType.SERVER).setId(serverSecurity.getServerId()).build();
-        this.downloadingFrom = "send";
+        this.downloadingFrom = serverDownloadPath;
         this.uploadingTo = "receive";
         this.setProcessBundle(this::settingProcessBundle);
         this.setGenerateBundle(this::settingGenerateBundle);
@@ -48,7 +52,7 @@ public class ClientFileServiceImpl extends FileServiceImpl {
 
     public void settingProcessBundle() {
         bundleTransmission.processReceivedBundles(
-                BundleSender.newBuilder().setType(BundleSenderType.CLIENT).setId("noname").build());
+                BundleSender.newBuilder().setType(BundleSenderType.CLIENT).setId(this.clientId).build());
     }
 
     public void settingGenerateBundle() {

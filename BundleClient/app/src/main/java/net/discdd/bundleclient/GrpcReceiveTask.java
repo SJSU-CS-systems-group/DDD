@@ -91,10 +91,12 @@ class GrpcReceiveTask {
         List<String> bundleRequests = null;
         logger.log(FINE, "Starting File Receive");
         activity.runOnUiThread(() -> resultText.append(applicationContext.getString(R.string.starting_file_receive)));
+        String clientId = null;
         try {
             var bundleTransmission = new BundleTransmission(Paths.get(applicationContext.getApplicationInfo().dataDir));
             bundleRequests = BundleClientActivity.clientWindow.getWindow(
                     bundleTransmission.getBundleSecurity().getClientSecurity());
+            clientId = bundleTransmission.getBundleSecurity().getClientSecurity().getClientID();
         } catch (RuntimeException e) {
             logger.log(WARNING, "{BR}: Failed to get Window: " + e);
             e.printStackTrace();
@@ -114,7 +116,7 @@ class GrpcReceiveTask {
 
         for (String bundle : bundleRequests) {
             String bundleName = bundle + ".bundle";
-            ReqFilePath request = ReqFilePath.newBuilder().setValue(bundleName).build();
+            ReqFilePath request = ReqFilePath.newBuilder().setValue(bundleName).setClientId(clientId).build();
             logger.log(INFO, "Downloading file: " + bundleName);
             var downloadObserver = new DownloadObserver(FILE_PATH, bundleName);
 

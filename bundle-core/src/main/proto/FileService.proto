@@ -6,7 +6,10 @@ option java_multiple_files = true;
 option java_package = "net.discdd.bundletransport.service";
 option java_outer_classname = "FileServiceEntry";
 
-message ReqFilePath { string value = 1; }
+message ReqFilePath {
+  string value = 1;
+  string clientId = 2;
+}
 
 message RespFileInfo {
   string name = 1;

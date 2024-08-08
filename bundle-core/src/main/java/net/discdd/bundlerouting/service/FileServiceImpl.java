@@ -41,6 +41,8 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
     protected String uploadingTo;
     protected String downloadingFrom;
     protected String bundleToDownload;
+
+    protected String clientId;
     protected BundleProcessingInterface processBundle;
     protected BundleProcessingInterface generateBundle;
     protected FileServiceEventListener listener;
@@ -131,12 +133,15 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
     @Override
     public void downloadFile(ReqFilePath request, StreamObserver<Bytes> responseObserver) {
         logger.log(INFO, "Received request to download file from: " + bundleSenderToString(sender));
+        String requestedPath = String.valueOf(SERVER_BASE_PATH.resolve(downloadingFrom).resolve(request.getValue()));
         if (null != generateBundle) {
             this.bundleToDownload = request.getValue();
+            this.clientId = request.getClientId();
             generateBundle.execute();
+
+            requestedPath = String.valueOf(Path.of(downloadingFrom).resolve(request.getClientId()).resolve(request.getValue()));
         }
 
-        String requestedPath = String.valueOf(SERVER_BASE_PATH.resolve(downloadingFrom).resolve(request.getValue()));
         logger.log(INFO, "Bundle generation completed, now starting to download from path: " + requestedPath);
         logger.log(FINE, "Downloading " + requestedPath);
         if (listener != null) listener.onFileServiceEvent(FileServiceEvent.DOWNLOAD_STARTED);
