@@ -1,5 +1,6 @@
 package net.discdd.server.bundlesecurity;
 
+import net.discdd.bundlesecurity.InvalidClientSessionException;
 import net.discdd.model.EncryptedPayload;
 import net.discdd.model.EncryptionHeader;
 import net.discdd.model.Payload;
