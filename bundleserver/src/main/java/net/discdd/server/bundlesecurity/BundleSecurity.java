@@ -125,7 +125,7 @@ public class BundleSecurity {
         Path[] paths = new Path[0];
         try {
             paths = this.serverSecurity.encrypt(payload.getSource().toPath(), bundleGenDirPath, bundleId, clientId);
-        } catch (net.discdd.bundlesecurity.InvalidClientSessionException e) {
+        } catch (InvalidClientSessionException e) {
             throw new RuntimeException(e);
         }
 
