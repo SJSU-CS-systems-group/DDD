@@ -139,7 +139,8 @@ public class FileServiceImpl extends FileServiceGrpc.FileServiceImplBase {
             this.clientId = request.getClientId();
             generateBundle.execute();
 
-            requestedPath = String.valueOf(Path.of(downloadingFrom).resolve(request.getClientId()).resolve(request.getValue()));
+            requestedPath =
+                    String.valueOf(Path.of(downloadingFrom).resolve(request.getClientId()).resolve(request.getValue()));
         }
 
         logger.log(INFO, "Bundle generation completed, now starting to download from path: " + requestedPath);
