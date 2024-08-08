@@ -2,18 +2,19 @@ package net.discdd.server.service;
 
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
+import net.discdd.bundlesecurity.ServerSecurity;
 import net.discdd.bundletransport.service.BundleSender;
 import net.discdd.bundlerouting.service.FileServiceImpl;
 import net.discdd.bundletransport.service.BundleDownloadRequest;
 import net.discdd.bundletransport.service.BundleDownloadResponse;
 import net.discdd.bundletransport.service.BundleSenderType;
-import net.discdd.server.bundlesecurity.ServerSecurity;
 import net.discdd.server.bundletransmission.BundleTransmission;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
 import javax.annotation.PostConstruct;
 import java.nio.file.Path;
+import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -38,8 +39,12 @@ public class ClientFileServiceImpl extends FileServiceImpl {
     private void init() {
         logger.log(Level.INFO, "inside ClientFileServiceImpl init method");
         this.SERVER_BASE_PATH = Path.of(serverBasePath);
-        this.sender =
-                BundleSender.newBuilder().setType(BundleSenderType.SERVER).setId(serverSecurity.getServerId()).build();
+        try {
+            this.sender =
+                    BundleSender.newBuilder().setType(BundleSenderType.SERVER).setId(serverSecurity.getServerId()).build();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
         this.downloadingFrom = serverDownloadPath;
         this.uploadingTo = "receive";
         this.setProcessBundle(this::settingProcessBundle);

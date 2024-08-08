@@ -457,7 +457,7 @@ public class ServerSecurity {
 
     public void createBundleIDFile(String bundleID, ClientSession client, Path bundlePath) throws IOException {
         var bundleIDPath = bundlePath.resolve(SecurityUtils.BUNDLEID_FILENAME);
-        Files.write(bundlePath, bundleID.getBytes());
+        Files.write(bundleIDPath, bundleID.getBytes());
     }
 
     public String decryptBundleID(String encryptedBundleID, String clientID) throws InvalidClientIDException,

@@ -235,15 +235,12 @@ public class BundleTransmission {
         return builder;
     }
 
-    private String generateBundleId(String clientId) throws SQLException, InvalidClientIDException,
-            GeneralSecurityException, InvalidKeyException {
+    private String generateBundleId(String clientId) throws SQLException, InvalidClientIDException, GeneralSecurityException, InvalidKeyException, net.discdd.bundlesecurity.InvalidClientIDException {
         return this.serverWindowService.getCurrentbundleID(clientId);
     }
 
     private BundleTransferDTO generateBundleForTransmission(BundleSender sender, String clientId,
-                                                            Set<String> bundleIdsPresent) throws ClientWindowNotFound
-            , SQLException, InvalidClientIDException, GeneralSecurityException, InvalidKeyException,
-            InvalidClientSessionException, IOException {
+                                                            Set<String> bundleIdsPresent) throws ClientWindowNotFound, SQLException, InvalidClientIDException, GeneralSecurityException, InvalidKeyException, InvalidClientSessionException, IOException, net.discdd.bundlesecurity.InvalidClientIDException {
         logger.log(INFO, "[BundleTransmission] Processing bundle generation request for client " + clientId);
         Set<String> deletionSet = new HashSet<>();
         List<BundleDTO> bundlesToSend = new ArrayList<>();
@@ -329,7 +326,7 @@ public class BundleTransmission {
         return new BundleTransferDTO(deletionSet, bundlesToSend);
     }
 
-    public BundleTransferDTO generateBundlesForTransmission(BundleSender sender, Set<String> bundleIdsPresent) throws SQLException, ClientWindowNotFound, InvalidClientIDException, GeneralSecurityException, InvalidClientSessionException, IOException, InvalidKeyException {
+    public BundleTransferDTO generateBundlesForTransmission(BundleSender sender, Set<String> bundleIdsPresent) throws SQLException, ClientWindowNotFound, InvalidClientIDException, GeneralSecurityException, InvalidClientSessionException, IOException, InvalidKeyException, net.discdd.bundlesecurity.InvalidClientIDException {
         List<String> clientIds = CLIENT == sender.getType() ? Collections.singletonList(sender.getId()) :
                 this.bundleRouting.getClientsForTransportId(sender.getId());
 
