@@ -142,7 +142,7 @@ public class MainPageFragment extends Fragment {
             connectionFuture.thenAccept(gi -> {
                 updateOwnerAndGroupInfo(wifiDirectManager.getGroupOwnerAddress(), wifiDirectManager.getGroupInfo());
                 bundleClientActivity.appendResultsMessage(String.format("Starting transmission to %s", transportName));
-                new GrpcReceiveTask(bundleClientActivity).executeInBackground("192.168.49.1", 7777)
+                new BundleClientGrpcReceiveTask(bundleClientActivity).executeInBackground("192.168.49.1", 7777)
                         .thenAccept(result -> {
                             logger.log(INFO, "connection complete!");
                             bundleClientActivity.runOnUiThread(() -> exchangeButton.setEnabled(true));
