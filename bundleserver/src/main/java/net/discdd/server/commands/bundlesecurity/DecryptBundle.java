@@ -1,7 +1,7 @@
 package net.discdd.server.commands.bundlesecurity;
 
 import net.discdd.bundlesecurity.SecurityUtils;
-import net.discdd.server.bundlesecurity.ServerSecurity;
+import net.discdd.bundlesecurity.ServerSecurity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;

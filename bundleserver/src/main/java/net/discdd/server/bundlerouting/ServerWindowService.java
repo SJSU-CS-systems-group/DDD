@@ -9,8 +9,8 @@ import net.discdd.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions.RecievedInvalidACK;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions.RecievedOldACK;
 import net.discdd.bundlesecurity.BundleIDGenerator;
-import net.discdd.server.bundlesecurity.InvalidClientIDException;
-import net.discdd.server.bundlesecurity.ServerSecurity;
+import net.discdd.bundlesecurity.InvalidClientIDException;
+import net.discdd.bundlesecurity.ServerSecurity;
 import net.discdd.server.repository.ServerWindowRepository;
 import net.discdd.server.repository.entity.ServerWindow;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,7 +44,7 @@ public class ServerWindowService {
     ServerSecurity serverSecurity;
 
     @PostConstruct
-    public void init() throws SQLException {
+    public void init() {
         try {
             initializeWindow();
         } catch (SQLException | BufferOverflow | InvalidLength e) {
@@ -141,9 +141,13 @@ public class ServerWindowService {
      * None
      */
     public void updateClientWindow(String clientID, String bundleID) throws ClientWindowNotFound, BufferOverflow,
-            InvalidBundleID, SQLException, InvalidClientIDException, GeneralSecurityException, InvalidKeyException {
+            InvalidBundleID, GeneralSecurityException, InvalidKeyException {
         String decryptedBundleID = null;
-        decryptedBundleID = serverSecurity.decryptBundleID(bundleID, clientID);
+        try {
+            decryptedBundleID = serverSecurity.decryptBundleID(bundleID, clientID);
+        } catch (InvalidClientIDException e) {
+            throw new RuntimeException(e);
+        }
 
         CircularBuffer circularBuffer = getClientWindow(clientID);
 
@@ -162,8 +166,7 @@ public class ServerWindowService {
         updateEndCounter(clientID, Long.toUnsignedString(endCounter));
     }
 
-    public String getCurrentbundleID(String clientID) throws InvalidClientIDException, SQLException,
-            GeneralSecurityException, InvalidKeyException {
+    public String getCurrentbundleID(String clientID) throws InvalidClientIDException, GeneralSecurityException, InvalidKeyException {
         long endCounter = Long.parseUnsignedLong(getValueFromTable(clientID).getEndCounter());
 
         String plainBundleID = BundleIDGenerator.generateBundleID(clientID, endCounter, BundleIDGenerator.DOWNSTREAM);
@@ -177,10 +180,14 @@ public class ServerWindowService {
      * Returns:
      * None
      */
-    public void processACK(String clientID, String ackedBundleID) throws ClientWindowNotFound, InvalidLength,
-            InvalidClientIDException, GeneralSecurityException, InvalidKeyException {
+    public void processACK(String clientID, String ackedBundleID) throws ClientWindowNotFound, InvalidLength, GeneralSecurityException, InvalidKeyException {
         CircularBuffer circularBuffer = getClientWindow(clientID);
-        String decryptedBundleID = serverSecurity.decryptBundleID(ackedBundleID, clientID);
+        String decryptedBundleID = null;
+        try {
+            decryptedBundleID = serverSecurity.decryptBundleID(ackedBundleID, clientID);
+        } catch (InvalidClientIDException e) {
+            throw new RuntimeException(e);
+        }
         logger.log(WARNING, "[ServerWindow]: Decrypted Ack from file = " + decryptedBundleID);
         long ack = BundleIDGenerator.getCounterFromBundleID(decryptedBundleID, BundleIDGenerator.DOWNSTREAM);
 

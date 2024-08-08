@@ -1,9 +1,11 @@
 package net.discdd.server.bundlesecurity;
 
+import net.discdd.bundlesecurity.InvalidClientSessionException;
 import net.discdd.model.EncryptedPayload;
 import net.discdd.model.EncryptionHeader;
 import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
+import net.discdd.bundlesecurity.ServerSecurity;
 import net.discdd.utils.Constants;
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -120,7 +122,12 @@ public class BundleSecurity {
         if (!this.encryptionEnabled) {
             return new UncompressedBundle(bundleId, payload.getSource(), null, null, null);
         }
-        var paths = this.serverSecurity.encrypt(payload.getSource().toPath(), bundleGenDirPath, bundleId, clientId);
+        Path[] paths = new Path[0];
+        try {
+            paths = this.serverSecurity.encrypt(payload.getSource().toPath(), bundleGenDirPath, bundleId, clientId);
+        } catch (InvalidClientSessionException e) {
+            throw new RuntimeException(e);
+        }
 
         EncryptedPayload encryptedPayload = new EncryptedPayload(bundleId, paths[0].toFile());
 
