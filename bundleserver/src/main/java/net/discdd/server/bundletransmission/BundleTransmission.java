@@ -235,12 +235,15 @@ public class BundleTransmission {
         return builder;
     }
 
-    private String generateBundleId(String clientId) throws InvalidClientIDException, GeneralSecurityException, InvalidKeyException {
+    private String generateBundleId(String clientId) throws InvalidClientIDException, GeneralSecurityException,
+            InvalidKeyException {
         return this.serverWindowService.getCurrentbundleID(clientId);
     }
 
     private BundleTransferDTO generateBundleForTransmission(BundleSender sender, String clientId,
-                                                            Set<String> bundleIdsPresent) throws ClientWindowNotFound, SQLException, InvalidClientIDException, GeneralSecurityException, InvalidKeyException, InvalidClientSessionException, IOException{
+                                                            Set<String> bundleIdsPresent) throws ClientWindowNotFound
+            , SQLException, InvalidClientIDException, GeneralSecurityException, InvalidKeyException,
+            InvalidClientSessionException, IOException {
         logger.log(INFO, "[BundleTransmission] Processing bundle generation request for client " + clientId);
         Set<String> deletionSet = new HashSet<>();
         List<BundleDTO> bundlesToSend = new ArrayList<>();

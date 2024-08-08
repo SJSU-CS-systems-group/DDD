@@ -40,8 +40,8 @@ public class ClientFileServiceImpl extends FileServiceImpl {
         logger.log(Level.INFO, "inside ClientFileServiceImpl init method");
         this.SERVER_BASE_PATH = Path.of(serverBasePath);
         try {
-            this.sender =
-                    BundleSender.newBuilder().setType(BundleSenderType.SERVER).setId(serverSecurity.getServerId()).build();
+            this.sender = BundleSender.newBuilder().setType(BundleSenderType.SERVER).setId(serverSecurity.getServerId())
+                    .build();
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }

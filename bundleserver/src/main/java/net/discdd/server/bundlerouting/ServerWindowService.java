@@ -166,7 +166,8 @@ public class ServerWindowService {
         updateEndCounter(clientID, Long.toUnsignedString(endCounter));
     }
 
-    public String getCurrentbundleID(String clientID) throws InvalidClientIDException, GeneralSecurityException, InvalidKeyException {
+    public String getCurrentbundleID(String clientID) throws InvalidClientIDException, GeneralSecurityException,
+            InvalidKeyException {
         long endCounter = Long.parseUnsignedLong(getValueFromTable(clientID).getEndCounter());
 
         String plainBundleID = BundleIDGenerator.generateBundleID(clientID, endCounter, BundleIDGenerator.DOWNSTREAM);
@@ -180,7 +181,8 @@ public class ServerWindowService {
      * Returns:
      * None
      */
-    public void processACK(String clientID, String ackedBundleID) throws ClientWindowNotFound, InvalidLength, GeneralSecurityException, InvalidKeyException {
+    public void processACK(String clientID, String ackedBundleID) throws ClientWindowNotFound, InvalidLength,
+            GeneralSecurityException, InvalidKeyException {
         CircularBuffer circularBuffer = getClientWindow(clientID);
         String decryptedBundleID = null;
         try {
