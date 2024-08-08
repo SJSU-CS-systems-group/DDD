@@ -59,18 +59,18 @@ public class ServerWindowService {
         for (ServerWindow entity : entities) {
             String clientID = entity.getClientID();
             long startCounter = Long.parseLong(entity.getStartCounter());
-            long endCounter = Long.parseLong(entity.getEndCounter());
+            long currentCounter = Long.parseLong(entity.getCurrentCounter());
             int windowLength = entity.getWindowLength();
 
-            CircularBuffer circularBuffer = createBuffer(clientID, startCounter, endCounter, windowLength);
+            CircularBuffer circularBuffer = createBuffer(clientID, startCounter, currentCounter, windowLength);
             clientWindowMap.put(clientID, circularBuffer);
         }
     }
 
-    private CircularBuffer createBuffer(String clientID, long startCounter, long endCounter, int windowLength) throws BufferOverflow, InvalidLength {
+    private CircularBuffer createBuffer(String clientID, long startCounter, long currentCounter, int windowLength) throws BufferOverflow, InvalidLength {
         CircularBuffer circularBuffer = new CircularBuffer(windowLength);
 
-        for (long i = startCounter; i < endCounter; ++i) {
+        for (long i = startCounter; i < currentCounter; ++i) {
             String bundleID = BundleIDGenerator.generateBundleID(clientID, i, BundleIDGenerator.DOWNSTREAM);
             if (i == startCounter) {
                 circularBuffer.initializeFromIndex(bundleID, (int) Long.remainderUnsigned(i, windowLength));
@@ -105,9 +105,9 @@ public class ServerWindowService {
         serverwindowrepo.save(serverWindow);
     }
 
-    private void updateEndCounter(String clientID, String endCounter) {
+    private void updateCurrentCounter(String clientID, String currentCounter) {
         ServerWindow serverWindow = serverwindowrepo.findByClientID(clientID);
-        serverWindow.setEndCounter(endCounter);
+        serverWindow.setCurrentCounter(currentCounter);
         serverwindowrepo.save(serverWindow);
     }
 
@@ -115,7 +115,6 @@ public class ServerWindowService {
         ServerWindow serverWindow = new ServerWindow(clientID, "0", "0", windowLength);
 
         serverwindowrepo.save(serverWindow);
-
     }
 
     /* Add a new client and initialize its window
@@ -133,44 +132,14 @@ public class ServerWindowService {
         initializeEntry(clientID, windowLength);
     }
 
-    /* Commits the bundleID to the client's window
-     * Parameter:
-     * clientID     : encoded clientID
-     * bundleID     : encoded bundleID
-     * Returns:
-     * None
-     */
-    public void updateClientWindow(String clientID, String bundleID) throws ClientWindowNotFound, BufferOverflow,
-            InvalidBundleID, GeneralSecurityException, InvalidKeyException {
-        String decryptedBundleID = null;
-        try {
-            decryptedBundleID = serverSecurity.decryptBundleID(bundleID, clientID);
-        } catch (InvalidClientIDException e) {
-            throw new RuntimeException(e);
-        }
-
-        CircularBuffer circularBuffer = getClientWindow(clientID);
-
-        long bundleIDcounter =
-                BundleIDGenerator.getCounterFromBundleID(decryptedBundleID, BundleIDGenerator.DOWNSTREAM);
-
-        long endCounter = Long.parseUnsignedLong(getValueFromTable(clientID).getEndCounter());
-
-        if (endCounter != bundleIDcounter) {
-            throw new InvalidBundleID("[ServerWindow]: Expected: " + Long.toUnsignedString(endCounter) + ", Got: " +
-                                              Long.toUnsignedString(bundleIDcounter));
-        }
-
-        circularBuffer.add(decryptedBundleID);
-        endCounter++;
-        updateEndCounter(clientID, Long.toUnsignedString(endCounter));
-    }
-
-    public String getCurrentbundleID(String clientID) throws InvalidClientIDException, GeneralSecurityException,
+    public String getCurrentBundleID(String clientID) throws InvalidClientIDException, GeneralSecurityException,
             InvalidKeyException {
-        long endCounter = Long.parseUnsignedLong(getValueFromTable(clientID).getEndCounter());
+        long currentCounter = Long.parseUnsignedLong(getValueFromTable(clientID).getCurrentCounter());
 
-        String plainBundleID = BundleIDGenerator.generateBundleID(clientID, endCounter, BundleIDGenerator.DOWNSTREAM);
+        String plainBundleID = BundleIDGenerator.generateBundleID(clientID, currentCounter, BundleIDGenerator.DOWNSTREAM);
+
+        currentCounter++;
+        updateCurrentCounter(clientID, Long.toUnsignedString(currentCounter));
         return serverSecurity.encryptBundleID(plainBundleID, clientID);
     }
 
@@ -214,15 +183,15 @@ public class ServerWindowService {
 
     private void compareBundleID(long ack, String clientID) throws RecievedOldACK, RecievedInvalidACK, SQLException {
         long startCounter = Long.parseUnsignedLong(getValueFromTable(clientID).getStartCounter());
-        long endCounter = Long.parseUnsignedLong(getValueFromTable(clientID).getEndCounter());
+        long currentCounter = Long.parseUnsignedLong(getValueFromTable(clientID).getCurrentCounter());
 
         if (Long.compareUnsigned(ack, startCounter) == -1) {
             throw new RecievedOldACK(
                     "Received old ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(startCounter) +
                             "]");
-        } else if (Long.compareUnsigned(ack, endCounter) == 1) {
+        } else if (Long.compareUnsigned(ack, currentCounter) == 1) {
             throw new RecievedInvalidACK(
-                    "Received Invalid ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(endCounter) +
+                    "Received Invalid ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(currentCounter) +
                             "]");
         }
     }

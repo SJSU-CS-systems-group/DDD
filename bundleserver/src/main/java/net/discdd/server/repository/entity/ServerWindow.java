@@ -20,11 +20,11 @@ public class ServerWindow {
     @Column(name = "clientID", nullable = false, columnDefinition = "VARCHAR(256)")
     private String clientID;
 
-    @Column(name = "startCounter", columnDefinition = "VARCHAR(256)")
+    @Column(name = "startCounter", columnDefinition = "INTEGER")
     private String startCounter;
 
-    @Column(name = "endCounter", columnDefinition = "VARCHAR(256)")
-    private String endCounter;
+    @Column(name = "currentCounter", columnDefinition = "INTEGER")
+    private String currentCounter;
 
     @Column(name = "windowLength", columnDefinition = "INTEGER")
     private int windowLength;
@@ -32,6 +32,6 @@ public class ServerWindow {
     @Override
     public String toString() {
         return "ServerWindow{" + "clientId='" + clientID + '\'' + ", startCounter='" + startCounter + '\'' +
-                ", endCounter='" + endCounter + '\'' + ", windowLength=" + windowLength + '}';
+                ", endCounter='" + currentCounter + '\'' + ", windowLength=" + windowLength + '}';
     }
 }

@@ -237,12 +237,12 @@ public class BundleTransmission {
 
     private String generateBundleId(String clientId) throws InvalidClientIDException, GeneralSecurityException,
             InvalidKeyException {
-        return this.serverWindowService.getCurrentbundleID(clientId);
+        return this.serverWindowService.getCurrentBundleID(clientId);
     }
 
     private BundleTransferDTO generateBundleForTransmission(BundleSender sender, String clientId,
                                                             Set<String> bundleIdsPresent) throws ClientWindowNotFound
-            , SQLException, InvalidClientIDException, GeneralSecurityException, InvalidKeyException,
+            , InvalidClientIDException, GeneralSecurityException, InvalidKeyException,
             InvalidClientSessionException, IOException {
         logger.log(INFO, "[BundleTransmission] Processing bundle generation request for client " + clientId);
         Set<String> deletionSet = new HashSet<>();
@@ -383,22 +383,4 @@ public class BundleTransmission {
         return bundles;
     }
 
-    public void notifyBundleSent(BundleDTO bundleDTO) {
-        logger.log(INFO, "[BundleTransmission] Inside method notifyBundleSent");
-        //      try {
-        //        FileUtils.delete(bundle.getSource());
-        //      } catch (IOException e) {
-        //        e.printStackTrace();
-        //      }
-        // TODO: Commented out for the moment.
-        String clientId = "";
-        try {
-            clientId = BundleIDGenerator.getClientIDFromBundleID(bundleDTO.getBundleId(), BundleIDGenerator.DOWNSTREAM);
-            this.serverWindowService.updateClientWindow(clientId, bundleDTO.getBundleId());
-            logger.log(INFO, "[BundleTransmission] Updated client window for client " + clientId + " with bundle id: " +
-                    bundleDTO.getBundleId());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 }
