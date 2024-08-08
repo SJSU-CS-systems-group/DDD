@@ -16,10 +16,7 @@ public class CircularBuffer {
     private int length = 0;
     private int capacity = 0;
 
-    public CircularBuffer(int length) throws WindowExceptions.InvalidLength {
-        if (length <= 0) {
-            throw new WindowExceptions.InvalidLength("Length [" + length + "] <= 0");
-        }
+    public CircularBuffer(int length) {
         buffer = new String[length];
         this.length = length;
     }
@@ -55,16 +52,11 @@ public class CircularBuffer {
         capacity--;
     }
 
-    public int deleteUntilIndex(int index) throws WindowExceptions.InvalidLength {
-        int i = start;
-        int count = 1;
-
-        if (index > length) {
-            throw new WindowExceptions.InvalidLength("Invalid Index provided, length = [" + length + "]");
-        }
+    public int deleteUntilIndex(int index) {
+        int count = 0;
 
         /* Delete elements until provided index */
-        while (buffer[i] != buffer[index]) {
+        for (int i = start; i <= index; i++) {
             try {
                 delete();
                 count++;
@@ -73,14 +65,6 @@ public class CircularBuffer {
                 // TODO Change to LOG Warn
                 logger.log(WARNING, "ERROR: Buffer is Empty");
             }
-        }
-
-        /* Delete the element at index */
-        try {
-            delete();
-        } catch (WindowExceptions.BufferUnderflow e) {
-            // TODO Change to LOG Warn
-            logger.log(WARNING, "ERROR: Buffer is Empty");
         }
 
         /* Return number of deleted items */

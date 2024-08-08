@@ -2,10 +2,8 @@ package net.discdd.server.bundlerouting;
 
 import net.discdd.bundlerouting.WindowUtils.CircularBuffer;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
-import net.discdd.bundlerouting.WindowUtils.WindowExceptions.ClientAlreadyExists;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions.ClientWindowNotFound;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions.InvalidBundleID;
-import net.discdd.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions.RecievedInvalidACK;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions.RecievedOldACK;
 import net.discdd.bundlesecurity.BundleIDGenerator;
@@ -47,12 +45,12 @@ public class ServerWindowService {
     public void init() {
         try {
             initializeWindow();
-        } catch (SQLException | BufferOverflow | InvalidLength e) {
+        } catch (SQLException | BufferOverflow e) {
             logger.log(SEVERE, "[ServerWindow] INFO: Failed to initialize window from database", e);
         }
     }
 
-    private void initializeWindow() throws SQLException, InvalidLength, BufferOverflow {
+    private void initializeWindow() throws SQLException, BufferOverflow {
 
         Iterable<ServerWindow> entities = serverwindowrepo.findAll();
 
@@ -67,7 +65,7 @@ public class ServerWindowService {
         }
     }
 
-    private CircularBuffer createBuffer(String clientID, long startCounter, long currentCounter, int windowLength) throws BufferOverflow, InvalidLength {
+    private CircularBuffer createBuffer(String clientID, long startCounter, long endCounter, int windowLength) throws BufferOverflow {
         CircularBuffer circularBuffer = new CircularBuffer(windowLength);
 
         for (long i = startCounter; i < currentCounter; ++i) {
@@ -124,9 +122,9 @@ public class ServerWindowService {
      * Returns:
      * None
      */
-    public void addClient(String clientID, int windowLength) throws InvalidLength, ClientAlreadyExists {
+    public void addClient(String clientID, int windowLength) {
         if (clientWindowMap.containsKey(clientID)) {
-            throw new ClientAlreadyExists("[ServerWindow]: Cannot Add to Map; client already exists");
+            return;
         }
         clientWindowMap.put(clientID, new CircularBuffer(windowLength));
         initializeEntry(clientID, windowLength);

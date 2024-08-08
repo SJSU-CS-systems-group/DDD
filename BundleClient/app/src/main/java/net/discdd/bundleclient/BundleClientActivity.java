@@ -1,9 +1,11 @@
 package net.discdd.bundleclient;
 
+import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
 import android.content.Context;
+import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
@@ -24,10 +26,13 @@ import net.discdd.android.fragments.PermissionsFragment;
 import net.discdd.client.bundlerouting.ClientWindow;
 import net.discdd.client.bundlesecurity.BundleSecurity;
 import net.discdd.client.bundletransmission.BundleTransmission;
+import net.discdd.model.ADU;
 import net.discdd.wifidirect.WifiDirectManager;
 import net.discdd.wifidirect.WifiDirectStateListener;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -119,19 +124,23 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
 
         //Application context
         ApplicationContext = getApplicationContext();
-
+        var resources = ApplicationContext.getResources();
         /* Set up Server Keys before initializing Security Module */
-        try {
-            BundleSecurity.initializeKeyPaths(ApplicationContext.getResources(),
-                                              ApplicationContext.getApplicationInfo().dataDir);
+        try (InputStream inServerIdentity = resources.openRawResource(
+                R.raw.server_identity); InputStream inServerSignedPre = resources.openRawResource(
+                R.raw.server_signed_pre); InputStream inServerRatchet = resources.openRawResource(
+                R.raw.server_ratchet)) {
+            BundleSecurity.initializeKeyPaths(inServerIdentity, inServerSignedPre, inServerRatchet,
+                                              Paths.get(ApplicationContext.getApplicationInfo().dataDir));
         } catch (IOException e) {
             logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
         }
 
         //Initialize bundle transmission
         try {
+
             bundleTransmission =
-                    new BundleTransmission(Paths.get(getApplicationContext().getApplicationInfo().dataDir));
+                    new BundleTransmission(Paths.get(getApplicationContext().getApplicationInfo().dataDir), this::processADU);
             clientWindow = bundleTransmission.getBundleSecurity().getClientWindow();
             logger.log(WARNING, "{MC} - got clientwindow " + clientWindow);
         } catch (Exception e) {
@@ -140,6 +149,21 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
 
     }
 
+    public void processADU(ADU adu) {
+        //notify app that someone sent data for the app
+        Intent intent = new Intent("android.intent.dtn.SEND_DATA");
+        intent.setPackage(adu.getAppId());
+        intent.setType("text/plain");
+        byte[] data = null;
+        try {
+            logger.log(FINE, String.format("Sending ADU %s:%d from %s", adu.getAppId(), adu.getADUId(), adu.getSource()));
+            data = Files.readAllBytes(adu.getSource().toPath());
+            intent.putExtra(Intent.EXTRA_TEXT, data);
+            BundleClientActivity.ApplicationContext.startForegroundService(intent);
+        } catch (IOException e) {
+            logger.log(WARNING, String.format("Sending ADU %s:%d from %s", adu.getAppId(), adu.getADUId(), adu.getSource()), e);
+        }
+    }
     @Override
     public void onResume() {
         super.onResume();

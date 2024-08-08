@@ -1,10 +1,8 @@
 package net.discdd.utils;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
+import net.discdd.model.ADU;
+
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,29 +11,20 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.logging.Logger;
 
-import net.discdd.model.ADU;
-
-import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
 
 public class ADUUtils {
 
     private static final Logger logger = Logger.getLogger(BundleUtils.class.getName());
 
     public static void writeADU(ADU adu, Path targetDirectory) throws IOException {
-        String aduFileName = adu.getAppId() + "-" + adu.getADUId();
-        var aduFile = targetDirectory.resolve(aduFileName).toFile();
-        try (BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(
-                adu.getSource())); BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(
-                new FileOutputStream(aduFile))) {
-            bufferedInputStream.transferTo(bufferedOutputStream);
-        }
+        String aduFileName = Long.toString(adu.getADUId());
+        var aduFile = targetDirectory.resolve(aduFileName);
+        Files.copy(adu.getSource().toPath(), aduFile);
     }
 
     public static void writeADUs(List<ADU> adus, Path targetDirectory) throws IOException {
-        if (adus.isEmpty()) {
-            return;
-        }
         for (final ADU adu : adus) {
             String appId = adu.getAppId();
             var appDirectory = targetDirectory.resolve(appId);
@@ -60,11 +49,15 @@ public class ADUUtils {
             String appId = appSubDirectory.getName();
             for (final File aduFile : appSubDirectory.listFiles(file -> !file.isHidden())) {
                 String aduFileName = aduFile.getName();
+                logger.info("Reading ADU file: " + aduFileName);
                 long aduId;
-                if (aduFileName.contains("-")) aduId = Long.parseLong((aduFileName.split("-")[1]).replace(".adu", ""));
-                else aduId = Long.parseLong(aduFileName.replace(".adu", ""));
-                long size = aduFile.length();
-                ret.add(new ADU(aduFile, appId, aduId, size));
+                try {
+                    aduId = Long.parseLong(aduFileName);
+                    long size = aduFile.length();
+                    ret.add(new ADU(aduFile, appId, aduId, size));
+                } catch (NumberFormatException e) {
+                    logger.log(INFO, "Ignoring file " + aduFileName + " in " + appSubDirectory);
+                }
             }
         }
         ret.sort(Comparator.comparingLong(ADU::getADUId));

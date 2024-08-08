@@ -93,13 +93,19 @@ public class ApplicationDataManager {
         logger.log(INFO, "[ApplicationDataManager] Store ADUs");
 
         LargestBundleIdReceived largestBundleIdReceived = new LargestBundleIdReceived(clientId, bundleId);
-        this.largestBundleIdReceivedRepository.save(largestBundleIdReceived);
-
+        try {
+            this.largestBundleIdReceivedRepository.save(largestBundleIdReceived);
+        } catch (Exception e) {
+            logger.log(INFO, "[StateManager] Failed to store largest bundle id received for client " + clientId, e);
+            return;
+        }
         logger.log(INFO, "[StateManager] Registered bundle identifier: " + bundleId + " of client " + clientId);
         var affectedAppIds = new HashSet<String>();
 
         Map<String, List<ADU>> appIdToADUMap = new HashMap<>();
         for (var adu : adus) {
+            logger.log(INFO, "[ApplicationDataManager] Storing ADU for app " + adu.getAppId() + " with id " +
+                    adu.getADUId() + " in " + receiveADUsStorage.rootFolder);
             var addedFile =
                     receiveADUsStorage.addADU(clientId, adu.getAppId(), Files.readAllBytes(adu.getSource().toPath()),
                                               adu.getADUId());

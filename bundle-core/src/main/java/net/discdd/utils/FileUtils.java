@@ -1,18 +1,18 @@
 package net.discdd.utils;
 
 import com.google.protobuf.ByteString;
-import net.discdd.bundletransport.service.BundleDownloadResponse;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
+import java.util.Comparator;
 import java.util.Objects;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
 public class FileUtils {
@@ -29,14 +29,6 @@ public class FileUtils {
 
     public static void createEmptyFileIfNeeded(Path path) throws IOException {
         createFileWithDefaultIfNeeded(path, new byte[0]);
-    }
-
-    public static OutputStream getFilePath(BundleDownloadResponse response, Path receive_Directory) throws IOException {
-        String fileName = response.getMetadata().getBid();
-        // TODO: we are ignoring type here. It works, but we might want to rethink this.
-        var directoryReceive = receive_Directory.resolve(response.getMetadata().getSender().getId());
-        return Files.newOutputStream(directoryReceive.resolve(fileName), StandardOpenOption.CREATE,
-                                     StandardOpenOption.APPEND);
     }
 
     public static void writeFile(OutputStream writer, ByteString content) throws IOException {
@@ -64,6 +56,14 @@ public class FileUtils {
                 boolean result = bundle.delete();
                 logger.log(INFO, bundle.getName() + "deleted:" + result);
             }
+        }
+    }
+
+    public static void recursiveDelete(Path path) {
+        try (var walk = Files.walk(path)){
+            walk.map(Path::toFile).sorted(Comparator.reverseOrder()).forEach(File::delete);
+        } catch (IOException e) {
+            logger.log(SEVERE, "Error deleting directory: " + path, e);
         }
     }
 }

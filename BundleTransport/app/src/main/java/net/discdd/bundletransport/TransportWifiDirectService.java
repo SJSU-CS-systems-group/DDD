@@ -17,7 +17,7 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import net.discdd.bundlerouting.service.FileServiceImpl;
+import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
 import net.discdd.wifidirect.WifiDirectManager;
 import net.discdd.wifidirect.WifiDirectStateListener;
 
@@ -33,12 +33,12 @@ import java.util.logging.Logger;
  * returns a reference to this service.
  */
 public class TransportWifiDirectService extends Service
-        implements WifiDirectStateListener, RpcServerStateListener, FileServiceImpl.FileServiceEventListener {
+        implements WifiDirectStateListener, BundleExchangeServiceImpl.BundleExchangeEventListener {
     public static final String NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION = "net.discdd.bundletransport.CLIENT_LOG";
     public static final String NET_DISCDD_BUNDLETRANSPORT_WIFI_EVENT_ACTION = "net.discdd.bundletransport.WIFI_EVENT";
     private static final Logger logger = Logger.getLogger(TransportWifiDirectService.class.getName());
     private final IBinder binder = new TransportWifiDirectServiceBinder();
-    RpcServer grpcServer = new RpcServer(this);
+    private final RpcServer grpcServer = new RpcServer(this);
     private WifiDirectManager wifiDirectManager;
 
     public TransportWifiDirectService() {
@@ -106,7 +106,7 @@ public class TransportWifiDirectService extends Service
             if (grpcServer.isShutdown()) {
                 appendToClientLog("Starting gRPC server");
                 logger.log(INFO, "starting grpc server from main activity!!!!!!!");
-                grpcServer.startServer(getApplicationContext(), this);
+                grpcServer.startServer(getApplicationContext());
             }
         }
     }
@@ -121,13 +121,9 @@ public class TransportWifiDirectService extends Service
     }
 
     @Override
-    public void onStateChanged(RpcServer.ServerState newState) {
-    }
-
-    @Override
-    public void onFileServiceEvent(FileServiceImpl.FileServiceEvent fileServiceEvent) {
-        appendToClientLog("File service event: " + fileServiceEvent);
-    }
+    public void onBundleExchangeEvent(BundleExchangeServiceImpl.BundleExchangeEvent exchangeEvent) {
+        appendToClientLog("File service event: " + exchangeEvent);
+}
 
     private void appendToClientLog(String message) {
         var intent = new Intent(getApplicationContext(), TransportWifiDirectFragment.class);
