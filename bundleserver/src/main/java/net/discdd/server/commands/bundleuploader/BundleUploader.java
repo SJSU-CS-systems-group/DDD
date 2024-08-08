@@ -3,12 +3,11 @@ package net.discdd.server.commands.bundleuploader;
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
-import net.discdd.bundletransport.service.BundleMetaData;
-import net.discdd.bundletransport.service.BundleSender;
-import net.discdd.bundletransport.service.BundleSenderType;
-import net.discdd.bundletransport.service.BundleServiceGrpc;
-import net.discdd.bundletransport.service.BundleUploadRequest;
-import net.discdd.bundletransport.service.BundleUploadResponse;
+import net.discdd.grpc.BundleChunk;
+import net.discdd.grpc.BundleExchangeServiceGrpc;
+import net.discdd.grpc.BundleUploadRequest;
+import net.discdd.grpc.BundleUploadResponse;
+import net.discdd.grpc.EncryptedBundleId;
 import org.springframework.boot.CommandLineRunner;
 import picocli.CommandLine;
 
@@ -49,7 +48,7 @@ public class BundleUploader implements CommandLineRunner, Callable<Integer> {
     @Override
     public Integer call() throws Exception {
         var channel = ManagedChannelBuilder.forAddress(bundleServerHost, bundleServerPort).usePlaintext().build();
-        BundleServiceGrpc.BundleServiceStub stub = BundleServiceGrpc.newStub(channel);
+        BundleExchangeServiceGrpc.BundleExchangeServiceStub stub = BundleExchangeServiceGrpc.newStub(channel);
         CountDownLatch latch = new CountDownLatch(1);
         StreamObserver<BundleUploadRequest> streamObserver =
                 stub.uploadBundle(new StreamObserver<BundleUploadResponse>() {
@@ -72,9 +71,8 @@ public class BundleUploader implements CommandLineRunner, Callable<Integer> {
 
                     }
                 });
-        BundleUploadRequest metadata = BundleUploadRequest.newBuilder().setMetadata(
-                        BundleMetaData.newBuilder().setBid(bundle.getName())
-                                .setSender(BundleSender.newBuilder().setType(BundleSenderType.TRANSPORT).setId("CLI")).build())
+        BundleUploadRequest metadata = BundleUploadRequest.newBuilder().setBundleId(
+                EncryptedBundleId.newBuilder().setEncryptedId(bundle.getName()).build())
                 .build();
         streamObserver.onNext(metadata);
 
@@ -86,9 +84,9 @@ public class BundleUploader implements CommandLineRunner, Callable<Integer> {
         int size = 0;
         while ((size = inputStream.read(bytes)) != -1) {
             logger.log(WARNING, "Sending chunk size: " + size);
-            BundleUploadRequest uploadRequest = BundleUploadRequest.newBuilder().setFile(
-                    net.discdd.bundletransport.service.File.newBuilder().setContent(ByteString.copyFrom(bytes, 0, size))
-                            .build()).build();
+            BundleUploadRequest uploadRequest = BundleUploadRequest.newBuilder().setChunk(
+                    BundleChunk.newBuilder().setChunk(ByteString.copyFrom(bytes, 0, size)).build()
+            ).build();
             streamObserver.onNext(uploadRequest);
         }
         inputStream.close();

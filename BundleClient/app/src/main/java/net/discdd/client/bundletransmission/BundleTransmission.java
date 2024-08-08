@@ -5,13 +5,12 @@ import static java.util.logging.Level.INFO;
 
 import net.discdd.bundlerouting.RoutingExceptions;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
-import net.discdd.bundlerouting.service.FileServiceImpl;
 import net.discdd.bundlesecurity.BundleIDGenerator;
-import net.discdd.bundletransport.service.BundleSender;
 import net.discdd.client.applicationdatamanager.ApplicationDataManager;
 import net.discdd.client.bundlerouting.ClientBundleGenerator;
 import net.discdd.client.bundlerouting.ClientRouting;
 import net.discdd.client.bundlesecurity.BundleSecurity;
+import net.discdd.grpc.BundleSender;
 import net.discdd.model.ADU;
 import net.discdd.model.Acknowledgement;
 import net.discdd.model.Bundle;
@@ -121,7 +120,7 @@ public class BundleTransmission {
                 Paths.get(BUNDLE_GENERATION_DIRECTORY, RECEIVED_PROCESSING)));
         Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
         logger.log(INFO,
-                   "Updating client routing metadata for sender:  " + FileServiceImpl.bundleSenderToString(sender));
+                   "Updating client routing metadata for sender:  " + bundleSenderToString(sender));
         clientRouting.updateMetaData(sender.getId());
 
         String bundleId = payload.getBundleId();
@@ -145,6 +144,10 @@ public class BundleTransmission {
         this.applicationDataManager.processAcknowledgement(ackedBundleId);
         this.applicationDataManager.storeReceivedADUs(null, null, uncompressedPayload.getADUs());
 
+    }
+
+    public static String bundleSenderToString(BundleSender sender) {
+        return sender.getType() + " : " + sender.getId();
     }
 
     public void processReceivedBundles(BundleSender sender, String bundlesLocation) throws WindowExceptions.BufferOverflow, IOException, InvalidKeyException, RoutingExceptions.ClientMetaDataFileException, NoSessionException, InvalidMessageException, DuplicateMessageException, LegacyMessageException, GeneralSecurityException {

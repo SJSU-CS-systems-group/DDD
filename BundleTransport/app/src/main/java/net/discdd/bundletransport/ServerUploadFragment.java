@@ -15,8 +15,6 @@ import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
 
-import net.discdd.bundlerouting.service.ServerManager;
-
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.SubmissionPublisher;
@@ -85,10 +83,10 @@ public class ServerUploadFragment extends Fragment {
             requireActivity().runOnUiThread(() -> serverConnnectedStatus.setText(
                     "Initiating server exchange to " + serverDomain + ":" + serverPort + "...\n"));
 
-            ServerManager serverManager =
-                    new ServerManager(requireActivity().getExternalFilesDir(null).toPath(), serverDomain, serverPort,
-                                      transportID, this::sendTask, this::receiveTask, this::connectToServerComplete);
-            executor.execute(serverManager);
+            TransportToBundleServerManager transportToBundleServerManager =
+                    new TransportToBundleServerManager(requireActivity().getExternalFilesDir(null).toPath(), serverDomain, serverPort,
+                                                       transportID, this::connectToServerComplete);
+            executor.execute(transportToBundleServerManager);
         } else {
             Toast.makeText(getContext(), "Enter the domain and port", Toast.LENGTH_SHORT).show();
         }

@@ -1,0 +1,25 @@
+syntax = "proto3";
+package protobuf;
+
+option java_multiple_files = true;
+option java_package = "net.discdd.grpc";
+
+import "BundleExchangeService.proto";
+
+message BundleInventoryRequest {
+  repeated EncryptedBundleId bundlesFromServerOnTransport = 2;
+  repeated EncryptedBundleId bundlesFromClientsOnTransport = 3;
+  // TODO: once authentication goes in, this should go away
+  BundleSender sender = 99;
+}
+
+
+message BundleInventoryResponse {
+  repeated EncryptedBundleId bundlesToDownload = 1;
+  repeated EncryptedBundleId bundlesToUpload = 2;
+  repeated EncryptedBundleId bundlesToDelete = 3;
+}
+
+service BundleServerService {
+  rpc bundleInventory(BundleInventoryRequest) returns (BundleInventoryResponse) {}
+}

@@ -7,19 +7,18 @@ import io.grpc.stub.StreamObserver;
 import net.discdd.bundlesecurity.BundleIDGenerator;
 import net.discdd.bundlesecurity.DDDPEMEncoder;
 import net.discdd.bundlesecurity.SecurityUtils;
-import net.discdd.bundletransport.service.BundleMetaData;
-import net.discdd.bundletransport.service.BundleSender;
-import net.discdd.bundletransport.service.BundleSenderType;
-import net.discdd.bundletransport.service.BundleServiceGrpc;
-import net.discdd.bundletransport.service.BundleUploadRequest;
-import net.discdd.bundletransport.service.BundleUploadResponse;
-import net.discdd.bundletransport.service.Status;
 import net.discdd.grpc.AppDataUnit;
+import net.discdd.grpc.BundleChunk;
+import net.discdd.grpc.BundleExchangeServiceGrpc;
+import net.discdd.grpc.BundleUploadRequest;
+import net.discdd.grpc.BundleUploadResponse;
+import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.grpc.ExchangeADUsRequest;
 import net.discdd.grpc.ExchangeADUsResponse;
 import net.discdd.grpc.PendingDataCheckRequest;
 import net.discdd.grpc.PendingDataCheckResponse;
 import net.discdd.grpc.ServiceAdapterServiceGrpc;
+import net.discdd.grpc.Status;
 import net.discdd.model.Acknowledgement;
 import net.discdd.server.repository.RegisteredAppAdapterRepository;
 import net.discdd.server.repository.entity.RegisteredAppAdapter;
@@ -390,21 +389,23 @@ public class ADUEnd2EndTest {
     }
 
     private void sendBundle(Path bundleJarPath) throws Throwable {
-        var stub = BundleServiceGrpc.newStub(
+        var stub = BundleExchangeServiceGrpc.newStub(
                 ManagedChannelBuilder.forAddress("localhost", grpcPort).usePlaintext().build());
 
         // carefull! this is all backwards: we pass an object to receive the response and we get an object back to send
         // requests to the server
         BundleUploadResponseStreamObserver response = new BundleUploadResponseStreamObserver();
         var request = stub.uploadBundle(response);
-        request.onNext(BundleUploadRequest.newBuilder().setMetadata(
-                        BundleMetaData.newBuilder().setBid(bundleJarPath.toFile().getName()).setSender(
-                                BundleSender.newBuilder().setType(BundleSenderType.TRANSPORT).setId("8675309").build()).build())
-                               .build());
-        request.onNext(BundleUploadRequest.newBuilder().setFile(net.discdd.bundletransport.service.File.newBuilder()
-                                                                        .setContent(ByteString.copyFrom(
-                                                                                Files.readAllBytes(bundleJarPath)))
-                                                                        .build()).build());
+        var allBytes = Files.readAllBytes(bundleJarPath);
+        var firstByteString = ByteString.copyFrom(allBytes, 0, allBytes.length/2);
+        var secondByteString = ByteString.copyFrom(allBytes, allBytes.length/2, allBytes.length - allBytes.length/2);
+        request.onNext(BundleUploadRequest.newBuilder().setBundleId(EncryptedBundleId.newBuilder().setEncryptedId("8675309").build()).build());
+        request.onNext(BundleUploadRequest.newBuilder().setChunk(
+                BundleChunk.newBuilder().setChunk(firstByteString).build()
+        ).build());
+        request.onNext(BundleUploadRequest.newBuilder().setChunk(
+                BundleChunk.newBuilder().setChunk(secondByteString).build()
+        ).build());
         request.onCompleted();
 
         // let's see if it worked...
