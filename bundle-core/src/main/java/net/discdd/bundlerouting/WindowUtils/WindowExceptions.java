@@ -1,12 +1,6 @@
 package net.discdd.bundlerouting.WindowUtils;
 
 public class WindowExceptions {
-    public static class InvalidLength extends Exception {
-        public InvalidLength(String errorMessage) {
-            super(errorMessage);
-        }
-    }
-
     public static class BufferOverflow extends Exception {
         public BufferOverflow(String errorMessage) {
             super(errorMessage);
@@ -39,12 +33,6 @@ public class WindowExceptions {
 
     public static class ClientWindowNotFound extends Exception {
         public ClientWindowNotFound(String errorMessage) {
-            super(errorMessage);
-        }
-    }
-
-    public static class ClientAlreadyExists extends Exception {
-        public ClientAlreadyExists(String errorMessage) {
             super(errorMessage);
         }
     }

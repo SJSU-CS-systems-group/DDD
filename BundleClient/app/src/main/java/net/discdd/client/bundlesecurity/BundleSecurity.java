@@ -46,7 +46,7 @@ public class BundleSecurity {
     private ClientSecurity client = null;
     private int counter = 0;
 
-    public BundleSecurity(Path rootFolder) throws IOException, InvalidKeyException, WindowExceptions.InvalidLength,
+    public BundleSecurity(Path rootFolder) throws IOException, InvalidKeyException,
             WindowExceptions.BufferOverflow, NoSuchAlgorithmException {
         BundleSecurity.rootFolder = rootFolder;
 

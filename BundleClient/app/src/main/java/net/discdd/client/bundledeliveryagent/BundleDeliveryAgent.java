@@ -25,8 +25,7 @@ public class BundleDeliveryAgent {
 
     private BundleTransmission bundleTransmission;
 
-    public BundleDeliveryAgent(Path rootFolder) throws WindowExceptions.InvalidLength,
-            WindowExceptions.BufferOverflow, RoutingExceptions.ClientMetaDataFileException, IOException,
+    public BundleDeliveryAgent(Path rootFolder) throws WindowExceptions.BufferOverflow, RoutingExceptions.ClientMetaDataFileException, IOException,
             NoSuchAlgorithmException, InvalidKeyException {
         ROOT_FOLDER = rootFolder;
         File receivedBundlesDir = new File(ROOT_FOLDER + RelativePath);

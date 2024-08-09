@@ -40,7 +40,6 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
         Path downloadPath = pathProducer(bundleExchangeName, request.getSender());
         if (downloadPath == null) {
             responseObserver.onError(new IOException("Bundle not found"));
-            responseObserver.onCompleted();
             return;
         }
 

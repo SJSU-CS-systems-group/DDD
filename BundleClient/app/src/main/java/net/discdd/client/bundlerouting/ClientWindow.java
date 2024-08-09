@@ -8,7 +8,6 @@ import static java.util.logging.Level.WARNING;
 
 import net.discdd.bundlerouting.WindowUtils.CircularBuffer;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
-import net.discdd.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
 import net.discdd.bundlesecurity.BundleIDGenerator;
 import net.discdd.client.bundlesecurity.ClientSecurity;
 
@@ -81,7 +80,7 @@ public class ClientWindow {
      * Returns:
      * None
      */
-    private ClientWindow(int length, String clientID, Path rootPath) throws InvalidLength, BufferOverflow, IOException {
+    private ClientWindow(int length, String clientID, Path rootPath) throws BufferOverflow, IOException {
         clientWindowDataPath = rootPath.resolve("ClientWindow");
         clientWindowDataPath.toFile().mkdirs();
 
@@ -103,7 +102,7 @@ public class ClientWindow {
         fillWindow(windowLength, begin);
     }
 
-    public static ClientWindow initializeInstance(int windowLength, String clientID, Path rootPath) throws InvalidLength, BufferOverflow, IOException {
+    public static ClientWindow initializeInstance(int windowLength, String clientID, Path rootPath) throws BufferOverflow, IOException {
         if (singleClientWindowInstance == null) {
             singleClientWindowInstance = new ClientWindow(windowLength, clientID, rootPath);
         } else {
@@ -143,10 +142,8 @@ public class ClientWindow {
         int ackIndex = (int) Long.remainderUnsigned(ack, windowLength);
 
         /* Delete ACKs until ackIndex */
-        int noDeleted = 0;
-        try {
-            noDeleted = window.deleteUntilIndex(ackIndex);
-        } catch (InvalidLength e) {
+        int noDeleted = window.deleteUntilIndex(ackIndex);
+        if (noDeleted == 0) {
             logger.log(WARNING, "Received Invalid ACK [" + Long.toUnsignedString(ack) + "]");
         }
 

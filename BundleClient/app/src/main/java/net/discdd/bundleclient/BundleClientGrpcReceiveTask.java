@@ -15,6 +15,7 @@ import net.discdd.client.bundletransmission.BundleTransmission;
 import net.discdd.grpc.BundleDownloadRequest;
 import net.discdd.grpc.BundleExchangeServiceGrpc;
 import net.discdd.grpc.BundleSender;
+import net.discdd.grpc.BundleSenderType;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.utils.Constants;
 
@@ -113,11 +114,14 @@ class BundleClientGrpcReceiveTask {
             logger.log(FINE, "BUNDLE REQuests has size 0 / ");
         }
 
-        final var errorOccurred = new boolean[1];
+        var sender = BundleSender.newBuilder().setId(clientId).setType(BundleSenderType.CLIENT).build();
+        var successful = false;
 
         for (String bundle : bundleRequests) {
-            var downloadRequest = BundleDownloadRequest.newBuilder().setBundleId(
-                    EncryptedBundleId.newBuilder().setEncryptedId(bundle).build()).build();
+            var downloadRequest = BundleDownloadRequest.newBuilder()
+                    .setSender(sender)
+                    .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId(bundle).build())
+                    .build();
 
             String bundleName = bundle + ".bundle";
             logger.log(INFO, "Downloading file: " + bundleName);
@@ -132,12 +136,14 @@ class BundleClientGrpcReceiveTask {
                     var response = responses.next();
                     fileOutputStream.write(response.getChunk().getChunk().toByteArray());
                 }
+                successful = true;
+                break;
             } catch (StatusRuntimeException e) {
                 logger.log(SEVERE, "Receive bundle failed " + channel, e);
             }
         }
-        postExecute(errorOccurred[0] ? applicationContext.getString(R.string.failed) :
-                            applicationContext.getString(R.string.completed), host, String.valueOf(port));
+        postExecute(successful ? applicationContext.getString(R.string.completed) :
+                            applicationContext.getString(R.string.failed), host, String.valueOf(port));
     }
 
     public void shutdownExecutor() {
@@ -146,8 +152,7 @@ class BundleClientGrpcReceiveTask {
 
     protected void postExecute(String result, String host, String port) throws NoSessionException,
             InvalidMessageException, WindowExceptions.BufferOverflow, DuplicateMessageException,
-            RoutingExceptions.ClientMetaDataFileException, IOException, LegacyMessageException, InvalidKeyException,
-            WindowExceptions.InvalidLength, GeneralSecurityException {
+            RoutingExceptions.ClientMetaDataFileException, IOException, LegacyMessageException, InvalidKeyException, GeneralSecurityException {
         activity.runOnUiThread(() -> resultText.append(String.format("Receive finished: %s\n", result)));
         if (result.equals("Incomplete")) {
             return;

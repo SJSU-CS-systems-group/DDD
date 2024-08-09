@@ -237,7 +237,7 @@ public class BundleTransmission {
         return builder;
     }
 
-    private String generateBundleId(String clientId) throws SQLException, InvalidClientIDException,
+    public String generateBundleId(String clientId) throws SQLException, InvalidClientIDException,
             GeneralSecurityException, InvalidKeyException {
         return this.serverWindowService.getCurrentbundleID(clientId);
     }
@@ -250,6 +250,7 @@ public class BundleTransmission {
         Set<String> deletionSet = new HashSet<>();
         List<BundleDTO> bundlesToSend = new ArrayList<>();
 
+
         Optional<UncompressedPayload.Builder> optional =
                 this.applicationDataManager.getLastSentBundlePayloadBuilder(clientId);
         UncompressedPayload.Builder generatedPayloadBuilder = this.generatePayloadBuilder(clientId);
@@ -258,11 +259,7 @@ public class BundleTransmission {
         String bundleId = "";
         boolean isRetransmission = false;
 
-        try {
-            this.serverWindowService.addClient(clientId, this.WINDOW_LENGTH);
-        } catch (Exception e) {
-            logger.log(SEVERE, "[ServerWindow] INFO : Did not Add client " + clientId + " : " + e);
-        }
+        this.serverWindowService.addClient(clientId, this.WINDOW_LENGTH);
 
         boolean isSenderWindowFull = this.serverWindowService.isClientWindowFull(clientId);
 

@@ -13,6 +13,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 @GrpcService
 public class BundleServerEchangeServiceImpl extends BundleExchangeServiceImpl {
@@ -49,31 +50,37 @@ public class BundleServerEchangeServiceImpl extends BundleExchangeServiceImpl {
     public Path pathProducer(BundleExchangeName bundleExchangeName, BundleSender sender) {
         if (bundleExchangeName.isDownload()) {
             var bundlePath = downloadingFrom.resolve(bundleExchangeName.encryptedBundleId());
-            if (bundlePath.toFile().exists()) {
-                return bundlePath;
-            }
+            if (bundlePath.toFile().exists()) return bundlePath;
 
-            if (sender.getType() != BundleSenderType.CLIENT) {
-                // we only generate bundles on the fly here for clients
-                return null;
-            }
+            // we only generate bundles on the fly here for clients
+            if (sender.getType() != BundleSenderType.CLIENT) return null;
 
-            try {
-                var bundles = bundleTransmission.generateBundleForTransmission(null, sender.getId(), null);
-                if (bundles.getBundles().size() != 1) throw new Exception("Only one bundle expected to send to client");
-                var bundle = bundles.getBundles().get(0);
-                String generatedBundleId = bundle.getBundleId();
-                String requestedBundleId = bundleExchangeName.encryptedBundleId();
-                if (!generatedBundleId.equals(requestedBundleId)) {
-                    throw new Exception("Requested " + requestedBundleId + " but generated " + generatedBundleId);
-                }
-                return bundle.getBundle().getSource().toPath();
-            } catch (Exception e) {
-                logger.log(SEVERE, "Error generating bundle for transmission to " + sender, e);
-            }
-            return bundlePath;
+            return getPathForClientBundleDownload(bundleExchangeName, sender);
         } else {
             return uploadingTo.resolve(bundleExchangeName.encryptedBundleId());
         }
+    }
+
+    private Path getPathForClientBundleDownload(BundleExchangeName bundleExchangeName, BundleSender sender) {
+
+        try {
+            String expectedBundleId = bundleTransmission.generateBundleId(sender.getId());
+            String requestedBundleId = bundleExchangeName.encryptedBundleId();
+            var bundles = bundleTransmission.generateBundleForTransmission(sender, sender.getId(), null);
+            if (bundles.getBundles().size() != 1) {
+                logger.log(WARNING, BundleTransmission.bundleSenderToString(sender) + " requested " + requestedBundleId + " but generated " + bundles.getBundles());
+                return null;
+            }
+            var bundle = bundles.getBundles().get(0);
+            String generatedBundleId = bundle.getBundleId();
+            if (!generatedBundleId.equals(requestedBundleId)) {
+                logger.log(WARNING, BundleTransmission.bundleSenderToString(sender) + " requested " + requestedBundleId + " but generated " + generatedBundleId);
+                return null;
+            }
+            return bundle.getBundle().getSource().toPath();
+        } catch (Exception e) {
+            logger.log(SEVERE, "Error generating bundle for transmission to " + sender, e);
+        }
+        return null;
     }
 }

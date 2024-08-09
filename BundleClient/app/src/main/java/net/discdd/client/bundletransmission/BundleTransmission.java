@@ -65,7 +65,7 @@ public class BundleTransmission {
 
     private ClientRouting clientRouting;
 
-    public BundleTransmission(Path rootFolder) throws WindowExceptions.InvalidLength, WindowExceptions.BufferOverflow
+    public BundleTransmission(Path rootFolder) throws WindowExceptions.BufferOverflow
             , IOException, InvalidKeyException, RoutingExceptions.ClientMetaDataFileException,
             NoSuchAlgorithmException {
         this.ROOT_DIR = rootFolder;
