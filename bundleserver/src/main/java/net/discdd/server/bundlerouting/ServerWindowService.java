@@ -136,7 +136,8 @@ public class ServerWindowService {
             InvalidKeyException {
         long currentCounter = Long.parseUnsignedLong(getValueFromTable(clientID).getCurrentCounter());
 
-        String plainBundleID = BundleIDGenerator.generateBundleID(clientID, currentCounter, BundleIDGenerator.DOWNSTREAM);
+        String plainBundleID =
+                BundleIDGenerator.generateBundleID(clientID, currentCounter, BundleIDGenerator.DOWNSTREAM);
 
         currentCounter++;
         updateCurrentCounter(clientID, Long.toUnsignedString(currentCounter));
@@ -190,9 +191,8 @@ public class ServerWindowService {
                     "Received old ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(startCounter) +
                             "]");
         } else if (Long.compareUnsigned(ack, currentCounter) == 1) {
-            throw new RecievedInvalidACK(
-                    "Received Invalid ACK [" + Long.toUnsignedString(ack) + " < " + Long.toUnsignedString(currentCounter) +
-                            "]");
+            throw new RecievedInvalidACK("Received Invalid ACK [" + Long.toUnsignedString(ack) + " < " +
+                                                 Long.toUnsignedString(currentCounter) + "]");
         }
     }
 

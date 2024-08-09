@@ -97,7 +97,8 @@ public class BundleSecurity {
                 logger.log(FINE, "[BundleSecurity] decrypted payload");
             } catch (Exception e) {
                 // TODO
-                logger.log(SEVERE, "[BundleSecurity] Failed to decrypt payload" + uncompressedBundle.getSource().toPath(), e);
+                logger.log(SEVERE,
+                           "[BundleSecurity] Failed to decrypt payload" + uncompressedBundle.getSource().toPath(), e);
                 // e.printStackTrace();
                 return null;
             }

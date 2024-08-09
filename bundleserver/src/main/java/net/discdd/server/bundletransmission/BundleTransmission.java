@@ -242,8 +242,8 @@ public class BundleTransmission {
 
     private BundleTransferDTO generateBundleForTransmission(BundleSender sender, String clientId,
                                                             Set<String> bundleIdsPresent) throws ClientWindowNotFound
-            , InvalidClientIDException, GeneralSecurityException, InvalidKeyException,
-            InvalidClientSessionException, IOException {
+            , InvalidClientIDException, GeneralSecurityException, InvalidKeyException, InvalidClientSessionException,
+            IOException {
         logger.log(INFO, "[BundleTransmission] Processing bundle generation request for client " + clientId);
         Set<String> deletionSet = new HashSet<>();
         List<BundleDTO> bundlesToSend = new ArrayList<>();
