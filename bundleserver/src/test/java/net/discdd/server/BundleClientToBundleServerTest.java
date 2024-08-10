@@ -187,7 +187,7 @@ public class BundleClientToBundleServerTest extends End2EndTest {
             try {
                 final OutputStream fileOutputStream = responses.hasNext() ?
                         // I should not have this literal here! but this change is getting too large to fix all the literal problems!
-                        Files.newOutputStream(clientTestRoot.resolve("Shared/received-bundles").resolve(bundle), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING) : null;
+                        Files.newOutputStream(clientTestRoot.resolve("BundleTransmission/bundle-generation/to-send").resolve(bundle), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING) : null;
 
                 while (responses.hasNext()) {
                     var response = responses.next();

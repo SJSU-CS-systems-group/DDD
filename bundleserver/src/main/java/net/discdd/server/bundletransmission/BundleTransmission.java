@@ -319,7 +319,7 @@ public class BundleTransmission {
 
                 Bundle toSend = this.bundleUtils.compressBundle(uncompressedBundle, toSendTxpDir.toPath());
                 bundlesToSend.add(new BundleDTO(bundleId, toSend));
-                deletionSet.addAll(bundleIdsPresent);
+                if (bundleIdsPresent != null) deletionSet.addAll(bundleIdsPresent);
             }
         }
 
