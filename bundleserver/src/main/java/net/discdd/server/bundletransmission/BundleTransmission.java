@@ -2,7 +2,6 @@ package net.discdd.server.bundletransmission;
 
 import net.discdd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions.ClientWindowNotFound;
-import net.discdd.bundlesecurity.BundleIDGenerator;
 import net.discdd.bundlesecurity.InvalidClientIDException;
 import net.discdd.bundlesecurity.InvalidClientSessionException;
 import net.discdd.bundlesecurity.SecurityUtils;
@@ -240,13 +239,11 @@ public class BundleTransmission {
 
     public String generateBundleId(String clientId) throws SQLException, InvalidClientIDException,
             GeneralSecurityException, InvalidKeyException {
-        return this.serverWindowService.getCurrentbundleID(clientId);
+        return this.serverWindowService.getCurrentBundleID(clientId);
     }
 
     public BundleTransferDTO generateBundleForTransmission(BundleSender sender, String clientId,
-                                                            Set<String> bundleIdsPresent) throws ClientWindowNotFound
-            , InvalidClientIDException, GeneralSecurityException, InvalidKeyException, InvalidClientSessionException,
-            IOException {
+                                                            Set<String> bundleIdsPresent) throws ClientWindowNotFound, InvalidClientIDException, GeneralSecurityException, InvalidKeyException, InvalidClientSessionException, IOException, SQLException {
         logger.log(INFO, "[BundleTransmission] Processing bundle generation request for client " + clientId);
         Set<String> deletionSet = new HashSet<>();
         List<BundleDTO> bundlesToSend = new ArrayList<>();
