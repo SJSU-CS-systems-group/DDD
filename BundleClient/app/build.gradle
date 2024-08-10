@@ -95,5 +95,4 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-intents:3.6.1'
 
     testImplementation 'junit:junit:4.+'
-    testImplementation 'net.discdd:bundle-server:0.0.2'
 }
