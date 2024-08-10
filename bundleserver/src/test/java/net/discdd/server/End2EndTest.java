@@ -76,7 +76,7 @@ public class End2EndTest {
     // we don't really need the atomicity part, but we need a way to pass around a mutable long
     protected final static TestAppServiceAdapter testAppServiceAdapter = new TestAppServiceAdapter();
     private static final Logger logger = Logger.getLogger(End2EndTest.class.getName());
-    public static final int GRPC_TEST_PORT = 6666;
+    public static int GRPC_TEST_PORT;
     protected static IdentityKeyPair serverIdentity;
     protected static String clientId;
     protected static ECKeyPair baseKeyPair;
@@ -148,8 +148,9 @@ public class End2EndTest {
 
         // start up the gRPC server
 
-        var server = NettyServerBuilder.forPort(GRPC_TEST_PORT).addService(testAppServiceAdapter).build();
+        var server = NettyServerBuilder.forPort(0).addService(testAppServiceAdapter).build();
         server.start();
+        GRPC_TEST_PORT = server.getPort();
 
         tempRootDir.resolve(Paths.get("send", clientId, TEST_APPID)).toFile().mkdirs();
     }
@@ -280,7 +281,7 @@ public class End2EndTest {
         @Override
         public void run(ApplicationArguments args) {
             logger.info("Registering the testAppId");
-            registeredAppAdapterRepository.save(new RegisteredAppAdapter(TEST_APPID, "localhost:6666"));
+            registeredAppAdapterRepository.save(new RegisteredAppAdapter(TEST_APPID, "localhost:" + GRPC_TEST_PORT));
         }
     }
 
