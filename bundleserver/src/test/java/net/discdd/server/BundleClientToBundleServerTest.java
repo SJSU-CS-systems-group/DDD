@@ -25,8 +25,11 @@ import net.discdd.utils.StoreADUs;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.io.TempDir;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.whispersystems.libsignal.InvalidKeyException;
 
 import java.io.FileInputStream;
@@ -44,6 +47,8 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
+@SpringBootTest(classes = { BundleServerApplication.class, End2EndTest.End2EndTestInitializer.class })
+@TestMethodOrder(MethodOrderer.MethodName.class)
 public class BundleClientToBundleServerTest extends End2EndTest {
     private static final Logger logger = Logger.getLogger(BundleClientToBundleServerTest.class.getName());
     @TempDir

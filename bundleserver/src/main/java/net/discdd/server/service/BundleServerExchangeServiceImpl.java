@@ -14,6 +14,7 @@ import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
@@ -34,7 +35,11 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
         logger.log(Level.INFO, "inside ClientFileServiceImpl init method");
         var basePath = Path.of(serverBasePath);
         this.downloadingFrom = basePath.resolve("send");
+        downloadingFrom.toFile().mkdirs();
+        logger.log(INFO, "Downloading from: " + downloadingFrom + " created");
         this.uploadingTo = basePath.resolve("receive");
+        uploadingTo.toFile().mkdirs();
+        logger.log(INFO, "Uploading to: " + uploadingTo + " created");
     }
 
     @Override

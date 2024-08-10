@@ -102,7 +102,7 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
                         if (path == null) throw new IOException("Could not produce a path for " + bundleExchangeName.encryptedBundleId);
                         writer = Files.newOutputStream(path, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
                      } catch (IOException e) {
-                        logger.log(SEVERE, "Error creating file", e);
+                        logger.log(SEVERE, "Error creating file " + path, e);
                         this.onError(e);
                     }
                 } else {
@@ -129,7 +129,11 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
         @Override
         public void onCompleted() {
             logger.log(INFO, "File Upload Complete for " + path);
-            closeFile(writer);
+            try {
+                if (writer != null) writer.close();
+            } catch (Exception e) {
+                logger.log(SEVERE, "Problem closing bundle", e);
+            }
             if (bundleExchangeName != null) {
                 bundleCompletion(bundleExchangeName);
             }
@@ -143,13 +147,6 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
             writer.flush();
         }
 
-        private void closeFile(OutputStream writer) {
-            try {
-                writer.close();
-            } catch (Exception e) {
-                logger.log(SEVERE, "Problem closing bundle", e);
-            }
-        }
     }
 
     protected abstract void bundleCompletion(BundleExchangeName bundleExchangeName);

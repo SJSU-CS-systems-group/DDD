@@ -160,7 +160,8 @@ public class BundleTransmission {
 
     public void processReceivedBundles(BundleSender sender) {
         File receivedBundlesDirectory = this.config.getBundleTransmission().getBundleReceivedLocation().toFile();
-        for (final File transportDir : receivedBundlesDirectory.listFiles()) {
+        File[] files = receivedBundlesDirectory.listFiles();
+        if (files != null) for (final File transportDir : files) {
             if (TRANSPORT == sender.getType() && !sender.getId().equals(transportDir.getName())) {
                 continue;
             }

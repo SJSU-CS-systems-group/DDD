@@ -12,8 +12,11 @@ import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.grpc.ExchangeADUsResponse;
 import net.discdd.grpc.Status;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.io.TempDir;
+import org.springframework.boot.test.context.SpringBootTest;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,6 +27,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.logging.Logger;
 
+@SpringBootTest(classes = { BundleServerApplication.class, End2EndTest.End2EndTestInitializer.class })
+@TestMethodOrder(MethodOrderer.MethodName.class)
 public class ADUEnd2EndTest extends End2EndTest {
     private static final Logger logger = Logger.getLogger(ADUEnd2EndTest.class.getName());
 

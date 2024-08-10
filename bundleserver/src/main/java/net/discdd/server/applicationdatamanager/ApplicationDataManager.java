@@ -104,8 +104,6 @@ public class ApplicationDataManager {
 
         Map<String, List<ADU>> appIdToADUMap = new HashMap<>();
         for (var adu : adus) {
-            logger.log(INFO, "[ApplicationDataManager] Storing ADU for app " + adu.getAppId() + " with id " +
-                    adu.getADUId() + " in " + receiveADUsStorage.rootFolder);
             var addedFile =
                     receiveADUsStorage.addADU(clientId, adu.getAppId(), Files.readAllBytes(adu.getSource().toPath()),
                                               adu.getADUId());

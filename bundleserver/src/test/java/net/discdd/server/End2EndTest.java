@@ -69,8 +69,6 @@ import static net.discdd.bundlesecurity.SecurityUtils.SIGNATURE_DIR;
 import static net.discdd.bundlesecurity.SecurityUtils.SIGNATURE_FILENAME;
 import static net.discdd.bundlesecurity.SecurityUtils.createEncodedPublicKeyBytes;
 
-@SpringBootTest(classes = { BundleServerApplication.class, End2EndTest.End2EndTestInitializer.class })
-@TestMethodOrder(MethodOrderer.MethodName.class)
 public class End2EndTest {
     public static final String TEST_APPID = "testAppId";
     // we don't really need the atomicity part, but we need a way to pass around a mutable long
