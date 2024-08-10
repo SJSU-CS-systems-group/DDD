@@ -73,7 +73,7 @@ public class BundleClientToBundleServerTest extends End2EndTest {
     @BeforeEach
     void setUpEach() {
         if (stub == null) {
-            channel = ManagedChannelBuilder.forAddress("127.0.0.1", grpcPort).usePlaintext().build();
+            channel = ManagedChannelBuilder.forAddress("127.0.0.1", BUNDLESERVER_GRPC_PORT).usePlaintext().build();
             stub = BundleExchangeServiceGrpc.newStub(channel);
             blockingStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
         }

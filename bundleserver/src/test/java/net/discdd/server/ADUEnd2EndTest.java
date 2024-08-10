@@ -105,7 +105,7 @@ public class ADUEnd2EndTest extends End2EndTest {
 
     private void sendBundle(Path bundleJarPath) throws Throwable {
         var stub = BundleExchangeServiceGrpc.newStub(
-                ManagedChannelBuilder.forAddress("localhost", grpcPort).usePlaintext().build());
+                ManagedChannelBuilder.forAddress("localhost", BUNDLESERVER_GRPC_PORT).usePlaintext().build());
 
         // carefull! this is all backwards: we pass an object to receive the response and we get an object back to send
         // requests to the server

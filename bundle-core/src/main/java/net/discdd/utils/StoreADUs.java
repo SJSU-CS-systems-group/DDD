@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.FINEST;
 import static java.util.logging.Level.SEVERE;
 
 public class StoreADUs {
@@ -28,7 +28,7 @@ public class StoreADUs {
     private static final Logger logger = Logger.getLogger(StoreADUs.class.getName());
 
     public StoreADUs(Path rootFolder) {
-        logger.log(FINE, "bundlecore", "rootFolder: " + rootFolder);
+        logger.log(FINEST, "ADU rootFolder: " + rootFolder);
         this.rootFolder = rootFolder;
     }
 
@@ -44,7 +44,7 @@ public class StoreADUs {
             Gson gson = new Gson();
             return gson.fromJson(data, Metadata.class);
         } catch (Exception e) {
-            logger.log(SEVERE, "[FileStoreHelper] metadata not found at " + metadataPath + ". create a new one.");
+            logger.log(FINE, "[FileStoreHelper] metadata not found at " + metadataPath + ". create a new one.");
             Metadata metadata = new Metadata();
             setMetadata(clientId, appId, metadata);
             return metadata;
@@ -99,7 +99,7 @@ public class StoreADUs {
                 }
             });
         } catch (IOException e) {
-            logger.log(INFO, "Nothing found in rootFolder: " + rootFolder);
+            logger.log(FINE, "Nothing found in rootFolder: " + rootFolder);
             return Stream.empty();
         }
     }
@@ -190,7 +190,7 @@ public class StoreADUs {
         }
 
         Path aduPath = appFolder.resolve(Long.toString(aduId));
-        logger.log(INFO, "Writing " + appId + ":" + aduId + " to " + aduPath);
+        logger.log(FINEST, "Writing " + appId + ":" + aduId + " to " + aduPath);
         Files.write(aduPath, data);
         return aduPath.toFile();
     }

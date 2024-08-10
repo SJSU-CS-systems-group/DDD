@@ -76,7 +76,7 @@ public class End2EndTest {
     // we don't really need the atomicity part, but we need a way to pass around a mutable long
     protected final static TestAppServiceAdapter testAppServiceAdapter = new TestAppServiceAdapter();
     private static final Logger logger = Logger.getLogger(End2EndTest.class.getName());
-    public static int GRPC_TEST_PORT;
+    public static int TEST_ADAPTER_GRPC_PORT;
     protected static IdentityKeyPair serverIdentity;
     protected static String clientId;
     protected static ECKeyPair baseKeyPair;
@@ -91,7 +91,7 @@ public class End2EndTest {
     static Path serverRatchetKeyPath;
     private static Path serverPrivateRatchetKeyPath;
     @Value("${grpc.server.port}")
-    protected int grpcPort;
+    protected int BUNDLESERVER_GRPC_PORT;
 
     @BeforeAll
     static void setup() throws IOException, NoSuchAlgorithmException, InvalidKeyException {
@@ -150,7 +150,7 @@ public class End2EndTest {
 
         var server = NettyServerBuilder.forPort(0).addService(testAppServiceAdapter).build();
         server.start();
-        GRPC_TEST_PORT = server.getPort();
+        TEST_ADAPTER_GRPC_PORT = server.getPort();
 
         tempRootDir.resolve(Paths.get("send", clientId, TEST_APPID)).toFile().mkdirs();
     }
@@ -281,7 +281,8 @@ public class End2EndTest {
         @Override
         public void run(ApplicationArguments args) {
             logger.info("Registering the testAppId");
-            registeredAppAdapterRepository.save(new RegisteredAppAdapter(TEST_APPID, "localhost:" + GRPC_TEST_PORT));
+            registeredAppAdapterRepository.save(new RegisteredAppAdapter(TEST_APPID, "localhost:" +
+                    TEST_ADAPTER_GRPC_PORT));
         }
     }
 
