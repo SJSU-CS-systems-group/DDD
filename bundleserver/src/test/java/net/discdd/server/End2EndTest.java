@@ -202,7 +202,6 @@ public class End2EndTest {
         // create the signed outer jar
         DDDJarFileCreator outerJar = new DDDJarFileCreator(Files.newOutputStream(bundleJarPath));
         byte[] payloadBytes = payload.toByteArray();
-        Files.write(java.nio.file.Path.of("/Users/bcr33/test" + jarCounter++ + ".zip"), payloadBytes);
 
         // now sign the payload
         String payloadSignature = Base64.getUrlEncoder()
