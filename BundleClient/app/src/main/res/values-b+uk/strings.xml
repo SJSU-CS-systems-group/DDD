@@ -6,7 +6,6 @@
     <string name="android.permission.NEARBY_WIFI_DEVICES">Знайти сусідні пристрої WiFi</string>
     <string name="app_name">BundleClient</string>
     <string name="tansport_host">ddd_transport</string>
-    <string name="hello_blank_fragment">Привіт, порожній фрагмент</string>
     <string name="home_tab">Головна</string>
     <string name="permissions_tab">Дозволи</string>
     <string name="usb_tab">USB</string>
@@ -29,7 +28,6 @@
     <string name="connected_device_addresses">Адреси підключених пристроїв:</string>
     <string name="response">Відповідь:</string>
     <string name="exchange_data">Обмін даними</string>
-    <string name="browse">Перегляд</string>
     <string name="permission_caption">Заголовок дозволу</string>
     <string name="needed_permissions">Необхідні дозволи</string>
     <string name="exchange_usb_data">ОБМІН ДАНИМИ USB</string>

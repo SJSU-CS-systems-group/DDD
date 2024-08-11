@@ -6,7 +6,6 @@
     <string name="android.permission.NEARBY_WIFI_DEVICES">Find nearby Wifi devices</string>
     <string name="app_name">BundleClient</string>
     <string name="tansport_host">ddd_transport</string>
-    <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="home_tab">Home</string>
     <string name="permissions_tab">Permissions</string>
     <string name="usb_tab">Usb</string>
@@ -30,7 +29,6 @@
     <string name="connected_device_addresses">Connected Device Addresses:</string>
     <string name="response">Response:</string>
     <string name="exchange_data">Exchange Data</string>
-    <string name="browse">Browse</string>
     <string name="permission_caption">Permission caption</string>
     <string name="needed_permissions">Needed Permissions</string>
     <string name="exchange_usb_data">EXCHANGE USB DATA</string>

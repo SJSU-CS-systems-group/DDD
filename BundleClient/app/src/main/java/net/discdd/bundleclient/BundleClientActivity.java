@@ -67,12 +67,22 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     private int WINDOW_LENGTH = 3;
     private LinkedList<String> logRecords;
     private Consumer<String> logConsumer;
+    private ViewPagerAdapter adapter;
+    private WifiDirectFragment wifiDirectFragment;
 
-    // gRPC set up moved to -- MainPageFragment -- //
+    record FragmentWithTitle(Fragment fragment, String title) {}
+    ArrayList<FragmentWithTitle> fragmentsWithTitles = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        wifiDirectFragment = new WifiDirectFragment();
+        fragmentsWithTitles.add(new FragmentWithTitle(wifiDirectFragment, getString(R.string.home_tab)));
+        var permissionsFragment = new PermissionsFragment();
+        fragmentsWithTitles.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
+        fragmentsWithTitles.add(new FragmentWithTitle(new UsbFragment(), getString(R.string.usb_tab)));
+        fragmentsWithTitles.add(new FragmentWithTitle(new ServerFragment(), getString(R.string.server_tab)));
+        fragmentsWithTitles.add(new FragmentWithTitle(new LogFragment(), getString(R.string.logs_tab)));
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         if (logRecords == null) {
             logRecords = new LinkedList<>();
@@ -104,15 +114,13 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         //Set up ViewPager and TabLayout
         ViewPager2 viewPager = findViewById(R.id.view_pager);
         TabLayout tabLayout = findViewById(R.id.tab_layout);
-        ViewPagerAdapter adapter = new ViewPagerAdapter(this);
+        adapter = new ViewPagerAdapter(this);
         viewPager.setAdapter(adapter);
 
-        new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
-            final String[] labels =
-                    { getString(R.string.home_tab), getString(R.string.permissions_tab), getString(R.string.usb_tab),
-                            getString(R.string.server_tab), getString(R.string.logs_tab) };
-            tab.setText(labels[position]);
-        }).attach();
+        var tabMediator = new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
+            tab.setText(fragmentsWithTitles.get(position).title());
+        });
+        tabMediator.attach();
 
         if (wifiDirectManager == null) {
             // set up wifi direct
@@ -146,7 +154,6 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         } catch (Exception e) {
             logger.log(SEVERE, "Failed to initialize bundle transmission", e);
         }
-
     }
 
     public void processADU(ADU adu) {
@@ -185,7 +192,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     }
 
     void appendResultsMessage(String message) {
-        MainPageFragment fragment = getMainPageFragment();
+        WifiDirectFragment fragment = getMainPageFragment();
         if (fragment != null) {
             fragment.appendResultText(message + "\n");
         }
@@ -246,7 +253,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
 
     // Method to update connected devices text
     private void updateConnectedDevices() {
-        MainPageFragment fragment = getMainPageFragment();
+        WifiDirectFragment fragment = getMainPageFragment();
         if (fragment != null) {
             HashSet<WifiP2pDevice> peerList = wifiDirectManager.getPeerList();
             fragment.updateConnectedDevices(peerList);
@@ -254,8 +261,8 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     }
 
     // Helper method to get the MainPageFragment instance
-    private MainPageFragment getMainPageFragment() {
-        return (MainPageFragment) getSupportFragmentManager().findFragmentByTag("f0");
+    private WifiDirectFragment getMainPageFragment() {
+        return wifiDirectFragment != null && wifiDirectFragment.isAdded() ? wifiDirectFragment : null;
     }
 
     public String subscribeToLogs(Consumer<String> logConsumer) {
@@ -268,33 +275,21 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     }
 
     // ViewPagerAdapter class for managing fragments in the ViewPager
-    private static class ViewPagerAdapter extends FragmentStateAdapter {
-        private final BundleClientActivity bundleClientActivity;
-        private LogFragment logFragment;
-        private PermissionsFragment permissionsFragment;
-        private UsbFragment usbFragment;
-        private ServerFragment serverFragment;
+    private class ViewPagerAdapter extends FragmentStateAdapter {
 
         public ViewPagerAdapter(@NonNull BundleClientActivity fragmentActivity) {
             super(fragmentActivity);
-            this.bundleClientActivity = fragmentActivity;
         }
 
         @NonNull
         @Override
         public Fragment createFragment(int position) {
-            return switch (position) {
-                case 0 -> new MainPageFragment();
-                case 1 -> permissionsFragment = new PermissionsFragment();
-                case 2 -> new UsbFragment();
-                case 3 -> serverFragment = new ServerFragment();
-                default -> logFragment = new LogFragment();
-            };
+            return fragmentsWithTitles.get(position).fragment();
         }
 
         @Override
         public int getItemCount() {
-            return 5;
+            return fragmentsWithTitles.size();
         }
     }
 }

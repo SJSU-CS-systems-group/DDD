@@ -30,10 +30,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-public class MainPageFragment extends Fragment {
-    private static final Logger logger = Logger.getLogger(MainPageFragment.class.getName());
+public class WifiDirectFragment extends Fragment {
+    private static final Logger logger = Logger.getLogger(WifiDirectFragment.class.getName());
 
-    private FileChooserFragment fragment;
     private TextView resultText;
     private TextView connectedDeviceText;
     private TextView wifiDirectResponseText;
@@ -48,7 +47,7 @@ public class MainPageFragment extends Fragment {
     @Override
     public View onCreateView(
             @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.activity_helloworld, container, false);
+        View view = inflater.inflate(R.layout.wifi_direct_fragment, container, false);
 
         //Initialize UI elements and buttons
         TextView clientIdView = view.findViewById(R.id.client_id_text);
