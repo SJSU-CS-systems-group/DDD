@@ -1,31 +1,14 @@
 package net.discdd.client.applicationdatamanager;
 
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
-
-import android.content.Context;
-import android.content.Intent;
-import android.os.Build;
-
-import net.discdd.bundleclient.BundleClientActivity;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
 import net.discdd.model.ADU;
 import net.discdd.model.UncompressedPayload;
-
 import net.discdd.utils.BundleUtils;
 import net.discdd.utils.StoreADUs;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonIOException;
-import com.google.gson.JsonSyntaxException;
-import com.google.gson.reflect.TypeToken;
-
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -37,8 +20,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
+
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 public class ApplicationDataManager {
 
@@ -46,9 +35,7 @@ public class ApplicationDataManager {
 
     private StoreADUs sendADUsStorage;
     private StoreADUs receiveADUsStorage;
-
-    private Context applicationContext;
-
+    private Consumer<ADU> aduConsumer;
     /* Database tables */
     private static String SENT_BUNDLE_DETAILS = "Shared/DB/SENT_BUNDLE_DETAILS.json";
 
@@ -56,14 +43,15 @@ public class ApplicationDataManager {
 
     private Long APP_DATA_SIZE_LIMIT = 1000000000L;
 
-    private static List<String> REGISTER_APP_IDS = List.of("com.example.mysignal", "com.fsck.k9.debug");
+    private static List<String> REGISTER_APP_IDS = List.of("com.example.mysignal", "com.fsck.k9.debug", "testAppId");
 
     private final Path ROOT_DIR;
 
-    public ApplicationDataManager(Path rootDir) {
+    public ApplicationDataManager(Path rootDir, Consumer<ADU> aduConsumer) {
         ROOT_DIR = rootDir;
         sendADUsStorage = new StoreADUs(rootDir.resolve("send"));
         receiveADUsStorage = new StoreADUs(rootDir.resolve("receive"));
+        this.aduConsumer = aduConsumer;
 
         try {
             File sentBundleDetails = ROOT_DIR.resolve(SENT_BUNDLE_DETAILS).toFile();
@@ -110,27 +98,11 @@ public class ApplicationDataManager {
             try {
                 receiveADUsStorage.addADU(null, adu.getAppId(), Files.readAllBytes(adu.getSource().toPath()),
                                           adu.getADUId());
-                sendDataToApp(adu);
+                aduConsumer.accept(adu);
                 logger.log(FINE, "[ADM] Updated Largest ADU id: " + adu.getADUId() + "," + adu.getSource());
             } catch (IOException e) {
                 logger.log(WARNING, "Could not persist adu: " + adu.getADUId(), e);
             }
-        }
-    }
-
-    private void sendDataToApp(ADU adu) throws IOException {
-        //notify app that someone sent data for the app
-        Intent intent = new Intent("android.intent.dtn.SEND_DATA");
-        intent.setPackage(adu.getAppId());
-        intent.setType("text/plain");
-        byte[] data = Files.readAllBytes(adu.getSource().toPath());
-        logger.log(FINE, new String(data) + ", Source:" + adu.getSource());
-        intent.putExtra(Intent.EXTRA_TEXT, data);
-        applicationContext = BundleClientActivity.ApplicationContext;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            applicationContext.startForegroundService(intent);
-        } else {
-            logger.log(SEVERE, "[Failed] to send to application. Upgrade Android SDK to 26 or greater");
         }
     }
 
@@ -202,18 +174,14 @@ public class ApplicationDataManager {
     private Map<String, Map<String, Long>> getSentBundleDetails() {
         Gson gson = new Gson();
         Map<String, Map<String, Long>> ret = new HashMap<>();
-        try {
+        try (FileReader reader = new FileReader(ROOT_DIR.resolve(SENT_BUNDLE_DETAILS).toFile())) {
             Type mapType = new TypeToken<Map<String, Map<String, Long>>>() {}.getType();
-            ret = gson.fromJson(new FileReader(ROOT_DIR.resolve(SENT_BUNDLE_DETAILS).toFile()), mapType);
+            ret = gson.fromJson(reader, mapType);
             if (ret == null) {
                 ret = new HashMap<>();
             }
-        } catch (JsonSyntaxException e) {
-            e.printStackTrace();
-        } catch (JsonIOException e) {
-            e.printStackTrace();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
+        } catch (Exception e) {
+            logger.log(SEVERE, "Failed to read sent bundle details", e);
         }
         return ret;
     }

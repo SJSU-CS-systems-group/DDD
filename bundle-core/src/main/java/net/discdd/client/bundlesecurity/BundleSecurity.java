@@ -1,21 +1,14 @@
 package net.discdd.client.bundlesecurity;
 
-import static java.util.logging.Level.INFO;
-
-import android.content.res.Resources;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
-
-import net.discdd.bundleclient.R;
+import net.discdd.client.bundlerouting.ClientBundleGenerator;
+import net.discdd.client.bundlerouting.ClientWindow;
 import net.discdd.model.EncryptedPayload;
 import net.discdd.model.EncryptionHeader;
 import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
 import net.discdd.utils.Constants;
 import net.discdd.utils.FileUtils;
-
-import net.discdd.client.bundlerouting.ClientWindow;
-import net.discdd.client.bundlerouting.ClientBundleGenerator;
-
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.InvalidMessageException;
@@ -27,11 +20,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.util.logging.Logger;
+
+import static java.util.logging.Level.INFO;
 
 public class BundleSecurity {
     private static final Logger logger = Logger.getLogger(BundleSecurity.class.getName());
@@ -39,20 +33,25 @@ public class BundleSecurity {
     public static final String BUNDLE_SECURITY_DIR = "BundleSecurity";
     private static final String LARGEST_BUNDLE_ID_RECEIVED = "Shared/DB/LARGEST_BUNDLE_ID_RECEIVED.txt";
     private static final String BUNDLE_ID_NEXT_COUNTER = "Shared/DB/BUNDLE_ID_NEXT_COUNTER.txt";
+    public static final String SERVER_IDENTITY_PUB = "server_identity.pub";
+    public static final String SERVER_SIGNED_PRE_PUB = "server_signed_pre.pub";
+    public static final String SERVER_RATCHET_PUB = "server_ratchet.pub";
+    public static final String SERVER_KEYS_SUBDIR = "Server_Keys";
     private static Path rootFolder;
     private final ClientWindow clientWindow;
     private final ClientBundleGenerator clientBundleGenerator;
     private final boolean isEncryptionEnabled = true;
+    private final Path serverKeyPath;
     private ClientSecurity client = null;
     private int counter = 0;
 
-    public BundleSecurity(Path rootFolder) throws IOException, InvalidKeyException, WindowExceptions.InvalidLength,
+    public BundleSecurity(Path rootFolder) throws IOException, InvalidKeyException,
             WindowExceptions.BufferOverflow, NoSuchAlgorithmException {
         BundleSecurity.rootFolder = rootFolder;
 
         Path bundleSecurityPath = rootFolder.resolve(BUNDLE_SECURITY_DIR);
 
-        Path serverKeyPath = bundleSecurityPath.resolve("Server_Keys");
+        serverKeyPath = bundleSecurityPath.resolve(SERVER_KEYS_SUBDIR);
 
         Path bundleIdNextCounter = rootFolder.resolve(BUNDLE_ID_NEXT_COUNTER);
         FileUtils.createFileWithDefaultIfNeeded(bundleIdNextCounter, "0".getBytes());
@@ -69,18 +68,17 @@ public class BundleSecurity {
         clientWindow = ClientWindow.initializeInstance(5, client.getClientID(), rootFolder);
     }
 
-    public static void initializeKeyPaths(Resources resources, String rootDir) throws IOException {
-        var serverKeyPath = Paths.get(rootDir, BundleSecurity.BUNDLE_SECURITY_DIR, "Server_Keys");
-
-        InputStream inServerIdentity = resources.openRawResource(R.raw.server_identity);
-        InputStream inServerSignedPre = resources.openRawResource(R.raw.server_signed_pre);
-        InputStream inServerRatchet = resources.openRawResource(R.raw.server_ratchet);
-
+    // TODO: this function makes me sad! it should not be static. We should probably inject BundleSecurity
+    // into Bundle transport so that everything can be set up properly
+    public static void initializeKeyPaths(InputStream inServerIdentity, InputStream inServerSignedPre,
+                                          InputStream inServerRatchet, Path rootFolder) throws IOException {
+        var bundleSecurityPath = rootFolder.resolve(BUNDLE_SECURITY_DIR);
+        var serverKeyPath = bundleSecurityPath.resolve(SERVER_KEYS_SUBDIR);
         serverKeyPath.toFile().mkdirs();
 
-        Path outServerIdentity = serverKeyPath.resolve("server_identity.pub");
-        Path outServerSignedPre = serverKeyPath.resolve("server_signed_pre.pub");
-        Path outServerRatchet = serverKeyPath.resolve("server_ratchet.pub");
+        Path outServerIdentity = serverKeyPath.resolve(SERVER_IDENTITY_PUB);
+        Path outServerSignedPre = serverKeyPath.resolve(SERVER_SIGNED_PRE_PUB);
+        Path outServerRatchet = serverKeyPath.resolve(SERVER_RATCHET_PUB);
 
         Files.copy(inServerIdentity, outServerIdentity, StandardCopyOption.REPLACE_EXISTING);
         inServerIdentity.close();

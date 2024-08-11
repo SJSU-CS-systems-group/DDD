@@ -6,15 +6,13 @@ import static java.util.logging.Level.WARNING;
 
 import android.content.Context;
 
-import net.discdd.bundlerouting.service.FileServiceImpl;
-import net.discdd.bundletransport.service.BundleSender;
-import net.discdd.bundletransport.service.BundleSenderType;
+import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
+import net.discdd.grpc.BundleSender;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.ArrayList;
-import java.util.List;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -29,49 +27,54 @@ public class RpcServer {
     private static final Logger logger = Logger.getLogger(RpcServer.class.getName());
 
     // private final String TAG = "dddTransport";
-    private final String inetSocketAddressIP = "192.168.49.1";
-    private final int port = 7777;
+    private static final String inetSocketAddressIP = "192.168.49.1";
+    private static final int port = 7777;
     private ServerState state = ServerState.SHUTDOWN;
 
     private Server server;
     private static RpcServer rpcServerInstance;
 
-    private List<RpcServerStateListener> listeners = new ArrayList<>();
+    private final BundleExchangeServiceImpl.BundleExchangeEventListener listener;
 
-    public RpcServer(RpcServerStateListener ssl) {
-        if (null != ssl) listeners.add(ssl);
+    public RpcServer(BundleExchangeServiceImpl.BundleExchangeEventListener listener) {
+        this.listener = listener;
     }
 
-    public static RpcServer getInstance(RpcServerStateListener ssl) {
-        if (null == rpcServerInstance) {
-            rpcServerInstance = new RpcServer(ssl);
-        }
-        return rpcServerInstance;
-    }
-
-    public void startServer(Context context, FileServiceImpl.FileServiceEventListener listener) {
+    public void startServer(Context context) {
         logger.log(INFO, "Server state is : " + state.name());
         if (state == ServerState.RUNNING || state == ServerState.PENDING) {
             return;
         }
-
+        state = ServerState.PENDING;
         SocketAddress address = new InetSocketAddress(inetSocketAddressIP, port);
-        notifyStateChange(ServerState.PENDING);
-        server = NettyServerBuilder.forAddress(address).addService(
-                new FileServiceImpl(context.getExternalFilesDir(null),
-                                    BundleSender.newBuilder().setType(BundleSenderType.TRANSPORT).setId("FIXME!")
-                                            .build(), listener)).build();
+        var bundleReceivePath = context.getExternalFilesDir(null).toPath().resolve("BundleTransmission/server");
+        var bundleExchangeService = new BundleExchangeServiceImpl() {
+            @Override
+            protected void onBundleExchangeEvent(BundleExchangeEvent bundleExchangeEvent) {
+                listener.onBundleExchangeEvent(bundleExchangeEvent);
+            }
+
+            @Override
+            protected Path pathProducer(BundleExchangeName bundleExchangeName, BundleSender bundleSender) {
+                return bundleReceivePath.resolve(bundleExchangeName.encryptedBundleId());
+            }
+
+            @Override
+            protected void bundleCompletion(BundleExchangeName bundleExchangeName) {
+            }
+        };
+        server = NettyServerBuilder.forAddress(address).addService(bundleExchangeService).build();
 
         logger.log(INFO, "Starting rpc server at: " + server.toString());
 
         try {
             server.start();
-            notifyStateChange(ServerState.RUNNING);
+            state = ServerState.RUNNING;
             logger.log(FINE, "Rpc server running at: " + server.toString());
         } catch (IOException e) {
+            state = ServerState.SHUTDOWN;
             logger.log(WARNING, "RpcServer -> startServer() IOException: " + e.getMessage());
-            notifyStateChange(ServerState.SHUTDOWN);
-        }
+       }
     }
 
     public void shutdownServer() {
@@ -80,7 +83,6 @@ public class RpcServer {
         }
 
         logger.log(INFO, "Stopping rpc server");
-        notifyStateChange(ServerState.PENDING);
         if (server != null) {
             try {
                 boolean stopped = server.shutdown().awaitTermination(5, TimeUnit.SECONDS);
@@ -88,19 +90,12 @@ public class RpcServer {
                     throw new Exception("Server not stopped");
                 }
                 logger.log(WARNING, "Stopped rpc server");
-                notifyStateChange(ServerState.SHUTDOWN);
             } catch (IOException e) {
                 logger.log(WARNING, "RpcServer -> terminateServer() IOException: " + e.getMessage());
-                notifyStateChange(ServerState.RUNNING);
             } catch (Exception e) {
                 logger.log(WARNING, "RpcServer -> terminateServer() Exception: " + e.getMessage());
-                notifyStateChange(ServerState.RUNNING);
             }
         }
-    }
-
-    public void addStateListener(RpcServerStateListener listener) {
-        listeners.add(listener);
     }
 
     public ServerState getState() {
@@ -112,12 +107,5 @@ public class RpcServer {
             return true;
         }
         return server.isShutdown();
-    }
-
-    private void notifyStateChange(ServerState newState) {
-        state = newState;
-        for (RpcServerStateListener listener : listeners) {
-            listener.onStateChanged(state);
-        }
     }
 }

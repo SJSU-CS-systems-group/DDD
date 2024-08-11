@@ -108,8 +108,8 @@ public class ServerFragment extends Fragment {
     private void connectToServer(String serverDomain, String serverPort) {
         if (!serverDomain.isEmpty() && !serverPort.isEmpty()) {
             logger.log(INFO, "Sending to " + serverDomain + ":" + serverPort);
-            new GrpcReceiveTask(((BundleClientActivity) requireActivity())).executeInBackground(serverDomain,
-                                                                                                Integer.parseInt(
+            new BundleClientGrpcReceiveTask(((BundleClientActivity) requireActivity())).executeInBackground(serverDomain,
+                                                                                                            Integer.parseInt(
                                                                                                         serverPort));
 
         }

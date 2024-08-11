@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package protobuf;
+
+option java_multiple_files = true;
+option java_package = "net.discdd.grpc";
+
+enum Status {
+  UNDEFINED = 0;
+  SUCCESS = 1;
+  FAILED = 2;
+}
+
+
+enum BundleSenderType {
+  UNKNOWN = 0;
+  CLIENT = 1;
+  TRANSPORT = 2;
+  SERVER = 3;
+}
+
+message BundleSender {
+  string id = 1;
+  BundleSenderType type = 2;
+}
+
+message EncryptedBundleId {
+  string encryptedId = 1;
+}
+
+/*
+ * The bundle will be chunked into smaller pieces for transmission.
+ * Multiple chunks will be sent until the whole bundle has been transmitted.
+ */
+message BundleChunk {
+  bytes chunk = 1;
+}
+
+/*
+ * The first upload message will be the EncryptedBundleId followed by a
+ * stream of chunks.
+ */
+message BundleUploadRequest {
+  oneof request {
+    EncryptedBundleId bundleId = 1;
+    BundleChunk chunk = 2;
+  }
+}
+
+message BundleUploadResponse {
+  Status status = 1;
+}
+
+message BundleDownloadResponse {
+  oneof request {
+    BundleChunk chunk = 2;
+  }
+}
+
+message BundleDownloadRequest {
+  EncryptedBundleId bundleId = 1;
+  // TODO: once authentication goes in, this should go away!
+  BundleSender sender = 99;
+}
+
+service BundleExchangeService {
+  rpc uploadBundle(stream BundleUploadRequest) returns (BundleUploadResponse) {}
+  rpc downloadBundle(BundleDownloadRequest) returns (stream BundleDownloadResponse) {}
+}

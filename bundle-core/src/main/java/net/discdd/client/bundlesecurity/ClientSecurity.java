@@ -1,13 +1,6 @@
 package net.discdd.client.bundlesecurity;
 
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.FINER;
-import static java.util.logging.Level.WARNING;
-
-import android.util.Base64;
-
 import net.discdd.bundlesecurity.SecurityUtils;
-
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
@@ -42,8 +35,13 @@ import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 import java.util.logging.Logger;
+
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.WARNING;
 
 public class ClientSecurity {
 
@@ -192,7 +190,7 @@ public class ClientSecurity {
 
     private void createSignature(byte[] fileContents, Path signedFilePath) throws IOException, InvalidKeyException {
         byte[] signedData = Curve.calculateSignature(ourIdentityKeyPair.getPrivateKey(), fileContents);
-        String encodedSignature = Base64.encodeToString(signedData, Base64.URL_SAFE | Base64.NO_WRAP);
+        String encodedSignature = Base64.getUrlEncoder().encodeToString(signedData);
         Files.write(signedFilePath, encodedSignature.getBytes());
     }
 
@@ -204,7 +202,7 @@ public class ClientSecurity {
         byte[] agreement =
                 Curve.calculateAgreement(theirIdentityKey.getPublicKey(), ourIdentityKeyPair.getPrivateKey());
 
-        String secretKey = Base64.encodeToString(agreement, Base64.URL_SAFE | Base64.NO_WRAP);
+        String secretKey = Base64.getUrlEncoder().encodeToString(agreement);
 
         return SecurityUtils.encryptAesCbcPkcs5(secretKey, bundleID);
     }
@@ -324,7 +322,7 @@ public class ClientSecurity {
 
         agreement = Curve.calculateAgreement(theirIdentityKey.getPublicKey(), ourIdentityKeyPair.getPrivateKey());
 
-        String secretKey = Base64.encodeToString(agreement, Base64.URL_SAFE | Base64.NO_WRAP);
+        String secretKey = Base64.getUrlEncoder().encodeToString(agreement);
 
         bundleIDBytes = SecurityUtils.decryptAesCbcPkcs5(secretKey, encryptedBundleID);
         return new String(bundleIDBytes, StandardCharsets.UTF_8);

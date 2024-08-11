@@ -21,10 +21,10 @@ public class ServerWindow {
     private String clientID;
 
     @Column(name = "startCounter", columnDefinition = "INTEGER")
-    private String startCounter;
+    private long startCounter;
 
     @Column(name = "currentCounter", columnDefinition = "INTEGER")
-    private String currentCounter;
+    private long currentCounter;
 
     @Column(name = "windowLength", columnDefinition = "INTEGER")
     private int windowLength;

@@ -1,17 +1,13 @@
 package net.discdd.client.bundletransmission;
 
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
-
 import net.discdd.bundlerouting.RoutingExceptions;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
-import net.discdd.bundlerouting.service.FileServiceImpl;
 import net.discdd.bundlesecurity.BundleIDGenerator;
-import net.discdd.bundletransport.service.BundleSender;
 import net.discdd.client.applicationdatamanager.ApplicationDataManager;
 import net.discdd.client.bundlerouting.ClientBundleGenerator;
 import net.discdd.client.bundlerouting.ClientRouting;
 import net.discdd.client.bundlesecurity.BundleSecurity;
+import net.discdd.grpc.BundleSender;
 import net.discdd.model.ADU;
 import net.discdd.model.Acknowledgement;
 import net.discdd.model.Bundle;
@@ -22,9 +18,7 @@ import net.discdd.model.UncompressedPayload;
 import net.discdd.utils.AckRecordUtils;
 import net.discdd.utils.BundleUtils;
 import net.discdd.utils.Constants;
-
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
+import net.discdd.utils.FileUtils;
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.InvalidMessageException;
@@ -43,7 +37,11 @@ import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
+
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
 
 public class BundleTransmission {
     private static final Logger logger = Logger.getLogger(BundleTransmission.class.getName());
@@ -66,12 +64,12 @@ public class BundleTransmission {
 
     private ClientRouting clientRouting;
 
-    public BundleTransmission(Path rootFolder) throws WindowExceptions.InvalidLength, WindowExceptions.BufferOverflow
+    public BundleTransmission(Path rootFolder, Consumer<ADU> aduConsumer) throws WindowExceptions.BufferOverflow
             , IOException, InvalidKeyException, RoutingExceptions.ClientMetaDataFileException,
             NoSuchAlgorithmException {
         this.ROOT_DIR = rootFolder;
         this.bundleSecurity = new BundleSecurity(this.ROOT_DIR);
-        this.applicationDataManager = new ApplicationDataManager(this.ROOT_DIR);
+        this.applicationDataManager = new ApplicationDataManager(this.ROOT_DIR, aduConsumer);
 
         this.clientRouting = ClientRouting.initializeInstance(rootFolder);
 
@@ -121,13 +119,13 @@ public class BundleTransmission {
                 Paths.get(BUNDLE_GENERATION_DIRECTORY, RECEIVED_PROCESSING)));
         Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
         logger.log(INFO,
-                   "Updating client routing metadata for sender:  " + FileServiceImpl.bundleSenderToString(sender));
+                   "Updating client routing metadata for sender:  " + bundleSenderToString(sender));
         clientRouting.updateMetaData(sender.getId());
 
         String bundleId = payload.getBundleId();
 
         ClientBundleGenerator clientBundleGenerator = this.bundleSecurity.getClientBundleGenerator();
-        boolean isLatestBundleId = (!StringUtils.isBlank(largestBundleIdReceived) &&
+        boolean isLatestBundleId = (!largestBundleIdReceived.isEmpty() &&
                 clientBundleGenerator.compareBundleIDs(bundleId, Long.parseLong(largestBundleIdReceived),
                                                        BundleIDGenerator.DOWNSTREAM) == 1);
 
@@ -147,6 +145,10 @@ public class BundleTransmission {
 
     }
 
+    public static String bundleSenderToString(BundleSender sender) {
+        return sender.getType() + " : " + sender.getId();
+    }
+
     public void processReceivedBundles(BundleSender sender, String bundlesLocation) throws WindowExceptions.BufferOverflow, IOException, InvalidKeyException, RoutingExceptions.ClientMetaDataFileException, NoSessionException, InvalidMessageException, DuplicateMessageException, LegacyMessageException, GeneralSecurityException {
         File bundleStorageDirectory = new File(bundlesLocation);
         logger.log(FINE, "inside receives" + bundlesLocation);
@@ -159,7 +161,7 @@ public class BundleTransmission {
             logger.log(INFO, "Processing: " + bundle.getSource().getName());
             this.processReceivedBundle(sender, bundle);
             logger.log(INFO, "Deleting Directory");
-            FileUtils.deleteQuietly(bundle.getSource());
+            FileUtils.recursiveDelete(bundle.getSource().toPath());
             logger.log(INFO, "Deleted Directory");
         }
         String largestBundleId = getLargestBundleIdReceived();
@@ -241,7 +243,7 @@ public class BundleTransmission {
     }
 
     public void notifyBundleSent(BundleDTO bundle) {
-        FileUtils.deleteQuietly(bundle.getBundle().getSource());
+        FileUtils.recursiveDelete(bundle.getBundle().getSource().toPath());
     }
 
     public BundleSecurity getBundleSecurity() {

@@ -2,10 +2,7 @@ package net.discdd.server.bundlerouting;
 
 import net.discdd.bundlerouting.WindowUtils.CircularBuffer;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
-import net.discdd.bundlerouting.WindowUtils.WindowExceptions.ClientAlreadyExists;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions.ClientWindowNotFound;
-import net.discdd.bundlerouting.WindowUtils.WindowExceptions.InvalidBundleID;
-import net.discdd.bundlerouting.WindowUtils.WindowExceptions.InvalidLength;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions.RecievedInvalidACK;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions.RecievedOldACK;
 import net.discdd.bundlesecurity.BundleIDGenerator;
@@ -47,27 +44,30 @@ public class ServerWindowService {
     public void init() {
         try {
             initializeWindow();
-        } catch (SQLException | BufferOverflow | InvalidLength e) {
+        } catch (SQLException | BufferOverflow e) {
             logger.log(SEVERE, "[ServerWindow] INFO: Failed to initialize window from database", e);
         }
     }
 
-    private void initializeWindow() throws SQLException, InvalidLength, BufferOverflow {
+    private void initializeWindow() throws SQLException, BufferOverflow {
 
         Iterable<ServerWindow> entities = serverwindowrepo.findAll();
 
         for (ServerWindow entity : entities) {
             String clientID = entity.getClientID();
-            long startCounter = Long.parseLong(entity.getStartCounter());
-            long currentCounter = Long.parseLong(entity.getCurrentCounter());
+            long startCounter = entity.getStartCounter();
+            long currentCounter = entity.getCurrentCounter();
             int windowLength = entity.getWindowLength();
-
+            if (currentCounter - startCounter > windowLength) {
+                logger.log(SEVERE, String.format("Current Counter %d  & Start Counter %d > Window Length %d making start equal to current", currentCounter, startCounter, windowLength));
+                startCounter = currentCounter;
+            }
             CircularBuffer circularBuffer = createBuffer(clientID, startCounter, currentCounter, windowLength);
             clientWindowMap.put(clientID, circularBuffer);
         }
     }
 
-    private CircularBuffer createBuffer(String clientID, long startCounter, long currentCounter, int windowLength) throws BufferOverflow, InvalidLength {
+    private CircularBuffer createBuffer(String clientID, long startCounter, long currentCounter, int windowLength) throws BufferOverflow {
         CircularBuffer circularBuffer = new CircularBuffer(windowLength);
 
         for (long i = startCounter; i < currentCounter; ++i) {
@@ -96,23 +96,24 @@ public class ServerWindowService {
     }
 
     private ServerWindow getValueFromTable(String clientID) {
-        return serverwindowrepo.findByClientID(clientID);
+        var window =  serverwindowrepo.findByClientID(clientID);
+        return window == null ? new ServerWindow(clientID, 0, 0, 5) : window;
     }
 
-    private void updateStartCounter(String clientID, String startCounter) {
-        ServerWindow serverWindow = serverwindowrepo.findByClientID(clientID);
+    private void updateStartCounter(String clientID, long startCounter) {
+        ServerWindow serverWindow = getValueFromTable(clientID);
         serverWindow.setStartCounter(startCounter);
         serverwindowrepo.save(serverWindow);
     }
 
-    private void updateCurrentCounter(String clientID, String currentCounter) {
-        ServerWindow serverWindow = serverwindowrepo.findByClientID(clientID);
+    private void updateCurrentCounter(String clientID, long currentCounter) {
+        ServerWindow serverWindow = getValueFromTable(clientID);
         serverWindow.setCurrentCounter(currentCounter);
         serverwindowrepo.save(serverWindow);
     }
 
     private void initializeEntry(String clientID, int windowLength) {
-        ServerWindow serverWindow = new ServerWindow(clientID, "0", "0", windowLength);
+        ServerWindow serverWindow = new ServerWindow(clientID, 0, 0, windowLength);
 
         serverwindowrepo.save(serverWindow);
     }
@@ -124,9 +125,9 @@ public class ServerWindowService {
      * Returns:
      * None
      */
-    public void addClient(String clientID, int windowLength) throws InvalidLength, ClientAlreadyExists {
+    public void addClient(String clientID, int windowLength) {
         if (clientWindowMap.containsKey(clientID)) {
-            throw new ClientAlreadyExists("[ServerWindow]: Cannot Add to Map; client already exists");
+            return;
         }
         clientWindowMap.put(clientID, new CircularBuffer(windowLength));
         initializeEntry(clientID, windowLength);
@@ -134,13 +135,13 @@ public class ServerWindowService {
 
     public String getCurrentBundleID(String clientID) throws InvalidClientIDException, GeneralSecurityException,
             InvalidKeyException {
-        long currentCounter = Long.parseUnsignedLong(getValueFromTable(clientID).getCurrentCounter());
+        long currentCounter = getValueFromTable(clientID).getCurrentCounter();
 
         String plainBundleID =
                 BundleIDGenerator.generateBundleID(clientID, currentCounter, BundleIDGenerator.DOWNSTREAM);
 
         currentCounter++;
-        updateCurrentCounter(clientID, Long.toUnsignedString(currentCounter));
+        updateCurrentCounter(clientID, currentCounter);
         return serverSecurity.encryptBundleID(plainBundleID, clientID);
     }
 
@@ -151,8 +152,7 @@ public class ServerWindowService {
      * Returns:
      * None
      */
-    public void processACK(String clientID, String ackedBundleID) throws ClientWindowNotFound, InvalidLength,
-            GeneralSecurityException, InvalidKeyException {
+    public void processACK(String clientID, String ackedBundleID) throws ClientWindowNotFound, GeneralSecurityException, InvalidKeyException {
         CircularBuffer circularBuffer = getClientWindow(clientID);
         String decryptedBundleID = null;
         try {
@@ -169,7 +169,7 @@ public class ServerWindowService {
             int index = (int) Long.remainderUnsigned(ack, circularBuffer.getLength());
             circularBuffer.deleteUntilIndex(index);
             long startCounter = ack + 1;
-            updateStartCounter(clientID, Long.toUnsignedString(startCounter));
+            updateStartCounter(clientID, startCounter);
 
             // TODO: Change to log
             logger.log(INFO, "[ServerWindow]: Updated start Counter: " + startCounter);
@@ -183,8 +183,8 @@ public class ServerWindowService {
     }
 
     private void compareBundleID(long ack, String clientID) throws RecievedOldACK, RecievedInvalidACK, SQLException {
-        long startCounter = Long.parseUnsignedLong(getValueFromTable(clientID).getStartCounter());
-        long currentCounter = Long.parseUnsignedLong(getValueFromTable(clientID).getCurrentCounter());
+        long startCounter = getValueFromTable(clientID).getStartCounter();
+        long currentCounter = getValueFromTable(clientID).getCurrentCounter();
 
         if (Long.compareUnsigned(ack, startCounter) == -1) {
             throw new RecievedOldACK(

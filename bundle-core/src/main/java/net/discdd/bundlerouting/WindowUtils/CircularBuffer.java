@@ -16,71 +16,51 @@ public class CircularBuffer {
     private int length = 0;
     private int capacity = 0;
 
-    public CircularBuffer(int length) throws WindowExceptions.InvalidLength {
-        if (length <= 0) {
-            throw new WindowExceptions.InvalidLength("Length [" + length + "] <= 0");
-        }
+    public CircularBuffer(int length) {
         buffer = new String[length];
-        this.length = length;
+        this.capacity = length;
     }
 
     public void add(String item) throws WindowExceptions.BufferOverflow {
-        if (capacity + 1 > length) {
-            throw new WindowExceptions.BufferOverflow("Exceeding lenght(" + length + ")");
+        if (length > capacity) {
+            throw new WindowExceptions.BufferOverflow(String.format("Exceeding length %d > %d", length, capacity));
         }
 
-        end = (end + 1) % length;
+        end = (end + 1) % capacity;
         buffer[end] = item;
-        capacity++;
+        length++;
     }
 
     // Used only to initialize window to an older state
     public void initializeFromIndex(String item, int index) throws WindowExceptions.BufferOverflow {
-        if (index >= length) {
-            throw new WindowExceptions.BufferOverflow("Exceeding lenght(" + length + ")");
-        }
-
         buffer[index] = item;
         start = end = index;
-        capacity = 1;
+        length = 1;
     }
 
     private void delete() throws WindowExceptions.BufferUnderflow {
-        if (capacity == 0) {
+        if (length == 0) {
             throw new WindowExceptions.BufferUnderflow("Buffer is empty");
         }
 
         buffer[start] = null;
         start = (start + 1) % length;
-        capacity--;
+        length--;
     }
 
-    public int deleteUntilIndex(int index) throws WindowExceptions.InvalidLength {
-        int i = start;
-        int count = 1;
-
-        if (index > length) {
-            throw new WindowExceptions.InvalidLength("Invalid Index provided, length = [" + length + "]");
-        }
+    public int deleteUntilIndex(int index) {
+        int count = 0;
 
         /* Delete elements until provided index */
-        while (buffer[i] != buffer[index]) {
+        for (int i = start; i <= index; i++) {
             try {
                 delete();
                 count++;
-                i = (i + 1) % length;
+                i = (i + 1) % capacity;
             } catch (WindowExceptions.BufferUnderflow e) {
                 // TODO Change to LOG Warn
                 logger.log(WARNING, "ERROR: Buffer is Empty");
             }
-        }
-
-        /* Delete the element at index */
-        try {
-            delete();
-        } catch (WindowExceptions.BufferUnderflow e) {
-            // TODO Change to LOG Warn
-            logger.log(WARNING, "ERROR: Buffer is Empty");
         }
 
         /* Return number of deleted items */
@@ -89,12 +69,12 @@ public class CircularBuffer {
 
     public List<String> getBuffer() {
         List<String> sList = new ArrayList<String>();
-        int count = capacity;
+        int count = length;
         int i = start;
 
         while (count != 0) {
             sList.add(buffer[i]);
-            i = (i + 1) % length;
+            i = (i + 1) % capacity;
             count--;
         }
 
