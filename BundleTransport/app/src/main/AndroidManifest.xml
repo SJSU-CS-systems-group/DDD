@@ -2,34 +2,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools" >
 
-    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"
-            android:usesPermissionFlags="neverForLocation" />
 
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="Manifest.permission.POST_NOTIFICATIONS"/>
-    <uses-permission
-        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        tools:ignore="ScopedStorage" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission
-        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
-        tools:ignore="ScopedStorage" />
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission
-        android:name="android.permission.ACCESS_WIFI_STATE"
-        android:required="true" />
-    <uses-permission
-        android:name="android.permission.CHANGE_WIFI_STATE"
-        android:required="true" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
-        android:allowBackup="true"
         android:icon="@drawable/bundletransport_icon"
         android:label="@string/app_name"
         android:roundIcon="@drawable/bundletransport_icon"
         android:supportsRtl="true"
-        android:theme="@style/Theme.SimpleRpcServer" >
+        android:theme="@style/Theme.AppCompat.DayNight" >
         <service
             android:name=".TransportWifiDirectService"
             android:enabled="true"
@@ -39,9 +21,7 @@
 
         <activity
             android:name=".BundleTransportActivity"
-            android:exported="true"
-            android:label="@string/title_activity_bundle_transport"
-            android:theme="@style/Theme.SimpleRpcServer.NoActionBar" >
+            android:exported="true" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
