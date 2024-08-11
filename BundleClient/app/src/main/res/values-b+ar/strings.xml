@@ -6,7 +6,6 @@
     <string name="android.permission.NEARBY_WIFI_DEVICES">البحث عن أجهزة الواي فاي القريبة</string>
     <string name="app_name">عميلالحزم</string>
     <string name="tansport_host">ddd_النقل</string>
-    <string name="hello_blank_fragment">مرحبا بالجزء الفارغ</string>
     <string name="home_tab">الرئيسية</string>
     <string name="permissions_tab">الأذونات</string>
     <string name="usb_tab">يو إس بي</string>
@@ -29,7 +28,6 @@
     <string name="connected_device_addresses">عناوين الأجهزة المتصلة:</string>
     <string name="response">الاستجابة:</string>
     <string name="exchange_data">تبادل البيانات</string>
-    <string name="browse">تصفح</string>
     <string name="permission_caption">شرح الأذونات</string>
     <string name="needed_permissions">الأذونات المطلوبة</string>
     <string name="exchange_usb_data">تبادل بيانات يو إس بي</string>

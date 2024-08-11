@@ -6,7 +6,6 @@
     <string name="android.permission.NEARBY_WIFI_DEVICES">Encontrar dispositivos Wifi cercanos</string>
     <string name="app_name">ClienteDePaquetes</string>
     <string name="tansport_host">ddd_transporte</string>
-    <string name="hello_blank_fragment">Hola fragmento en blanco</string>
     <string name="home_tab">Inicio</string>
     <string name="permissions_tab">Permisos</string>
     <string name="usb_tab">Usb</string>
@@ -29,7 +28,6 @@
     <string name="connected_device_addresses">Direcciones de dispositivos conectados:</string>
     <string name="response">Respuesta:</string>
     <string name="exchange_data">Intercambiar datos</string>
-    <string name="browse">Navegar</string>
     <string name="permission_caption">Leyenda de permiso</string>
     <string name="needed_permissions">Permisos necesarios</string>
     <string name="exchange_usb_data">INTERCAMBIAR DATOS USB</string>
