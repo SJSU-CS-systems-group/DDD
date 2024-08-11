@@ -61,7 +61,7 @@ class BundleClientGrpcReceiveTask {
         this.resultText = (TextView) activity.findViewById(R.id.grpc_response_text);
         this.applicationContext = activity.getApplicationContext();
         this.activity = activity;
-        this.bundleTransmission = ((BundleClientActivity)activity).bundleTransmission;
+        this.bundleTransmission = ((BundleClientActivity) activity).bundleTransmission;
     }
 
     public CompletableFuture<Boolean> executeInBackground(String domain, int port) {
@@ -119,19 +119,18 @@ class BundleClientGrpcReceiveTask {
         var successful = false;
 
         for (String bundle : bundleRequests) {
-            var downloadRequest = BundleDownloadRequest.newBuilder()
-                    .setSender(sender)
-                    .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId(bundle).build())
-                    .build();
+            var downloadRequest = BundleDownloadRequest.newBuilder().setSender(sender)
+                    .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId(bundle).build()).build();
 
             String bundleName = bundle + ".bundle";
             logger.log(INFO, "Downloading file: " + bundleName);
-            var responses =
-                    stub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).downloadBundle(downloadRequest);
+            var responses = stub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                    .downloadBundle(downloadRequest);
 
             try {
                 final OutputStream fileOutputStream = responses.hasNext() ?
-                        Files.newOutputStream(FILE_PATH.resolve(bundleName), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING) : null;
+                        Files.newOutputStream(FILE_PATH.resolve(bundleName), StandardOpenOption.CREATE,
+                                              StandardOpenOption.TRUNCATE_EXISTING) : null;
 
                 while (responses.hasNext()) {
                     var response = responses.next();
@@ -153,7 +152,8 @@ class BundleClientGrpcReceiveTask {
 
     protected void postExecute(String result, String host, String port) throws NoSessionException,
             InvalidMessageException, WindowExceptions.BufferOverflow, DuplicateMessageException,
-            RoutingExceptions.ClientMetaDataFileException, IOException, LegacyMessageException, InvalidKeyException, GeneralSecurityException {
+            RoutingExceptions.ClientMetaDataFileException, IOException, LegacyMessageException, InvalidKeyException,
+            GeneralSecurityException {
         activity.runOnUiThread(() -> resultText.append(String.format("Receive finished: %s\n", result)));
         if (result.equals("Incomplete")) {
             return;

@@ -107,8 +107,7 @@ public class End2EndTest {
         Files.writeString(serverIdentityKeyPath,
                           DDDPEMEncoder.encode(serverIdentity.getPublicKey().serialize(), ECPublicKeyType));
         serverPrivateKeyPath = keysDir.resolve(SecurityUtils.SERVER_IDENTITY_PRIVATE_KEY);
-        Files.writeString(serverPrivateKeyPath,
-                          DDDPEMEncoder.encode(serverIdentity.serialize(), ECPrivateKeyType));
+        Files.writeString(serverPrivateKeyPath, DDDPEMEncoder.encode(serverIdentity.serialize(), ECPrivateKeyType));
         serverSignedPreKeyPath = keysDir.resolve(SecurityUtils.SERVER_SIGNEDPRE_KEY);
         Files.writeString(serverSignedPreKeyPath,
                           DDDPEMEncoder.encode(serverSignedPreKey.getPublicKey().serialize(), ECPublicKeyType));
@@ -167,11 +166,7 @@ public class End2EndTest {
 
     static int jarCounter = 0;
 
-    protected static Path createBundleForAdus(List<Long> adus, String clientId,
-                                              int bundleCount, Path targetDir) throws IOException,
-            NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException
-            , IllegalBlockSizeException, InvalidKeySpecException, BadPaddingException,
-            java.security.InvalidKeyException {
+    protected static Path createBundleForAdus(List<Long> adus, String clientId, int bundleCount, Path targetDir) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, InvalidKeySpecException, BadPaddingException, java.security.InvalidKeyException {
         String bundleId = BundleIDGenerator.generateBundleID(clientId, bundleCount, BundleIDGenerator.UPSTREAM);
         String encryptedBundleID = encryptBundleID(bundleId);
         Path bundleJarPath = targetDir.resolve(encryptedBundleID);
@@ -190,7 +185,7 @@ public class End2EndTest {
         // TODO: *** the ADU id, but the server ignores what is before the -.
         // TODO: ***
 
-        for (var adu: adus) {
+        for (var adu : adus) {
             logger.info("Adding ADU " + adu);
             innerJar.createEntry(
                     java.nio.file.Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, TEST_APPID, Long.toString(adu)),
@@ -236,8 +231,7 @@ public class End2EndTest {
         logger.info("Checking for files in " + aduDir);
         // try for up to 10 seconds to see if the files have arrived
         for (int tries = 0;
-             !(toSendFiles = new HashSet<>(listJustADUs(aduDir))).equals(expectedFileList) &&
-                     tries < 20; tries++) {
+             !(toSendFiles = new HashSet<>(listJustADUs(aduDir))).equals(expectedFileList) && tries < 20; tries++) {
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
@@ -254,8 +248,7 @@ public class End2EndTest {
         logger.info("Checking for files in " + aduDir);
         // try for up to 10 seconds to see if the files have arrived
         for (int tries = 0;
-             !(receivedFiles = new HashSet<>(listJustADUs(aduDir))).equals(expectedFileList) &&
-                     tries < 20; tries++) {
+             !(receivedFiles = new HashSet<>(listJustADUs(aduDir))).equals(expectedFileList) && tries < 20; tries++) {
             logger.info("Expecting " + expectedFileList + " but got " + receivedFiles);
             Thread.sleep(500);
         }
@@ -279,8 +272,8 @@ public class End2EndTest {
         @Override
         public void run(ApplicationArguments args) {
             logger.info("Registering the testAppId");
-            registeredAppAdapterRepository.save(new RegisteredAppAdapter(TEST_APPID, "localhost:" +
-                    TEST_ADAPTER_GRPC_PORT));
+            registeredAppAdapterRepository.save(
+                    new RegisteredAppAdapter(TEST_APPID, "localhost:" + TEST_ADAPTER_GRPC_PORT));
         }
     }
 

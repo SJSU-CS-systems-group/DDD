@@ -185,7 +185,9 @@ public class BundleTransmission {
         try {
             this.processReceivedBundle(sender, bundle);
         } catch (Exception e) {
-            logger.log(SEVERE, "[BundleTransmission] Failed to process received bundle from: " + bundleSenderToString(sender), e);
+            logger.log(SEVERE,
+                       "[BundleTransmission] Failed to process received bundle from: " + bundleSenderToString(sender),
+                       e);
         } finally {
             try {
                 FileUtils.delete(bundleFile);
@@ -244,11 +246,12 @@ public class BundleTransmission {
     }
 
     public BundleTransferDTO generateBundleForTransmission(BundleSender sender, String clientId,
-                                                            Set<String> bundleIdsPresent) throws ClientWindowNotFound, InvalidClientIDException, GeneralSecurityException, InvalidKeyException, InvalidClientSessionException, IOException, SQLException {
+                                                           Set<String> bundleIdsPresent) throws ClientWindowNotFound,
+            InvalidClientIDException, GeneralSecurityException, InvalidKeyException, InvalidClientSessionException,
+            IOException, SQLException {
         logger.log(INFO, "[BundleTransmission] Processing bundle generation request for client " + clientId);
         Set<String> deletionSet = new HashSet<>();
         List<BundleDTO> bundlesToSend = new ArrayList<>();
-
 
         Optional<UncompressedPayload.Builder> optional =
                 this.applicationDataManager.getLastSentBundlePayloadBuilder(clientId);
@@ -327,7 +330,9 @@ public class BundleTransmission {
         return new BundleTransferDTO(deletionSet, bundlesToSend);
     }
 
-    public record BundlesToExchange(List<String> bundlesToDownload, List<String> bundlesToUpload, List<String> bundlesToDelete) {}
+    public record BundlesToExchange(List<String> bundlesToDownload, List<String> bundlesToUpload,
+                                    List<String> bundlesToDelete) {}
+
     public BundlesToExchange generateBundlesForTransmission(BundleSender sender, Set<String> bundleIdsPresent) throws SQLException, ClientWindowNotFound, InvalidClientIDException, GeneralSecurityException, InvalidClientSessionException, IOException, InvalidKeyException {
         List<String> clientIds = CLIENT == sender.getType() ? Collections.singletonList(sender.getId()) :
                 this.bundleRouting.getClientsForTransportId(sender.getId());
@@ -360,8 +365,8 @@ public class BundleTransmission {
     }
 
     public List<File> getBundlesForTransmission(BundleSender sender) {
-        logger.log(INFO, "[BundleTransmission] Inside getBundlesForTransmission method for " +
-                bundleSenderToString(sender));
+        logger.log(INFO,
+                   "[BundleTransmission] Inside getBundlesForTransmission method for " + bundleSenderToString(sender));
         List<File> bundles = new ArrayList<>();
         List<String> clientIds = new ArrayList<>();
         if (CLIENT == sender.getType()) {

@@ -139,8 +139,8 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         //Initialize bundle transmission
         try {
 
-            bundleTransmission =
-                    new BundleTransmission(Paths.get(getApplicationContext().getApplicationInfo().dataDir), this::processADU);
+            bundleTransmission = new BundleTransmission(Paths.get(getApplicationContext().getApplicationInfo().dataDir),
+                                                        this::processADU);
             clientWindow = bundleTransmission.getBundleSecurity().getClientWindow();
             logger.log(WARNING, "{MC} - got clientwindow " + clientWindow);
         } catch (Exception e) {
@@ -156,14 +156,17 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
         intent.setType("text/plain");
         byte[] data = null;
         try {
-            logger.log(FINE, String.format("Sending ADU %s:%d from %s", adu.getAppId(), adu.getADUId(), adu.getSource()));
+            logger.log(FINE,
+                       String.format("Sending ADU %s:%d from %s", adu.getAppId(), adu.getADUId(), adu.getSource()));
             data = Files.readAllBytes(adu.getSource().toPath());
             intent.putExtra(Intent.EXTRA_TEXT, data);
             BundleClientActivity.ApplicationContext.startForegroundService(intent);
         } catch (IOException e) {
-            logger.log(WARNING, String.format("Sending ADU %s:%d from %s", adu.getAppId(), adu.getADUId(), adu.getSource()), e);
+            logger.log(WARNING,
+                       String.format("Sending ADU %s:%d from %s", adu.getAppId(), adu.getADUId(), adu.getSource()), e);
         }
     }
+
     @Override
     public void onResume() {
         super.onResume();

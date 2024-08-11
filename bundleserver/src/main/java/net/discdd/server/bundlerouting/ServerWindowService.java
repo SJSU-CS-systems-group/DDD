@@ -59,7 +59,9 @@ public class ServerWindowService {
             long currentCounter = entity.getCurrentCounter();
             int windowLength = entity.getWindowLength();
             if (currentCounter - startCounter > windowLength) {
-                logger.log(SEVERE, String.format("Current Counter %d  & Start Counter %d > Window Length %d making start equal to current", currentCounter, startCounter, windowLength));
+                logger.log(SEVERE, String.format(
+                        "Current Counter %d  & Start Counter %d > Window Length %d making start equal to current",
+                        currentCounter, startCounter, windowLength));
                 startCounter = currentCounter;
             }
             CircularBuffer circularBuffer = createBuffer(clientID, startCounter, currentCounter, windowLength);
@@ -96,7 +98,7 @@ public class ServerWindowService {
     }
 
     private ServerWindow getValueFromTable(String clientID) {
-        var window =  serverwindowrepo.findByClientID(clientID);
+        var window = serverwindowrepo.findByClientID(clientID);
         return window == null ? new ServerWindow(clientID, 0, 0, 5) : window;
     }
 
@@ -152,7 +154,8 @@ public class ServerWindowService {
      * Returns:
      * None
      */
-    public void processACK(String clientID, String ackedBundleID) throws ClientWindowNotFound, GeneralSecurityException, InvalidKeyException {
+    public void processACK(String clientID, String ackedBundleID) throws ClientWindowNotFound,
+            GeneralSecurityException, InvalidKeyException {
         CircularBuffer circularBuffer = getClientWindow(clientID);
         String decryptedBundleID = null;
         try {

@@ -26,10 +26,12 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
     private Path downloadingFrom;
     private Path uploadingTo;
 
-    public BundleServerExchangeServiceImpl(@Value("${bundle-server.bundle-store-shared}") String serverBasePath, BundleTransmission bundleTransmission) {
+    public BundleServerExchangeServiceImpl(@Value("${bundle-server.bundle-store-shared}")
+                                           String serverBasePath, BundleTransmission bundleTransmission) {
         this.serverBasePath = serverBasePath;
         this.bundleTransmission = bundleTransmission;
     }
+
     @PostConstruct
     private void init() {
         logger.log(Level.INFO, "inside ClientFileServiceImpl init method");
@@ -80,13 +82,17 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
             String requestedBundleId = bundleExchangeName.encryptedBundleId();
             var bundles = bundleTransmission.generateBundleForTransmission(sender, sender.getId(), null);
             if (bundles.getBundles().size() != 1) {
-                logger.log(WARNING, BundleTransmission.bundleSenderToString(sender) + " requested " + requestedBundleId + " but generated " + bundles.getBundles());
+                logger.log(WARNING,
+                           BundleTransmission.bundleSenderToString(sender) + " requested " + requestedBundleId +
+                                   " but generated " + bundles.getBundles());
                 return null;
             }
             var bundle = bundles.getBundles().get(0);
             String generatedBundleId = bundle.getBundleId();
             if (!generatedBundleId.equals(requestedBundleId)) {
-                logger.log(WARNING, BundleTransmission.bundleSenderToString(sender) + " requested " + requestedBundleId + " but generated " + generatedBundleId);
+                logger.log(WARNING,
+                           BundleTransmission.bundleSenderToString(sender) + " requested " + requestedBundleId +
+                                   " but generated " + generatedBundleId);
                 return null;
             }
             return bundle.getBundle().getSource().toPath();

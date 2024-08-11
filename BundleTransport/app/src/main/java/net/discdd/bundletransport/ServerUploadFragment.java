@@ -84,8 +84,9 @@ public class ServerUploadFragment extends Fragment {
                     "Initiating server exchange to " + serverDomain + ":" + serverPort + "...\n"));
 
             TransportToBundleServerManager transportToBundleServerManager =
-                    new TransportToBundleServerManager(requireActivity().getExternalFilesDir(null).toPath(), serverDomain, serverPort,
-                                                       transportID, this::connectToServerComplete);
+                    new TransportToBundleServerManager(requireActivity().getExternalFilesDir(null).toPath(),
+                                                       serverDomain, serverPort, transportID,
+                                                       this::connectToServerComplete);
             executor.execute(transportToBundleServerManager);
         } else {
             Toast.makeText(getContext(), "Enter the domain and port", Toast.LENGTH_SHORT).show();

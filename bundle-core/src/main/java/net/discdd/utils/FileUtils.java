@@ -60,7 +60,7 @@ public class FileUtils {
     }
 
     public static void recursiveDelete(Path path) {
-        try (var walk = Files.walk(path)){
+        try (var walk = Files.walk(path)) {
             walk.map(Path::toFile).sorted(Comparator.reverseOrder()).forEach(File::delete);
         } catch (IOException e) {
             logger.log(SEVERE, "Error deleting directory: " + path, e);

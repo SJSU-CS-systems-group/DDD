@@ -37,7 +37,7 @@ public class ADUEnd2EndTest extends End2EndTest {
 
     @Test
     void test2UploadBundle(@TempDir Path bundleDir) throws Throwable {
-        var adus = List.of(1L,2L,3L);
+        var adus = List.of(1L, 2L, 3L);
         Path bundleJarPath = createBundleForAdus(adus, clientId, 1, bundleDir);
         sendBundle(bundleJarPath);
 
@@ -66,7 +66,7 @@ public class ADUEnd2EndTest extends End2EndTest {
 
     @Test
     void test3UploadMoreBundle(@TempDir Path bundleDir) throws Throwable {
-        var adus = List.of(3L,4L,5L,6L);
+        var adus = List.of(3L, 4L, 5L, 6L);
 
         Path bundleJarPath = createBundleForAdus(adus, clientId, 2, bundleDir);
         logger.info("Sending test3 bundle");
@@ -75,7 +75,7 @@ public class ADUEnd2EndTest extends End2EndTest {
         // check if the files are there
 
         HashSet<String> expectedFileList = new HashSet<>(List.of());
-        for (int i = 4; i <= adus.get(adus.size()-1); i++) expectedFileList.add(String.valueOf(i));
+        for (int i = 4; i <= adus.get(adus.size() - 1); i++) expectedFileList.add(String.valueOf(i));
         checkReceivedFiles(expectedFileList);
 
         // check the gRPC
@@ -117,15 +117,17 @@ public class ADUEnd2EndTest extends End2EndTest {
         BundleUploadResponseStreamObserver response = new BundleUploadResponseStreamObserver();
         var request = stub.uploadBundle(response);
         var allBytes = Files.readAllBytes(bundleJarPath);
-        var firstByteString = ByteString.copyFrom(allBytes, 0, allBytes.length/2);
-        var secondByteString = ByteString.copyFrom(allBytes, allBytes.length/2, allBytes.length - allBytes.length/2);
-        request.onNext(BundleUploadRequest.newBuilder().setBundleId(EncryptedBundleId.newBuilder().setEncryptedId("8675309").build()).build());
-        request.onNext(BundleUploadRequest.newBuilder().setChunk(
-                BundleChunk.newBuilder().setChunk(firstByteString).build()
-        ).build());
-        request.onNext(BundleUploadRequest.newBuilder().setChunk(
-                BundleChunk.newBuilder().setChunk(secondByteString).build()
-        ).build());
+        var firstByteString = ByteString.copyFrom(allBytes, 0, allBytes.length / 2);
+        var secondByteString =
+                ByteString.copyFrom(allBytes, allBytes.length / 2, allBytes.length - allBytes.length / 2);
+        request.onNext(BundleUploadRequest.newBuilder()
+                               .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId("8675309").build()).build());
+        request.onNext(
+                BundleUploadRequest.newBuilder().setChunk(BundleChunk.newBuilder().setChunk(firstByteString).build())
+                        .build());
+        request.onNext(
+                BundleUploadRequest.newBuilder().setChunk(BundleChunk.newBuilder().setChunk(secondByteString).build())
+                        .build());
         request.onCompleted();
 
         // let's see if it worked...

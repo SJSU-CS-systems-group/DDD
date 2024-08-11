@@ -62,7 +62,8 @@ public class BundleClientToBundleServerTest extends End2EndTest {
 
     @BeforeAll
     static void setUp() throws Exception {
-        var securityDir = clientTestRoot.resolve(Path.of(BundleSecurity.BUNDLE_SECURITY_DIR, BundleSecurity.SERVER_KEYS_SUBDIR));
+        var securityDir =
+                clientTestRoot.resolve(Path.of(BundleSecurity.BUNDLE_SECURITY_DIR, BundleSecurity.SERVER_KEYS_SUBDIR));
         securityDir.toFile().mkdirs();
         Files.copy(serverIdentityKeyPath, securityDir.resolve(BundleSecurity.SERVER_IDENTITY_PUB));
         Files.copy(serverSignedPreKeyPath, securityDir.resolve(BundleSecurity.SERVER_SIGNED_PRE_PUB));
@@ -83,6 +84,7 @@ public class BundleClientToBundleServerTest extends End2EndTest {
             blockingStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
         }
     }
+
     @Test
     void test1ContextLoads() {}
 
@@ -94,7 +96,6 @@ public class BundleClientToBundleServerTest extends End2EndTest {
 
         Assertions.assertEquals(0, sendStore.getADUs(null, TEST_APPID).count());
         Assertions.assertEquals(0, recieveStore.getADUs(null, TEST_APPID).count());
-
 
     }
 
@@ -136,10 +137,10 @@ public class BundleClientToBundleServerTest extends End2EndTest {
         */
     }
 
-
     // send the bundle the same way the client does. we should move this code into bundle transmission so we are really
     // testing the exact code that the client is using
-    private static void sendBundle() throws RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException, GeneralSecurityException {
+    private static void sendBundle() throws RoutingExceptions.ClientMetaDataFileException, IOException,
+            InvalidKeyException, GeneralSecurityException {
         BundleDTO toSend = bundleTransmission.generateBundleForTransmission();
 
         var bundleUploadResponseObserver = new BundleUploadResponseObserver();
@@ -148,51 +149,51 @@ public class BundleClientToBundleServerTest extends End2EndTest {
                         .uploadBundle(bundleUploadResponseObserver);
 
         uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setBundleId(
-                        EncryptedBundleId.newBuilder().setEncryptedId(toSend.getBundleId()).build())
-                                                   .build());
+                EncryptedBundleId.newBuilder().setEncryptedId(toSend.getBundleId()).build()).build());
 
         // upload file as chunk
         logger.log(INFO, "Started file transfer");
-        try (FileInputStream inputStream = new FileInputStream(
-                toSend.getBundle().getSource())) {
+        try (FileInputStream inputStream = new FileInputStream(toSend.getBundle().getSource())) {
             int chunkSize = 1000 * 1000 * 4;
             byte[] bytes = new byte[chunkSize];
             int size;
             while ((size = inputStream.read(bytes)) != -1) {
-                var uploadRequest = BundleUploadRequest.newBuilder().setChunk(
-                        BundleChunk.newBuilder().setChunk(ByteString.copyFrom(bytes, 0, size))
-                                .build()).build();
+                var uploadRequest = BundleUploadRequest.newBuilder()
+                        .setChunk(BundleChunk.newBuilder().setChunk(ByteString.copyFrom(bytes, 0, size)).build())
+                        .build();
                 uploadRequestStreamObserver.onNext(uploadRequest);
             }
         }
         uploadRequestStreamObserver.onCompleted();
         logger.log(INFO, "Completed file transfer");
         bundleUploadResponseObserver.waitForCompletion(Constants.GRPC_LONG_TIMEOUT_MS);
-        Assertions.assertTrue(bundleUploadResponseObserver.completed, () -> bundleUploadResponseObserver.throwable.getMessage());
+        Assertions.assertTrue(bundleUploadResponseObserver.completed,
+                              () -> bundleUploadResponseObserver.throwable.getMessage());
         Assertions.assertEquals(Status.SUCCESS, bundleUploadResponseObserver.bundleUploadResponse.getStatus());
     }
 
     private static void receiveBundle() throws Exception {
-        var bundleRequests = bundleTransmission.getBundleSecurity().getClientWindow().getWindow(bundleTransmission.getBundleSecurity().getClientSecurity());
+        var bundleRequests = bundleTransmission.getBundleSecurity().getClientWindow()
+                .getWindow(bundleTransmission.getBundleSecurity().getClientSecurity());
         var clientId = bundleTransmission.getBundleSecurity().getClientSecurity().getClientID();
 
         var sender = BundleSender.newBuilder().setId(clientId).setType(BundleSenderType.CLIENT).build();
 
         for (String bundle : bundleRequests) {
-            var downloadRequest = BundleDownloadRequest.newBuilder()
-                    .setSender(sender)
-                    .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId(bundle).build())
-                    .build();
-
+            var downloadRequest = BundleDownloadRequest.newBuilder().setSender(sender)
+                    .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId(bundle).build()).build();
 
             logger.log(INFO, "Downloading file: " + bundle);
-            var responses =
-                    blockingStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).downloadBundle(downloadRequest);
+            var responses = blockingStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                    .downloadBundle(downloadRequest);
 
             try {
                 final OutputStream fileOutputStream = responses.hasNext() ?
-                        // I should not have this literal here! but this change is getting too large to fix all the literal problems!
-                        Files.newOutputStream(clientTestRoot.resolve("BundleTransmission/bundle-generation/to-send").resolve(bundle), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING) : null;
+                        // I should not have this literal here! but this change is getting too large to fix all the
+                        // literal problems!
+                        Files.newOutputStream(
+                                clientTestRoot.resolve("BundleTransmission/bundle-generation/to-send").resolve(bundle),
+                                StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING) : null;
 
                 while (responses.hasNext()) {
                     var response = responses.next();

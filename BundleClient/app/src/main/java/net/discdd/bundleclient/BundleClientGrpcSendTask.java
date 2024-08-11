@@ -38,7 +38,7 @@ class BundleClientGrpcSendTask {
     BundleClientGrpcSendTask(Activity activity) {
         this.activityReference = new WeakReference<>(activity);
         this.applicationContext = activity.getApplicationContext();
-        this.bundleTransmission = ((BundleClientActivity)activity).bundleTransmission;
+        this.bundleTransmission = ((BundleClientActivity) activity).bundleTransmission;
     }
 
     void inBackground(String... params) {
@@ -56,20 +56,18 @@ class BundleClientGrpcSendTask {
                             .uploadBundle(bundleUploadResponseObserver);
 
             uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setBundleId(
-                            EncryptedBundleId.newBuilder().setEncryptedId(toSend.getBundleId()).build())
-                                                       .build());
+                    EncryptedBundleId.newBuilder().setEncryptedId(toSend.getBundleId()).build()).build());
 
             // upload file as chunk
             logger.log(INFO, "Started file transfer");
-            try (FileInputStream inputStream = new FileInputStream(
-                    toSend.getBundle().getSource())) {
+            try (FileInputStream inputStream = new FileInputStream(toSend.getBundle().getSource())) {
                 int chunkSize = 1000 * 1000 * 4;
                 byte[] bytes = new byte[chunkSize];
                 int size;
                 while ((size = inputStream.read(bytes)) != -1) {
-                    var uploadRequest = BundleUploadRequest.newBuilder().setChunk(
-                            BundleChunk.newBuilder().setChunk(ByteString.copyFrom(bytes, 0, size))
-                                    .build()).build();
+                    var uploadRequest = BundleUploadRequest.newBuilder()
+                            .setChunk(BundleChunk.newBuilder().setChunk(ByteString.copyFrom(bytes, 0, size)).build())
+                            .build();
                     uploadRequestStreamObserver.onNext(uploadRequest);
                 }
             }

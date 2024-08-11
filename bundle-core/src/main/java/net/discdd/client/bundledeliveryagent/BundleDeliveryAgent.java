@@ -26,8 +26,8 @@ public class BundleDeliveryAgent {
 
     private BundleTransmission bundleTransmission;
 
-    public BundleDeliveryAgent(Path rootFolder, Consumer<ADU> aduConsumer) throws WindowExceptions.BufferOverflow, RoutingExceptions.ClientMetaDataFileException, IOException,
-            NoSuchAlgorithmException, InvalidKeyException {
+    public BundleDeliveryAgent(Path rootFolder, Consumer<ADU> aduConsumer) throws WindowExceptions.BufferOverflow,
+            RoutingExceptions.ClientMetaDataFileException, IOException, NoSuchAlgorithmException, InvalidKeyException {
         ROOT_FOLDER = rootFolder;
         File receivedBundlesDir = new File(ROOT_FOLDER + RelativePath);
         receivedBundlesDir.mkdirs();

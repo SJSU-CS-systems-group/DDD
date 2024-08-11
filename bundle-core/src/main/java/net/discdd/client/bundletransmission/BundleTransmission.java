@@ -64,9 +64,8 @@ public class BundleTransmission {
 
     private ClientRouting clientRouting;
 
-    public BundleTransmission(Path rootFolder, Consumer<ADU> aduConsumer) throws WindowExceptions.BufferOverflow
-            , IOException, InvalidKeyException, RoutingExceptions.ClientMetaDataFileException,
-            NoSuchAlgorithmException {
+    public BundleTransmission(Path rootFolder, Consumer<ADU> aduConsumer) throws WindowExceptions.BufferOverflow,
+            IOException, InvalidKeyException, RoutingExceptions.ClientMetaDataFileException, NoSuchAlgorithmException {
         this.ROOT_DIR = rootFolder;
         this.bundleSecurity = new BundleSecurity(this.ROOT_DIR);
         this.applicationDataManager = new ApplicationDataManager(this.ROOT_DIR, aduConsumer);
@@ -118,8 +117,7 @@ public class BundleTransmission {
         UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, this.ROOT_DIR.resolve(
                 Paths.get(BUNDLE_GENERATION_DIRECTORY, RECEIVED_PROCESSING)));
         Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
-        logger.log(INFO,
-                   "Updating client routing metadata for sender:  " + bundleSenderToString(sender));
+        logger.log(INFO, "Updating client routing metadata for sender:  " + bundleSenderToString(sender));
         clientRouting.updateMetaData(sender.getId());
 
         String bundleId = payload.getBundleId();

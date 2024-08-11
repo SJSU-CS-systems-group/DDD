@@ -74,7 +74,7 @@ public class RpcServer {
         } catch (IOException e) {
             state = ServerState.SHUTDOWN;
             logger.log(WARNING, "RpcServer -> startServer() IOException: " + e.getMessage());
-       }
+        }
     }
 
     public void shutdownServer() {

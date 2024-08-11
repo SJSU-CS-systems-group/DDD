@@ -24,6 +24,7 @@ import static java.util.logging.Level.SEVERE;
 
 public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrpc.BundleExchangeServiceImplBase {
     private static final Logger logger = Logger.getLogger(BundleExchangeServiceImpl.class.getName());
+
     public record BundleExchangeName(String encryptedBundleId, boolean isDownload) {}
 
     @Override
@@ -54,9 +55,9 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
         }
 
         StreamHandler handler = new StreamHandler(is);
-        Exception ex = handler.handle(bytes -> responseObserver.onNext(BundleDownloadResponse.newBuilder()
-                                        .setChunk(
-                                                BundleChunk.newBuilder().setChunk(bytes).build()).build()));
+        Exception ex = handler.handle(bytes -> responseObserver.onNext(
+                BundleDownloadResponse.newBuilder().setChunk(BundleChunk.newBuilder().setChunk(bytes).build())
+                        .build()));
         if (ex != null) {
             logger.log(SEVERE, "Error downloading bundle: " + request.getBundleId().getEncryptedId(), ex);
             responseObserver.onError(ex);
@@ -96,12 +97,15 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
                 if (bundleUploadRequest.hasBundleId()) {
                     logger.log(INFO, "Received request to upload file to: " +
                             bundleUploadRequest.getBundleId().getEncryptedId());
-                    bundleExchangeName = new BundleExchangeName(bundleUploadRequest.getBundleId().getEncryptedId(), false);
+                    bundleExchangeName =
+                            new BundleExchangeName(bundleUploadRequest.getBundleId().getEncryptedId(), false);
                     path = pathProducer(bundleExchangeName, null);
                     try {
-                        if (path == null) throw new IOException("Could not produce a path for " + bundleExchangeName.encryptedBundleId);
-                        writer = Files.newOutputStream(path, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-                     } catch (IOException e) {
+                        if (path == null) throw new IOException(
+                                "Could not produce a path for " + bundleExchangeName.encryptedBundleId);
+                        writer = Files.newOutputStream(path, StandardOpenOption.CREATE,
+                                                       StandardOpenOption.TRUNCATE_EXISTING);
+                    } catch (IOException e) {
                         logger.log(SEVERE, "Error creating file " + path, e);
                         this.onError(e);
                     }

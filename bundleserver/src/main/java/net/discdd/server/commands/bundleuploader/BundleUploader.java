@@ -71,9 +71,8 @@ public class BundleUploader implements CommandLineRunner, Callable<Integer> {
 
                     }
                 });
-        BundleUploadRequest metadata = BundleUploadRequest.newBuilder().setBundleId(
-                EncryptedBundleId.newBuilder().setEncryptedId(bundle.getName()).build())
-                .build();
+        BundleUploadRequest metadata = BundleUploadRequest.newBuilder()
+                .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId(bundle.getName()).build()).build();
         streamObserver.onNext(metadata);
 
         // upload file in chunks
@@ -84,9 +83,8 @@ public class BundleUploader implements CommandLineRunner, Callable<Integer> {
         int size = 0;
         while ((size = inputStream.read(bytes)) != -1) {
             logger.log(WARNING, "Sending chunk size: " + size);
-            BundleUploadRequest uploadRequest = BundleUploadRequest.newBuilder().setChunk(
-                    BundleChunk.newBuilder().setChunk(ByteString.copyFrom(bytes, 0, size)).build()
-            ).build();
+            BundleUploadRequest uploadRequest = BundleUploadRequest.newBuilder()
+                    .setChunk(BundleChunk.newBuilder().setChunk(ByteString.copyFrom(bytes, 0, size)).build()).build();
             streamObserver.onNext(uploadRequest);
         }
         inputStream.close();

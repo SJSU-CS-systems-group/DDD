@@ -123,7 +123,7 @@ public class TransportWifiDirectService extends Service
     @Override
     public void onBundleExchangeEvent(BundleExchangeServiceImpl.BundleExchangeEvent exchangeEvent) {
         appendToClientLog("File service event: " + exchangeEvent);
-}
+    }
 
     private void appendToClientLog(String message) {
         var intent = new Intent(getApplicationContext(), TransportWifiDirectFragment.class);

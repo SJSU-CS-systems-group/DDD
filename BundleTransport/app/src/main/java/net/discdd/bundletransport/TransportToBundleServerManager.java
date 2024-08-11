@@ -43,12 +43,12 @@ public class TransportToBundleServerManager implements Runnable {
     private final Function<Void, Void> connectComplete;
     private final String transportTarget;
 
-    public TransportToBundleServerManager(Path filePath, String host, String port, String transportId,
-                                          Function<Void, Void> connectComplete) {
+    public TransportToBundleServerManager(Path filePath, String host, String port, String transportId, Function<Void,
+            Void> connectComplete) {
         this.connectComplete = connectComplete;
         this.transportTarget = host + ":" + port;
-        this.transportSenderId = BundleSender.newBuilder().setId(transportId).setType(
-                BundleSenderType.TRANSPORT).build();
+        this.transportSenderId =
+                BundleSender.newBuilder().setId(transportId).setType(BundleSenderType.TRANSPORT).build();
         this.fromClientPath = filePath.resolve("BundleTransmission/server");
         this.fromServerPath = filePath.resolve("BundleTransmission/client");
     }
@@ -62,10 +62,9 @@ public class TransportToBundleServerManager implements Runnable {
         var bundlesFromServer = populateListFromPath(fromServerPath);
         var inventoryResponse = bsStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                 .bundleInventory(BundleInventoryRequest.newBuilder().setSender(transportSenderId)
-                                     .addAllBundlesFromClientsOnTransport(bundlesFromClients)
-                                     .addAllBundlesFromServerOnTransport(bundlesFromServer)
-                                     .build());
-        for (var toDelete: inventoryResponse.getBundlesToDeleteList()) {
+                                         .addAllBundlesFromClientsOnTransport(bundlesFromClients)
+                                         .addAllBundlesFromServerOnTransport(bundlesFromServer).build());
+        for (var toDelete : inventoryResponse.getBundlesToDeleteList()) {
             var delPath = fromServerPath.resolve(toDelete.getEncryptedId());
             try {
                 Files.delete(delPath);
@@ -74,17 +73,16 @@ public class TransportToBundleServerManager implements Runnable {
             }
         }
 
-        for (var toSend: inventoryResponse.getBundlesToUploadList()) {
+        for (var toSend : inventoryResponse.getBundlesToUploadList()) {
             var path = fromClientPath.resolve(toSend.getEncryptedId());
             StreamObserver<BundleUploadResponse> responseObserver = null;
-            try (var is = Files.newInputStream(path, StandardOpenOption.READ)){
+            try (var is = Files.newInputStream(path, StandardOpenOption.READ)) {
                 responseObserver = new BundleUploadResponseObserver();
                 var uploadRequestStreamObserver =
-                        exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS,
-                                                       TimeUnit.MILLISECONDS)
+                        exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                                 .uploadBundle(responseObserver);
                 uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setBundleId(toSend).build());
-                byte[] data = new byte[1024*1024];
+                byte[] data = new byte[1024 * 1024];
                 int rc;
                 while ((rc = is.read(data)) > 0) {
                     uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setChunk(
@@ -97,12 +95,11 @@ public class TransportToBundleServerManager implements Runnable {
             if (responseObserver != null) responseObserver.onCompleted();
         }
 
-        for (var toReceive: inventoryResponse.getBundlesToDownloadList()) {
+        for (var toReceive : inventoryResponse.getBundlesToDownloadList()) {
             var path = fromServerPath.resolve(toReceive.getEncryptedId());
             try (OutputStream os = Files.newOutputStream(path, StandardOpenOption.CREATE,
                                                          StandardOpenOption.TRUNCATE_EXISTING)) {
-                exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS,
-                                               TimeUnit.MILLISECONDS).downloadBundle(
+                exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).downloadBundle(
                         BundleDownloadRequest.newBuilder().setBundleId(toReceive).setSender(transportSenderId).build(),
                         new StreamObserver<>() {
                             @Override
