@@ -1,11 +1,15 @@
 package net.discdd.server.bundletransmission;
 
+import com.google.protobuf.ByteString;
 import net.discdd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions.ClientWindowNotFound;
 import net.discdd.bundlesecurity.InvalidClientIDException;
 import net.discdd.bundlesecurity.InvalidClientSessionException;
 import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.grpc.BundleSender;
+import net.discdd.grpc.GetRecencyBlobResponse;
+import net.discdd.grpc.RecencyBlob;
+import net.discdd.grpc.RecencyBlobStatus;
 import net.discdd.model.ADU;
 import net.discdd.model.Acknowledgement;
 import net.discdd.model.Bundle;
@@ -31,6 +35,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
+import java.security.SecureRandom;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -328,6 +333,24 @@ public class BundleTransmission {
         }
 
         return new BundleTransferDTO(deletionSet, bundlesToSend);
+    }
+
+    SecureRandom secureRandom = new SecureRandom();
+
+    public GetRecencyBlobResponse getRecencyBlob() throws InvalidKeyException {
+        var blob = RecencyBlob.newBuilder()
+                .setVersion(0)
+                .setNonce(secureRandom.nextInt())
+                .setBlobTimestamp(System.currentTimeMillis())
+                .build();
+        byte[] signature = this.bundleSecurity.signRecencyBlob(blob);
+        byte[] publicKeyBytes = this.bundleSecurity.getIdentityPublicKey();
+        return GetRecencyBlobResponse.newBuilder()
+                .setStatus(RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS)
+                .setRecencyBlob(blob)
+                .setRecencyBlobSignature(ByteString.copyFrom(signature))
+                .setServerPublicKey(ByteString.copyFrom(publicKeyBytes))
+                .build();
     }
 
     public record BundlesToExchange(List<String> bundlesToDownload, List<String> bundlesToUpload,

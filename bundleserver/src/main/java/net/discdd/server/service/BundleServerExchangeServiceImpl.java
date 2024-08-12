@@ -1,11 +1,16 @@
 package net.discdd.server.service;
 
+import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
 import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
 import net.discdd.grpc.BundleSender;
 import net.discdd.grpc.BundleSenderType;
+import net.discdd.grpc.GetRecencyBlobRequest;
+import net.discdd.grpc.GetRecencyBlobResponse;
+import net.discdd.grpc.RecencyBlobStatus;
 import net.discdd.server.bundletransmission.BundleTransmission;
 import org.springframework.beans.factory.annotation.Value;
+import org.whispersystems.libsignal.InvalidKeyException;
 
 import javax.annotation.PostConstruct;
 import java.nio.file.Path;
@@ -100,5 +105,18 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
             logger.log(SEVERE, "Error generating bundle for transmission to " + sender, e);
         }
         return null;
+    }
+
+    @Override
+    public void getRecencyBlob(GetRecencyBlobRequest request, StreamObserver<GetRecencyBlobResponse> responseObserver) {
+        GetRecencyBlobResponse recencyBlob = null;
+        try {
+            recencyBlob = bundleTransmission.getRecencyBlob();
+        } catch (InvalidKeyException e) {
+            recencyBlob = GetRecencyBlobResponse.newBuilder().setStatus(RecencyBlobStatus.RECENCY_BLOB_STATUS_FAILED).build();
+            logger.log(SEVERE, "Problem signing recency blob", e);
+        }
+        responseObserver.onNext(recencyBlob);
+        responseObserver.onCompleted();
     }
 }

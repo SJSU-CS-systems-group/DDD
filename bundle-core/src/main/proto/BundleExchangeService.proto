@@ -63,7 +63,32 @@ message BundleDownloadRequest {
   BundleSender sender = 99;
 }
 
+// the prefixed names is stupid, but recommend https://protobuf.dev/programming-guides/style/#enums
+enum RecencyBlobStatus {
+    RECENCY_BLOB_STATUS_UNDEFINED = 0;
+    RECENCY_BLOB_STATUS_SUCCESS = 1;
+    RECENCY_BLOB_STATUS_FAILED = 2;
+}
+
+message RecencyBlob {
+  int32 version = 1;
+  int32 nonce = 2;
+  // milliseconds since epoch (1/1/1970 UTC) https://docs.oracle.com/javase/8/docs/api/java/lang/System.html#currentTimeMillis--
+  int64 blobTimestamp = 3;
+}
+
+message GetRecencyBlobRequest {
+}
+
+message GetRecencyBlobResponse {
+  RecencyBlobStatus status = 1;
+  RecencyBlob recencyBlob = 2;
+  bytes recencyBlobSignature = 4;
+  bytes serverPublicKey = 3;
+}
+
 service BundleExchangeService {
   rpc uploadBundle(stream BundleUploadRequest) returns (BundleUploadResponse) {}
   rpc downloadBundle(BundleDownloadRequest) returns (stream BundleDownloadResponse) {}
+  rpc getRecencyBlob(GetRecencyBlobRequest) returns (GetRecencyBlobResponse) {}
 }
