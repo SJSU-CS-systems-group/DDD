@@ -145,12 +145,14 @@ public class BundleClientToBundleServerTest extends End2EndTest {
         bundleTransmission.processRecencyBlob(fakeAddress, rsp);
         var rt = bundleTransmission.getRecentTransport(fakeAddress);
         // the blob should have been signed within the last second or so
-        Assertions.assertEquals((double)System.currentTimeMillis(), (double)rt.getRecencyTime(), 2000);
+        Assertions.assertEquals((double) System.currentTimeMillis(), (double) rt.getRecencyTime(), 2000);
         var badBlob = rsp.toBuilder().setRecencyBlob(rsp.getRecencyBlob().toBuilder().setNonce(1)).build();
         // mess with the signature
         Assertions.assertThrows(IOException.class, () -> bundleTransmission.processRecencyBlob(fakeAddress, badBlob));
         // make an old blob (more than a minute old
-        var oldBlob = rsp.toBuilder().setRecencyBlob(rsp.getRecencyBlob().toBuilder().setBlobTimestamp(System.currentTimeMillis()-100_000)).build();
+        var oldBlob = rsp.toBuilder()
+                .setRecencyBlob(rsp.getRecencyBlob().toBuilder().setBlobTimestamp(System.currentTimeMillis() - 100_000))
+                .build();
         Assertions.assertThrows(IOException.class, () -> bundleTransmission.processRecencyBlob(fakeAddress, oldBlob));
     }
 

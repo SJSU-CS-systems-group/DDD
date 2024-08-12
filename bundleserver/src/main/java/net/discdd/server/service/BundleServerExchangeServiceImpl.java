@@ -113,7 +113,8 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
         try {
             recencyBlob = bundleTransmission.getRecencyBlob();
         } catch (InvalidKeyException e) {
-            recencyBlob = GetRecencyBlobResponse.newBuilder().setStatus(RecencyBlobStatus.RECENCY_BLOB_STATUS_FAILED).build();
+            recencyBlob =
+                    GetRecencyBlobResponse.newBuilder().setStatus(RecencyBlobStatus.RECENCY_BLOB_STATUS_FAILED).build();
             logger.log(SEVERE, "Problem signing recency blob", e);
         }
         responseObserver.onNext(recencyBlob);

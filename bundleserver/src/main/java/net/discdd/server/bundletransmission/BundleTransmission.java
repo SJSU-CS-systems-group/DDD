@@ -338,19 +338,13 @@ public class BundleTransmission {
     SecureRandom secureRandom = new SecureRandom();
 
     public GetRecencyBlobResponse getRecencyBlob() throws InvalidKeyException {
-        var blob = RecencyBlob.newBuilder()
-                .setVersion(0)
-                .setNonce(secureRandom.nextInt())
-                .setBlobTimestamp(System.currentTimeMillis())
-                .build();
+        var blob = RecencyBlob.newBuilder().setVersion(0).setNonce(secureRandom.nextInt())
+                .setBlobTimestamp(System.currentTimeMillis()).build();
         byte[] signature = this.bundleSecurity.signRecencyBlob(blob);
         byte[] publicKeyBytes = this.bundleSecurity.getIdentityPublicKey();
-        return GetRecencyBlobResponse.newBuilder()
-                .setStatus(RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS)
-                .setRecencyBlob(blob)
-                .setRecencyBlobSignature(ByteString.copyFrom(signature))
-                .setServerPublicKey(ByteString.copyFrom(publicKeyBytes))
-                .build();
+        return GetRecencyBlobResponse.newBuilder().setStatus(RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS)
+                .setRecencyBlob(blob).setRecencyBlobSignature(ByteString.copyFrom(signature))
+                .setServerPublicKey(ByteString.copyFrom(publicKeyBytes)).build();
     }
 
     public record BundlesToExchange(List<String> bundlesToDownload, List<String> bundlesToUpload,

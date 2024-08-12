@@ -252,7 +252,9 @@ public class BundleTransmission {
      */
     @Getter
     public static class RecentTransport {
-        /** from WifiP2pDevice.deviceAddress */
+        /**
+         * from WifiP2pDevice.deviceAddress
+         */
         private String deviceAddress;
         /* @param deviceName from WifiP2pDevice.deviceName */
         private String deviceName;
@@ -262,6 +264,7 @@ public class BundleTransmission {
         private long lastSeen;
         /* @param recencyTime time from the last recencyBlob received */
         private long recencyTime;
+
         private RecentTransport(String deviceAddress) {
             this.deviceAddress = deviceAddress;
         }
@@ -305,15 +308,14 @@ public class BundleTransmission {
         }
         var recencyBlob = recencyBlobResponse.getRecencyBlob();
         // we will allow a 1 minute clock skew
-        if (recencyBlob.getBlobTimestamp() > System.currentTimeMillis() + 60*1000) {
+        if (recencyBlob.getBlobTimestamp() > System.currentTimeMillis() + 60 * 1000) {
             throw new IOException("Recency blob timestamp is in the future");
         }
         var receivedServerPublicKey = Curve.decodePoint(recencyBlobResponse.getServerPublicKey().toByteArray(), 0);
         if (!bundleSecurity.getClientSecurity().getServerPublicKey().equals(receivedServerPublicKey)) {
             throw new IOException("Recency blob signed by unknown server");
         }
-        if (!SecurityUtils.verifySignatureRaw(recencyBlob.toByteArray(),
-                                              receivedServerPublicKey,
+        if (!SecurityUtils.verifySignatureRaw(recencyBlob.toByteArray(), receivedServerPublicKey,
                                               recencyBlobResponse.getRecencyBlobSignature().toByteArray())) {
             throw new IOException("Recency blob signature verification failed");
         }
