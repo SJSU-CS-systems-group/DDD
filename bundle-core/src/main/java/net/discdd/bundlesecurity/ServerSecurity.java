@@ -294,12 +294,16 @@ public class ServerSecurity {
     }
 
     private void createSignature(byte[] fileContents, Path signedFilePath) throws InvalidKeyException, IOException {
-        byte[] signedData = Curve.calculateSignature(ourIdentityKeyPair.getPrivateKey(), fileContents);
+        byte[] signedData = createSignature(fileContents);
         String encodedSignature = Base64.getUrlEncoder().encodeToString(signedData);
 
         try (FileOutputStream stream = new FileOutputStream(signedFilePath.toFile())) {
             stream.write(encodedSignature.getBytes());
         }
+    }
+
+    public byte[] createSignature(byte[] fileContents) throws InvalidKeyException {
+        return Curve.calculateSignature(ourIdentityKeyPair.getPrivateKey(), fileContents);
     }
 
     private String getsharedSecret(ClientSession client) throws InvalidKeyException {
@@ -521,4 +525,7 @@ public class ServerSecurity {
         return SecurityUtils.generateID(ourIdentityKeyPair.getPublicKey().serialize());
     }
 
+    public byte[] getIdentityPublicKey() {
+        return ourIdentityKeyPair.getPublicKey().serialize();
+    }
 }

@@ -142,6 +142,10 @@ public class SecurityUtils {
         byte[] encodedsignature = Files.readAllBytes(signaturePath);
         byte[] signature = Base64.getUrlDecoder().decode(encodedsignature);
 
+        return verifySignatureRaw(message, publicKey, signature);
+    }
+
+    public static boolean verifySignatureRaw(byte[] message, ECPublicKey publicKey, byte[] signature) throws InvalidKeyException {
         return Curve.verifySignature(publicKey, message, signature);
     }
 
