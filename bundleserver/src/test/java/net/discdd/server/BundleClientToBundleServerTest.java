@@ -18,6 +18,7 @@ import net.discdd.grpc.BundleSenderType;
 import net.discdd.grpc.BundleUploadRequest;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.grpc.ExchangeADUsResponse;
+import net.discdd.grpc.GetRecencyBlobRequest;
 import net.discdd.grpc.Status;
 import net.discdd.model.BundleDTO;
 import net.discdd.utils.Constants;
@@ -135,6 +136,24 @@ public class BundleClientToBundleServerTest extends End2EndTest {
         sendBundle();
         // that send bundle should have caused the ACK to be processed and cleared the ADU to send
         */
+    }
+
+    @Test
+    void test5RecencyBlob() throws InvalidKeyException, IOException {
+        var rsp = blockingStub.getRecencyBlob(GetRecencyBlobRequest.getDefaultInstance());
+        var fakeAddress = "fakeAddress";
+        bundleTransmission.processRecencyBlob(fakeAddress, rsp);
+        var rt = bundleTransmission.getRecentTransport(fakeAddress);
+        // the blob should have been signed within the last second or so
+        Assertions.assertEquals((double) System.currentTimeMillis(), (double) rt.getRecencyTime(), 2000);
+        var badBlob = rsp.toBuilder().setRecencyBlob(rsp.getRecencyBlob().toBuilder().setNonce(1)).build();
+        // mess with the signature
+        Assertions.assertThrows(IOException.class, () -> bundleTransmission.processRecencyBlob(fakeAddress, badBlob));
+        // make an old blob (more than a minute old
+        var oldBlob = rsp.toBuilder()
+                .setRecencyBlob(rsp.getRecencyBlob().toBuilder().setBlobTimestamp(System.currentTimeMillis() - 100_000))
+                .build();
+        Assertions.assertThrows(IOException.class, () -> bundleTransmission.processRecencyBlob(fakeAddress, oldBlob));
     }
 
     // send the bundle the same way the client does. we should move this code into bundle transmission so we are really

@@ -1,13 +1,17 @@
 package net.discdd.client.bundletransmission;
 
+import lombok.Getter;
 import net.discdd.bundlerouting.RoutingExceptions;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
 import net.discdd.bundlesecurity.BundleIDGenerator;
+import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.client.applicationdatamanager.ApplicationDataManager;
 import net.discdd.client.bundlerouting.ClientBundleGenerator;
 import net.discdd.client.bundlerouting.ClientRouting;
 import net.discdd.client.bundlesecurity.BundleSecurity;
 import net.discdd.grpc.BundleSender;
+import net.discdd.grpc.GetRecencyBlobResponse;
+import net.discdd.grpc.RecencyBlobStatus;
 import net.discdd.model.ADU;
 import net.discdd.model.Acknowledgement;
 import net.discdd.model.Bundle;
@@ -24,6 +28,7 @@ import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.InvalidMessageException;
 import org.whispersystems.libsignal.LegacyMessageException;
 import org.whispersystems.libsignal.NoSessionException;
+import org.whispersystems.libsignal.ecc.Curve;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -35,6 +40,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -238,6 +244,85 @@ public class BundleTransmission {
 
         logger.log(INFO, "sending bundle with id: " + toSend.getBundleId());
         return toSend;
+    }
+
+    /**
+     * Used to track in memory recently seen transports.
+     * All times are in milliseconds since epoch.
+     */
+    @Getter
+    public static class RecentTransport {
+        /**
+         * from WifiP2pDevice.deviceAddress
+         */
+        private String deviceAddress;
+        /* @param deviceName from WifiP2pDevice.deviceName */
+        private String deviceName;
+        /* @param lastExchange time of last bundle exchange */
+        private long lastExchange;
+        /* @param lastSeen time of last device discovery */
+        private long lastSeen;
+        /* @param recencyTime time from the last recencyBlob received */
+        private long recencyTime;
+
+        private RecentTransport(String deviceAddress) {
+            this.deviceAddress = deviceAddress;
+        }
+    }
+
+    final private HashMap<String, RecentTransport> recentTransports = new HashMap();
+
+    public RecentTransport[] getRecentTransports() {
+        synchronized (recentTransports) {
+            return recentTransports.values().toArray(new RecentTransport[0]);
+        }
+    }
+
+    public RecentTransport getRecentTransport(String deviceAddress) {
+        synchronized (recentTransports) {
+            return recentTransports.get(deviceAddress);
+        }
+    }
+
+    public void discovered(String deviceAddress, String deviceName) {
+        synchronized (recentTransports) {
+            RecentTransport recentTransport = recentTransports.computeIfAbsent(deviceAddress, RecentTransport::new);
+            recentTransport.deviceName = deviceName;
+            recentTransport.lastSeen = System.currentTimeMillis();
+        }
+    }
+
+    public void exchangedWithTransport(String deviceAddress) {
+        synchronized (recentTransports) {
+            RecentTransport recentTransport = recentTransports.computeIfAbsent(deviceAddress, RecentTransport::new);
+            var now = System.currentTimeMillis();
+            recentTransport.lastExchange = now;
+            recentTransport.lastSeen = now;
+        }
+    }
+
+    public void processRecencyBlob(String deviceAddress, GetRecencyBlobResponse recencyBlobResponse) throws IOException, InvalidKeyException {
+        // first make sure the data is valid
+        if (recencyBlobResponse.getStatus() != RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS) {
+            throw new IOException("Recency request failed");
+        }
+        var recencyBlob = recencyBlobResponse.getRecencyBlob();
+        // we will allow a 1 minute clock skew
+        if (recencyBlob.getBlobTimestamp() > System.currentTimeMillis() + 60 * 1000) {
+            throw new IOException("Recency blob timestamp is in the future");
+        }
+        var receivedServerPublicKey = Curve.decodePoint(recencyBlobResponse.getServerPublicKey().toByteArray(), 0);
+        if (!bundleSecurity.getClientSecurity().getServerPublicKey().equals(receivedServerPublicKey)) {
+            throw new IOException("Recency blob signed by unknown server");
+        }
+        if (!SecurityUtils.verifySignatureRaw(recencyBlob.toByteArray(), receivedServerPublicKey,
+                                              recencyBlobResponse.getRecencyBlobSignature().toByteArray())) {
+            throw new IOException("Recency blob signature verification failed");
+        }
+        synchronized (recentTransports) {
+            RecentTransport recentTransport = recentTransports.computeIfAbsent(deviceAddress, RecentTransport::new);
+            recentTransport.recencyTime = recencyBlob.getBlobTimestamp();
+        }
     }
 
     public void notifyBundleSent(BundleDTO bundle) {

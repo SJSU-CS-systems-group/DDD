@@ -1,11 +1,12 @@
 package net.discdd.server.bundlesecurity;
 
 import net.discdd.bundlesecurity.InvalidClientSessionException;
+import net.discdd.bundlesecurity.ServerSecurity;
+import net.discdd.grpc.RecencyBlob;
 import net.discdd.model.EncryptedPayload;
 import net.discdd.model.EncryptionHeader;
 import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
-import net.discdd.bundlesecurity.ServerSecurity;
 import net.discdd.utils.Constants;
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,9 +24,9 @@ import java.util.Arrays;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.WARNING;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 @Service
 public class BundleSecurity {
@@ -147,5 +148,13 @@ public class BundleSecurity {
 
     public boolean bundleServerIdMatchesCurrentServer(String receivedServerId) throws NoSuchAlgorithmException {
         return receivedServerId.equals(serverSecurity.getServerId());
+    }
+
+    public byte[] signRecencyBlob(RecencyBlob blob) throws InvalidKeyException {
+        return serverSecurity.createSignature(blob.toByteArray());
+    }
+
+    public byte[] getIdentityPublicKey() {
+        return serverSecurity.getIdentityPublicKey();
     }
 }

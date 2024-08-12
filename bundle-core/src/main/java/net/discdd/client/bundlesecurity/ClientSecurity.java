@@ -348,4 +348,7 @@ public class ClientSecurity {
         return clientRootPath;
     }
 
+    public Object getServerPublicKey() {
+        return theirIdentityKey.getPublicKey();
+    }
 }
