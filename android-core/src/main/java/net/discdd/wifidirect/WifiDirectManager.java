@@ -31,6 +31,7 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 
@@ -147,6 +148,20 @@ public class WifiDirectManager {
         return status;
     }
 
+    private static class CompletableActionListener extends CompletableFuture<OptionalInt> implements WifiP2pManager.ActionListener {
+
+        @Override
+        public void onSuccess() {
+            complete(OptionalInt.empty());
+        }
+
+        @Override
+        public void onFailure(int reason) {
+
+            complete(OptionalInt.of(reason));
+        }
+    }
+
     /**
      * Discovers WifiDirect peers for this device.
      *
@@ -154,40 +169,10 @@ public class WifiDirectManager {
      */
 
     @SuppressLint("MissingPermission")
-    public CompletableFuture<Boolean> discoverPeers() {
-        CompletableFuture<Boolean> completableFuture = new CompletableFuture<>();
-        this.manager.discoverPeers(this.channel, new WifiP2pManager.ActionListener() {
-
-            @Override
-            public void onSuccess() {
-                completableFuture.complete(true);
-            }
-
-            @Override
-            public void onFailure(int reasonCode) {
-                completableFuture.complete(false);
-            }
-        });
-        return completableFuture;
-    }
-
-    /**
-     * PeersListListener interface override function
-     * Activation function is this.manager.discoverPeers();
-     * Afterwards  WIFI_P2P_PEERS_CHANGED_ACTION in WifiDirectBroadcastReceiver
-     * is activated and manager.requestPeers() is called which leads to this
-     * function
-     */
-
-    @SuppressLint("MissingPermission")
-    CompletableFuture<HashSet<WifiP2pDevice>> requestPeers() {
-        var completableFuture = new CompletableFuture<HashSet<WifiP2pDevice>>();
-        manager.requestPeers(channel, peers -> {
-            discoveredPeers = new HashSet<>(peers.getDeviceList());
-            notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_PEERS_CHANGED);
-            completableFuture.complete(discoveredPeers);
-        });
-        return completableFuture;
+    public CompletableFuture<OptionalInt> discoverPeers() {
+        var completableActionListener = new CompletableActionListener();
+        this.manager.discoverPeers(this.channel, completableActionListener);
+        return completableActionListener;
     }
 
     public CompletableFuture<WifiP2pGroup> createGroup() {
@@ -211,23 +196,16 @@ public class WifiDirectManager {
      *
      * @return Future containing true if successful false if not
      */
-    public CompletableFuture<Boolean> removeGroup() {
-        CompletableFuture<Boolean> cFuture = new CompletableFuture<>();
-        this.manager.removeGroup(this.channel, new WifiP2pManager.ActionListener() {
-
-            @Override
-            public void onSuccess() {
-                cFuture.complete(true);
-            }
-
-            @Override
-            public void onFailure(int reasonCode) {
-                logger.log(WARNING, "Failed to remove a group with reasonCode: " + reasonCode +
+    public CompletableFuture<OptionalInt> removeGroup() {
+        var cal = new CompletableActionListener();
+        this.manager.removeGroup(this.channel, cal);
+        return cal.thenApply(rc -> {
+            if (rc.isPresent()) {
+                logger.log(WARNING, "Failed to remove a group with reasonCode: " + rc.getAsInt() +
                         " Note: this could mean device was never part of a group");
-                cFuture.complete(false);
             }
+            return rc;
         });
-        return cFuture;
     }
 
     /**
@@ -309,13 +287,22 @@ public class WifiDirectManager {
         getContext().registerReceiver(receiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
     }
 
-    public CompletableFuture<Void> requestDeviceInfo() {
-        CompletableFuture<Void> completableFuture = new CompletableFuture<>();
+    public CompletableFuture<WifiP2pDevice> requestDeviceInfo() {
+        var completableFuture = new CompletableFuture<WifiP2pDevice>();
         manager.requestDeviceInfo(channel, di -> {
             processDeviceInfo(di);
-            completableFuture.complete(null);
+            completableFuture.complete(di);
         });
         return completableFuture;
+    }
+
+    public CompletableFuture<OptionalInt> shutdown() {
+        var cal = new CompletableActionListener();
+        manager.removeGroup(channel, null);
+        manager.cancelConnect(channel, null);
+        manager.stopPeerDiscovery(channel, null);
+        manager.stopListening(channel, cal);
+        return cal;
     }
 
     public WifiP2pGroup getGroupInfo() {

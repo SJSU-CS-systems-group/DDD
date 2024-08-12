@@ -7,12 +7,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
+import android.net.wifi.p2p.WifiP2pDevice;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
 import android.widget.TextView;
 
 import androidx.fragment.app.Fragment;
@@ -37,6 +40,7 @@ public class TransportWifiDirectFragment extends Fragment {
     private View changeDeviceNameView;
     private TransportWifiDirectService btService;
     private TextView myWifiStatusView;
+    private SharedPreferences sharedPreferences;
     private final ServiceConnection connection = new ServiceConnection() {
 
         @Override
@@ -59,7 +63,8 @@ public class TransportWifiDirectFragment extends Fragment {
         intentFilter.addAction(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION);
     }
 
-    private void processDeviceInfoChange(Void v) {
+    private void processDeviceInfoChange(WifiP2pDevice device) {
+        // NOTE: we aren't using device info here, but be aware that it can be null!
         requireActivity().runOnUiThread(() -> {
             var deviceName = btService.getDeviceName();
             deviceNameView.setText(deviceName != null ? deviceName : "Unknown");
@@ -83,6 +88,7 @@ public class TransportWifiDirectFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        sharedPreferences = requireActivity().getSharedPreferences(TransportWifiDirectService.WIFI_DIRECT_PREFERENCES, Context.MODE_PRIVATE);
     }
 
     @Override
@@ -97,6 +103,16 @@ public class TransportWifiDirectFragment extends Fragment {
     public void onPause() {
         unregisterBroadcastReceiver();
         super.onPause();
+    }
+
+    @Override
+    public void onDestroy() {
+        requireActivity().unbindService(connection);
+        super.onDestroy();
+    }
+
+    private BundleTransportActivity getBundleTransportActivity() {
+        return (BundleTransportActivity) requireActivity();
     }
 
     @Override
@@ -124,6 +140,9 @@ public class TransportWifiDirectFragment extends Fragment {
         deviceNameView = rootView.findViewById(R.id.device_name);
         deviceNameView.setText("Unknown");
         myWifiInfoView.setText("Wifi state pending...");
+        CheckBox bgWifiCheckbox = rootView.findViewById(R.id.collect_background_data);
+        bgWifiCheckbox.setChecked(getBundleTransportActivity().isBackgroundWifiEnabled());
+        bgWifiCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> getBundleTransportActivity().setBgWifiEnabled(isChecked));
 
         Intent intent = new Intent(getActivity(), TransportWifiDirectService.class);
         requireContext().bindService(intent, connection, Context.BIND_AUTO_CREATE);
@@ -189,8 +208,8 @@ public class TransportWifiDirectFragment extends Fragment {
                 var actionMessage = intent.getStringExtra("message");
                 if (actionType != null) {
                     switch (actionType) {
-                        case WIFI_DIRECT_MANAGER_INITIALIZED:
                         case WIFI_DIRECT_MANAGER_DEVICE_INFO_CHANGED:
+                        case WIFI_DIRECT_MANAGER_INITIALIZED:
                             processDeviceInfoChange(null);
                             updateGroupInfo();
                             break;

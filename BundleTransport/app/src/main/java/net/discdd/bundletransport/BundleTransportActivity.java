@@ -4,6 +4,7 @@ import static java.util.logging.Level.WARNING;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -38,6 +39,7 @@ public class BundleTransportActivity extends AppCompatActivity {
     private ViewPager2 viewPager2;
     private FragmentStateAdapter viewPager2Adapter;
     private PermissionsFragment permissionsFragment;
+    private SharedPreferences sharedPreferences;
 
     record TitledFragment(String title, Fragment fragment) {}
 
@@ -50,6 +52,8 @@ public class BundleTransportActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        sharedPreferences = getSharedPreferences(TransportWifiDirectService.WIFI_DIRECT_PREFERENCES, MODE_PRIVATE);
 
         try {
             getApplicationContext().startForegroundService(new Intent(this, TransportWifiDirectService.class));
@@ -118,8 +122,21 @@ public class BundleTransportActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        if (!isBackgroundWifiEnabled()) {
+            stopService(new Intent(this, TransportWifiDirectService.class));
+        }
+
         unmonitorUploadTab();
         super.onDestroy();
+    }
+
+    void setBgWifiEnabled(boolean enabled) {
+        sharedPreferences.edit().putBoolean(TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE, enabled).apply();
+    }
+
+    boolean isBackgroundWifiEnabled() {
+        return sharedPreferences.getBoolean(
+                TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE, true);
     }
 
     private void enableFragment(TitledFragment titledFragment) {

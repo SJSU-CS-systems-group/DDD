@@ -7,8 +7,11 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
+import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.os.Binder;
 import android.os.IBinder;
@@ -37,9 +40,12 @@ public class TransportWifiDirectService extends Service
     public static final String NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION = "net.discdd.bundletransport.CLIENT_LOG";
     public static final String NET_DISCDD_BUNDLETRANSPORT_WIFI_EVENT_ACTION = "net.discdd.bundletransport.WIFI_EVENT";
     private static final Logger logger = Logger.getLogger(TransportWifiDirectService.class.getName());
+    public static final String WIFI_DIRECT_PREFERENCES = "wifi_direct";
+    public static final String WIFI_DIRECT_PREFERENCE_BG_SERVICE = "background_wifi";
     private final IBinder binder = new TransportWifiDirectServiceBinder();
     private final RpcServer grpcServer = new RpcServer(this);
     private WifiDirectManager wifiDirectManager;
+    private SharedPreferences sharedPreferences;
 
     public TransportWifiDirectService() {
     }
@@ -47,6 +53,7 @@ public class TransportWifiDirectService extends Service
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
+        sharedPreferences = getSharedPreferences(WIFI_DIRECT_PREFERENCES, Context.MODE_PRIVATE);
         logger.log(INFO,
                    "Starting " + TransportWifiDirectService.class.getName() + " with flags " + flags + " and startId " +
                            startId);
@@ -77,6 +84,14 @@ public class TransportWifiDirectService extends Service
 
         wifiDirectManager = new WifiDirectManager(this, null, this, true);
         wifiDirectManager.initialize();
+    }
+
+    @Override
+    public void onDestroy() {
+        if (wifiDirectManager != null) {
+            wifiDirectManager.shutdown();
+        }
+        super.onDestroy();
     }
 
     @Override
@@ -140,7 +155,7 @@ public class TransportWifiDirectService extends Service
         LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
     }
 
-    public CompletableFuture<Void> requestDeviceInfo() {
+    public CompletableFuture<WifiP2pDevice> requestDeviceInfo() {
         return wifiDirectManager.requestDeviceInfo();
     }
 
