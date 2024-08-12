@@ -71,6 +71,7 @@ public class BundleClientActivity extends AppCompatActivity implements WifiDirec
     private WifiDirectFragment wifiDirectFragment;
 
     record FragmentWithTitle(Fragment fragment, String title) {}
+
     ArrayList<FragmentWithTitle> fragmentsWithTitles = new ArrayList<>();
 
     @Override
