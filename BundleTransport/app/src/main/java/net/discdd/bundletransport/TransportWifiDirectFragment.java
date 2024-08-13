@@ -88,7 +88,8 @@ public class TransportWifiDirectFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        sharedPreferences = requireActivity().getSharedPreferences(TransportWifiDirectService.WIFI_DIRECT_PREFERENCES, Context.MODE_PRIVATE);
+        sharedPreferences = requireActivity().getSharedPreferences(TransportWifiDirectService.WIFI_DIRECT_PREFERENCES,
+                                                                   Context.MODE_PRIVATE);
     }
 
     @Override
@@ -142,7 +143,8 @@ public class TransportWifiDirectFragment extends Fragment {
         myWifiInfoView.setText("Wifi state pending...");
         CheckBox bgWifiCheckbox = rootView.findViewById(R.id.collect_background_data);
         bgWifiCheckbox.setChecked(getBundleTransportActivity().isBackgroundWifiEnabled());
-        bgWifiCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> getBundleTransportActivity().setBgWifiEnabled(isChecked));
+        bgWifiCheckbox.setOnCheckedChangeListener(
+                (buttonView, isChecked) -> getBundleTransportActivity().setBgWifiEnabled(isChecked));
 
         Intent intent = new Intent(getActivity(), TransportWifiDirectService.class);
         requireContext().bindService(intent, connection, Context.BIND_AUTO_CREATE);

@@ -148,7 +148,8 @@ public class WifiDirectManager {
         return status;
     }
 
-    private static class CompletableActionListener extends CompletableFuture<OptionalInt> implements WifiP2pManager.ActionListener {
+    private static class CompletableActionListener extends CompletableFuture<OptionalInt>
+            implements WifiP2pManager.ActionListener {
 
         @Override
         public void onSuccess() {

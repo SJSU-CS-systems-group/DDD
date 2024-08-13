@@ -131,12 +131,12 @@ public class BundleTransportActivity extends AppCompatActivity {
     }
 
     void setBgWifiEnabled(boolean enabled) {
-        sharedPreferences.edit().putBoolean(TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE, enabled).apply();
+        sharedPreferences.edit().putBoolean(TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE, enabled)
+                .apply();
     }
 
     boolean isBackgroundWifiEnabled() {
-        return sharedPreferences.getBoolean(
-                TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE, true);
+        return sharedPreferences.getBoolean(TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE, true);
     }
 
     private void enableFragment(TitledFragment titledFragment) {
