@@ -1,39 +1,16 @@
 package net.discdd.bundlesecurity;
 
-import java.io.IOException;
-import java.nio.file.Path;
-import java.security.NoSuchAlgorithmException;
+import com.google.common.primitives.Bytes;
+
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Base64;
-
-import com.google.common.primitives.Bytes;
-import org.whispersystems.libsignal.InvalidKeyException;
 
 public class BundleIDGenerator {
     public static final boolean UPSTREAM = true;
     public static final boolean DOWNSTREAM = false;
     /* Length of the Counter */
-    private static final int counterLength = 8;
-
-    /* Counter value used as unsigned long */
-    private long currentCounter = 0;
-
-    /* Generates bundleID
-     * Used when a window is NOT involved to maintain the counter values
-     * Parameters:
-     * clientKeyPath:   Path to client Identity key (public key)
-     * direction:   UPSTREAM (Client->Server), DOWNSTREAM (Server->Client)
-     * Returns:
-     * bundleID as a Base64 encoded String
-     */
-    synchronized public String generateBundleID(Path clientKeyPath, boolean direction) throws IOException,
-            NoSuchAlgorithmException, InvalidKeyException {
-        String clientID = SecurityUtils.getClientID(clientKeyPath);
-
-        currentCounter++;
-
-        return generateBundleID(clientID, currentCounter, direction);
-    }
+    private static final int COUNTER_BYTE_SIZE = Long.BYTES;
 
     /* Generates bundleID for the specified clientID and counter value
      * Used when a window is involved to maintain the counter values
@@ -46,15 +23,11 @@ public class BundleIDGenerator {
      */
     public static String generateBundleID(String clientID, long counter, boolean direction) {
         byte[] bClientID = Base64.getUrlDecoder().decode(clientID);
-        byte[] bCounter = new byte[1];
+        byte[] bCounter = new byte[COUNTER_BYTE_SIZE];
+        ByteBuffer.wrap(bCounter).putLong(counter);
         bCounter[0] = (byte) counter;
-        byte[] bundleID = new byte[bClientID.length + counterLength];
 
-        if (direction == UPSTREAM) {
-            bundleID = Bytes.concat(bClientID, bCounter);
-        } else {
-            bundleID = Bytes.concat(bCounter, bClientID);
-        }
+        byte[] bundleID = direction == UPSTREAM ? Bytes.concat(bClientID, bCounter) : Bytes.concat(bCounter, bClientID);
 
         return Base64.getUrlEncoder().encodeToString(bundleID);
     }
@@ -86,9 +59,9 @@ public class BundleIDGenerator {
     public static long getCounterFromBundleID(String bundleID, boolean direction) {
         byte[] bundleIDBytes = Base64.getUrlDecoder().decode(bundleID);
 
-        int index = (direction == DOWNSTREAM) ? 0 : (bundleIDBytes.length - 1);
+        int index = (direction == DOWNSTREAM) ? 0 : (bundleIDBytes.length - COUNTER_BYTE_SIZE);
 
-        return Long.parseUnsignedLong(Byte.toString(bundleIDBytes[index]));
+        return ByteBuffer.wrap(bundleIDBytes, index, COUNTER_BYTE_SIZE).getLong();
     }
 
     public static String getClientIDFromBundleID(String bundleID, boolean direction) {
@@ -96,9 +69,9 @@ public class BundleIDGenerator {
         byte[] clientIDBytes = null;
 
         if (direction == UPSTREAM) {
-            clientIDBytes = Arrays.copyOfRange(bundleIDBytes, 0, bundleIDBytes.length - 1);
+            clientIDBytes = Arrays.copyOfRange(bundleIDBytes, 0, bundleIDBytes.length - COUNTER_BYTE_SIZE);
         } else {
-            clientIDBytes = Arrays.copyOfRange(bundleIDBytes, 1, bundleIDBytes.length);
+            clientIDBytes = Arrays.copyOfRange(bundleIDBytes, COUNTER_BYTE_SIZE, bundleIDBytes.length);
         }
 
         return Base64.getUrlEncoder().encodeToString(clientIDBytes);
