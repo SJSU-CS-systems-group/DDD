@@ -11,21 +11,22 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
 import net.discdd.android_core.R;
 
+import java.util.Collections;
 import java.util.LinkedList;
-import java.util.function.Consumer;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
-public class LogFragment extends Fragment implements Consumer<String> {
+public class LogFragment extends Fragment {
     private static final Logger logger = Logger.getLogger(LogFragment.class.getName());
     private TextView logMsgs;
-    public static LinkedList<String> logRecords;
-    public static Consumer<String> logConsumer;
+    private static LinkedList<String> logRecords;
 
-    {
+    static {
         LogFragment.registerLoggerHandler();
     }
 
@@ -34,24 +35,17 @@ public class LogFragment extends Fragment implements Consumer<String> {
             @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         var layout = inflater.inflate(R.layout.log_fragment, container, false);
         logMsgs = layout.findViewById(R.id.logmsgs);
-        logMsgs.setText(subscribeToLogs(this));
         logMsgs.setMovementMethod(new ScrollingMovementMethod());
+        refreshLogMsgs();
+        FloatingActionButton refreshBtn = layout.findViewById(R.id.log_refresh);
+        refreshBtn.setOnClickListener(v -> refreshLogMsgs());
         return layout;
     }
 
-    public void accept(String newLog) {
-        getActivity().runOnUiThread(() -> {
-            logMsgs.append(newLog);
-            if (logMsgs.getLineCount() > 200) {
-                int nl = logMsgs.getText().toString().indexOf('\n');
-                logMsgs.getEditableText().delete(0, nl + 1);
-            }
-        });
-    }
-
-    private static String subscribeToLogs(Consumer<String> logConsumer) {
-        LogFragment.logConsumer = logConsumer;
-        return String.join("\n", logRecords);
+    private void refreshLogMsgs() {
+        LinkedList<String> reversedLogRecords = new LinkedList<>(logRecords);
+        Collections.reverse(reversedLogRecords);
+        logMsgs.setText(String.join("\n", reversedLogRecords));
     }
 
     private static final Handler logHandler = new Handler() {
@@ -63,7 +57,6 @@ public class LogFragment extends Fragment implements Consumer<String> {
             if (LogFragment.logRecords.size() > 100) LogFragment.logRecords.remove(0);
             String entry = String.format("[%s] %s", loggerName, logRecord.getMessage());
             System.out.println(entry);
-            if (LogFragment.logConsumer != null) LogFragment.logConsumer.accept(entry + '\n');
             LogFragment.logRecords.add(entry);
         }
 
