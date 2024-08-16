@@ -14,9 +14,13 @@ import net.discdd.grpc.Status;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
@@ -24,8 +28,7 @@ import static java.util.logging.Level.SEVERE;
 
 public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrpc.BundleExchangeServiceImplBase {
     private static final Logger logger = Logger.getLogger(BundleExchangeServiceImpl.class.getName());
-
-    public record BundleExchangeName(String encryptedBundleId, boolean isDownload) {}
+    private static final int DOWNLOAD_BUFFER_SIZE = 4096;
 
     @Override
     public StreamObserver<BundleUploadRequest> uploadBundle(StreamObserver<BundleUploadResponse> responseObserver) {
@@ -37,38 +40,46 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
 
     @Override
     public void downloadBundle(BundleDownloadRequest request, StreamObserver<BundleDownloadResponse> responseObserver) {
+        onBundleExchangeEvent(BundleExchangeEvent.DOWNLOAD_STARTED);
         var bundleExchangeName = new BundleExchangeName(request.getBundleId().getEncryptedId(), true);
-        Path downloadPath = pathProducer(bundleExchangeName, request.getSender());
-        if (downloadPath == null) {
-            responseObserver.onError(new IOException("Bundle not found"));
-            return;
-        }
-
-        InputStream is;
         try {
-            is = Files.newInputStream(downloadPath, StandardOpenOption.READ);
-        } catch (IOException e) {
+            Path downloadPath = pathProducer(bundleExchangeName, request.getSender());
+            if (downloadPath == null) {
+                responseObserver.onError(new IOException("Bundle not found"));
+                return;
+            }
+
+            try (InputStream is = Files.newInputStream(downloadPath, StandardOpenOption.READ)) {
+                transferToStream(is, bytes -> responseObserver.onNext(
+                        BundleDownloadResponse.newBuilder().setChunk(BundleChunk.newBuilder().setChunk(bytes).build())
+                                .build()));
+            }
+            responseObserver.onCompleted();
+            logger.log(INFO, "Complete " + request.getBundleId().getEncryptedId());
+        } catch (Exception e) {
             logger.log(SEVERE, "Error downloading bundle: " + request.getBundleId().getEncryptedId(), e);
             responseObserver.onError(e);
             responseObserver.onCompleted();
-            return;
         }
 
-        StreamHandler handler = new StreamHandler(is);
-        Exception ex = handler.handle(bytes -> responseObserver.onNext(
-                BundleDownloadResponse.newBuilder().setChunk(BundleChunk.newBuilder().setChunk(bytes).build())
-                        .build()));
-        if (ex != null) {
-            logger.log(SEVERE, "Error downloading bundle: " + request.getBundleId().getEncryptedId(), ex);
-            responseObserver.onError(ex);
-        }
-
-        responseObserver.onCompleted();
-        logger.log(INFO, "Complete " + request.getBundleId().getEncryptedId());
         onBundleExchangeEvent(BundleExchangeEvent.DOWNLOAD_FINISHED);
     }
 
+    public void transferToStream(InputStream in, Consumer<ByteString> callback) throws IOException {
+        ByteBuffer buffer = ByteBuffer.allocate(DOWNLOAD_BUFFER_SIZE);
+        try (ReadableByteChannel channel = Channels.newChannel(in)) {
+            int n;
+            while ((n = channel.read(buffer)) > 0) {
+                buffer.flip();
+                callback.accept(ByteString.copyFrom(buffer));
+                buffer.clear();
+            }
+        }
+    }
+
     protected abstract Path pathProducer(BundleExchangeName bundleExchangeName, BundleSender sender);
+
+    protected abstract void bundleCompletion(BundleExchangeName bundleExchangeName);
 
     public enum BundleExchangeEvent {
         UPLOAD_STARTED, DOWNLOAD_STARTED, UPLOAD_FINISHED, DOWNLOAD_FINISHED
@@ -77,6 +88,8 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
     public interface BundleExchangeEventListener {
         void onBundleExchangeEvent(BundleExchangeEvent event);
     }
+
+    public record BundleExchangeName(String encryptedBundleId, boolean isDownload) {}
 
     private class BundleUploadRequestStreamObserver implements StreamObserver<BundleUploadRequest> {
         private final StreamObserver<BundleUploadResponse> responseObserver;
@@ -152,6 +165,4 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
         }
 
     }
-
-    protected abstract void bundleCompletion(BundleExchangeName bundleExchangeName);
 }

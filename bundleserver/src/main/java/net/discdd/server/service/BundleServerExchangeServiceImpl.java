@@ -3,6 +3,7 @@ package net.discdd.server.service;
 import io.grpc.stub.StreamObserver;
 import net.devh.boot.grpc.server.service.GrpcService;
 import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
+import net.discdd.bundlesecurity.BundleIDGenerator;
 import net.discdd.grpc.BundleSender;
 import net.discdd.grpc.BundleSenderType;
 import net.discdd.grpc.GetRecencyBlobRequest;
@@ -25,9 +26,10 @@ import static java.util.logging.Level.WARNING;
 
 @GrpcService
 public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
+    private static final Logger logger = Logger.getLogger(BundleServerExchangeServiceImpl.class.getName());
     private final String serverBasePath;
     private final BundleTransmission bundleTransmission;
-    private static final Logger logger = Logger.getLogger(BundleServerExchangeServiceImpl.class.getName());
+    Random random = new Random();
     private Path downloadingFrom;
     private Path uploadingTo;
 
@@ -60,8 +62,6 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
         // ignore
     }
 
-    Random random = new Random();
-
     @Override
     public Path pathProducer(BundleExchangeName bundleExchangeName, BundleSender sender) {
         if (bundleExchangeName.isDownload()) {
@@ -71,7 +71,7 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
             // we only generate bundles on the fly here for clients
             if (sender.getType() != BundleSenderType.CLIENT) return null;
 
-            return getPathForClientBundleDownload(bundleExchangeName, sender);
+            return getPathForClientBundleDownload(bundleExchangeName.encryptedBundleId(), sender);
         } else {
             byte[] randomBytes = new byte[16];
             random.nextBytes(randomBytes);
@@ -80,23 +80,31 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
         }
     }
 
-    private Path getPathForClientBundleDownload(BundleExchangeName bundleExchangeName, BundleSender sender) {
+    private Path getPathForClientBundleDownload(String requestedEncryptedBundleId, BundleSender sender) {
 
         try {
-            String expectedBundleId = bundleTransmission.generateBundleId(sender.getId());
-            String requestedBundleId = bundleExchangeName.encryptedBundleId();
+            var currentBundleIdForClient = bundleTransmission.generateBundleId(sender.getId());
+            if (!currentBundleIdForClient.equals(requestedEncryptedBundleId)) {
+                logger.log(WARNING, String.format("Client %s requested %s (%d) but the next id is %s (%d)",
+                                                  BundleTransmission.bundleSenderToString(sender),
+                                                  requestedEncryptedBundleId,
+                                                  bundleTransmission.getCounterFromEncryptedBundleId(requestedEncryptedBundleId, sender.getId(), BundleIDGenerator.DOWNSTREAM),
+                                                  currentBundleIdForClient,
+                                                  bundleTransmission.getCounterFromEncryptedBundleId(currentBundleIdForClient, sender.getId(),
+                                                                                                     BundleIDGenerator.DOWNSTREAM)));
+                return null;
+            }
             var bundles = bundleTransmission.generateBundleForTransmission(sender, sender.getId(), null);
             if (bundles.getBundles().size() != 1) {
-                logger.log(WARNING,
-                           BundleTransmission.bundleSenderToString(sender) + " requested " + requestedBundleId +
-                                   " but generated " + bundles.getBundles());
+                logger.log(WARNING, "Couldn't generated current bundle " + requestedEncryptedBundleId + " for " +
+                                   BundleTransmission.bundleSenderToString(sender));
                 return null;
             }
             var bundle = bundles.getBundles().get(0);
             String generatedBundleId = bundle.getBundleId();
-            if (!generatedBundleId.equals(requestedBundleId)) {
+            if (!generatedBundleId.equals(requestedEncryptedBundleId)) {
                 logger.log(WARNING,
-                           BundleTransmission.bundleSenderToString(sender) + " requested " + requestedBundleId +
+                           BundleTransmission.bundleSenderToString(sender) + " requested " + requestedEncryptedBundleId +
                                    " but generated " + generatedBundleId);
                 return null;
             }
