@@ -25,7 +25,6 @@ public class BundleIDGenerator {
         byte[] bClientID = Base64.getUrlDecoder().decode(clientID);
         byte[] bCounter = new byte[COUNTER_BYTE_SIZE];
         ByteBuffer.wrap(bCounter).putLong(counter);
-        bCounter[0] = (byte) counter;
 
         byte[] bundleID = direction == UPSTREAM ? Bytes.concat(bClientID, bCounter) : Bytes.concat(bCounter, bClientID);
 
