@@ -406,4 +406,7 @@ public class BundleTransmission {
         return bundles;
     }
 
+    public long getCounterFromEncryptedBundleId(String requestedEncryptedBundleId, String clientId, boolean downstream) throws InvalidClientIDException, GeneralSecurityException, InvalidKeyException {
+        return serverWindowService.getCounterFromBundleID(requestedEncryptedBundleId, clientId, downstream);
+    }
 }
