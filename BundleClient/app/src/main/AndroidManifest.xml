@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="Manifest.permission.POST_NOTIFICATIONS"/>
     <permission android:name="net.discdd.bundleclient.permission.MESSAGE_PROVIDER_WRITE" android:protectionLevel="normal" />
     <permission android:name="net.discdd.bundleclient.permission.MESSAGE_PROVIDER_READ" android:protectionLevel="normal" />
     <uses-feature android:name="android.hardware.usb.host" />
@@ -11,6 +13,12 @@
         android:label="@string/app_name"
         android:theme="@style/Theme.AppCompat.DayNight"
         android:supportsRtl="true">
+        <service
+                android:name=".BundleClientWifiDirectService"
+                android:enabled="true"
+                android:foregroundServiceType="dataSync"
+                android:exported="false" >
+        </service>
         <activity
             android:name="net.discdd.bundleclient.BundleClientActivity"
             android:exported="true">
