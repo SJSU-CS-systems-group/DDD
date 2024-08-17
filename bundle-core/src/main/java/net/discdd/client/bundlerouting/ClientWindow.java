@@ -1,20 +1,20 @@
 package net.discdd.client.bundlerouting;
 
-import net.discdd.bundlerouting.WindowUtils.CircularBuffer;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
 import net.discdd.bundlesecurity.BundleIDGenerator;
 import net.discdd.client.bundlesecurity.ClientSecurity;
+import net.discdd.model.EncryptedBundleId;
 import org.whispersystems.libsignal.InvalidKeyException;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.logging.Logger;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
@@ -28,13 +28,9 @@ public class ClientWindow {
     final private Path clientWindowDataPath;
     final private String WINDOW_FILE = "clientWindow.csv";
 
-    private final CircularBuffer window;
+    private final LinkedList<EncryptedBundleId> window = new LinkedList<>();
     private String clientID = null;
     private int windowLength = 10; /* Default Value */
-
-    /* Begin and End are used as Unsigned Long */
-    private long begin = 0;
-    private long end = 0;
 
     /* Generates bundleIDs for window slots
      * Parameter:
@@ -43,33 +39,34 @@ public class ClientWindow {
      * Returns:
      * None
      */
-    private void fillWindow(int count, long startCounter) throws BufferOverflow, IOException {
+    private void fillWindow(long startCounter, int count) throws IOException {
         long length = startCounter + count;
 
         for (long i = startCounter; i < length; ++i) {
-            window.add(BundleIDGenerator.generateBundleID(this.clientID, i, BundleIDGenerator.DOWNSTREAM));
+            String encryptedId = BundleIDGenerator.generateBundleID(this.clientID, i, BundleIDGenerator.DOWNSTREAM);
+            window.add(new EncryptedBundleId(encryptedId, clientID, i));
         }
 
-        end = begin + windowLength;
         updateDBWindow();
     }
 
     private void updateDBWindow() throws IOException {
         var dbFile = clientWindowDataPath.resolve(WINDOW_FILE);
 
-        Files.write(dbFile, String.format(Locale.US, "%d,%d,%d", begin, end, windowLength).getBytes());
+        Files.write(dbFile, String.format(Locale.US, "%d,%d,%d",
+                                          window.getFirst().bundleCounter(),
+                                          window.getLast().bundleCounter(),
+                                          windowLength).getBytes());
     }
 
     private void initializeWindow() throws IOException {
         var dbFile = clientWindowDataPath.resolve(WINDOW_FILE);
-
-        String dbData = new String(Files.readAllBytes(dbFile), UTF_8);
-
+        String dbData = Files.readString(dbFile);
         String[] dbCSV = dbData.split(",");
-
-        begin = Long.parseLong(dbCSV[0]);
-        end = Long.parseLong(dbCSV[1]);
+        var start = Long.parseLong(dbCSV[0]);
+        var end = Long.parseLong(dbCSV[1]);
         windowLength = Integer.parseInt(dbCSV[2]);
+        fillWindow(start, (int) (end - start + 1));
     }
 
     /* Allocate and Initialize Window with provided size
@@ -82,6 +79,7 @@ public class ClientWindow {
     private ClientWindow(int length, String clientID, Path rootPath) throws BufferOverflow, IOException {
         clientWindowDataPath = rootPath.resolve(CLIENT_WINDOW_SUBDIR);
         clientWindowDataPath.toFile().mkdirs();
+        this.clientID = clientID;
 
         try {
             initializeWindow();
@@ -93,12 +91,6 @@ public class ClientWindow {
                 logger.log(WARNING, "Invalid window size -- using default size: " + windowLength);
             }
         }
-
-        this.clientID = clientID;
-        window = new CircularBuffer(windowLength);
-
-        /* Initialize Slots */
-        fillWindow(windowLength, begin);
     }
 
     public static ClientWindow initializeInstance(int windowLength, String clientID, Path rootPath) throws BufferOverflow, IOException {
@@ -129,26 +121,19 @@ public class ClientWindow {
         logger.log(FINE, "Largest Bundle ID = " + decryptedBundleID);
         long ack = BundleIDGenerator.getCounterFromBundleID(decryptedBundleID, BundleIDGenerator.DOWNSTREAM);
 
-        if (Long.compareUnsigned(ack, begin) == -1) {
+        long begin = window.getFirst().bundleCounter();
+        long end = window.getFirst().bundleCounter();
+        if (ack < begin) {
             logger.log(FINE, "Received old [" + ack + " < " + begin + "]");
             return;
-        } else if (Long.compareUnsigned(ack, end) == 1) {
+        } else if (ack > end) {
             logger.log(FINE, "Received Invalid ACK [" + ack + " < " + end + "]");
             return;
         }
 
-        /* Index will be an int as windowLength is int */
-        int ackIndex = (int) Long.remainderUnsigned(ack, windowLength);
+        window.removeIf(bundle -> bundle.bundleCounter() <= ack);
 
-        /* Delete ACKs until ackIndex */
-        int noDeleted = window.deleteUntilIndex(ackIndex);
-        if (noDeleted == 0) {
-            logger.log(WARNING, "Received Invalid ACK [" + Long.toUnsignedString(ack) + "]");
-        }
-
-        begin = ack + 1;
-        /* Add new bundleIDs to window */
-        fillWindow(noDeleted, end);
+        fillWindow(end+1, windowLength - window.size());
 
         logger.log(FINE, "Updated Begin: " + Long.toUnsignedString(begin) + "; End: " + Long.toUnsignedString(end));
     }
@@ -160,13 +145,6 @@ public class ClientWindow {
      * None
      */
     public List<String> getWindow(ClientSecurity client) throws InvalidKeyException, GeneralSecurityException {
-        List<String> bundleIDs = window.getBuffer();
-
-        for (int i = 0; i < bundleIDs.size(); ++i) {
-            String bundleID = client.encryptBundleID(bundleIDs.get(i));
-            bundleIDs.set(i, bundleID);
-        }
-
-        return bundleIDs;
+        return window.stream().map(EncryptedBundleId::encryptedId).toList();
     }
 }

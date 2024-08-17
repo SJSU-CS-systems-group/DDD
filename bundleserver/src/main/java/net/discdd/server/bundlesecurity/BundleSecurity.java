@@ -1,10 +1,7 @@
 package net.discdd.server.bundlesecurity;
 
-import net.discdd.bundlesecurity.InvalidClientSessionException;
 import net.discdd.bundlesecurity.ServerSecurity;
 import net.discdd.grpc.RecencyBlob;
-import net.discdd.model.EncryptedPayload;
-import net.discdd.model.EncryptionHeader;
 import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
 import net.discdd.utils.Constants;
@@ -119,34 +116,7 @@ public class BundleSecurity {
         return new Payload(bundleId, decryptedPayloadJar);
     }
 
-    public UncompressedBundle encryptPayload(String clientId, Payload payload, Path bundleGenDirPath) throws InvalidClientSessionException, IOException, NoSuchAlgorithmException, InvalidKeyException {
-        String bundleId = payload.getBundleId();
-        if (!this.encryptionEnabled) {
-            return new UncompressedBundle(bundleId, payload.getSource(), null, null, null);
-        }
-        Path[] paths = new Path[0];
-        try {
-            paths = this.serverSecurity.encrypt(payload.getSource().toPath(), bundleGenDirPath, bundleId, clientId);
-        } catch (InvalidClientSessionException e) {
-            throw new RuntimeException(e);
-        }
-
-        EncryptedPayload encryptedPayload = new EncryptedPayload(bundleId, paths[0].toFile());
-
-        File source = bundleGenDirPath.resolve(bundleId).toFile();
-        EncryptionHeader encHeader =
-                EncryptionHeader.builder().serverSignedPreKey(paths[2].toFile()).serverIdentityKey(paths[3].toFile())
-                        .serverRatchetKey(paths[4].toFile()).build();
-        return new UncompressedBundle( // TODO get encryption header, payload signature
-                                       bundleId, source, encHeader, encryptedPayload, paths[1].toFile());
-    }
-
-    public int isNewerBundle(Path bundlePath, String lastReceivedBundleID) throws GeneralSecurityException,
-            IOException, InvalidKeyException {
-        return this.serverSecurity.isNewerBundle(bundlePath, lastReceivedBundleID);
-    }
-
-    public boolean bundleServerIdMatchesCurrentServer(String receivedServerId) throws NoSuchAlgorithmException {
+     public boolean bundleServerIdMatchesCurrentServer(String receivedServerId) throws NoSuchAlgorithmException {
         return receivedServerId.equals(serverSecurity.getServerId());
     }
 
@@ -155,6 +125,10 @@ public class BundleSecurity {
     }
 
     public byte[] getIdentityPublicKey() {
-        return serverSecurity.getIdentityPublicKey();
+        return serverSecurity.getIdentityPublicKey().serialize();
+    }
+
+    public long getCounterFromBundlePath(Path bundlePath, boolean direction) throws GeneralSecurityException, IOException, InvalidKeyException {
+        return serverSecurity.getCounterFromBundlePath(bundlePath, direction);
     }
 }

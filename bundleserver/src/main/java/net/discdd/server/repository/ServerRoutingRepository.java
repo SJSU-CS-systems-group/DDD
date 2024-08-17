@@ -1,6 +1,7 @@
 package net.discdd.server.repository;
 
 import net.discdd.server.repository.entity.ServerRouting;
+import net.discdd.server.repository.compositeId.ServerRoutingId;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 

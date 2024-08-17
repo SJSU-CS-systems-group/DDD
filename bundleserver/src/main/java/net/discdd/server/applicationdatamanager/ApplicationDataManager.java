@@ -3,19 +3,16 @@ package net.discdd.server.applicationdatamanager;
 import net.discdd.model.ADU;
 import net.discdd.model.UncompressedPayload;
 import net.discdd.server.config.BundleServerConfig;
-import net.discdd.server.repository.LargestBundleIdReceivedRepository;
-import net.discdd.server.repository.LastBundleIdSentRepository;
+import net.discdd.server.repository.BundleMetadataRepository;
+import net.discdd.server.repository.ClientBundleCountersRepository;
 import net.discdd.server.repository.RegisteredAppAdapterRepository;
 import net.discdd.server.repository.SentAduDetailsRepository;
-import net.discdd.server.repository.SentBundleDetailsRepository;
-import net.discdd.server.repository.entity.LargestBundleIdReceived;
-import net.discdd.server.repository.entity.LastBundleIdSent;
+import net.discdd.server.repository.entity.BundleMetadata;
+import net.discdd.server.repository.entity.ClientBundleCounters;
 import net.discdd.server.repository.entity.SentAduDetails;
-import net.discdd.server.repository.entity.SentBundleDetails;
 import net.discdd.utils.BundleUtils;
 import net.discdd.utils.StoreADUs;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,27 +33,24 @@ import static java.util.logging.Level.INFO;
 public class ApplicationDataManager {
     private static final Logger logger = Logger.getLogger(ApplicationDataManager.class.getName());
     private final BundleServerConfig bundleServerConfig;
-    private final LastBundleIdSentRepository lastBundleIdSentRepository;
-    private final LargestBundleIdReceivedRepository largestBundleIdReceivedRepository;
-    private final SentBundleDetailsRepository sentBundleDetailsRepository;
     private final SentAduDetailsRepository sentAduDetailsRepository;
+    private final BundleMetadataRepository bundleMetadataRepository;
     private final RegisteredAppAdapterRepository registeredAppAdapterRepository;
+    private final ClientBundleCountersRepository clientBundleCountersRepository;
     AduDeliveredListener aduDeliveredListener;
     private final StoreADUs receiveADUsStorage;
     private final StoreADUs sendADUsStorage;
 
     public ApplicationDataManager(AduStores aduStores, AduDeliveredListener aduDeliveredListener,
-                                  LastBundleIdSentRepository lastBundleIdSentRepository,
-                                  LargestBundleIdReceivedRepository largestBundleIdReceivedRepository,
-                                  SentBundleDetailsRepository sentBundleDetailsRepository,
                                   SentAduDetailsRepository sentAduDetailsRepository,
+                                    BundleMetadataRepository bundleMetadataRepository,
                                   RegisteredAppAdapterRepository registeredAppAdapterRepository,
+                                  ClientBundleCountersRepository clientBundleCountersRepository,
                                   BundleServerConfig bundleServerConfig) {
         this.aduDeliveredListener = aduDeliveredListener;
-        this.lastBundleIdSentRepository = lastBundleIdSentRepository;
-        this.largestBundleIdReceivedRepository = largestBundleIdReceivedRepository;
-        this.sentBundleDetailsRepository = sentBundleDetailsRepository;
+        this.clientBundleCountersRepository = clientBundleCountersRepository;
         this.sentAduDetailsRepository = sentAduDetailsRepository;
+        this.bundleMetadataRepository = bundleMetadataRepository;
         this.bundleServerConfig = bundleServerConfig;
         this.registeredAppAdapterRepository = registeredAppAdapterRepository;
         this.sendADUsStorage = aduStores.getSendADUsStorage();
@@ -67,7 +61,6 @@ public class ApplicationDataManager {
         return registeredAppAdapterRepository.findAllAppIds().stream().toList();
     }
 
-    @Transactional
     public void processAcknowledgement(String clientId, String bundleId) throws IOException {
         if ("HB".equals(bundleId)) {
             return;
@@ -76,8 +69,8 @@ public class ApplicationDataManager {
         List<SentAduDetails> sentAduDetailsList = this.sentAduDetailsRepository.findByBundleId(bundleId);
 
         for (SentAduDetails sentAduDetails : sentAduDetailsList) {
-            String appId = sentAduDetails.getAppId();
-            Long lastAduIdForAppId = sentAduDetails.getAduIdRangeEnd();
+            String appId = sentAduDetails.appId;
+            Long lastAduIdForAppId = sentAduDetails.aduIdRangeEnd;
             sendADUsStorage.deleteAllFilesUpTo(clientId, appId, lastAduIdForAppId);
             logger.log(INFO, "[DataStoreAdaptor] Deleted ADUs for application " + appId + " with id upto " +
                     lastAduIdForAppId);
@@ -89,16 +82,10 @@ public class ApplicationDataManager {
                 " corresponding to client " + clientId);
     }
 
-    public void storeReceivedADUs(String clientId, String bundleId, List<ADU> adus) throws IOException {
+    public void storeReceivedADUs(String clientId, String bundleId, long receivedBundleCounter, List<ADU> adus) throws IOException {
         logger.log(INFO, "[ApplicationDataManager] Store ADUs");
 
-        LargestBundleIdReceived largestBundleIdReceived = new LargestBundleIdReceived(clientId, bundleId);
-        try {
-            this.largestBundleIdReceivedRepository.save(largestBundleIdReceived);
-        } catch (Exception e) {
-            logger.log(INFO, "[StateManager] Failed to store largest bundle id received for client " + clientId, e);
-            return;
-        }
+        updateLastReceivedCounter(clientId, receivedBundleCounter, bundleId);
         logger.log(INFO, "[StateManager] Registered bundle identifier: " + bundleId + " of client " + clientId);
         var affectedAppIds = new HashSet<String>();
 
@@ -110,6 +97,28 @@ public class ApplicationDataManager {
             if (addedFile != null) affectedAppIds.add(adu.getAppId());
         }
         aduDeliveredListener.onAduDelivered(clientId, affectedAppIds);
+    }
+
+    private void updateLastReceivedCounter(String clientId, long receivedBundleCounter, String receivedBundleId) {
+        var counters = getBundleCountersForClient(clientId);
+        if (counters.lastReceivedBundleCounter < receivedBundleCounter) {
+            counters.lastReceivedBundleCounter = receivedBundleCounter;
+            counters.lastReceivedBundleId = receivedBundleId;
+            clientBundleCountersRepository.save(counters);
+        }
+    }
+
+    public ClientBundleCounters getBundleCountersForClient(String clientId) {
+        return clientBundleCountersRepository.findById(clientId).orElse(new ClientBundleCounters(clientId, 0, "", 0, ""));
+    }
+
+    private void updateLastSentCounter(String clientId, long sentBundleCounter, String sentBundleId) {
+        var counters = getBundleCountersForClient(clientId);
+        if (counters.lastSentBundleCounter < sentBundleCounter) {
+            counters.lastSentBundleCounter = sentBundleCounter;
+            counters.lastSentBundleId = sentBundleId;
+            clientBundleCountersRepository.save(counters);
+        }
     }
 
     static class SizeLimiter implements Predicate<Long> {
@@ -142,60 +151,59 @@ public class ApplicationDataManager {
         return file.isFile() ? new ADU(file, appId, aduId, file.length(), clientId) : null;
     }
 
-    public void notifyBundleGenerated(String clientId, UncompressedPayload bundle) {
-        LastBundleIdSent lastBundleIdSent = new LastBundleIdSent(clientId, bundle.getBundleId());
-        lastBundleIdSentRepository.save(lastBundleIdSent);
-        Optional<SentBundleDetails> opt = sentBundleDetailsRepository.findByBundleId(bundle.getBundleId());
-        if (opt.isPresent()) {
-            return;
-        }
-        SentBundleDetails sentBundleDetails = new SentBundleDetails();
-        sentBundleDetails.setAckedBundleId(bundle.getAckRecord().getBundleId());
-        sentBundleDetails.setClientId(clientId);
-        sentBundleDetails.setBundleId(bundle.getBundleId());
-        sentBundleDetailsRepository.save(sentBundleDetails);
+    /**
+     * Generate a new bundle and return the newly generated encrypted bundleId.
+     */
+    public void registerNewBundleId(String clientId, String encryptedBundleId, long bundleCounter, long ackCounter) {
+        var counters = getBundleCountersForClient(clientId);
+        counters.lastSentBundleId = encryptedBundleId;
+        counters.lastSentBundleCounter = bundleCounter;
+        clientBundleCountersRepository.save(counters);
+        bundleMetadataRepository.save(new BundleMetadata(encryptedBundleId, bundleCounter, clientId, ackCounter));
+    }
 
-        Map<String, Long[]> aduRangeMap = new HashMap<>();
-        for (ADU adu : bundle.getADUs()) {
-            Long[] entry = null;
-            if (aduRangeMap.containsKey(adu.getAppId())) {
-                Long[] minmax = aduRangeMap.get(adu.getAppId());
-                minmax[0] = Math.min(minmax[0], adu.getADUId());
-                minmax[1] = Math.max(minmax[1], adu.getADUId());
-                entry = minmax;
-            } else {
-                entry = new Long[] { adu.getADUId(), adu.getADUId() };
-            }
-            aduRangeMap.put(adu.getAppId(), entry);
+    /**
+     * Check the last sent bundle against the current outgoing data to see if a new bundle is needed.
+     */
+    public boolean newDataToSend(String lastBundleSent) {
+        var bundleMetadata = bundleMetadataRepository.findById(lastBundleSent);
+        if (bundleMetadata.isEmpty()) {
+            return true;
         }
+        var clientId = bundleMetadata.get().clientId;
+        var details = sentAduDetailsRepository.findByBundleId(lastBundleSent);
+        var lastAdus = new HashMap<String, Long>();
+        details.forEach(d -> lastAdus.put(d.appId, d.aduIdRangeEnd));
+        return registeredAppAdapterRepository.findAllAppIds().stream().anyMatch(app -> {
+            var lastStoredAdu = sendADUsStorage.getLastADUIdAdded(clientId, app);
+            return lastStoredAdu > lastAdus.getOrDefault(app, 0L);
+        });
+    }
 
-        for (String appId : aduRangeMap.keySet()) {
-            Long[] minmax = aduRangeMap.get(appId);
-            SentAduDetails sentAduDetails = new SentAduDetails(bundle.getBundleId(), appId, minmax[0], minmax[1]);
-            sentAduDetailsRepository.save(sentAduDetails);
+    public boolean newAckNeeded(String lastSentBundleId) {
+        var bundleDetails = bundleMetadataRepository.findById(lastSentBundleId);
+        if (bundleDetails.isEmpty()) {
+            return false;
         }
+        var counters = getBundleCountersForClient(bundleDetails.get().clientId);
+        return bundleDetails.get().ackCounter < counters.lastReceivedBundleCounter;
     }
 
     public Optional<UncompressedPayload.Builder> getLastSentBundlePayloadBuilder(String clientId) {
+        var counters = getBundleCountersForClient(clientId);
         Map<String, Object> ret = new HashMap<>();
-        Optional<LastBundleIdSent> opt = lastBundleIdSentRepository.findByClientId(clientId);
-        if (opt.isPresent()) {
-            String bundleId = opt.get().getBundleId();
-            Optional<SentBundleDetails> bundleDetailsOpt = sentBundleDetailsRepository.findByBundleId(bundleId);
+         if (counters.lastSentBundleId != null && !counters.lastSentBundleId.isEmpty()) {
+            ret.put("bundle-id", counters.lastSentBundleId);
+            ret.put("acknowledgement", counters.lastReceivedBundleId);
 
-            SentBundleDetails bundleDetails =
-                    bundleDetailsOpt.get(); // assume this is guaranteed to be present. TODO: add FK on LastBundleIdSent
-            // to SentBundleDetails
-            ret.put("bundle-id", bundleId);
-            ret.put("acknowledgement", bundleDetails.getAckedBundleId());
-
-            List<SentAduDetails> bundleAduDetailsList = sentAduDetailsRepository.findByBundleId(bundleId);
+            List<SentAduDetails> bundleAduDetailsList = sentAduDetailsRepository.findByBundleId(
+                    counters.lastSentBundleId);
 
             Map<String, List<ADU>> aduMap = new HashMap<>();
             for (SentAduDetails bundleAduDetails : bundleAduDetailsList) {
-                Long rangeStart = bundleAduDetails.getAduIdRangeStart();
-                Long rangeEnd = bundleAduDetails.getAduIdRangeEnd();
-                String appId = bundleAduDetails.getAppId();
+                Long rangeStart = bundleAduDetails.aduIdRangeStart;
+                Long rangeEnd = bundleAduDetails.aduIdRangeEnd;
+                String appId = bundleAduDetails.appId;
                 List<ADU> aduList = new ArrayList<>();
                 for (Long aduId = rangeStart; aduId <= rangeEnd; aduId++) {
                     ADU adu = fetchSentADU(clientId, appId, aduId);
@@ -208,15 +216,6 @@ public class ApplicationDataManager {
             }
         }
         return BundleUtils.bundleStructureToBuilder(ret);
-    }
-
-    public String getLargestRecvdBundleId(String clientId) {
-        return largestBundleIdReceivedRepository.findByClientId(clientId).map(LargestBundleIdReceived::getBundleId)
-                .orElse(null);
-    }
-
-    public String getClientIdFromSentBundleId(String bundleId) {
-        return sentBundleDetailsRepository.findByBundleId(bundleId).map(SentBundleDetails::getClientId).orElse(null);
     }
 
     public interface AduDeliveredListener {

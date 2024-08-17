@@ -17,13 +17,10 @@ import net.discdd.utils.Constants;
 import net.discdd.utils.DDDJarFileCreator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Configuration;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
@@ -176,14 +173,8 @@ public class End2EndTest {
 
         // add the records to the inner jar
         Acknowledgement ackRecord = new Acknowledgement("HB");
-        innerJar.createEntry("/acknowledgement.txt", ackRecord.getBundleId().getBytes());
-        innerJar.createEntry("/routing.metadata", "{}".getBytes());
-
-        // TODO: ***
-        // TODO: *** there is ALOT unexpected here! the server does NOT expect and .adu suffix. the client is also
-        //  putting the appId before
-        // TODO: *** the ADU id, but the server ignores what is before the -.
-        // TODO: ***
+        innerJar.createEntry("acknowledgement.txt", ackRecord.getBundleId().getBytes());
+        innerJar.createEntry("routing.metadata", "{}".getBytes());
 
         for (var adu : adus) {
             logger.info("Adding ADU " + adu);

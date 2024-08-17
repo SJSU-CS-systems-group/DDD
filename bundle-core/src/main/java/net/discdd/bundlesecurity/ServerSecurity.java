@@ -23,8 +23,6 @@ import org.whispersystems.libsignal.state.SessionState;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.util.guava.Optional;
 
-import java.io.DataInputStream;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -33,12 +31,8 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
@@ -274,7 +268,7 @@ public class ServerSecurity {
         RatchetingSession.initializeSession(serverSessionState, parameters);
     }
 
-    private ClientSession getClientSession(String clientID) {
+    public ClientSession getClientSession(String clientID) {
         if (clientMap.containsKey(clientID)) {
             return clientMap.get(clientID);
         } else {
@@ -377,57 +371,16 @@ public class ServerSecurity {
         return decryptedFile;
     }
 
-    public Path[] encrypt(Path toBeEncPath, Path encPath, String bundleID, String clientID) throws IOException,
-            NoSuchAlgorithmException, InvalidKeyException, InvalidClientSessionException {
+    public CiphertextMessage encrypt(String clientID, byte[] data) throws IOException, NoSuchAlgorithmException, InvalidKeyException {
         /* get Client Session */
         ClientSession client = getClientSessionFromFile(clientRootPath.resolve(clientID));
         if (client == null) {
-            throw new InvalidClientSessionException("Failed to get client [" + clientID + "]",
-                                                    new Throwable("Client not found"));
+            throw new InvalidKeyException("Failed to get client [" + clientID + "]", null);
         }
 
-        var bundlePath = encPath.resolve(bundleID);
-        var payloadPath = bundlePath.resolve(SecurityUtils.PAYLOAD_DIR);
-        var signPath = bundlePath.resolve(SecurityUtils.SIGNATURE_DIR);
-        List<Path> returnPaths = new ArrayList<>();
-        int len = 0;
-
-        /* Create Directory if it does not exist */
-        bundlePath.toFile().mkdirs();
-        payloadPath.toFile().mkdirs();
-        signPath.toFile().mkdirs();
-
-        DataInputStream inputStream = new DataInputStream(new FileInputStream(toBeEncPath.toFile()));
-        byte[] chunk = new byte[SecurityUtils.CHUNKSIZE];
-
-        for (int i = 1; (len = inputStream.read(chunk)) != -1; i++) {
-            var encBundlePath = payloadPath.resolve(SecurityUtils.PAYLOAD_FILENAME + i);
-            var signBundlePath =
-                    signPath.resolve(SecurityUtils.PAYLOAD_FILENAME + i + SecurityUtils.SIGNATURE_FILENAME);
-
-            if (chunk.length != len) {
-                chunk = Arrays.copyOf(chunk, len);
-            }
-
-            /* Create Signature with plaintext*/
-            createSignature(chunk, signBundlePath);
-            /* Encrypt File */
-            CiphertextMessage cipherText = client.cipherSession.encrypt(chunk);
-            updateSessionRecord(client);
-
-            Files.write(encBundlePath, cipherText.serialize());
-        }
-        inputStream.close();
-
-        /* Create Encryption Headers */
-        Path[] clientKeyPaths = createEncryptionHeader(encPath, bundleID, client);
-
-        returnPaths.add(payloadPath);
-        returnPaths.add(signPath);
-
-        Collections.addAll(returnPaths, clientKeyPaths);
-
-        return returnPaths.toArray(new Path[returnPaths.size()]);
+        CiphertextMessage cipherText = client.cipherSession.encrypt(data);
+        updateSessionRecord(client);
+        return cipherText;
     }
 
     public Path[] createEncryptionHeader(Path encPath, String bundleID, ClientSession client) throws IOException {
@@ -458,6 +411,13 @@ public class ServerSecurity {
 
         return SecurityUtils.encryptAesCbcPkcs5(sharedSecret, bundleID);
     }
+
+
+    public String createEncryptedBundleId(String clientId, long bundleCounter, boolean downstream) throws InvalidClientIDException, GeneralSecurityException, InvalidKeyException {
+        var bundleId = BundleIDGenerator.generateBundleID(clientId, bundleCounter, downstream);
+        return encryptBundleID(bundleId, clientId);
+    }
+
 
     public void createBundleIDFile(String bundleID, ClientSession client, Path bundlePath) throws IOException {
         var bundleIDPath = bundlePath.resolve(SecurityUtils.BUNDLEID_FILENAME);
@@ -497,8 +457,7 @@ public class ServerSecurity {
         return clientRootPath;
     }
 
-    public int isNewerBundle(Path bundlePath, String lastBundleID) throws IOException, GeneralSecurityException,
-            InvalidKeyException {
+    public long getCounterFromBundlePath(Path bundlePath, boolean direction) throws IOException, InvalidKeyException, GeneralSecurityException {
         var bundleIDPath = bundlePath.resolve(SecurityUtils.BUNDLEID_FILENAME);
         byte[] encryptedBundleID = Files.readAllBytes(bundleIDPath);
         String receivedBundleID, latestBundleID;
@@ -511,18 +470,16 @@ public class ServerSecurity {
 
         byte[] bundleIDbytes =
                 SecurityUtils.decryptAesCbcPkcs5(sharedSecret, new String(encryptedBundleID, StandardCharsets.UTF_8));
-        receivedBundleID = new String(bundleIDbytes, StandardCharsets.UTF_8);
-        bundleIDbytes = SecurityUtils.decryptAesCbcPkcs5(sharedSecret, lastBundleID);
-        latestBundleID = new String(bundleIDbytes, StandardCharsets.UTF_8);
 
-        return BundleIDGenerator.compareBundleIDs(receivedBundleID, latestBundleID, BundleIDGenerator.UPSTREAM);
+        receivedBundleID = new String(bundleIDbytes, StandardCharsets.UTF_8);
+        return BundleIDGenerator.getCounterFromBundleID(receivedBundleID, direction);
     }
 
     public String getServerId() throws NoSuchAlgorithmException {
         return SecurityUtils.generateID(ourIdentityKeyPair.getPublicKey().serialize());
     }
 
-    public byte[] getIdentityPublicKey() {
-        return ourIdentityKeyPair.getPublicKey().serialize();
+    public IdentityKey getIdentityPublicKey() {
+        return ourIdentityKeyPair.getPublicKey();
     }
 }

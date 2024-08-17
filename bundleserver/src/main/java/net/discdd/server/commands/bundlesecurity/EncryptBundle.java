@@ -1,3 +1,4 @@
+/*
 package net.discdd.server.commands.bundlesecurity;
 
 import net.discdd.bundlesecurity.ServerSecurity;
@@ -62,3 +63,4 @@ public class EncryptBundle implements Callable<Void> {
         return null;
     }
 }
+*/
