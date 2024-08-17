@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
+import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.model.ADU;
 import net.discdd.model.Acknowledgement;
 import net.discdd.model.Bundle;
@@ -12,15 +13,21 @@ import net.discdd.model.EncryptedPayload;
 import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
 import net.discdd.model.UncompressedPayload;
+import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.ecc.ECPublicKey;
+import org.whispersystems.libsignal.protocol.CiphertextMessage;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -32,6 +39,9 @@ import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
+import static net.discdd.bundlesecurity.SecurityUtils.PAYLOAD_DIR;
+import static net.discdd.bundlesecurity.SecurityUtils.PAYLOAD_FILENAME;
+import static net.discdd.bundlesecurity.SecurityUtils.createEncodedPublicKeyBytes;
 
 public class BundleUtils {
     private static final Logger logger = Logger.getLogger(BundleUtils.class.getName());
@@ -295,4 +305,54 @@ public class BundleUtils {
         }
     }
 
+    public static void createBundlePayloadForAdus(List<ADU> adus, String ackedEncryptedBundleId, OutputStream outputStream) throws IOException, NoSuchAlgorithmException {
+        DDDJarFileCreator innerJar = new DDDJarFileCreator(outputStream);
+
+        // add the records to the inner jar
+        innerJar.createEntry("acknowledgement.txt", ackedEncryptedBundleId.getBytes());
+        innerJar.createEntry("routing.metadata", "{}".getBytes());
+
+        for (var adu : adus) {
+            try (var os = innerJar.createEntry(
+                    Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, adu.getAppId(),
+                                          Long.toString(adu.getADUId()))); var aos = Files.newInputStream(
+                    adu.getSource().toPath(), StandardOpenOption.READ)) {
+                aos.transferTo(os);
+            }
+        }
+        innerJar.close();
+    }
+
+    public static void encryptPayloadAndCreateBundle(Encrypter payloadEncryptor,
+                                                        ECPublicKey clientIdentityPublicKey,
+                                                        ECPublicKey clientBaseKeyPairPublicKey,
+                                                        ECPublicKey serverIdentityPublicKey,
+                                                        String encryptedBundleId,
+                                                        byte[] payloadBytes,
+                                                        OutputStream outputStream)
+            throws IOException, NoSuchAlgorithmException, InvalidKeyException {
+        DDDJarFileCreator outerJar = new DDDJarFileCreator(outputStream);
+
+        // encrypt the payload
+        CiphertextMessage cipherTextMessage = payloadEncryptor.encrypt(payloadBytes);
+        var cipherTextBytes = cipherTextMessage.serialize();
+
+        // store the encrypted payload
+        outerJar.createEntry(Path.of(PAYLOAD_DIR, PAYLOAD_FILENAME), cipherTextBytes);
+
+        // store the bundleId
+        outerJar.createEntry(SecurityUtils.BUNDLEID_FILENAME, encryptedBundleId.getBytes());
+
+        // store the keys
+        outerJar.createEntry(SecurityUtils.CLIENT_IDENTITY_KEY, createEncodedPublicKeyBytes(clientIdentityPublicKey));
+        outerJar.createEntry(SecurityUtils.CLIENT_BASE_KEY, createEncodedPublicKeyBytes(clientBaseKeyPairPublicKey));
+        outerJar.createEntry(SecurityUtils.SERVER_IDENTITY_KEY, createEncodedPublicKeyBytes(serverIdentityPublicKey));
+
+        // bundle is ready
+        outerJar.close();
+    }
+
+    public interface Encrypter {
+        CiphertextMessage encrypt(byte[] payload) throws IOException, NoSuchAlgorithmException, InvalidKeyException;
+    }
 }

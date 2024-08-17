@@ -10,7 +10,6 @@ import net.discdd.grpc.BundleSender;
 import net.discdd.grpc.GetRecencyBlobResponse;
 import net.discdd.grpc.RecencyBlob;
 import net.discdd.grpc.RecencyBlobStatus;
-import net.discdd.model.ADU;
 import net.discdd.model.Acknowledgement;
 import net.discdd.model.Bundle;
 import net.discdd.model.Payload;
@@ -24,13 +23,10 @@ import net.discdd.server.config.BundleServerConfig;
 import net.discdd.utils.AckRecordUtils;
 import net.discdd.utils.BundleUtils;
 import net.discdd.utils.Constants;
-import net.discdd.utils.DDDJarFileCreator;
 import org.apache.commons.io.FileUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.ecc.ECPublicKey;
-import org.whispersystems.libsignal.protocol.CiphertextMessage;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -39,7 +35,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -55,9 +50,6 @@ import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
-import static net.discdd.bundlesecurity.SecurityUtils.PAYLOAD_DIR;
-import static net.discdd.bundlesecurity.SecurityUtils.PAYLOAD_FILENAME;
-import static net.discdd.bundlesecurity.SecurityUtils.createEncodedPublicKeyBytes;
 import static net.discdd.grpc.BundleSenderType.CLIENT;
 import static net.discdd.grpc.BundleSenderType.TRANSPORT;
 
@@ -261,10 +253,19 @@ public class BundleTransmission {
         bundleSecurity.getIdentityPublicKey();
         var clientSession = serverSecurity.getClientSession(clientId);
         var adus = applicationDataManager.fetchADUsToSend(0, clientId);
-        createBundleForAdus(adus, counts.lastReceivedBundleId, bytes -> serverSecurity.encrypt(clientId, bytes),
-                            clientSession.IdentityKey.getPublicKey(), clientSession.BaseKey,
-                            serverSecurity.getIdentityPublicKey().getPublicKey(), encryptedBundleId,
-                            getPathToSendDirectory());
+        var byteArrayOsForPayload = new ByteArrayOutputStream();
+        BundleUtils.createBundlePayloadForAdus(adus, counts.lastReceivedBundleId, byteArrayOsForPayload);
+        try (var bundleOutputStream = Files.newOutputStream(getPathForBundleToSend(encryptedBundleId),
+                                                            StandardOpenOption.CREATE,
+                                                            StandardOpenOption.TRUNCATE_EXISTING)) {
+            BundleUtils.encryptPayloadAndCreateBundle(bytes -> serverSecurity.encrypt(clientId, bytes),
+                                                      clientSession.IdentityKey.getPublicKey(),
+                                                      clientSession.BaseKey,
+                                                      serverSecurity.getIdentityPublicKey().getPublicKey(),
+                                                      encryptedBundleId,
+                                                      byteArrayOsForPayload.toByteArray(),
+                                                      bundleOutputStream);
+        }
         return encryptedBundleId;
     }
 
@@ -328,59 +329,4 @@ public class BundleTransmission {
                                      new ArrayList<>(deletionSet));
     }
 
-    public interface Encrypter {
-        CiphertextMessage encrypt(byte[] payload) throws IOException, NoSuchAlgorithmException, InvalidKeyException;
-    }
-
-    public static Path createBundleForAdus(List<ADU> adus, String ackedEncryptedBundleId,
-                                              Encrypter payloadEncryptor,
-                                              ECPublicKey clientIdentityPublicKey,
-                                              ECPublicKey clientBaseKeyPairPublicKey,
-                                              ECPublicKey serverIdentityPublicKey,
-                                              String encryptedBundleId, Path targetDir) throws IOException, NoSuchAlgorithmException, InvalidKeyException {
-        Path bundleJarPath = targetDir.resolve(encryptedBundleId);
-
-        // First create the inner jar
-        ByteArrayOutputStream payload = new ByteArrayOutputStream();
-        DDDJarFileCreator innerJar = new DDDJarFileCreator(payload);
-
-        // add the records to the inner jar
-        innerJar.createEntry("acknowledgement.txt", ackedEncryptedBundleId.getBytes());
-        innerJar.createEntry("routing.metadata", "{}".getBytes());
-
-        for (var adu : adus) {
-            try (var os = innerJar.createEntry(
-                    java.nio.file.Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, adu.getAppId(),
-                                          Long.toString(adu.getADUId()))); var aos = Files.newInputStream(
-                    adu.getSource().toPath(), StandardOpenOption.READ)) {
-                aos.transferTo(os);
-            }
-        }
-        innerJar.close();
-
-        // create the signed outer jar
-        DDDJarFileCreator outerJar = new DDDJarFileCreator(Files.newOutputStream(bundleJarPath));
-        byte[] payloadBytes = payload.toByteArray();
-
-        // encrypt the payload
-        CiphertextMessage cipherTextMessage = payloadEncryptor.encrypt(payloadBytes);
-        var cipherTextBytes = cipherTextMessage.serialize();
-
-        // store the encrypted payload
-        outerJar.createEntry(java.nio.file.Path.of(PAYLOAD_DIR, PAYLOAD_FILENAME), cipherTextBytes);
-
-        // store the bundleId
-        outerJar.createEntry(SecurityUtils.BUNDLEID_FILENAME, encryptedBundleId.getBytes());
-
-        // store the keys
-        outerJar.createEntry(SecurityUtils.CLIENT_IDENTITY_KEY,
-                             createEncodedPublicKeyBytes(clientIdentityPublicKey));
-        outerJar.createEntry(SecurityUtils.CLIENT_BASE_KEY, createEncodedPublicKeyBytes(clientBaseKeyPairPublicKey));
-        outerJar.createEntry(SecurityUtils.SERVER_IDENTITY_KEY,
-                             createEncodedPublicKeyBytes(serverIdentityPublicKey));
-
-        // bundle is ready
-        outerJar.close();
-        return bundleJarPath;
-    }
 }

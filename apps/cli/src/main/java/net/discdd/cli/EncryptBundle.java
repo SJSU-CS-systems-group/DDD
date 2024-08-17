@@ -1,12 +1,14 @@
-/*
 package net.discdd.cli;
 
 import net.discdd.bundlesecurity.ServerSecurity;
+import net.discdd.utils.BundleUtils;
 import picocli.CommandLine;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.concurrent.Callable;
 import java.util.logging.Logger;
 
@@ -49,8 +51,13 @@ public class EncryptBundle implements Callable<Void> {
         Path path = Paths.get(bundlePath);
         String bundleId = path.getFileName().toString().replace(".decrypted", "");
 
-        try {
-            Path[] paths = serverSecurity.encrypt(Paths.get(bundlePath), Paths.get(encPath), bundleId, clientId);
+        try (var encryptedBundleOs = Files.newOutputStream(path, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+            var clientSession = serverSecurity.getClientSession(clientId);
+            BundleUtils.encryptPayloadAndCreateBundle(bytes -> serverSecurity.encrypt(clientId, bytes),
+                                                      clientSession.IdentityKey.getPublicKey(),
+            clientSession.BaseKey,
+            serverSecurity.getIdentityPublicKey().getPublicKey(),
+            bundleId, Files.readAllBytes(path), encryptedBundleOs);
             logger.log(INFO, "Finished encrypting " + bundlePath);
         } catch (Exception e) {
             e.printStackTrace();
@@ -58,4 +65,3 @@ public class EncryptBundle implements Callable<Void> {
         return null;
     }
 }
- */
