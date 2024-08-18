@@ -54,6 +54,5 @@ class EncryptBundleTest {
         System.out.println("Standard Out: " + outText);
         System.out.println("Standard Error: " + errText);
         assertEquals(expectedOutput, TestUtils.trimMessage(outText + errText));
-        ;
     }
 }

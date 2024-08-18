@@ -57,15 +57,14 @@ import static net.discdd.grpc.BundleSenderType.TRANSPORT;
 public class BundleTransmission {
 
     private static final Logger logger = Logger.getLogger(BundleTransmission.class.getName());
-    private static final int WINDOW_LENGTH = 3;
+    public static final int WINDOW_LENGTH = 3;
     private final BundleServerConfig config;
     private final BundleSecurity bundleSecurity;
     private final ApplicationDataManager applicationDataManager;
     private final BundleRouting bundleRouting;
     private final ServerWindowService serverWindowService;
-    SecureRandom secureRandom = new SecureRandom();
     private final ServerSecurity serverSecurity;
-    public static final int WINDOW_LENGTH = 3;
+    SecureRandom secureRandom = new SecureRandom();
 
     public BundleTransmission(BundleSecurity bundleSecurity, ApplicationDataManager applicationDataManager,
                               BundleRouting bundleRouting, BundleServerConfig config,
@@ -105,8 +104,9 @@ public class BundleTransmission {
                 uncompressedBundle.getSource().toPath().resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
         var counters = this.applicationDataManager.getBundleCountersForClient(clientId);
 
-        var receivedBundleCounter = this.bundleSecurity.getCounterFromBundlePath(uncompressedBundle.getSource().toPath(),
-                                                                                 BundleIDGenerator.UPSTREAM);
+        var receivedBundleCounter =
+                this.bundleSecurity.getCounterFromBundlePath(uncompressedBundle.getSource().toPath(),
+                                                             BundleIDGenerator.UPSTREAM);
 
         if (receivedBundleCounter <= counters.lastReceivedBundleCounter) {
             logger.log(WARNING,
@@ -221,15 +221,6 @@ public class BundleTransmission {
         return this.applicationDataManager.getBundleCountersForClient(clientId).lastSentBundleId;
     }
 
-    public String generateBundleId(String clientId) throws SQLException, InvalidClientIDException,
-            GeneralSecurityException, InvalidKeyException {
-        return this.serverWindowService.getCurrentBundleID(clientId);
-    }
-
-    public long getCounterFromEncryptedBundleId(String encryptedBundleId, String clientId, boolean direction) throws InvalidClientIDException, GeneralSecurityException, InvalidKeyException {
-        return this.serverWindowService.getCounterFromBundleID(encryptedBundleId, clientId, direction);
-    }
-
     public String generateBundleForClient(BundleSender sender, String clientId) throws InvalidClientIDException,
             GeneralSecurityException, InvalidKeyException, IOException {
         logger.log(INFO, "[BundleTransmission] Processing bundle generation request for client " + clientId);
@@ -259,11 +250,9 @@ public class BundleTransmission {
                                                             StandardOpenOption.CREATE,
                                                             StandardOpenOption.TRUNCATE_EXISTING)) {
             BundleUtils.encryptPayloadAndCreateBundle(bytes -> serverSecurity.encrypt(clientId, bytes),
-                                                      clientSession.IdentityKey.getPublicKey(),
-                                                      clientSession.BaseKey,
+                                                      clientSession.IdentityKey.getPublicKey(), clientSession.BaseKey,
                                                       serverSecurity.getIdentityPublicKey().getPublicKey(),
-                                                      encryptedBundleId,
-                                                      byteArrayOsForPayload.toByteArray(),
+                                                      encryptedBundleId, byteArrayOsForPayload.toByteArray(),
                                                       bundleOutputStream);
         }
         return encryptedBundleId;
@@ -295,9 +284,6 @@ public class BundleTransmission {
         return config.getBundleTransmission().getBundleReceivedLocation();
     }
 
-    public record BundlesToExchange(List<String> bundlesToDownload, List<String> bundlesToUpload,
-                                    List<String> bundlesToDelete) {}
-
     public BundlesToExchange inventoryBundlesForTransmission(BundleSender sender, Set<String> bundleIdsPresent) {
         List<String> clientIds = CLIENT == sender.getType() ? Collections.singletonList(sender.getId()) :
                 this.bundleRouting.getClientsForTransportId(sender.getId());
@@ -324,9 +310,10 @@ public class BundleTransmission {
         }
         bundlesToSend.forEach(deletionSet::remove);
 
-        return new BundlesToExchange(bundlesToSend,
-                                     bundleIdsPresent.stream().toList(),
-                                     new ArrayList<>(deletionSet));
+        return new BundlesToExchange(bundlesToSend, bundleIdsPresent.stream().toList(), new ArrayList<>(deletionSet));
     }
+
+    public record BundlesToExchange(List<String> bundlesToDownload, List<String> bundlesToUpload,
+                                    List<String> bundlesToDelete) {}
 
 }
