@@ -1,7 +1,6 @@
 package net.discdd.app.cli;
 
 import com.github.stefanbirkner.systemlambda.SystemLambda;
-
 import net.discdd.cli.EncryptBundle;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,10 +8,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import picocli.CommandLine;
 
-import java.net.URISyntaxException;
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 
+import static net.discdd.app.cli.TestUtils.escapeBackslash;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,21 +37,23 @@ class EncryptBundleTest {
 
     @Test
     void testEncryptBundle() throws Exception {
-        appProps = TestUtils.createResource("bundle-server.bundle-store-root = " + baseDirPath + File.separator);
+        appProps = TestUtils.createResource(
+                "bundle-server.bundle-store-root = " + escapeBackslash(baseDirPath + File.separator));
         String expectedOutput = "Encrypting bundle\n" + "Finished encrypting\n";
         StringBuilder sb = new StringBuilder();
         String errText = SystemLambda.tapSystemErr(() -> {
             String outText = SystemLambda.tapSystemOutNormalized(() -> {
-                new CommandLine(new EncryptBundle()).execute("--decrypted-bundle=" + bundlePath,
+                new CommandLine(new EncryptBundle()).execute("--decrypted-bundle=" + escapeBackslash(bundlePath),
                                                              "--clientId=" + clientId,
-                                                             "--applicationYaml=" + applicationYml,
-                                                             "--appProps=" + appProps);
+                                                             "--applicationYaml=" + escapeBackslash(applicationYml),
+                                                             "--appProps=" + escapeBackslash(appProps));
             });
             sb.append(outText);
         });
         var outText = sb.toString();
+        System.out.println("Standard Out: " + outText);
         System.out.println("Standard Error: " + errText);
-        assertEquals(expectedOutput, TestUtils.trimMessage(outText));
-        assertEquals("", errText);
+        assertEquals(expectedOutput, TestUtils.trimMessage(outText + errText));
+        ;
     }
 }

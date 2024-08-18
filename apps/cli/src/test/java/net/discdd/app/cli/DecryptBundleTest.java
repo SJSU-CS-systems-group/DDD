@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
+import static net.discdd.app.cli.TestUtils.escapeBackslash;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @ExtendWith(MockitoExtension.class)
@@ -19,15 +20,17 @@ public class DecryptBundleTest {
     public String bundlePath;
     public String applicationYml;
     public String appProps;
-    public String expectedErrText = "net.discdd.bundlesecurity.SecurityUtils unzip\n" + "INFO: Unzipped to: \n" +
-            "net.discdd.bundlesecurity.ServerSecurity getClientSession\n" +
-            "SEVERE: [ServerSecurity]: Error Reading Session record from \n" + "Creating New Session Record!\n" +
-            "net.discdd.bundlesecurity.ServerSecurity getClientSession\n" +
-            "SEVERE: [ServerSecurity]: Error Reading Session record from \n" + "Creating New Session Record!\n" +
-            "net.discdd.bundlesecurity.ServerSecurity decrypt\n" + "INFO: \n" +
-            "net.discdd.bundlesecurity.ServerSecurity decrypt\n" + "WARNING: [ServerSecurity]:Verified Signature!\n" +
-            "net.discdd.bundlesecurity.SecurityUtils unzip\n" + "INFO: Unzipped to: \n";
-    public String expectedOutText = "Decrypting bundle\n" + "Finished decrypting \n";
+    public String expectedText = """
+            Decrypting bundle
+            Unzipped to
+            [ServerSecurity]: Error Reading
+            Creating New
+            [ServerSecurity]: Error Reading
+            Creating New
+            [ServerSecurity]:Verified Signature
+            Unzipped to
+            Finished decrypting
+            """;
     String baseDirPath;
 
     @BeforeEach
@@ -39,7 +42,8 @@ public class DecryptBundleTest {
         //creates temp directories
         baseDirPath = String.valueOf(TestUtils.makeDecryptsTempDirs());
         //create appProps
-        appProps = TestUtils.createResource("bundle-server.bundle-store-root = " + baseDirPath + File.separator);
+        appProps = TestUtils.createResource(
+                "bundle-server.bundle-store-root = " + escapeBackslash(baseDirPath + File.separator));
     }
 
     @Test
@@ -48,16 +52,16 @@ public class DecryptBundleTest {
         StringBuilder sb = new StringBuilder();
         String errText = SystemLambda.tapSystemErr(() -> {
             String outText = SystemLambda.tapSystemOutNormalized(() -> {
-                new CommandLine(new DecryptBundle()).execute("--bundle=" + bundlePath,
-                                                             "--applicationYaml=" + applicationYml,
-                                                             "--appProps=" + appProps);
+                new CommandLine(new DecryptBundle()).execute("--bundle=" + escapeBackslash(bundlePath),
+                                                             "--applicationYaml=" + escapeBackslash(applicationYml),
+                                                             "--appProps=" + escapeBackslash(appProps));
             });
             sb.append(outText);
         });
         var outText = sb.toString();
+        System.out.println("Standard Out: " + outText);
+        System.out.println("Standard Error: " + errText);
         //checks to see if command was successful
-        assertEquals(TestUtils.trimMessage(expectedOutText), TestUtils.trimMessage(outText));
-        assertEquals(expectedErrText, TestUtils.trimMessage(errText));
-
+        assertEquals(TestUtils.trimMessage(expectedText), TestUtils.trimMessage(outText + errText));
     }
 }

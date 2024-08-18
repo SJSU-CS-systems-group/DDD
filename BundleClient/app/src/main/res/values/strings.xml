@@ -39,4 +39,7 @@
     <string name="usb_device_not_connected">USB device not connected\n</string>
     <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">USB was connected, but /DDD_transport directory was not detected\n</string>
     <string name="usb_device_attached_checking_for_storage_volumes">USB device attached. Checking for storage volumes.\n</string>
+    <string name="transfers_in_the_background">Do transfers in the background</string>
+    <string name="PeerDetailedDescription">Last seen: %s\nLast exchange: %s\nLast Server Contact: %s\n</string>
+    <string name="never">Never</string>
 </resources>

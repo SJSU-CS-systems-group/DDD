@@ -1,13 +1,11 @@
 package net.discdd.cli;
 
 import net.discdd.bundlesecurity.ServerSecurity;
-import net.discdd.cli.CliUtils;
 import picocli.CommandLine;
 
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.concurrent.Callable;
 import java.util.logging.Logger;
 
@@ -15,6 +13,10 @@ import static java.util.logging.Level.INFO;
 
 @CommandLine.Command(name = "encrypt-bundle", description = "Encrypt bundle")
 public class EncryptBundle implements Callable<Void> {
+    static {
+        System.setProperty("java.util.logging.SimpleFormatter.format", "%5$s%6$s%n");
+    }
+
     private static final Logger logger = Logger.getLogger(EncryptBundle.class.getName());
 
     @CommandLine.Option(names = "--decrypted-bundle", required = true, description = "Bundle file path")
@@ -48,7 +50,6 @@ public class EncryptBundle implements Callable<Void> {
 
         try {
             Path[] paths = serverSecurity.encrypt(Paths.get(bundlePath), Paths.get(encPath), bundleId, clientId);
-            Arrays.stream(paths).forEach(System.out::println);
             logger.log(INFO, "Finished encrypting " + bundlePath);
         } catch (Exception e) {
             e.printStackTrace();

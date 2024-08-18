@@ -42,7 +42,6 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
@@ -323,8 +322,7 @@ public class ServerSecurity {
         /* get Client Session */
         ClientSession client = getClientSession(clientID);
         if (client == null) {
-            throw new InvalidClientIDException("Failed to get client [" + clientID + "] ",
-                                               new Throwable("Client not found"));
+            throw new InvalidClientIDException("Failed to get client [" + clientID + "]", null);
         }
 
         byte[] agreement =
@@ -346,7 +344,6 @@ public class ServerSecurity {
         /* Create Directory if it does not exist */
         decryptedPath.toFile().mkdirs();
 
-        logger.log(INFO, decryptedFile.toString());
         int fileCount = payloadPath.toFile().list().length;
 
         for (int i = 1; i <= fileCount; ++i) {

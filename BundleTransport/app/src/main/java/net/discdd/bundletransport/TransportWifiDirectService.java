@@ -20,6 +20,7 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import net.discdd.android.fragments.LogFragment;
 import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
 import net.discdd.wifidirect.WifiDirectManager;
 import net.discdd.wifidirect.WifiDirectStateListener;
@@ -47,12 +48,12 @@ public class TransportWifiDirectService extends Service
     private WifiDirectManager wifiDirectManager;
     private SharedPreferences sharedPreferences;
 
-    public TransportWifiDirectService() {
-    }
-
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
+        // TransportWifiDirectService doesn't use LogFragment directly, but we do want our
+        // logs to go to its logger
+        LogFragment.registerLoggerHandler();
         sharedPreferences = getSharedPreferences(WIFI_DIRECT_PREFERENCES, Context.MODE_PRIVATE);
         logger.log(INFO,
                    "Starting " + TransportWifiDirectService.class.getName() + " with flags " + flags + " and startId " +
