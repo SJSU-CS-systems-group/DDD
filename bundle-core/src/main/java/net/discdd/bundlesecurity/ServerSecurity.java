@@ -322,8 +322,7 @@ public class ServerSecurity {
         /* get Client Session */
         ClientSession client = getClientSession(clientID);
         if (client == null) {
-            throw new InvalidClientIDException("Failed to get client [" + clientID + "] ",
-                                               new Throwable("Client not found"));
+            throw new InvalidClientIDException("Failed to get client [" + clientID + "]", null);
         }
 
         byte[] agreement =
