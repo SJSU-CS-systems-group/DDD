@@ -88,24 +88,25 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
                 logger.log(WARNING, String.format("Client %s requested %s (%d) but the next id is %s (%d)",
                                                   BundleTransmission.bundleSenderToString(sender),
                                                   requestedEncryptedBundleId,
-                                                  bundleTransmission.getCounterFromEncryptedBundleId(requestedEncryptedBundleId, sender.getId(), BundleIDGenerator.DOWNSTREAM),
-                                                  currentBundleIdForClient,
-                                                  bundleTransmission.getCounterFromEncryptedBundleId(currentBundleIdForClient, sender.getId(),
-                                                                                                     BundleIDGenerator.DOWNSTREAM)));
+                                                  bundleTransmission.getCounterFromEncryptedBundleId(
+                                                          requestedEncryptedBundleId, sender.getId(),
+                                                          BundleIDGenerator.DOWNSTREAM), currentBundleIdForClient,
+                                                  bundleTransmission.getCounterFromEncryptedBundleId(
+                                                          currentBundleIdForClient, sender.getId(),
+                                                          BundleIDGenerator.DOWNSTREAM)));
                 return null;
             }
             var bundles = bundleTransmission.generateBundleForTransmission(sender, sender.getId(), null);
             if (bundles.getBundles().size() != 1) {
                 logger.log(WARNING, "Couldn't generated current bundle " + requestedEncryptedBundleId + " for " +
-                                   BundleTransmission.bundleSenderToString(sender));
+                        BundleTransmission.bundleSenderToString(sender));
                 return null;
             }
             var bundle = bundles.getBundles().get(0);
             String generatedBundleId = bundle.getBundleId();
             if (!generatedBundleId.equals(requestedEncryptedBundleId)) {
-                logger.log(WARNING,
-                           BundleTransmission.bundleSenderToString(sender) + " requested " + requestedEncryptedBundleId +
-                                   " but generated " + generatedBundleId);
+                logger.log(WARNING, BundleTransmission.bundleSenderToString(sender) + " requested " +
+                        requestedEncryptedBundleId + " but generated " + generatedBundleId);
                 return null;
             }
             return bundle.getBundle().getSource().toPath();
