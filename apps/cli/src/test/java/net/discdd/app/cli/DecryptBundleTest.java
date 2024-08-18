@@ -42,7 +42,8 @@ public class DecryptBundleTest {
         //creates temp directories
         baseDirPath = String.valueOf(TestUtils.makeDecryptsTempDirs());
         //create appProps
-        appProps = TestUtils.createResource("bundle-server.bundle-store-root = " + escapeBackslash(baseDirPath + File.separator));
+        appProps = TestUtils.createResource(
+                "bundle-server.bundle-store-root = " + escapeBackslash(baseDirPath + File.separator));
     }
 
     @Test
@@ -61,6 +62,6 @@ public class DecryptBundleTest {
         System.out.println("Standard Out: " + outText);
         System.out.println("Standard Error: " + errText);
         //checks to see if command was successful
-        assertEquals(TestUtils.trimMessage(expectedText), TestUtils.trimMessage(outText+errText));
-     }
+        assertEquals(TestUtils.trimMessage(expectedText), TestUtils.trimMessage(outText + errText));
+    }
 }

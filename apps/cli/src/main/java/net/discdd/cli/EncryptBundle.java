@@ -16,6 +16,7 @@ public class EncryptBundle implements Callable<Void> {
     static {
         System.setProperty("java.util.logging.SimpleFormatter.format", "%5$s%6$s%n");
     }
+
     private static final Logger logger = Logger.getLogger(EncryptBundle.class.getName());
 
     @CommandLine.Option(names = "--decrypted-bundle", required = true, description = "Bundle file path")

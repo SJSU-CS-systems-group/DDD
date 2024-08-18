@@ -288,7 +288,7 @@ public class BundleTransmission {
             isRetransmission = true;
 
         } else /* if (!generatedPayloadBuilder.getADUs()
-                .isEmpty()) */{ // to ensure we never send a pure ack bundle i.e. a bundle with no ADUs
+                .isEmpty()) */ { // to ensure we never send a pure ack bundle i.e. a bundle with no ADUs
             if (optional.isEmpty()) { // no bundle ever sent
                 bundleId = this.generateBundleId(clientId);
             } else {
@@ -321,9 +321,8 @@ public class BundleTransmission {
                 BundleUtils.writeUncompressedPayload(toSendBundlePayload, this.config.getBundleTransmission()
                         .getUncompressedPayloadDirectory().toFile(), toSendBundlePayload.getBundleId());
 
-                Payload payload = BundleUtils.compressPayload(toSendBundlePayload,
-                                                              this.config.getBundleTransmission()
-                                                                           .getCompressedPayloadDirectory());
+                Payload payload = BundleUtils.compressPayload(toSendBundlePayload, this.config.getBundleTransmission()
+                        .getCompressedPayloadDirectory());
                 UncompressedBundle uncompressedBundle = this.bundleSecurity.encryptPayload(clientId, payload,
                                                                                            this.config.getBundleTransmission()
                                                                                                    .getEncryptedPayloadDirectory());

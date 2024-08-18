@@ -17,6 +17,7 @@ public class DecryptBundle implements Callable<Void> {
     static {
         System.setProperty("java.util.logging.SimpleFormatter.format", "%5$s%6$s%n");
     }
+
     private static final Logger logger = Logger.getLogger(DecryptBundle.class.getName());
 
     @CommandLine.Option(names = "--applicationYaml", required = true, description = "an application yaml")

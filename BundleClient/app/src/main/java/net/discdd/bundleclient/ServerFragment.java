@@ -34,16 +34,16 @@ public class ServerFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(
-            @NonNull LayoutInflater inflater,
-            @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+            @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.server_fragment, container, false);
         domainInput = view.findViewById(R.id.domain_input);
         portInput = view.findViewById(R.id.port_input);
         var connectServerBtn = view.findViewById(R.id.btn_connect_client_to_bundle_server);
         Button saveDomainPortBtn = view.findViewById(R.id.save_domain_port);
 
-        sharedPref = requireActivity().getSharedPreferences(
-                BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE);
+        sharedPref =
+                requireActivity().getSharedPreferences(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTINGS,
+                                                       MODE_PRIVATE);
         restoreDomainPort();
 
         domainInput.addTextChangedListener(new TextWatcher() {
@@ -53,8 +53,7 @@ public class ServerFragment extends Fragment {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                connectServerBtn.setEnabled(
-                        s.length() > 0 && portInput.getText().toString().length() > 0);
+                connectServerBtn.setEnabled(s.length() > 0 && portInput.getText().toString().length() > 0);
             }
 
             @Override
@@ -70,8 +69,7 @@ public class ServerFragment extends Fragment {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                connectServerBtn.setEnabled(
-                        s.length() > 0 && !domainInput.getText().toString().isEmpty());
+                connectServerBtn.setEnabled(s.length() > 0 && !domainInput.getText().toString().isEmpty());
             }
 
             @Override
@@ -88,55 +86,50 @@ public class ServerFragment extends Fragment {
             connectServerBtn.setEnabled(false);
             ((BundleClientActivity) requireActivity()).wifiBgService.initiateServerExchange()
                     .thenAccept(bec -> requireActivity().runOnUiThread(() -> {
-                        Toast.makeText(requireContext(),
-                                       String.format("%d bundles sent %d received",
-                                                     bec.bundlesSent(), bec.bundlesReceived()),
-                                       Toast.LENGTH_LONG).show();
+                        Toast.makeText(requireContext(), String.format("%d bundles sent %d received", bec.bundlesSent(),
+                                                                       bec.bundlesReceived()), Toast.LENGTH_LONG)
+                                .show();
                         connectServerBtn.setEnabled(true);
                     }));
         });
 
         // register network listeners
-        if (getActivity() instanceof BundleClientActivity &&
-                !domainInput.getText().toString().isEmpty() &&
+        if (getActivity() instanceof BundleClientActivity && !domainInput.getText().toString().isEmpty() &&
                 !portInput.getText().toString().isEmpty()) {
-            createAndRegisterConnectivityManager(domainInput.getText().toString(),
-                                                 portInput.getText().toString());
+            createAndRegisterConnectivityManager(domainInput.getText().toString(), portInput.getText().toString());
         }
 
         return view;
     }
 
     private void createAndRegisterConnectivityManager(String serverDomain, String serverPort) {
-        ConnectivityManager connectivityManager =
-                ((BundleClientActivity) requireActivity()).connectivityManager;
-        NetworkRequest networkRequest = new NetworkRequest.Builder().addCapability(
-                        NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-                .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR).build();
+        ConnectivityManager connectivityManager = ((BundleClientActivity) requireActivity()).connectivityManager;
+        NetworkRequest networkRequest =
+                new NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                        .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR).build();
 
-        ConnectivityManager.NetworkCallback serverConnectNetworkCallback =
-                new ConnectivityManager.NetworkCallback() {
-                    @Override
-                    public void onAvailable(Network network) {
-                        logger.log(INFO, "Available network: " + network.toString());
-                    }
+        ConnectivityManager.NetworkCallback serverConnectNetworkCallback = new ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onAvailable(Network network) {
+                logger.log(INFO, "Available network: " + network.toString());
+            }
 
-                    @Override
-                    public void onLost(Network network) {
-                        logger.log(WARNING, "Lost network connectivity");
-                    }
+            @Override
+            public void onLost(Network network) {
+                logger.log(WARNING, "Lost network connectivity");
+            }
 
-                    @Override
-                    public void onUnavailable() {
-                        logger.log(WARNING, "Unavailable network connectivity");
-                    }
+            @Override
+            public void onUnavailable() {
+                logger.log(WARNING, "Unavailable network connectivity");
+            }
 
-                    @Override
-                    public void onBlockedStatusChanged(Network network, boolean blocked) {
-                        logger.log(WARNING, "Blocked network connectivity");
-                    }
-                };
+            @Override
+            public void onBlockedStatusChanged(Network network, boolean blocked) {
+                logger.log(WARNING, "Blocked network connectivity");
+            }
+        };
 
         connectivityManager.registerNetworkCallback(networkRequest, serverConnectNetworkCallback);
     }

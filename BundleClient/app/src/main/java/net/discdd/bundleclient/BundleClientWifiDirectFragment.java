@@ -35,8 +35,7 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class BundleClientWifiDirectFragment extends Fragment {
-    private static final Logger logger =
-            Logger.getLogger(BundleClientWifiDirectFragment.class.getName());
+    private static final Logger logger = Logger.getLogger(BundleClientWifiDirectFragment.class.getName());
 
     private final BundleClientServiceBroadcastReceiver bundleClientServiceBroadcastReceiver =
             new BundleClientServiceBroadcastReceiver();
@@ -50,24 +49,22 @@ public class BundleClientWifiDirectFragment extends Fragment {
     private TextView deliveryStatus;
 
     BundleClientWifiDirectFragment() {
-        intentFilter.addAction(
-                BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_WIFI_EVENT_ACTION);
+        intentFilter.addAction(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_WIFI_EVENT_ACTION);
         intentFilter.addAction(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_LOG_ACTION);
     }
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        preferences = requireActivity().getSharedPreferences(
-                BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTINGS,
-                Context.MODE_PRIVATE);
+        preferences =
+                requireActivity().getSharedPreferences(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTINGS,
+                                                       Context.MODE_PRIVATE);
     }
 
     @Nullable
     @Override
     public View onCreateView(
-            @NonNull LayoutInflater inflater,
-            @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+            @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.wifi_direct_fragment, container, false);
 
         //Initialize UI elements and buttons
@@ -82,12 +79,11 @@ public class BundleClientWifiDirectFragment extends Fragment {
         connectedDeviceText = view.findViewById(R.id.connected_device_address);
         CheckBox bgCheckBox = view.findViewById(R.id.transfer_in_background_checkbox);
         bgCheckBox.setChecked(preferences.getBoolean(
-                BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE,
-                false));
+                BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, false));
         bgCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            preferences.edit().putBoolean(
-                    BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE,
-                    isChecked).apply();
+            preferences.edit()
+                    .putBoolean(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE,
+                                isChecked).apply();
         });
         resultText.setMovementMethod(new ScrollingMovementMethod());
         peersList = view.findViewById(R.id.peers_list);
@@ -95,10 +91,8 @@ public class BundleClientWifiDirectFragment extends Fragment {
         peersList.setAdapter(new RecyclerView.Adapter() {
             @NonNull
             @Override
-            public RecyclerView.ViewHolder onCreateViewHolder(
-                    @NonNull ViewGroup parent, int viewType) {
-                return new RecyclerView.ViewHolder(
-                        inflater.inflate(R.layout.peers_list_element, parent, false)) {};
+            public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                return new RecyclerView.ViewHolder(inflater.inflate(R.layout.peers_list_element, parent, false)) {};
             }
 
             @Override
@@ -110,14 +104,11 @@ public class BundleClientWifiDirectFragment extends Fragment {
                 name.setOnClickListener(v -> {
                     // fetch the peer again because stats may have changed
                     var updatedPeer = getWifiBgService().getPeer(deviceAddress);
-                    new AlertDialog.Builder(requireContext()).setTitle(updatedPeer.getDeviceName())
-                            .setMessage(String.format(getString(R.string.PeerDetailedDescription),
-                                                      getRelativeTime(updatedPeer.getLastSeen()),
-                                                      getRelativeTime(
-                                                              updatedPeer.getLastExchange()),
-                                                      getRelativeTime(
-                                                              updatedPeer.getRecencyTime())))
-                            .show();
+                    new AlertDialog.Builder(requireContext()).setTitle(updatedPeer.getDeviceName()).setMessage(
+                            String.format(getString(R.string.PeerDetailedDescription),
+                                          getRelativeTime(updatedPeer.getLastSeen()),
+                                          getRelativeTime(updatedPeer.getLastExchange()),
+                                          getRelativeTime(updatedPeer.getRecencyTime()))).show();
                 });
                 Button action = holder.itemView.findViewById(R.id.peer_exchange);
                 action.setOnClickListener(click -> exchangeMessage(deviceAddress, action));
@@ -146,8 +137,7 @@ public class BundleClientWifiDirectFragment extends Fragment {
     }
 
     private void unregisterBroadcastReceiver() {
-        LocalBroadcastManager.getInstance(requireActivity())
-                .unregisterReceiver(bundleClientServiceBroadcastReceiver);
+        LocalBroadcastManager.getInstance(requireActivity()).unregisterReceiver(bundleClientServiceBroadcastReceiver);
     }
 
     @Override
@@ -176,8 +166,7 @@ public class BundleClientWifiDirectFragment extends Fragment {
         requireActivity().runOnUiThread(() -> {
             var recentTransports = getWifiBgService().getRecentTransports();
             var discoveredPeers =
-                    Arrays.stream(recentTransports).map(RecentTransport::getDeviceAddress)
-                            .collect(Collectors.toSet());
+                    Arrays.stream(recentTransports).map(RecentTransport::getDeviceAddress).collect(Collectors.toSet());
             var currentPeers = new HashSet<>(peerDeviceAddresses);
             // figure out the new names (discoveredPeers - currentPeers)
             var newNames = new HashSet<>(discoveredPeers);
@@ -208,8 +197,9 @@ public class BundleClientWifiDirectFragment extends Fragment {
         // the groupOwnerAddress doesn't seem to be coming through and the groupInfo owner device
         // name doesn't seem to come through either.
         requireActivity().runOnUiThread(() -> {
-            var ownerNameAndAddress = groupInfo == null || groupInfo.getOwner() == null ?
-                    getString(R.string.not_connected) : getString(R.string.connected_to_transport);
+            var ownerNameAndAddress =
+                    groupInfo == null || groupInfo.getOwner() == null ? getString(R.string.not_connected) :
+                            getString(R.string.connected_to_transport);
             connectedDeviceText.setText(ownerNameAndAddress);
         });
     }
@@ -217,8 +207,7 @@ public class BundleClientWifiDirectFragment extends Fragment {
     public void exchangeMessage(String deviceAddress, Button exchangeButton) {
         if (getWifiBgService() != null) {
             exchangeButton.setEnabled(false);
-            getWifiBgService().initiateExchange(deviceAddress)
-                    .thenAccept(c -> exchangeButton.setEnabled(true));
+            getWifiBgService().initiateExchange(deviceAddress).thenAccept(c -> exchangeButton.setEnabled(true));
         }
     }
 
@@ -234,30 +223,25 @@ public class BundleClientWifiDirectFragment extends Fragment {
             if (action.equals(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_LOG_ACTION)) {
                 String message = intent.getStringExtra("message");
                 appendResultText(message);
-            } else if (action.equals(
-                    BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_WIFI_EVENT_ACTION)) {
-                var wifiEvent = intent.getSerializableExtra(
-                        BundleClientWifiDirectService.WIFI_DIRECT_EVENT_EXTRA,
-                        WifiDirectManager.WifiDirectEventType.class);
-                var bundleClientWifiEvent = intent.getSerializableExtra(
-                        BundleClientWifiDirectService.BUNDLE_CLIENT_WIFI_EVENT_EXTRA,
-                        BundleClientWifiDirectService.BundleClientWifiDirectEventType.class);
+            } else if (action.equals(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_WIFI_EVENT_ACTION)) {
+                var wifiEvent = intent.getSerializableExtra(BundleClientWifiDirectService.WIFI_DIRECT_EVENT_EXTRA,
+                                                            WifiDirectManager.WifiDirectEventType.class);
+                var bundleClientWifiEvent =
+                        intent.getSerializableExtra(BundleClientWifiDirectService.BUNDLE_CLIENT_WIFI_EVENT_EXTRA,
+                                                    BundleClientWifiDirectService.BundleClientWifiDirectEventType.class);
                 if (wifiEvent != null) switch (wifiEvent) {
                     case WIFI_DIRECT_MANAGER_INITIALIZED -> {
-                        deliveryStatus.setText(
-                                getWifiBgService().isDiscoveryActive() ? "Active" : "Inactive");
+                        deliveryStatus.setText(getWifiBgService().isDiscoveryActive() ? "Active" : "Inactive");
                     }
                     case WIFI_DIRECT_MANAGER_PEERS_CHANGED -> updateConnectedDevices();
-                    case WIFI_DIRECT_MANAGER_GROUP_INFO_CHANGED,
-                         WIFI_DIRECT_MANAGER_DEVICE_INFO_CHANGED ->
+                    case WIFI_DIRECT_MANAGER_GROUP_INFO_CHANGED, WIFI_DIRECT_MANAGER_DEVICE_INFO_CHANGED ->
                             updateOwnerAndGroupInfo(getWifiBgService().getGroupOwnerAddress(),
                                                     getWifiBgService().getGroupInfo());
 
                     case WIFI_DIRECT_MANAGER_CONNECTION_CHANGED -> discoverPeers();
                     case WIFI_DIRECT_MANAGER_DISCOVERY_CHANGED -> getActivity().runOnUiThread(
                             () -> deliveryStatus.setText(
-                                    getWifiBgService().isDiscoveryActive() ? "Active" :
-                                            "Inactive"));
+                                    getWifiBgService().isDiscoveryActive() ? "Active" : "Inactive"));
 
                 }
                 if (bundleClientWifiEvent != null) {
@@ -269,8 +253,7 @@ public class BundleClientWifiDirectFragment extends Fragment {
                             appendResultText(message);
                         }
                         case WIFI_DIRECT_CLIENT_EXCHANGE_FINISHED -> {
-                            var message =
-                                    String.format("Exchange completed with %s", deviceAddress);
+                            var message = String.format("Exchange completed with %s", deviceAddress);
                             appendResultText(message);
                         }
                     }

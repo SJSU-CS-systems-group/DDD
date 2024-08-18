@@ -179,7 +179,9 @@ public class TestUtils {
         return log.replaceAll("(\\s*\\w+\\s+\\w+).*[\r]*", "$1");
     }
 
-    /** windows paths will get messed up on the commandline... */
+    /**
+     * windows paths will get messed up on the commandline...
+     */
     public static String escapeBackslash(String s) {
         return s.replace("\\", "\\\\");
     }

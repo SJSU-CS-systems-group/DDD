@@ -37,7 +37,8 @@ class EncryptBundleTest {
 
     @Test
     void testEncryptBundle() throws Exception {
-        appProps = TestUtils.createResource("bundle-server.bundle-store-root = " + escapeBackslash(baseDirPath + File.separator));
+        appProps = TestUtils.createResource(
+                "bundle-server.bundle-store-root = " + escapeBackslash(baseDirPath + File.separator));
         String expectedOutput = "Encrypting bundle\n" + "Finished encrypting\n";
         StringBuilder sb = new StringBuilder();
         String errText = SystemLambda.tapSystemErr(() -> {
@@ -52,6 +53,7 @@ class EncryptBundleTest {
         var outText = sb.toString();
         System.out.println("Standard Out: " + outText);
         System.out.println("Standard Error: " + errText);
-        assertEquals(expectedOutput, TestUtils.trimMessage(outText + errText));;
+        assertEquals(expectedOutput, TestUtils.trimMessage(outText + errText));
+        ;
     }
 }

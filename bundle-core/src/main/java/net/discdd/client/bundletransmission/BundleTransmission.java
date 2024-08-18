@@ -92,7 +92,8 @@ public class BundleTransmission {
 
     private ClientRouting clientRouting;
 
-    public BundleTransmission(Path rootFolder, Consumer<ADU> aduConsumer) throws WindowExceptions.BufferOverflow, IOException, InvalidKeyException, RoutingExceptions.ClientMetaDataFileException, NoSuchAlgorithmException {
+    public BundleTransmission(Path rootFolder, Consumer<ADU> aduConsumer) throws WindowExceptions.BufferOverflow,
+            IOException, InvalidKeyException, RoutingExceptions.ClientMetaDataFileException, NoSuchAlgorithmException {
         this.ROOT_DIR = rootFolder;
         this.bundleSecurity = new BundleSecurity(this.ROOT_DIR);
         this.applicationDataManager = new ApplicationDataManager(this.ROOT_DIR, aduConsumer);
@@ -137,7 +138,9 @@ public class BundleTransmission {
         return bundleId.trim();
     }
 
-    private void processReceivedBundle(BundleSender sender, Bundle bundle) throws IOException, RoutingExceptions.ClientMetaDataFileException, NoSessionException, InvalidMessageException, DuplicateMessageException, LegacyMessageException, InvalidKeyException, GeneralSecurityException {
+    private void processReceivedBundle(BundleSender sender, Bundle bundle) throws IOException,
+            RoutingExceptions.ClientMetaDataFileException, NoSessionException, InvalidMessageException,
+            DuplicateMessageException, LegacyMessageException, InvalidKeyException, GeneralSecurityException {
         String largestBundleIdReceived = this.getLargestBundleIdReceived();
         UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, this.ROOT_DIR.resolve(
                 Paths.get(BUNDLE_GENERATION_DIRECTORY, RECEIVED_PROCESSING)));
@@ -206,7 +209,8 @@ public class BundleTransmission {
         return builder;
     }
 
-    private BundleDTO generateNewBundle(Path targetDir) throws RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException, GeneralSecurityException {
+    private BundleDTO generateNewBundle(Path targetDir) throws RoutingExceptions.ClientMetaDataFileException,
+            IOException, InvalidKeyException, GeneralSecurityException {
         UncompressedPayload.Builder builder = this.generateBundleBuilder();
         String bundleId = this.bundleSecurity.generateNewBundleId();
 
@@ -234,7 +238,8 @@ public class BundleTransmission {
         return new BundleDTO(bundleId, toSend);
     }
 
-    public BundleDTO generateBundleForTransmission() throws RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException, GeneralSecurityException {
+    public BundleDTO generateBundleForTransmission() throws RoutingExceptions.ClientMetaDataFileException,
+            IOException, InvalidKeyException, GeneralSecurityException {
         logger.log(FINE, "Started process of generating bundle");
         Path toSendDir = this.ROOT_DIR.resolve(Paths.get(BUNDLE_GENERATION_DIRECTORY, TO_SEND_DIRECTORY));
 
@@ -366,11 +371,13 @@ public class BundleTransmission {
     }
 
     public record BundleExchangeCounts(int bundlesSent, int bundlesReceived) {}
+
     /**
      * IT IS VERY VERY IMPORTANT THAT TRANSPORT IS THE HOSTNAME WHEN TALKING TO THE SERVER, AND AN ADDRESS
      * WHEN TALKING TO A DEVICE.
      */
-    public BundleExchangeCounts doExchangeWithTransport(String deviceAddress, String deviceDeviceName, String transportAddress, int port) {
+    public BundleExchangeCounts doExchangeWithTransport(String deviceAddress, String deviceDeviceName,
+                                                        String transportAddress, int port) {
         var channel = ManagedChannelBuilder.forAddress(transportAddress, port).enableRetry().usePlaintext().build();
         var blockingStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
         var blobRecencyReply = blockingStub.getRecencyBlob(GetRecencyBlobRequest.getDefaultInstance());
@@ -378,7 +385,8 @@ public class BundleTransmission {
         int bundlesUploaded = 0;
         try {
             if (!processRecencyBlob(deviceAddress, blobRecencyReply)) {
-                logger.log(SEVERE, "Did not process recency blob. In the future, we need to stop talking to this device");
+                logger.log(SEVERE,
+                           "Did not process recency blob. In the future, we need to stop talking to this device");
             }
             timestampExchangeWithTransport(deviceAddress);
             var clientSecurity = bundleSecurity.getClientSecurity();
@@ -421,16 +429,18 @@ public class BundleTransmission {
         }
         uploadRequestStreamObserver.onCompleted();
         bundleUploadResponseObserver.waitForCompletion(GRPC_LONG_TIMEOUT_MS);
-        return bundleUploadResponseObserver.bundleUploadResponse != null && bundleUploadResponseObserver.bundleUploadResponse.getStatus() == Status.SUCCESS ? 1 : 0;
+        return bundleUploadResponseObserver.bundleUploadResponse != null &&
+                bundleUploadResponseObserver.bundleUploadResponse.getStatus() == Status.SUCCESS ? 1 : 0;
     }
 
-    private int downloadBundles(List<String> bundleRequests, BundleSender sender, BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub stub) throws IOException {
+    private int downloadBundles(List<String> bundleRequests, BundleSender sender,
+                                BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub stub) throws IOException {
         for (String bundle : bundleRequests) {
             var downloadRequest = BundleDownloadRequest.newBuilder().setSender(sender)
                     .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId(bundle).build()).build();
             logger.log(INFO, "Downloading file: " + bundle);
-            var responses = stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                    .downloadBundle(downloadRequest);
+            var responses =
+                    stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).downloadBundle(downloadRequest);
             OutputStream fileOutputStream = null;
             try {
                 fileOutputStream = responses.hasNext() ?

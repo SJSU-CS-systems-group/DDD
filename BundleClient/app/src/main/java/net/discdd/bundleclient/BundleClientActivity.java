@@ -52,8 +52,7 @@ public class BundleClientActivity extends AppCompatActivity {
             @Override
             public void onServiceConnected(ComponentName className, IBinder service) {
                 // We've bound to LocalService, cast the IBinder and get LocalService instance.
-                var binder =
-                        (BundleClientWifiDirectService.BundleClientWifiDirectServiceBinder) service;
+                var binder = (BundleClientWifiDirectService.BundleClientWifiDirectServiceBinder) service;
                 wifiBgService = binder.getService();
                 serviceReady.complete(BundleClientActivity.this);
             }
@@ -64,15 +63,18 @@ public class BundleClientActivity extends AppCompatActivity {
             }
         };
     }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        sharedPreferences = getSharedPreferences(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE);
+        sharedPreferences =
+                getSharedPreferences(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE);
 
         ComponentName comp;
         try {
-            comp = getApplicationContext().startForegroundService(new Intent(this, BundleClientWifiDirectService.class));
+            comp = getApplicationContext().startForegroundService(
+                    new Intent(this, BundleClientWifiDirectService.class));
         } catch (Exception e) {
             logger.log(WARNING, "Failed to start TransportWifiDirectService", e);
         }
@@ -80,19 +82,13 @@ public class BundleClientActivity extends AppCompatActivity {
         var intent = new Intent(this, BundleClientWifiDirectService.class);
         var svc = bindService(intent, connection, Context.BIND_AUTO_CREATE);
 
-        BundleClientWifiDirectFragment
-                bundleClientWifiDirectFragment = new BundleClientWifiDirectFragment();
-        fragmentsWithTitles.add(
-                new FragmentWithTitle(bundleClientWifiDirectFragment, getString(R.string.home_tab)));
+        BundleClientWifiDirectFragment bundleClientWifiDirectFragment = new BundleClientWifiDirectFragment();
+        fragmentsWithTitles.add(new FragmentWithTitle(bundleClientWifiDirectFragment, getString(R.string.home_tab)));
         var permissionsFragment = new PermissionsFragment();
-        fragmentsWithTitles.add(
-                new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
-        fragmentsWithTitles.add(
-                new FragmentWithTitle(new UsbFragment(), getString(R.string.usb_tab)));
-        fragmentsWithTitles.add(
-                new FragmentWithTitle(new ServerFragment(), getString(R.string.server_tab)));
-        fragmentsWithTitles.add(
-                new FragmentWithTitle(new LogFragment(), getString(R.string.logs_tab)));
+        fragmentsWithTitles.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
+        fragmentsWithTitles.add(new FragmentWithTitle(new UsbFragment(), getString(R.string.usb_tab)));
+        fragmentsWithTitles.add(new FragmentWithTitle(new ServerFragment(), getString(R.string.server_tab)));
+        fragmentsWithTitles.add(new FragmentWithTitle(new LogFragment(), getString(R.string.logs_tab)));
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
         //set up view
@@ -104,9 +100,8 @@ public class BundleClientActivity extends AppCompatActivity {
         ViewPagerAdapter adapter = new ViewPagerAdapter(this);
         viewPager.setAdapter(adapter);
 
-        var tabMediator = new TabLayoutMediator(tabLayout, viewPager,
-                                                (tab, position) -> tab.setText(
-                                                        fragmentsWithTitles.get(position).title()));
+        var tabMediator = new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> tab.setText(
+                fragmentsWithTitles.get(position).title()));
         tabMediator.attach();
 
         //Application context
@@ -117,8 +112,7 @@ public class BundleClientActivity extends AppCompatActivity {
                 R.raw.server_signed_pre); InputStream inServerRatchet = resources.openRawResource(
                 R.raw.server_ratchet)) {
             BundleSecurity.initializeKeyPaths(inServerIdentity, inServerSignedPre, inServerRatchet,
-                                              Paths.get(
-                                                      getApplicationContext().getApplicationInfo().dataDir));
+                                              Paths.get(getApplicationContext().getApplicationInfo().dataDir));
         } catch (IOException e) {
             logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
         }
@@ -136,7 +130,8 @@ public class BundleClientActivity extends AppCompatActivity {
 
     @Override
     public void onDestroy() {
-        if (!sharedPreferences.getBoolean(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, false)) {
+        if (!sharedPreferences.getBoolean(
+                BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, false)) {
             stopService(new Intent(this, BundleClientWifiDirectService.class));
         }
         unbindService(connection);
