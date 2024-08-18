@@ -272,8 +272,16 @@ public class ServerSecurity {
         if (clientMap.containsKey(clientID)) {
             return clientMap.get(clientID);
         } else {
-            // TODO: Change to log
-            logger.log(SEVERE, "[ServerSecurity]:Key[ " + clientID + " ] NOT found!");
+            var clientKeyPath = clientRootPath.resolve(clientID);
+            if (clientKeyPath.toFile().exists()) {
+                try {
+                    return getClientSessionFromFile(clientKeyPath);
+                } catch (IOException | NoSuchAlgorithmException | InvalidKeyException e) {
+                    logger.log(SEVERE, "Problem getting key for " + clientID, e);
+                }
+            } else {
+                logger.log(SEVERE, "[ServerSecurity]:Key[ " + clientID + " ] NOT found!");
+            }
         }
         return null;
     }
