@@ -10,7 +10,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
-import java.util.Comparator;
 import java.util.stream.Stream;
 
 public class TestUtils {
@@ -93,7 +92,6 @@ public class TestUtils {
                                 continue;
                             }
                             Files.copy(fileIs, destFilePath, StandardCopyOption.REPLACE_EXISTING);
-                            System.out.println("Copied file to: " + destFilePath);
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -107,7 +105,6 @@ public class TestUtils {
 
             // Optionally return the base directory path if needed
             String baseDirPath = tempDir.toAbsolutePath().toString();
-            System.out.println("Base directory path: " + baseDirPath);
             return Path.of(baseDirPath);
 
         } catch (IOException | URISyntaxException e) {
@@ -178,13 +175,14 @@ public class TestUtils {
     }
 
     public static String trimMessage(String log) {
-        String s = "";
-        if (log.contains("Encrypting bundle") && log.contains("Finished encrypting")) {
-            s = "Encrypting bundle" + "\n" + "Finished encrypting" + "\n";
-        } else {
-            String regex = "(\\w{3} \\d{1,2}, \\d{4} \\d{1,2}:\\d{2}:\\d{2} (AM|PM) )|(/[^\\s]+)";
-            s = log.replaceAll(regex, "");
-        }
-        return s;
+        // use only the first words of each line. strip off the \r of the \r\n for windows
+        return log.replaceAll("(\\s*\\w+\\s+\\w+).*[\r]*", "$1");
+    }
+
+    /**
+     * windows paths will get messed up on the commandline...
+     */
+    public static String escapeBackslash(String s) {
+        return s.replace("\\", "\\\\");
     }
 }

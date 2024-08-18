@@ -1,6 +1,10 @@
 package net.discdd.wifidirect;
 
 import static android.net.wifi.p2p.WifiP2pManager.EXTRA_P2P_DEVICE_LIST;
+import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION;
+import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_DISCOVERY_CHANGED_ACTION;
+import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION;
+import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION;
 import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION;
 import static net.discdd.wifidirect.WifiDirectManager.WifiDirectEventType.WIFI_DIRECT_MANAGER_DEVICE_INFO_CHANGED;
 import static net.discdd.wifidirect.WifiDirectManager.WifiDirectEventType.WIFI_DIRECT_MANAGER_INITIALIZED;
@@ -56,6 +60,7 @@ public class WifiDirectManager {
     private WifiP2pGroup groupInfo;
     private InetAddress groupOwnerAddress;
     private boolean wifiDirectEnabled;
+    private boolean discoveryActive;
 
     /**
      * @param context   AppcompatActivity Context returned with a
@@ -134,10 +139,11 @@ public class WifiDirectManager {
      * want to listen to for this device.
      */
     private void registerIntents() {
-        intentFilter.addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION);
-        intentFilter.addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION);
-        intentFilter.addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION);
-        intentFilter.addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
+        intentFilter.addAction(WIFI_P2P_STATE_CHANGED_ACTION);
+        intentFilter.addAction(WIFI_P2P_PEERS_CHANGED_ACTION);
+        intentFilter.addAction(WIFI_P2P_CONNECTION_CHANGED_ACTION);
+        intentFilter.addAction(WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
+        intentFilter.addAction(WIFI_P2P_DISCOVERY_CHANGED_ACTION);
     }
 
     public String getDeviceName() {
@@ -148,19 +154,8 @@ public class WifiDirectManager {
         return status;
     }
 
-    private static class CompletableActionListener extends CompletableFuture<OptionalInt>
-            implements WifiP2pManager.ActionListener {
-
-        @Override
-        public void onSuccess() {
-            complete(OptionalInt.empty());
-        }
-
-        @Override
-        public void onFailure(int reason) {
-
-            complete(OptionalInt.of(reason));
-        }
+    public boolean isDiscoveryActive() {
+        return discoveryActive;
     }
 
     /**
@@ -322,7 +317,23 @@ public class WifiDirectManager {
 
     public enum WifiDirectEventType {
         WIFI_DIRECT_MANAGER_INITIALIZED, WIFI_DIRECT_MANAGER_PEERS_CHANGED, WIFI_DIRECT_MANAGER_CONNECTION_CHANGED,
-        WIFI_DIRECT_MANAGER_GROUP_INFO_CHANGED, WIFI_DIRECT_MANAGER_DEVICE_INFO_CHANGED
+        WIFI_DIRECT_MANAGER_GROUP_INFO_CHANGED, WIFI_DIRECT_MANAGER_DISCOVERY_CHANGED,
+        WIFI_DIRECT_MANAGER_DEVICE_INFO_CHANGED
+    }
+
+    private static class CompletableActionListener extends CompletableFuture<OptionalInt>
+            implements WifiP2pManager.ActionListener {
+
+        @Override
+        public void onSuccess() {
+            complete(OptionalInt.empty());
+        }
+
+        @Override
+        public void onFailure(int reason) {
+
+            complete(OptionalInt.of(reason));
+        }
     }
 
     public record WifiDirectEvent(WifiDirectEventType type, String message) {}
@@ -366,75 +377,88 @@ public class WifiDirectManager {
          *
          * @param context Context/MainActivity where the intent is triggered
          * @param intent  Intent object containing triggered action.
+         * @noinspection deprecation, deprecation
          */
 
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-            // Broadcast intent action to indicate whether Wi-Fi p2p is enabled or disabled
-            if (WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION.equals(action)) {
-                // Check if WifiDirect on this device is turned on.
-                int state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1);
-                if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
-                    logger.log(INFO, "WifiDirect enabled");
-                    wifiDirectEnabled = true;
-                } else {
-                    logger.log(INFO, "WifiDirect not enabled");
-                    wifiDirectEnabled = false;
-                }
-            }
-            // Broadcast intent action indicating that the available peer list has changed.
-            // This can be sent as a result of peers being found, lost or updated.
-            else if (WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)) {
-                try {
-                    var newPeerList = intent.getParcelableExtra(EXTRA_P2P_DEVICE_LIST, WifiP2pDeviceList.class);
-                    if (newPeerList != null) {
-                        discoveredPeers = new HashSet<>(newPeerList.getDeviceList());
+            if (action != null) switch (action) {
+                case WIFI_P2P_STATE_CHANGED_ACTION -> {
+                    // Broadcast intent action to indicate whether Wi-Fi p2p is enabled or disabled
+                    // Check if WifiDirect on this device is turned on.
+                    int state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1);
+                    if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
+                        logger.log(INFO, "WifiDirect enabled");
+                        wifiDirectEnabled = true;
+                        manager.requestDiscoveryState(channel, state1 -> discoveryActive =
+                                state1 == WifiP2pManager.WIFI_P2P_DISCOVERY_STARTED);
+                        manager.requestPeers(channel, peers -> discoveredPeers = new HashSet<>(peers.getDeviceList()));
+                    } else {
+                        logger.log(INFO, "WifiDirect not enabled");
+                        wifiDirectEnabled = false;
                     }
-                    notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_PEERS_CHANGED);
-                } catch (SecurityException e) {
-                    logger.log(SEVERE, "SecurityException in requestPeers", e);
                 }
-            }
-            //         Broadcast intent action indicating that the state of Wi-Fi p2p
-            //         connectivity has changed.
-            //         EXTRA_WIFI_P2P_INFO provides the p2p connection info in the form of a
-            //         WifiP2pInfo object.
-            //         Another extra EXTRA_NETWORK_INFO provides the network info in the form of
-            //         a NetworkInfo.
-            //         A third extra provides the details of the EXTRA_WIFI_P2P_GROUP and may
-            //         contain a null
-            else if (WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {
-                WifiP2pInfo info = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_INFO, WifiP2pInfo.class);
-                NetworkInfo networkInfo =
-                        intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE, NetworkInfo.class);
-                WifiP2pGroup wifiP2pGroup =
-                        intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP, WifiP2pGroup.class);
+                case WIFI_P2P_PEERS_CHANGED_ACTION -> {
+                    // Broadcast intent action indicating that the available peer list has changed.
+                    // This can be sent as a result of peers being found, lost or updated.
+                    try {
+                        var newPeerList = intent.getParcelableExtra(EXTRA_P2P_DEVICE_LIST, WifiP2pDeviceList.class);
+                        if (newPeerList != null) {
+                            discoveredPeers = new HashSet<>(newPeerList.getDeviceList());
+                        }
+                        notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_PEERS_CHANGED);
+                    } catch (SecurityException e) {
+                        logger.log(SEVERE, "SecurityException in requestPeers", e);
+                    }
+                }
+                case WIFI_P2P_CONNECTION_CHANGED_ACTION -> {
+                    //         Broadcast intent action indicating that the state of Wi-Fi p2p
+                    //         connectivity has changed.
+                    //         EXTRA_WIFI_P2P_INFO provides the p2p connection info in the form of a
+                    //         WifiP2pInfo object.
+                    //         Another extra EXTRA_NETWORK_INFO provides the network info in the
+                    //         form of
+                    //         a NetworkInfo.
+                    //         A third extra provides the details of the EXTRA_WIFI_P2P_GROUP and
+                    //         may
+                    //         contain a null
+                    WifiP2pInfo info = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_INFO, WifiP2pInfo.class);
+                    NetworkInfo networkInfo =
+                            intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE, NetworkInfo.class);
+                    WifiP2pGroup wifiP2pGroup =
+                            intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP, WifiP2pGroup.class);
 
-                var groupInfoChanged = false;
-                if (groupInfo == null || !groupInfo.equals(wifiP2pGroup)) {
-                    groupInfo = wifiP2pGroup;
-                    groupInfoChanged = true;
-                }
-                if (networkInfo != null && networkInfo.isConnected()) {
-                    var newGroupOwnerAddress = info == null ? null : info.groupOwnerAddress;
-                    if ((groupOwnerAddress != null && !groupOwnerAddress.equals(newGroupOwnerAddress) ||
-                            (groupOwnerAddress == null && newGroupOwnerAddress != null))) {
-                        groupOwnerAddress = newGroupOwnerAddress;
-                        groupInfoChanged = true;
-                        notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_CONNECTION_CHANGED);
-                    }
-                } else {
-                    if (groupOwnerAddress != null) {
-                        groupOwnerAddress = null;
+                    var groupInfoChanged = false;
+                    if (groupInfo == null || !groupInfo.equals(wifiP2pGroup)) {
+                        groupInfo = wifiP2pGroup;
                         groupInfoChanged = true;
                     }
+                    if (networkInfo != null && networkInfo.isConnected()) {
+                        var newGroupOwnerAddress = info == null ? null : info.groupOwnerAddress;
+                        if ((groupOwnerAddress != null && !groupOwnerAddress.equals(newGroupOwnerAddress) ||
+                                (groupOwnerAddress == null && newGroupOwnerAddress != null))) {
+                            groupOwnerAddress = newGroupOwnerAddress;
+                            groupInfoChanged = true;
+                            notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_CONNECTION_CHANGED);
+                        }
+                    } else {
+                        if (groupOwnerAddress != null) {
+                            groupOwnerAddress = null;
+                            groupInfoChanged = true;
+                        }
+                    }
+                    if (groupInfoChanged) {
+                        notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_GROUP_INFO_CHANGED);
+                    }
                 }
-                if (groupInfoChanged) {
-                    notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_GROUP_INFO_CHANGED);
+                case WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> processDeviceInfo(
+                        intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE, WifiP2pDevice.class));
+                case WIFI_P2P_DISCOVERY_CHANGED_ACTION -> {
+                    int discoveryState = intent.getIntExtra(WifiP2pManager.EXTRA_DISCOVERY_STATE, -1);
+                    discoveryActive = discoveryState == WifiP2pManager.WIFI_P2P_DISCOVERY_STARTED;
+                    notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_DISCOVERY_CHANGED);
                 }
-            } else if (WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
-                processDeviceInfo(intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE, WifiP2pDevice.class));
             }
         }
     }

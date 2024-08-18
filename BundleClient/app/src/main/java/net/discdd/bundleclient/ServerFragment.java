@@ -17,6 +17,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -25,15 +26,10 @@ import androidx.fragment.app.Fragment;
 import java.util.logging.Logger;
 
 public class ServerFragment extends Fragment {
+    private static final Logger logger = Logger.getLogger(ServerFragment.class.getName());
     private EditText domainInput;
     private EditText portInput;
-    private Button connectServerBtn;
-    private Button saveDomainPortBtn;
-    private ConnectivityManager connectivityManager;
-    private ConnectivityManager.NetworkCallback serverConnectNetworkCallback;
     private SharedPreferences sharedPref;
-
-    private static final Logger logger = Logger.getLogger(ServerFragment.class.getName());
 
     @Nullable
     @Override
@@ -42,10 +38,12 @@ public class ServerFragment extends Fragment {
         View view = inflater.inflate(R.layout.server_fragment, container, false);
         domainInput = view.findViewById(R.id.domain_input);
         portInput = view.findViewById(R.id.port_input);
-        connectServerBtn = view.findViewById(R.id.btn_connect_client_to_bundle_server);
-        saveDomainPortBtn = view.findViewById(R.id.save_domain_port);
+        var connectServerBtn = view.findViewById(R.id.btn_connect_client_to_bundle_server);
+        Button saveDomainPortBtn = view.findViewById(R.id.save_domain_port);
 
-        sharedPref = requireActivity().getSharedPreferences("server_endpoint", MODE_PRIVATE);
+        sharedPref =
+                requireActivity().getSharedPreferences(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTINGS,
+                                                       MODE_PRIVATE);
         restoreDomainPort();
 
         domainInput.addTextChangedListener(new TextWatcher() {
@@ -55,11 +53,7 @@ public class ServerFragment extends Fragment {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                if (s.length() > 0 && portInput.getText().toString().length() > 0) {
-                    connectServerBtn.setEnabled(true);
-                } else {
-                    connectServerBtn.setEnabled(false);
-                }
+                connectServerBtn.setEnabled(s.length() > 0 && portInput.getText().toString().length() > 0);
             }
 
             @Override
@@ -75,11 +69,7 @@ public class ServerFragment extends Fragment {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                if (s.length() > 0 && !domainInput.getText().toString().isEmpty()) {
-                    connectServerBtn.setEnabled(true);
-                } else {
-                    connectServerBtn.setEnabled(false);
-                }
+                connectServerBtn.setEnabled(s.length() > 0 && !domainInput.getText().toString().isEmpty());
             }
 
             @Override
@@ -93,7 +83,14 @@ public class ServerFragment extends Fragment {
         });
 
         connectServerBtn.setOnClickListener(v -> {
-            connectToServer(domainInput.getText().toString(), portInput.getText().toString());
+            connectServerBtn.setEnabled(false);
+            ((BundleClientActivity) requireActivity()).wifiBgService.initiateServerExchange()
+                    .thenAccept(bec -> requireActivity().runOnUiThread(() -> {
+                        Toast.makeText(requireContext(), String.format("%d bundles sent %d received", bec.bundlesSent(),
+                                                                       bec.bundlesReceived()), Toast.LENGTH_LONG)
+                                .show();
+                        connectServerBtn.setEnabled(true);
+                    }));
         });
 
         // register network listeners
@@ -105,28 +102,17 @@ public class ServerFragment extends Fragment {
         return view;
     }
 
-    private void connectToServer(String serverDomain, String serverPort) {
-        if (!serverDomain.isEmpty() && !serverPort.isEmpty()) {
-            logger.log(INFO, "Sending to " + serverDomain + ":" + serverPort);
-            new BundleClientGrpcReceiveTask(((BundleClientActivity) requireActivity())).executeInBackground(
-                    serverDomain, Integer.parseInt(serverPort));
-
-        }
-    }
-
     private void createAndRegisterConnectivityManager(String serverDomain, String serverPort) {
-        connectivityManager = ((BundleClientActivity) requireActivity()).connectivityManager;
+        ConnectivityManager connectivityManager = ((BundleClientActivity) requireActivity()).connectivityManager;
         NetworkRequest networkRequest =
                 new NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                         .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
                         .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR).build();
 
-        serverConnectNetworkCallback = new ConnectivityManager.NetworkCallback() {
+        ConnectivityManager.NetworkCallback serverConnectNetworkCallback = new ConnectivityManager.NetworkCallback() {
             @Override
             public void onAvailable(Network network) {
                 logger.log(INFO, "Available network: " + network.toString());
-                logger.log(INFO, "Initiating automatic connection to server");
-                connectToServer(serverDomain, serverPort);
             }
 
             @Override
@@ -154,13 +140,13 @@ public class ServerFragment extends Fragment {
         String port = portInput.getText().toString();
 
         editor.putString("domain", domain);
-        editor.putString("port", port);
+        editor.putInt("port", Integer.parseInt(port));
         editor.apply();
     }
 
     private void restoreDomainPort() {
         domainInput.setText(sharedPref.getString("domain", ""));
-        portInput.setText(sharedPref.getString("port", ""));
+        portInput.setText(Integer.toString(sharedPref.getInt("port", 0)));
     }
 
 }

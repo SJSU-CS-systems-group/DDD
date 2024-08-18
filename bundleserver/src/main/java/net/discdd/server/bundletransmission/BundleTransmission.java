@@ -59,13 +59,14 @@ import static net.discdd.grpc.BundleSenderType.TRANSPORT;
 public class BundleTransmission {
 
     private static final Logger logger = Logger.getLogger(BundleTransmission.class.getName());
+    private static final int WINDOW_LENGTH = 3;
     private final BundleServerConfig config;
     private final BundleSecurity bundleSecurity;
     private final ApplicationDataManager applicationDataManager;
     private final BundleRouting bundleRouting;
     private final BundleUtils bundleUtils;
     private final ServerWindowService serverWindowService;
-    private static final int WINDOW_LENGTH = 3;
+    SecureRandom secureRandom = new SecureRandom();
 
     public BundleTransmission(BundleSecurity bundleSecurity, ApplicationDataManager applicationDataManager,
                               BundleRouting bundleRouting, BundleServerConfig config,
@@ -78,6 +79,10 @@ public class BundleTransmission {
         this.bundleUtils = new BundleUtils();
     }
 
+    public static String bundleSenderToString(BundleSender sender) {
+        return sender.getType() + " : " + sender.getId();
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public void processReceivedBundle(BundleSender sender, Bundle bundle) throws Exception {
         logger.log(INFO, "Processing received bundle: " + bundle.getSource().getName());
@@ -87,7 +92,7 @@ public class BundleTransmission {
 
         bundleRecvProcDir.toFile().mkdirs();
 
-        UncompressedBundle uncompressedBundle = this.bundleUtils.extractBundle(bundle, bundleRecvProcDir);
+        UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, bundleRecvProcDir);
         String clientId = "";
         String serverIdReceived = SecurityUtils.generateID(
                 uncompressedBundle.getSource().toPath().resolve(SecurityUtils.SERVER_IDENTITY_KEY));
@@ -114,7 +119,7 @@ public class BundleTransmission {
         }
 
         UncompressedPayload uncompressedPayload =
-                this.bundleUtils.extractPayload(payload, uncompressedBundle.getSource().toPath());
+                BundleUtils.extractPayload(payload, uncompressedBundle.getSource().toPath());
         logger.log(FINE, "[BundleTransmission] extracted payload from uncompressed bundle");
 
         File ackRecordFile = new File(this.getAckRecordLocation(clientId));
@@ -203,10 +208,6 @@ public class BundleTransmission {
         }
     }
 
-    public static String bundleSenderToString(BundleSender sender) {
-        return sender.getType() + " : " + sender.getId();
-    }
-
     private String getAckRecordLocation(String clientId) {
         return this.config.getBundleTransmission().getToBeBundledDirectory()
                 .resolve(Path.of(clientId, Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME)).toString();
@@ -250,6 +251,10 @@ public class BundleTransmission {
         return this.serverWindowService.getCurrentBundleID(clientId);
     }
 
+    public long getCounterFromEncryptedBundleId(String encryptedBundleId, String clientId, boolean direction) throws InvalidClientIDException, GeneralSecurityException, InvalidKeyException {
+        return this.serverWindowService.getCounterFromBundleID(encryptedBundleId, clientId, direction);
+    }
+
     public BundleTransferDTO generateBundleForTransmission(BundleSender sender, String clientId,
                                                            Set<String> bundleIdsPresent) throws ClientWindowNotFound,
             InvalidClientIDException, GeneralSecurityException, InvalidKeyException, InvalidClientSessionException,
@@ -266,7 +271,7 @@ public class BundleTransmission {
         String bundleId = "";
         boolean isRetransmission = false;
 
-        this.serverWindowService.addClient(clientId, this.WINDOW_LENGTH);
+        this.serverWindowService.addClient(clientId, WINDOW_LENGTH);
 
         boolean isSenderWindowFull = this.serverWindowService.isClientWindowFull(clientId);
 
@@ -282,8 +287,8 @@ public class BundleTransmission {
             toSendOpt = Optional.of(toSend);
             isRetransmission = true;
 
-        } else if (!generatedPayloadBuilder.getADUs()
-                .isEmpty()) { // to ensure we never send a pure ack bundle i.e. a bundle with no ADUs
+        } else /* if (!generatedPayloadBuilder.getADUs()
+                .isEmpty()) */ { // to ensure we never send a pure ack bundle i.e. a bundle with no ADUs
             if (optional.isEmpty()) { // no bundle ever sent
                 bundleId = this.generateBundleId(clientId);
             } else {
@@ -313,12 +318,11 @@ public class BundleTransmission {
                 if (!isRetransmission) {
                     this.applicationDataManager.notifyBundleGenerated(clientId, toSendBundlePayload);
                 }
-                this.bundleUtils.writeUncompressedPayload(toSendBundlePayload, this.config.getBundleTransmission()
+                BundleUtils.writeUncompressedPayload(toSendBundlePayload, this.config.getBundleTransmission()
                         .getUncompressedPayloadDirectory().toFile(), toSendBundlePayload.getBundleId());
 
-                Payload payload = this.bundleUtils.compressPayload(toSendBundlePayload,
-                                                                   this.config.getBundleTransmission()
-                                                                           .getCompressedPayloadDirectory());
+                Payload payload = BundleUtils.compressPayload(toSendBundlePayload, this.config.getBundleTransmission()
+                        .getCompressedPayloadDirectory());
                 UncompressedBundle uncompressedBundle = this.bundleSecurity.encryptPayload(clientId, payload,
                                                                                            this.config.getBundleTransmission()
                                                                                                    .getEncryptedPayloadDirectory());
@@ -326,7 +330,7 @@ public class BundleTransmission {
                 File toSendTxpDir = this.config.getBundleTransmission().getToSendDirectory().resolve(clientId).toFile();
                 toSendTxpDir.mkdirs();
 
-                Bundle toSend = this.bundleUtils.compressBundle(uncompressedBundle, toSendTxpDir.toPath());
+                Bundle toSend = BundleUtils.compressBundle(uncompressedBundle, toSendTxpDir.toPath());
                 bundlesToSend.add(new BundleDTO(bundleId, toSend));
                 if (bundleIdsPresent != null) deletionSet.addAll(bundleIdsPresent);
             }
@@ -334,8 +338,6 @@ public class BundleTransmission {
 
         return new BundleTransferDTO(deletionSet, bundlesToSend);
     }
-
-    SecureRandom secureRandom = new SecureRandom();
 
     public GetRecencyBlobResponse getRecencyBlob() throws InvalidKeyException {
         var blob = RecencyBlob.newBuilder().setVersion(0).setNonce(secureRandom.nextInt())
@@ -346,9 +348,6 @@ public class BundleTransmission {
                 .setRecencyBlob(blob).setRecencyBlobSignature(ByteString.copyFrom(signature))
                 .setServerPublicKey(ByteString.copyFrom(publicKeyBytes)).build();
     }
-
-    public record BundlesToExchange(List<String> bundlesToDownload, List<String> bundlesToUpload,
-                                    List<String> bundlesToDelete) {}
 
     public BundlesToExchange generateBundlesForTransmission(BundleSender sender, Set<String> bundleIdsPresent) throws SQLException, ClientWindowNotFound, InvalidClientIDException, GeneralSecurityException, InvalidClientSessionException, IOException, InvalidKeyException {
         List<String> clientIds = CLIENT == sender.getType() ? Collections.singletonList(sender.getId()) :
@@ -405,5 +404,8 @@ public class BundleTransmission {
                 bundleSenderToString(sender));
         return bundles;
     }
+
+    public record BundlesToExchange(List<String> bundlesToDownload, List<String> bundlesToUpload,
+                                    List<String> bundlesToDelete) {}
 
 }
