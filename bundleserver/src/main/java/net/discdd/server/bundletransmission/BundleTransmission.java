@@ -407,5 +407,4 @@ public class BundleTransmission {
 
     public record BundlesToExchange(List<String> bundlesToDownload, List<String> bundlesToUpload,
                                     List<String> bundlesToDelete) {}
-
 }
