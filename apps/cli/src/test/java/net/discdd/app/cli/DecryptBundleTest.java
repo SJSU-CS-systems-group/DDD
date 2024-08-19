@@ -23,10 +23,6 @@ public class DecryptBundleTest {
     public String expectedText = """
             Decrypting bundle
             Unzipped to
-            [ServerSecurity]: Error Reading
-            Creating New
-            [ServerSecurity]: Error Reading
-            Creating New
             Unzipped to
             Finished decrypting
             """;

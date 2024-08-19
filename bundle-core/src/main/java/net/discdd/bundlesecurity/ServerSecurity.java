@@ -238,6 +238,7 @@ public class ServerSecurity {
             initializeRatchet(clientSessionRecord.getSessionState(), clientSession);
             updateSessionRecord(clientSession);
         }
+        initializeClientKeysFromFiles(keyPath, clientSession);
 
         serverProtocolStore.storeSession(clientSession.clientProtocolAddress, clientSessionRecord);
         clientSession.cipherSession = new SessionCipher(serverProtocolStore, clientSession.clientProtocolAddress);
