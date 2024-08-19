@@ -208,7 +208,7 @@ public class BundleTransmission {
         return this.applicationDataManager.getBundleCountersForClient(clientId).lastSentBundleId;
     }
 
-    public String generateBundleForClient(BundleSender sender, String clientId) throws InvalidClientIDException,
+    public String generateBundleForClient(String clientId) throws InvalidClientIDException,
             GeneralSecurityException, InvalidKeyException, IOException {
         logger.log(INFO, "[BundleTransmission] Processing bundle generation request for client " + clientId);
 
@@ -289,7 +289,7 @@ public class BundleTransmission {
 
         for (String clientId : clientIds) {
             try {
-                var clientBundle = this.generateBundleForClient(sender, clientId);
+                var clientBundle = this.generateBundleForClient(clientId);
                 bundlesToSend.add(clientBundle);
             } catch (InvalidClientIDException | GeneralSecurityException | InvalidKeyException | IOException e) {
                 logger.log(SEVERE, "Failed to generate bundle for client " + clientId, e);

@@ -10,11 +10,10 @@ import net.discdd.grpc.ExchangeADUsResponse;
 import net.discdd.grpc.PendingDataCheckRequest;
 import net.discdd.grpc.PendingDataCheckResponse;
 import net.discdd.grpc.ServiceAdapterServiceGrpc;
-import net.discdd.model.Acknowledgement;
+import net.discdd.model.ADU;
 import net.discdd.server.repository.RegisteredAppAdapterRepository;
 import net.discdd.server.repository.entity.RegisteredAppAdapter;
-import net.discdd.utils.Constants;
-import net.discdd.utils.DDDJarFileCreator;
+import net.discdd.utils.BundleUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.io.TempDir;
@@ -29,7 +28,6 @@ import org.whispersystems.libsignal.SessionCipher;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
-import org.whispersystems.libsignal.protocol.CiphertextMessage;
 import org.whispersystems.libsignal.ratchet.AliceSignalProtocolParameters;
 import org.whispersystems.libsignal.ratchet.RatchetingSession;
 import org.whispersystems.libsignal.state.SessionRecord;
@@ -44,6 +42,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
@@ -60,9 +59,6 @@ import java.util.logging.Logger;
 
 import static net.discdd.bundlesecurity.DDDPEMEncoder.ECPrivateKeyType;
 import static net.discdd.bundlesecurity.DDDPEMEncoder.ECPublicKeyType;
-import static net.discdd.bundlesecurity.SecurityUtils.PAYLOAD_DIR;
-import static net.discdd.bundlesecurity.SecurityUtils.PAYLOAD_FILENAME;
-import static net.discdd.bundlesecurity.SecurityUtils.createEncodedPublicKeyBytes;
 
 public class End2EndTest {
     public static final String TEST_APPID = "testAppId";
@@ -161,65 +157,52 @@ public class End2EndTest {
 
     static int jarCounter = 0;
 
-    protected static Path createBundleForAdus(List<Long> adus, String clientId, int bundleCount, Path targetDir) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, InvalidKeySpecException, BadPaddingException, java.security.InvalidKeyException {
+    @TempDir
+    static File aduTempDir;
+
+    protected static Path createBundleForAdus(List<Long> aduIds, String clientId, int bundleCount, Path targetDir) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, InvalidKeySpecException, BadPaddingException, java.security.InvalidKeyException {
+        var baos = new ByteArrayOutputStream();
+        var adus = aduIds.stream()
+                .map(aduId -> {
+                         var aduFile = new File(aduTempDir, Long.toString(aduId));
+                         try {
+                             Files.write(aduFile.toPath(), String.format("ADU%d", aduId).getBytes(),
+                                         StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+                         } catch (IOException e) {
+                             e.printStackTrace();
+                         }
+                         return new ADU(aduFile, TEST_APPID, aduId, aduFile.length(), clientId);
+                     })
+                .toList();
+        BundleUtils.createBundlePayloadForAdus(adus, "{}".getBytes(), "HB", baos);
         String bundleId = BundleIDGenerator.generateBundleID(clientId, bundleCount, BundleIDGenerator.UPSTREAM);
         String encryptedBundleID = encryptBundleID(bundleId);
         Path bundleJarPath = targetDir.resolve(encryptedBundleID);
-
-        ByteArrayOutputStream payload = new ByteArrayOutputStream();
-        DDDJarFileCreator innerJar = new DDDJarFileCreator(payload);
-
-        // add the records to the inner jar
-        Acknowledgement ackRecord = new Acknowledgement("HB");
-        innerJar.createEntry("acknowledgement.txt", ackRecord.getBundleId().getBytes());
-        innerJar.createEntry("routing.metadata", "{}".getBytes());
-
-        for (var adu : adus) {
-            logger.info("Adding ADU " + adu);
-            innerJar.createEntry(
-                    java.nio.file.Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, TEST_APPID, Long.toString(adu)),
-                    String.format("ADU%d", adu).getBytes());
+        try (var os = Files.newOutputStream(bundleJarPath, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+            BundleUtils.encryptPayloadAndCreateBundle(a -> clientSessionCipher.encrypt(a),
+                                                      clientIdentity.getPublicKey().getPublicKey(),
+                                                      baseKeyPair.getPublicKey(),
+                                                      serverIdentity.getPublicKey().getPublicKey(), encryptedBundleID,
+                                                      baos.toByteArray(), os);
         }
-        innerJar.close();
-
-        // create the signed outer jar
-        DDDJarFileCreator outerJar = new DDDJarFileCreator(Files.newOutputStream(bundleJarPath));
-        byte[] payloadBytes = payload.toByteArray();
-
-        // encrypt the payload
-        CiphertextMessage cipherTextMessage = clientSessionCipher.encrypt(payloadBytes);
-        var cipherTextBytes = cipherTextMessage.serialize();
-
-        // store the encrypted payload
-        outerJar.createEntry(java.nio.file.Path.of(PAYLOAD_DIR, PAYLOAD_FILENAME), cipherTextBytes);
-        // store the bundleId
-        outerJar.createEntry(SecurityUtils.BUNDLEID_FILENAME, encryptedBundleID.getBytes());
-
-        // store the keys
-        outerJar.createEntry(SecurityUtils.CLIENT_IDENTITY_KEY,
-                             createEncodedPublicKeyBytes(clientIdentity.getPublicKey().getPublicKey()));
-        outerJar.createEntry(SecurityUtils.CLIENT_BASE_KEY, createEncodedPublicKeyBytes(baseKeyPair.getPublicKey()));
-        outerJar.createEntry(SecurityUtils.SERVER_IDENTITY_KEY,
-                             createEncodedPublicKeyBytes(serverIdentity.getPublicKey().getPublicKey()));
-
-        // bundle is ready
-        outerJar.close();
         return bundleJarPath;
     }
 
     protected static void checkToSendFiles(Set<String> expectedFileList) {
         HashSet<String> toSendFiles;
         File aduDir = tempRootDir.resolve(java.nio.file.Path.of("send", clientId, TEST_APPID)).toFile();
-        logger.info("Checking for files in " + aduDir);
+        logger.info("Checking for files to send in " + aduDir);
         // try for up to 10 seconds to see if the files have arrived
         for (int tries = 0;
              !(toSendFiles = new HashSet<>(listJustADUs(aduDir))).equals(expectedFileList) && tries < 20; tries++) {
             try {
+                logger.info("Expecting " + expectedFileList + " but got " + toSendFiles);
                 Thread.sleep(500);
             } catch (InterruptedException e) {
                 logger.warning("Interrupted while waiting for files to be sent");
             }
         }
+        logger.info("Expecting " + expectedFileList + " and saw " + toSendFiles);
         Assertions.assertEquals(expectedFileList, toSendFiles);
     }
 
@@ -227,14 +210,14 @@ public class End2EndTest {
     protected static void checkReceivedFiles(Set<String> expectedFileList) throws InterruptedException {
         HashSet<String> receivedFiles;
         File aduDir = tempRootDir.resolve(java.nio.file.Path.of("receive", clientId, TEST_APPID)).toFile();
-        logger.info("Checking for files in " + aduDir);
+        logger.info("Checking for received files in " + aduDir);
         // try for up to 10 seconds to see if the files have arrived
         for (int tries = 0;
              !(receivedFiles = new HashSet<>(listJustADUs(aduDir))).equals(expectedFileList) && tries < 20; tries++) {
             logger.info("Expecting " + expectedFileList + " but got " + receivedFiles);
             Thread.sleep(500);
         }
-
+        logger.info("Expecting " + expectedFileList + " and saw " + receivedFiles);
         Assertions.assertEquals(expectedFileList, receivedFiles);
     }
 

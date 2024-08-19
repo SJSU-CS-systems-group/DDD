@@ -140,7 +140,7 @@ public class BundleTransmission {
         return bundleId.trim();
     }
 
-    private void processReceivedBundle(BundleSender sender, Bundle bundle) throws IOException, RoutingExceptions.ClientMetaDataFileException, NoSessionException, InvalidMessageException, DuplicateMessageException, LegacyMessageException, InvalidKeyException, GeneralSecurityException {
+    public void processReceivedBundle(BundleSender sender, Bundle bundle) throws IOException, RoutingExceptions.ClientMetaDataFileException, NoSessionException, InvalidMessageException, DuplicateMessageException, LegacyMessageException, InvalidKeyException, GeneralSecurityException {
         String largestBundleIdReceived = this.getLargestBundleIdReceived();
         UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, this.ROOT_DIR.resolve(
                 Paths.get(BUNDLE_GENERATION_DIRECTORY, RECEIVED_PROCESSING)));
@@ -155,7 +155,7 @@ public class BundleTransmission {
                 clientBundleGenerator.compareBundleIDs(bundleId, Long.parseLong(largestBundleIdReceived),
                                                        BundleIDGenerator.DOWNSTREAM) == 1);
 
-        if (isLatestBundleId) {
+        if (!isLatestBundleId) {
             return;
         }
         UncompressedPayload uncompressedPayload =
@@ -226,7 +226,7 @@ public class BundleTransmission {
             var lastBundleSentTimestamp = lastSentBundle.lastModified();
 
             // lets check to see if we have gotten new ADUs or a new ack record
-            if (ackRecordPath.toFile().lastModified() <= lastBundleSentTimestamp ||
+            if (ackRecordPath.toFile().lastModified() <= lastBundleSentTimestamp &&
                     !applicationDataManager.hasNewADUs(null, lastBundleSentTimestamp)) {
                 return new BundleDTO(lastSentBundle.getName(), new Bundle(lastSentBundle));
             }

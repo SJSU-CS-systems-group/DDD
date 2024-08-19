@@ -16,6 +16,7 @@ import java.util.Base64;
 import java.util.Random;
 import java.util.logging.Logger;
 
+import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
 @GrpcService
@@ -46,10 +47,24 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
         if (bundleExchangeName.isDownload()) {
             bundleTransmission.getPathForBundleToSend(bundleExchangeName.encryptedBundleId());
             var bundlePath = bundleTransmission.getPathForBundleToSend(bundleExchangeName.encryptedBundleId());
-            return (bundlePath.toFile().exists()) ? bundlePath : null;
-            // NOTE: it is super tempting to try to generate a new bundle if request is from a client, but that can
-            //       cause a large number of worthless bundles to be generated. stick to generating new client
-            //       bundles only in response to the receipt of a bundle from the client.
+            if (bundlePath.toFile().exists()) {
+                return bundlePath;
+            }
+            if (sender.getType() != BundleSenderType.CLIENT) {
+                return null;
+            }
+            // let's see if there is something new to send
+            try {
+                var encryptedBundleId = bundleTransmission.generateBundleForClient(sender.getId());
+                if (encryptedBundleId != null && encryptedBundleId.equals(bundleExchangeName.encryptedBundleId())) {
+                    return bundleTransmission.getPathForBundleToSend(encryptedBundleId);
+                }
+                logger.log(INFO, String.format("%s requested %s but waiting to send %s", sender.getId(),
+                        bundleExchangeName.encryptedBundleId(), encryptedBundleId));
+            } catch (Exception e) {
+                logger.log(SEVERE, "Problem generating bundle for client " + sender.getId(), e);
+            }
+            return null;
         } else {
             byte[] randomBytes = new byte[16];
             random.nextBytes(randomBytes);

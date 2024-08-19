@@ -229,6 +229,7 @@ public class ClientSecurity {
     public CiphertextMessage encrypt(byte[] bytes) {
         /* Encrypt File */
         CiphertextMessage cipherText = cipherSession.encrypt(bytes);
+        System.out.println("BRRRRRRRRRR " + ((SignalMessage)cipherText).getCounter());
         updateSessionRecord();
         return cipherText;
     }

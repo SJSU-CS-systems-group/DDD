@@ -30,7 +30,7 @@ public class AckRecordUtils {
             return;
         }
         try {
-            Files.writeString(ackFilePath, ackRecord.toString());
+            Files.writeString(ackFilePath, ackRecord.getBundleId());
         } catch (IOException e) {
             logger.log(Level.WARNING, "Failed to write Acknowledgment record to " + ackFilePath, e);
         }

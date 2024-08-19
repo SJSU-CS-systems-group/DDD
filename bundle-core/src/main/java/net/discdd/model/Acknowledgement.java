@@ -40,4 +40,9 @@ public class Acknowledgement {
         Acknowledgement other = (Acknowledgement) obj;
         return Objects.equals(this.bundleId, other.bundleId);
     }
+
+    @Override
+    public String toString() {
+        return this.bundleId;
+    }
 }

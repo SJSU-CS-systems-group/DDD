@@ -3,11 +3,12 @@ package net.discdd.client.bundlerouting;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
 import net.discdd.bundlesecurity.BundleIDGenerator;
 import net.discdd.client.bundlesecurity.ClientSecurity;
-import net.discdd.model.EncryptedBundleId;
+import net.discdd.utils.Constants;
 import org.whispersystems.libsignal.InvalidKeyException;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.util.LinkedList;
@@ -17,8 +18,11 @@ import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
+// TODO: I'm not sure if this class is worthwhile. We can easily generate a sequence of needed
+//       encryptedBundleIds on the fly.
 public class ClientWindow {
 
     private static final Logger logger = Logger.getLogger(ClientWindow.class.getName());
@@ -28,8 +32,10 @@ public class ClientWindow {
     final private Path clientWindowDataPath;
     final private String WINDOW_FILE = "clientWindow.csv";
 
-    private final LinkedList<EncryptedBundleId> window = new LinkedList<>();
-    private String clientID = null;
+    record UnencryptedBundleId(String bundleId, long bundleCounter) {}
+
+    private final LinkedList<UnencryptedBundleId> windowOfUnencryptedBundleIds = new LinkedList<>();
+    private final String clientID;
     private int windowLength = 10; /* Default Value */
 
     /* Generates bundleIDs for window slots
@@ -43,8 +49,8 @@ public class ClientWindow {
         long length = startCounter + count;
 
         for (long i = startCounter; i < length; ++i) {
-            String encryptedId = BundleIDGenerator.generateBundleID(this.clientID, i, BundleIDGenerator.DOWNSTREAM);
-            window.add(new EncryptedBundleId(encryptedId, clientID, i));
+            String bundleId = BundleIDGenerator.generateBundleID(this.clientID, i, BundleIDGenerator.DOWNSTREAM);
+            windowOfUnencryptedBundleIds.add(new UnencryptedBundleId(bundleId, i));
         }
 
         updateDBWindow();
@@ -54,18 +60,29 @@ public class ClientWindow {
         var dbFile = clientWindowDataPath.resolve(WINDOW_FILE);
 
         Files.write(dbFile, String.format(Locale.US, "%d,%d,%d",
-                                          window.getFirst().bundleCounter(),
-                                          window.getLast().bundleCounter(),
+                                          windowOfUnencryptedBundleIds.getFirst().bundleCounter(),
+                                          windowOfUnencryptedBundleIds.getLast().bundleCounter(),
                                           windowLength).getBytes());
     }
 
     private void initializeWindow() throws IOException {
         var dbFile = clientWindowDataPath.resolve(WINDOW_FILE);
-        String dbData = Files.readString(dbFile);
-        String[] dbCSV = dbData.split(",");
-        var start = Long.parseLong(dbCSV[0]);
-        var end = Long.parseLong(dbCSV[1]);
-        windowLength = Integer.parseInt(dbCSV[2]);
+        var start = 0L;
+        windowLength = Constants.DEFAULT_WINDOW_SIZE;
+        var end = start + windowLength - 1;
+
+        try {
+            String dbData = Files.readString(dbFile);
+            String[] dbCSV = dbData.split(",");
+            start = Long.parseLong(dbCSV[0]);
+            end = Long.parseLong(dbCSV[1]);
+            windowLength = Integer.parseInt(dbCSV[2]);
+        } catch (NoSuchFileException e) {
+            // this is expected the first time
+            logger.log(INFO, "Window File not found -- creating new window");
+        } catch (IOException e) {
+            logger.log(WARNING, "Failed to read Window from Disk -- creating new window", e);
+        }
         fillWindow(start, (int) (end - start + 1));
     }
 
@@ -76,7 +93,7 @@ public class ClientWindow {
      * Returns:
      * None
      */
-    private ClientWindow(int length, String clientID, Path rootPath) throws BufferOverflow, IOException {
+    private ClientWindow(int length, String clientID, Path rootPath) {
         clientWindowDataPath = rootPath.resolve(CLIENT_WINDOW_SUBDIR);
         clientWindowDataPath.toFile().mkdirs();
         this.clientID = clientID;
@@ -121,8 +138,8 @@ public class ClientWindow {
         logger.log(FINE, "Largest Bundle ID = " + decryptedBundleID);
         long ack = BundleIDGenerator.getCounterFromBundleID(decryptedBundleID, BundleIDGenerator.DOWNSTREAM);
 
-        long begin = window.getFirst().bundleCounter();
-        long end = window.getFirst().bundleCounter();
+        long begin = windowOfUnencryptedBundleIds.getFirst().bundleCounter();
+        long end = windowOfUnencryptedBundleIds.getFirst().bundleCounter();
         if (ack < begin) {
             logger.log(FINE, "Received old [" + ack + " < " + begin + "]");
             return;
@@ -131,9 +148,9 @@ public class ClientWindow {
             return;
         }
 
-        window.removeIf(bundle -> bundle.bundleCounter() <= ack);
+        windowOfUnencryptedBundleIds.removeIf(bundle -> bundle.bundleCounter() <= ack);
 
-        fillWindow(end+1, windowLength - window.size());
+        fillWindow(end+1, windowLength - windowOfUnencryptedBundleIds.size());
 
         logger.log(FINE, "Updated Begin: " + Long.toUnsignedString(begin) + "; End: " + Long.toUnsignedString(end));
     }
@@ -145,6 +162,13 @@ public class ClientWindow {
      * None
      */
     public List<String> getWindow(ClientSecurity client) throws InvalidKeyException, GeneralSecurityException {
-        return window.stream().map(EncryptedBundleId::encryptedId).toList();
+        return windowOfUnencryptedBundleIds.stream().map(ueb -> {
+            try {
+                return client.encryptBundleID(ueb.bundleId);
+            } catch (GeneralSecurityException | InvalidKeyException e) {
+                logger.log(SEVERE, "Failed to encrypt bundleID: " + ueb.bundleId, e);
+            }
+            return null;
+        }).toList();
     }
 }
