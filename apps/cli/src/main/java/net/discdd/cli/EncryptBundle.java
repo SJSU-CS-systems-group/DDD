@@ -51,13 +51,14 @@ public class EncryptBundle implements Callable<Void> {
         Path path = Paths.get(bundlePath);
         String bundleId = path.getFileName().toString().replace(".decrypted", "");
 
-        try (var encryptedBundleOs = Files.newOutputStream(path, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
-            var clientSession = serverSecurity.getClientSession(clientId);
+        try (var encryptedBundleOs = Files.newOutputStream(path, StandardOpenOption.CREATE,
+                                                           StandardOpenOption.TRUNCATE_EXISTING)) {
+            var identityPublicKey = serverSecurity.getClientIdentityPublicKey(clientId);
+            var baseKey = serverSecurity.getClientBaseKey(clientId);
             BundleUtils.encryptPayloadAndCreateBundle(bytes -> serverSecurity.encrypt(clientId, bytes),
-                                                      clientSession.IdentityKey.getPublicKey(),
-            clientSession.BaseKey,
-            serverSecurity.getIdentityPublicKey().getPublicKey(),
-            bundleId, Files.readAllBytes(path), encryptedBundleOs);
+                                                      identityPublicKey, baseKey,
+                                                      serverSecurity.getIdentityPublicKey().getPublicKey(), bundleId,
+                                                      Files.readAllBytes(path), encryptedBundleOs);
             logger.log(INFO, "Finished encrypting " + bundlePath);
         } catch (Exception e) {
             e.printStackTrace();

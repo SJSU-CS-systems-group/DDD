@@ -123,15 +123,8 @@ public class BundleTransmission {
                 BundleUtils.extractPayload(payload, uncompressedBundle.getSource().toPath());
         logger.log(FINE, "[BundleTransmission] extracted payload from uncompressed bundle");
 
-        File ackRecordFile = new File(this.getAckRecordLocation(clientId));
-        ackRecordFile.getParentFile().mkdirs();
-        try {
-            ackRecordFile.createNewFile();
-        } catch (IOException e1) {
-            // TODO Auto-generated catch block
-            e1.printStackTrace();
-        }
-
+        var ackRecordFile = this.getAckRecordLocation(clientId);
+        ackRecordFile.toFile().getParentFile().mkdirs();
         AckRecordUtils.writeAckRecordToFile(new Acknowledgement(uncompressedPayload.getBundleId()), ackRecordFile);
 
         Path clientAckSubDirectory = this.config.getBundleTransmission().getToBeBundledDirectory().resolve(clientId);
@@ -140,15 +133,9 @@ public class BundleTransmission {
             clientAckSubDirectory.toFile().mkdirs();
         }
 
-        File ackFile = clientAckSubDirectory.resolve(Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME).toFile();
-        try {
-            if (!ackFile.exists()) {
-                ackFile.createNewFile();
-            }
-            AckRecordUtils.writeAckRecordToFile(new Acknowledgement(uncompressedPayload.getBundleId()), ackFile);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        var ackFile = clientAckSubDirectory.resolve(Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME);
+        AckRecordUtils.writeAckRecordToFile(new Acknowledgement(uncompressedPayload.getBundleId()), ackFile);
+
 
         if (!"HB".equals(uncompressedPayload.getAckRecord().getBundleId())) {
             this.serverWindowService.processACK(clientId, uncompressedPayload.getAckRecord().getBundleId());
@@ -209,9 +196,9 @@ public class BundleTransmission {
         }
     }
 
-    private String getAckRecordLocation(String clientId) {
+    private Path getAckRecordLocation(String clientId) {
         return this.config.getBundleTransmission().getToBeBundledDirectory()
-                .resolve(Path.of(clientId, Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME)).toString();
+                .resolve(Path.of(clientId, Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME));
     }
 
     public String generateBundleId(String clientId) {
@@ -242,15 +229,15 @@ public class BundleTransmission {
         long ackedRecievedBundle = counts.lastReceivedBundleCounter;
         applicationDataManager.registerNewBundleId(clientId, encryptedBundleId, bundleCounter, ackedRecievedBundle);
         bundleSecurity.getIdentityPublicKey();
-        var clientSession = serverSecurity.getClientSession(clientId);
         var adus = applicationDataManager.fetchADUsToSend(0, clientId);
         var byteArrayOsForPayload = new ByteArrayOutputStream();
-        BundleUtils.createBundlePayloadForAdus(adus, counts.lastReceivedBundleId, byteArrayOsForPayload);
+        BundleUtils.createBundlePayloadForAdus(adus, null, counts.lastReceivedBundleId, byteArrayOsForPayload);
         try (var bundleOutputStream = Files.newOutputStream(getPathForBundleToSend(encryptedBundleId),
                                                             StandardOpenOption.CREATE,
                                                             StandardOpenOption.TRUNCATE_EXISTING)) {
             BundleUtils.encryptPayloadAndCreateBundle(bytes -> serverSecurity.encrypt(clientId, bytes),
-                                                      clientSession.IdentityKey.getPublicKey(), clientSession.BaseKey,
+                                                      serverSecurity.getClientIdentityPublicKey(clientId),
+                                                      serverSecurity.getClientBaseKey(clientId),
                                                       serverSecurity.getIdentityPublicKey().getPublicKey(),
                                                       encryptedBundleId, byteArrayOsForPayload.toByteArray(),
                                                       bundleOutputStream);

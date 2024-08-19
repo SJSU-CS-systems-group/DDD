@@ -62,8 +62,6 @@ import static net.discdd.bundlesecurity.DDDPEMEncoder.ECPrivateKeyType;
 import static net.discdd.bundlesecurity.DDDPEMEncoder.ECPublicKeyType;
 import static net.discdd.bundlesecurity.SecurityUtils.PAYLOAD_DIR;
 import static net.discdd.bundlesecurity.SecurityUtils.PAYLOAD_FILENAME;
-import static net.discdd.bundlesecurity.SecurityUtils.SIGNATURE_DIR;
-import static net.discdd.bundlesecurity.SecurityUtils.SIGNATURE_FILENAME;
 import static net.discdd.bundlesecurity.SecurityUtils.createEncodedPublicKeyBytes;
 
 public class End2EndTest {
@@ -188,19 +186,12 @@ public class End2EndTest {
         DDDJarFileCreator outerJar = new DDDJarFileCreator(Files.newOutputStream(bundleJarPath));
         byte[] payloadBytes = payload.toByteArray();
 
-        // now sign the payload
-        String payloadSignature = Base64.getUrlEncoder()
-                .encodeToString(Curve.calculateSignature(clientIdentity.getPrivateKey(), payloadBytes));
-        outerJar.createEntry(java.nio.file.Path.of(SIGNATURE_DIR, PAYLOAD_FILENAME + 1 + SIGNATURE_FILENAME),
-                             payloadSignature.getBytes());
-
         // encrypt the payload
-
         CiphertextMessage cipherTextMessage = clientSessionCipher.encrypt(payloadBytes);
         var cipherTextBytes = cipherTextMessage.serialize();
 
         // store the encrypted payload
-        outerJar.createEntry(java.nio.file.Path.of(PAYLOAD_DIR, PAYLOAD_FILENAME + 1), cipherTextBytes);
+        outerJar.createEntry(java.nio.file.Path.of(PAYLOAD_DIR, PAYLOAD_FILENAME), cipherTextBytes);
         // store the bundleId
         outerJar.createEntry(SecurityUtils.BUNDLEID_FILENAME, encryptedBundleID.getBytes());
 

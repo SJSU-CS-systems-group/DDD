@@ -27,7 +27,6 @@ public class DecryptBundleTest {
             Creating New
             [ServerSecurity]: Error Reading
             Creating New
-            [ServerSecurity]:Verified Signature
             Unzipped to
             Finished decrypting
             """;

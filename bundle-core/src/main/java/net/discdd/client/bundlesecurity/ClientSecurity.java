@@ -23,8 +23,6 @@ import org.whispersystems.libsignal.state.SessionState;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.util.guava.Optional;
 
-import java.io.DataInputStream;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -33,14 +31,12 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Base64;
-import java.util.List;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
 public class ClientSecurity {
@@ -165,7 +161,7 @@ public class ClientSecurity {
             SessionRecord clientSessionRecord = clientProtocolStore.loadSession(ourAddress);
             stream.write(clientSessionRecord.serialize());
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.log(SEVERE, "Error Writing Session record to " + sessionStorePath, e);
         }
     }
 
@@ -230,56 +226,16 @@ public class ClientSecurity {
     }
 
     /* Encrypts File and creates signature for plain text */
-    public Path[] encrypt(final Path toBeEncPath, final Path encPath, final String bundleID) throws IOException,
-            InvalidKeyException {
-        final var bundlePath = encPath.resolve(bundleID);
-        final var payloadPath = bundlePath.resolve(SecurityUtils.PAYLOAD_DIR);
-        final var signPath = bundlePath.resolve(SecurityUtils.SIGNATURE_DIR);
-        List<Path> returnPaths = new ArrayList<>();
-
-        /* Create Directory if it does not exist */
-        bundlePath.toFile().mkdirs();
-        payloadPath.toFile().mkdirs();
-        signPath.toFile().mkdirs();
-
-        try (DataInputStream inputStream = new DataInputStream(new FileInputStream(toBeEncPath.toFile()))) {
-            byte[] chunk = new byte[SecurityUtils.CHUNKSIZE];
-            int len;
-            for (int i = 1; (len = inputStream.read(chunk)) != -1; i++) {
-                var payloadFilePath = payloadPath.resolve(SecurityUtils.PAYLOAD_FILENAME + i);
-                var signFilePath =
-                        signPath.resolve(SecurityUtils.PAYLOAD_FILENAME + i + SecurityUtils.SIGNATURE_FILENAME);
-
-                /* if we got a partial chunk make a new chunk with the exact size */
-                if (chunk.length != len) chunk = Arrays.copyOf(chunk, len);
-
-                /* Create Signature with plaintext*/
-                createSignature(chunk, signFilePath);
-                /* Encrypt File */
-                CiphertextMessage cipherText = cipherSession.encrypt(chunk);
-                updateSessionRecord();
-                Files.write(payloadFilePath, cipherText.serialize());
-            }
-        }
-
-        /* Create Bundle ID File */
-        var bundleIDPath = bundlePath.resolve(SecurityUtils.BUNDLEID_FILENAME);
-        Files.write(bundleIDPath, bundleID.getBytes());
-
-        /* Write Keys to Bundle directory */
-        Path[] identityKeyPaths = writeKeysToFiles(bundlePath, false);
-
-        returnPaths.add(payloadPath);
-        returnPaths.add(signPath);
-
-        returnPaths.addAll(Arrays.asList(identityKeyPaths));
-        return returnPaths.toArray(new Path[returnPaths.size()]);
+    public CiphertextMessage encrypt(byte[] bytes) {
+        /* Encrypt File */
+        CiphertextMessage cipherText = cipherSession.encrypt(bytes);
+        updateSessionRecord();
+        return cipherText;
     }
 
     public void decrypt(Path bundlePath, Path decryptedPath) throws IOException, InvalidMessageException,
             LegacyMessageException, NoSessionException, DuplicateMessageException, InvalidKeyException {
         var payloadPath = bundlePath.resolve(SecurityUtils.PAYLOAD_DIR);
-        var signPath = bundlePath.resolve(SecurityUtils.SIGNATURE_DIR);
 
         String bundleID = getBundleIDFromFile(bundlePath);
         var decryptedFile = decryptedPath.resolve(bundleID + SecurityUtils.DECRYPTED_FILE_EXT);
@@ -287,33 +243,15 @@ public class ClientSecurity {
         /* Create Directory if it does not exist */
         decryptedPath.toFile().mkdirs();
 
-        System.out.println(decryptedFile);
-        int fileCount = payloadPath.toFile().list().length;
+        String payloadName = SecurityUtils.PAYLOAD_FILENAME;
 
-        for (int i = 1; i <= fileCount; ++i) {
-            String payloadName = SecurityUtils.PAYLOAD_FILENAME + i;
-            var signatureFile = signPath.resolve(payloadName + SecurityUtils.SIGNATURE_FILENAME);
+        byte[] encryptedData = Files.readAllBytes(payloadPath.resolve(payloadName));
+        byte[] serverDecryptedMessage = cipherSession.decrypt(new SignalMessage(encryptedData));
+        updateSessionRecord();
 
-            byte[] encryptedData = Files.readAllBytes(payloadPath.resolve(payloadName));
-            byte[] serverDecryptedMessage = cipherSession.decrypt(new SignalMessage(encryptedData));
-            updateSessionRecord();
+        Files.write(decryptedFile, serverDecryptedMessage, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
 
-            Files.write(decryptedFile, serverDecryptedMessage, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
-
-            logger.log(FINER, "Decrypted Size = %d\n", serverDecryptedMessage.length);
-
-            if (SecurityUtils.verifySignature(serverDecryptedMessage, theirIdentityKey.getPublicKey(), signatureFile)) {
-                logger.log(FINE, "Verified Signature!");
-            } else {
-                // Failed to verify sign, delete bundle and return
-                logger.log(WARNING, "Invalid Signature [" + payloadName + "], Aborting bundle " + bundleID);
-
-                if (!decryptedFile.toFile().delete()) {
-                    logger.log(WARNING, "Error: Failed to delete decrypted file [%s]", decryptedFile);
-                }
-            }
-        }
-
+        logger.log(FINER, "Decrypted Size = %d\n", serverDecryptedMessage.length);
     }
 
     public String decryptBundleID(String encryptedBundleID) throws GeneralSecurityException, InvalidKeyException {
@@ -348,7 +286,15 @@ public class ClientSecurity {
         return clientRootPath;
     }
 
-    public Object getServerPublicKey() {
+    public ECPublicKey getServerPublicKey() {
         return theirIdentityKey.getPublicKey();
+    }
+
+    public ECPublicKey getClientIdentityPublicKey() {
+        return ourIdentityKeyPair.getPublicKey().getPublicKey();
+    }
+
+    public ECPublicKey getClientBaseKeyPairPublicKey() {
+        return ourBaseKey.getPublicKey();
     }
 }

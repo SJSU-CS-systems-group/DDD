@@ -9,15 +9,13 @@ public class UncompressedBundle {
 
     private final EncryptionHeader encryptionHeader;
     private final EncryptedPayload encryptedPayload;
-    private final File payloadSignature;
 
     public UncompressedBundle(String bundleId, File source, EncryptionHeader encryptionHeader,
-                              EncryptedPayload encryptedPayload, File payloadSignature) {
+                              EncryptedPayload encryptedPayload) {
         this.bundleId = bundleId;
         this.source = source;
         this.encryptionHeader = encryptionHeader;
         this.encryptedPayload = encryptedPayload;
-        this.payloadSignature = payloadSignature;
     }
 
     public String getBundleId() {
@@ -34,9 +32,5 @@ public class UncompressedBundle {
 
     public EncryptedPayload getEncryptedPayload() {
         return this.encryptedPayload;
-    }
-
-    public File getPayloadSignature() {
-        return payloadSignature;
     }
 }

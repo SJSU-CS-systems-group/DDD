@@ -47,8 +47,10 @@ class EncryptBundleTest {
                                                              "--clientId=" + clientId,
                                                              "--applicationYaml=" + escapeBackslash(applicationYml),
                                                              "--appProps=" + escapeBackslash(appProps));
+                System.out.flush();
             });
             sb.append(outText);
+            System.err.flush();
         });
         var outText = sb.toString();
         System.out.println("Standard Out: " + outText);

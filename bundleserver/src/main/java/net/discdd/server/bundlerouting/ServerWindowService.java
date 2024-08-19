@@ -10,10 +10,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.whispersystems.libsignal.InvalidKeyException;
 
+import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.FINE;
 
 @Service
 public class ServerWindowService {
@@ -60,14 +61,10 @@ public class ServerWindowService {
      * Returns:
      * None
      */
-    public void processACK(String clientID, String ackedBundleID) throws GeneralSecurityException, InvalidKeyException {
+    public void processACK(String clientID, String ackedBundleID) throws GeneralSecurityException, InvalidKeyException, InvalidClientIDException, IOException {
         String decryptedBundleID = null;
-        try {
-            decryptedBundleID = serverSecurity.decryptBundleID(ackedBundleID, clientID);
-        } catch (InvalidClientIDException e) {
-            throw new RuntimeException(e);
-        }
-        logger.log(WARNING, "[ServerWindow]: Decrypted Ack from file = " + decryptedBundleID);
+        decryptedBundleID = serverSecurity.decryptBundleID(ackedBundleID, clientID);
+        logger.log(FINE, "[ServerWindow]: Decrypted Ack from file = " + decryptedBundleID);
         long ack = BundleIDGenerator.getCounterFromBundleID(decryptedBundleID, BundleIDGenerator.DOWNSTREAM);
 
         ServerWindow serverWindow = getValueFromTable(clientID);

@@ -55,10 +55,8 @@ public class BundleUtils {
         JarUtils.jarToDir(bundle.getSource().getAbsolutePath(), extractedBundlePath.toString());
         File[] payloads = extractedBundlePath.resolve("payloads").toFile().listFiles();
         EncryptedPayload encryptedPayload = new EncryptedPayload(null, payloads[0]);
-        File payloadSign = extractedBundlePath.resolve("signatures").toFile().listFiles()[0];
-
         return new UncompressedBundle( // TODO get encryption header, payload signature and get bundle id from BS
-                                       null, extractedBundlePath.toFile(), null, encryptedPayload, payloadSign);
+                                       null, extractedBundlePath.toFile(), null, encryptedPayload);
     }
 
     public static UncompressedPayload extractPayload(Payload payload, Path extractDirPath) throws IOException {
@@ -78,7 +76,7 @@ public class BundleUtils {
 
         UncompressedPayload.Builder builder = new UncompressedPayload.Builder();
 
-        builder.setAckRecord(AckRecordUtils.readAckRecordFromFile(ackPath.toFile()));
+        builder.setAckRecord(AckRecordUtils.readAckRecordFromFile(ackPath));
         builder.setBundleId(payload.getBundleId());
         builder.setADUs(ADUUtils.readADUs(aduPath.toFile()));
         builder.setBundleId(payload.getBundleId());
@@ -120,15 +118,7 @@ public class BundleUtils {
 
         Path ackPath = bundleFilePath.resolve(Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME);
 
-        File ackRecordFile = ackPath.toFile();
-        if (!ackRecordFile.exists()) {
-            try {
-                ackRecordFile.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
+        var ackRecordFile = ackPath;
         AckRecordUtils.writeAckRecordToFile(uncompressedPayload.getAckRecord(), ackRecordFile);
 
         Path aduPath = bundleFilePath.resolve(Constants.BUNDLE_ADU_DIRECTORY_NAME);
@@ -305,12 +295,12 @@ public class BundleUtils {
         }
     }
 
-    public static void createBundlePayloadForAdus(List<ADU> adus, String ackedEncryptedBundleId, OutputStream outputStream) throws IOException, NoSuchAlgorithmException {
+    public static void createBundlePayloadForAdus(List<ADU> adus, byte[] routingData, String ackedEncryptedBundleId, OutputStream outputStream) throws IOException, NoSuchAlgorithmException {
         DDDJarFileCreator innerJar = new DDDJarFileCreator(outputStream);
-
+        if (ackedEncryptedBundleId == null) ackedEncryptedBundleId = "HB";
         // add the records to the inner jar
         innerJar.createEntry("acknowledgement.txt", ackedEncryptedBundleId.getBytes());
-        innerJar.createEntry("routing.metadata", "{}".getBytes());
+        innerJar.createEntry("routing.metadata", routingData == null ? "{}".getBytes() : routingData);
 
         for (var adu : adus) {
             try (var os = innerJar.createEntry(

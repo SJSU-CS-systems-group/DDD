@@ -78,6 +78,17 @@ public class StoreADUs {
                 .sorted(Comparator.comparingLong(ADU::getADUId));
     }
 
+    public boolean hasNewADUs(String clientId, long lastBundleSentTimestamp) {
+        var appAdus = clientId == null ? rootFolder : rootFolder.resolve(clientId);
+        try {
+            return Files.walk(appAdus).filter(Files::isRegularFile).map(Path::toFile)
+                    .anyMatch(f -> f.lastModified() > lastBundleSentTimestamp);
+        } catch (IOException e) {
+            logger.log(SEVERE, "Failed to check for new ADUs answering false to newADUs", e);
+            return false;
+        }
+    }
+
     public record ClientApp(String clientId, String appId) {}
 
     public Stream<ClientApp> getAllClientApps() {
