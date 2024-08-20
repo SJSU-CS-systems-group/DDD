@@ -18,31 +18,31 @@ DESCRIPTIONS
 	- File structure
 ***
 	BundleTransmission (generate bundles and process received bundles)
-			|_bundle-generation
-				|compressed-payload
-					|_payload.jar
-				|_encrypted-payload
-					|_ **TODO**
-				|_to-be-bundled
-					|_bundleID
-				|_to-send
-					|_client
-						|_transportID
-							|_bundleID
-				|_uncompressed-payload
-						|_bundleID
-			|_received-processing
-				|_transportID
-					|_serverID
+	    |_bundle-generation
+		|compressed-payload
+		    |_payload.jar
+		|_encrypted-payload
+		    |_ **TODO**
+		|_to-be-bundled
+		    |_bundleID
+		|_to-send
+		    |_client
+			|_transportID
+		            |_bundleID
+		|_uncompressed-payload
+		    |_bundleID
+	    |_received-processing
+		|_transportID
+		    |_serverID
 	recieve (manage received bundles)
-		|_clientID
-			|_appID
-				|_metadata.json
+	    |_clientID
+	        |_appID
+		    |_metadata.json
 	send (manage bundles to send)
-		|_clientID
-			|_appID
-				|_to-send-adu
-				|_metadata.json
+	    |_clientID
+		|_appID
+		    |_to-send-adu
+	            |_metadata.json
 
 INSTALLATION
 -------
