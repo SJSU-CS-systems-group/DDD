@@ -5,7 +5,6 @@ import net.discdd.model.ADU;
 import net.discdd.model.Metadata;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -37,7 +36,7 @@ public class StoreADUs {
         this(rootFolder);
     }
 
-    private Metadata getMetadata(String clientId, String appId) throws IOException {
+    private Metadata getMetadata(String clientId, String appId) {
         Path metadataPath = getAppFolder(clientId, appId).resolve(METADATA_FILENAME);
         try {
             String data = new String(Files.readAllBytes(metadataPath));
@@ -46,7 +45,11 @@ public class StoreADUs {
         } catch (Exception e) {
             logger.log(FINE, "[FileStoreHelper] metadata not found at " + metadataPath + ". create a new one.");
             Metadata metadata = new Metadata();
-            setMetadata(clientId, appId, metadata);
+            try {
+                setMetadata(clientId, appId, metadata);
+            } catch (IOException ex) {
+                logger.log(SEVERE, "Failed to create metadata file. PROBLEMS IMMINENT!", ex);
+            }
             return metadata;
         }
     }
@@ -63,25 +66,27 @@ public class StoreADUs {
         oFile.close();
     }
 
-    private Metadata getIfNotCreateMetadata(String clientId, String appId) throws IOException {
-        try {
-            return getMetadata(clientId, appId);
-        } catch (FileNotFoundException e) {
-            setMetadata(clientId, appId, new Metadata());
-            return getMetadata(clientId, appId);
-        }
-    }
-
     public List<ADU> getAppData(String clientId, String appId) throws IOException {
         return getADUs(clientId, appId).collect(Collectors.toList());
 
     }
 
     public Stream<ADU> getADUs(String clientId, String appId) throws IOException {
-        getIfNotCreateMetadata(clientId, appId);
+        getMetadata(clientId, appId);
         return Files.list(getAppFolder(clientId, appId)).filter(p -> !p.endsWith(METADATA_PATH)).map(Path::toFile)
                 .map(f -> new ADU(f, appId, Long.parseLong(f.getName()), f.length(), clientId))
                 .sorted(Comparator.comparingLong(ADU::getADUId));
+    }
+
+    public boolean hasNewADUs(String clientId, long lastBundleSentTimestamp) {
+        var appAdus = clientId == null ? rootFolder : rootFolder.resolve(clientId);
+        try {
+            return Files.walk(appAdus).filter(Files::isRegularFile).map(Path::toFile)
+                    .anyMatch(f -> f.lastModified() > lastBundleSentTimestamp);
+        } catch (IOException e) {
+            logger.log(SEVERE, "Failed to check for new ADUs answering false to newADUs", e);
+            return false;
+        }
     }
 
     public record ClientApp(String clientId, String appId) {}
@@ -105,7 +110,7 @@ public class StoreADUs {
     }
 
     public List<byte[]> getAllAppData(String appId) throws IOException {
-        getIfNotCreateMetadata(null, appId);
+        getMetadata(null, appId);
         var folder = rootFolder.resolve(appId);
         return Files.list(folder).map(path -> {
             try {
@@ -118,7 +123,7 @@ public class StoreADUs {
     }
 
     public List<Long> getAllADUIds(String appId) throws IOException {
-        getIfNotCreateMetadata(null, appId);
+        getMetadata(null, appId);
         var folder = rootFolder.resolve(appId);
         return Files.list(folder).map(path -> path.getFileName().toString())
                 .filter(fileName -> !fileName.equals(METADATA_FILENAME)).map(Long::parseLong)
@@ -154,12 +159,12 @@ public class StoreADUs {
         return appFolder.resolve(Long.toString(aduId)).toFile();
     }
 
-    public long getLastADUIdAdded(String clientId, String appId) throws IOException {
+    public long getLastADUIdAdded(String clientId, String appId) {
         Metadata metadata = getMetadata(clientId, appId);
         return metadata.lastAduAdded;
     }
 
-    public long getLastADUIdDeleted(String clientId, String appId) throws IOException {
+    public long getLastADUIdDeleted(String clientId, String appId) {
         Metadata metadata = getMetadata(clientId, appId);
         return metadata.lastAduDeleted;
     }
@@ -175,7 +180,7 @@ public class StoreADUs {
     public File addADU(String clientId, String appId, byte[] data, long aduId) throws IOException {
         var appFolder = getAppFolder(clientId, appId);
 
-        Metadata metadata = getIfNotCreateMetadata(clientId, appId);
+        Metadata metadata = getMetadata(clientId, appId);
         var lastAduDeleted = metadata.lastAduDeleted;
         var lastAduAdded = metadata.lastAduAdded;
         if (aduId == -1L) {

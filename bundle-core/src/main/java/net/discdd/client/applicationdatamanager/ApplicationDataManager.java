@@ -157,6 +157,10 @@ public class ApplicationDataManager {
         }
     }
 
+    public boolean hasNewADUs(String clientId, long lastBundleSentTimestamp) {
+        return sendADUsStorage.hasNewADUs(clientId, lastBundleSentTimestamp);
+    }
+
     static class SizeLimiter implements Predicate<Long> {
         long remaining;
 

@@ -1,10 +1,10 @@
 package net.discdd.server.repository.entity;
 
-import net.discdd.server.repository.ServerRoutingId;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
+import net.discdd.server.repository.compositeId.ServerRoutingId;
 
 @Entity(name = "ServerRouting")
 @Table(name = "serverroutingtable")
