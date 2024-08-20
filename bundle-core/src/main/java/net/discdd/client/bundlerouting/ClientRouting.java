@@ -104,9 +104,7 @@ public class ClientRouting {
      * Returns:
      * None
      */
-    public void bundleMetaData(Path bundlePath) throws ClientMetaDataFileException, IOException {
-        if (!Files.exists(bundlePath.resolve(METADATAFILE))) {
-            Files.copy(metaDataPath, bundlePath.resolve(METADATAFILE));
-        }
+    public byte[] bundleMetaData() throws IOException {
+        return Files.readAllBytes(metaDataPath);
     }
 }

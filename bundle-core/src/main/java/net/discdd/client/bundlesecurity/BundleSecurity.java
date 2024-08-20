@@ -3,8 +3,6 @@ package net.discdd.client.bundlesecurity;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
 import net.discdd.client.bundlerouting.ClientBundleGenerator;
 import net.discdd.client.bundlerouting.ClientWindow;
-import net.discdd.model.EncryptedPayload;
-import net.discdd.model.EncryptionHeader;
 import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
 import net.discdd.utils.Constants;
@@ -106,26 +104,6 @@ public class BundleSecurity {
 
     public String generateNewBundleId() throws IOException, InvalidKeyException, GeneralSecurityException {
         return clientBundleGenerator.generateBundleID();
-    }
-
-    public UncompressedBundle encryptPayload(Payload payload, Path bundleGenDirPath) throws IOException,
-            InvalidKeyException {
-        String bundleId = payload.getBundleId();
-        logger.log(INFO, "Encrypting payload in bundleId: " + bundleId);
-        logger.log(INFO, "[BS] Payload source:" + payload.getSource() + " bundle id " + bundleId);
-        Path[] paths;
-        if (!this.isEncryptionEnabled) {
-            return new UncompressedBundle(bundleId, payload.getSource(), null, null, null);
-        }
-        paths = client.encrypt(payload.getSource().toPath(), bundleGenDirPath, bundleId);
-
-        EncryptedPayload encryptedPayload = new EncryptedPayload(bundleId, paths[0].toFile());
-        File source = bundleGenDirPath.resolve(bundleId).toFile();
-        EncryptionHeader encHeader =
-                EncryptionHeader.builder().clientBaseKey(paths[2].toFile()).clientIdentityKey(paths[3].toFile())
-                        .serverIdentityKey(paths[4].toFile()).build();
-        return new UncompressedBundle(bundleId, source, encHeader, encryptedPayload, paths[1].toFile());
-
     }
 
     public Payload decryptPayload(UncompressedBundle uncompressedBundle) throws NoSessionException,
