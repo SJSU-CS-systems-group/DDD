@@ -46,10 +46,8 @@ public class ApplicationDataManagerTest {
         bundleServerConfig.getApplicationDataManager().setAppDataSizeLimit(100_000_000L);
         applicationDataManager =
                 new ApplicationDataManager(new AduStores(tempRootDir), (a, b) -> System.out.println("hello"),
-                                           sentAduDetailsRepository,
-                                           bundleMetadataRepository,
-                                           registeredAppAdapterRepository,
-                                           clientBundleCountersRepository,
+                                           sentAduDetailsRepository, bundleMetadataRepository,
+                                           registeredAppAdapterRepository, clientBundleCountersRepository,
                                            bundleServerConfig);
         var receiveADUsStorageField = ApplicationDataManager.class.getDeclaredField("receiveADUsStorage");
         receiveADUsStorageField.setAccessible(true);

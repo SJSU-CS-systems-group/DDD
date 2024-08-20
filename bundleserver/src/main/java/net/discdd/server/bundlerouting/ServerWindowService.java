@@ -61,7 +61,8 @@ public class ServerWindowService {
      * Returns:
      * None
      */
-    public void processACK(String clientID, String ackedBundleID) throws GeneralSecurityException, InvalidKeyException, InvalidClientIDException, IOException {
+    public void processACK(String clientID, String ackedBundleID) throws GeneralSecurityException,
+            InvalidKeyException, InvalidClientIDException, IOException {
         String decryptedBundleID = null;
         decryptedBundleID = serverSecurity.decryptBundleID(ackedBundleID, clientID);
         logger.log(FINE, "[ServerWindow]: Decrypted Ack from file = " + decryptedBundleID);

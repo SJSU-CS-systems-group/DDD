@@ -95,7 +95,8 @@ public class BundleTransmission {
 
     private ClientRouting clientRouting;
 
-    public BundleTransmission(Path rootFolder, Consumer<ADU> aduConsumer) throws WindowExceptions.BufferOverflow, IOException, InvalidKeyException, RoutingExceptions.ClientMetaDataFileException, NoSuchAlgorithmException {
+    public BundleTransmission(Path rootFolder, Consumer<ADU> aduConsumer) throws WindowExceptions.BufferOverflow,
+            IOException, InvalidKeyException, RoutingExceptions.ClientMetaDataFileException, NoSuchAlgorithmException {
         this.ROOT_DIR = rootFolder;
         this.bundleSecurity = new BundleSecurity(this.ROOT_DIR);
         this.applicationDataManager = new ApplicationDataManager(this.ROOT_DIR, aduConsumer);
@@ -140,7 +141,9 @@ public class BundleTransmission {
         return bundleId.trim();
     }
 
-    public void processReceivedBundle(BundleSender sender, Bundle bundle) throws IOException, RoutingExceptions.ClientMetaDataFileException, NoSessionException, InvalidMessageException, DuplicateMessageException, LegacyMessageException, InvalidKeyException, GeneralSecurityException {
+    public void processReceivedBundle(BundleSender sender, Bundle bundle) throws IOException,
+            RoutingExceptions.ClientMetaDataFileException, NoSessionException, InvalidMessageException,
+            DuplicateMessageException, LegacyMessageException, InvalidKeyException, GeneralSecurityException {
         String largestBundleIdReceived = this.getLargestBundleIdReceived();
         UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, this.ROOT_DIR.resolve(
                 Paths.get(BUNDLE_GENERATION_DIRECTORY, RECEIVED_PROCESSING)));
@@ -194,7 +197,8 @@ public class BundleTransmission {
         this.bundleSecurity.registerLargestBundleIdReceived(largestBundleId);
     }
 
-    private BundleDTO generateNewBundle(String bundleId) throws RoutingExceptions.ClientMetaDataFileException, IOException, NoSuchAlgorithmException, InvalidKeyException {
+    private BundleDTO generateNewBundle(String bundleId) throws RoutingExceptions.ClientMetaDataFileException,
+            IOException, NoSuchAlgorithmException, InvalidKeyException {
         Acknowledgement ackRecord = AckRecordUtils.readAckRecordFromFile(ackRecordPath);
         List<ADU> adus = this.applicationDataManager.fetchADUsToSend(BUNDLE_SIZE_LIMIT, null);
         var routingData = clientRouting.bundleMetaData();
@@ -205,7 +209,8 @@ public class BundleTransmission {
 
         ClientSecurity clientSecurity = bundleSecurity.getClientSecurity();
         Path bundleFile = tosendDir.resolve(bundleId);
-        try (OutputStream os = Files.newOutputStream(bundleFile, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+        try (OutputStream os = Files.newOutputStream(bundleFile, StandardOpenOption.CREATE,
+                                                     StandardOpenOption.TRUNCATE_EXISTING)) {
             BundleUtils.encryptPayloadAndCreateBundle(bytes -> clientSecurity.encrypt(bytes),
                                                       clientSecurity.getClientIdentityPublicKey(),
                                                       clientSecurity.getClientBaseKeyPairPublicKey(),
@@ -215,7 +220,8 @@ public class BundleTransmission {
         return new BundleDTO(bundleId, new Bundle(bundleFile.toFile()));
     }
 
-    public BundleDTO generateBundleForTransmission() throws RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException, GeneralSecurityException {
+    public BundleDTO generateBundleForTransmission() throws RoutingExceptions.ClientMetaDataFileException,
+            IOException, InvalidKeyException, GeneralSecurityException {
         // find the latest sent bundle
         var sentBundles = tosendDir.toFile().listFiles();
         if (sentBundles != null && sentBundles.length > 0) {

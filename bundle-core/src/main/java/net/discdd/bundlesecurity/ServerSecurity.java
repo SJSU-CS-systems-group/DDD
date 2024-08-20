@@ -192,8 +192,7 @@ public class ServerSecurity {
 
     private void initializeClientKeysFromFiles(Path path, ClientSession clientSession) throws IOException,
             InvalidKeyException {
-        byte[] clientIdentityKey =
-                SecurityUtils.decodePublicKeyfromFile(path.resolve(CLIENT_IDENTITY_KEY));
+        byte[] clientIdentityKey = SecurityUtils.decodePublicKeyfromFile(path.resolve(CLIENT_IDENTITY_KEY));
         clientSession.IdentityKey = new IdentityKey(clientIdentityKey, 0);
 
         byte[] clientBaseKey = SecurityUtils.decodePublicKeyfromFile(path.resolve(CLIENT_BASE_KEY));
@@ -210,7 +209,8 @@ public class ServerSecurity {
     }
 
     @NonNull
-    private ClientSession getClientSession(String clientID, Path keyPathIfNeeded) throws InvalidKeyException, IOException {
+    private ClientSession getClientSession(String clientID, Path keyPathIfNeeded) throws InvalidKeyException,
+            IOException {
         var clientSession = clientMap.get(clientID);
         if (clientSession != null) {
             return clientMap.get(clientID);
@@ -300,7 +300,8 @@ public class ServerSecurity {
         return decryptedFile;
     }
 
-    public CiphertextMessage encrypt(String clientID, byte[] data) throws IOException, NoSuchAlgorithmException, InvalidKeyException {
+    public CiphertextMessage encrypt(String clientID, byte[] data) throws IOException, NoSuchAlgorithmException,
+            InvalidKeyException {
         ClientSession client = getClientSession(clientID, null);
         CiphertextMessage cipherText = client.cipherSession.encrypt(data);
         updateSessionRecord(client);
@@ -319,26 +320,26 @@ public class ServerSecurity {
         return writeKeysToFiles(bundlePath, false);
     }
 
-     public String encryptBundleID(String bundleID, String clientID) throws GeneralSecurityException, InvalidKeyException, InvalidClientIDException, IOException {
+    public String encryptBundleID(String bundleID, String clientID) throws GeneralSecurityException,
+            InvalidKeyException, InvalidClientIDException, IOException {
         String sharedSecret = null;
         sharedSecret = getsharedSecret(clientID);
 
         return SecurityUtils.encryptAesCbcPkcs5(sharedSecret, bundleID);
     }
 
-
     public String createEncryptedBundleId(String clientId, long bundleCounter, boolean downstream) throws InvalidClientIDException, GeneralSecurityException, InvalidKeyException, IOException {
         var bundleId = BundleIDGenerator.generateBundleID(clientId, bundleCounter, downstream);
         return encryptBundleID(bundleId, clientId);
     }
-
 
     public void createBundleIDFile(String bundleID, ClientSession client, Path bundlePath) throws IOException {
         var bundleIDPath = bundlePath.resolve(SecurityUtils.BUNDLEID_FILENAME);
         Files.write(bundleIDPath, bundleID.getBytes());
     }
 
-    public String decryptBundleID(String encryptedBundleID, String clientID) throws InvalidClientIDException, InvalidKeyException, GeneralSecurityException, IOException {
+    public String decryptBundleID(String encryptedBundleID, String clientID) throws InvalidClientIDException,
+            InvalidKeyException, GeneralSecurityException, IOException {
         String sharedSecret = null;
         byte[] bundleBytes = null;
 
@@ -370,13 +371,13 @@ public class ServerSecurity {
         return clientRootPath;
     }
 
-    public long getCounterFromBundlePath(Path bundlePath, boolean direction) throws IOException, InvalidKeyException, GeneralSecurityException {
+    public long getCounterFromBundlePath(Path bundlePath, boolean direction) throws IOException, InvalidKeyException,
+            GeneralSecurityException {
         var bundleIDPath = bundlePath.resolve(SecurityUtils.BUNDLEID_FILENAME);
         byte[] encryptedBundleID = Files.readAllBytes(bundleIDPath);
         String receivedBundleID, latestBundleID;
 
-        byte[] clientIdentityKeyBytes =
-                SecurityUtils.decodePublicKeyfromFile(bundlePath.resolve(CLIENT_IDENTITY_KEY));
+        byte[] clientIdentityKeyBytes = SecurityUtils.decodePublicKeyfromFile(bundlePath.resolve(CLIENT_IDENTITY_KEY));
         IdentityKey clientIdentityKey = new IdentityKey(clientIdentityKeyBytes, 0);
 
         String sharedSecret = getsharedSecret(clientIdentityKey.getPublicKey());

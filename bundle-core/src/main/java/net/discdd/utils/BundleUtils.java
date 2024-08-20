@@ -295,7 +295,9 @@ public class BundleUtils {
         }
     }
 
-    public static void createBundlePayloadForAdus(List<ADU> adus, byte[] routingData, String ackedEncryptedBundleId, OutputStream outputStream) throws IOException, NoSuchAlgorithmException {
+    public static void createBundlePayloadForAdus(List<ADU> adus, byte[] routingData, String ackedEncryptedBundleId,
+                                                  OutputStream outputStream) throws IOException,
+            NoSuchAlgorithmException {
         DDDJarFileCreator innerJar = new DDDJarFileCreator(outputStream);
         if (ackedEncryptedBundleId == null) ackedEncryptedBundleId = "HB";
         // add the records to the inner jar
@@ -303,9 +305,8 @@ public class BundleUtils {
         innerJar.createEntry("routing.metadata", routingData == null ? "{}".getBytes() : routingData);
 
         for (var adu : adus) {
-            try (var os = innerJar.createEntry(
-                    Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, adu.getAppId(),
-                                          Long.toString(adu.getADUId()))); var aos = Files.newInputStream(
+            try (var os = innerJar.createEntry(Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, adu.getAppId(),
+                                                       Long.toString(adu.getADUId()))); var aos = Files.newInputStream(
                     adu.getSource().toPath(), StandardOpenOption.READ)) {
                 aos.transferTo(os);
             }
@@ -313,14 +314,10 @@ public class BundleUtils {
         innerJar.close();
     }
 
-    public static void encryptPayloadAndCreateBundle(Encrypter payloadEncryptor,
-                                                        ECPublicKey clientIdentityPublicKey,
-                                                        ECPublicKey clientBaseKeyPairPublicKey,
-                                                        ECPublicKey serverIdentityPublicKey,
-                                                        String encryptedBundleId,
-                                                        byte[] payloadBytes,
-                                                        OutputStream outputStream)
-            throws IOException, NoSuchAlgorithmException, InvalidKeyException {
+    public static void encryptPayloadAndCreateBundle(Encrypter payloadEncryptor, ECPublicKey clientIdentityPublicKey,
+                                                     ECPublicKey clientBaseKeyPairPublicKey,
+                                                     ECPublicKey serverIdentityPublicKey, String encryptedBundleId,
+                                                     byte[] payloadBytes, OutputStream outputStream) throws IOException, NoSuchAlgorithmException, InvalidKeyException {
         DDDJarFileCreator outerJar = new DDDJarFileCreator(outputStream);
 
         // encrypt the payload

@@ -43,7 +43,7 @@ public class ApplicationDataManager {
 
     public ApplicationDataManager(AduStores aduStores, AduDeliveredListener aduDeliveredListener,
                                   SentAduDetailsRepository sentAduDetailsRepository,
-                                    BundleMetadataRepository bundleMetadataRepository,
+                                  BundleMetadataRepository bundleMetadataRepository,
                                   RegisteredAppAdapterRepository registeredAppAdapterRepository,
                                   ClientBundleCountersRepository clientBundleCountersRepository,
                                   BundleServerConfig bundleServerConfig) {
@@ -109,7 +109,8 @@ public class ApplicationDataManager {
     }
 
     public ClientBundleCounters getBundleCountersForClient(String clientId) {
-        return clientBundleCountersRepository.findById(clientId).orElse(new ClientBundleCounters(clientId, 0, "", 0, ""));
+        return clientBundleCountersRepository.findById(clientId)
+                .orElse(new ClientBundleCounters(clientId, 0, "", 0, ""));
     }
 
     private void updateLastSentCounter(String clientId, long sentBundleCounter, String sentBundleId) {
@@ -192,12 +193,12 @@ public class ApplicationDataManager {
     public Optional<UncompressedPayload.Builder> getLastSentBundlePayloadBuilder(String clientId) {
         var counters = getBundleCountersForClient(clientId);
         Map<String, Object> ret = new HashMap<>();
-         if (counters.lastSentBundleId != null && !counters.lastSentBundleId.isEmpty()) {
+        if (counters.lastSentBundleId != null && !counters.lastSentBundleId.isEmpty()) {
             ret.put("bundle-id", counters.lastSentBundleId);
             ret.put("acknowledgement", counters.lastReceivedBundleId);
 
-            List<SentAduDetails> bundleAduDetailsList = sentAduDetailsRepository.findByBundleId(
-                    counters.lastSentBundleId);
+            List<SentAduDetails> bundleAduDetailsList =
+                    sentAduDetailsRepository.findByBundleId(counters.lastSentBundleId);
 
             Map<String, List<ADU>> aduMap = new HashMap<>();
             for (SentAduDetails bundleAduDetails : bundleAduDetailsList) {

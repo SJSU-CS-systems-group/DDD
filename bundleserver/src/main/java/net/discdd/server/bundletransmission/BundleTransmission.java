@@ -136,7 +136,6 @@ public class BundleTransmission {
         var ackFile = clientAckSubDirectory.resolve(Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME);
         AckRecordUtils.writeAckRecordToFile(new Acknowledgement(uncompressedPayload.getBundleId()), ackFile);
 
-
         if (!"HB".equals(uncompressedPayload.getAckRecord().getBundleId())) {
             this.serverWindowService.processACK(clientId, uncompressedPayload.getAckRecord().getBundleId());
         }
@@ -208,8 +207,8 @@ public class BundleTransmission {
         return this.applicationDataManager.getBundleCountersForClient(clientId).lastSentBundleId;
     }
 
-    public String generateBundleForClient(String clientId) throws InvalidClientIDException,
-            GeneralSecurityException, InvalidKeyException, IOException {
+    public String generateBundleForClient(String clientId) throws InvalidClientIDException, GeneralSecurityException,
+            InvalidKeyException, IOException {
         logger.log(INFO, "[BundleTransmission] Processing bundle generation request for client " + clientId);
 
         if (this.serverWindowService.isWindowFull(clientId)) {

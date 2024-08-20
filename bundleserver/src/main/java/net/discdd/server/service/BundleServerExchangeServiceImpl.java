@@ -60,7 +60,7 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
                     return bundleTransmission.getPathForBundleToSend(encryptedBundleId);
                 }
                 logger.log(INFO, String.format("%s requested %s but waiting to send %s", sender.getId(),
-                        bundleExchangeName.encryptedBundleId(), encryptedBundleId));
+                                               bundleExchangeName.encryptedBundleId(), encryptedBundleId));
             } catch (Exception e) {
                 logger.log(SEVERE, "Problem generating bundle for client " + sender.getId(), e);
             }

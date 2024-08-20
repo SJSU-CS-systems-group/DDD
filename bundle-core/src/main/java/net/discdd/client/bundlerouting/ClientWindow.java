@@ -59,10 +59,9 @@ public class ClientWindow {
     private void updateDBWindow() throws IOException {
         var dbFile = clientWindowDataPath.resolve(WINDOW_FILE);
 
-        Files.write(dbFile, String.format(Locale.US, "%d,%d,%d",
-                                          windowOfUnencryptedBundleIds.getFirst().bundleCounter(),
-                                          windowOfUnencryptedBundleIds.getLast().bundleCounter(),
-                                          windowLength).getBytes());
+        Files.write(dbFile,
+                    String.format(Locale.US, "%d,%d,%d", windowOfUnencryptedBundleIds.getFirst().bundleCounter(),
+                                  windowOfUnencryptedBundleIds.getLast().bundleCounter(), windowLength).getBytes());
     }
 
     private void initializeWindow() throws IOException {
@@ -150,7 +149,7 @@ public class ClientWindow {
 
         windowOfUnencryptedBundleIds.removeIf(bundle -> bundle.bundleCounter() <= ack);
 
-        fillWindow(end+1, windowLength - windowOfUnencryptedBundleIds.size());
+        fillWindow(end + 1, windowLength - windowOfUnencryptedBundleIds.size());
 
         logger.log(FINE, "Updated Begin: " + Long.toUnsignedString(begin) + "; End: " + Long.toUnsignedString(end));
     }

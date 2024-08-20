@@ -22,7 +22,8 @@ public class SentAduDetails {
     public long aduIdRangeStart;
     public long aduIdRangeEnd;
 
-    public SentAduDetails(String bundleId, String clientId, long ClientBundleCounter, String appId, long aduIdRangeStart, long aduIdRangeEnd) {
+    public SentAduDetails(String bundleId, String clientId, long ClientBundleCounter, String appId,
+                          long aduIdRangeStart, long aduIdRangeEnd) {
         this.bundleId = bundleId;
         this.ClientBundleCounter = ClientBundleCounter;
         this.appId = appId;

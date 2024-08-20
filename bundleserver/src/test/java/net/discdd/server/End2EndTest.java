@@ -162,23 +162,22 @@ public class End2EndTest {
 
     protected static Path createBundleForAdus(List<Long> aduIds, String clientId, int bundleCount, Path targetDir) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, InvalidKeySpecException, BadPaddingException, java.security.InvalidKeyException {
         var baos = new ByteArrayOutputStream();
-        var adus = aduIds.stream()
-                .map(aduId -> {
-                         var aduFile = new File(aduTempDir, Long.toString(aduId));
-                         try {
-                             Files.write(aduFile.toPath(), String.format("ADU%d", aduId).getBytes(),
-                                         StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-                         } catch (IOException e) {
-                             e.printStackTrace();
-                         }
-                         return new ADU(aduFile, TEST_APPID, aduId, aduFile.length(), clientId);
-                     })
-                .toList();
+        var adus = aduIds.stream().map(aduId -> {
+            var aduFile = new File(aduTempDir, Long.toString(aduId));
+            try {
+                Files.write(aduFile.toPath(), String.format("ADU%d", aduId).getBytes(), StandardOpenOption.CREATE,
+                            StandardOpenOption.TRUNCATE_EXISTING);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return new ADU(aduFile, TEST_APPID, aduId, aduFile.length(), clientId);
+        }).toList();
         BundleUtils.createBundlePayloadForAdus(adus, "{}".getBytes(), "HB", baos);
         String bundleId = BundleIDGenerator.generateBundleID(clientId, bundleCount, BundleIDGenerator.UPSTREAM);
         String encryptedBundleID = encryptBundleID(bundleId);
         Path bundleJarPath = targetDir.resolve(encryptedBundleID);
-        try (var os = Files.newOutputStream(bundleJarPath, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+        try (var os = Files.newOutputStream(bundleJarPath, StandardOpenOption.CREATE,
+                                            StandardOpenOption.TRUNCATE_EXISTING)) {
             BundleUtils.encryptPayloadAndCreateBundle(a -> clientSessionCipher.encrypt(a),
                                                       clientIdentity.getPublicKey().getPublicKey(),
                                                       baseKeyPair.getPublicKey(),

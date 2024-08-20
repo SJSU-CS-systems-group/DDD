@@ -36,7 +36,7 @@ public class StoreADUs {
         this(rootFolder);
     }
 
-    private Metadata getMetadata(String clientId, String appId)  {
+    private Metadata getMetadata(String clientId, String appId) {
         Path metadataPath = getAppFolder(clientId, appId).resolve(METADATA_FILENAME);
         try {
             String data = new String(Files.readAllBytes(metadataPath));

@@ -33,6 +33,7 @@ public class BundleSecurity {
     private String BUNDLE_ID_NEXT_COUNTER;
     @Autowired
     private ServerSecurity serverSecurity;
+
     private Long getRecvdBundleIdCounter(String bundleId) {
         return Long.valueOf(bundleId.split("-")[1]);
     }
@@ -113,7 +114,8 @@ public class BundleSecurity {
         return serverSecurity.getIdentityPublicKey().serialize();
     }
 
-    public long getCounterFromBundlePath(Path bundlePath, boolean direction) throws GeneralSecurityException, IOException, InvalidKeyException {
+    public long getCounterFromBundlePath(Path bundlePath, boolean direction) throws GeneralSecurityException,
+            IOException, InvalidKeyException {
         return serverSecurity.getCounterFromBundlePath(bundlePath, direction);
     }
 }
