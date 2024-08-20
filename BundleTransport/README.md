@@ -12,6 +12,13 @@
 4. Android developer options configuration - [guide](https://developer.android.com/studio/debug/dev-options)
 5. Connect the phone to laptop through USB-C cable and **Allow** connection from the laptop on the phone
 6. Choose the desired physical device and application and hit “Play” to install
+
+Set up VPN to be able to connect with Bundle Server
+1. Get a OPVN certificate from [](https://authncert.com/)
+2. Request Ben Reed to configure the server for your email
+3. Use OpenVPN or TunnelBlick with the .OPVN file
+4. Connect VPN 
+   
    
 **Notes**
 - check for possible Gradle sync 
@@ -22,7 +29,7 @@
 The Bundle Transport has two main features:
 1. Start/Stop the gRPC server - The gRPC server on the Bundle Transport is used by the Bundle Client to send and retrieve data from the Bundle Transport
 2. Connect to the Bundle Server - Creates a request to the Bundle Server in order to upload and download the bundles
-   
+
 Look up bundle transport directory in Device Explorer ```/storage/emulated/0/Android/data/net.discdd.bundletransport```
 ```
   /client: bundles to send to client
