@@ -3,6 +3,7 @@ package net.discdd.bundlesecurity;
 import org.whispersystems.libsignal.*;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
+import org.whispersystems.libsignal.ecc.ECPrivateKey;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
 import org.whispersystems.libsignal.state.impl.InMemorySignalProtocolStore;
 import org.whispersystems.libsignal.util.KeyHelper;
@@ -35,10 +36,7 @@ import static java.util.logging.Level.INFO;
 
 public class SecurityUtils {
     public static final String PAYLOAD_FILENAME = "payload";
-    public static final String SIGNATURE_FILENAME = ".signature";
     public static final String PAYLOAD_DIR = "payloads";
-    public static final String SIGNATURE_DIR = "signatures";
-    public static final String SIGN_FILENAME = PAYLOAD_FILENAME + ".signature";
     public static final String BUNDLEID_FILENAME = "bundle.id";
     public static final String DECRYPTED_FILE_EXT = ".decrypted";
     public static final String BUNDLE_FILE_EXT = ".bundle";
@@ -138,15 +136,12 @@ public class SecurityUtils {
         return new InMemorySignalProtocolStore(tIdentityKeyPair, KeyHelper.generateRegistrationId(false));
     }
 
-    public static boolean verifySignature(byte[] message, ECPublicKey publicKey, Path signaturePath) throws InvalidKeyException, IOException {
-        byte[] encodedsignature = Files.readAllBytes(signaturePath);
-        byte[] signature = Base64.getUrlDecoder().decode(encodedsignature);
-
-        return verifySignatureRaw(message, publicKey, signature);
-    }
-
     public static boolean verifySignatureRaw(byte[] message, ECPublicKey publicKey, byte[] signature) throws InvalidKeyException {
         return Curve.verifySignature(publicKey, message, signature);
+    }
+
+    public static byte[] signMessageRaw(byte[] message, ECPrivateKey signingKey) throws InvalidKeyException {
+        return Curve.calculateSignature(signingKey, message);
     }
 
     public static String getClientID(Path bundlePath) throws IOException, InvalidKeyException,

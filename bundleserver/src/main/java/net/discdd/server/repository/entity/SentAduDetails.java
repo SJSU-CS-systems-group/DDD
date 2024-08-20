@@ -1,87 +1,33 @@
 package net.discdd.server.repository.entity;
 
-import java.util.UUID;
-
-import org.hibernate.annotations.UuidGenerator;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.UuidGenerator;
 
-@Entity(name = "SentAduDetails")
-@Table(name = "sent_adu_details")
+import java.util.UUID;
+
+@Entity
+@NoArgsConstructor
 public class SentAduDetails {
-
     @Id
     @UuidGenerator
     @Column(name = "id", updatable = false, nullable = false)
-    private UUID id;
+    public UUID id;
 
-    @Column(name = "bundle_id", nullable = false, columnDefinition = "TEXT")
-    @NotBlank
-    private String bundleId;
+    public String bundleId;
+    public long ClientBundleCounter;
+    public String appId;
+    public long aduIdRangeStart;
+    public long aduIdRangeEnd;
 
-    @Column(name = "app_id", nullable = false, columnDefinition = "TEXT")
-    @NotBlank
-    private String appId;
-
-    @Column(name = "adu_id_range_start", nullable = false, columnDefinition = "BIGINT")
-    @NotNull
-    private Long aduIdRangeStart;
-
-    @Column(name = "adu_id_range_end", nullable = false, columnDefinition = "BIGINT")
-    @NotNull
-    private Long aduIdRangeEnd;
-
-    public SentAduDetails() {}
-
-    public SentAduDetails(String bundleId, String appId, Long aduIdRangeStart, Long aduIdRangeEnd) {
+    public SentAduDetails(String bundleId, String clientId, long ClientBundleCounter, String appId,
+                          long aduIdRangeStart, long aduIdRangeEnd) {
         this.bundleId = bundleId;
+        this.ClientBundleCounter = ClientBundleCounter;
         this.appId = appId;
         this.aduIdRangeStart = aduIdRangeStart;
-        this.aduIdRangeEnd = aduIdRangeEnd;
-    }
-
-    public String getId() {
-        return this.id.toString();
-    }
-
-    public void setId(String id) {
-        this.id = UUID.fromString(id);
-    }
-
-    public String getBundleId() {
-        return this.bundleId;
-    }
-
-    public void setBundleId(String bundleId) {
-        this.bundleId = bundleId;
-    }
-
-    public String getAppId() {
-        return this.appId;
-    }
-
-    public void setAppId(String appId) {
-        this.appId = appId;
-    }
-
-    public Long getAduIdRangeStart() {
-        return this.aduIdRangeStart;
-    }
-
-    public void setAduIdRangeStart(Long aduIdRangeStart) {
-        this.aduIdRangeStart = aduIdRangeStart;
-    }
-
-    public Long getAduIdRangeEnd() {
-        return this.aduIdRangeEnd;
-    }
-
-    public void setAduIdRangeEnd(Long aduIdRangeEnd) {
         this.aduIdRangeEnd = aduIdRangeEnd;
     }
 }

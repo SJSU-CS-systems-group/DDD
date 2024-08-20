@@ -1,10 +1,8 @@
 package net.discdd.server.bundlesecurity;
 
-import net.discdd.bundlesecurity.InvalidClientSessionException;
+import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.bundlesecurity.ServerSecurity;
 import net.discdd.grpc.RecencyBlob;
-import net.discdd.model.EncryptedPayload;
-import net.discdd.model.EncryptionHeader;
 import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
 import net.discdd.utils.Constants;
@@ -36,8 +34,6 @@ public class BundleSecurity {
     @Autowired
     private ServerSecurity serverSecurity;
 
-    private final boolean encryptionEnabled = true;
-
     private Long getRecvdBundleIdCounter(String bundleId) {
         return Long.valueOf(bundleId.split("-")[1]);
     }
@@ -52,17 +48,6 @@ public class BundleSecurity {
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    public String getClientIdFromBundleId(String bundleId) {
-        String clientId = "";
-        if (bundleId.contains("-")) {
-            clientId = bundleId.split("-")[0];
-        } else {
-            clientId = bundleId.split("#")[0];
-        }
-        logger.log(INFO, "[BundleSecurity] Client id corresponding to bundle id: " + bundleId + " is " + clientId);
-        return clientId;
     }
 
     public String[] encrypt(String toBeEncPath, String encPath, String bundleID, String clientID) {
@@ -91,59 +76,30 @@ public class BundleSecurity {
                 uncompressedBundle.getSource().toPath().resolve(Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar")
                         .toFile();
 
-        if (this.encryptionEnabled) {
-            try {
-                this.serverSecurity.decrypt(uncompressedBundle.getSource().toPath(),
-                                            uncompressedBundle.getSource().toPath());
-                logger.log(FINE, "[BundleSecurity] decrypted payload");
-            } catch (Exception e) {
-                // TODO
-                logger.log(SEVERE,
-                           "[BundleSecurity] Failed to decrypt payload" + uncompressedBundle.getSource().toPath(), e);
-                // e.printStackTrace();
-                return null;
-            }
+        try {
+            this.serverSecurity.decrypt(uncompressedBundle.getSource().toPath(),
+                                        uncompressedBundle.getSource().toPath());
+            logger.log(FINE, "[BundleSecurity] decrypted payload");
+        } catch (Exception e) {
+            // TODO
+            logger.log(SEVERE, "[BundleSecurity] Failed to decrypt payload" + uncompressedBundle.getSource().toPath(),
+                       e);
+            // e.printStackTrace();
+            return null;
+        }
 
-            try {
-                bundleId = this.serverSecurity.getBundleIDFromFile(uncompressedBundle.getSource().toPath());
-                logger.log(FINE, "[BundleSecurity] Got bundleId from File");
-            } catch (Exception e) {
-                logger.log(WARNING, "[BundleSecurity] Unable to get bundleId from File");
-                e.printStackTrace();
-            }
-            File decryptedPayload = uncompressedBundle.getSource().toPath().resolve(bundleId + ".decrypted").toFile();
-            if (decryptedPayload.exists()) {
-                decryptedPayload.renameTo(decryptedPayloadJar);
-            }
+        try {
+            bundleId = this.serverSecurity.getBundleIDFromFile(uncompressedBundle.getSource().toPath());
+            logger.log(FINE, "[BundleSecurity] Got bundleId from File");
+        } catch (Exception e) {
+            logger.log(WARNING, "[BundleSecurity] Unable to get bundleId from File");
+            e.printStackTrace();
+        }
+        File decryptedPayload = uncompressedBundle.getSource().toPath().resolve(bundleId + ".decrypted").toFile();
+        if (decryptedPayload.exists()) {
+            decryptedPayload.renameTo(decryptedPayloadJar);
         }
         return new Payload(bundleId, decryptedPayloadJar);
-    }
-
-    public UncompressedBundle encryptPayload(String clientId, Payload payload, Path bundleGenDirPath) throws InvalidClientSessionException, IOException, NoSuchAlgorithmException, InvalidKeyException {
-        String bundleId = payload.getBundleId();
-        if (!this.encryptionEnabled) {
-            return new UncompressedBundle(bundleId, payload.getSource(), null, null, null);
-        }
-        Path[] paths = new Path[0];
-        try {
-            paths = this.serverSecurity.encrypt(payload.getSource().toPath(), bundleGenDirPath, bundleId, clientId);
-        } catch (InvalidClientSessionException e) {
-            throw new RuntimeException(e);
-        }
-
-        EncryptedPayload encryptedPayload = new EncryptedPayload(bundleId, paths[0].toFile());
-
-        File source = bundleGenDirPath.resolve(bundleId).toFile();
-        EncryptionHeader encHeader =
-                EncryptionHeader.builder().serverSignedPreKey(paths[2].toFile()).serverIdentityKey(paths[3].toFile())
-                        .serverRatchetKey(paths[4].toFile()).build();
-        return new UncompressedBundle( // TODO get encryption header, payload signature
-                                       bundleId, source, encHeader, encryptedPayload, paths[1].toFile());
-    }
-
-    public int isNewerBundle(Path bundlePath, String lastReceivedBundleID) throws GeneralSecurityException,
-            IOException, InvalidKeyException {
-        return this.serverSecurity.isNewerBundle(bundlePath, lastReceivedBundleID);
     }
 
     public boolean bundleServerIdMatchesCurrentServer(String receivedServerId) throws NoSuchAlgorithmException {
@@ -151,10 +107,15 @@ public class BundleSecurity {
     }
 
     public byte[] signRecencyBlob(RecencyBlob blob) throws InvalidKeyException {
-        return serverSecurity.createSignature(blob.toByteArray());
+        return SecurityUtils.signMessageRaw(blob.toByteArray(), serverSecurity.getSigningKey());
     }
 
     public byte[] getIdentityPublicKey() {
-        return serverSecurity.getIdentityPublicKey();
+        return serverSecurity.getIdentityPublicKey().serialize();
+    }
+
+    public long getCounterFromBundlePath(Path bundlePath, boolean direction) throws GeneralSecurityException,
+            IOException, InvalidKeyException {
+        return serverSecurity.getCounterFromBundlePath(bundlePath, direction);
     }
 }

@@ -1,4 +1,4 @@
-package net.discdd.server.repository;
+package net.discdd.server.repository.compositeId;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;

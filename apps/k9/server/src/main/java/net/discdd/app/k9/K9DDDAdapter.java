@@ -109,14 +109,8 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         List<String> pendingClients = new ArrayList<>();
 
         sendADUsStorage.getAllClientApps().filter(s -> {
-            try {
-                return sendADUsStorage.getLastADUIdAdded(s.clientId(), s.appId()) >
-                        sendADUsStorage.getLastADUIdDeleted(s.clientId(), s.appId());
-            } catch (IOException e) {
-                logger.log(SEVERE,
-                           "Error while checking pending data for client: " + s.clientId() + " app: " + s.appId(), e);
-                return false;
-            }
+            return sendADUsStorage.getLastADUIdAdded(s.clientId(), s.appId()) >
+                    sendADUsStorage.getLastADUIdDeleted(s.clientId(), s.appId());
         }).map(StoreADUs.ClientApp::clientId).forEach(pendingClients::add);
 
         responseObserver.onNext(PendingDataCheckResponse.newBuilder().addAllClientId(pendingClients).build());

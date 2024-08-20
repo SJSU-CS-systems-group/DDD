@@ -20,6 +20,7 @@ import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.grpc.ExchangeADUsResponse;
 import net.discdd.grpc.GetRecencyBlobRequest;
 import net.discdd.grpc.Status;
+import net.discdd.model.Bundle;
 import net.discdd.model.BundleDTO;
 import net.discdd.utils.Constants;
 import net.discdd.utils.StoreADUs;
@@ -102,6 +103,7 @@ public class BundleClientToBundleServerTest extends End2EndTest {
 
     @Test
     void test3UploadBundleWithADUs() throws Exception {
+        System.out.println("BRRRRRRRRRRRRR starting test 3");
         sendStore.addADU(null, TEST_APPID, "ADU1".getBytes(), 1);
         sendStore.addADU(null, TEST_APPID, "ADU2".getBytes(), 2);
 
@@ -129,13 +131,9 @@ public class BundleClientToBundleServerTest extends End2EndTest {
         checkToSendFiles(Set.of("1"));
         receiveBundle();
         checkToSendFiles(Set.of("1"));
-        // TODO: waiting for trique's fix to window tracking
-        /*
         Assertions.assertEquals(1, recieveStore.getADUs(null, TEST_APPID).count());
 
         sendBundle();
-        // that send bundle should have caused the ACK to be processed and cleared the ADU to send
-        */
     }
 
     @Test
@@ -207,17 +205,19 @@ public class BundleClientToBundleServerTest extends End2EndTest {
                     .downloadBundle(downloadRequest);
 
             try {
+                Path receivedBundleLocation =
+                        clientTestRoot.resolve("BundleTransmission/bundle-generation/to-send").resolve(bundle);
                 final OutputStream fileOutputStream = responses.hasNext() ?
                         // I should not have this literal here! but this change is getting too large to fix all the
                         // literal problems!
-                        Files.newOutputStream(
-                                clientTestRoot.resolve("BundleTransmission/bundle-generation/to-send").resolve(bundle),
-                                StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING) : null;
+                        Files.newOutputStream(receivedBundleLocation, StandardOpenOption.CREATE,
+                                              StandardOpenOption.TRUNCATE_EXISTING) : null;
 
                 while (responses.hasNext()) {
                     var response = responses.next();
                     fileOutputStream.write(response.getChunk().getChunk().toByteArray());
                 }
+                bundleTransmission.processReceivedBundle(sender, new Bundle(receivedBundleLocation.toFile()));
                 break;
             } catch (StatusRuntimeException e) {
                 logger.log(SEVERE, "Receive bundle failed " + channel, e);

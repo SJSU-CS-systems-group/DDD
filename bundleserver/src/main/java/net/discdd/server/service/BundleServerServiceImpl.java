@@ -54,10 +54,9 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
         ;
         var deletionList = new ArrayList<EncryptedBundleId>();
         var downloadList = new ArrayList<EncryptedBundleId>();
-        var uploadList = new ArrayList<EncryptedBundleId>();
         try {
             var bundlesToExchange =
-                    bundleTransmission.generateBundlesForTransmission(request.getSender(), serverBundlesOnTransport);
+                    bundleTransmission.inventoryBundlesForTransmission(request.getSender(), serverBundlesOnTransport);
             bundlesToExchange.bundlesToDelete().stream()
                     .map(s -> EncryptedBundleId.newBuilder().setEncryptedId(s).build()).forEach(deletionList::add);
             bundlesToExchange.bundlesToDownload().stream()
