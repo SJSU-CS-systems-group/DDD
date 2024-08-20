@@ -72,7 +72,6 @@ public class ClientSecurity {
         try {
             loadKeysfromFiles(clientKeyPath);
             logger.log(FINE, "[Sec]: Using Existing Keys");
-            System.out.println("[Sec]: Using Existing Keys");
         } catch (IOException | InvalidKeyException e) {
             logger.log(WARNING, "[Sec]: Error Loading Keys from files, generating new keys instead");
             // Create Client's Key pairs
@@ -229,7 +228,6 @@ public class ClientSecurity {
     public CiphertextMessage encrypt(byte[] bytes) {
         /* Encrypt File */
         CiphertextMessage cipherText = cipherSession.encrypt(bytes);
-        System.out.println("BRRRRRRRRRR " + ((SignalMessage)cipherText).getCounter());
         updateSessionRecord();
         return cipherText;
     }
