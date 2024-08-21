@@ -35,12 +35,3 @@ Look up bundle transport directory in Device Explorer ```/storage/emulated/0/And
   /client: bundles to send to client
   /server: bundles to send to server
 ```
-
-## ADDITIONAL NOTES
-- [Android Tutorial](https://developer.android.com/training/basics/firstapp/index.html) if you're new to Android development
-- For M1 and M2 Mac models please change grpc plugin (found in build.gradle file) from
-```artifact = 'io.grpc:protoc-gen-grpc-java:1.42.0'```
-to
-```artifact = 'io.grpc:protoc-gen-grpc-java:1.42.0:osx-x86_64'```
-- For M2 Mac models ALSO install rosetta in terminal using following command in terminal
-```softwareupdate --install-rosetta```
