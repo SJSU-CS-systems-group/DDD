@@ -48,30 +48,28 @@ public class LogFragment extends Fragment {
         logMsgs.setText(String.join("\n", reversedLogRecords));
     }
 
-    private static final Handler logHandler = new Handler() {
-        @Override
-        public void publish(LogRecord logRecord) {
-            // get the last part of the logger name
-            var loggerNameParts = logRecord.getLoggerName().split("\\.");
-            var loggerName = loggerNameParts[loggerNameParts.length - 1];
-            if (LogFragment.logRecords.size() > 100) LogFragment.logRecords.remove(0);
-            String entry = String.format("[%s] %s", loggerName, logRecord.getMessage());
-            System.out.println(entry);
-            LogFragment.logRecords.add(entry);
-        }
-
-        @Override
-        public void flush() {
-        }
-
-        @Override
-        public void close() throws SecurityException {
-        }
-    };
-
     public static void registerLoggerHandler() {
         if (LogFragment.logRecords == null) {
-            Logger.getLogger("").addHandler(logHandler);
+            Logger.getLogger("").addHandler(new Handler() {
+                @Override
+                public void publish(LogRecord logRecord) {
+                    // get the last part of the logger name
+                    var loggerNameParts = logRecord.getLoggerName().split("\\.");
+                    var loggerName = loggerNameParts[loggerNameParts.length - 1];
+                    if (LogFragment.logRecords.size() > 100) LogFragment.logRecords.remove(0);
+                    String entry = String.format("[%s] %s", loggerName, logRecord.getMessage());
+                    System.out.println(entry);
+                    LogFragment.logRecords.add(entry);
+                }
+
+                @Override
+                public void flush() {
+                }
+
+                @Override
+                public void close() throws SecurityException {
+                }
+            });
             LogFragment.logRecords = new LinkedList<>();
             LogFragment.logRecords.add("Log messages:\n");
         }
