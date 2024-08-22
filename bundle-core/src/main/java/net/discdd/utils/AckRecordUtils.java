@@ -13,7 +13,7 @@ public class AckRecordUtils {
 
     public static Acknowledgement readAckRecordFromFile(Path ackFilePath) {
         try {
-            return new Acknowledgement(Files.readString(ackFilePath));
+            return new Acknowledgement(new String(Files.readAllBytes(ackFilePath)));
         } catch (IOException e) {
             // we don't do a full stack trace here because this is a common case
             logger.log(Level.WARNING,
