@@ -8,7 +8,7 @@ Bundle Server is a Java Spring application that processes, stores, and distribut
 INSTALLATION
 ------------
 
-MSQL installation:
+MySQL installation:
 
 download mysql zip  
 run "mysqld --initialize --console" (only for the first time)  
@@ -40,24 +40,27 @@ create table client_data_changed_table (
     has_new_data bool not null
 );
 ```
-in the resources/application.yml file change the spring.datasource.password attribute to your mysql db password
 
-Additional Notes
+COMPILATION
 ----------------
+Compile app package with ``` mvn clean install ```
 
 For running server (in server mode), add custom properties in an application.properties file, outside of your git repository
 and add its path as program argument on run command.
-java -jar {jar file} {custom application.properties file}
+``` java -jar {jar file} {custom application.properties file} ```
 
 Sample application.properties file:
 ```
 spring.datasource.password = tripti
+spring.datasource.password = password
 bundle-server.bundle-store-root = C:/Users/tript/IdeaProjects/DDD/bundleserver
 ```
 Sample server run command:
 ```
-java -jar \target\bundleserver-0.0.1-SNAPSHOT.jar C:/Users/tripti/Downloads/application.properties   
+java -jar bundleserver/target/bundleserver-0.0.1-SNAPSHOT.jar C:/Users/tripti/Downloads/application.properties   
 ```
-Do not add your custom application.properties in git
 
-AND: Use IntelliJ IDEA for IDE
+NOTE
+- Do not add your custom application.properties in git
+- Use IntelliJ IDEA for IDE
+
