@@ -71,7 +71,7 @@ public class ClientWindow {
         var end = start + windowLength - 1;
 
         try {
-            String dbData = Files.readString(dbFile);
+            String dbData = new String(Files.readAllBytes(dbFile));
             String[] dbCSV = dbData.split(",");
             start = Long.parseLong(dbCSV[0]);
             end = Long.parseLong(dbCSV[1]);
