@@ -8,7 +8,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
-import android.net.wifi.p2p.WifiP2pDevice;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.provider.Settings;
@@ -48,7 +47,7 @@ public class TransportWifiDirectFragment extends Fragment {
             // We've bound to LocalService, cast the IBinder and get LocalService instance.
             var binder = (TransportWifiDirectService.TransportWifiDirectServiceBinder) service;
             btService = binder.getService();
-            btService.requestDeviceInfo().thenAccept(TransportWifiDirectFragment.this::processDeviceInfoChange);
+            btService.requestDeviceInfo().thenAccept(di -> processDeviceInfoChange());
             updateGroupInfo();
         }
 
@@ -63,7 +62,7 @@ public class TransportWifiDirectFragment extends Fragment {
         intentFilter.addAction(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION);
     }
 
-    private void processDeviceInfoChange(WifiP2pDevice device) {
+    private void processDeviceInfoChange() {
         // NOTE: we aren't using device info here, but be aware that it can be null!
         requireActivity().runOnUiThread(() -> {
             var deviceName = btService.getDeviceName();
@@ -97,7 +96,7 @@ public class TransportWifiDirectFragment extends Fragment {
         super.onResume();
         registerBroadcastReceiver();
         updateGroupInfo();
-        btService.requestDeviceInfo().thenAccept(TransportWifiDirectFragment.this::processDeviceInfoChange);
+        processDeviceInfoChange();
     }
 
     @Override
@@ -149,12 +148,13 @@ public class TransportWifiDirectFragment extends Fragment {
         Intent intent = new Intent(getActivity(), TransportWifiDirectService.class);
         requireContext().bindService(intent, connection, Context.BIND_AUTO_CREATE);
         bundleTransportWifiEvent = new BundleTransportWifiEvent();
-        registerBroadcastReceiver();
         return rootView;
     }
 
     private void registerBroadcastReceiver() {
         LocalBroadcastManager.getInstance(requireActivity()).registerReceiver(bundleTransportWifiEvent, intentFilter);
+        updateGroupInfo();
+        processDeviceInfoChange();
     }
 
     private void unregisterBroadcastReceiver() {
@@ -212,7 +212,7 @@ public class TransportWifiDirectFragment extends Fragment {
                     switch (actionType) {
                         case WIFI_DIRECT_MANAGER_DEVICE_INFO_CHANGED:
                         case WIFI_DIRECT_MANAGER_INITIALIZED:
-                            processDeviceInfoChange(null);
+                            processDeviceInfoChange();
                             updateGroupInfo();
                             break;
                         case WIFI_DIRECT_MANAGER_GROUP_INFO_CHANGED:
@@ -221,8 +221,6 @@ public class TransportWifiDirectFragment extends Fragment {
                     }
                 }
             }
-
         }
-
     }
 }

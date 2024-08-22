@@ -17,7 +17,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.net.NetworkInfo;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
@@ -417,40 +416,26 @@ public class WifiDirectManager {
                     //         connectivity has changed.
                     //         EXTRA_WIFI_P2P_INFO provides the p2p connection info in the form of a
                     //         WifiP2pInfo object.
-                    //         Another extra EXTRA_NETWORK_INFO provides the network info in the
-                    //         form of
-                    //         a NetworkInfo.
-                    //         A third extra provides the details of the EXTRA_WIFI_P2P_GROUP and
-                    //         may
-                    //         contain a null
-                    WifiP2pInfo info = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_INFO, WifiP2pInfo.class);
-                    NetworkInfo networkInfo =
-                            intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE, NetworkInfo.class);
-                    WifiP2pGroup wifiP2pGroup =
+                    //         EXTRA_WIFI_P2P_GROUP provides the details of the group and
+                    //         may contain a null
+                    var conInfo = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_INFO, WifiP2pInfo.class);
+                    var conGroup =
                             intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP, WifiP2pGroup.class);
 
-                    var groupInfoChanged = false;
-                    if (groupInfo == null || !groupInfo.equals(wifiP2pGroup)) {
-                        groupInfo = wifiP2pGroup;
-                        groupInfoChanged = true;
-                    }
-                    if (networkInfo != null && networkInfo.isConnected()) {
-                        var newGroupOwnerAddress = info == null ? null : info.groupOwnerAddress;
-                        if ((groupOwnerAddress != null && !groupOwnerAddress.equals(newGroupOwnerAddress) ||
-                                (groupOwnerAddress == null && newGroupOwnerAddress != null))) {
-                            groupOwnerAddress = newGroupOwnerAddress;
-                            groupInfoChanged = true;
+                    WifiDirectManager.this.groupInfo = conGroup;
+                    var ownerAddress = conInfo == null ? null : conInfo.groupOwnerAddress;
+                    if (ownerAddress == null) {
+                        if (groupOwnerAddress != null) {
+                            groupOwnerAddress = null;
                             notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_CONNECTION_CHANGED);
                         }
                     } else {
-                        if (groupOwnerAddress != null) {
-                            groupOwnerAddress = null;
-                            groupInfoChanged = true;
+                        if (!ownerAddress.equals(groupOwnerAddress)) {
+                            groupOwnerAddress = ownerAddress;
+                            notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_CONNECTION_CHANGED);
                         }
                     }
-                    if (groupInfoChanged) {
-                        notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_GROUP_INFO_CHANGED);
-                    }
+                    notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_GROUP_INFO_CHANGED);
                 }
                 case WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> processDeviceInfo(
                         intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE, WifiP2pDevice.class));
