@@ -60,19 +60,21 @@ public class RpcServer {
 
             @Override
             protected Path pathProducer(BundleExchangeName bundleExchangeName, BundleSender bundleSender) {
-                return bundleExchangeName.isDownload() ? toClientPath.resolve(bundleExchangeName.encryptedBundleId()) : toServerPath.resolve(bundleExchangeName.encryptedBundleId());
+                return bundleExchangeName.isDownload() ? toClientPath.resolve(bundleExchangeName.encryptedBundleId()) :
+                        toServerPath.resolve(bundleExchangeName.encryptedBundleId());
             }
-
 
             @Override
             protected void bundleCompletion(BundleExchangeName bundleExchangeName) {
             }
 
             @Override
-            public void getRecencyBlob(GetRecencyBlobRequest request, StreamObserver<GetRecencyBlobResponse> responseObserver) {
+            public void getRecencyBlob(GetRecencyBlobRequest request,
+                                       StreamObserver<GetRecencyBlobResponse> responseObserver) {
                 var recencyBlobResponse = GetRecencyBlobResponse.getDefaultInstance();
-                try (var is = Files.newInputStream(toClientPath.resolve(TransportToBundleServerManager.RECENCY_BLOB_BIN))) {
-                    recencyBlobResponse =  GetRecencyBlobResponse.parseFrom(is);
+                try (var is = Files.newInputStream(
+                        toClientPath.resolve(TransportToBundleServerManager.RECENCY_BLOB_BIN))) {
+                    recencyBlobResponse = GetRecencyBlobResponse.parseFrom(is);
                 } catch (IOException e) {
                     logger.log(SEVERE, "Failed to read recency blob", e);
                 }

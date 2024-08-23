@@ -73,8 +73,7 @@ public class TransportToBundleServerManager implements Runnable {
                 Files.createDirectories(fromServerPath);
                 Files.createDirectories(fromClientPath);
             }
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             logger.log(SEVERE, "Failed to get inventory", e);
         }
 
@@ -139,10 +138,12 @@ public class TransportToBundleServerManager implements Runnable {
                 logger.log(SEVERE, "Failed to download file: " + path, e);
             }
         }
-        var recencyBlob = blockingExchangeStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS).getRecencyBlob(GetRecencyBlobRequest.getDefaultInstance());
+        var recencyBlob = blockingExchangeStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                .getRecencyBlob(GetRecencyBlobRequest.getDefaultInstance());
 
         Path blobPath = fromServerPath.resolve(RECENCY_BLOB_BIN);
-        try (var os = Files.newOutputStream(blobPath, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)){
+        try (var os = Files.newOutputStream(blobPath, StandardOpenOption.CREATE,
+                                            StandardOpenOption.TRUNCATE_EXISTING)) {
             recencyBlob.writeTo(os);
         } catch (IOException e) {
             logger.log(SEVERE, "Failed to write recency blob", e);
