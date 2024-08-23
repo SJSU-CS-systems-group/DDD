@@ -169,9 +169,9 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
                 if (periodicExecutor == null) processBackgroundExchangeSetting();
             }
             case WIFI_DIRECT_MANAGER_GROUP_INFO_CHANGED -> {
-                var groupInfo = wifiDirectManager.getGroupInfo();
-                if (groupInfo != null && groupInfo.getOwner() != null) {
-                    completeConnectionWaiter(groupInfo);
+                var ownerAddress = wifiDirectManager.getGroupOwnerAddress();
+                if (ownerAddress != null) {
+                    completeConnectionWaiter(wifiDirectManager.getGroupInfo());
                 }
             }
         }
@@ -212,6 +212,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
         } catch (Exception e) {
             logger.log(WARNING, "Failed to connect to " + device.deviceName, e);
         } finally {
+            wifiDirectManager.disconnect();
             broadcastBundleClientWifiEvent(BundleClientWifiDirectEventType.WIFI_DIRECT_CLIENT_EXCHANGE_FINISHED,
                                            device.deviceAddress);
         }

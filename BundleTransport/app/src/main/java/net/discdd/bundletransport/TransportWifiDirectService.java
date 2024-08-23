@@ -27,6 +27,7 @@ import net.discdd.wifidirect.WifiDirectStateListener;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 /**
  * This service handles the Wifi Direct group and the gRPC server.
@@ -105,6 +106,8 @@ public class TransportWifiDirectService extends Service
         switch (action.type()) {
             case WIFI_DIRECT_MANAGER_GROUP_INFO_CHANGED:
                 var groupInfo = wifiDirectManager.getGroupInfo();
+                appendToClientLog("Group info: " + (groupInfo == null ? "N/A" : groupInfo.getClientList().stream().map(
+                        d -> d.deviceName).collect(Collectors.joining(", "))));
                 if (groupInfo == null || groupInfo.getClientList().isEmpty()) {
                     appendToClientLog("No clients connected. Shutting down gRPC server");
                     stopRpcServer();

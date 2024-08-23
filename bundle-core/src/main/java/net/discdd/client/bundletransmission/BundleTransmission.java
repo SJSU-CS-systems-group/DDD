@@ -349,6 +349,7 @@ public class BundleTransmission {
     }
 
     public record BundleExchangeCounts(int bundlesSent, int bundlesReceived) {}
+    private static final int INITIAL_CONNECT_RETRIES = 8;
 
     /**
      * IT IS VERY VERY IMPORTANT THAT TRANSPORT IS THE HOSTNAME WHEN TALKING TO THE SERVER, AND AN ADDRESS
@@ -358,13 +359,21 @@ public class BundleTransmission {
                                                         String transportAddress, int port) {
         var channel = ManagedChannelBuilder.forAddress(transportAddress, port).enableRetry().usePlaintext().build();
         var blockingStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
-        var blobRecencyReply = blockingStub.getRecencyBlob(GetRecencyBlobRequest.getDefaultInstance());
         int bundlesDownloaded = 0;
         int bundlesUploaded = 0;
         try {
-            if (!processRecencyBlob(deviceAddress, blobRecencyReply)) {
-                logger.log(SEVERE,
-                           "Did not process recency blob. In the future, we need to stop talking to this device");
+            for (var tries = 0; tries < INITIAL_CONNECT_RETRIES; tries++) {
+                try {
+                    var blobRecencyReply = blockingStub.getRecencyBlob(GetRecencyBlobRequest.getDefaultInstance());
+                    if (!processRecencyBlob(deviceAddress, blobRecencyReply)) {
+                        logger.log(SEVERE,
+                                   "Did not process recency blob. In the future, we need to stop talking to this device");
+                    }
+                } catch (StatusRuntimeException e) {
+                    logger.log(SEVERE, "Recency blob request failed for try " + tries + ": " + e.getMessage());
+                    if (tries == INITIAL_CONNECT_RETRIES) throw e;
+                    Thread.sleep(500);
+                }
             }
             timestampExchangeWithTransport(deviceAddress);
             var clientSecurity = bundleSecurity.getClientSecurity();

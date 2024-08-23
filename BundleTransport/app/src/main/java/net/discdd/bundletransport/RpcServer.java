@@ -10,8 +10,6 @@ import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
 import net.discdd.grpc.BundleSender;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
@@ -27,7 +25,6 @@ public class RpcServer {
     private static final Logger logger = Logger.getLogger(RpcServer.class.getName());
 
     // private final String TAG = "dddTransport";
-    private static final String inetSocketAddressIP = "192.168.49.1";
     private static final int port = 7777;
     private ServerState state = ServerState.SHUTDOWN;
 
@@ -46,7 +43,6 @@ public class RpcServer {
             return;
         }
         state = ServerState.PENDING;
-        SocketAddress address = new InetSocketAddress(inetSocketAddressIP, port);
         var bundleReceivePath = context.getExternalFilesDir(null).toPath().resolve("BundleTransmission/server");
         var bundleExchangeService = new BundleExchangeServiceImpl() {
             @Override
@@ -63,7 +59,7 @@ public class RpcServer {
             protected void bundleCompletion(BundleExchangeName bundleExchangeName) {
             }
         };
-        server = NettyServerBuilder.forAddress(address).addService(bundleExchangeService).build();
+        server = NettyServerBuilder.forPort(7777).addService(bundleExchangeService).build();
 
         logger.log(INFO, "Starting rpc server at: " + server.toString());
 
