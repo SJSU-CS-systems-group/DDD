@@ -2,20 +2,27 @@ package net.discdd.bundletransport;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
 import android.content.Context;
 
 import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
 import net.discdd.grpc.BundleSender;
+import net.discdd.grpc.GetRecencyBlobRequest;
+import net.discdd.grpc.GetRecencyBlobResponse;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import io.grpc.Server;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
+import io.grpc.stub.StreamObserver;
 
 public class RpcServer {
     public enum ServerState {
@@ -43,7 +50,8 @@ public class RpcServer {
             return;
         }
         state = ServerState.PENDING;
-        var bundleReceivePath = context.getExternalFilesDir(null).toPath().resolve("BundleTransmission/server");
+        var toServerPath = context.getExternalFilesDir(null).toPath().resolve("BundleTransmission/server");
+        var toClientPath = context.getExternalFilesDir(null).toPath().resolve("BundleTransmission/client");
         var bundleExchangeService = new BundleExchangeServiceImpl() {
             @Override
             protected void onBundleExchangeEvent(BundleExchangeEvent bundleExchangeEvent) {
@@ -52,11 +60,25 @@ public class RpcServer {
 
             @Override
             protected Path pathProducer(BundleExchangeName bundleExchangeName, BundleSender bundleSender) {
-                return bundleReceivePath.resolve(bundleExchangeName.encryptedBundleId());
+                return bundleExchangeName.isDownload() ? toClientPath.resolve(bundleExchangeName.encryptedBundleId()) : toServerPath.resolve(bundleExchangeName.encryptedBundleId());
             }
+
 
             @Override
             protected void bundleCompletion(BundleExchangeName bundleExchangeName) {
+            }
+
+            @Override
+            public void getRecencyBlob(GetRecencyBlobRequest request, StreamObserver<GetRecencyBlobResponse> responseObserver) {
+                var recencyBlobResponse = GetRecencyBlobResponse.getDefaultInstance();
+                try (var is = Files.newInputStream(toClientPath.resolve(TransportToBundleServerManager.RECENCY_BLOB_BIN))) {
+                    recencyBlobResponse =  GetRecencyBlobResponse.parseFrom(is);
+                } catch (IOException e) {
+                    logger.log(SEVERE, "Failed to read recency blob", e);
+                }
+
+                responseObserver.onNext(recencyBlobResponse);
+                responseObserver.onCompleted();
             }
         };
         server = NettyServerBuilder.forPort(7777).addService(bundleExchangeService).build();

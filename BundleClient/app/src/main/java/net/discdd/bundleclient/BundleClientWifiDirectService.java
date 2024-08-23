@@ -139,6 +139,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
     }
 
     private void addConnectionWaiter(CompletableFuture<WifiP2pGroup> connectedFuture) {
+        logger.log(INFO, "Adding connection waiter" + connectedFuture);
         var oldFuture = connectionWaiter.getAndSet(connectedFuture);
         if (oldFuture != null && !oldFuture.isDone()) {
             oldFuture.completeExceptionally(new TimeoutException("Connection timed out"));
@@ -147,6 +148,8 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
 
     private void completeConnectionWaiter(WifiP2pGroup groupInfo) {
         var future = connectionWaiter.getAndSet(null);
+        logger.log(INFO, "Completing connection waiter" + future);
+
         if (future != null && !future.isDone()) {
             future.complete(groupInfo);
         }
@@ -205,7 +208,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
             }
         }
         try {
-            var newGroup = connectTo(device).get(2, TimeUnit.SECONDS);
+            var newGroup = connectTo(device).get(10, TimeUnit.SECONDS);
             return bundleTransmission.doExchangeWithTransport(device.deviceAddress, device.deviceName,
                                                               wifiDirectManager.getGroupOwnerAddress().getHostAddress(),
                                                               7777);
