@@ -106,8 +106,8 @@ public class TransportWifiDirectService extends Service
         switch (action.type()) {
             case WIFI_DIRECT_MANAGER_GROUP_INFO_CHANGED:
                 var groupInfo = wifiDirectManager.getGroupInfo();
-                appendToClientLog("Group info: " + (groupInfo == null ? "N/A" : groupInfo.getClientList().stream().map(
-                        d -> d.deviceName).collect(Collectors.joining(", "))));
+                appendToClientLog("Group info: " + (groupInfo == null ? "N/A" :
+                        groupInfo.getClientList().stream().map(d -> d.deviceName).collect(Collectors.joining(", "))));
                 if (groupInfo == null || groupInfo.getClientList().isEmpty()) {
                     appendToClientLog("No clients connected. Shutting down gRPC server");
                     stopRpcServer();

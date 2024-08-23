@@ -419,8 +419,7 @@ public class WifiDirectManager {
                     //         EXTRA_WIFI_P2P_GROUP provides the details of the group and
                     //         may contain a null
                     var conInfo = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_INFO, WifiP2pInfo.class);
-                    var conGroup =
-                            intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP, WifiP2pGroup.class);
+                    var conGroup = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP, WifiP2pGroup.class);
 
                     WifiDirectManager.this.groupInfo = conGroup;
                     var ownerAddress = conInfo == null ? null : conInfo.groupOwnerAddress;

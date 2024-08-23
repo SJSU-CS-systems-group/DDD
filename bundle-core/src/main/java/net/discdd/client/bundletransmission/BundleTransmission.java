@@ -349,6 +349,7 @@ public class BundleTransmission {
     }
 
     public record BundleExchangeCounts(int bundlesSent, int bundlesReceived) {}
+
     private static final int INITIAL_CONNECT_RETRIES = 8;
 
     /**
@@ -367,7 +368,8 @@ public class BundleTransmission {
                     var blobRecencyReply = blockingStub.getRecencyBlob(GetRecencyBlobRequest.getDefaultInstance());
                     if (!processRecencyBlob(deviceAddress, blobRecencyReply)) {
                         logger.log(SEVERE,
-                                   "Did not process recency blob. In the future, we need to stop talking to this device");
+                                   "Did not process recency blob. In the future, we need to stop talking to this " +
+                                           "device");
                     }
                 } catch (StatusRuntimeException e) {
                     logger.log(SEVERE, "Recency blob request failed for try " + tries + ": " + e.getMessage());
