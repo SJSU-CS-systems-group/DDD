@@ -423,6 +423,7 @@ public class WifiDirectManager {
 
                     WifiDirectManager.this.groupInfo = conGroup;
                     var ownerAddress = conInfo == null ? null : conInfo.groupOwnerAddress;
+                    logger.log(INFO, "Connection changed " + conInfo + " " + ownerAddress);
                     if (ownerAddress == null) {
                         if (groupOwnerAddress != null) {
                             groupOwnerAddress = null;

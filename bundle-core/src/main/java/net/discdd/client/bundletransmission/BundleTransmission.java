@@ -442,7 +442,7 @@ public class BundleTransmission {
                 }
                 return 1;
             } catch (StatusRuntimeException e) {
-                logger.log(SEVERE, "Receive bundle failed " + stub.getChannel(), e);
+                logger.log(SEVERE, "Receive bundle failed " + stub.getChannel() + " " + e.getMessage());
             } finally {
                 if (fileOutputStream != null) {
                     try {

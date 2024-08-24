@@ -172,6 +172,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
                 if (periodicExecutor == null) processBackgroundExchangeSetting();
             }
             case WIFI_DIRECT_MANAGER_GROUP_INFO_CHANGED -> {
+                logger.info("WifiDirectManager group info changed " + wifiDirectManager.getGroupOwnerAddress());
                 var ownerAddress = wifiDirectManager.getGroupOwnerAddress();
                 if (ownerAddress != null) {
                     completeConnectionWaiter(wifiDirectManager.getGroupInfo());
@@ -225,9 +226,10 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
     private CompletableFuture<WifiP2pGroup> connectTo(WifiP2pDevice transport) {
         var connectedFuture = new CompletableFuture<WifiP2pGroup>();
         addConnectionWaiter(connectedFuture);
+        logger.log(INFO, "Connecting to " + transport);
         // NOTE: we don't return the future from connect because that future only triggers
         //       at the data link layer.
-        wifiDirectManager.connect(transport);
+        wifiDirectManager.connect(transport).thenAccept(groupInfo -> logger.log(INFO, "Connected to " + groupInfo));
         return connectedFuture;
     }
 

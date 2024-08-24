@@ -13,8 +13,6 @@ import net.discdd.grpc.GetRecencyBlobRequest;
 import net.discdd.grpc.GetRecencyBlobResponse;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
@@ -98,7 +96,7 @@ public class RpcServer {
     }
 
     public void shutdownServer() {
-        if (state == ServerState.SHUTDOWN || state == ServerState.PENDING) {
+        if (true || state == ServerState.SHUTDOWN || state == ServerState.PENDING) {
             return;
         }
 
