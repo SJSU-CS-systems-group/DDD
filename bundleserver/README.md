@@ -51,7 +51,7 @@ and add its path as program argument on run command.
 
 Sample application.properties file:
 ```
-spring.datasource.password = tripti
+spring.datasource.username = tripti
 spring.datasource.password = password
 bundle-server.bundle-store-root = C:/Users/tript/IdeaProjects/DDD/bundleserver
 ```
