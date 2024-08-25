@@ -45,6 +45,7 @@
             android:id="@+id/change_device_name"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:visibility="gone"
             android:orientation="vertical">
         <TextView
                 android:text="@string/phone_name_must_start_with_ddd"
