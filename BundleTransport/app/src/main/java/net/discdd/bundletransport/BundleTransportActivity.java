@@ -2,14 +2,17 @@ package net.discdd.bundletransport;
 
 import static java.util.logging.Level.WARNING;
 
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.Bundle;
+import android.os.IBinder;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -25,6 +28,7 @@ import net.discdd.android.fragments.PermissionsFragment;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.SubmissionPublisher;
 import java.util.logging.Logger;
 
@@ -40,14 +44,14 @@ public class BundleTransportActivity extends AppCompatActivity {
     private FragmentStateAdapter viewPager2Adapter;
     private PermissionsFragment permissionsFragment;
     private SharedPreferences sharedPreferences;
+    TransportWifiServiceConnection transportWifiServiceConnection = new TransportWifiServiceConnection();
 
     record TitledFragment(String title, Fragment fragment) {}
 
     ArrayList<TitledFragment> fragments = new ArrayList<>();
     private static final List<String> wifiDirectPermissions =
             List.of("android.permission.ACCESS_WIFI_STATE", "android.permission.CHANGE_WIFI_STATE",
-                    "android.permission.INTERNET", "android.permission.ACCESS_FINE_LOCATION",
-                    "android.permission.NEARBY_WIFI_DEVICES");
+                    "android.permission.INTERNET", "android.permission.NEARBY_WIFI_DEVICES");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,7 +60,9 @@ public class BundleTransportActivity extends AppCompatActivity {
         sharedPreferences = getSharedPreferences(TransportWifiDirectService.WIFI_DIRECT_PREFERENCES, MODE_PRIVATE);
 
         try {
-            getApplicationContext().startForegroundService(new Intent(this, TransportWifiDirectService.class));
+            Intent intent = new Intent(this, TransportWifiDirectService.class);
+            getApplicationContext().startForegroundService(intent);
+            bindService(intent, transportWifiServiceConnection, Context.BIND_AUTO_CREATE);
         } catch (Exception e) {
             logger.log(WARNING, "Failed to start TransportWifiDirectService", e);
         }
@@ -100,6 +106,8 @@ public class BundleTransportActivity extends AppCompatActivity {
         permissionsFragment.registerPermissionsWatcher(obtainedPermissions -> {
             logger.info("Permissions obtained: " + obtainedPermissions);
             if (obtainedPermissions.containsAll(wifiDirectPermissions)) {
+                transportWifiServiceConnection.thenApply(
+                        transportWifiDirectService -> transportWifiDirectService.requestDeviceInfo());
                 enableFragment(transportWifiFragment);
             } else {
                 disableFragment(transportWifiFragment);
@@ -127,6 +135,7 @@ public class BundleTransportActivity extends AppCompatActivity {
         }
 
         unmonitorUploadTab();
+        if (transportWifiServiceConnection.btService != null) unbindService(transportWifiServiceConnection);
         super.onDestroy();
     }
 
@@ -204,4 +213,22 @@ public class BundleTransportActivity extends AppCompatActivity {
         connectivityManager.registerNetworkCallback(networkRequest, uploadTabMonitorCallback);
     }
 
+
+    static class TransportWifiServiceConnection extends CompletableFuture<TransportWifiDirectService>
+            implements ServiceConnection {
+        public TransportWifiDirectService btService;
+
+        @Override
+        public void onServiceConnected(ComponentName className, IBinder service) {
+            // We've bound to LocalService, cast the IBinder and get LocalService instance.
+            var binder = (TransportWifiDirectService.TransportWifiDirectServiceBinder) service;
+            btService = binder.getService();
+            complete(btService);
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName arg0) {
+            btService = null;
+        }
+    }
 }

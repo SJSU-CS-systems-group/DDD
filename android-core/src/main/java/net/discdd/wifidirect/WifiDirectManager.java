@@ -147,11 +147,13 @@ public class WifiDirectManager {
         this.manager.createGroup(this.channel, new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
+                logger.log(INFO, "Wifi direct group created");
                 requestGroupInfo().thenAccept(completableFuture::complete);
             }
 
             @Override
             public void onFailure(int reasonCode) {
+                logger.log(SEVERE, "Wifi direct group creation failed with reason code: " + reasonCode);
                 requestGroupInfo().thenAccept(completableFuture::complete);
             }
         });
@@ -339,13 +341,14 @@ public class WifiDirectManager {
                     if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
                         logger.log(INFO, "WifiDirect enabled");
                         wifiDirectEnabled = true;
+                        manager.requestDeviceInfo(channel, WifiDirectManager.this::processDeviceInfo);
                         manager.requestDiscoveryState(channel, state1 -> discoveryActive =
                                 state1 == WifiP2pManager.WIFI_P2P_DISCOVERY_STARTED);
-                        manager.requestPeers(channel, peers -> discoveredPeers = new HashSet<>(peers.getDeviceList()));
                     } else {
                         logger.log(INFO, "WifiDirect not enabled");
                         wifiDirectEnabled = false;
                     }
+                    notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_INITIALIZED);
                 }
                 case WIFI_P2P_PEERS_CHANGED_ACTION -> {
                     // Broadcast intent action indicating that the available peer list has changed.
