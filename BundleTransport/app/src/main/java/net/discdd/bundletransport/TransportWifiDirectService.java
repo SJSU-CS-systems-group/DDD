@@ -84,7 +84,7 @@ public class TransportWifiDirectService extends Service
             logger.log(SEVERE, "Failed to start foreground service", e);
         }
 
-        wifiDirectManager = new WifiDirectManager(this, null, this, true);
+        wifiDirectManager = new WifiDirectManager(this, this, true);
         wifiDirectManager.initialize();
     }
 

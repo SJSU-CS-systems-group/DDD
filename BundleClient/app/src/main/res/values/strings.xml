@@ -42,4 +42,7 @@
     <string name="transfers_in_the_background">Do transfers in the background</string>
     <string name="PeerDetailedDescription">Last seen: %s\nLast exchange: %s\nLast Server Contact: %s\n</string>
     <string name="never">Never</string>
+    <string name="sending_adu_s_d_from_s">Sending ADU %s:%d from %s</string>
+    <string name="exchanged_d_bundles_to_and_d_bundles_from_s">Exchanged %d bundles to and %d bundles from %s</string>
+    <string name="exchanged_d_bundles_to_and_d_bundles_from_server">Exchanged %d bundles to and %d bundles from server</string>
 </resources>
