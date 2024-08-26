@@ -25,11 +25,6 @@ import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 
-import androidx.annotation.NonNull;
-import androidx.lifecycle.DefaultLifecycleObserver;
-import androidx.lifecycle.Lifecycle;
-import androidx.lifecycle.LifecycleOwner;
-
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -47,7 +42,6 @@ public class WifiDirectManager {
 
     private final IntentFilter intentFilter = new IntentFilter();
     private final Context context;
-    private final Lifecycle lifeCycle;
     private final List<WifiDirectStateListener> listeners = new ArrayList<>();
     private final boolean isOwner;
     private String deviceName;
@@ -61,23 +55,18 @@ public class WifiDirectManager {
     private boolean wifiDirectEnabled;
     private boolean discoveryActive;
 
-    /**
-     * @param context   AppcompatActivity Context returned with a
-     *                  AppCompatActivity.getApplication() call in
-     *                  your main activity
-     * @param lifeCycle AppActivity Lifecycle returned with a
-     *                  AppCompatActivity.getLifeCycle() call in
-     *                  your main activity
-     */
-    public WifiDirectManager(Context context, Lifecycle lifeCycle, WifiDirectStateListener listener, boolean isOwner) {
+    public WifiDirectManager(Context context, WifiDirectStateListener listener, boolean isOwner) {
         this.context = context;
-        this.lifeCycle = lifeCycle;
         listeners.add(listener);
         this.isOwner = isOwner;
+        intentFilter.addAction(WIFI_P2P_STATE_CHANGED_ACTION);
+        intentFilter.addAction(WIFI_P2P_PEERS_CHANGED_ACTION);
+        intentFilter.addAction(WIFI_P2P_CONNECTION_CHANGED_ACTION);
+        intentFilter.addAction(WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
+        intentFilter.addAction(WIFI_P2P_DISCOVERY_CHANGED_ACTION);
     }
 
     public void initialize() {
-        this.registerIntents();
         this.manager = (WifiP2pManager) this.context.getSystemService(Context.WIFI_P2P_SERVICE);
         if (manager == null) {
             logger.log(INFO, "Cannot get Wi-Fi system service");
@@ -93,11 +82,6 @@ public class WifiDirectManager {
 
         this.receiver = new WifiDirectBroadcastReceiver();
         registerWifiIntentReceiver();
-        if (lifeCycle != null) {
-            WifiDirectLifeCycleObserver lifeCycleObserver = new WifiDirectLifeCycleObserver(this);
-            this.lifeCycle.addObserver(lifeCycleObserver);
-        }
-
         manager.requestDeviceInfo(channel, this::processDeviceInfo);
     }
 
@@ -131,18 +115,6 @@ public class WifiDirectManager {
                 notifyActionToListeners(WIFI_DIRECT_MANAGER_DEVICE_INFO_CHANGED);
             }
         }
-    }
-
-    /**
-     * Register Android Intents more commonly known as events we
-     * want to listen to for this device.
-     */
-    private void registerIntents() {
-        intentFilter.addAction(WIFI_P2P_STATE_CHANGED_ACTION);
-        intentFilter.addAction(WIFI_P2P_PEERS_CHANGED_ACTION);
-        intentFilter.addAction(WIFI_P2P_CONNECTION_CHANGED_ACTION);
-        intentFilter.addAction(WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
-        intentFilter.addAction(WIFI_P2P_DISCOVERY_CHANGED_ACTION);
     }
 
     public String getDeviceName() {
@@ -299,6 +271,7 @@ public class WifiDirectManager {
         manager.cancelConnect(channel, null);
         manager.stopPeerDiscovery(channel, null);
         manager.stopListening(channel, cal);
+        unregisterWifiIntentReceiver();
         return cal;
     }
 
@@ -338,30 +311,6 @@ public class WifiDirectManager {
     }
 
     public record WifiDirectEvent(WifiDirectEventType type, String message) {}
-
-    /**
-     * Inner Class to hook into activity Lifecycle functions
-     * and register/unregister BroadcastReceiver
-     * Note this may need to be modified when turning WifiDirectManager into
-     * a service
-     */
-    private class WifiDirectLifeCycleObserver implements DefaultLifecycleObserver {
-        public WifiDirectManager manager;
-
-        public WifiDirectLifeCycleObserver(WifiDirectManager manager) {
-            this.manager = manager;
-        }
-
-        @Override
-        public void onResume(@NonNull LifecycleOwner owner) {
-            registerWifiIntentReceiver();
-        }
-
-        @Override
-        public void onPause(@NonNull LifecycleOwner owner) {
-            unregisterWifiIntentReceiver();
-        }
-    }
 
     /**
      * A BroadcastReceiver that notifies of important wifi p2p events.
