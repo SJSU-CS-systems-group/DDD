@@ -213,7 +213,6 @@ public class BundleTransportActivity extends AppCompatActivity {
         connectivityManager.registerNetworkCallback(networkRequest, uploadTabMonitorCallback);
     }
 
-
     static class TransportWifiServiceConnection extends CompletableFuture<TransportWifiDirectService>
             implements ServiceConnection {
         public TransportWifiDirectService btService;
