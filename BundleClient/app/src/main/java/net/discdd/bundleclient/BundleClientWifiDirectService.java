@@ -116,14 +116,15 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
         intent.setPackage(adu.getAppId());
         intent.setType("text/plain");
         try {
-            logger.log(FINE,
-                       String.format(getString(R.string.sending_adu_s_d_from_s), adu.getAppId(), adu.getADUId(), adu.getSource()));
+            logger.log(FINE, String.format(getString(R.string.sending_adu_s_d_from_s), adu.getAppId(), adu.getADUId(),
+                                           adu.getSource()));
             var data = Files.readAllBytes(adu.getSource().toPath());
             intent.putExtra(Intent.EXTRA_TEXT, data);
             getApplicationContext().startForegroundService(intent);
         } catch (IOException e) {
             logger.log(WARNING,
-                       String.format(getString(R.string.sending_adu_s_d_from_s), adu.getAppId(), adu.getADUId(), adu.getSource()), e);
+                       String.format(getString(R.string.sending_adu_s_d_from_s), adu.getAppId(), adu.getADUId(),
+                                     adu.getSource()), e);
         }
     }
 
@@ -190,8 +191,10 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
             wifiDirectManager.getPeerList().stream()
                     .filter(peer -> peer.deviceAddress.equals(transport.getDeviceAddress())).findFirst()
                     .map(this::exchangeWith).ifPresent(bc -> {
-                        logger.info(String.format(getString(R.string.exchanged_d_bundles_to_and_d_bundles_from_s), bc.bundlesSent(),
-                                                  bc.bundlesReceived(), transport.getDeviceName()));
+                        logger.info(
+                                String.format(getString(R.string.exchanged_d_bundles_to_and_d_bundles_from_s),
+                                              bc.bundlesSent(),
+                                              bc.bundlesReceived(), transport.getDeviceName()));
                     });
         }
     }
