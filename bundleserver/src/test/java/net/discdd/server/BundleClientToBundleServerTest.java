@@ -9,6 +9,7 @@ import net.discdd.bundlerouting.RoutingExceptions;
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
 import net.discdd.client.bundlesecurity.BundleSecurity;
 import net.discdd.client.bundletransmission.BundleTransmission;
+import net.discdd.client.bundletransmission.BundleTransmission.BundleTransmissionRecencyException;
 import net.discdd.grpc.AppDataUnit;
 import net.discdd.grpc.BundleChunk;
 import net.discdd.grpc.BundleDownloadRequest;
@@ -137,7 +138,7 @@ public class BundleClientToBundleServerTest extends End2EndTest {
     }
 
     @Test
-    void test5RecencyBlob() throws InvalidKeyException, IOException {
+    void test5RecencyBlob() throws BundleTransmission.BundleTransmissionException {
         var rsp = blockingStub.getRecencyBlob(GetRecencyBlobRequest.getDefaultInstance());
         var fakeAddress = "fakeAddress";
         bundleTransmission.processRecencyBlob(fakeAddress, rsp);
@@ -146,12 +147,12 @@ public class BundleClientToBundleServerTest extends End2EndTest {
         Assertions.assertEquals((double) System.currentTimeMillis(), (double) rt.getRecencyTime(), 2000);
         var badBlob = rsp.toBuilder().setRecencyBlob(rsp.getRecencyBlob().toBuilder().setNonce(1)).build();
         // mess with the signature
-        Assertions.assertThrows(IOException.class, () -> bundleTransmission.processRecencyBlob(fakeAddress, badBlob));
+        Assertions.assertThrows(BundleTransmissionRecencyException.class, () -> bundleTransmission.processRecencyBlob(fakeAddress, badBlob));
         // make an old blob (more than a minute old
         var oldBlob = rsp.toBuilder()
                 .setRecencyBlob(rsp.getRecencyBlob().toBuilder().setBlobTimestamp(System.currentTimeMillis() - 100_000))
                 .build();
-        Assertions.assertThrows(IOException.class, () -> bundleTransmission.processRecencyBlob(fakeAddress, oldBlob));
+        Assertions.assertThrows(BundleTransmissionRecencyException.class, () -> bundleTransmission.processRecencyBlob(fakeAddress, oldBlob));
     }
 
     // send the bundle the same way the client does. we should move this code into bundle transmission so we are really

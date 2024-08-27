@@ -5,6 +5,7 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import lombok.Getter;
+import lombok.experimental.StandardException;
 import net.discdd.bundlerouting.RoutingExceptions;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
@@ -73,6 +74,19 @@ import static java.util.logging.Level.WARNING;
 import static net.discdd.utils.Constants.GRPC_LONG_TIMEOUT_MS;
 
 public class BundleTransmission {
+    @StandardException
+    public static class BundleTransmissionException extends Exception {}
+
+    @StandardException
+    public static class BundleTransmissionRecencyException extends BundleTransmissionException {}
+
+    @StandardException
+    public static class BundleTransmissionDownloadException extends BundleTransmissionException {}
+
+    @StandardException
+    public static class BundleTransmissionUploadException extends BundleTransmissionException {}
+
+
     private static final Logger logger = Logger.getLogger(BundleTransmission.class.getName());
 
     /* Bundle generation directory */
@@ -308,24 +322,29 @@ public class BundleTransmission {
     }
 
     // returns true if the blob is more recent than previously seen
-    public boolean processRecencyBlob(String deviceAddress, GetRecencyBlobResponse recencyBlobResponse) throws IOException, InvalidKeyException {
+    public boolean processRecencyBlob(String deviceAddress, GetRecencyBlobResponse recencyBlobResponse) throws BundleTransmissionException {
         // first make sure the data is valid
         if (recencyBlobResponse.getStatus() != RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS) {
-            throw new IOException("Recency request failed");
+            throw new BundleTransmissionRecencyException("Recency request failed");
         }
         var recencyBlob = recencyBlobResponse.getRecencyBlob();
         // we will allow a 1 minute clock skew
         if (recencyBlob.getBlobTimestamp() > System.currentTimeMillis() + 60 * 1000) {
-            throw new IOException("Recency blob timestamp is in the future");
+            throw new BundleTransmissionRecencyException("Recency blob timestamp is in the future");
         }
-        var receivedServerPublicKey = Curve.decodePoint(recencyBlobResponse.getServerPublicKey().toByteArray(), 0);
-        if (!bundleSecurity.getClientSecurity().getServerPublicKey().equals(receivedServerPublicKey)) {
-            throw new IOException("Recency blob signed by unknown server");
+        try {
+            var receivedServerPublicKey = Curve.decodePoint(recencyBlobResponse.getServerPublicKey().toByteArray(), 0);
+            if (!bundleSecurity.getClientSecurity().getServerPublicKey().equals(receivedServerPublicKey)) {
+                throw new BundleTransmissionRecencyException("Recency blob signed by unknown server");
+            }
+            if (!SecurityUtils.verifySignatureRaw(recencyBlob.toByteArray(), receivedServerPublicKey,
+                                                  recencyBlobResponse.getRecencyBlobSignature().toByteArray())) {
+                throw new BundleTransmissionRecencyException("Recency blob signature verification failed");
+            }
+        } catch (InvalidKeyException e) {
+            throw new BundleTransmissionRecencyException("Recency blob signature verification failed", e);
         }
-        if (!SecurityUtils.verifySignatureRaw(recencyBlob.toByteArray(), receivedServerPublicKey,
-                                              recencyBlobResponse.getRecencyBlobSignature().toByteArray())) {
-            throw new IOException("Recency blob signature verification failed");
-        }
+
         synchronized (recentTransports) {
             RecentTransport recentTransport = recentTransports.computeIfAbsent(deviceAddress, RecentTransport::new);
             if (recencyBlob.getBlobTimestamp() > recentTransport.recencyTime) {
@@ -348,7 +367,7 @@ public class BundleTransmission {
         return clientRouting;
     }
 
-    public record BundleExchangeCounts(int bundlesSent, int bundlesReceived) {}
+    public record BundleExchangeCounts(int bundlesSent, int bundlesReceived, Exception e) {}
 
     private static final int INITIAL_CONNECT_RETRIES = 8;
 
@@ -362,6 +381,7 @@ public class BundleTransmission {
         var blockingStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
         int bundlesDownloaded = 0;
         int bundlesUploaded = 0;
+        BundleTransmissionException exception = null;
         try {
             for (var tries = 0; tries < INITIAL_CONNECT_RETRIES; tries++) {
                 try {
@@ -374,7 +394,9 @@ public class BundleTransmission {
                 } catch (StatusRuntimeException e) {
                     logger.log(SEVERE, "Recency blob request failed for try " + tries + ": " + e.getMessage());
                     if (tries == INITIAL_CONNECT_RETRIES) throw e;
-                    Thread.sleep(500);
+                    try {
+                        Thread.sleep(500);
+                    } catch (InterruptedException ignored) {}
                 }
             }
             timestampExchangeWithTransport(deviceAddress);
@@ -387,43 +409,52 @@ public class BundleTransmission {
 
             var stub = BundleExchangeServiceGrpc.newStub(channel);
             bundlesUploaded = uploadBundle(stub);
-        } catch (Exception e) {
-            logger.log(WARNING, "Upload failed", e);
+        } catch (BundleTransmissionException e) {
+            logger.log(WARNING, "Exchange failed", e);
+            exception = e;
+        } catch (GeneralSecurityException | InvalidKeyException e) {
+            logger.log(WARNING, "Security exception", e);
+            exception = new BundleTransmissionException("Security exception", e);
         }
-        return new BundleExchangeCounts(bundlesUploaded, bundlesDownloaded);
+        return new BundleExchangeCounts(bundlesUploaded, bundlesDownloaded, exception);
     }
 
-    private int uploadBundle(BundleExchangeServiceGrpc.BundleExchangeServiceStub stub) throws RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException, GeneralSecurityException {
-        BundleDTO toSend = generateBundleForTransmission();
-        var bundleUploadResponseObserver = new BundleUploadResponseObserver();
-        StreamObserver<BundleUploadRequest> uploadRequestStreamObserver =
-                stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                        .uploadBundle(bundleUploadResponseObserver);
+    private int uploadBundle(BundleExchangeServiceGrpc.BundleExchangeServiceStub stub) throws BundleTransmissionUploadException {
+        try {
+            BundleDTO toSend = generateBundleForTransmission();
+            try (FileInputStream inputStream = new FileInputStream(toSend.getBundle().getSource())) {
+                var bundleUploadResponseObserver = new BundleUploadResponseObserver();
+                StreamObserver<BundleUploadRequest> uploadRequestStreamObserver =
+                        stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                                .uploadBundle(bundleUploadResponseObserver);
 
-        uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setBundleId(
-                EncryptedBundleId.newBuilder().setEncryptedId(toSend.getBundleId()).build()).build());
+                uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setBundleId(
+                        EncryptedBundleId.newBuilder().setEncryptedId(toSend.getBundleId()).build()).build());
 
-        // upload file as chunk
-        logger.log(INFO, "Started file transfer");
-        try (FileInputStream inputStream = new FileInputStream(toSend.getBundle().getSource())) {
-            int chunkSize = 1000 * 1000 * 4;
-            byte[] bytes = new byte[chunkSize];
-            int size;
-            while ((size = inputStream.read(bytes)) != -1) {
-                var uploadRequest = BundleUploadRequest.newBuilder()
-                        .setChunk(BundleChunk.newBuilder().setChunk(ByteString.copyFrom(bytes, 0, size)).build())
-                        .build();
-                uploadRequestStreamObserver.onNext(uploadRequest);
+                // upload file as chunk
+                logger.log(INFO, "Started file transfer");
+                int chunkSize = 1000 * 1000 * 4;
+                byte[] bytes = new byte[chunkSize];
+                int size;
+                while ((size = inputStream.read(bytes)) != -1) {
+                    var uploadRequest = BundleUploadRequest.newBuilder()
+                            .setChunk(BundleChunk.newBuilder().setChunk(ByteString.copyFrom(bytes, 0, size)).build())
+                            .build();
+                    uploadRequestStreamObserver.onNext(uploadRequest);
+                }
+                uploadRequestStreamObserver.onCompleted();
+                bundleUploadResponseObserver.waitForCompletion(GRPC_LONG_TIMEOUT_MS);
+                return bundleUploadResponseObserver.bundleUploadResponse != null &&
+                        bundleUploadResponseObserver.bundleUploadResponse.getStatus() == Status.SUCCESS ? 1 : 0;
             }
+        } catch (IOException | RoutingExceptions.ClientMetaDataFileException | InvalidKeyException |
+                 GeneralSecurityException e) {
+            throw new BundleTransmissionUploadException("Exception while uploading bundle", e);
         }
-        uploadRequestStreamObserver.onCompleted();
-        bundleUploadResponseObserver.waitForCompletion(GRPC_LONG_TIMEOUT_MS);
-        return bundleUploadResponseObserver.bundleUploadResponse != null &&
-                bundleUploadResponseObserver.bundleUploadResponse.getStatus() == Status.SUCCESS ? 1 : 0;
     }
 
     private int downloadBundles(List<String> bundleRequests, BundleSender sender,
-                                BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub stub) throws IOException {
+                                BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub stub) throws BundleTransmissionDownloadException {
         for (String bundle : bundleRequests) {
             var downloadRequest = BundleDownloadRequest.newBuilder().setSender(sender)
                     .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId(bundle).build()).build();
@@ -442,7 +473,11 @@ public class BundleTransmission {
                 }
                 return 1;
             } catch (StatusRuntimeException e) {
-                logger.log(SEVERE, "Receive bundle failed " + stub.getChannel(), e);
+                String msg = "Receive bundle failed " + stub.getChannel();
+                logger.log(SEVERE, msg, e);
+                throw new BundleTransmissionDownloadException(msg, e);
+            } catch (IOException e) {
+                throw new BundleTransmissionDownloadException("IOException while downloading bundle", e);
             } finally {
                 if (fileOutputStream != null) {
                     try {
