@@ -128,7 +128,7 @@ public class BundleClientWifiDirectFragment extends Fragment {
 
     private String getRelativeTime(long time) {
         if (time == 0) return getString(R.string.never);
-        return DateUtils.getRelativeTimeSpanString(time).toString();
+        return DateUtils.getRelativeTimeSpanString(time, System.currentTimeMillis(), DateUtils.SECOND_IN_MILLIS).toString();
     }
 
     private void registerBroadcastReceiver() {
