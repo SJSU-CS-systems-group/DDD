@@ -123,19 +123,6 @@ public class BundleTransmission {
                 BundleUtils.extractPayload(payload, uncompressedBundle.getSource().toPath());
         logger.log(FINE, "[BundleTransmission] extracted payload from uncompressed bundle");
 
-        var ackRecordFile = this.getAckRecordLocation(clientId);
-        ackRecordFile.toFile().getParentFile().mkdirs();
-        AckRecordUtils.writeAckRecordToFile(new Acknowledgement(uncompressedPayload.getBundleId()), ackRecordFile);
-
-        Path clientAckSubDirectory = this.config.getBundleTransmission().getToBeBundledDirectory().resolve(clientId);
-
-        if (!clientAckSubDirectory.toFile().exists()) {
-            clientAckSubDirectory.toFile().mkdirs();
-        }
-
-        var ackFile = clientAckSubDirectory.resolve(Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME);
-        AckRecordUtils.writeAckRecordToFile(new Acknowledgement(uncompressedPayload.getBundleId()), ackFile);
-
         if (!"HB".equals(uncompressedPayload.getAckRecord().getBundleId())) {
             this.serverWindowService.processACK(clientId, uncompressedPayload.getAckRecord().getBundleId());
         }
@@ -193,11 +180,6 @@ public class BundleTransmission {
                 logger.log(SEVERE, "e");
             }
         }
-    }
-
-    private Path getAckRecordLocation(String clientId) {
-        return this.config.getBundleTransmission().getToBeBundledDirectory()
-                .resolve(Path.of(clientId, Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME));
     }
 
     public String generateBundleId(String clientId) {
@@ -284,6 +266,7 @@ public class BundleTransmission {
 
         for (String clientId : clientIds) {
             clientIdToBundleIds.put(clientId, new HashSet<>());
+            logger.log(INFO, "[BT/inventBundle] Processing client " + clientId);
         }
 
         for (String clientId : clientIds) {
