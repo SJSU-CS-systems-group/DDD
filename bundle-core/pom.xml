@@ -96,6 +96,19 @@
             <version>2.14.2</version>
             <scope>compile</scope>
         </dependency>
+        <!-- BouncyCastle Provider -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.76</version>
+        </dependency>
+
+        <!-- BouncyCastle PKIX/CMS/EAC -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk18on</artifactId>
+            <version>1.76</version>
+        </dependency>
     </dependencies>
 
     <build>
