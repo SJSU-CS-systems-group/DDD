@@ -22,7 +22,7 @@ spring:
 
 grpc:
   server:
-    port: 8080
+    port: 7778
 server:
   port: 8081
 bundle-server:
