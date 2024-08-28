@@ -17,7 +17,7 @@ public class AckRecordUtils {
         } catch (IOException e) {
             // we don't do a full stack trace here because this is a common case
             logger.log(Level.WARNING,
-                       "Failed to read Acknowledgment record from " + ackFilePath + " " + e.getMessage());
+                       "Failed to read Acknowledgment record from " + ackFilePath, e);
         }
         return null;
     }
