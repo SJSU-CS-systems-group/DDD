@@ -5,10 +5,12 @@ DESCRIPTIONS
 - **Client - MySignal**: receive ADUs from mysignal through the message provider at ```content://net.discdd.provider.datastoreprovider/messages```
     
 - **Client - Transport**
-	- Connect with Transport through Wifi Direct mechanism 
-	- Send bundles to Transport/Server with GrpcSendTask -> BundleTransmission to fetch ADUs for sending (Application Data Manager) and generate bundle for transmission.
-  - Receive bundles from Transport/Client with GrpcRecieveTask -> BundleTransmission to process received bundles and decrypt bundles to get ADUs and send to MySignal app
-   
+  - Connect to Transport with Wifi Direct and exchange bundles with gRPC (BundleClientWifiDirectService)
+  - Client checks recency blob in Transport to determine communication
+  - Sending: BundleTransmission to fetch ADUs for sending (Application Data Manager) and generate bundle for transmission.
+  - Receiving: BundleTransmission to process received bundles to get ADUs and send to MySignal app (or other messaging apps)
+
+
 - **Client - USB**
 	- USB works as a Transport using on-device UsbManager to check USB drive connection
 	- (In progress) As USB Drive connected, Client generate bundles and send to the Drive
