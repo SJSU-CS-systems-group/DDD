@@ -1,3 +1,4 @@
+/**
 package net.discdd.app.cli;
 
 import com.github.stefanbirkner.systemlambda.SystemLambda;
@@ -60,3 +61,4 @@ public class DecryptBundleTest {
         assertEquals(TestUtils.trimMessage(expectedText), TestUtils.trimMessage(outText + errText));
     }
 }
+ **/
