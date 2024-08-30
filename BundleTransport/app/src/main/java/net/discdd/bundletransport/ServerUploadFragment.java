@@ -86,7 +86,7 @@ public class ServerUploadFragment extends Fragment {
             TransportToBundleServerManager transportToBundleServerManager =
                     new TransportToBundleServerManager(requireActivity().getExternalFilesDir(null).toPath(),
                                                        serverDomain, serverPort, transportID,
-                                                       this::connectToServerComplete);
+                                                       this::connectToServerComplete, this::connectToServerError);
             executor.execute(transportToBundleServerManager);
         } else {
             Toast.makeText(getContext(), "Enter the domain and port", Toast.LENGTH_SHORT).show();
@@ -137,6 +137,15 @@ public class ServerUploadFragment extends Fragment {
     private Void connectToServerComplete(Void x) {
         requireActivity().runOnUiThread(() -> {
             serverConnnectedStatus.append("Server exchange complete.\n");
+            connectServerBtn.setEnabled(true);
+        });
+        return null;
+    }
+
+    private Void connectToServerError(Exception e) {
+        requireActivity().runOnUiThread(() -> {
+            serverConnnectedStatus.append("Server exchange incomplete with error.\n");
+            serverConnnectedStatus.append("Error: "+e.getMessage()+" \n");
             connectServerBtn.setEnabled(true);
         });
         return null;
