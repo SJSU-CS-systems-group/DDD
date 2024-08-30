@@ -1,8 +1,15 @@
 # gRPC Bundle Transport (Android Java)
 
 ## PROJECT DESCRIPTION
-- Android mobile application that behaves as the data transporter between the disconnected and connected areas for the DDD system
-- Store the bundles received by the client and deliver them to the server and vice versa
+- Transport bundle between client and server
+- Transport - Client: required have the recency blob in order to exchange bundles with Client
+- Transport - Server
+  - Receives blob from Server in first connection
+  - Send and request bundles from Server every connection
+- File structure: /storage/emulated/0/Android/data/net.discdd.bundletransport
+  - /client: bundles to send to client + recencyBlob
+  - /server: bundles to send to server
+
 - Important note: Bundle Transport device is considered untrustworthy due to having physical carriers to transport the data.
 
 ## INSTALLATION
@@ -14,7 +21,7 @@
 6. Choose the desired physical device and application and hit “Play” to install
 
 Set up VPN to be able to connect with Bundle Server
-1. Get a OPVN certificate from [](https://authncert.com/)
+1. Get a OPVN certificate from [authncert.com](https://authncert.com/)
 2. Request Ben Reed to configure the server for your email
 3. Use OpenVPN or TunnelBlick with the .OPVN file
 4. Connect VPN 

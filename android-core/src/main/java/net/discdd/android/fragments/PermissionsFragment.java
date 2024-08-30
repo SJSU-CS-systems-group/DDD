@@ -74,6 +74,9 @@ public class PermissionsFragment extends Fragment {
                                                   if (view != null) {
                                                       view.permissionCheckbox.setChecked(r);
                                                   }
+                                                  if (r) {
+                                                      trackGrantedPermission(p);
+                                                  }
                                               });
                                               if (neededPermissions.isEmpty()) {
                                                   promptPending = false;
@@ -89,31 +92,6 @@ public class PermissionsFragment extends Fragment {
 
     // TODO: in the future, we should enable removing from this set
     HashSet<String> grantedPermissions = new HashSet<>();
-
-    /*
-     * The Main activity uses this to call us back with the results of permission requests
-     */
-    public void processPermissionResults(String[] permissions, int[] grantResults) {
-        logger.log(Level.INFO, "Permission request results:");
-        for (var i = 0; i < permissions.length; i++) {
-            boolean permissionGranted = grantResults[i] == PackageManager.PERMISSION_GRANTED;
-            logger.log(Level.INFO, permissions[i] + " " + (permissionGranted ? "granted" : "denied"));
-            if (permissionGranted) {
-                trackGrantedPermission(permissions[i]);
-            }
-            var view = neededPermissions.remove(permissions[i]);
-            if (view != null) {
-                view.permissionCheckbox.setChecked(permissionGranted);
-            }
-        }
-        if (neededPermissions.isEmpty()) {
-            promptPending = false;
-        } else {
-            String[] permissionsToRequest = neededPermissions.keySet().toArray(new String[0]);
-            logger.info("Requesting " + Arrays.toString(permissionsToRequest));
-            activityResultLauncher.launch(permissionsToRequest);
-        }
-    }
 
     private void trackGrantedPermission(String permissions) {
         if (grantedPermissions.contains(permissions)) {

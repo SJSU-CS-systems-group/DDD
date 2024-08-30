@@ -17,6 +17,7 @@ import net.discdd.grpc.BundleServerServiceGrpc;
 import net.discdd.grpc.BundleUploadRequest;
 import net.discdd.grpc.BundleUploadResponse;
 import net.discdd.grpc.EncryptedBundleId;
+import net.discdd.grpc.GetRecencyBlobRequest;
 import net.discdd.utils.Constants;
 
 import java.io.File;
@@ -37,6 +38,7 @@ import io.grpc.stub.StreamObserver;
 public class TransportToBundleServerManager implements Runnable {
 
     private static final Logger logger = Logger.getLogger(TransportToBundleServerManager.class.getName());
+    public static final String RECENCY_BLOB_BIN = "recencyBlob.bin";
     private final BundleSender transportSenderId;
     private final Path fromClientPath;
     private final Path fromServerPath;
@@ -60,6 +62,7 @@ public class TransportToBundleServerManager implements Runnable {
         var channel = ManagedChannelBuilder.forTarget(transportTarget).usePlaintext().build();
         var bsStub = BundleServerServiceGrpc.newBlockingStub(channel);
         var exchangeStub = BundleExchangeServiceGrpc.newStub(channel);
+        var blockingExchangeStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
         var bundlesFromClients = populateListFromPath(fromClientPath);
         var bundlesFromServer = populateListFromPath(fromServerPath);
 
@@ -130,12 +133,31 @@ public class TransportToBundleServerManager implements Runnable {
                     logger.log(SEVERE, "Failed to download file: " + path, e);
                 }
             }
-            logger.log(INFO, "Connect server completed");
-            connectComplete.apply(null);
         } catch (Exception e) {
             logger.log(SEVERE, "error: "+e.getMessage());
             connectError.apply(e);
         }
+
+        try{
+
+            var recencyBlob = blockingExchangeStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                    .getRecencyBlob(GetRecencyBlobRequest.getDefaultInstance());
+            Path blobPath = fromServerPath.resolve(RECENCY_BLOB_BIN);
+            try (var os = Files.newOutputStream(blobPath, StandardOpenOption.CREATE,
+                                                StandardOpenOption.TRUNCATE_EXISTING)) {
+                recencyBlob.writeTo(os);
+            } catch (IOException e) {
+                logger.log(SEVERE, "Failed to write recency blob", e);
+            }
+
+            logger.log(INFO, "Connect server completed");
+
+            connectComplete.apply(null);
+        }catch (Exception e){
+            logger.log(SEVERE, "error: "+e.getMessage());
+            connectError.apply(new Exception("Failed to write recency blob"));
+        }
+
     }
 
     private List<EncryptedBundleId> populateListFromPath(Path path) {

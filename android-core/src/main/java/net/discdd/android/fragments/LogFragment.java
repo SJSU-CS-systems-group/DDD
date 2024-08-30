@@ -58,7 +58,6 @@ public class LogFragment extends Fragment {
                     var loggerName = loggerNameParts[loggerNameParts.length - 1];
                     if (LogFragment.logRecords.size() > 100) LogFragment.logRecords.remove(0);
                     String entry = String.format("[%s] %s", loggerName, logRecord.getMessage());
-                    System.out.println(entry);
                     LogFragment.logRecords.add(entry);
                 }
 

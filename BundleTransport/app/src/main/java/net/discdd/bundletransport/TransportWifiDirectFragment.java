@@ -2,14 +2,11 @@ package net.discdd.bundletransport;
 
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.os.IBinder;
 import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -37,25 +34,9 @@ public class TransportWifiDirectFragment extends Fragment {
     private TextView myWifiInfoView;
     private TextView clientLogView;
     private View changeDeviceNameView;
-    private TransportWifiDirectService btService;
     private TextView myWifiStatusView;
     private SharedPreferences sharedPreferences;
-    private final ServiceConnection connection = new ServiceConnection() {
-
-        @Override
-        public void onServiceConnected(ComponentName className, IBinder service) {
-            // We've bound to LocalService, cast the IBinder and get LocalService instance.
-            var binder = (TransportWifiDirectService.TransportWifiDirectServiceBinder) service;
-            btService = binder.getService();
-            btService.requestDeviceInfo().thenAccept(di -> processDeviceInfoChange());
-            updateGroupInfo();
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName arg0) {
-            btService = null;
-        }
-    };
+    private TransportWifiDirectService btService;
 
     public TransportWifiDirectFragment() {
         intentFilter.addAction(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_WIFI_EVENT_ACTION);
@@ -65,8 +46,9 @@ public class TransportWifiDirectFragment extends Fragment {
     private void processDeviceInfoChange() {
         // NOTE: we aren't using device info here, but be aware that it can be null!
         requireActivity().runOnUiThread(() -> {
+            if (btService == null) return;
             var deviceName = btService.getDeviceName();
-            deviceNameView.setText(deviceName != null ? deviceName : "Unknown");
+            deviceNameView.setText(deviceName != null ? deviceName : getString(R.string.unknown));
             // only show the changeDeviceNameView if we don't have a valid device name
             // (transports must have device names starting with ddd_)
             if (deviceName != null) {
@@ -74,7 +56,7 @@ public class TransportWifiDirectFragment extends Fragment {
             }
             var status = btService.getStatus();
             myWifiStatusView.setText(switch (status) {
-                case UNDEFINED -> getString(R.string.unknown);
+                case UNDEFINED -> getString(R.string.check_permissions_and_that_wifi_is_enabled);
                 case CONNECTED -> getString(R.string.connected);
                 case INVITED -> getString(R.string.invited);
                 case FAILED -> getString(R.string.failed);
@@ -107,7 +89,6 @@ public class TransportWifiDirectFragment extends Fragment {
 
     @Override
     public void onDestroy() {
-        requireActivity().unbindService(connection);
         super.onDestroy();
     }
 
@@ -117,6 +98,11 @@ public class TransportWifiDirectFragment extends Fragment {
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        getBundleTransportActivity().transportWifiServiceConnection.thenAccept(btService -> {
+            this.btService = btService;
+            processDeviceInfoChange();
+            updateGroupInfo();
+        });
         // Inflate the layout for this fragment
         View rootView = inflater.inflate(R.layout.fragment_transport_wifi_direct, container, false);
         myWifiInfoView = rootView.findViewById(R.id.my_wifi_info);
@@ -145,8 +131,6 @@ public class TransportWifiDirectFragment extends Fragment {
         bgWifiCheckbox.setOnCheckedChangeListener(
                 (buttonView, isChecked) -> getBundleTransportActivity().setBgWifiEnabled(isChecked));
 
-        Intent intent = new Intent(getActivity(), TransportWifiDirectService.class);
-        requireContext().bindService(intent, connection, Context.BIND_AUTO_CREATE);
         bundleTransportWifiEvent = new BundleTransportWifiEvent();
         return rootView;
     }
@@ -173,7 +157,7 @@ public class TransportWifiDirectFragment extends Fragment {
                     String addresses;
                     try {
                         NetworkInterface ni = NetworkInterface.getByName(gi.getInterface());
-                        addresses = ni.getInterfaceAddresses().stream()
+                        addresses = ni == null ? "N/A" : ni.getInterfaceAddresses().stream()
                                 .filter(ia -> ia.getAddress() instanceof Inet4Address)
                                 .map(ia -> ia.getAddress().getHostAddress()).collect(Collectors.joining(", "));
                     } catch (SocketException e) {

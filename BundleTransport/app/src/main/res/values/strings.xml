@@ -40,4 +40,5 @@
     <string name="local_wifi">Local Wifi</string>
     <string name="permissions">Permissions</string>
     <string name="logs">Logs</string>
+    <string name="check_permissions_and_that_wifi_is_enabled">Check Permissions and that Wifi is enabled</string>
 </resources>

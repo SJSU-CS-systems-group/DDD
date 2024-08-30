@@ -100,7 +100,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
             logger.log(SEVERE, "Failed to start foreground service", e);
         }
 
-        wifiDirectManager = new WifiDirectManager(this, null, this, false);
+        wifiDirectManager = new WifiDirectManager(this, this, false);
         wifiDirectManager.initialize();
         try {
             bundleTransmission =
@@ -116,19 +116,21 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
         intent.setPackage(adu.getAppId());
         intent.setType("text/plain");
         try {
-            logger.log(FINE,
-                       String.format("Sending ADU %s:%d from %s", adu.getAppId(), adu.getADUId(), adu.getSource()));
+            logger.log(FINE, String.format(getString(R.string.sending_adu_s_d_from_s), adu.getAppId(), adu.getADUId(),
+                                           adu.getSource()));
             var data = Files.readAllBytes(adu.getSource().toPath());
             intent.putExtra(Intent.EXTRA_TEXT, data);
             getApplicationContext().startForegroundService(intent);
         } catch (IOException e) {
             logger.log(WARNING,
-                       String.format("Sending ADU %s:%d from %s", adu.getAppId(), adu.getADUId(), adu.getSource()), e);
+                       String.format(getString(R.string.sending_adu_s_d_from_s), adu.getAppId(), adu.getADUId(),
+                                     adu.getSource()), e);
         }
     }
 
     @Override
     public void onDestroy() {
+        if (wifiDirectManager != null) wifiDirectManager.shutdown();
         super.onDestroy();
     }
 
@@ -139,6 +141,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
     }
 
     private void addConnectionWaiter(CompletableFuture<WifiP2pGroup> connectedFuture) {
+        logger.log(INFO, "Adding connection waiter" + connectedFuture);
         var oldFuture = connectionWaiter.getAndSet(connectedFuture);
         if (oldFuture != null && !oldFuture.isDone()) {
             oldFuture.completeExceptionally(new TimeoutException("Connection timed out"));
@@ -147,6 +150,8 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
 
     private void completeConnectionWaiter(WifiP2pGroup groupInfo) {
         var future = connectionWaiter.getAndSet(null);
+        logger.log(INFO, "Completing connection waiter" + future);
+
         if (future != null && !future.isDone()) {
             future.complete(groupInfo);
         }
@@ -186,8 +191,10 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
             wifiDirectManager.getPeerList().stream()
                     .filter(peer -> peer.deviceAddress.equals(transport.getDeviceAddress())).findFirst()
                     .map(this::exchangeWith).ifPresent(bc -> {
-                        logger.info(String.format("Exchanged %d bundles to and %d bundles from %s", bc.bundlesSent(),
-                                                  bc.bundlesReceived(), transport.getDeviceName()));
+                        logger.info(
+                                String.format(getString(R.string.exchanged_d_bundles_to_and_d_bundles_from_s),
+                                              bc.bundlesSent(),
+                                              bc.bundlesReceived(), transport.getDeviceName()));
                     });
         }
     }
@@ -205,7 +212,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
             }
         }
         try {
-            var newGroup = connectTo(device).get(2, TimeUnit.SECONDS);
+            var newGroup = connectTo(device).get(10, TimeUnit.SECONDS);
             return bundleTransmission.doExchangeWithTransport(device.deviceAddress, device.deviceName,
                                                               wifiDirectManager.getGroupOwnerAddress().getHostAddress(),
                                                               7777);
@@ -286,7 +293,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
                 var bundleExchangeCounts =
                         bundleTransmission.doExchangeWithTransport("XX:XX:XX:XX:XX:XX", "BundleServer", serverAddress,
                                                                    port);
-                logger.log(INFO, String.format("Exchanged %d bundles to and %d bundles from server",
+                logger.log(INFO, String.format(getString(R.string.exchanged_d_bundles_to_and_d_bundles_from_server),
                                                bundleExchangeCounts.bundlesSent(),
                                                bundleExchangeCounts.bundlesReceived()));
                 completableFuture.complete(bundleExchangeCounts);
