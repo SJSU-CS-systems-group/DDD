@@ -1,23 +1,25 @@
 package net.discdd.utils;
 
-
+import net.discdd.bundlesecurity.SecurityUtils;
 import org.bouncycastle.asn1.x500.X500Name;
-import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
+import org.whispersystems.libsignal.ecc.DjbECPublicKey;
 import org.whispersystems.libsignal.ecc.ECPrivateKey;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
 
 import java.math.BigInteger;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
+import java.security.KeyFactory;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.Security;
 import java.security.cert.X509Certificate;
-import java.security.spec.ECGenParameterSpec;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.Date;
 
 // thank you for this class copilot!
@@ -29,12 +31,12 @@ public class SelfSignedCertificateGenerator {
 
     public static X509Certificate generateSelfSignedCertificate(ECPublicKey publicKey, ECPrivateKey privateKey) throws Exception {
         // Create subject and issuer
-        X500Name issuer = new X500Name("CN=" + publicKey.toString());
+        X500Name issuer = new X500Name("CN=" + SecurityUtils.generateID(publicKey.serialize()));
         X500Name subject = issuer;
 
         // Set validity period
         Date notBefore = new Date();
-        Date notAfter = new Date(notBefore.getTime() + (365 * 24 * 60 * 60 * 1000L)); // 1 year validity
+        Date notAfter = new Date(notBefore.getTime() + (30 * 24 * 60 * 60 * 1000L)); // 30 day validity
 
         // Create certificate builder
         X509v3CertificateBuilder certBuilder = new JcaX509v3CertificateBuilder(
@@ -43,18 +45,27 @@ public class SelfSignedCertificateGenerator {
                 notBefore,
                 notAfter,
                 subject,
-                SubjectPublicKeyInfo.getInstance(keyPair.getPublic().getEncoded())
+                convertToPublicKey(publicKey)
         );
 
         // Sign the certificate
-        ContentSigner contentSigner = new JcaContentSignerBuilder("SHA256withECDSA").setProvider("BC").build(keyPair.getPrivate());
+        ContentSigner contentSigner = new JcaContentSignerBuilder("SHA256withECDSA").setProvider("BC").build(convertToPrivateKey(privateKey));
         X509Certificate certificate = new JcaX509CertificateConverter().setProvider("BC").getCertificate(certBuilder.build(contentSigner));
 
         return certificate;
     }
 
-    public static void main(String[] args) throws Exception {
-        X509Certificate certificate = generateSelfSignedCertificate();
-        System.out.println("Generated Certificate: " + certificate);
+    public static PrivateKey convertToPrivateKey(ECPrivateKey ecPrivateKey) throws Exception {
+        byte[] privateKeyBytes = ecPrivateKey.serialize();
+        PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(privateKeyBytes);
+        KeyFactory keyFactory = KeyFactory.getInstance("EC", "BC");
+        return keyFactory.generatePrivate(keySpec);
+    }
+
+    public static PublicKey convertToPublicKey(ECPublicKey ecPublicKey) throws Exception {
+        byte[] publicKeyBytes = ((DjbECPublicKey)ecPublicKey).getPublicKey();
+        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicKeyBytes);
+        KeyFactory keyFactory = KeyFactory.getInstance("EC", "BC");
+        return keyFactory.generatePublic(keySpec);
     }
 }
