@@ -6,6 +6,8 @@ import io.grpc.stub.StreamObserver;
 import net.discdd.grpc.AppDataUnit;
 import net.discdd.grpc.BundleChunk;
 import net.discdd.grpc.BundleExchangeServiceGrpc;
+import net.discdd.grpc.BundleSender;
+import net.discdd.grpc.BundleSenderType;
 import net.discdd.grpc.BundleUploadRequest;
 import net.discdd.grpc.BundleUploadResponse;
 import net.discdd.grpc.EncryptedBundleId;
@@ -109,10 +111,13 @@ public class ADUEnd2EndTest extends End2EndTest {
     }
 
     private void sendBundle(Path bundleJarPath) throws Throwable {
+        var testSender =
+                BundleSender.newBuilder().setId("testSenderId").setType(BundleSenderType.TRANSPORT).build();
+
         var stub = BundleExchangeServiceGrpc.newStub(
                 ManagedChannelBuilder.forAddress("localhost", BUNDLESERVER_GRPC_PORT).usePlaintext().build());
 
-        // carefull! this is all backwards: we pass an object to receive the response and we get an object back to send
+        // careful! this is all backwards: we pass an object to receive the response and we get an object back to send
         // requests to the server
         BundleUploadResponseStreamObserver response = new BundleUploadResponseStreamObserver();
         var request = stub.uploadBundle(response);
@@ -128,6 +133,7 @@ public class ADUEnd2EndTest extends End2EndTest {
         request.onNext(
                 BundleUploadRequest.newBuilder().setChunk(BundleChunk.newBuilder().setChunk(secondByteString).build())
                         .build());
+        request.onNext(BundleUploadRequest.newBuilder().build());
         request.onCompleted();
 
         // let's see if it worked...

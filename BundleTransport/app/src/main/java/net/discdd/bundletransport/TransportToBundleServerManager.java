@@ -101,6 +101,8 @@ public class TransportToBundleServerManager implements Runnable {
                     uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setChunk(
                             BundleChunk.newBuilder().setChunk(ByteString.copyFrom(data, 0, rc))).build());
                 }
+                uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setSender(transportSenderId).build());
+                uploadRequestStreamObserver.onCompleted();
             } catch (IOException e) {
                 logger.log(SEVERE, "Failed to upload file: " + path, e);
                 if (responseObserver != null) responseObserver.onError(e);
