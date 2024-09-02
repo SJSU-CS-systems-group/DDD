@@ -396,6 +396,8 @@ public class BundleTransmission {
     private int uploadBundle(BundleExchangeServiceGrpc.BundleExchangeServiceStub stub) throws RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException, GeneralSecurityException {
         BundleDTO toSend = generateBundleForTransmission();
         var bundleUploadResponseObserver = new BundleUploadResponseObserver();
+        BundleSender clientSender = BundleSender.newBuilder().setId(bundleSecurity.getClientSecurity().getClientID())
+                .setType(BundleSenderType.CLIENT).build();
         StreamObserver<BundleUploadRequest> uploadRequestStreamObserver =
                 stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                         .uploadBundle(bundleUploadResponseObserver);
@@ -416,6 +418,7 @@ public class BundleTransmission {
                 uploadRequestStreamObserver.onNext(uploadRequest);
             }
         }
+        uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setSender(clientSender).build());
         uploadRequestStreamObserver.onCompleted();
         bundleUploadResponseObserver.waitForCompletion(GRPC_LONG_TIMEOUT_MS);
         return bundleUploadResponseObserver.bundleUploadResponse != null &&

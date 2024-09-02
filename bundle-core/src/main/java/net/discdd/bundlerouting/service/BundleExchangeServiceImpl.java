@@ -138,7 +138,7 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
             status = Status.FAILED;
             // TODO we should probably convey that the upload failed. We'll figure it out later, but it
             //      would be nice to indicate early on.
-            if (bundleExchangeName != null) {
+            if (bundleExchangeName != null && bundleSender != null) {
                 bundleCompletion(bundleExchangeName, bundleSender);
             }
             status = Status.FAILED;
@@ -153,9 +153,10 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
             } catch (Exception e) {
                 logger.log(SEVERE, "Problem closing bundle", e);
             }
-            if (bundleExchangeName != null) {
+            if (bundleExchangeName != null && bundleSender != null) {
                 bundleCompletion(bundleExchangeName, bundleSender);
             }
+
             responseObserver.onNext(BundleUploadResponse.newBuilder().setStatus(status).build());
             responseObserver.onCompleted();
             onBundleExchangeEvent(BundleExchangeEvent.UPLOAD_FINISHED);
