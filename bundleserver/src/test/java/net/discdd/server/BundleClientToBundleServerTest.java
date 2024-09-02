@@ -158,6 +158,8 @@ public class BundleClientToBundleServerTest extends End2EndTest {
     // testing the exact code that the client is using
     private static void sendBundle() throws RoutingExceptions.ClientMetaDataFileException, IOException,
             InvalidKeyException, GeneralSecurityException {
+        var testSender = BundleSender.newBuilder().setId("testSenderId").setType(BundleSenderType.CLIENT).build();
+
         BundleDTO toSend = bundleTransmission.generateBundleForTransmission();
 
         var bundleUploadResponseObserver = new BundleUploadResponseObserver();
@@ -181,6 +183,7 @@ public class BundleClientToBundleServerTest extends End2EndTest {
                 uploadRequestStreamObserver.onNext(uploadRequest);
             }
         }
+        uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setSender(testSender).build());
         uploadRequestStreamObserver.onCompleted();
         logger.log(INFO, "Completed file transfer");
         bundleUploadResponseObserver.waitForCompletion(Constants.GRPC_LONG_TIMEOUT_MS);

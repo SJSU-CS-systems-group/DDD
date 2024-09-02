@@ -44,6 +44,7 @@ message BundleUploadRequest {
   oneof request {
     EncryptedBundleId bundleId = 1;
     BundleChunk chunk = 2;
+    BundleSender sender = 99;
   }
 }
 
