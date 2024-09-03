@@ -183,12 +183,6 @@ public class ClientSecurity {
         updateSessionRecord();
     }
 
-    private void createSignature(byte[] fileContents, Path signedFilePath) throws IOException, InvalidKeyException {
-        byte[] signedData = Curve.calculateSignature(ourIdentityKeyPair.getPrivateKey(), fileContents);
-        String encodedSignature = Base64.getUrlEncoder().encodeToString(signedData);
-        Files.write(signedFilePath, encodedSignature.getBytes());
-    }
-
     /* Encrypts and creates a file for the BundleID */
 
     /* Encrypts the given bundleID
@@ -224,7 +218,7 @@ public class ClientSecurity {
         return singleClientInstance;
     }
 
-    /* Encrypts File and creates signature for plain text */
+    /* Encrypts File */
     public CiphertextMessage encrypt(byte[] bytes) {
         /* Encrypt File */
         CiphertextMessage cipherText = cipherSession.encrypt(bytes);
