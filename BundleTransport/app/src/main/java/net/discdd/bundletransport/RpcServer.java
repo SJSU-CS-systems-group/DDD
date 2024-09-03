@@ -65,7 +65,7 @@ public class RpcServer {
             }
 
             @Override
-            protected void bundleCompletion(BundleExchangeName bundleExchangeName) {
+            protected void bundleCompletion(BundleExchangeName bundleExchangeName, BundleSender sender) {
             }
 
             @Override

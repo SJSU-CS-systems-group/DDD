@@ -32,9 +32,8 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
     }
 
     @Override
-    public void bundleCompletion(BundleExchangeName bundleExchangeName) {
-        bundleTransmission.processReceivedBundles(
-                BundleSender.newBuilder().setType(BundleSenderType.CLIENT).setId("unknown").build());
+    public void bundleCompletion(BundleExchangeName bundleExchangeName, BundleSender sender) {
+        bundleTransmission.processReceivedBundles(sender);
     }
 
     @Override

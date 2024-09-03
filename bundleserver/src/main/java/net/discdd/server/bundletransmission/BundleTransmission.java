@@ -83,17 +83,20 @@ public class BundleTransmission {
 
     @Transactional(rollbackFor = Exception.class)
     public void processReceivedBundle(BundleSender sender, Bundle bundle) throws Exception {
-        logger.log(INFO, "Processing received bundle: " + bundle.getSource().getName());
+        logger.log(INFO, "Processing received bundle: " + bundle.getSource().getName() + " from " +
+                bundleSenderToString(sender));
+
         Path bundleRecvProcDir = TRANSPORT == sender.getType() ?
                 this.config.getBundleTransmission().getReceivedProcessingDirectory().resolve(sender.getId()) :
                 this.config.getBundleTransmission().getReceivedProcessingDirectory();
 
-        bundleRecvProcDir.toFile().mkdirs();
+        Files.createDirectories(bundleRecvProcDir);
 
         UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, bundleRecvProcDir);
         String clientId = "";
         String serverIdReceived = SecurityUtils.generateID(
                 uncompressedBundle.getSource().toPath().resolve(SecurityUtils.SERVER_IDENTITY_KEY));
+
         if (!bundleSecurity.bundleServerIdMatchesCurrentServer(serverIdReceived)) {
             logger.log(WARNING, "Received bundle's serverIdentity didn't match with current server, " +
                     "ignoring bundle with bundleId: " + uncompressedBundle.getBundleId());
@@ -128,7 +131,7 @@ public class BundleTransmission {
         }
 
         try {
-            this.bundleRouting.processClientMetaData(uncompressedPayload.getSource().getAbsolutePath(), sender.getId(),
+            this.bundleRouting.processClientMetaData(uncompressedPayload.getSource().toPath(), sender.getId(),
                                                      clientId);
         } catch (ClientMetaDataFileException | SQLException e) {
             // TODO Auto-generated catch block
@@ -145,6 +148,9 @@ public class BundleTransmission {
     public void processReceivedBundles(BundleSender sender) {
         File receivedBundlesDirectory = this.config.getBundleTransmission().getBundleReceivedLocation().toFile();
         File[] files = receivedBundlesDirectory.listFiles();
+
+        logger.log(INFO, "[BundleTransmission] Processing received bundles for: " + sender.getId());
+
         if (files != null) for (final File transportDir : files) {
             if (TRANSPORT == sender.getType() && !sender.getId().equals(transportDir.getName())) {
                 continue;

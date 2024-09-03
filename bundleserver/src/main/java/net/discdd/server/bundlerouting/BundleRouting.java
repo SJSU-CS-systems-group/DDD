@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -56,14 +57,14 @@ public class BundleRouting {
     /*
      * payloadPath: path of received payload where routing metadata file exists
      */
-    public void processClientMetaData(String payloadPath, String transportID, String clientID) throws RoutingExceptions.ClientMetaDataFileException, SQLException {
+    public void processClientMetaData(Path payloadPath, String transportID, String clientID) throws RoutingExceptions.ClientMetaDataFileException, SQLException {
         logger.log(FINE, "processing client metadata, for transportId: " + transportID, ",clientID: " + clientID);
-        String clientMetaDataPath = payloadPath + File.separator + METADATAFILE;
+        var clientMetaDataPath = payloadPath.resolve(METADATAFILE);
         HashMap<String, Long> clientMap = null;
         ObjectMapper mapper = new ObjectMapper();
 
         try {
-            clientMap = mapper.readValue(new File(clientMetaDataPath), new TypeReference<HashMap<String, Long>>() {});
+            clientMap = mapper.readValue(clientMetaDataPath.toFile(), new TypeReference<HashMap<String, Long>>() {});
         } catch (Exception e) {
             throw new RoutingExceptions.ClientMetaDataFileException("Error Reading client metadata: " + e);
         }

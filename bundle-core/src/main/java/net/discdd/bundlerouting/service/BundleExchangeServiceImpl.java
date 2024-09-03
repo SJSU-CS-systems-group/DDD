@@ -79,7 +79,7 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
 
     protected abstract Path pathProducer(BundleExchangeName bundleExchangeName, BundleSender sender);
 
-    protected abstract void bundleCompletion(BundleExchangeName bundleExchangeName);
+    protected abstract void bundleCompletion(BundleExchangeName bundleExchangeName, BundleSender sender);
 
     public enum BundleExchangeEvent {
         UPLOAD_STARTED, DOWNLOAD_STARTED, UPLOAD_FINISHED, DOWNLOAD_FINISHED
@@ -98,6 +98,7 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
         Path path;
         Status status;
         BundleExchangeName bundleExchangeName;
+        BundleSender bundleSender;
 
         public BundleUploadRequestStreamObserver(StreamObserver<BundleUploadResponse> responseObserver) {
             this.responseObserver = responseObserver;
@@ -112,6 +113,7 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
                             bundleUploadRequest.getBundleId().getEncryptedId());
                     bundleExchangeName =
                             new BundleExchangeName(bundleUploadRequest.getBundleId().getEncryptedId(), false);
+                    bundleSender = bundleUploadRequest.getSender();
                     path = pathProducer(bundleExchangeName, null);
                     try {
                         if (path == null) throw new IOException(
@@ -136,8 +138,8 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
             status = Status.FAILED;
             // TODO we should probably convey that the upload failed. We'll figure it out later, but it
             //      would be nice to indicate early on.
-            if (bundleExchangeName != null) {
-                bundleCompletion(bundleExchangeName);
+            if (bundleExchangeName != null && bundleSender != null) {
+                bundleCompletion(bundleExchangeName, bundleSender);
             }
             status = Status.FAILED;
             this.onCompleted();
@@ -151,9 +153,10 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
             } catch (Exception e) {
                 logger.log(SEVERE, "Problem closing bundle", e);
             }
-            if (bundleExchangeName != null) {
-                bundleCompletion(bundleExchangeName);
+            if (bundleExchangeName != null && bundleSender != null) {
+                bundleCompletion(bundleExchangeName, bundleSender);
             }
+
             responseObserver.onNext(BundleUploadResponse.newBuilder().setStatus(status).build());
             responseObserver.onCompleted();
             onBundleExchangeEvent(BundleExchangeEvent.UPLOAD_FINISHED);
