@@ -94,6 +94,7 @@ public class TransportToBundleServerManager implements Runnable {
                 var uploadRequestStreamObserver =
                         exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                                 .uploadBundle(responseObserver);
+                uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setSender(transportSenderId).build());
                 uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setBundleId(toSend).build());
                 byte[] data = new byte[1024 * 1024];
                 int rc;
@@ -103,8 +104,6 @@ public class TransportToBundleServerManager implements Runnable {
                             .build();
                     uploadRequestStreamObserver.onNext(uploadRequest);
                 }
-                uploadRequestStreamObserver.onNext(
-                        BundleUploadRequest.newBuilder().setSender(transportSenderId).build());
                 uploadRequestStreamObserver.onCompleted();
             } catch (IOException e) {
                 logger.log(SEVERE, "Failed to upload file: " + path, e);

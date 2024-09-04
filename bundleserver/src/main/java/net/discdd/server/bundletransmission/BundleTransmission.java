@@ -96,7 +96,6 @@ public class BundleTransmission {
         String clientId = "";
         String serverIdReceived = SecurityUtils.generateID(
                 uncompressedBundle.getSource().toPath().resolve(SecurityUtils.SERVER_IDENTITY_KEY));
-
         if (!bundleSecurity.bundleServerIdMatchesCurrentServer(serverIdReceived)) {
             logger.log(WARNING, "Received bundle's serverIdentity didn't match with current server, " +
                     "ignoring bundle with bundleId: " + uncompressedBundle.getBundleId());
@@ -145,32 +144,7 @@ public class BundleTransmission {
         }
     }
 
-    public void processReceivedBundles(BundleSender sender) {
-        File receivedBundlesDirectory = this.config.getBundleTransmission().getBundleReceivedLocation().toFile();
-        File[] files = receivedBundlesDirectory.listFiles();
-
-        logger.log(INFO, "[BundleTransmission] Processing received bundles for: " + sender.getId());
-
-        if (files != null) for (final File transportDir : files) {
-            if (TRANSPORT == sender.getType() && !sender.getId().equals(transportDir.getName())) {
-                continue;
-            }
-            if (TRANSPORT == sender.getType()) {
-                List<String> reachableClients = new ArrayList<>();
-                reachableClients = bundleRouting.getClientsForTransportId(sender.getId());
-            }
-
-            if (transportDir.isDirectory()) {
-                for (final File bundleFile : transportDir.listFiles()) {
-                    processBundleFile(bundleFile, sender);
-                }
-            } else if (transportDir.isFile()) {
-                processBundleFile(transportDir, sender);
-            }
-        }
-    }
-
-    private void processBundleFile(File bundleFile, BundleSender sender) {
+    public void processBundleFile(File bundleFile, BundleSender sender) {
         Bundle bundle = new Bundle(bundleFile);
         try {
             this.processReceivedBundle(sender, bundle);

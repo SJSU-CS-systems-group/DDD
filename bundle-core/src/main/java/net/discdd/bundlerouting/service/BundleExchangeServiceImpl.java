@@ -79,7 +79,7 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
 
     protected abstract Path pathProducer(BundleExchangeName bundleExchangeName, BundleSender sender);
 
-    protected abstract void bundleCompletion(BundleExchangeName bundleExchangeName, BundleSender sender);
+    protected abstract void bundleCompletion(BundleExchangeName bundleExchangeName, BundleSender sender, Path path);
 
     public enum BundleExchangeEvent {
         UPLOAD_STARTED, DOWNLOAD_STARTED, UPLOAD_FINISHED, DOWNLOAD_FINISHED
@@ -113,8 +113,7 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
                             bundleUploadRequest.getBundleId().getEncryptedId());
                     bundleExchangeName =
                             new BundleExchangeName(bundleUploadRequest.getBundleId().getEncryptedId(), false);
-                    bundleSender = bundleUploadRequest.getSender();
-                    path = pathProducer(bundleExchangeName, null);
+                    path = pathProducer(bundleExchangeName, bundleSender);
                     try {
                         if (path == null) throw new IOException(
                                 "Could not produce a path for " + bundleExchangeName.encryptedBundleId);
@@ -124,6 +123,8 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
                         logger.log(SEVERE, "Error creating file " + path, e);
                         this.onError(e);
                     }
+                } else if (bundleUploadRequest.hasSender()) {
+                    bundleSender = bundleUploadRequest.getSender();
                 } else {
                     writeFile(writer, bundleUploadRequest.getChunk().getChunk());
                 }
@@ -139,7 +140,7 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
             // TODO we should probably convey that the upload failed. We'll figure it out later, but it
             //      would be nice to indicate early on.
             if (bundleExchangeName != null && bundleSender != null) {
-                bundleCompletion(bundleExchangeName, bundleSender);
+                bundleCompletion(bundleExchangeName, bundleSender, path);
             }
             status = Status.FAILED;
             this.onCompleted();
@@ -154,9 +155,8 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
                 logger.log(SEVERE, "Problem closing bundle", e);
             }
             if (bundleExchangeName != null && bundleSender != null) {
-                bundleCompletion(bundleExchangeName, bundleSender);
+                bundleCompletion(bundleExchangeName, bundleSender, path);
             }
-
             responseObserver.onNext(BundleUploadResponse.newBuilder().setStatus(status).build());
             responseObserver.onCompleted();
             onBundleExchangeEvent(BundleExchangeEvent.UPLOAD_FINISHED);
