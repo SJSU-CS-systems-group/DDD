@@ -111,8 +111,7 @@ public class ADUEnd2EndTest extends End2EndTest {
     }
 
     private void sendBundle(Path bundleJarPath) throws Throwable {
-        var testSender =
-                BundleSender.newBuilder().setId("testSenderId").setType(BundleSenderType.CLIENT).build();
+        var testSender = BundleSender.newBuilder().setId("testSenderId").setType(BundleSenderType.CLIENT).build();
 
         var stub = BundleExchangeServiceGrpc.newStub(
                 ManagedChannelBuilder.forAddress("localhost", BUNDLESERVER_GRPC_PORT).usePlaintext().build());

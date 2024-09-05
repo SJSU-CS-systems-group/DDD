@@ -94,7 +94,8 @@ public class TransportToBundleServerManager implements Runnable {
                 var uploadRequestStreamObserver =
                         exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                                 .uploadBundle(responseObserver);
-                uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setSender(transportSenderId).build());
+                uploadRequestStreamObserver.onNext(
+                        BundleUploadRequest.newBuilder().setSender(transportSenderId).build());
                 uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setBundleId(toSend).build());
                 byte[] data = new byte[1024 * 1024];
                 int rc;
