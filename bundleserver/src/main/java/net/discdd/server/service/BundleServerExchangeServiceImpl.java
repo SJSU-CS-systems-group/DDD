@@ -32,8 +32,9 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
     }
 
     @Override
-    public void bundleCompletion(BundleExchangeName bundleExchangeName, BundleSender sender) {
-        bundleTransmission.processReceivedBundles(sender);
+    public void bundleCompletion(BundleExchangeName bundleExchangeName, BundleSender sender, Path path) {
+        logger.log(INFO, "Downloaded " + bundleExchangeName.encryptedBundleId());
+        bundleTransmission.processBundleFile(path.toFile(), sender);
     }
 
     @Override
