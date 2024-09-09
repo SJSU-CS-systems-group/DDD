@@ -112,7 +112,7 @@ public class BundleTransmission {
 
         if (receivedBundleCounter <= counters.lastReceivedBundleCounter) {
             logger.log(WARNING,
-                       "[BundleTransmission] Skipping bundle " + bundle.getSource().getName() + " as it is outdated");
+                       "[BundleTransmission] Skipping bundle " + bundle.getSource().getName() + " already received");
             return;
         }
 
@@ -157,7 +157,7 @@ public class BundleTransmission {
                 FileUtils.delete(bundleFile);
                 FileUtils.deleteDirectory(bundle.getSource());
             } catch (IOException e) {
-                logger.log(SEVERE, "e");
+                logger.log(SEVERE, "Delete bundle file: " + bundleFile.getName() + " failed");
             }
         }
     }
