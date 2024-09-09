@@ -22,7 +22,7 @@ import static java.util.logging.Level.SEVERE;
 
 public class StoreADUs {
     public static final String METADATA_FILENAME = "metadata.json";
-    private static final Path METADATA_PATH = Path.of(METADATA_FILENAME);
+    private static final Path METADATA_PATH = Paths.get(METADATA_FILENAME);
     public Path rootFolder;
     private static final Logger logger = Logger.getLogger(StoreADUs.class.getName());
 
