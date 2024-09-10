@@ -28,7 +28,10 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.logging.Logger;
 
@@ -117,6 +120,7 @@ public class TransportToBundleServerManager implements Runnable {
             var path = fromServerPath.resolve(toReceive.getEncryptedId());
             try (OutputStream os = Files.newOutputStream(path, StandardOpenOption.CREATE,
                                                          StandardOpenOption.TRUNCATE_EXISTING)) {
+                var completion = new CompletableFuture<Boolean>();
                 exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).downloadBundle(
                         BundleDownloadRequest.newBuilder().setBundleId(toReceive).setSender(transportSenderId).build(),
                         new StreamObserver<>() {
@@ -132,14 +136,18 @@ public class TransportToBundleServerManager implements Runnable {
                             @Override
                             public void onError(Throwable t) {
                                 logger.log(SEVERE, "Failed to download file: " + path, t);
+                                completion.completeExceptionally(t);
                             }
 
                             @Override
                             public void onCompleted() {
                                 logger.log(INFO, "Downloaded " + path);
+                                completion.complete(true);
                             }
                         });
-            } catch (IOException e) {
+
+                completion.get(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            } catch (IOException | ExecutionException | InterruptedException | TimeoutException e) {
                 logger.log(SEVERE, "Failed to download file: " + path, e);
             }
         }

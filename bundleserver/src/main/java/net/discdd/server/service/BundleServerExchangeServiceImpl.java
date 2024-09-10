@@ -45,6 +45,7 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
     @Override
     public Path pathProducer(BundleExchangeName bundleExchangeName, BundleSender sender) {
         if (bundleExchangeName.isDownload()) {
+            logger.log(INFO, sender.getId() +  " requested " + bundleExchangeName.encryptedBundleId());
             bundleTransmission.getPathForBundleToSend(bundleExchangeName.encryptedBundleId());
             var bundlePath = bundleTransmission.getPathForBundleToSend(bundleExchangeName.encryptedBundleId());
             if (bundlePath.toFile().exists()) {

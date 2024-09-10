@@ -10,7 +10,7 @@ public class Constants {
 
     public static final String BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME = "payload";
 
-    public static final long GRPC_LONG_TIMEOUT_MS = 60_000L;
+    public static final long GRPC_LONG_TIMEOUT_MS = 120_000L;
     public static final long GRPC_SHORT_TIMEOUT_MS = 5_000L;
     public static final int DEFAULT_WINDOW_SIZE = 10;
 }
