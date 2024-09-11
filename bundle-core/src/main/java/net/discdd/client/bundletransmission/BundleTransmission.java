@@ -1,6 +1,7 @@
 package net.discdd.client.bundletransmission;
 
 import com.google.protobuf.ByteString;
+import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
@@ -53,6 +54,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -332,19 +335,36 @@ public class BundleTransmission {
 
     private static final int INITIAL_CONNECT_RETRIES = 8;
 
+    private boolean isServerRunning(String transportAddress, int port) {
+        for (var tries = 0; tries < INITIAL_CONNECT_RETRIES; tries++) {
+            try (Socket socket = new Socket(transportAddress, port)) {
+                logger.log(INFO, "transport server is running");
+                return true;
+            } catch (Exception e) {
+                logger.log(SEVERE, "Try: "+tries+" | Error - message: "+e.getMessage()+", cause: "+e.getCause());
+                try {
+                    Thread.sleep(1000);
+                }catch (Exception ex){
+                    logger.log(SEVERE, "Thread sleep error: " +ex.getMessage()+", cause: "+ex.getCause());
+                }
+            }
+        }
+        return false;
+    }
     /**
      * IT IS VERY VERY IMPORTANT THAT TRANSPORT IS THE HOSTNAME WHEN TALKING TO THE SERVER, AND AN ADDRESS
      * WHEN TALKING TO A DEVICE.
      */
     public BundleExchangeCounts doExchangeWithTransport(String deviceAddress, String deviceDeviceName,
                                                         String transportAddress, int port) {
+        //ManagedChannel channel = null;
+        //BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub blockingStub = null;
         var channel = ManagedChannelBuilder.forAddress(transportAddress, port).enableRetry().usePlaintext().build();
         var blockingStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
         int bundlesUploaded = 0;
         BundleSender transportSender = null;
-        try {
-            for (var tries = 0; tries < INITIAL_CONNECT_RETRIES; tries++) {
-                try {
+            try {
+                if (isServerRunning(transportAddress, port)) {
                     var recencyBlobRequest = GetRecencyBlobRequest.newBuilder().setSender(
                             BundleSender.newBuilder().setId(bundleSecurity.getClientSecurity().getClientID())
                                     .setType(BundleSenderType.CLIENT).build()).build();
@@ -356,29 +376,24 @@ public class BundleTransmission {
                                            "device");
                     } else {
                         transportSender = recencyBlob.getSender();
-                        break;
                     }
-                } catch (StatusRuntimeException e) {
-                    logger.log(SEVERE, "Recency blob request failed for try " + tries + ": " + e.getMessage());
-                    if (tries == INITIAL_CONNECT_RETRIES) throw e;
-                    Thread.sleep(500);
+
+                timestampExchangeWithTransport(deviceAddress);
+                var clientSecurity = bundleSecurity.getClientSecurity();
+                var bundleRequests = bundleSecurity.getClientWindow().getWindow(clientSecurity);
+                var clientId = clientSecurity.getClientID();
+                var sender = BundleSender.newBuilder().setId(clientId).setType(BundleSenderType.CLIENT).build();
+                var bundlesDownloaded = downloadBundles(bundleRequests, sender, blockingStub);
+
+                    if (bundlesDownloaded != null) {
+                        processReceivedBundle(transportSender, new Bundle(bundlesDownloaded.toFile()));
+                    }
+
+                var stub = BundleExchangeServiceGrpc.newStub(channel);
+                bundlesUploaded = uploadBundle(stub);
                 }
-            }
-            timestampExchangeWithTransport(deviceAddress);
-            var clientSecurity = bundleSecurity.getClientSecurity();
-            var bundleRequests = bundleSecurity.getClientWindow().getWindow(clientSecurity);
-            var clientId = clientSecurity.getClientID();
-            var sender = BundleSender.newBuilder().setId(clientId).setType(BundleSenderType.CLIENT).build();
-            var bundlesDownloaded = downloadBundles(bundleRequests, sender, blockingStub);
-
-            if (bundlesDownloaded != null) {
-                processReceivedBundle(transportSender, new Bundle(bundlesDownloaded.toFile()));
-            }
-
-            var stub = BundleExchangeServiceGrpc.newStub(channel);
-            bundlesUploaded = uploadBundle(stub);
-        } catch (Exception e) {
-            logger.log(WARNING, "Upload failed", e);
+            } catch (Exception e) {
+                logger.log(WARNING, "Upload failed", e);
         }
         return new BundleExchangeCounts(bundlesUploaded, 1);
     }
