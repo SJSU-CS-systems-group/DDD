@@ -111,12 +111,12 @@ public class ADUEnd2EndTest extends End2EndTest {
     }
 
     private void sendBundle(Path bundleJarPath) throws Throwable {
-        var testSender = BundleSender.newBuilder().setId("testSenderId").setType(BundleSenderType.TRANSPORT).build();
+        var testSender = BundleSender.newBuilder().setId("testSenderId").setType(BundleSenderType.CLIENT).build();
 
         var stub = BundleExchangeServiceGrpc.newStub(
                 ManagedChannelBuilder.forAddress("localhost", BUNDLESERVER_GRPC_PORT).usePlaintext().build());
 
-        // careful! this is all backwards: we pass an object to receive the response and we get an object back to send
+        // carefull! this is all backwards: we pass an object to receive the response and we get an object back to send
         // requests to the server
         BundleUploadResponseStreamObserver response = new BundleUploadResponseStreamObserver();
         var request = stub.uploadBundle(response);
@@ -124,6 +124,7 @@ public class ADUEnd2EndTest extends End2EndTest {
         var firstByteString = ByteString.copyFrom(allBytes, 0, allBytes.length / 2);
         var secondByteString =
                 ByteString.copyFrom(allBytes, allBytes.length / 2, allBytes.length - allBytes.length / 2);
+        request.onNext(BundleUploadRequest.newBuilder().setSender(testSender).build());
         request.onNext(BundleUploadRequest.newBuilder()
                                .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId("8675309").build()).build());
         request.onNext(
@@ -132,7 +133,6 @@ public class ADUEnd2EndTest extends End2EndTest {
         request.onNext(
                 BundleUploadRequest.newBuilder().setChunk(BundleChunk.newBuilder().setChunk(secondByteString).build())
                         .build());
-        request.onNext(BundleUploadRequest.newBuilder().build());
         request.onCompleted();
 
         // let's see if it worked...

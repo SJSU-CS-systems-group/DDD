@@ -428,8 +428,9 @@ public class BundleTransmission {
     private int downloadBundles(List<String> bundleRequests, BundleSender sender,
                                 BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub stub) throws IOException {
         for (String bundle : bundleRequests) {
-            var downloadRequest = BundleDownloadRequest.newBuilder().setSender(sender)
-                    .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId(bundle).build()).build();
+            var downloadRequest = BundleDownloadRequest.newBuilder()
+                    .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId(bundle).build()).setSender(sender)
+                    .build();
             logger.log(INFO, "Downloading file: " + bundle);
             var responses =
                     stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).downloadBundle(downloadRequest);

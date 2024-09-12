@@ -32,8 +32,9 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
     }
 
     @Override
-    public void bundleCompletion(BundleExchangeName bundleExchangeName, BundleSender sender) {
-        bundleTransmission.processReceivedBundles(sender);
+    public void bundleCompletion(BundleExchangeName bundleExchangeName, BundleSender sender, Path path) {
+        logger.log(INFO, "Downloaded " + bundleExchangeName.encryptedBundleId());
+        bundleTransmission.processBundleFile(path.toFile(), sender);
     }
 
     @Override
@@ -44,6 +45,7 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
     @Override
     public Path pathProducer(BundleExchangeName bundleExchangeName, BundleSender sender) {
         if (bundleExchangeName.isDownload()) {
+            logger.log(INFO, sender.getId() + " requested " + bundleExchangeName.encryptedBundleId());
             bundleTransmission.getPathForBundleToSend(bundleExchangeName.encryptedBundleId());
             var bundlePath = bundleTransmission.getPathForBundleToSend(bundleExchangeName.encryptedBundleId());
             if (bundlePath.toFile().exists()) {

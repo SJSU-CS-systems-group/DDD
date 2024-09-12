@@ -300,6 +300,7 @@ public class BundleUtils {
             NoSuchAlgorithmException {
         DDDJarFileCreator innerJar = new DDDJarFileCreator(outputStream);
         if (ackedEncryptedBundleId == null) ackedEncryptedBundleId = "HB";
+        logger.log(INFO, "[BU/createBundlePayload] " + adus.size());
         // add the records to the inner jar
         innerJar.createEntry("acknowledgement.txt", ackedEncryptedBundleId.getBytes());
         innerJar.createEntry("routing.metadata", routingData == null ? "{}".getBytes() : routingData);
