@@ -129,10 +129,14 @@ public class JarUtils {
                 }
 
                 // Create the destination file
-                File destinationFile = Paths.get(dirPath, entry.getName()).toFile();
+                File destinationFile = new File(destinationFolder, entry.getName());
+                System.out.println("Destination file " + destinationFile.getAbsolutePath());
+                System.out.println("Extracting: " + entry.getName());
 
                 // Create any necessary subdirectories
-                destinationFile.getParentFile().mkdirs();
+                if (!destinationFile.getParentFile().exists()) {
+                    destinationFile.getParentFile().mkdirs();
+                }
 
                 // Extract the file
                 MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");

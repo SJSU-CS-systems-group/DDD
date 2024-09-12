@@ -36,10 +36,13 @@ public class DDDJarFileCreator {
     }
 
     public OutputStream createEntry(Path path) throws IOException, NoSuchAlgorithmException {
-        return createEntry(path.toString());
+        var name = path.toString().replace('\\', '/');
+
+        return createEntry(name);
     }
 
     public void createEntry(String name, byte[] bytes) throws IOException, NoSuchAlgorithmException {
+        name = name.replace('\\', '/');
         try (var os = createEntry(name)) {
             os.write(bytes);
         }
