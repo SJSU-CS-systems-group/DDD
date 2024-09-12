@@ -69,7 +69,7 @@ public class TransportToBundleServerManager implements Runnable {
         var bundlesFromClients = populateListFromPath(fromClientPath);
         var bundlesFromServer = populateListFromPath(fromServerPath);
 
-        try{
+        try {
             var inventoryResponse = bsStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     .bundleInventory(BundleInventoryRequest.newBuilder().setSender(transportSenderId)
                                              .addAllBundlesFromClientsOnTransport(bundlesFromClients)
@@ -110,9 +110,9 @@ public class TransportToBundleServerManager implements Runnable {
                 var path = fromServerPath.resolve(toReceive.getEncryptedId());
                 try (OutputStream os = Files.newOutputStream(path, StandardOpenOption.CREATE,
                                                              StandardOpenOption.TRUNCATE_EXISTING)) {
-                    exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).downloadBundle(
-                            BundleDownloadRequest.newBuilder().setBundleId(toReceive).setSender(transportSenderId).build(),
-                            new StreamObserver<>() {
+                    exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                            .downloadBundle(BundleDownloadRequest.newBuilder().setBundleId(toReceive)
+                                                    .setSender(transportSenderId).build(), new StreamObserver<>() {
                                 @Override
                                 public void onNext(BundleDownloadResponse value) {
                                     try {
@@ -137,13 +137,14 @@ public class TransportToBundleServerManager implements Runnable {
                 }
             }
         } catch (Exception e) {
-            logger.log(SEVERE, "error: "+e.getMessage());
+            logger.log(SEVERE, "error: " + e.getMessage());
             connectError.apply(e);
         }
 
-        try{
-            var recencyBlob = blockingExchangeStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                        .getRecencyBlob(GetRecencyBlobRequest.getDefaultInstance());
+        try {
+            var recencyBlob =
+                    blockingExchangeStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                            .getRecencyBlob(GetRecencyBlobRequest.getDefaultInstance());
 
             Path blobPath = fromServerPath.resolve(RECENCY_BLOB_BIN);
             try (var os = Files.newOutputStream(blobPath, StandardOpenOption.CREATE,
@@ -153,7 +154,7 @@ public class TransportToBundleServerManager implements Runnable {
                 logger.log(SEVERE, "Failed to write recency blob", e);
             }
         } catch (Exception e) {
-            logger.log(SEVERE, "error: "+e.getMessage());
+            logger.log(SEVERE, "error: " + e.getMessage());
             connectError.apply(e);
         }
 

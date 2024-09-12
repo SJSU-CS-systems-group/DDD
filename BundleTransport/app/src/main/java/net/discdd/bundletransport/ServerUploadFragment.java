@@ -145,7 +145,7 @@ public class ServerUploadFragment extends Fragment {
     private Void connectToServerError(Exception e) {
         requireActivity().runOnUiThread(() -> {
             serverConnnectedStatus.append("Server exchange incomplete with error.\n");
-            serverConnnectedStatus.append("Error: "+e.getMessage()+" \n");
+            serverConnnectedStatus.append("Error: " + e.getMessage() + " \n");
             connectServerBtn.setEnabled(true);
         });
         return null;
