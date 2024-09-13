@@ -1,10 +1,14 @@
 package net.discdd.utils;
 
 import net.discdd.bundlesecurity.SecurityUtils;
+import org.bouncycastle.asn1.edec.EdECObjectIdentifiers;
 import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
+import org.bouncycastle.crypto.params.X25519PublicKeyParameters;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
@@ -64,8 +68,15 @@ public class SelfSignedCertificateGenerator {
 
     public static PublicKey convertToPublicKey(ECPublicKey ecPublicKey) throws Exception {
         byte[] publicKeyBytes = ((DjbECPublicKey)ecPublicKey).getPublicKey();
-        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicKeyBytes);
-        KeyFactory keyFactory = KeyFactory.getInstance("EC", "BC");
+        X25519PublicKeyParameters publicKeyParams = new X25519PublicKeyParameters(publicKeyBytes, 0);
+
+        SubjectPublicKeyInfo spki = new SubjectPublicKeyInfo(
+                new AlgorithmIdentifier(EdECObjectIdentifiers.id_X25519),
+                publicKeyParams.getEncoded()
+        );
+
+        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(spki.getEncoded());
+        KeyFactory keyFactory = KeyFactory.getInstance("X25519", BouncyCastleProvider.PROVIDER_NAME);
         return keyFactory.generatePublic(keySpec);
     }
 }
