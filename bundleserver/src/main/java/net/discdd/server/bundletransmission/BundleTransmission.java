@@ -206,9 +206,9 @@ public class BundleTransmission {
         return encryptedBundleId;
     }
 
-    public GetRecencyBlobResponse getRecencyBlob() throws InvalidKeyException {
+    public GetRecencyBlobResponse getRecencyBlob(BundleSender sender) throws InvalidKeyException {
         var blob = RecencyBlob.newBuilder().setVersion(0).setNonce(secureRandom.nextInt())
-                .setBlobTimestamp(System.currentTimeMillis()).build();
+                .setBlobTimestamp(System.currentTimeMillis()).setSender(sender).build();
         byte[] signature = this.bundleSecurity.signRecencyBlob(blob);
         byte[] publicKeyBytes = this.bundleSecurity.getIdentityPublicKey();
         return GetRecencyBlobResponse.newBuilder().setStatus(RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS)

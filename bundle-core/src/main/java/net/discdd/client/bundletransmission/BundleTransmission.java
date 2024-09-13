@@ -171,30 +171,10 @@ public class BundleTransmission {
 
         this.applicationDataManager.processAcknowledgement(ackedBundleId);
         this.applicationDataManager.storeReceivedADUs(null, null, uncompressedPayload.getADUs());
-
     }
 
     public static String bundleSenderToString(BundleSender sender) {
         return sender.getType() + " : " + sender.getId();
-    }
-
-    public void processReceivedBundles(BundleSender sender, String bundlesLocation) throws WindowExceptions.BufferOverflow, IOException, InvalidKeyException, RoutingExceptions.ClientMetaDataFileException, NoSessionException, InvalidMessageException, DuplicateMessageException, LegacyMessageException, GeneralSecurityException {
-        File bundleStorageDirectory = new File(bundlesLocation);
-        logger.log(FINE, "inside receives" + bundlesLocation);
-        if (bundleStorageDirectory.listFiles() == null || bundleStorageDirectory.listFiles().length == 0) {
-            logger.log(INFO, "No Bundle received");
-            return;
-        }
-        for (final File bundleFile : bundleStorageDirectory.listFiles()) {
-            Bundle bundle = new Bundle(bundleFile);
-            logger.log(INFO, "Processing: " + bundle.getSource().getName());
-            this.processReceivedBundle(sender, bundle);
-            logger.log(INFO, "Deleting Directory");
-            FileUtils.recursiveDelete(bundle.getSource().toPath());
-            logger.log(INFO, "Deleted Directory");
-        }
-        String largestBundleId = getLargestBundleIdReceived();
-        this.bundleSecurity.registerLargestBundleIdReceived(largestBundleId);
     }
 
     private BundleDTO generateNewBundle(String bundleId) throws RoutingExceptions.ClientMetaDataFileException,
@@ -360,16 +340,23 @@ public class BundleTransmission {
                                                         String transportAddress, int port) {
         var channel = ManagedChannelBuilder.forAddress(transportAddress, port).enableRetry().usePlaintext().build();
         var blockingStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
-        int bundlesDownloaded = 0;
         int bundlesUploaded = 0;
+        BundleSender transportSender = null;
         try {
             for (var tries = 0; tries < INITIAL_CONNECT_RETRIES; tries++) {
                 try {
-                    var blobRecencyReply = blockingStub.getRecencyBlob(GetRecencyBlobRequest.getDefaultInstance());
+                    var recencyBlobRequest = GetRecencyBlobRequest.newBuilder().setSender(
+                            BundleSender.newBuilder().setId(bundleSecurity.getClientSecurity().getClientID())
+                                    .setType(BundleSenderType.CLIENT).build()).build();
+                    var blobRecencyReply = blockingStub.getRecencyBlob(recencyBlobRequest);
+                    var recencyBlob = blobRecencyReply.getRecencyBlob();
                     if (!processRecencyBlob(deviceAddress, blobRecencyReply)) {
                         logger.log(SEVERE,
                                    "Did not process recency blob. In the future, we need to stop talking to this " +
                                            "device");
+                    } else {
+                        transportSender = recencyBlob.getSender();
+                        break;
                     }
                 } catch (StatusRuntimeException e) {
                     logger.log(SEVERE, "Recency blob request failed for try " + tries + ": " + e.getMessage());
@@ -382,15 +369,18 @@ public class BundleTransmission {
             var bundleRequests = bundleSecurity.getClientWindow().getWindow(clientSecurity);
             var clientId = clientSecurity.getClientID();
             var sender = BundleSender.newBuilder().setId(clientId).setType(BundleSenderType.CLIENT).build();
+            var bundlesDownloaded = downloadBundles(bundleRequests, sender, blockingStub);
 
-            bundlesDownloaded = downloadBundles(bundleRequests, sender, blockingStub);
+            if (bundlesDownloaded != null) {
+                processReceivedBundle(transportSender, new Bundle(bundlesDownloaded.toFile()));
+            }
 
             var stub = BundleExchangeServiceGrpc.newStub(channel);
             bundlesUploaded = uploadBundle(stub);
         } catch (Exception e) {
             logger.log(WARNING, "Upload failed", e);
         }
-        return new BundleExchangeCounts(bundlesUploaded, bundlesDownloaded);
+        return new BundleExchangeCounts(bundlesUploaded, 1);
     }
 
     private int uploadBundle(BundleExchangeServiceGrpc.BundleExchangeServiceStub stub) throws RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException, GeneralSecurityException {
@@ -425,8 +415,8 @@ public class BundleTransmission {
                 bundleUploadResponseObserver.bundleUploadResponse.getStatus() == Status.SUCCESS ? 1 : 0;
     }
 
-    private int downloadBundles(List<String> bundleRequests, BundleSender sender,
-                                BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub stub) throws IOException {
+    private Path downloadBundles(List<String> bundleRequests, BundleSender sender,
+                                 BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub stub) throws IOException {
         for (String bundle : bundleRequests) {
             var downloadRequest = BundleDownloadRequest.newBuilder()
                     .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId(bundle).build()).setSender(sender)
@@ -435,16 +425,26 @@ public class BundleTransmission {
             var responses =
                     stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).downloadBundle(downloadRequest);
             OutputStream fileOutputStream = null;
+
+            var receiveBundlePath = ROOT_DIR.resolve(RECEIVED_BUNDLES_DIRECTORY);
+            if (!Files.exists(receiveBundlePath)) {
+                Files.createDirectories(receiveBundlePath);
+            }
+
+            var bundlePath = receiveBundlePath.resolve(bundle);
+
             try {
-                fileOutputStream = responses.hasNext() ?
-                        Files.newOutputStream(ROOT_DIR.resolve(RECEIVED_BUNDLES_DIRECTORY), StandardOpenOption.CREATE,
-                                              StandardOpenOption.TRUNCATE_EXISTING) : null;
+                fileOutputStream = Files.newOutputStream(bundlePath, StandardOpenOption.CREATE,
+                                                         StandardOpenOption.TRUNCATE_EXISTING);
 
                 while (responses.hasNext()) {
                     var response = responses.next();
                     fileOutputStream.write(response.getChunk().getChunk().toByteArray());
                 }
-                return 1;
+
+                if (Files.size(bundlePath) > 0) {
+                    return bundlePath;
+                }
             } catch (StatusRuntimeException e) {
                 logger.log(SEVERE, "Receive bundle failed " + stub.getChannel(), e);
             } finally {
@@ -457,6 +457,6 @@ public class BundleTransmission {
                 }
             }
         }
-        return 0;
+        return null;
     }
 }

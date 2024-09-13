@@ -5,6 +5,7 @@ import net.discdd.model.Acknowledgement;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -30,7 +31,8 @@ public class AckRecordUtils {
             return;
         }
         try {
-            Files.writeString(ackFilePath, ackRecord.getBundleId());
+            Files.write(ackFilePath, ackRecord.getBundleId().getBytes(), StandardOpenOption.CREATE,
+                        StandardOpenOption.TRUNCATE_EXISTING);
         } catch (IOException e) {
             logger.log(Level.WARNING, "Failed to write Acknowledgment record to " + ackFilePath, e);
         }
