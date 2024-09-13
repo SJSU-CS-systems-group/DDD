@@ -91,7 +91,7 @@ public class ApplicationDataManager {
     }
 
     public void storeReceivedADUs(String clientId, String bundleId, List<ADU> adus) {
-        System.out.println("[ADM] Storing ADUs in the Data Store, Size:" + adus.size());
+        logger.log(INFO, "[ADM] Storing ADUs in the Data Store, Size:" + adus.size());
 
         for (final ADU adu : adus) {
 
