@@ -178,7 +178,7 @@ public class TransportToBundleServerManager implements Runnable {
 
         try {
             channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
-        } catch (InterruptedException e){
+        } catch (InterruptedException e) {
             logger.log(SEVERE, "could not shutdown channel, error: " + e.getMessage() + ", cause: " + e.getCause());
         }
         logger.log(INFO, "Connect server completed");
