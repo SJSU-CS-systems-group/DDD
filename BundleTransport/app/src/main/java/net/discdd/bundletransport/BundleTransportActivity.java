@@ -36,6 +36,7 @@ public class BundleTransportActivity extends AppCompatActivity {
     Logger logger = Logger.getLogger(BundleTransportActivity.class.getName());
     private TitledFragment serverUploadFragment;
     private TitledFragment transportWifiFragment;
+    private TitledFragment storageFragment;
 
     record ConnectivityEvent(boolean internetAvailable) {}
 
@@ -74,10 +75,12 @@ public class BundleTransportActivity extends AppCompatActivity {
         serverUploadFragment =
                 new TitledFragment(getString(R.string.upload), new ServerUploadFragment(connectivityEventPublisher));
         transportWifiFragment = new TitledFragment(getString(R.string.local_wifi), new TransportWifiDirectFragment());
+        storageFragment = new TitledFragment("Storage Settings", new StorageFragment());
 
         permissionsFragment = new PermissionsFragment();
         fragments.add(serverUploadFragment);
         fragments.add(transportWifiFragment);
+        fragments.add(storageFragment);
         fragments.add(new TitledFragment(getString(R.string.permissions), permissionsFragment));
         fragments.add(new TitledFragment(getString(R.string.logs), new LogFragment()));
         TabLayout tabLayout = findViewById(R.id.tabs);
