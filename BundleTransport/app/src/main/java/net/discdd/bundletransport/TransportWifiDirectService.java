@@ -126,6 +126,7 @@ public class TransportWifiDirectService extends Service
                 appendToClientLog("Starting gRPC server");
                 logger.log(INFO, "starting grpc server from main activity!!!!!!!");
                 grpcServer.startServer(getApplicationContext());
+                appendToClientLog("server started");
             }
         }
     }
