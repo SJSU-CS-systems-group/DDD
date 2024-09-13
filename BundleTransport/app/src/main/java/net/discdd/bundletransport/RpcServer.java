@@ -72,8 +72,8 @@ public class RpcServer {
             public void getRecencyBlob(GetRecencyBlobRequest request,
                                        StreamObserver<GetRecencyBlobResponse> responseObserver) {
                 var recencyBlobResponse = GetRecencyBlobResponse.getDefaultInstance();
-                try (var is = Files.newInputStream(
-                        toClientPath.resolve(TransportToBundleServerManager.RECENCY_BLOB_BIN))) {
+                var recencyBlobPath = toClientPath.resolve(TransportToBundleServerManager.RECENCY_BLOB_BIN);
+                try (var is = Files.newInputStream(recencyBlobPath)) {
                     recencyBlobResponse = GetRecencyBlobResponse.parseFrom(is);
                 } catch (IOException e) {
                     logger.log(SEVERE, "Failed to read recency blob", e);

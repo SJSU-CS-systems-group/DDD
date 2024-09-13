@@ -77,8 +77,10 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
     @Override
     public void getRecencyBlob(GetRecencyBlobRequest request, StreamObserver<GetRecencyBlobResponse> responseObserver) {
         GetRecencyBlobResponse recencyBlob = null;
+        var sender = request.getSender();
         try {
-            recencyBlob = bundleTransmission.getRecencyBlob();
+            recencyBlob = bundleTransmission.getRecencyBlob(sender);
+            logger.log(INFO, "Created Blob for sender " + sender);
         } catch (InvalidKeyException e) {
             recencyBlob =
                     GetRecencyBlobResponse.newBuilder().setStatus(RecencyBlobStatus.RECENCY_BLOB_STATUS_FAILED).build();
