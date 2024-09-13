@@ -43,7 +43,7 @@ public class RpcServer {
     }
 
     public void startServer(Context context) {
-        if (server != null && !server.isShutdown()){
+        if (server != null && !server.isShutdown()) {
             return;
         }
         var toServerPath = context.getExternalFilesDir(null).toPath().resolve("BundleTransmission/server");
@@ -79,7 +79,9 @@ public class RpcServer {
                 responseObserver.onCompleted();
             }
         };
-        server = Grpc.newServerBuilderForPort(7777, InsecureServerCredentials.create()).addService(bundleExchangeService).build();
+        server =
+                Grpc.newServerBuilderForPort(7777, InsecureServerCredentials.create()).addService(bundleExchangeService)
+                        .build();
 
         logger.log(INFO, "Starting rpc server at: " + server.toString());
 
@@ -92,7 +94,7 @@ public class RpcServer {
     }
 
     public void shutdownServer() {
-        if (server != null && server.isShutdown()){
+        if (server != null && server.isShutdown()) {
             return;
         }
 
