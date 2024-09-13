@@ -130,8 +130,6 @@ public class JarUtils {
 
                 // Create the destination file
                 File destinationFile = new File(destinationFolder, entry.getName());
-                System.out.println("Destination file " + destinationFile.getAbsolutePath());
-                System.out.println("Extracting: " + entry.getName());
 
                 // Create any necessary subdirectories
                 if (!destinationFile.getParentFile().exists()) {

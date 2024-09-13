@@ -26,6 +26,7 @@ public class DDDJarFileCreator {
     }
 
     public OutputStream createEntry(String name) throws IOException, NoSuchAlgorithmException {
+        name = name.replace('\\', '/');
         jarOutputStream.putNextEntry(new JarEntry(name));
         if (previousDigestStream != null) previousDigestStream.flush();
         var digest = MessageDigest.getInstance("SHA-256");
@@ -36,9 +37,7 @@ public class DDDJarFileCreator {
     }
 
     public OutputStream createEntry(Path path) throws IOException, NoSuchAlgorithmException {
-        var name = path.toString().replace('\\', '/');
-
-        return createEntry(name);
+        return createEntry(path.toString());
     }
 
     public void createEntry(String name, byte[] bytes) throws IOException, NoSuchAlgorithmException {
