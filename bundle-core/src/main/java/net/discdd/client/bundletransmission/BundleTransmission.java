@@ -1,10 +1,12 @@
 package net.discdd.client.bundletransmission;
 
 import com.google.protobuf.ByteString;
-import io.grpc.ManagedChannel;
+import io.grpc.InsecureChannelCredentials;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
+import io.grpc.Grpc;
+import io.grpc.okhttp.OkHttpChannelBuilder;
 import lombok.Getter;
 import net.discdd.bundlerouting.RoutingExceptions;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
@@ -340,10 +342,10 @@ public class BundleTransmission {
             try (Socket socket = new Socket(transportAddress, port)) {
                 logger.log(INFO, "transport server is running");
                 return true;
-            } catch (Exception e) {
+            } catch (IOException e) {
                 logger.log(SEVERE, "Try: "+tries+" | Error - message: "+e.getMessage()+", cause: "+e.getCause());
                 try {
-                    Thread.sleep(1000);
+                    Thread.sleep(500);
                 }catch (Exception ex){
                     logger.log(SEVERE, "Thread sleep error: " +ex.getMessage()+", cause: "+ex.getCause());
                 }
@@ -357,9 +359,7 @@ public class BundleTransmission {
      */
     public BundleExchangeCounts doExchangeWithTransport(String deviceAddress, String deviceDeviceName,
                                                         String transportAddress, int port) {
-        //ManagedChannel channel = null;
-        //BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub blockingStub = null;
-        var channel = ManagedChannelBuilder.forAddress(transportAddress, port).enableRetry().usePlaintext().build();
+        var channel = Grpc.newChannelBuilderForAddress(transportAddress, port, InsecureChannelCredentials.create()).build();
         var blockingStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
         int bundlesUploaded = 0;
         BundleSender transportSender = null;
@@ -392,8 +392,13 @@ public class BundleTransmission {
                 var stub = BundleExchangeServiceGrpc.newStub(channel);
                 bundlesUploaded = uploadBundle(stub);
                 }
-            } catch (Exception e) {
-                logger.log(WARNING, "Upload failed", e);
+        } catch (Exception e) {
+            logger.log(WARNING, "Upload failed", e);
+        }
+        try{
+            channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e){
+            logger.log(SEVERE, "could not shutdown channel, error: "+e.getMessage()+", cause: "+e.getCause());
         }
         return new BundleExchangeCounts(bundlesUploaded, 1);
     }

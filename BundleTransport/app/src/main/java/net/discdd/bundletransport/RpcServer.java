@@ -20,20 +20,18 @@ import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
+import io.grpc.Grpc;
+import io.grpc.InsecureServerCredentials;
 import io.grpc.Server;
-import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
+import io.grpc.ServerBuilder;
+import io.grpc.okhttp.OkHttpServerBuilder;
 import io.grpc.stub.StreamObserver;
 
 public class RpcServer {
-    public enum ServerState {
-        RUNNING, PENDING, SHUTDOWN
-    }
-
     private static final Logger logger = Logger.getLogger(RpcServer.class.getName());
 
     // private final String TAG = "dddTransport";
     private static final int port = 7777;
-    private ServerState state = ServerState.SHUTDOWN;
 
     private Server server;
     private static RpcServer rpcServerInstance;
@@ -45,11 +43,9 @@ public class RpcServer {
     }
 
     public void startServer(Context context) {
-        logger.log(INFO, "Server state is : " + state.name());
-        if (state == ServerState.RUNNING || state == ServerState.PENDING) {
+        if (server != null && !server.isShutdown()){
             return;
         }
-        state = ServerState.PENDING;
         var toServerPath = context.getExternalFilesDir(null).toPath().resolve("BundleTransmission/server");
         var toClientPath = context.getExternalFilesDir(null).toPath().resolve("BundleTransmission/client");
         var bundleExchangeService = new BundleExchangeServiceImpl() {
@@ -83,22 +79,20 @@ public class RpcServer {
                 responseObserver.onCompleted();
             }
         };
-        server = NettyServerBuilder.forPort(7777).addService(bundleExchangeService).build();
+        server = Grpc.newServerBuilderForPort(7777, InsecureServerCredentials.create()).addService(bundleExchangeService).build();
 
         logger.log(INFO, "Starting rpc server at: " + server.toString());
 
         try {
             server.start();
-            state = ServerState.RUNNING;
             logger.log(FINE, "Rpc server running at: " + server.toString());
         } catch (IOException e) {
-            state = ServerState.SHUTDOWN;
             logger.log(WARNING, "RpcServer -> startServer() IOException: " + e.getMessage());
         }
     }
 
     public void shutdownServer() {
-        if (state == ServerState.SHUTDOWN || state == ServerState.PENDING) {
+        if (server != null && server.isShutdown()){
             return;
         }
 
@@ -118,8 +112,8 @@ public class RpcServer {
         }
     }
 
-    public ServerState getState() {
-        return state;
+    public boolean isServerRunning() {
+        return server != null && !server.isShutdown();
     }
 
     public boolean isShutdown() {
