@@ -352,8 +352,8 @@ public class BundleTransmission {
                     var recencyBlob = blobRecencyReply.getRecencyBlob();
                     if (!processRecencyBlob(deviceAddress, blobRecencyReply)) {
                         logger.log(SEVERE,
-                                "Did not process recency blob. In the future, we need to stop talking to this " +
-                                        "device");
+                                   "Did not process recency blob. In the future, we need to stop talking to this " +
+                                           "device");
                     } else {
                         transportSender = recencyBlob.getSender();
                         break;
@@ -416,7 +416,7 @@ public class BundleTransmission {
     }
 
     private Path downloadBundles(List<String> bundleRequests, BundleSender sender,
-                                BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub stub) throws IOException {
+                                 BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub stub) throws IOException {
         for (String bundle : bundleRequests) {
             var downloadRequest = BundleDownloadRequest.newBuilder()
                     .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId(bundle).build()).setSender(sender)
@@ -435,14 +435,14 @@ public class BundleTransmission {
 
             try {
                 fileOutputStream = Files.newOutputStream(bundlePath, StandardOpenOption.CREATE,
-                                StandardOpenOption.TRUNCATE_EXISTING);
+                                                         StandardOpenOption.TRUNCATE_EXISTING);
 
                 while (responses.hasNext()) {
                     var response = responses.next();
                     fileOutputStream.write(response.getChunk().getChunk().toByteArray());
                 }
 
-                if (Files.size(bundlePath) >0) {
+                if (Files.size(bundlePath) > 0) {
                     return bundlePath;
                 }
             } catch (StatusRuntimeException e) {
