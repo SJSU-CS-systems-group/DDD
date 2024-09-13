@@ -343,40 +343,42 @@ public class BundleTransmission {
                 logger.log(INFO, "transport server is running");
                 return true;
             } catch (IOException e) {
-                logger.log(SEVERE, "Try: "+tries+" | Error - message: "+e.getMessage()+", cause: "+e.getCause());
+                logger.log(SEVERE,
+                           "Try: " + tries + " | Error - message: " + e.getMessage() + ", cause: " + e.getCause());
                 try {
                     Thread.sleep(500);
-                }catch (Exception ex){
-                    logger.log(SEVERE, "Thread sleep error: " +ex.getMessage()+", cause: "+ex.getCause());
+                } catch (Exception ex) {
+                    logger.log(SEVERE, "Thread sleep error: " + ex.getMessage() + ", cause: " + ex.getCause());
                 }
             }
         }
         return false;
     }
+
     /**
      * IT IS VERY VERY IMPORTANT THAT TRANSPORT IS THE HOSTNAME WHEN TALKING TO THE SERVER, AND AN ADDRESS
      * WHEN TALKING TO A DEVICE.
      */
     public BundleExchangeCounts doExchangeWithTransport(String deviceAddress, String deviceDeviceName,
                                                         String transportAddress, int port) {
-        var channel = Grpc.newChannelBuilderForAddress(transportAddress, port, InsecureChannelCredentials.create()).build();
+        var channel =
+                Grpc.newChannelBuilderForAddress(transportAddress, port, InsecureChannelCredentials.create()).build();
         var blockingStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
         int bundlesUploaded = 0;
         BundleSender transportSender = null;
-            try {
-                if (isServerRunning(transportAddress, port)) {
-                    var recencyBlobRequest = GetRecencyBlobRequest.newBuilder().setSender(
-                            BundleSender.newBuilder().setId(bundleSecurity.getClientSecurity().getClientID())
-                                    .setType(BundleSenderType.CLIENT).build()).build();
-                    var blobRecencyReply = blockingStub.getRecencyBlob(recencyBlobRequest);
-                    var recencyBlob = blobRecencyReply.getRecencyBlob();
-                    if (!processRecencyBlob(deviceAddress, blobRecencyReply)) {
-                        logger.log(SEVERE,
-                                   "Did not process recency blob. In the future, we need to stop talking to this " +
-                                           "device");
-                    } else {
-                        transportSender = recencyBlob.getSender();
-                    }
+        try {
+            if (isServerRunning(transportAddress, port)) {
+                var recencyBlobRequest = GetRecencyBlobRequest.newBuilder().setSender(
+                        BundleSender.newBuilder().setId(bundleSecurity.getClientSecurity().getClientID())
+                                .setType(BundleSenderType.CLIENT).build()).build();
+                var blobRecencyReply = blockingStub.getRecencyBlob(recencyBlobRequest);
+                var recencyBlob = blobRecencyReply.getRecencyBlob();
+                if (!processRecencyBlob(deviceAddress, blobRecencyReply)) {
+                    logger.log(SEVERE, "Did not process recency blob. In the future, we need to stop talking to this " +
+                            "device");
+                } else {
+                    transportSender = recencyBlob.getSender();
+                }
 
                 timestampExchangeWithTransport(deviceAddress);
                 var clientSecurity = bundleSecurity.getClientSecurity();
@@ -385,20 +387,20 @@ public class BundleTransmission {
                 var sender = BundleSender.newBuilder().setId(clientId).setType(BundleSenderType.CLIENT).build();
                 var bundlesDownloaded = downloadBundles(bundleRequests, sender, blockingStub);
 
-                    if (bundlesDownloaded != null) {
-                        processReceivedBundle(transportSender, new Bundle(bundlesDownloaded.toFile()));
-                    }
+                if (bundlesDownloaded != null) {
+                    processReceivedBundle(transportSender, new Bundle(bundlesDownloaded.toFile()));
+                }
 
                 var stub = BundleExchangeServiceGrpc.newStub(channel);
                 bundlesUploaded = uploadBundle(stub);
-                }
+            }
         } catch (Exception e) {
             logger.log(WARNING, "Upload failed", e);
         }
-        try{
+        try {
             channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
-        } catch (InterruptedException e){
-            logger.log(SEVERE, "could not shutdown channel, error: "+e.getMessage()+", cause: "+e.getCause());
+        } catch (InterruptedException e) {
+            logger.log(SEVERE, "could not shutdown channel, error: " + e.getMessage() + ", cause: " + e.getCause());
         }
         return new BundleExchangeCounts(bundlesUploaded, 1);
     }
