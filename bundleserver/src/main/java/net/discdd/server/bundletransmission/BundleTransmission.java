@@ -211,7 +211,7 @@ public class BundleTransmission {
                 .setBlobTimestamp(System.currentTimeMillis()).setSender(sender).build();
         byte[] signature = this.bundleSecurity.signRecencyBlob(blob);
         byte[] publicKeyBytes = this.bundleSecurity.getIdentityPublicKey();
-            return GetRecencyBlobResponse.newBuilder().setStatus(RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS)
+        return GetRecencyBlobResponse.newBuilder().setStatus(RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS)
                 .setRecencyBlob(blob).setRecencyBlobSignature(ByteString.copyFrom(signature))
                 .setServerPublicKey(ByteString.copyFrom(publicKeyBytes)).build();
     }
