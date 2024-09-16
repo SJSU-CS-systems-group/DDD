@@ -210,7 +210,8 @@ public class BundleClientToBundleServerTest extends End2EndTest {
             try {
                 Path receivedBundleLocation =
                         clientTestRoot.resolve("BundleTransmission/bundle-generation/to-send").resolve(bundle);
-                final OutputStream fileOutputStream = Files.newOutputStream(receivedBundleLocation, StandardOpenOption.CREATE,
+                final OutputStream fileOutputStream =
+                        Files.newOutputStream(receivedBundleLocation, StandardOpenOption.CREATE,
                                               StandardOpenOption.TRUNCATE_EXISTING);
 
                 while (responses.hasNext()) {

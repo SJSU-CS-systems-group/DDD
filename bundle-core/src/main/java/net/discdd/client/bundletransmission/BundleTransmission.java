@@ -123,7 +123,8 @@ public class BundleTransmission {
         receivedProcDir.toFile().mkdirs();
     }
 
-    public void registerBundleId(String bundleId) throws IOException, WindowExceptions.BufferOverflow, GeneralSecurityException, InvalidKeyException {
+    public void registerBundleId(String bundleId) throws IOException, WindowExceptions.BufferOverflow,
+            GeneralSecurityException, InvalidKeyException {
         try (BufferedWriter bufferedWriter = new BufferedWriter(
                 new FileWriter(this.ROOT_DIR.resolve(LARGEST_BUNDLE_ID_RECEIVED).toFile()))) {
             bufferedWriter.write(bundleId);
@@ -148,7 +149,8 @@ public class BundleTransmission {
 
     public void processReceivedBundle(BundleSender sender, Bundle bundle) throws IOException,
             RoutingExceptions.ClientMetaDataFileException, NoSessionException, InvalidMessageException,
-            DuplicateMessageException, LegacyMessageException, InvalidKeyException, GeneralSecurityException, WindowExceptions.BufferOverflow {
+            DuplicateMessageException, LegacyMessageException, InvalidKeyException, GeneralSecurityException,
+            WindowExceptions.BufferOverflow {
         String largestBundleIdReceived = this.getLargestBundleIdReceived();
         UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, this.ROOT_DIR.resolve(
                 Paths.get(BUNDLE_GENERATION_DIRECTORY, RECEIVED_PROCESSING)));

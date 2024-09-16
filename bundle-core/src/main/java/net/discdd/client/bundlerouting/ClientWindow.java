@@ -60,7 +60,7 @@ public class ClientWindow {
         var dbFile = clientWindowDataPath.resolve(WINDOW_FILE);
 
         Files.write(dbFile, String.format(Locale.US, "%d,%d", windowOfUnencryptedBundleIds.getFirst().bundleCounter(),
-                                  windowOfUnencryptedBundleIds.getLast().bundleCounter()).getBytes());
+                                          windowOfUnencryptedBundleIds.getLast().bundleCounter()).getBytes());
 
         logger.log(FINE, "Update window: " + windowOfUnencryptedBundleIds.getFirst().bundleCounter() + " - " +
                 windowOfUnencryptedBundleIds.getLast().bundleCounter());
