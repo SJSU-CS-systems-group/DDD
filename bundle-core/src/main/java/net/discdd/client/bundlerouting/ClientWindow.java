@@ -62,7 +62,7 @@ public class ClientWindow {
         Files.write(dbFile, String.format(Locale.US, "%d,%d", windowOfUnencryptedBundleIds.getFirst().bundleCounter(),
                                   windowOfUnencryptedBundleIds.getLast().bundleCounter()).getBytes());
 
-        logger.log(INFO, "Update window: " + windowOfUnencryptedBundleIds.getFirst().bundleCounter() + " - " +
+        logger.log(FINE, "Update window: " + windowOfUnencryptedBundleIds.getFirst().bundleCounter() + " - " +
                 windowOfUnencryptedBundleIds.getLast().bundleCounter());
     }
 
