@@ -14,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 public class ClientBundleGenerator {
@@ -70,12 +71,22 @@ public class ClientBundleGenerator {
         return clientSecurity.encryptBundleID(plainBundleID);
     }
 
-    public int compareBundleIDs(String id1, long id2, boolean direction) throws GeneralSecurityException,
+    public int compareBundleIDs(String id1, String id2, boolean direction) throws GeneralSecurityException,
             InvalidKeyException {
-        String decryptedBundleID1 = clientSecurity.decryptBundleID(id1);
-        var foo = BundleIDGenerator.getCounterFromBundleID(decryptedBundleID1, direction);
+        if (Objects.equals(id2, "0")) {
+            String decryptedBundleID1 = clientSecurity.decryptBundleID(id1);
+            var foo = BundleIDGenerator.getCounterFromBundleID(decryptedBundleID1, direction);
 
-        return Long.compare(foo, id2);
+            return Long.compare(foo, Long.parseLong(id2));
+        }
+
+        String decryptedBundleID1 = clientSecurity.decryptBundleID(id1);
+        String decryptedBundleID2 = clientSecurity.decryptBundleID(id2);
+
+        var counterId1 = BundleIDGenerator.getCounterFromBundleID(decryptedBundleID1, direction);
+        var counterId2 = BundleIDGenerator.getCounterFromBundleID(decryptedBundleID2, direction);
+
+        return Long.compare(counterId1, counterId2);
     }
 
     public long getCounterFromBundleID(String bundleID, boolean direction) throws GeneralSecurityException,

@@ -210,18 +210,14 @@ public class BundleClientToBundleServerTest extends End2EndTest {
             try {
                 Path receivedBundleLocation =
                         clientTestRoot.resolve("BundleTransmission/bundle-generation/to-send").resolve(bundle);
-                final OutputStream fileOutputStream = responses.hasNext() ?
-                        // I should not have this literal here! but this change is getting too large to fix all the
-                        // literal problems!
-                        Files.newOutputStream(receivedBundleLocation, StandardOpenOption.CREATE,
-                                              StandardOpenOption.TRUNCATE_EXISTING) : null;
+                final OutputStream fileOutputStream = Files.newOutputStream(receivedBundleLocation, StandardOpenOption.CREATE,
+                                              StandardOpenOption.TRUNCATE_EXISTING);
 
                 while (responses.hasNext()) {
                     var response = responses.next();
                     fileOutputStream.write(response.getChunk().getChunk().toByteArray());
                 }
                 bundleTransmission.processReceivedBundle(sender, new Bundle(receivedBundleLocation.toFile()));
-                break;
             } catch (StatusRuntimeException e) {
                 logger.log(SEVERE, "Receive bundle failed " + channel, e);
             }

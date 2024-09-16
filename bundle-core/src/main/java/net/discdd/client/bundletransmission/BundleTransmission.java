@@ -113,7 +113,6 @@ public class BundleTransmission {
         net.discdd.utils.FileUtils.createFileWithDefaultIfNeeded(ackRecordPath, "HB".getBytes());
         tosendDir = bundleGenerationDir.resolve(TO_SEND_DIRECTORY);
         tosendDir.toFile().mkdirs();
-
         var uncompressedPayloadDir = bundleGenerationDir.resolve(UNCOMPRESSED_PAYLOAD);
         uncompressedPayloadDir.toFile().mkdirs();
         var compressedPayloadDir = bundleGenerationDir.resolve(COMPRESSED_PAYLOAD);
@@ -124,11 +123,13 @@ public class BundleTransmission {
         receivedProcDir.toFile().mkdirs();
     }
 
-    public void registerBundleId(String bundleId) throws IOException {
+    public void registerBundleId(String bundleId) throws IOException, WindowExceptions.BufferOverflow, GeneralSecurityException, InvalidKeyException {
         try (BufferedWriter bufferedWriter = new BufferedWriter(
                 new FileWriter(this.ROOT_DIR.resolve(LARGEST_BUNDLE_ID_RECEIVED).toFile()))) {
             bufferedWriter.write(bundleId);
         }
+
+        bundleSecurity.registerLargestBundleIdReceived(bundleId);
         System.out.println("[BS] Registered bundle identifier: " + bundleId);
     }
 
@@ -147,7 +148,7 @@ public class BundleTransmission {
 
     public void processReceivedBundle(BundleSender sender, Bundle bundle) throws IOException,
             RoutingExceptions.ClientMetaDataFileException, NoSessionException, InvalidMessageException,
-            DuplicateMessageException, LegacyMessageException, InvalidKeyException, GeneralSecurityException {
+            DuplicateMessageException, LegacyMessageException, InvalidKeyException, GeneralSecurityException, WindowExceptions.BufferOverflow {
         String largestBundleIdReceived = this.getLargestBundleIdReceived();
         UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, this.ROOT_DIR.resolve(
                 Paths.get(BUNDLE_GENERATION_DIRECTORY, RECEIVED_PROCESSING)));
@@ -159,12 +160,13 @@ public class BundleTransmission {
 
         ClientBundleGenerator clientBundleGenerator = this.bundleSecurity.getClientBundleGenerator();
         boolean isLatestBundleId = (!largestBundleIdReceived.isEmpty() &&
-                clientBundleGenerator.compareBundleIDs(bundleId, Long.parseLong(largestBundleIdReceived),
+                clientBundleGenerator.compareBundleIDs(bundleId, largestBundleIdReceived,
                                                        BundleIDGenerator.DOWNSTREAM) == 1);
 
         if (!isLatestBundleId) {
             return;
         }
+
         UncompressedPayload uncompressedPayload =
                 BundleUtils.extractPayload(payload, uncompressedBundle.getSource().toPath());
 
@@ -394,7 +396,7 @@ public class BundleTransmission {
                 bundlesUploaded = uploadBundle(stub);
             }
         } catch (Exception e) {
-            logger.log(WARNING, "Upload failed", e);
+            logger.log(WARNING, "Exchange failed", e);
         }
         try {
             channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
