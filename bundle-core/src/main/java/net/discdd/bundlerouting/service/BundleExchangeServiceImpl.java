@@ -7,6 +7,7 @@ import net.discdd.grpc.BundleDownloadRequest;
 import net.discdd.grpc.BundleDownloadResponse;
 import net.discdd.grpc.BundleExchangeServiceGrpc;
 import net.discdd.grpc.BundleSender;
+import net.discdd.grpc.BundleSenderType;
 import net.discdd.grpc.BundleUploadRequest;
 import net.discdd.grpc.BundleUploadResponse;
 import net.discdd.grpc.Status;
@@ -55,6 +56,7 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
                                 .build()));
             }
             responseObserver.onCompleted();
+            Files.delete(downloadPath);
             logger.log(INFO, "Complete " + request.getBundleId().getEncryptedId());
         } catch (Exception e) {
             logger.log(SEVERE, "Error downloading bundle: " + request.getBundleId().getEncryptedId(), e);
