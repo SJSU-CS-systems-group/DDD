@@ -120,8 +120,7 @@ public class TransportToBundleServerManager implements Runnable {
                     if (responseObserver != null) responseObserver.onError(e);
                 }
 
-                if (responseObserver != null)
-                {
+                if (responseObserver != null) {
                     responseObserver.onCompleted();
                     Files.delete(path);
                 }
