@@ -6,7 +6,6 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import io.grpc.Grpc;
-import io.grpc.okhttp.OkHttpChannelBuilder;
 import lombok.Getter;
 import net.discdd.bundlerouting.RoutingExceptions;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
@@ -114,7 +113,6 @@ public class BundleTransmission {
         net.discdd.utils.FileUtils.createFileWithDefaultIfNeeded(ackRecordPath, "HB".getBytes());
         tosendDir = bundleGenerationDir.resolve(TO_SEND_DIRECTORY);
         tosendDir.toFile().mkdirs();
-
         var uncompressedPayloadDir = bundleGenerationDir.resolve(UNCOMPRESSED_PAYLOAD);
         uncompressedPayloadDir.toFile().mkdirs();
         var compressedPayloadDir = bundleGenerationDir.resolve(COMPRESSED_PAYLOAD);
@@ -125,11 +123,14 @@ public class BundleTransmission {
         receivedProcDir.toFile().mkdirs();
     }
 
-    public void registerBundleId(String bundleId) throws IOException {
+    public void registerBundleId(String bundleId) throws IOException, WindowExceptions.BufferOverflow,
+            GeneralSecurityException, InvalidKeyException {
         try (BufferedWriter bufferedWriter = new BufferedWriter(
                 new FileWriter(this.ROOT_DIR.resolve(LARGEST_BUNDLE_ID_RECEIVED).toFile()))) {
             bufferedWriter.write(bundleId);
         }
+
+        bundleSecurity.registerLargestBundleIdReceived(bundleId);
         System.out.println("[BS] Registered bundle identifier: " + bundleId);
     }
 
@@ -148,7 +149,8 @@ public class BundleTransmission {
 
     public void processReceivedBundle(BundleSender sender, Bundle bundle) throws IOException,
             RoutingExceptions.ClientMetaDataFileException, NoSessionException, InvalidMessageException,
-            DuplicateMessageException, LegacyMessageException, InvalidKeyException, GeneralSecurityException {
+            DuplicateMessageException, LegacyMessageException, InvalidKeyException, GeneralSecurityException,
+            WindowExceptions.BufferOverflow {
         String largestBundleIdReceived = this.getLargestBundleIdReceived();
         UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, this.ROOT_DIR.resolve(
                 Paths.get(BUNDLE_GENERATION_DIRECTORY, RECEIVED_PROCESSING)));
@@ -160,12 +162,13 @@ public class BundleTransmission {
 
         ClientBundleGenerator clientBundleGenerator = this.bundleSecurity.getClientBundleGenerator();
         boolean isLatestBundleId = (!largestBundleIdReceived.isEmpty() &&
-                clientBundleGenerator.compareBundleIDs(bundleId, Long.parseLong(largestBundleIdReceived),
+                clientBundleGenerator.compareBundleIDs(bundleId, largestBundleIdReceived,
                                                        BundleIDGenerator.DOWNSTREAM) == 1);
 
         if (!isLatestBundleId) {
             return;
         }
+
         UncompressedPayload uncompressedPayload =
                 BundleUtils.extractPayload(payload, uncompressedBundle.getSource().toPath());
 
@@ -387,15 +390,17 @@ public class BundleTransmission {
                 var sender = BundleSender.newBuilder().setId(clientId).setType(BundleSenderType.CLIENT).build();
                 var bundlesDownloaded = downloadBundles(bundleRequests, sender, blockingStub);
 
-                if (bundlesDownloaded != null) {
+                try {
                     processReceivedBundle(transportSender, new Bundle(bundlesDownloaded.toFile()));
+                } catch (Exception e) {
+                    logger.log(WARNING, "Processing received bundle failed", e);
                 }
 
                 var stub = BundleExchangeServiceGrpc.newStub(channel);
                 bundlesUploaded = uploadBundle(stub);
             }
         } catch (Exception e) {
-            logger.log(WARNING, "Upload failed", e);
+            logger.log(WARNING, "Exchange failed", e);
         }
         try {
             channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);

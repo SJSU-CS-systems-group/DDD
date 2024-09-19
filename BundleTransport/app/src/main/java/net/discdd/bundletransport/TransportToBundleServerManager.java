@@ -35,6 +35,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.logging.Logger;
 
+import io.grpc.Grpc;
+import io.grpc.InsecureChannelCredentials;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
@@ -62,7 +64,7 @@ public class TransportToBundleServerManager implements Runnable {
 
     @Override
     public void run() {
-        var channel = ManagedChannelBuilder.forTarget(transportTarget).usePlaintext().build();
+        var channel = Grpc.newChannelBuilder(transportTarget, InsecureChannelCredentials.create()).build();
         var bsStub = BundleServerServiceGrpc.newBlockingStub(channel);
         var exchangeStub = BundleExchangeServiceGrpc.newStub(channel);
         var blockingExchangeStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
@@ -179,6 +181,11 @@ public class TransportToBundleServerManager implements Runnable {
             logger.log(SEVERE, "Failed to write recency blob", e);
         }
 
+        try {
+            channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            logger.log(SEVERE, "could not shutdown channel, error: " + e.getMessage() + ", cause: " + e.getCause());
+        }
         logger.log(INFO, "Connect server completed");
         connectComplete.apply(null);
     }
