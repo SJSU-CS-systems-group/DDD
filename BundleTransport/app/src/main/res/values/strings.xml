@@ -17,7 +17,6 @@
     <string name="start_grpc_server">Start gRPC Server</string>
     <string name="stop_grpc_server">Stop gRPC Server</string>
     <string name="connect_to_bundle_server">connect to bundle server</string>
-    <string name="free_up_space">Free up Space</string>
     <string name="save_domain_and_port">Save Domain and Port</string>
     <string name="restore_domain_and_port">Restore Domain and Port</string>
     <string name="nearby_devices">Nearby Devices:</string>

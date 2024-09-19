@@ -18,7 +18,6 @@
     <string name="start_grpc_server">بدء خادم gRPC</string>
     <string name="stop_grpc_server">إيقاف خادم gRPC</string>
     <string name="connect_to_bundle_server">اتصل بخادم الحزم</string>
-    <string name="free_up_space">تحرير المساحة</string>
     <string name="save_domain_and_port">حفظ النطاق والمنفذ</string>
     <string name="restore_domain_and_port">استعادة النطاق والمنفذ</string>
     <string name="nearby_devices">الأجهزة القريبة:</string>

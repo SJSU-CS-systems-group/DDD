@@ -17,7 +17,6 @@
     <string name="start_grpc_server">Запустити сервер gRPC</string>
     <string name="stop_grpc_server">Зупинити сервер gRPC</string>
     <string name="connect_to_bundle_server">підключитися до сервера пакетів</string>
-    <string name="free_up_space">Звільнити місце</string>
     <string name="save_domain_and_port">Зберегти домен і порт</string>
     <string name="restore_domain_and_port">Відновити домен і порт</string>
     <string name="nearby_devices">Поруч із пристрої:</string>

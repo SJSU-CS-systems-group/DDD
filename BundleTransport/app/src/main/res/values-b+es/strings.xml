@@ -17,7 +17,6 @@
     <string name="start_grpc_server">Iniciar servidor gRPC</string>
     <string name="stop_grpc_server">Detener servidor gRPC</string>
     <string name="connect_to_bundle_server">conectar al servidor de paquetes</string>
-    <string name="free_up_space">Liberar espacio</string>
     <string name="save_domain_and_port">Guardar dominio y puerto</string>
     <string name="restore_domain_and_port">Restaurar dominio y puerto</string>
     <string name="nearby_devices">Dispositivos cercanos:</string>
