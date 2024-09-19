@@ -16,13 +16,6 @@
             android:text="@string/connect_to_bundle_server"
             android:layout_marginTop="10dp"/>
 
-    <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btn_clear_storage"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/free_up_space"
-            android:layout_marginTop="10dp"/>
-
     <EditText
             android:id="@+id/domain_input"
             android:layout_width="match_parent"
