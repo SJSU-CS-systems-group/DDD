@@ -53,6 +53,7 @@ public class StorageFragment extends Fragment {
                 // Update the TextView
                 seekbarTextView.setText("Value: " + currentValue + " MB");
             }
+
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
             }
