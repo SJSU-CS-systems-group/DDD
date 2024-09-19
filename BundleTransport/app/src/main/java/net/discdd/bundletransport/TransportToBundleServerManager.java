@@ -119,7 +119,11 @@ public class TransportToBundleServerManager implements Runnable {
                     logger.log(SEVERE, "Failed to upload file: " + path, e);
                     if (responseObserver != null) responseObserver.onError(e);
                 }
-                if (responseObserver != null) responseObserver.onCompleted();
+
+                if (responseObserver != null) {
+                    responseObserver.onCompleted();
+                    Files.delete(path);
+                }
             }
 
             for (var toReceive : inventoryResponse.getBundlesToDownloadList()) {

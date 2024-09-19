@@ -390,8 +390,10 @@ public class BundleTransmission {
                 var sender = BundleSender.newBuilder().setId(clientId).setType(BundleSenderType.CLIENT).build();
                 var bundlesDownloaded = downloadBundles(bundleRequests, sender, blockingStub);
 
-                if (bundlesDownloaded != null) {
+                try {
                     processReceivedBundle(transportSender, new Bundle(bundlesDownloaded.toFile()));
+                } catch (Exception e) {
+                    logger.log(WARNING, "Processing received bundle failed", e);
                 }
 
                 var stub = BundleExchangeServiceGrpc.newStub(channel);
