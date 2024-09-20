@@ -37,7 +37,7 @@ public class BundleTransportActivity extends AppCompatActivity {
     private TitledFragment serverUploadFragment;
     private TitledFragment transportWifiFragment;
     private TitledFragment storageFragment;
-
+    public static Context applicationContext;
     record ConnectivityEvent(boolean internetAvailable) {}
 
     private final SubmissionPublisher<ConnectivityEvent> connectivityEventPublisher = new SubmissionPublisher<>();
@@ -62,6 +62,7 @@ public class BundleTransportActivity extends AppCompatActivity {
 
         try {
             Intent intent = new Intent(this, TransportWifiDirectService.class);
+            applicationContext = getApplicationContext();
             getApplicationContext().startForegroundService(intent);
             bindService(intent, transportWifiServiceConnection, Context.BIND_AUTO_CREATE);
         } catch (Exception e) {
