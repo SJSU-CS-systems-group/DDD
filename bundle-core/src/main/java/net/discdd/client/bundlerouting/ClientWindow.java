@@ -15,6 +15,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
@@ -169,6 +170,6 @@ public class ClientWindow {
                 logger.log(SEVERE, "Failed to encrypt bundleID: " + ueb.bundleId, e);
             }
             return null;
-        }).toList();
+        }).collect(Collectors.toList());
     }
 }

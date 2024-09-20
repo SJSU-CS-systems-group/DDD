@@ -56,6 +56,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import static net.discdd.bundlesecurity.DDDPEMEncoder.ECPrivateKeyType;
 import static net.discdd.bundlesecurity.DDDPEMEncoder.ECPublicKeyType;
@@ -171,7 +172,7 @@ public class End2EndTest {
                 e.printStackTrace();
             }
             return new ADU(aduFile, TEST_APPID, aduId, aduFile.length(), clientId);
-        }).toList();
+        }).collect(Collectors.toList());
         BundleUtils.createBundlePayloadForAdus(adus, "{}".getBytes(), "HB", baos);
         String bundleId = BundleIDGenerator.generateBundleID(clientId, bundleCount, BundleIDGenerator.UPSTREAM);
         String encryptedBundleID = encryptBundleID(bundleId);
