@@ -7,6 +7,7 @@ import net.discdd.model.ADU;
 import net.discdd.model.UncompressedPayload;
 import net.discdd.utils.BundleUtils;
 import net.discdd.utils.StoreADUs;
+import net.discdd.utils.StreamExt;
 
 import java.io.File;
 import java.io.FileReader;
@@ -111,7 +112,7 @@ public class ApplicationDataManager {
         final long dataSizeLimit = this.APP_DATA_SIZE_LIMIT;
         var sizeLimiter = new SizeLimiter(dataSizeLimit - initialSize);
         for (String appId : this.getRegisteredAppIds()) {
-            sendADUsStorage.getADUs(clientId, appId).takeWhile(a -> sizeLimiter.test(a.getSize()))
+            StreamExt.takeWhile(sendADUsStorage.getADUs(clientId, appId), a -> sizeLimiter.test(a.getSize()))
                     .forEach(adusToSend::add);
         }
         return adusToSend;
