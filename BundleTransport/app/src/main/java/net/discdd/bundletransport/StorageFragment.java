@@ -24,7 +24,7 @@ public class StorageFragment extends Fragment {
     private static final Logger logger = Logger.getLogger(StorageFragment.class.getName());
     private static final String PREFS_NAME = "SeekBarPrefs";
     private static final String SEEK_BAR_POSITION = "seekBarPosition";
-    private static final int MIN_STORAGE = 220;
+    private static final int MIN_STORAGE = 100;
 
     private StorageManager storageManager;
     private Button clearStorageBtn;
