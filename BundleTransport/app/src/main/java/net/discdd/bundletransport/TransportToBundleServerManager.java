@@ -3,6 +3,7 @@ package net.discdd.bundletransport;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
+import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.widget.Toast;
@@ -55,9 +56,10 @@ public class TransportToBundleServerManager implements Runnable {
     private final Function<Void, Void> connectComplete;
     private final Function<Exception, Void> connectError;
     private final String transportTarget;
+    private Context applicationContext;
 
     public TransportToBundleServerManager(Path filePath, String host, String port, String transportId, Function<Void,
-            Void> connectComplete, Function<Exception, Void> connectError) {
+            Void> connectComplete, Function<Exception, Void> connectError, Context applicationContext) {
         this.connectComplete = connectComplete;
         this.connectError = connectError;
         this.transportTarget = host + ":" + port;
@@ -65,6 +67,7 @@ public class TransportToBundleServerManager implements Runnable {
                 BundleSender.newBuilder().setId(transportId).setType(BundleSenderType.TRANSPORT).build();
         this.fromClientPath = filePath.resolve("BundleTransmission/server");
         this.fromServerPath = filePath.resolve("BundleTransmission/client");
+        this.applicationContext = applicationContext;
     }
 
     @Override
@@ -191,7 +194,7 @@ public class TransportToBundleServerManager implements Runnable {
         } catch (IllegalArgumentException | StatusRuntimeException e) {
             logger.log(SEVERE, "Failed to connect to server", e);
             new Handler(Looper.getMainLooper()).post(() -> {
-                Toast.makeText(BundleTransportActivity.applicationContext,
+                Toast.makeText(applicationContext,
                         "Invalid hostname: " + transportTarget, Toast.LENGTH_SHORT).show();
             });
             connectError.apply(e);
