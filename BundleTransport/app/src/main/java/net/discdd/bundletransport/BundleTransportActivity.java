@@ -103,7 +103,6 @@ public class BundleTransportActivity extends AppCompatActivity {
         fragments.add(new TitledFragment(getString(R.string.logs), new LogFragment()));
         TabLayout tabLayout = findViewById(R.id.tabs);
         viewPager2 = findViewById(R.id.view_pager);
-
         viewPager2Adapter = new FragmentStateAdapter(this) {
             @NonNull
             @Override
@@ -135,7 +134,6 @@ public class BundleTransportActivity extends AppCompatActivity {
                 disableFragment(transportWifiFragment);
             }
         });
-
     }
 
     @Override
