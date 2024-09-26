@@ -3,6 +3,11 @@ package net.discdd.bundletransport;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
+import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
+import android.widget.Toast;
+
 import com.google.protobuf.ByteString;
 
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
@@ -38,6 +43,7 @@ import java.util.logging.Logger;
 import io.grpc.Grpc;
 import io.grpc.InsecureChannelCredentials;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 
 public class TransportToBundleServerManager implements Runnable {
@@ -50,9 +56,10 @@ public class TransportToBundleServerManager implements Runnable {
     private final Function<Void, Void> connectComplete;
     private final Function<Exception, Void> connectError;
     private final String transportTarget;
+    private Context applicationContext;
 
     public TransportToBundleServerManager(Path filePath, String host, String port, String transportId, Function<Void,
-            Void> connectComplete, Function<Exception, Void> connectError) {
+            Void> connectComplete, Function<Exception, Void> connectError, Context applicationContext) {
         this.connectComplete = connectComplete;
         this.connectError = connectError;
         this.transportTarget = host + ":" + port;
@@ -60,22 +67,23 @@ public class TransportToBundleServerManager implements Runnable {
                 BundleSender.newBuilder().setId(transportId).setType(BundleSenderType.TRANSPORT).build();
         this.fromClientPath = filePath.resolve("BundleTransmission/server");
         this.fromServerPath = filePath.resolve("BundleTransmission/client");
+        this.applicationContext = applicationContext;
     }
 
     @Override
     public void run() {
-        var channel = Grpc.newChannelBuilder(transportTarget, InsecureChannelCredentials.create()).build();
-        var bsStub = BundleServerServiceGrpc.newBlockingStub(channel);
-        var exchangeStub = BundleExchangeServiceGrpc.newStub(channel);
-        var blockingExchangeStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
-        var bundlesFromClients = populateListFromPath(fromClientPath);
-        var bundlesFromServer = populateListFromPath(fromServerPath);
-
         try {
+            var channel = Grpc.newChannelBuilder(transportTarget, InsecureChannelCredentials.create()).build();
+            var bsStub = BundleServerServiceGrpc.newBlockingStub(channel);
+            var exchangeStub = BundleExchangeServiceGrpc.newStub(channel);
+            var blockingExchangeStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
+            var bundlesFromClients = populateListFromPath(fromClientPath);
+            var bundlesFromServer = populateListFromPath(fromServerPath);
+
             var inventoryResponse = bsStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     .bundleInventory(BundleInventoryRequest.newBuilder().setSender(transportSenderId)
-                                             .addAllBundlesFromClientsOnTransport(bundlesFromClients)
-                                             .addAllBundlesFromServerOnTransport(bundlesFromServer).build());
+                            .addAllBundlesFromClientsOnTransport(bundlesFromClients)
+                                .addAllBundlesFromServerOnTransport(bundlesFromServer).build());
 
             try {
                 if (!Files.exists(fromServerPath) || !Files.isDirectory(fromClientPath)) {
@@ -83,7 +91,7 @@ public class TransportToBundleServerManager implements Runnable {
                     Files.createDirectories(fromClientPath);
                 }
             } catch (Exception e) {
-                logger.log(SEVERE, "Failed to get inventory", e);
+                    logger.log(SEVERE, "Failed to get inventory", e);
             }
 
             for (var toDelete : inventoryResponse.getBundlesToDeleteList()) {
@@ -92,8 +100,8 @@ public class TransportToBundleServerManager implements Runnable {
                     Files.delete(delPath);
                 } catch (IOException e) {
                     logger.log(SEVERE, "Failed to delete file: " + delPath, e);
+                    }
                 }
-            }
 
             for (var toSend : inventoryResponse.getBundlesToUploadList()) {
                 var path = fromClientPath.resolve(toSend.getEncryptedId());
@@ -112,17 +120,16 @@ public class TransportToBundleServerManager implements Runnable {
                         var uploadRequest = BundleUploadRequest.newBuilder()
                                 .setChunk(BundleChunk.newBuilder().setChunk(ByteString.copyFrom(data, 0, rc)).build())
                                 .build();
-                        uploadRequestStreamObserver.onNext(uploadRequest);
+                            uploadRequestStreamObserver.onNext(uploadRequest);
+                        }
+                        uploadRequestStreamObserver.onCompleted();
+                    if (responseObserver != null) {
+                        responseObserver.onCompleted();
+                        Files.delete(path);
                     }
-                    uploadRequestStreamObserver.onCompleted();
                 } catch (IOException e) {
                     logger.log(SEVERE, "Failed to upload file: " + path, e);
                     if (responseObserver != null) responseObserver.onError(e);
-                }
-
-                if (responseObserver != null) {
-                    responseObserver.onCompleted();
-                    Files.delete(path);
                 }
             }
 
@@ -159,34 +166,39 @@ public class TransportToBundleServerManager implements Runnable {
                     completion.get(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS);
                 } catch (IOException | ExecutionException | InterruptedException | TimeoutException e) {
                     logger.log(SEVERE, "Failed to download file: " + path, e);
+
                 }
+
+                var recencyBlobReq = GetRecencyBlobRequest.newBuilder().setSender(transportSenderId).build();
+
+                var recencyBlob = blockingExchangeStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                        .getRecencyBlob(recencyBlobReq);
+
+                Path blobPath = fromServerPath.resolve(RECENCY_BLOB_BIN);
+                try (var os = Files.newOutputStream(blobPath, StandardOpenOption.CREATE,
+                                                    StandardOpenOption.TRUNCATE_EXISTING)) {
+                    logger.log(INFO, "Writing blob to " + blobPath);
+                    recencyBlob.writeTo(os);
+                } catch (IOException e) {
+                    logger.log(SEVERE, "Failed to write recency blob", e);
+                }
+
+                try {
+                    channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    logger.log(SEVERE, "could not shutdown channel, error: " + e.getMessage() + ", cause: " + e.getCause());
+                }
+                logger.log(INFO, "Connect server completed");
+                connectComplete.apply(null);
             }
-        } catch (Exception e) {
-            logger.log(SEVERE, "error: " + e.getMessage());
+        } catch (IllegalArgumentException | StatusRuntimeException e) {
+            logger.log(SEVERE, "Failed to connect to server", e);
+            new Handler(Looper.getMainLooper()).post(() -> {
+                Toast.makeText(applicationContext,
+                        "Invalid hostname: " + transportTarget, Toast.LENGTH_SHORT).show();
+            });
             connectError.apply(e);
         }
-
-        var recencyBlobReq = GetRecencyBlobRequest.newBuilder().setSender(transportSenderId).build();
-
-        var recencyBlob = blockingExchangeStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                .getRecencyBlob(recencyBlobReq);
-
-        Path blobPath = fromServerPath.resolve(RECENCY_BLOB_BIN);
-        try (var os = Files.newOutputStream(blobPath, StandardOpenOption.CREATE,
-                                            StandardOpenOption.TRUNCATE_EXISTING)) {
-            logger.log(INFO, "Writing blob to " + blobPath);
-            recencyBlob.writeTo(os);
-        } catch (IOException e) {
-            logger.log(SEVERE, "Failed to write recency blob", e);
-        }
-
-        try {
-            channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            logger.log(SEVERE, "could not shutdown channel, error: " + e.getMessage() + ", cause: " + e.getCause());
-        }
-        logger.log(INFO, "Connect server completed");
-        connectComplete.apply(null);
     }
 
     private List<EncryptedBundleId> populateListFromPath(Path path) {
