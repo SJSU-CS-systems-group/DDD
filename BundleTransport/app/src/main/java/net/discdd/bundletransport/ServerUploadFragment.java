@@ -36,7 +36,8 @@ public class ServerUploadFragment extends Fragment {
     private String transportID;
     private ExecutorService executor = Executors.newFixedThreadPool(2);
 
-    public ServerUploadFragment(SubmissionPublisher<BundleTransportActivity.ConnectivityEvent> connectivityFlow, String transportID) {
+    public ServerUploadFragment(SubmissionPublisher<BundleTransportActivity.ConnectivityEvent> connectivityFlow,
+                                String transportID) {
         this.connectivityFlow = connectivityFlow;
         this.transportID = transportID;
     }
