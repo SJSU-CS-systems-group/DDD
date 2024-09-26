@@ -82,8 +82,8 @@ public class TransportToBundleServerManager implements Runnable {
 
             var inventoryResponse = bsStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     .bundleInventory(BundleInventoryRequest.newBuilder().setSender(transportSenderId)
-                            .addAllBundlesFromClientsOnTransport(bundlesFromClients)
-                                .addAllBundlesFromServerOnTransport(bundlesFromServer).build());
+                                             .addAllBundlesFromClientsOnTransport(bundlesFromClients)
+                                             .addAllBundlesFromServerOnTransport(bundlesFromServer).build());
 
             try {
                 if (!Files.exists(fromServerPath) || !Files.isDirectory(fromClientPath)) {
@@ -91,7 +91,7 @@ public class TransportToBundleServerManager implements Runnable {
                     Files.createDirectories(fromClientPath);
                 }
             } catch (Exception e) {
-                    logger.log(SEVERE, "Failed to get inventory", e);
+                logger.log(SEVERE, "Failed to get inventory", e);
             }
 
             for (var toDelete : inventoryResponse.getBundlesToDeleteList()) {
@@ -100,8 +100,8 @@ public class TransportToBundleServerManager implements Runnable {
                     Files.delete(delPath);
                 } catch (IOException e) {
                     logger.log(SEVERE, "Failed to delete file: " + delPath, e);
-                    }
                 }
+            }
 
             for (var toSend : inventoryResponse.getBundlesToUploadList()) {
                 var path = fromClientPath.resolve(toSend.getEncryptedId());
@@ -120,9 +120,9 @@ public class TransportToBundleServerManager implements Runnable {
                         var uploadRequest = BundleUploadRequest.newBuilder()
                                 .setChunk(BundleChunk.newBuilder().setChunk(ByteString.copyFrom(data, 0, rc)).build())
                                 .build();
-                            uploadRequestStreamObserver.onNext(uploadRequest);
-                        }
-                        uploadRequestStreamObserver.onCompleted();
+                        uploadRequestStreamObserver.onNext(uploadRequest);
+                    }
+                    uploadRequestStreamObserver.onCompleted();
                     if (responseObserver != null) {
                         responseObserver.onCompleted();
                         Files.delete(path);
@@ -171,8 +171,9 @@ public class TransportToBundleServerManager implements Runnable {
 
                 var recencyBlobReq = GetRecencyBlobRequest.newBuilder().setSender(transportSenderId).build();
 
-                var recencyBlob = blockingExchangeStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                        .getRecencyBlob(recencyBlobReq);
+                var recencyBlob =
+                        blockingExchangeStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                                .getRecencyBlob(recencyBlobReq);
 
                 Path blobPath = fromServerPath.resolve(RECENCY_BLOB_BIN);
                 try (var os = Files.newOutputStream(blobPath, StandardOpenOption.CREATE,
@@ -186,7 +187,8 @@ public class TransportToBundleServerManager implements Runnable {
                 try {
                     channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
                 } catch (InterruptedException e) {
-                    logger.log(SEVERE, "could not shutdown channel, error: " + e.getMessage() + ", cause: " + e.getCause());
+                    logger.log(SEVERE,
+                               "could not shutdown channel, error: " + e.getMessage() + ", cause: " + e.getCause());
                 }
                 logger.log(INFO, "Connect server completed");
                 connectComplete.apply(null);
@@ -194,8 +196,7 @@ public class TransportToBundleServerManager implements Runnable {
         } catch (IllegalArgumentException | StatusRuntimeException e) {
             logger.log(SEVERE, "Failed to connect to server", e);
             new Handler(Looper.getMainLooper()).post(() -> {
-                Toast.makeText(applicationContext,
-                        "Invalid hostname: " + transportTarget, Toast.LENGTH_SHORT).show();
+                Toast.makeText(applicationContext, "Invalid hostname: " + transportTarget, Toast.LENGTH_SHORT).show();
             });
             connectError.apply(e);
         }
