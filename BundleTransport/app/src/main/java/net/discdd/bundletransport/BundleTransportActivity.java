@@ -46,7 +46,9 @@ public class BundleTransportActivity extends AppCompatActivity {
     private TitledFragment serverUploadFragment;
     private TitledFragment transportWifiFragment;
     private TitledFragment storageFragment;
+
     record ConnectivityEvent(boolean internetAvailable) {}
+
     private final SubmissionPublisher<ConnectivityEvent> connectivityEventPublisher = new SubmissionPublisher<>();
     private ViewPager2 viewPager2;
     private FragmentStateAdapter viewPager2Adapter;
