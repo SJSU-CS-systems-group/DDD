@@ -64,7 +64,7 @@ public class ClientSecurity {
 
     private ClientSecurity(int deviceID, Path clientRootPath, Path serverKeyPath) throws InvalidKeyException,
             IOException, NoSuchAlgorithmException {
-        var clientKeyPath = clientRootPath.resolve("Client_Keys");
+        var clientKeyPath = clientRootPath.resolve(SecurityUtils.CLIENT_KEY_PATH);
 
         // Read Server Keys from specified directory
         InitializeServerKeysFromFiles(serverKeyPath);
@@ -104,8 +104,8 @@ public class ClientSecurity {
                         path.resolve(SecurityUtils.SERVER_IDENTITY_KEY) };
 
         if (writePvt) {
-            Files.write(path.resolve("clientIdentity.pvt"), ourIdentityKeyPair.getPrivateKey().serialize());
-            Files.write(path.resolve("clientBase.pvt"), ourBaseKey.getPrivateKey().serialize());
+            Files.write(path.resolve(SecurityUtils.CLIENT_IDENTITY_PRIVATE_KEY), ourIdentityKeyPair.getPrivateKey().serialize());
+            Files.write(path.resolve(SecurityUtils.CLIENT_BASE_PRIVATE_KEY), ourBaseKey.getPrivateKey().serialize());
         }
 
         SecurityUtils.createEncodedPublicKeyFile(ourIdentityKeyPair.getPublicKey().getPublicKey(), identityKeyPaths[0]);
@@ -115,16 +115,16 @@ public class ClientSecurity {
     }
 
     private void loadKeysfromFiles(Path clientKeyPath) throws IOException, InvalidKeyException {
-        byte[] identityKeyPvt = Files.readAllBytes(clientKeyPath.resolve("clientIdentity.pvt"));
-        byte[] identityKeyPub = SecurityUtils.decodePublicKeyfromFile(clientKeyPath.resolve("clientIdentity.pub"));
+        byte[] identityKeyPvt = Files.readAllBytes(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_PRIVATE_KEY));
+        byte[] identityKeyPub = SecurityUtils.decodePublicKeyfromFile(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
 
         IdentityKey identityPublicKey = new IdentityKey(identityKeyPub, 0);
         ECPrivateKey identityPrivateKey = Curve.decodePrivatePoint(identityKeyPvt);
 
         ourIdentityKeyPair = new IdentityKeyPair(identityPublicKey, identityPrivateKey);
 
-        byte[] baseKeyPvt = Files.readAllBytes(clientKeyPath.resolve("clientBase.pvt"));
-        byte[] baseKeyPub = SecurityUtils.decodePublicKeyfromFile(clientKeyPath.resolve("clientBase.pub"));
+        byte[] baseKeyPvt = Files.readAllBytes(clientKeyPath.resolve(SecurityUtils.CLIENT_BASE_PRIVATE_KEY));
+        byte[] baseKeyPub = SecurityUtils.decodePublicKeyfromFile(clientKeyPath.resolve(SecurityUtils.CLIENT_BASE_KEY));
 
         ECPublicKey basePublicKey = Curve.decodePoint(baseKeyPub, 0);
         ECPrivateKey basePrivateKey = Curve.decodePrivatePoint(baseKeyPvt);

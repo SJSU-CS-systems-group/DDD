@@ -1,5 +1,6 @@
 package net.discdd.bundletransport;
 
+import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
 import android.content.ComponentName;
@@ -25,7 +26,14 @@ import com.google.android.material.tabs.TabLayoutMediator;
 
 import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
+import net.discdd.transport.TransportSecurity;
 
+import org.whispersystems.libsignal.InvalidKeyException;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Paths;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -34,6 +42,7 @@ import java.util.logging.Logger;
 
 public class BundleTransportActivity extends AppCompatActivity {
     Logger logger = Logger.getLogger(BundleTransportActivity.class.getName());
+    private TransportSecurity transportSecurity;
     private TitledFragment serverUploadFragment;
     private TitledFragment transportWifiFragment;
     private TitledFragment storageFragment;
@@ -72,8 +81,17 @@ public class BundleTransportActivity extends AppCompatActivity {
 
         LogFragment.registerLoggerHandler();
 
+        var resources = getApplicationContext().getResources();
+
+        try (InputStream inServerIdentity = resources.openRawResource(
+                net.discdd.android_core.R.raw.server_identity)) {
+            this.transportSecurity = new TransportSecurity(getApplicationContext().getExternalFilesDir(null).toPath(), inServerIdentity);
+        } catch (IOException | InvalidKeyException | NoSuchAlgorithmException e) {
+            logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
+        }
+
         serverUploadFragment =
-                new TitledFragment(getString(R.string.upload), new ServerUploadFragment(connectivityEventPublisher));
+                new TitledFragment(getString(R.string.upload), new ServerUploadFragment(connectivityEventPublisher, transportSecurity.getTransportID()));
         transportWifiFragment = new TitledFragment(getString(R.string.local_wifi), new TransportWifiDirectFragment());
         storageFragment = new TitledFragment("Storage Settings", new StorageFragment());
 
@@ -116,7 +134,6 @@ public class BundleTransportActivity extends AppCompatActivity {
                 disableFragment(transportWifiFragment);
             }
         });
-
     }
 
     @Override

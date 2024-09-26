@@ -33,11 +33,12 @@ public class ServerUploadFragment extends Fragment {
     private Button saveDomainAndPortBtn;
     private SharedPreferences sharedPref;
     private TextView serverConnnectedStatus;
-    private String transportID = "bundle_transport";
+    private String transportID;
     private ExecutorService executor = Executors.newFixedThreadPool(2);
 
-    public ServerUploadFragment(SubmissionPublisher<BundleTransportActivity.ConnectivityEvent> connectivityFlow) {
+    public ServerUploadFragment(SubmissionPublisher<BundleTransportActivity.ConnectivityEvent> connectivityFlow, String transportID) {
         this.connectivityFlow = connectivityFlow;
+        this.transportID = transportID;
     }
 
     @Override
