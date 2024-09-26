@@ -83,15 +83,16 @@ public class BundleTransportActivity extends AppCompatActivity {
 
         var resources = getApplicationContext().getResources();
 
-        try (InputStream inServerIdentity = resources.openRawResource(
-                net.discdd.android_core.R.raw.server_identity)) {
-            this.transportSecurity = new TransportSecurity(getApplicationContext().getExternalFilesDir(null).toPath(), inServerIdentity);
+        try (InputStream inServerIdentity = resources.openRawResource(net.discdd.android_core.R.raw.server_identity)) {
+            this.transportSecurity =
+                    new TransportSecurity(getApplicationContext().getExternalFilesDir(null).toPath(), inServerIdentity);
         } catch (IOException | InvalidKeyException | NoSuchAlgorithmException e) {
             logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
         }
 
-        serverUploadFragment =
-                new TitledFragment(getString(R.string.upload), new ServerUploadFragment(connectivityEventPublisher, transportSecurity.getTransportID()));
+        serverUploadFragment = new TitledFragment(getString(R.string.upload),
+                                                  new ServerUploadFragment(connectivityEventPublisher,
+                                                                           transportSecurity.getTransportID()));
         transportWifiFragment = new TitledFragment(getString(R.string.local_wifi), new TransportWifiDirectFragment());
         storageFragment = new TitledFragment("Storage Settings", new StorageFragment());
 

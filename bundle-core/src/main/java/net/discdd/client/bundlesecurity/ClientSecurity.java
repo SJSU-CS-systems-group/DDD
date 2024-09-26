@@ -104,7 +104,8 @@ public class ClientSecurity {
                         path.resolve(SecurityUtils.SERVER_IDENTITY_KEY) };
 
         if (writePvt) {
-            Files.write(path.resolve(SecurityUtils.CLIENT_IDENTITY_PRIVATE_KEY), ourIdentityKeyPair.getPrivateKey().serialize());
+            Files.write(path.resolve(SecurityUtils.CLIENT_IDENTITY_PRIVATE_KEY),
+                        ourIdentityKeyPair.getPrivateKey().serialize());
             Files.write(path.resolve(SecurityUtils.CLIENT_BASE_PRIVATE_KEY), ourBaseKey.getPrivateKey().serialize());
         }
 
@@ -116,7 +117,8 @@ public class ClientSecurity {
 
     private void loadKeysfromFiles(Path clientKeyPath) throws IOException, InvalidKeyException {
         byte[] identityKeyPvt = Files.readAllBytes(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_PRIVATE_KEY));
-        byte[] identityKeyPub = SecurityUtils.decodePublicKeyfromFile(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
+        byte[] identityKeyPub =
+                SecurityUtils.decodePublicKeyfromFile(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
 
         IdentityKey identityPublicKey = new IdentityKey(identityKeyPub, 0);
         ECPrivateKey identityPrivateKey = Curve.decodePrivatePoint(identityKeyPvt);

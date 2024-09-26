@@ -16,7 +16,7 @@ import java.nio.file.StandardCopyOption;
 import java.security.NoSuchAlgorithmException;
 import java.util.logging.Logger;
 
-public class TransportSecurity{
+public class TransportSecurity {
     private static final Logger logger = Logger.getLogger(TransportSecurity.class.getName());
     public static final String BUNDLE_SECURITY_DIR = "BundleSecurity";
     public static final String SERVER_IDENTITY_PUB = "server_identity.pub";
@@ -25,8 +25,10 @@ public class TransportSecurity{
     private ECKeyPair transportKeyPair;
     private String transportID;
 
-    public TransportSecurity(Path transportRootPath, InputStream inServerIdentity) throws IOException, InvalidKeyException, NoSuchAlgorithmException {
-        var tranportKeyPath = transportRootPath.resolve(Paths.get(BUNDLE_SECURITY_DIR,SecurityUtils.TRANSPORT_KEY_PATH));
+    public TransportSecurity(Path transportRootPath, InputStream inServerIdentity) throws IOException,
+            InvalidKeyException, NoSuchAlgorithmException {
+        var tranportKeyPath =
+                transportRootPath.resolve(Paths.get(BUNDLE_SECURITY_DIR, SecurityUtils.TRANSPORT_KEY_PATH));
 
         var serverKeyPath = transportRootPath.resolve(Paths.get(BUNDLE_SECURITY_DIR, SERVER_KEYS_SUBDIR));
 
@@ -44,20 +46,23 @@ public class TransportSecurity{
         // Create Transport ID
         this.transportID = SecurityUtils.generateID(transportKeyPair.getPublicKey().serialize());
     }
+
     private Path[] writeKeysToFiles(Path path, ECKeyPair transportKeyPair) throws IOException {
         /* Create Directory if it does not exist */
         path.toFile().mkdirs();
-        Path[] identityKeyPaths =
-                { path.resolve(SecurityUtils.TRANSPORT_IDENTITY_KEY),
-                        path.resolve(SecurityUtils.TRANSPORT_IDENTITY_PRIVATE_KEY)};
-        Files.write(path.resolve(SecurityUtils.TRANSPORT_IDENTITY_PRIVATE_KEY), transportKeyPair.getPrivateKey().serialize());
+        Path[] identityKeyPaths = { path.resolve(SecurityUtils.TRANSPORT_IDENTITY_KEY),
+                path.resolve(SecurityUtils.TRANSPORT_IDENTITY_PRIVATE_KEY) };
+        Files.write(path.resolve(SecurityUtils.TRANSPORT_IDENTITY_PRIVATE_KEY),
+                    transportKeyPair.getPrivateKey().serialize());
 
         SecurityUtils.createEncodedPublicKeyFile(transportKeyPair.getPublicKey(), identityKeyPaths[0]);
 
         return identityKeyPaths;
     }
+
     private void loadKeysfromFiles(Path tranportKeyPath) throws IOException, InvalidKeyException {
-        byte[] transportKeyPvt = Files.readAllBytes(tranportKeyPath.resolve(SecurityUtils.TRANSPORT_IDENTITY_PRIVATE_KEY));
+        byte[] transportKeyPvt =
+                Files.readAllBytes(tranportKeyPath.resolve(SecurityUtils.TRANSPORT_IDENTITY_PRIVATE_KEY));
         byte[] transportKeyPub = Files.readAllBytes(tranportKeyPath.resolve(SecurityUtils.TRANSPORT_IDENTITY_KEY));
 
         ECPublicKey basePublicKey = Curve.decodePoint(transportKeyPvt, 0);
