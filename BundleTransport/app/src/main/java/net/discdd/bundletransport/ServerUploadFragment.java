@@ -13,8 +13,6 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.os.Handler;
-import android.os.Looper;
 
 import androidx.fragment.app.Fragment;
 
@@ -153,9 +151,7 @@ public class ServerUploadFragment extends Fragment {
             serverConnnectedStatus.append("Server exchange incomplete with error.\n");
             serverConnnectedStatus.append("Error: " + e.getMessage() + " \n");
             connectServerBtn.setEnabled(true);
-
             Toast.makeText(getContext(), "Invalid hostname: " + transportTarget, Toast.LENGTH_SHORT).show();
-
         });
         return null;
     }
