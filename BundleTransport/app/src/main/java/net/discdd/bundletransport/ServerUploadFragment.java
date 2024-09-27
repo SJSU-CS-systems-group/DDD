@@ -13,8 +13,6 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.os.Handler;
-import android.os.Looper;
 
 import androidx.fragment.app.Fragment;
 
@@ -91,7 +89,7 @@ public class ServerUploadFragment extends Fragment {
             TransportToBundleServerManager transportToBundleServerManager =
                     new TransportToBundleServerManager(requireActivity().getExternalFilesDir(null).toPath(),
                                                        serverDomain, serverPort, transportID,
-                                                       this::connectToServerComplete, e -> connectToServerError(e, getContext(), serverDomain + ":" + serverPort));
+                                                       this::connectToServerComplete, e -> connectToServerError(e, serverDomain + ":" + serverPort));
             executor.execute(transportToBundleServerManager);
         } else {
             Toast.makeText(getContext(), "Enter the domain and port", Toast.LENGTH_SHORT).show();
@@ -147,14 +145,12 @@ public class ServerUploadFragment extends Fragment {
         return null;
     }
 
-    private Void connectToServerError(Exception e, Context context, String transportTarget) {
+    private Void connectToServerError(Exception e, String transportTarget) {
         requireActivity().runOnUiThread(() -> {
             serverConnnectedStatus.append("Server exchange incomplete with error.\n");
             serverConnnectedStatus.append("Error: " + e.getMessage() + " \n");
             connectServerBtn.setEnabled(true);
-            new Handler(Looper.getMainLooper()).post(() -> {
-                Toast.makeText(context, "Invalid hostname: " + transportTarget, Toast.LENGTH_SHORT).show();
-            });
+            Toast.makeText(getContext(), "Invalid hostname: " + transportTarget, Toast.LENGTH_SHORT).show();
         });
         return null;
     }
