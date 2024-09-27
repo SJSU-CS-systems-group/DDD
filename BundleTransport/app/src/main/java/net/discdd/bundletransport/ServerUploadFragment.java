@@ -4,6 +4,7 @@ import static android.content.Context.MODE_PRIVATE;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -12,6 +13,8 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.os.Handler;
+import android.os.Looper;
 
 import androidx.fragment.app.Fragment;
 
@@ -150,10 +153,13 @@ public class ServerUploadFragment extends Fragment {
             serverConnnectedStatus.append("Server exchange incomplete with error.\n");
             serverConnnectedStatus.append("Error: " + e.getMessage() + " \n");
             connectServerBtn.setEnabled(true);
+
             Toast.makeText(getContext(), "Invalid hostname: " + transportTarget, Toast.LENGTH_SHORT).show();
+
         });
         return null;
     }
+
 
     private void appendToActivityLog(String message) {
         requireActivity().runOnUiThread(() -> {
