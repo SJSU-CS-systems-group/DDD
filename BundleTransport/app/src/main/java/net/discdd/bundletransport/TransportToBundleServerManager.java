@@ -92,7 +92,6 @@ public class TransportToBundleServerManager implements Runnable {
             processUploadBundles(inventoryResponse.getBundlesToUploadList(), exchangeStub);
             processDownloadBundles(inventoryResponse.getBundlesToDownloadList(), exchangeStub);
             processRecencyBlob(blockingExchangeStub);
-
             logger.log(INFO, "Connect server completed");
             connectComplete.apply(null);
         } catch (IllegalArgumentException | StatusRuntimeException e) {
