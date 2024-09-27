@@ -218,7 +218,6 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
                                                               7777);
         } catch (Throwable e) {
             logger.log(WARNING, "Failed to connect to " + device.deviceName, e);
-            e.printStackTrace();
         } finally {
             wifiDirectManager.disconnect();
             broadcastBundleClientWifiEvent(BundleClientWifiDirectEventType.WIFI_DIRECT_CLIENT_EXCHANGE_FINISHED,
