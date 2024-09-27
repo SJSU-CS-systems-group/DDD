@@ -3,11 +3,6 @@ package net.discdd.bundletransport;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
-import android.content.Context;
-import android.os.Handler;
-import android.os.Looper;
-import android.widget.Toast;
-
 import com.google.protobuf.ByteString;
 
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
@@ -42,7 +37,7 @@ import java.util.logging.Logger;
 
 import io.grpc.Grpc;
 import io.grpc.InsecureChannelCredentials;
-import io.grpc.ManagedChannelBuilder;
+import io.grpc.ManagedChannel;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 
@@ -56,10 +51,9 @@ public class TransportToBundleServerManager implements Runnable {
     private final Function<Void, Void> connectComplete;
     private final Function<Exception, Void> connectError;
     private final String transportTarget;
-    private Context applicationContext;
 
     public TransportToBundleServerManager(Path filePath, String host, String port, String transportId, Function<Void,
-            Void> connectComplete, Function<Exception, Void> connectError, Context applicationContext) {
+            Void> connectComplete, Function<Exception, Void> connectError) {
         this.connectComplete = connectComplete;
         this.connectError = connectError;
         this.transportTarget = host + ":" + port;
@@ -67,13 +61,13 @@ public class TransportToBundleServerManager implements Runnable {
                 BundleSender.newBuilder().setId(transportId).setType(BundleSenderType.TRANSPORT).build();
         this.fromClientPath = filePath.resolve("BundleTransmission/server");
         this.fromServerPath = filePath.resolve("BundleTransmission/client");
-        this.applicationContext = applicationContext;
     }
 
     @Override
     public void run() {
+        ManagedChannel channel = null;
         try {
-            var channel = Grpc.newChannelBuilder(transportTarget, InsecureChannelCredentials.create()).build();
+            channel = Grpc.newChannelBuilder(transportTarget, InsecureChannelCredentials.create()).build();
             var bsStub = BundleServerServiceGrpc.newBlockingStub(channel);
             var exchangeStub = BundleExchangeServiceGrpc.newStub(channel);
             var blockingExchangeStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
@@ -183,22 +177,20 @@ public class TransportToBundleServerManager implements Runnable {
                 } catch (IOException e) {
                     logger.log(SEVERE, "Failed to write recency blob", e);
                 }
-
-                try {
-                    channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
-                } catch (InterruptedException e) {
-                    logger.log(SEVERE,
-                               "could not shutdown channel, error: " + e.getMessage() + ", cause: " + e.getCause());
-                }
-                logger.log(INFO, "Connect server completed");
-                connectComplete.apply(null);
             }
+            logger.log(INFO, "Connect server completed");
+            connectComplete.apply(null);
         } catch (IllegalArgumentException | StatusRuntimeException e) {
             logger.log(SEVERE, "Failed to connect to server", e);
-            new Handler(Looper.getMainLooper()).post(() -> {
-                Toast.makeText(applicationContext, "Invalid hostname: " + transportTarget, Toast.LENGTH_SHORT).show();
-            });
             connectError.apply(e);
+        } finally {
+            try {
+                if (channel != null) {
+                    channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
+                }
+            } catch (InterruptedException e) {
+                logger.log(SEVERE, "could not shutdown channel, error: " + e.getMessage() + ", cause: " + e.getCause());
+            }
         }
     }
 
