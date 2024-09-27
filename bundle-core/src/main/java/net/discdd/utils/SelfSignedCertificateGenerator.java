@@ -17,12 +17,15 @@ import org.whispersystems.libsignal.ecc.ECPrivateKey;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
 
 import java.math.BigInteger;
+import java.security.AlgorithmParameters;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Security;
 import java.security.cert.X509Certificate;
-import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.ECGenParameterSpec;
+import java.security.spec.ECParameterSpec;
+import java.security.spec.ECPrivateKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Date;
 
@@ -61,9 +64,16 @@ public class SelfSignedCertificateGenerator {
 
     public static PrivateKey convertToPrivateKey(ECPrivateKey ecPrivateKey) throws Exception {
         byte[] privateKeyBytes = ecPrivateKey.serialize();
-        PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(privateKeyBytes);
-        KeyFactory keyFactory = KeyFactory.getInstance("EC", "BC");
-        return keyFactory.generatePrivate(keySpec);
+        BigInteger s = new BigInteger(1, privateKeyBytes);
+
+        KeyFactory keyFactory = KeyFactory.getInstance("EC");
+        AlgorithmParameters parameters = AlgorithmParameters.getInstance("EC");
+        parameters.init(new ECGenParameterSpec("secp256r1"));
+
+        ECParameterSpec ecParameterSpec = parameters.getParameterSpec(ECParameterSpec.class);
+        ECPrivateKeySpec privateKeySpec = new ECPrivateKeySpec(s, ecParameterSpec);
+
+        return keyFactory.generatePrivate(privateKeySpec);
     }
 
     public static PublicKey convertToPublicKey(ECPublicKey ecPublicKey) throws Exception {
