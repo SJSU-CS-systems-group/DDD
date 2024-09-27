@@ -106,11 +106,12 @@ public class BundleClientActivity extends AppCompatActivity {
 
         //Application context
         var resources = getApplicationContext().getResources();
-        /* Set up Server Keys before initializing Security Module */
         try (InputStream inServerIdentity = resources.openRawResource(
-                R.raw.server_identity); InputStream inServerSignedPre = resources.openRawResource(
-                R.raw.server_signed_pre); InputStream inServerRatchet = resources.openRawResource(
-                R.raw.server_ratchet)) {
+                net.discdd.android_core.R.raw.server_identity); InputStream inServerSignedPre =
+                resources.openRawResource(
+                net.discdd.android_core.R.raw.server_signed_pre); InputStream inServerRatchet =
+                resources.openRawResource(
+                net.discdd.android_core.R.raw.server_ratchet)) {
             BundleSecurity.initializeKeyPaths(inServerIdentity, inServerSignedPre, inServerRatchet,
                                               Paths.get(getApplicationContext().getApplicationInfo().dataDir));
         } catch (IOException e) {

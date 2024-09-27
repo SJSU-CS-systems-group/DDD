@@ -15,6 +15,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
@@ -59,9 +60,11 @@ public class ClientWindow {
     private void updateDBWindow() throws IOException {
         var dbFile = clientWindowDataPath.resolve(WINDOW_FILE);
 
-        Files.write(dbFile,
-                    String.format(Locale.US, "%d,%d,%d", windowOfUnencryptedBundleIds.getFirst().bundleCounter(),
-                                  windowOfUnencryptedBundleIds.getLast().bundleCounter(), windowLength).getBytes());
+        Files.write(dbFile, String.format(Locale.US, "%d,%d", windowOfUnencryptedBundleIds.getFirst().bundleCounter(),
+                                          windowOfUnencryptedBundleIds.getLast().bundleCounter()).getBytes());
+
+        logger.log(FINE, "Update window: " + windowOfUnencryptedBundleIds.getFirst().bundleCounter() + " - " +
+                windowOfUnencryptedBundleIds.getLast().bundleCounter());
     }
 
     private void initializeWindow() throws IOException {
@@ -75,7 +78,6 @@ public class ClientWindow {
             String[] dbCSV = dbData.split(",");
             start = Long.parseLong(dbCSV[0]);
             end = Long.parseLong(dbCSV[1]);
-            windowLength = Integer.parseInt(dbCSV[2]);
         } catch (NoSuchFileException e) {
             // this is expected the first time
             logger.log(INFO, "Window File not found -- creating new window");
@@ -138,7 +140,7 @@ public class ClientWindow {
         long ack = BundleIDGenerator.getCounterFromBundleID(decryptedBundleID, BundleIDGenerator.DOWNSTREAM);
 
         long begin = windowOfUnencryptedBundleIds.getFirst().bundleCounter();
-        long end = windowOfUnencryptedBundleIds.getFirst().bundleCounter();
+        long end = windowOfUnencryptedBundleIds.getLast().bundleCounter();
         if (ack < begin) {
             logger.log(FINE, "Received old [" + ack + " < " + begin + "]");
             return;
@@ -168,6 +170,6 @@ public class ClientWindow {
                 logger.log(SEVERE, "Failed to encrypt bundleID: " + ueb.bundleId, e);
             }
             return null;
-        }).toList();
+        }).collect(Collectors.toList());
     }
 }

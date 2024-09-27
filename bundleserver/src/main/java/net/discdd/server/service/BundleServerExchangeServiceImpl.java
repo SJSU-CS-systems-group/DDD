@@ -32,9 +32,9 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
     }
 
     @Override
-    public void bundleCompletion(BundleExchangeName bundleExchangeName) {
-        bundleTransmission.processReceivedBundles(
-                BundleSender.newBuilder().setType(BundleSenderType.CLIENT).setId("unknown").build());
+    public void bundleCompletion(BundleExchangeName bundleExchangeName, BundleSender sender, Path path) {
+        logger.log(INFO, "Downloaded " + bundleExchangeName.encryptedBundleId());
+        bundleTransmission.processBundleFile(path.toFile(), sender);
     }
 
     @Override
@@ -45,6 +45,7 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
     @Override
     public Path pathProducer(BundleExchangeName bundleExchangeName, BundleSender sender) {
         if (bundleExchangeName.isDownload()) {
+            logger.log(INFO, sender.getId() + " requested " + bundleExchangeName.encryptedBundleId());
             bundleTransmission.getPathForBundleToSend(bundleExchangeName.encryptedBundleId());
             var bundlePath = bundleTransmission.getPathForBundleToSend(bundleExchangeName.encryptedBundleId());
             if (bundlePath.toFile().exists()) {
@@ -76,8 +77,10 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
     @Override
     public void getRecencyBlob(GetRecencyBlobRequest request, StreamObserver<GetRecencyBlobResponse> responseObserver) {
         GetRecencyBlobResponse recencyBlob = null;
+        var sender = request.getSender();
         try {
-            recencyBlob = bundleTransmission.getRecencyBlob();
+            recencyBlob = bundleTransmission.getRecencyBlob(sender);
+            logger.log(INFO, "Created Blob for sender " + sender);
         } catch (InvalidKeyException e) {
             recencyBlob =
                     GetRecencyBlobResponse.newBuilder().setStatus(RecencyBlobStatus.RECENCY_BLOB_STATUS_FAILED).build();

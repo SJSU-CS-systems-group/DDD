@@ -44,6 +44,7 @@ message BundleUploadRequest {
   oneof request {
     EncryptedBundleId bundleId = 1;
     BundleChunk chunk = 2;
+    BundleSender sender = 99;
   }
 }
 
@@ -75,9 +76,11 @@ message RecencyBlob {
   int32 nonce = 2;
   // milliseconds since epoch (1/1/1970 UTC) https://docs.oracle.com/javase/8/docs/api/java/lang/System.html#currentTimeMillis--
   int64 blobTimestamp = 3;
+  BundleSender sender = 4;
 }
 
 message GetRecencyBlobRequest {
+  BundleSender sender = 4;
 }
 
 message GetRecencyBlobResponse {

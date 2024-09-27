@@ -158,6 +158,8 @@ public class BundleClientToBundleServerTest extends End2EndTest {
     // testing the exact code that the client is using
     private static void sendBundle() throws RoutingExceptions.ClientMetaDataFileException, IOException,
             InvalidKeyException, GeneralSecurityException {
+        var testSender = BundleSender.newBuilder().setId("testSenderId").setType(BundleSenderType.CLIENT).build();
+
         BundleDTO toSend = bundleTransmission.generateBundleForTransmission();
 
         var bundleUploadResponseObserver = new BundleUploadResponseObserver();
@@ -181,6 +183,7 @@ public class BundleClientToBundleServerTest extends End2EndTest {
                 uploadRequestStreamObserver.onNext(uploadRequest);
             }
         }
+        uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setSender(testSender).build());
         uploadRequestStreamObserver.onCompleted();
         logger.log(INFO, "Completed file transfer");
         bundleUploadResponseObserver.waitForCompletion(Constants.GRPC_LONG_TIMEOUT_MS);
@@ -207,18 +210,15 @@ public class BundleClientToBundleServerTest extends End2EndTest {
             try {
                 Path receivedBundleLocation =
                         clientTestRoot.resolve("BundleTransmission/bundle-generation/to-send").resolve(bundle);
-                final OutputStream fileOutputStream = responses.hasNext() ?
-                        // I should not have this literal here! but this change is getting too large to fix all the
-                        // literal problems!
+                final OutputStream fileOutputStream =
                         Files.newOutputStream(receivedBundleLocation, StandardOpenOption.CREATE,
-                                              StandardOpenOption.TRUNCATE_EXISTING) : null;
+                                              StandardOpenOption.TRUNCATE_EXISTING);
 
                 while (responses.hasNext()) {
                     var response = responses.next();
                     fileOutputStream.write(response.getChunk().getChunk().toByteArray());
                 }
                 bundleTransmission.processReceivedBundle(sender, new Bundle(receivedBundleLocation.toFile()));
-                break;
             } catch (StatusRuntimeException e) {
                 logger.log(SEVERE, "Receive bundle failed " + channel, e);
             }

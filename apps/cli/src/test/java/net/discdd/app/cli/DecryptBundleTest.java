@@ -58,5 +58,6 @@ public class DecryptBundleTest {
         System.out.println("Standard Error: " + errText);
         //checks to see if command was successful
         assertEquals(TestUtils.trimMessage(expectedText), TestUtils.trimMessage(outText + errText));
+//        assertEquals(expectedText, outText + errText);
     }
 }

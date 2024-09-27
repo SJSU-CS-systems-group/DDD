@@ -83,12 +83,14 @@ public class BundleTransmission {
 
     @Transactional(rollbackFor = Exception.class)
     public void processReceivedBundle(BundleSender sender, Bundle bundle) throws Exception {
-        logger.log(INFO, "Processing received bundle: " + bundle.getSource().getName());
+        logger.log(INFO, "Processing received bundle: " + bundle.getSource().getName() + " from " +
+                bundleSenderToString(sender));
+
         Path bundleRecvProcDir = TRANSPORT == sender.getType() ?
                 this.config.getBundleTransmission().getReceivedProcessingDirectory().resolve(sender.getId()) :
                 this.config.getBundleTransmission().getReceivedProcessingDirectory();
 
-        bundleRecvProcDir.toFile().mkdirs();
+        Files.createDirectories(bundleRecvProcDir);
 
         UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, bundleRecvProcDir);
         String clientId = "";
@@ -110,7 +112,7 @@ public class BundleTransmission {
 
         if (receivedBundleCounter <= counters.lastReceivedBundleCounter) {
             logger.log(WARNING,
-                       "[BundleTransmission] Skipping bundle " + bundle.getSource().getName() + " as it is outdated");
+                       "[BundleTransmission] Skipping bundle " + bundle.getSource().getName() + " already received");
             return;
         }
 
@@ -123,25 +125,12 @@ public class BundleTransmission {
                 BundleUtils.extractPayload(payload, uncompressedBundle.getSource().toPath());
         logger.log(FINE, "[BundleTransmission] extracted payload from uncompressed bundle");
 
-        var ackRecordFile = this.getAckRecordLocation(clientId);
-        ackRecordFile.toFile().getParentFile().mkdirs();
-        AckRecordUtils.writeAckRecordToFile(new Acknowledgement(uncompressedPayload.getBundleId()), ackRecordFile);
-
-        Path clientAckSubDirectory = this.config.getBundleTransmission().getToBeBundledDirectory().resolve(clientId);
-
-        if (!clientAckSubDirectory.toFile().exists()) {
-            clientAckSubDirectory.toFile().mkdirs();
-        }
-
-        var ackFile = clientAckSubDirectory.resolve(Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME);
-        AckRecordUtils.writeAckRecordToFile(new Acknowledgement(uncompressedPayload.getBundleId()), ackFile);
-
         if (!"HB".equals(uncompressedPayload.getAckRecord().getBundleId())) {
             this.serverWindowService.processACK(clientId, uncompressedPayload.getAckRecord().getBundleId());
         }
 
         try {
-            this.bundleRouting.processClientMetaData(uncompressedPayload.getSource().getAbsolutePath(), sender.getId(),
+            this.bundleRouting.processClientMetaData(uncompressedPayload.getSource().toPath(), sender.getId(),
                                                      clientId);
         } catch (ClientMetaDataFileException | SQLException e) {
             // TODO Auto-generated catch block
@@ -155,29 +144,7 @@ public class BundleTransmission {
         }
     }
 
-    public void processReceivedBundles(BundleSender sender) {
-        File receivedBundlesDirectory = this.config.getBundleTransmission().getBundleReceivedLocation().toFile();
-        File[] files = receivedBundlesDirectory.listFiles();
-        if (files != null) for (final File transportDir : files) {
-            if (TRANSPORT == sender.getType() && !sender.getId().equals(transportDir.getName())) {
-                continue;
-            }
-            if (TRANSPORT == sender.getType()) {
-                List<String> reachableClients = new ArrayList<>();
-                reachableClients = bundleRouting.getClientsForTransportId(sender.getId());
-            }
-
-            if (transportDir.isDirectory()) {
-                for (final File bundleFile : transportDir.listFiles()) {
-                    processBundleFile(bundleFile, sender);
-                }
-            } else if (transportDir.isFile()) {
-                processBundleFile(transportDir, sender);
-            }
-        }
-    }
-
-    private void processBundleFile(File bundleFile, BundleSender sender) {
+    public void processBundleFile(File bundleFile, BundleSender sender) {
         Bundle bundle = new Bundle(bundleFile);
         try {
             this.processReceivedBundle(sender, bundle);
@@ -190,14 +157,9 @@ public class BundleTransmission {
                 FileUtils.delete(bundleFile);
                 FileUtils.deleteDirectory(bundle.getSource());
             } catch (IOException e) {
-                logger.log(SEVERE, "e");
+                logger.log(SEVERE, "Delete bundle file: " + bundleFile.getName() + " failed");
             }
         }
-    }
-
-    private Path getAckRecordLocation(String clientId) {
-        return this.config.getBundleTransmission().getToBeBundledDirectory()
-                .resolve(Path.of(clientId, Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME));
     }
 
     public String generateBundleId(String clientId) {
@@ -244,9 +206,9 @@ public class BundleTransmission {
         return encryptedBundleId;
     }
 
-    public GetRecencyBlobResponse getRecencyBlob() throws InvalidKeyException {
+    public GetRecencyBlobResponse getRecencyBlob(BundleSender sender) throws InvalidKeyException {
         var blob = RecencyBlob.newBuilder().setVersion(0).setNonce(secureRandom.nextInt())
-                .setBlobTimestamp(System.currentTimeMillis()).build();
+                .setBlobTimestamp(System.currentTimeMillis()).setSender(sender).build();
         byte[] signature = this.bundleSecurity.signRecencyBlob(blob);
         byte[] publicKeyBytes = this.bundleSecurity.getIdentityPublicKey();
         return GetRecencyBlobResponse.newBuilder().setStatus(RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS)
@@ -284,6 +246,7 @@ public class BundleTransmission {
 
         for (String clientId : clientIds) {
             clientIdToBundleIds.put(clientId, new HashSet<>());
+            logger.log(INFO, "[BT/inventBundle] Processing client " + clientId);
         }
 
         for (String clientId : clientIds) {

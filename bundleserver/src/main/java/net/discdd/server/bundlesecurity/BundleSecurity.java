@@ -31,6 +31,7 @@ public class BundleSecurity {
     private static final Logger logger = Logger.getLogger(BundleSecurity.class.getName());
     @Value("${bundle-server.application-data-manager.state-manager.bundle-id-next-counter}")
     private String BUNDLE_ID_NEXT_COUNTER;
+
     @Autowired
     private ServerSecurity serverSecurity;
 

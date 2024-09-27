@@ -5,6 +5,7 @@ import net.discdd.model.Acknowledgement;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -16,8 +17,7 @@ public class AckRecordUtils {
             return new Acknowledgement(new String(Files.readAllBytes(ackFilePath)));
         } catch (IOException e) {
             // we don't do a full stack trace here because this is a common case
-            logger.log(Level.WARNING,
-                       "Failed to read Acknowledgment record from " + ackFilePath + " " + e.getMessage());
+            logger.log(Level.WARNING, "Failed to read Acknowledgment record from " + ackFilePath, e);
         }
         return null;
     }
@@ -31,7 +31,8 @@ public class AckRecordUtils {
             return;
         }
         try {
-            Files.writeString(ackFilePath, ackRecord.getBundleId());
+            Files.write(ackFilePath, ackRecord.getBundleId().getBytes(), StandardOpenOption.CREATE,
+                        StandardOpenOption.TRUNCATE_EXISTING);
         } catch (IOException e) {
             logger.log(Level.WARNING, "Failed to write Acknowledgment record to " + ackFilePath, e);
         }

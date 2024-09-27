@@ -46,15 +46,14 @@
         </dependency>
         <dependency>
             <groupId>io.grpc</groupId>
-            <artifactId>grpc-netty-shaded</artifactId>
+            <artifactId>grpc-protobuf</artifactId>
             <version>${grpc.version}</version>
         </dependency>
         <dependency>
             <groupId>io.grpc</groupId>
-            <artifactId>grpc-protobuf</artifactId>
+            <artifactId>grpc-okhttp</artifactId>
             <version>${grpc.version}</version>
         </dependency>
-
         <dependency>
 			<groupId>org.whispersystems</groupId>
 			<artifactId>signal-protocol-java</artifactId>

@@ -33,11 +33,13 @@ public class ServerUploadFragment extends Fragment {
     private Button saveDomainAndPortBtn;
     private SharedPreferences sharedPref;
     private TextView serverConnnectedStatus;
-    private String transportID = "bundle_transport";
+    private String transportID;
     private ExecutorService executor = Executors.newFixedThreadPool(2);
 
-    public ServerUploadFragment(SubmissionPublisher<BundleTransportActivity.ConnectivityEvent> connectivityFlow) {
+    public ServerUploadFragment(SubmissionPublisher<BundleTransportActivity.ConnectivityEvent> connectivityFlow,
+                                String transportID) {
         this.connectivityFlow = connectivityFlow;
+        this.transportID = transportID;
     }
 
     @Override
@@ -86,7 +88,8 @@ public class ServerUploadFragment extends Fragment {
             TransportToBundleServerManager transportToBundleServerManager =
                     new TransportToBundleServerManager(requireActivity().getExternalFilesDir(null).toPath(),
                                                        serverDomain, serverPort, transportID,
-                                                       this::connectToServerComplete);
+                                                       this::connectToServerComplete, this::connectToServerError,
+                                                       getContext());
             executor.execute(transportToBundleServerManager);
         } else {
             Toast.makeText(getContext(), "Enter the domain and port", Toast.LENGTH_SHORT).show();
@@ -137,6 +140,15 @@ public class ServerUploadFragment extends Fragment {
     private Void connectToServerComplete(Void x) {
         requireActivity().runOnUiThread(() -> {
             serverConnnectedStatus.append("Server exchange complete.\n");
+            connectServerBtn.setEnabled(true);
+        });
+        return null;
+    }
+
+    private Void connectToServerError(Exception e) {
+        requireActivity().runOnUiThread(() -> {
+            serverConnnectedStatus.append("Server exchange incomplete with error.\n");
+            serverConnnectedStatus.append("Error: " + e.getMessage() + " \n");
             connectServerBtn.setEnabled(true);
         });
         return null;

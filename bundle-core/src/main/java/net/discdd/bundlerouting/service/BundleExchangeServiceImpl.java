@@ -7,6 +7,7 @@ import net.discdd.grpc.BundleDownloadRequest;
 import net.discdd.grpc.BundleDownloadResponse;
 import net.discdd.grpc.BundleExchangeServiceGrpc;
 import net.discdd.grpc.BundleSender;
+import net.discdd.grpc.BundleSenderType;
 import net.discdd.grpc.BundleUploadRequest;
 import net.discdd.grpc.BundleUploadResponse;
 import net.discdd.grpc.Status;
@@ -55,6 +56,7 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
                                 .build()));
             }
             responseObserver.onCompleted();
+            Files.delete(downloadPath);
             logger.log(INFO, "Complete " + request.getBundleId().getEncryptedId());
         } catch (Exception e) {
             logger.log(SEVERE, "Error downloading bundle: " + request.getBundleId().getEncryptedId(), e);
@@ -79,7 +81,7 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
 
     protected abstract Path pathProducer(BundleExchangeName bundleExchangeName, BundleSender sender);
 
-    protected abstract void bundleCompletion(BundleExchangeName bundleExchangeName);
+    protected abstract void bundleCompletion(BundleExchangeName bundleExchangeName, BundleSender sender, Path path);
 
     public enum BundleExchangeEvent {
         UPLOAD_STARTED, DOWNLOAD_STARTED, UPLOAD_FINISHED, DOWNLOAD_FINISHED
@@ -98,6 +100,7 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
         Path path;
         Status status;
         BundleExchangeName bundleExchangeName;
+        BundleSender bundleSender;
 
         public BundleUploadRequestStreamObserver(StreamObserver<BundleUploadResponse> responseObserver) {
             this.responseObserver = responseObserver;
@@ -112,7 +115,7 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
                             bundleUploadRequest.getBundleId().getEncryptedId());
                     bundleExchangeName =
                             new BundleExchangeName(bundleUploadRequest.getBundleId().getEncryptedId(), false);
-                    path = pathProducer(bundleExchangeName, null);
+                    path = pathProducer(bundleExchangeName, bundleSender);
                     try {
                         if (path == null) throw new IOException(
                                 "Could not produce a path for " + bundleExchangeName.encryptedBundleId);
@@ -122,6 +125,8 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
                         logger.log(SEVERE, "Error creating file " + path, e);
                         this.onError(e);
                     }
+                } else if (bundleUploadRequest.hasSender()) {
+                    bundleSender = bundleUploadRequest.getSender();
                 } else {
                     writeFile(writer, bundleUploadRequest.getChunk().getChunk());
                 }
@@ -136,8 +141,8 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
             status = Status.FAILED;
             // TODO we should probably convey that the upload failed. We'll figure it out later, but it
             //      would be nice to indicate early on.
-            if (bundleExchangeName != null) {
-                bundleCompletion(bundleExchangeName);
+            if (bundleExchangeName != null && bundleSender != null) {
+                bundleCompletion(bundleExchangeName, bundleSender, path);
             }
             status = Status.FAILED;
             this.onCompleted();
@@ -151,8 +156,8 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
             } catch (Exception e) {
                 logger.log(SEVERE, "Problem closing bundle", e);
             }
-            if (bundleExchangeName != null) {
-                bundleCompletion(bundleExchangeName);
+            if (bundleExchangeName != null && bundleSender != null) {
+                bundleCompletion(bundleExchangeName, bundleSender, path);
             }
             responseObserver.onNext(BundleUploadResponse.newBuilder().setStatus(status).build());
             responseObserver.onCompleted();

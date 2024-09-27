@@ -6,6 +6,8 @@ import io.grpc.stub.StreamObserver;
 import net.discdd.grpc.AppDataUnit;
 import net.discdd.grpc.BundleChunk;
 import net.discdd.grpc.BundleExchangeServiceGrpc;
+import net.discdd.grpc.BundleSender;
+import net.discdd.grpc.BundleSenderType;
 import net.discdd.grpc.BundleUploadRequest;
 import net.discdd.grpc.BundleUploadResponse;
 import net.discdd.grpc.EncryptedBundleId;
@@ -109,6 +111,8 @@ public class ADUEnd2EndTest extends End2EndTest {
     }
 
     private void sendBundle(Path bundleJarPath) throws Throwable {
+        var testSender = BundleSender.newBuilder().setId("testSenderId").setType(BundleSenderType.CLIENT).build();
+
         var stub = BundleExchangeServiceGrpc.newStub(
                 ManagedChannelBuilder.forAddress("localhost", BUNDLESERVER_GRPC_PORT).usePlaintext().build());
 
@@ -120,6 +124,7 @@ public class ADUEnd2EndTest extends End2EndTest {
         var firstByteString = ByteString.copyFrom(allBytes, 0, allBytes.length / 2);
         var secondByteString =
                 ByteString.copyFrom(allBytes, allBytes.length / 2, allBytes.length - allBytes.length / 2);
+        request.onNext(BundleUploadRequest.newBuilder().setSender(testSender).build());
         request.onNext(BundleUploadRequest.newBuilder()
                                .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId("8675309").build()).build());
         request.onNext(
