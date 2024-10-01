@@ -88,7 +88,8 @@ public class ServerUploadFragment extends Fragment {
             TransportToBundleServerManager transportToBundleServerManager =
                     new TransportToBundleServerManager(requireActivity().getExternalFilesDir(null).toPath(),
                                                        serverDomain, serverPort, transportID,
-                                                       this::connectToServerComplete, e -> connectToServerError(e, serverDomain + ":" + serverPort));
+                                                       this::connectToServerComplete,
+                                                       e -> connectToServerError(e, serverDomain + ":" + serverPort));
             executor.execute(transportToBundleServerManager);
         } else {
             Toast.makeText(getContext(), "Enter the domain and port", Toast.LENGTH_SHORT).show();
@@ -153,7 +154,6 @@ public class ServerUploadFragment extends Fragment {
         });
         return null;
     }
-
 
     private void appendToActivityLog(String message) {
         requireActivity().runOnUiThread(() -> {
