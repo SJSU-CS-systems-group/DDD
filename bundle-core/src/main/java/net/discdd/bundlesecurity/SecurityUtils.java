@@ -48,7 +48,7 @@ public class SecurityUtils {
     public static final String SERVER_KEY_PATH = "Server_Keys";
     public static final String TRANSPORT_KEY_PATH = "Transport_Keys";
     public static final String TRANSPORT_IDENTITY_KEY = "transport_identity.pub";
-    public static final String TRANSPORT_IDENTITY_PRIVATE_KEY = "transport_identity.pvt";
+    public static final String TRANSPORT_IDENTITY_PRIVATE_KEY = "transportIdentity.pvt";
     public static final String SESSION_STORE_FILE = "Session.store";
     public static final String CLIENT_IDENTITY_KEY = "clientIdentity.pub";
     public static final String CLIENT_IDENTITY_PRIVATE_KEY = "clientIdentity.pvt";
@@ -87,6 +87,16 @@ public class SecurityUtils {
      */
     public static String generateID(byte[] publicKey) throws NoSuchAlgorithmException {
         return Base64.getUrlEncoder().encodeToString(MessageDigest.getInstance("SHA-1").digest(publicKey));
+    }
+
+    public static void createEncodedPublicKeyFile(byte[] publicKey, Path path) throws IOException {
+        Files.write(path, createEncodedPublicKeyBytes(publicKey), StandardOpenOption.CREATE,
+                StandardOpenOption.TRUNCATE_EXISTING);
+    }
+
+    public static byte[] createEncodedPublicKeyBytes(byte[] publicKey) {
+        return (PUB_KEY_HEADER + "\n" + Base64.getUrlEncoder().encodeToString(publicKey) + "\n" +
+                PUB_KEY_FOOTER).getBytes();
     }
 
     public static void createEncodedPublicKeyFile(ECPublicKey publicKey, Path path) throws IOException {

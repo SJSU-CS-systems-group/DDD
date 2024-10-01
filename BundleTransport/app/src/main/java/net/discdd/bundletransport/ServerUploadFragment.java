@@ -15,6 +15,8 @@ import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
 
+import net.discdd.transport.TransportSecurity;
+
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.SubmissionPublisher;
@@ -33,13 +35,12 @@ public class ServerUploadFragment extends Fragment {
     private Button saveDomainAndPortBtn;
     private SharedPreferences sharedPref;
     private TextView serverConnnectedStatus;
-    private String transportID;
     private ExecutorService executor = Executors.newFixedThreadPool(2);
+    private TransportSecurity transportSecurity;
 
-    public ServerUploadFragment(SubmissionPublisher<BundleTransportActivity.ConnectivityEvent> connectivityFlow,
-                                String transportID) {
+    public ServerUploadFragment(SubmissionPublisher<BundleTransportActivity.ConnectivityEvent> connectivityFlow, TransportSecurity transportSecurity) {
         this.connectivityFlow = connectivityFlow;
-        this.transportID = transportID;
+        this.transportSecurity = transportSecurity;
     }
 
     @Override
@@ -87,9 +88,8 @@ public class ServerUploadFragment extends Fragment {
 
             TransportToBundleServerManager transportToBundleServerManager =
                     new TransportToBundleServerManager(requireActivity().getExternalFilesDir(null).toPath(),
-                                                       serverDomain, serverPort, transportID,
-                                                       this::connectToServerComplete, this::connectToServerError,
-                                                       getContext());
+                                                       serverDomain, serverPort, transportSecurity,
+                                                       this::connectToServerComplete, this::connectToServerError);
             executor.execute(transportToBundleServerManager);
         } else {
             Toast.makeText(getContext(), "Enter the domain and port", Toast.LENGTH_SHORT).show();

@@ -27,6 +27,8 @@ import io.grpc.ServerBuilder;
 import io.grpc.okhttp.OkHttpServerBuilder;
 import io.grpc.stub.StreamObserver;
 
+import net.discdd.utils.SelfSignedCertificateGenerator;
+
 public class RpcServer {
     private static final Logger logger = Logger.getLogger(RpcServer.class.getName());
 
@@ -79,6 +81,7 @@ public class RpcServer {
                 responseObserver.onCompleted();
             }
         };
+
         server =
                 Grpc.newServerBuilderForPort(7777, InsecureServerCredentials.create()).addService(bundleExchangeService)
                         .build();
@@ -87,7 +90,7 @@ public class RpcServer {
 
         try {
             server.start();
-            logger.log(FINE, "Rpc server running at: " + server.toString());
+            logger.log(FINE, "Rpc server running at: " + server.toString());        
         } catch (IOException e) {
             logger.log(WARNING, "RpcServer -> startServer() IOException: " + e.getMessage());
         }

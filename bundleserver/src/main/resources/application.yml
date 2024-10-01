@@ -23,6 +23,11 @@ spring:
 grpc:
   server:
     port: 7778
+    security:
+      enabled: true
+      certificateChain: file:\Users\ngngo\OneDrive\Desktop\ddd-research\Data\BundleSecurity\Keys\Server\Certificates\server.crt
+      privateKey: file:\Users\ngngo\OneDrive\Desktop\ddd-research\Data\BundleSecurity\Keys\Server\Server_Keys\private_key.pem
+
 server:
   port: 8081
 bundle-server:
@@ -49,4 +54,5 @@ bundle-server:
       app-data-root: "${bundle-server.bundle-store-root}"
   bundle-security:
     server-key-path: "${bundle-server.bundle-store-root}BundleSecurity/Keys/Server"
+    certificate-path: "${bundle-server.bundle-store-root}BundleSecurity/Keys/Server/Certificates"
     server-serverkeys-path: "${bundle-server.bundle-store-root}BundleSecurity/Keys/Server/Server_Keys"
