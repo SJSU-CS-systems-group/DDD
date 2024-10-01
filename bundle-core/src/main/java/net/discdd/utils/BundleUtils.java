@@ -27,6 +27,7 @@ import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.security.InvalidParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -36,6 +37,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
@@ -45,8 +48,8 @@ import static net.discdd.bundlesecurity.SecurityUtils.createEncodedPublicKeyByte
 
 public class BundleUtils {
     private static final Logger logger = Logger.getLogger(BundleUtils.class.getName());
-
     private static final String BUNDLE_EXTENSION = ".bundle";
+    private static final String stringToMatch = "^[a-zA-Z0-9-_=]+$";
 
     public static UncompressedBundle extractBundle(Bundle bundle, Path extractDirPath) {
         String bundleFileName = bundle.getSource().getName();
@@ -58,7 +61,6 @@ public class BundleUtils {
         return new UncompressedBundle( // TODO get encryption header, payload signature and get bundle id from BS
                                        null, extractedBundlePath.toFile(), null, encryptedPayload);
     }
-
     public static UncompressedPayload extractPayload(Payload payload, Path extractDirPath) throws IOException {
         var extractedPayloadPath = extractDirPath.resolve("extracted-payload");
 
@@ -342,5 +344,15 @@ public class BundleUtils {
 
     public interface Encrypter {
         CiphertextMessage encrypt(byte[] payload) throws IOException, NoSuchAlgorithmException, InvalidKeyException;
+    }
+
+
+    public static void checkIdClean(String s) {
+        // [a-zA-Z0-9+-] matches alphanumeric characters or + or -
+        Pattern p = Pattern.compile(stringToMatch);
+        final Matcher m = p.matcher(s);
+        if(!m.matches() || s.length() > 100){
+            throw new InvalidParameterException("Not URL Encoded");
+        }
     }
 }

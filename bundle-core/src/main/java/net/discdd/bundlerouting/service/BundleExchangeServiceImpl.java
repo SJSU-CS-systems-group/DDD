@@ -11,7 +11,7 @@ import net.discdd.grpc.BundleSenderType;
 import net.discdd.grpc.BundleUploadRequest;
 import net.discdd.grpc.BundleUploadResponse;
 import net.discdd.grpc.Status;
-import net.discdd.utils.GRPCSanitizer;
+import net.discdd.utils.BundleUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -44,7 +44,7 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
     public void downloadBundle(BundleDownloadRequest request, StreamObserver<BundleDownloadResponse> responseObserver) {
         onBundleExchangeEvent(BundleExchangeEvent.DOWNLOAD_STARTED);
 
-        GRPCSanitizer.checkIdClean(request.getBundleId().getEncryptedId());
+        BundleUtils.checkIdClean(request.getBundleId().getEncryptedId());
 
         var bundleExchangeName = new BundleExchangeName(request.getBundleId().getEncryptedId(), true);
 
