@@ -48,7 +48,6 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
 
         var bundleExchangeName = new BundleExchangeName(request.getBundleId().getEncryptedId(), true);
 
-
         try {
             Path downloadPath = pathProducer(bundleExchangeName, request.getSender());
             if (downloadPath == null) {

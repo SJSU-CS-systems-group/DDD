@@ -62,6 +62,7 @@ public class BundleUtils {
         return new UncompressedBundle( // TODO get encryption header, payload signature and get bundle id from BS
                                        null, extractedBundlePath.toFile(), null, encryptedPayload);
     }
+
     public static UncompressedPayload extractPayload(Payload payload, Path extractDirPath) throws IOException {
         var extractedPayloadPath = extractDirPath.resolve("extracted-payload");
 
@@ -348,12 +349,11 @@ public class BundleUtils {
         CiphertextMessage encrypt(byte[] payload) throws IOException, NoSuchAlgorithmException, InvalidKeyException;
     }
 
-
     public static void checkIdClean(String s) {
         // [a-zA-Z0-9+-] matches alphanumeric characters or + or -
         Pattern p = Pattern.compile(stringToMatch);
         final Matcher m = p.matcher(s);
-        if(!m.matches() || s.length() > 100){
+        if (!m.matches() || s.length() > 100) {
             throw new InvalidParameterException("Not URL Encoded");
         }
     }
