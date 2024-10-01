@@ -12,7 +12,7 @@ public class GRPCSanitizer {
             throw new InvalidParameterException("Not URL Encoded");
         }
     }
-    public static void main(String args[]){
-        checkIdClean("jw6rKsRqxJLQK6EFdKWJQrXDMAYeZ4eiao4IiWX_mpOp1zeN3Z9qyWVb7Wdu9Snk");
-    }
+//    public static void main(String args[]){
+//        checkIdClean("jw6rKsRqxJLQK6EFdKWJQrXDMAYeZ4eiao4IiWX_mpOp1zeN3Z9qyWVb7Wdu9Snk");
+//    }
 }
