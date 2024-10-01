@@ -37,7 +37,8 @@ import java.util.logging.Logger;
 
 import io.grpc.Grpc;
 import io.grpc.InsecureChannelCredentials;
-import io.grpc.ManagedChannelBuilder;
+import io.grpc.ManagedChannel;
+import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 
 public class TransportToBundleServerManager implements Runnable {
@@ -64,14 +65,15 @@ public class TransportToBundleServerManager implements Runnable {
 
     @Override
     public void run() {
-        var channel = Grpc.newChannelBuilder(transportTarget, InsecureChannelCredentials.create()).build();
-        var bsStub = BundleServerServiceGrpc.newBlockingStub(channel);
-        var exchangeStub = BundleExchangeServiceGrpc.newStub(channel);
-        var blockingExchangeStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
-        var bundlesFromClients = populateListFromPath(fromClientPath);
-        var bundlesFromServer = populateListFromPath(fromServerPath);
-
+        ManagedChannel channel = null;
         try {
+            channel = Grpc.newChannelBuilder(transportTarget, InsecureChannelCredentials.create()).build();
+            var bsStub = BundleServerServiceGrpc.newBlockingStub(channel);
+            var exchangeStub = BundleExchangeServiceGrpc.newStub(channel);
+            var blockingExchangeStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
+            var bundlesFromClients = populateListFromPath(fromClientPath);
+            var bundlesFromServer = populateListFromPath(fromServerPath);
+
             var inventoryResponse = bsStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     .bundleInventory(BundleInventoryRequest.newBuilder().setSender(transportSenderId)
                                              .addAllBundlesFromClientsOnTransport(bundlesFromClients)
@@ -115,14 +117,13 @@ public class TransportToBundleServerManager implements Runnable {
                         uploadRequestStreamObserver.onNext(uploadRequest);
                     }
                     uploadRequestStreamObserver.onCompleted();
+                    if (responseObserver != null) {
+                        responseObserver.onCompleted();
+                        Files.delete(path);
+                    }
                 } catch (IOException e) {
                     logger.log(SEVERE, "Failed to upload file: " + path, e);
                     if (responseObserver != null) responseObserver.onError(e);
-                }
-
-                if (responseObserver != null) {
-                    responseObserver.onCompleted();
-                    Files.delete(path);
                 }
             }
 
@@ -159,34 +160,38 @@ public class TransportToBundleServerManager implements Runnable {
                     completion.get(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS);
                 } catch (IOException | ExecutionException | InterruptedException | TimeoutException e) {
                     logger.log(SEVERE, "Failed to download file: " + path, e);
+
+                }
+
+                var recencyBlobReq = GetRecencyBlobRequest.newBuilder().setSender(transportSenderId).build();
+
+                var recencyBlob =
+                        blockingExchangeStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                                .getRecencyBlob(recencyBlobReq);
+
+                Path blobPath = fromServerPath.resolve(RECENCY_BLOB_BIN);
+                try (var os = Files.newOutputStream(blobPath, StandardOpenOption.CREATE,
+                                                    StandardOpenOption.TRUNCATE_EXISTING)) {
+                    logger.log(INFO, "Writing blob to " + blobPath);
+                    recencyBlob.writeTo(os);
+                } catch (IOException e) {
+                    logger.log(SEVERE, "Failed to write recency blob", e);
                 }
             }
-        } catch (Exception e) {
-            logger.log(SEVERE, "error: " + e.getMessage());
+            logger.log(INFO, "Connect server completed");
+            connectComplete.apply(null);
+        } catch (IllegalArgumentException | StatusRuntimeException e) {
+            logger.log(SEVERE, "Failed to connect to server", e);
             connectError.apply(e);
+        } finally {
+            try {
+                if (channel != null) {
+                    channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
+                }
+            } catch (InterruptedException e) {
+                logger.log(SEVERE, "could not shutdown channel, error: " + e.getMessage() + ", cause: " + e.getCause());
+            }
         }
-
-        var recencyBlobReq = GetRecencyBlobRequest.newBuilder().setSender(transportSenderId).build();
-
-        var recencyBlob = blockingExchangeStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                .getRecencyBlob(recencyBlobReq);
-
-        Path blobPath = fromServerPath.resolve(RECENCY_BLOB_BIN);
-        try (var os = Files.newOutputStream(blobPath, StandardOpenOption.CREATE,
-                                            StandardOpenOption.TRUNCATE_EXISTING)) {
-            logger.log(INFO, "Writing blob to " + blobPath);
-            recencyBlob.writeTo(os);
-        } catch (IOException e) {
-            logger.log(SEVERE, "Failed to write recency blob", e);
-        }
-
-        try {
-            channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            logger.log(SEVERE, "could not shutdown channel, error: " + e.getMessage() + ", cause: " + e.getCause());
-        }
-        logger.log(INFO, "Connect server completed");
-        connectComplete.apply(null);
     }
 
     private List<EncryptedBundleId> populateListFromPath(Path path) {

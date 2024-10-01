@@ -26,6 +26,7 @@ import java.io.OutputStream;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.security.InvalidParameterException;
 import java.security.NoSuchAlgorithmException;
@@ -308,8 +309,9 @@ public class BundleUtils {
         innerJar.createEntry("routing.metadata", routingData == null ? "{}".getBytes() : routingData);
 
         for (var adu : adus) {
-            try (var os = innerJar.createEntry(Path.of(Constants.BUNDLE_ADU_DIRECTORY_NAME, adu.getAppId(),
-                                                       Long.toString(adu.getADUId()))); var aos = Files.newInputStream(
+            try (var os = innerJar.createEntry(Paths.get(Constants.BUNDLE_ADU_DIRECTORY_NAME, adu.getAppId(),
+                                                         Long.toString(
+                                                                 adu.getADUId()))); var aos = Files.newInputStream(
                     adu.getSource().toPath(), StandardOpenOption.READ)) {
                 aos.transferTo(os);
             }
@@ -328,7 +330,7 @@ public class BundleUtils {
         var cipherTextBytes = cipherTextMessage.serialize();
 
         // store the encrypted payload
-        outerJar.createEntry(Path.of(PAYLOAD_DIR, PAYLOAD_FILENAME), cipherTextBytes);
+        outerJar.createEntry(Paths.get(PAYLOAD_DIR, PAYLOAD_FILENAME), cipherTextBytes);
 
         // store the bundleId
         outerJar.createEntry(SecurityUtils.BUNDLEID_FILENAME, encryptedBundleId.getBytes());

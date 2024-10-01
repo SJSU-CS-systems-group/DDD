@@ -33,11 +33,13 @@ public class ServerUploadFragment extends Fragment {
     private Button saveDomainAndPortBtn;
     private SharedPreferences sharedPref;
     private TextView serverConnnectedStatus;
-    private String transportID = "bundle_transport";
+    private String transportID;
     private ExecutorService executor = Executors.newFixedThreadPool(2);
 
-    public ServerUploadFragment(SubmissionPublisher<BundleTransportActivity.ConnectivityEvent> connectivityFlow) {
+    public ServerUploadFragment(SubmissionPublisher<BundleTransportActivity.ConnectivityEvent> connectivityFlow,
+                                String transportID) {
         this.connectivityFlow = connectivityFlow;
+        this.transportID = transportID;
     }
 
     @Override
@@ -86,7 +88,8 @@ public class ServerUploadFragment extends Fragment {
             TransportToBundleServerManager transportToBundleServerManager =
                     new TransportToBundleServerManager(requireActivity().getExternalFilesDir(null).toPath(),
                                                        serverDomain, serverPort, transportID,
-                                                       this::connectToServerComplete, this::connectToServerError);
+                                                       this::connectToServerComplete,
+                                                       e -> connectToServerError(e, serverDomain + ":" + serverPort));
             executor.execute(transportToBundleServerManager);
         } else {
             Toast.makeText(getContext(), "Enter the domain and port", Toast.LENGTH_SHORT).show();
@@ -142,11 +145,12 @@ public class ServerUploadFragment extends Fragment {
         return null;
     }
 
-    private Void connectToServerError(Exception e) {
+    private Void connectToServerError(Exception e, String transportTarget) {
         requireActivity().runOnUiThread(() -> {
             serverConnnectedStatus.append("Server exchange incomplete with error.\n");
             serverConnnectedStatus.append("Error: " + e.getMessage() + " \n");
             connectServerBtn.setEnabled(true);
+            Toast.makeText(getContext(), "Invalid hostname: " + transportTarget, Toast.LENGTH_SHORT).show();
         });
         return null;
     }

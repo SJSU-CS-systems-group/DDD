@@ -216,7 +216,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
             return bundleTransmission.doExchangeWithTransport(device.deviceAddress, device.deviceName,
                                                               wifiDirectManager.getGroupOwnerAddress().getHostAddress(),
                                                               7777);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             logger.log(WARNING, "Failed to connect to " + device.deviceName, e);
         } finally {
             wifiDirectManager.disconnect();

@@ -423,7 +423,7 @@ public class BundleTransmission {
                 EncryptedBundleId.newBuilder().setEncryptedId(toSend.getBundleId()).build()).build());
 
         // upload file as chunk
-        logger.log(INFO, "Started file transfer");
+        logger.log(INFO, "Started upload bundle: " + toSend.getBundleId());
         try (FileInputStream inputStream = new FileInputStream(toSend.getBundle().getSource())) {
             int chunkSize = 1000 * 1000 * 4;
             byte[] bytes = new byte[chunkSize];
