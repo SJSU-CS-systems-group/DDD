@@ -307,8 +307,9 @@ public class BundleUtils {
         innerJar.createEntry("routing.metadata", routingData == null ? "{}".getBytes() : routingData);
 
         for (var adu : adus) {
-            try (var os = innerJar.createEntry(
-                    Paths.get(Constants.BUNDLE_ADU_DIRECTORY_NAME, adu.getAppId(), Long.toString(adu.getADUId()))); var aos = Files.newInputStream(
+            try (var os = innerJar.createEntry(Paths.get(Constants.BUNDLE_ADU_DIRECTORY_NAME, adu.getAppId(),
+                                                         Long.toString(
+                                                                 adu.getADUId()))); var aos = Files.newInputStream(
                     adu.getSource().toPath(), StandardOpenOption.READ)) {
                 aos.transferTo(os);
             }

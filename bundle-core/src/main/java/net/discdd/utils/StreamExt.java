@@ -12,9 +12,9 @@ public class StreamExt {
         Iterator<T> iterator = stream.iterator();
         List<T> added = new ArrayList<>();
 
-        while(iterator.hasNext()) {
+        while (iterator.hasNext()) {
             T next = iterator.next();
-            if (!predicate.test(next)){
+            if (!predicate.test(next)) {
                 break;
             }
             added.add(next);
