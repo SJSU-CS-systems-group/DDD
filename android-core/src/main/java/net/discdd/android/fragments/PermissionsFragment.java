@@ -33,8 +33,17 @@ public class PermissionsFragment extends Fragment {
     private final HashMap<String, PermissionsAdapter.PermissionViewHolder> neededPermissions = new HashMap<>();
     private ActivityResultLauncher<String> requestPermissionLauncher;
     private PermissionsAdapter permissionsAdapter;
+    private PermissionStateManager permissionStateManager;
     private boolean promptPending;
     private Consumer<HashSet<String>> permissionWatcher;
+
+    public PermissionsFragment() {
+        this(null);
+    }
+
+    public PermissionsFragment(PermissionStateManager permissionStatemanager) {
+        this.permissionStateManager = permissionStatemanager;
+    }
 
     @Override
     public View onCreateView(
@@ -60,6 +69,15 @@ public class PermissionsFragment extends Fragment {
             permissionsRecyclerView.setAdapter(permissionsAdapter);
 
         }
+    }
+
+    public void allPermissionsSatisfied() {
+        permissionStateManager.updatePermissionSatisfied(neededPermissions.isEmpty());
+    }
+
+    public boolean checkStatus() {
+        logger.log(Level.INFO, "the length of the permissions array is " + neededPermissions.size());
+        return neededPermissions.isEmpty();
     }
 
     private ActivityResultLauncher<String[]> activityResultLauncher =
@@ -101,6 +119,7 @@ public class PermissionsFragment extends Fragment {
         if (permissionWatcher != null) {
             permissionWatcher.accept(grantedPermissions);
         }
+        allPermissionsSatisfied();
     }
 
     public void registerPermissionsWatcher(Consumer<HashSet<String>> watcher) {
@@ -122,6 +141,7 @@ public class PermissionsFragment extends Fragment {
                 activityResultLauncher.launch(permissionsToRequest);
             }
         }
+        allPermissionsSatisfied();
     }
 
     class PermissionsAdapter extends RecyclerView.Adapter<PermissionsAdapter.PermissionViewHolder> {

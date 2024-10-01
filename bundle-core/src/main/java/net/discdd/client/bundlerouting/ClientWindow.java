@@ -131,7 +131,7 @@ public class ClientWindow {
      * Returns:
      * None
      */
-    public void processBundle(String bundleID, ClientSecurity clientSecurity) throws BufferOverflow, IOException,
+    public void  (String bundleID, ClientSecurity clientSecurity) throws BufferOverflow, IOException,
             GeneralSecurityException, InvalidKeyException {
         String decryptedBundleID = clientSecurity.decryptBundleID(bundleID);
         logger.log(FINE, "Largest Bundle ID = " + decryptedBundleID);
