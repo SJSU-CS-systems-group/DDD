@@ -17,7 +17,6 @@ import net.discdd.grpc.BundleUploadRequest;
 import net.discdd.grpc.BundleUploadResponse;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.grpc.GetRecencyBlobRequest;
-import net.discdd.pathutils.TransportPaths;
 import net.discdd.utils.Constants;
 
 import java.io.File;
@@ -37,7 +36,7 @@ import java.util.logging.Logger;
 
 import io.grpc.Grpc;
 import io.grpc.InsecureChannelCredentials;
-import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 
@@ -65,6 +64,8 @@ public class TransportToBundleServerManager implements Runnable {
 
     @Override
     public void run() {
+        logger.log(INFO, "Connect server started");
+
         ManagedChannel channel = null;
         try {
             channel = Grpc.newChannelBuilder(transportTarget, InsecureChannelCredentials.create()).build();

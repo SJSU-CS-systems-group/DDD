@@ -89,6 +89,16 @@ public class SecurityUtils {
         return Base64.getUrlEncoder().encodeToString(MessageDigest.getInstance("SHA-1").digest(publicKey));
     }
 
+    public static void createEncodedPublicKeyFile(byte[] publicKey, Path path) throws IOException {
+        Files.write(path, createEncodedPublicKeyBytes(publicKey), StandardOpenOption.CREATE,
+                StandardOpenOption.TRUNCATE_EXISTING);
+    }
+
+    public static byte[] createEncodedPublicKeyBytes(byte[] publicKey) {
+        return (PUB_KEY_HEADER + "\n" + Base64.getUrlEncoder().encodeToString(publicKey) + "\n" +
+                PUB_KEY_FOOTER).getBytes();
+    }
+
     public static void createEncodedPublicKeyFile(ECPublicKey publicKey, Path path) throws IOException {
         Files.write(path, createEncodedPublicKeyBytes(publicKey), StandardOpenOption.CREATE,
                     StandardOpenOption.TRUNCATE_EXISTING);

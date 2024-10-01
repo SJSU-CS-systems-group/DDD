@@ -15,8 +15,6 @@ import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
 
-import net.discdd.pathutils.TransportPaths;
-
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.SubmissionPublisher;
@@ -148,12 +146,11 @@ public class ServerUploadFragment extends Fragment {
         return null;
     }
 
-    private Void connectToServerError(Exception e, String transportTarget) {
+    private Void connectToServerError(Exception e) {
         requireActivity().runOnUiThread(() -> {
             serverConnnectedStatus.append("Server exchange incomplete with error.\n");
             serverConnnectedStatus.append("Error: " + e.getMessage() + " \n");
             connectServerBtn.setEnabled(true);
-            Toast.makeText(getContext(), "Invalid hostname: " + transportTarget, Toast.LENGTH_SHORT).show();
         });
         return null;
     }
