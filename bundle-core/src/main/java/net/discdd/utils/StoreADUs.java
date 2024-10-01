@@ -136,7 +136,7 @@ public class StoreADUs {
 
     public void deleteAllFilesUpTo(String clientId, String appId, long aduId) throws IOException {
         var metadata = getMetadata(clientId, appId);
-        getADUs(clientId, appId).takeWhile(adu -> adu.getADUId() <= aduId).forEach(adu -> {
+        StreamExt.takeWhile(getADUs(clientId, appId), adu -> adu.getADUId() <= aduId).forEach(adu -> {
             if (!adu.getSource().delete()) logger.log(SEVERE, "Failed to delete file " + adu);
         });
         if (metadata.lastAduDeleted < aduId) {
