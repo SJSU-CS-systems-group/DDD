@@ -105,19 +105,24 @@ public class MessageProvider extends ContentProvider {
             cursor = new MatrixCursor(new String[] { "data" });
             if (selection != null) {
                 String clientId = ClientSecurity.getInstance().getClientID();
-                if ("clientId".equals(selection)) {
-                    cursor.newRow().add("data", clientId);
-                    return cursor;
-                } else if ("aduIds".equals(selection)) {
-                    List<Long> aduIds = receiveADUsStorage.getAllADUIds(appId);
-                    for (long id : aduIds) {
-                        cursor.newRow().add("data", id);
+                switch (selection) {
+                    case "clientId" -> {
+                        cursor.newRow().add("data", clientId);
+                        return cursor;
                     }
-                    return cursor;
-                } else if ("aduData".equals(selection)) {
-                    assert selectionArgs != null;
-                    cursor.newRow().add("data", receiveADUsStorage.getADU(appId, Long.parseLong(selectionArgs[0])));
-                    return cursor;
+                    case "aduIds" -> {
+                        List<Long> aduIds = receiveADUsStorage.getAllADUIds(appId);
+                        for (long id : aduIds) {
+                            cursor.newRow().add("data", id);
+                        }
+                        return cursor;
+                    }
+                    case "aduData" -> {
+                        assert selectionArgs != null;
+                        cursor.newRow().add("data", receiveADUsStorage.getADU(appId, Long.parseLong(
+                                selectionArgs[0])));
+                        return cursor;
+                    }
                 }
             } else {
                 List<byte[]> datalist = receiveADUsStorage.getAllAppData(appId);
@@ -214,4 +219,6 @@ public class MessageProvider extends ContentProvider {
         getContext().getContentResolver().notifyChange(uri, null);
         return rowsUpdated;
     }
+
+
 }

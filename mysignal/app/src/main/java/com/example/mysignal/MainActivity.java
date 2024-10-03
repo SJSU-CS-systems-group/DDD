@@ -2,6 +2,7 @@ package com.example.mysignal;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import android.content.ContentResolver;
 import android.content.ContentValues;
@@ -26,12 +27,14 @@ public class MainActivity extends AppCompatActivity {
     static final Uri CONTENT_URL = Uri.parse("content://net.discdd.provider.datastoreprovider/messages");
     static final String TAG = "ddd_signal";
     EditText receiver, messageText, appName;
-    Button insert, delete, view, update, startServiceBtn;
+    Button insert, delete, view, update, startServiceBtn, getMsgBtn;
 
     TextView messageListLabel;
     ContentResolver resolver;
 
     ListView messageList;
+    SwipeRefreshLayout swipeRefreshLayout;
+
 
     private static final String[] RESOLVER_COLUMNS = { "data" };
 
@@ -51,8 +54,29 @@ public class MainActivity extends AppCompatActivity {
         update = findViewById(R.id.btn_update_status);
         delete = findViewById(R.id.btn_delete);
         startServiceBtn = findViewById(R.id.btn_start_service);
+        swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
+        getMsgBtn = findViewById(R.id.BtnGetMsg);
+
         //grantUriPermission();
-        getMessages();
+        swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
+
+        getMsgBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                getMessages();
+            }
+        });
+
+        // Swipe to refresh setup
+        swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                // Call the method to load messages when swipe refresh is triggered
+                getMessages();
+                swipeRefreshLayout.setRefreshing(false); // Stop the refresh animation
+            }
+        });
+
         insert.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -88,8 +112,18 @@ public class MainActivity extends AppCompatActivity {
                 else{
                     Toast.makeText(MainActivity.this, "error deleting message", Toast.LENGTH_SHORT);
                 }*/
+
+                if (deleteMsg() == 1) {
+                    Toast.makeText(MainActivity.this, "message deleted", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(MainActivity.this, "error deleting message", Toast.LENGTH_SHORT).show();
+                }
             }
         });
+    }
+
+    private int deleteMsg() {
+        return resolver.delete(CONTENT_URL, null, null);
     }
 
     private ArrayList<String> queryResolver() throws NullPointerException, IllegalArgumentException {
@@ -125,7 +159,7 @@ public class MainActivity extends AppCompatActivity {
             messages = queryResolver();
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
-            createDialog("Error", "Error loading messages", true);
+            createDialog("Error", "No ADUs received yet!", true);
             return;
         }
 
@@ -149,7 +183,6 @@ public class MainActivity extends AppCompatActivity {
                 throw new Exception("Message not inserted");
             }
             messageText.setText("");
-            getMessages();
         } catch (IllegalArgumentException e) {
             e.printStackTrace();
             Toast.makeText(this, "Cannot connect to bundleclient", Toast.LENGTH_SHORT).show();
