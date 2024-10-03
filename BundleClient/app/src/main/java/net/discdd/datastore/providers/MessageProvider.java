@@ -83,8 +83,7 @@ public class MessageProvider extends ContentProvider {
                     }
                     case "aduData" -> {
                         assert selectionArgs != null;
-                        cursor.newRow().add("data", receiveADUsStorage.getADU(appId, Long.parseLong(
-                                selectionArgs[0])));
+                        cursor.newRow().add("data", receiveADUsStorage.getADU(appId, Long.parseLong(selectionArgs[0])));
                         return cursor;
                     }
                 }
@@ -157,6 +156,5 @@ public class MessageProvider extends ContentProvider {
         getContext().getContentResolver().notifyChange(uri, null);
         return rowsUpdated;
     }
-
 
 }

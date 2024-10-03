@@ -40,7 +40,6 @@ public class MainActivity extends AppCompatActivity {
 
     HashMap<String, Integer> aduMetadata = new HashMap<>();
 
-
     private static final String[] RESOLVER_COLUMNS = { "data" };
 
     @Override
@@ -117,7 +116,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private int deleteMsg() {
-        return resolver.delete(CONTENT_URL, "deleteAllADUsUpto", new String[]{String.valueOf(aduMetadata.get("lastAdded"))});
+        return resolver.delete(CONTENT_URL, "deleteAllADUsUpto",
+                               new String[] { String.valueOf(aduMetadata.get("lastAdded")) });
     }
 
     private ArrayList<String> queryResolver() throws NullPointerException, IllegalArgumentException {
