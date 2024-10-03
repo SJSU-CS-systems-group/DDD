@@ -112,20 +112,10 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
 
     private void processIncomingADU(ADU adu) {
         //notify app that someone sent data for the app
-        Intent intent = new Intent("android.intent.dtn.SEND_DATA");
+        Intent intent = new Intent("android.intent.dtn.DATA_RECEIVED");
         intent.setPackage(adu.getAppId());
         intent.setType("text/plain");
-        try {
-            logger.log(FINE, String.format(getString(R.string.sending_adu_s_d_from_s), adu.getAppId(), adu.getADUId(),
-                                           adu.getSource()));
-            var data = Files.readAllBytes(adu.getSource().toPath());
-            intent.putExtra(Intent.EXTRA_TEXT, data);
-            getApplicationContext().startForegroundService(intent);
-        } catch (IOException e) {
-            logger.log(WARNING,
-                       String.format(getString(R.string.sending_adu_s_d_from_s), adu.getAppId(), adu.getADUId(),
-                                     adu.getSource()), e);
-        }
+        getApplicationContext().sendBroadcast(intent);
     }
 
     @Override
