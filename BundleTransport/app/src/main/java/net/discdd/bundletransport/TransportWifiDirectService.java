@@ -45,7 +45,7 @@ public class TransportWifiDirectService extends Service
     public static final String WIFI_DIRECT_PREFERENCES = "wifi_direct";
     public static final String WIFI_DIRECT_PREFERENCE_BG_SERVICE = "background_wifi";
     private final IBinder binder = new TransportWifiDirectServiceBinder();
-    private final RpcServer grpcServer = new RpcServer(this);
+    private final RpcServer grpcServer;
     private WifiDirectManager wifiDirectManager;
     private SharedPreferences sharedPreferences;
 

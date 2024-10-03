@@ -46,8 +46,9 @@ public class RpcServer {
         if (server != null && !server.isShutdown()) {
             return;
         }
-        var toServerPath = context.getExternalFilesDir(null).toPath().resolve("BundleTransmission/server");
-        var toClientPath = context.getExternalFilesDir(null).toPath().resolve("BundleTransmission/client");
+        this.transportPaths = transportPaths;
+//        var toServerPath = context.getExternalFilesDir(null).toPath().resolve("BundleTransmission/server");
+//        var toClientPath = context.getExternalFilesDir(null).toPath().resolve("BundleTransmission/client");
         var bundleExchangeService = new BundleExchangeServiceImpl() {
             @Override
             protected void onBundleExchangeEvent(BundleExchangeEvent bundleExchangeEvent) {
@@ -56,8 +57,8 @@ public class RpcServer {
 
             @Override
             protected Path pathProducer(BundleExchangeName bundleExchangeName, BundleSender bundleSender) {
-                return bundleExchangeName.isDownload() ? toClientPath.resolve(bundleExchangeName.encryptedBundleId()) :
-                        toServerPath.resolve(bundleExchangeName.encryptedBundleId());
+                return bundleExchangeName.isDownload() ? getTransportPaths.getToClient()resolve(bundleExchangeName.encryptedBundleId()) :
+                        getTransportPaths.getToServer().resolve(bundleExchangeName.encryptedBundleId());
             }
 
             @Override
@@ -68,7 +69,7 @@ public class RpcServer {
             public void getRecencyBlob(GetRecencyBlobRequest request,
                                        StreamObserver<GetRecencyBlobResponse> responseObserver) {
                 var recencyBlobResponse = GetRecencyBlobResponse.getDefaultInstance();
-                var recencyBlobPath = toClientPath.resolve(TransportToBundleServerManager.RECENCY_BLOB_BIN);
+                var recencyBlobPath = geTransportPaths.getToClient().resolve(TransportToBundleServerManager.RECENCY_BLOB_BIN);
                 try (var is = Files.newInputStream(recencyBlobPath)) {
                     recencyBlobResponse = GetRecencyBlobResponse.parseFrom(is);
                 } catch (IOException e) {

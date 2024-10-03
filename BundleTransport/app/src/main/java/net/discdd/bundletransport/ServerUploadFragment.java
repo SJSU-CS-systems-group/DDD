@@ -35,11 +35,13 @@ public class ServerUploadFragment extends Fragment {
     private TextView serverConnnectedStatus;
     private String transportID;
     private ExecutorService executor = Executors.newFixedThreadPool(2);
+    private TransportPaths transportPaths;
 
     public ServerUploadFragment(SubmissionPublisher<BundleTransportActivity.ConnectivityEvent> connectivityFlow,
-                                String transportID) {
+                                String transportID, TransportPaths transportPaths) {
         this.connectivityFlow = connectivityFlow;
         this.transportID = transportID;
+        this.transportPaths = transportPaths;
     }
 
     @Override
@@ -86,7 +88,7 @@ public class ServerUploadFragment extends Fragment {
                     "Initiating server exchange to " + serverDomain + ":" + serverPort + "...\n"));
 
             TransportToBundleServerManager transportToBundleServerManager =
-                    new TransportToBundleServerManager(requireActivity().getExternalFilesDir(null).toPath(),
+                    new TransportToBundleServerManager(transportPaths,
                                                        serverDomain, serverPort, transportID,
                                                        this::connectToServerComplete,
                                                        e -> connectToServerError(e, serverDomain + ":" + serverPort));
