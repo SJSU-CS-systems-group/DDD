@@ -19,8 +19,11 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -34,6 +37,8 @@ public class MainActivity extends AppCompatActivity {
 
     ListView messageList;
     SwipeRefreshLayout swipeRefreshLayout;
+
+    HashMap<String, Integer> aduMetadata = new HashMap<>();
 
 
     private static final String[] RESOLVER_COLUMNS = { "data" };
@@ -102,17 +107,6 @@ public class MainActivity extends AppCompatActivity {
         delete.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                /*String receiverTXT=receiver.getText().toString();
-                String messageTXT=messageText.getText().toString();
-                String appNameTXT=appName.getText().toString();
-                Boolean checkDeleteStatus=resolver.delete(receiverTXT, messageTXT, appNameTXT);
-                if(checkDeleteStatus){
-                    Toast.makeText(MainActivity.this, "message deleted", Toast.LENGTH_SHORT);
-                }
-                else{
-                    Toast.makeText(MainActivity.this, "error deleting message", Toast.LENGTH_SHORT);
-                }*/
-
                 if (deleteMsg() == 1) {
                     Toast.makeText(MainActivity.this, "message deleted", Toast.LENGTH_SHORT).show();
                 } else {
@@ -123,7 +117,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private int deleteMsg() {
-        return resolver.delete(CONTENT_URL, null, null);
+        return resolver.delete(CONTENT_URL, "deleteAllADUsUpto", new String[]{String.valueOf(aduMetadata.get("lastAdded"))});
     }
 
     private ArrayList<String> queryResolver() throws NullPointerException, IllegalArgumentException {
@@ -135,13 +129,25 @@ public class MainActivity extends AppCompatActivity {
 
         ArrayList<String> messageList = new ArrayList<>(cursor.getCount());
         cursor.moveToNext();
+        if (cursor.moveToFirst()) {
+            String firstRowJson = cursor.getString(cursor.getColumnIndexOrThrow(RESOLVER_COLUMNS[0]));
+            try {
+                JSONObject jsonObject = new JSONObject(firstRowJson);
+                aduMetadata.put("lastAdded", jsonObject.getInt("lastAduAdded"));
+                aduMetadata.put("lastDeleted", jsonObject.getInt("lastAduDeleted"));
+
+            } catch (Exception e) {
+                // Handle JSON parsing exceptions
+                e.printStackTrace();
+                throw new IllegalArgumentException("Failed to parse JSON from cursor row");
+            }
+        }
         while (!cursor.isAfterLast()) {
             messageList.add(cursor.getString(cursor.getColumnIndexOrThrow(RESOLVER_COLUMNS[0])));
             cursor.moveToNext();
         }
 
         cursor.close();
-
         return messageList;
     }
 

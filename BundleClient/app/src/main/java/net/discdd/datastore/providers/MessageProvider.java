@@ -7,12 +7,9 @@ import android.content.ContentValues;
 import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.MatrixCursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Binder;
 
-import java.io.File;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.logging.Logger;
 
@@ -24,7 +21,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import net.discdd.client.bundlesecurity.ClientSecurity;
-import net.discdd.datastore.sqlite.DBHelper;
 import net.discdd.utils.StoreADUs;
 
 import java.io.IOException;
@@ -34,20 +30,8 @@ import java.util.List;
 public class MessageProvider extends ContentProvider {
 
     private static final Logger logger = Logger.getLogger(MessageProvider.class.getName());
-
     public static final String PROVIDER_NAME = "net.discdd.provider.datastoreprovider";
-
     public static final String URL = "content://" + PROVIDER_NAME + "/messages";
-
-    public static final Uri CONTENT_URI = Uri.parse(URL);
-    public static final String receiver = "receiver";
-    public static final String message = "message";
-    public static final String appName = "appName";
-    public static final int uriCode = 1;
-    public static final int uriMailCode = 2;
-
-    private static HashMap<String, String> values;
-    static final UriMatcher uriMatcher;
 
     private StoreADUs sendADUsStorage;
     private StoreADUs receiveADUsStorage;
@@ -58,19 +42,6 @@ public class MessageProvider extends ContentProvider {
      * is done.
      */
 
-    static {
-        uriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
-        uriMatcher.addURI(PROVIDER_NAME, "messages", uriCode);
-        uriMatcher.addURI(PROVIDER_NAME, "mails", uriMailCode);
-    }
-
-    private SQLiteDatabase sqlDB;
-    static final String DATABASE_NAME = "messages";
-    static final String TABLE_NAME = "messageTable";
-    static final int DATABASE_VERSION = 1;
-    static final String CREATE_DB_TABLE = "CREATE TABLE " + TABLE_NAME +
-            " (messageID INT, receiver TEXT, messageBody TEXT, messageHeader TEXT, appName TEXT, status TEXT)";
-
     private String getCallerAppId() throws IOException {
         int receiverId = Binder.getCallingUid();
         String appId = getContext().getPackageManager().getNameForUid(receiverId);
@@ -79,17 +50,10 @@ public class MessageProvider extends ContentProvider {
 
     @Override
     public boolean onCreate() {
-        DBHelper dbHelper = new DBHelper(getContext());
-        sqlDB = dbHelper.getWritableDatabase();
         var appRootDataDir = Paths.get(getContext().getApplicationInfo().dataDir);
-
         sendADUsStorage = new StoreADUs(appRootDataDir.resolve("send"));
         receiveADUsStorage = new StoreADUs(appRootDataDir.resolve("receive"));
-
-        logger.log(INFO, "Receive path " + appRootDataDir.resolve("receive").toString());
-
-        if (sqlDB != null) return true;
-        return false;
+        return true;
     }
 
     @Nullable
@@ -140,12 +104,7 @@ public class MessageProvider extends ContentProvider {
     @Nullable
     @Override
     public String getType(@NonNull Uri uri) {
-        switch ((uriMatcher.match(uri))) {
-            case uriCode:
-                return "vnd.android.cursor.dir/messages";
-            default:
-                throw new IllegalArgumentException("unsupported URI " + uri);
-        }
+        return "vnd.android.cursor.dir/messages";
     }
 
     @Nullable
@@ -164,38 +123,25 @@ public class MessageProvider extends ContentProvider {
 
     @Override
     public int delete(@NonNull Uri uri, @Nullable String selection, @Nullable String[] selectionArgs) {
-        int rowsDeleted = 0;
         String appName = null;
         try {
             appName = getCallerAppId();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        // Used to match uris with Content Providers
-        switch (uriMatcher.match(uri)) {
-            case uriCode:
-                rowsDeleted = sqlDB.delete(TABLE_NAME, selection, selectionArgs);
-                break;
-            case uriMailCode:
-                try {
-                    if ("deleteAllADUsUpto".equals(selection) && selectionArgs != null && selectionArgs.length == 1) {
-                        long lastProcessedADUId = Long.parseLong(selectionArgs[0]);
-                        receiveADUsStorage.deleteAllFilesUpTo(null, appName, lastProcessedADUId);
-                        return 1;
-                    }
-                    return 0;
-                } catch (Exception e) {
-                    logger.log(SEVERE, "Error while deleting processed ADUs for app: " + appName, e);
-                    return 0;
-                }
-            default:
-                throw new IllegalArgumentException("Unknown URI " + uri);
-        }
 
-        // getContentResolver provides access to the content model
-        // notifyChange notifies all observers that a row was updated
-        getContext().getContentResolver().notifyChange(uri, null);
-        return rowsDeleted;
+        try {
+            if ("deleteAllADUsUpto".equals(selection) && selectionArgs != null && selectionArgs.length == 1) {
+                long lastProcessedADUId = Long.parseLong(selectionArgs[0]);
+                receiveADUsStorage.deleteAllFilesUpTo(null, appName, lastProcessedADUId);
+                getContext().getContentResolver().notifyChange(uri, null);
+                return 1;
+            }
+            return 0;
+        } catch (Exception e) {
+            logger.log(SEVERE, "Error while deleting processed ADUs for app: " + appName, e);
+            return 0;
+        }
     }
 
     @Override
@@ -204,15 +150,7 @@ public class MessageProvider extends ContentProvider {
             @Nullable ContentValues contentValues, @Nullable String selection, @Nullable String[] selectionArgs) {
         int rowsUpdated = 0;
 
-        // Used to match uris with Content Providers
-        switch (uriMatcher.match(uri)) {
-            case uriCode:
-                // Update the row or rows of data
-                rowsUpdated = sqlDB.update(TABLE_NAME, contentValues, selection, selectionArgs);
-                break;
-            default:
-                throw new IllegalArgumentException("Unknown URI " + uri);
-        }
+        // TODO: implement update if necessary
 
         // getContentResolver provides access to the content model
         // notifyChange notifies all observers that a row was updated
