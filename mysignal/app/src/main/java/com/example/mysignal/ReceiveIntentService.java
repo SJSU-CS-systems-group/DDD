@@ -4,7 +4,10 @@ import android.app.IntentService;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
+import android.widget.Toast;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -21,7 +24,7 @@ import java.nio.file.Paths;
  */
 public class ReceiveIntentService extends IntentService {
 
-    private static final String ACTION_RECV = "android.intent.dtn.SEND_DATA";
+    private static final String ACTION_RECV = "android.intent.dtn.DATA_RECEIVED";
 
     public ReceiveIntentService() {
         super("ReceiveIntentService");
@@ -39,8 +42,10 @@ public class ReceiveIntentService extends IntentService {
         if (intent != null) {
             final String action = intent.getAction();
             if (ACTION_RECV.equals(action)) {
-                final String data = new String(intent.getByteArrayExtra(Intent.EXTRA_TEXT));
-                saveData(data);
+                Handler mainHandler = new Handler(Looper.getMainLooper());
+                mainHandler.post(() ->
+                        Toast.makeText(getApplicationContext(), "receive adus from client ", Toast.LENGTH_SHORT).show()
+                );
             }
         }
     }
@@ -50,7 +55,6 @@ public class ReceiveIntentService extends IntentService {
      * parameters.
      */
     private void saveData(String message) {
-
         Log.d(MainActivity.TAG, "data received in service: " + message);
 
         ContentValues values = new ContentValues();
