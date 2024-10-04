@@ -18,12 +18,34 @@
         android:hint="message receiver"
         android:layout_below="@+id/heading" />
        -->
-    <EditText
-        android:id="@+id/message"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="message"
-        android:layout_below="@+id/receiver" />
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/message"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:hint="Message"
+            android:inputType="textMultiLine"
+            android:minLines="1"
+            android:maxLines="6"
+            android:scrollbars="vertical"
+            android:gravity="top"
+            android:overScrollMode="always"
+            android:scrollHorizontally="false"
+            android:imeOptions="actionDone" />
+
+        <Button
+            android:id="@+id/btn_insert"
+            android:layout_width="74dp"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/btn_file_select"
+            android:text="Send" />
+    </LinearLayout>
+
     <!--
     <EditText
         android:id="@+id/app_name"
@@ -32,18 +54,8 @@
         android:hint="app name"
         android:layout_below="@+id/message"></EditText>
         -->
-    <Button
-        android:id="@+id/btn_file_select"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Select File"
-        android:layout_below="@id/message" />
-    <Button
-        android:id="@+id/btn_insert"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Send"
-        android:layout_below="@id/btn_file_select" />
+
+
     <!--
     <Button
         android:id="@+id/btn_view_messages"
@@ -52,28 +64,64 @@
         android:text="View Messages"
         android:layout_below="@id/btn_insert" />
         -->
-    <Button
-        android:id="@+id/btn_delete"
+
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Delete Message" />
+        android:orientation="horizontal">
 
-    <Button
-        android:id="@+id/btn_update_status"
+        <Button
+            android:id="@+id/btn_file_select"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Select File"
+            android:layout_marginEnd="18dp"
+            />
+
+        <Button
+            android:id="@+id/btn_update_status"
+            android:layout_width="107dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="18dp"
+            android:text="Status" />
+
+        <Button
+            android:id="@+id/btn_start_service"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Start" />
+    </LinearLayout>
+
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/btn_delete"
-        android:text="Status" />
+        android:orientation="horizontal">
 
-    <Button
-        android:id="@+id/btn_start_service"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/btn_update_status"
-        android:text="Start" />
+        <Button
+            android:id="@+id/BtnGetMsg"
+            android:layout_width="173dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="18dp"
+            android:text="Get Message" />
 
-    <ListView
-        android:id="@+id/message_list"
+        <Button
+            android:id="@+id/btn_delete"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Delete Message" />
+    </LinearLayout>
+
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefreshLayout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <ListView
+            android:id="@+id/message_list"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:divider="@android:color/darker_gray"
+            android:dividerHeight="1dp" />
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 </LinearLayout>

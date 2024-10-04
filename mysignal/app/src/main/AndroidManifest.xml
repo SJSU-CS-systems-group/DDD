@@ -31,7 +31,7 @@
             android:name=".ReceiveIntentService"
             android:exported="true">
             <intent-filter>
-                <action android:name="android.intent.dtn.SEND_DATA" />
+                <action android:name="android.intent.dtn.DATA_RECEIVED" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
             </intent-filter>
