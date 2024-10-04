@@ -85,6 +85,9 @@ public class BundleTransmission {
     public void processReceivedBundle(BundleSender sender, Bundle bundle) throws Exception {
         logger.log(INFO, "Processing received bundle: " + bundle.getSource().getName() + " from " +
                 bundleSenderToString(sender));
+        if (!bundle.getSource().exists() || bundle.getSource().length() == 0) {
+            return;
+        }
 
         Path bundleRecvProcDir = TRANSPORT == sender.getType() ?
                 this.config.getBundleTransmission().getReceivedProcessingDirectory().resolve(sender.getId()) :
