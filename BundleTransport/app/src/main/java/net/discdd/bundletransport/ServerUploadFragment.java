@@ -87,7 +87,7 @@ public class ServerUploadFragment extends Fragment {
 
             TransportToBundleServerManager transportToBundleServerManager =
                     new TransportToBundleServerManager(requireActivity().getExternalFilesDir(null).toPath(),
-                                                       serverDomain, serverPort, transportID,
+                                                       serverDomain, serverPort,
                                                        this::connectToServerComplete,
                                                        e -> connectToServerError(e, serverDomain + ":" + serverPort));
             executor.execute(transportToBundleServerManager);

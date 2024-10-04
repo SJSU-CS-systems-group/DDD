@@ -52,13 +52,13 @@ public class TransportToBundleServerManager implements Runnable {
     private final Function<Exception, Void> connectError;
     private final String transportTarget;
 
-    public TransportToBundleServerManager(Path filePath, String host, String port, String transportId, Function<Void,
+    public TransportToBundleServerManager(Path filePath, String host, String port, Function<Void,
             Void> connectComplete, Function<Exception, Void> connectError) {
         this.connectComplete = connectComplete;
         this.connectError = connectError;
         this.transportTarget = host + ":" + port;
         this.transportSenderId =
-                BundleSender.newBuilder().setId(transportId).setType(BundleSenderType.TRANSPORT).build();
+                BundleSender.newBuilder().setId("bundle_transport").setType(BundleSenderType.TRANSPORT).build();
         this.fromClientPath = filePath.resolve("BundleTransmission/server");
         this.fromServerPath = filePath.resolve("BundleTransmission/client");
     }
