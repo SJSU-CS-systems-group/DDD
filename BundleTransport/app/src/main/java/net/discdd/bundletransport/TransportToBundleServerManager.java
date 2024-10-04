@@ -74,7 +74,7 @@ public class TransportToBundleServerManager implements Runnable {
             var bundlesFromClients = populateListFromPath(fromClientPath);
             var bundlesFromServer = populateListFromPath(fromServerPath);
 
-            var inventoryResponse = bsStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+            var inventoryResponse = bsStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     .bundleInventory(BundleInventoryRequest.newBuilder().setSender(transportSenderId)
                                              .addAllBundlesFromClientsOnTransport(bundlesFromClients)
                                              .addAllBundlesFromServerOnTransport(bundlesFromServer).build());
@@ -162,22 +162,23 @@ public class TransportToBundleServerManager implements Runnable {
                     logger.log(SEVERE, "Failed to download file: " + path, e);
 
                 }
-
-                var recencyBlobReq = GetRecencyBlobRequest.newBuilder().setSender(transportSenderId).build();
-
-                var recencyBlob =
-                        blockingExchangeStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                                .getRecencyBlob(recencyBlobReq);
-
-                Path blobPath = fromServerPath.resolve(RECENCY_BLOB_BIN);
-                try (var os = Files.newOutputStream(blobPath, StandardOpenOption.CREATE,
-                                                    StandardOpenOption.TRUNCATE_EXISTING)) {
-                    logger.log(INFO, "Writing blob to " + blobPath);
-                    recencyBlob.writeTo(os);
-                } catch (IOException e) {
-                    logger.log(SEVERE, "Failed to write recency blob", e);
-                }
             }
+
+            var recencyBlobReq = GetRecencyBlobRequest.newBuilder().setSender(transportSenderId).build();
+
+            var recencyBlob =
+                    blockingExchangeStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                            .getRecencyBlob(recencyBlobReq);
+
+            Path blobPath = fromServerPath.resolve(RECENCY_BLOB_BIN);
+            try (var os = Files.newOutputStream(blobPath, StandardOpenOption.CREATE,
+                                                StandardOpenOption.TRUNCATE_EXISTING)) {
+                logger.log(INFO, "Writing blob to " + blobPath);
+                recencyBlob.writeTo(os);
+            } catch (IOException e) {
+                logger.log(SEVERE, "Failed to write recency blob", e);
+            }
+
             logger.log(INFO, "Connect server completed");
             connectComplete.apply(null);
         } catch (IllegalArgumentException | StatusRuntimeException e) {
