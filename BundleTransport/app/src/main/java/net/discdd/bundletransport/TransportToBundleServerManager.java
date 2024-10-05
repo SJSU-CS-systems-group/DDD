@@ -88,96 +88,10 @@ public class TransportToBundleServerManager implements Runnable {
                 logger.log(SEVERE, "Failed to get inventory", e);
             }
 
-            for (var toDelete : inventoryResponse.getBundlesToDeleteList()) {
-                var delPath = fromServerPath.resolve(toDelete.getEncryptedId());
-                try {
-                    Files.delete(delPath);
-                } catch (IOException e) {
-                    logger.log(SEVERE, "Failed to delete file: " + delPath, e);
-                }
-            }
-
-            for (var toSend : inventoryResponse.getBundlesToUploadList()) {
-                var path = fromClientPath.resolve(toSend.getEncryptedId());
-                StreamObserver<BundleUploadResponse> responseObserver = null;
-                try (var is = Files.newInputStream(path, StandardOpenOption.READ)) {
-                    responseObserver = new BundleUploadResponseObserver();
-                    var uploadRequestStreamObserver =
-                            exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                                    .uploadBundle(responseObserver);
-                    uploadRequestStreamObserver.onNext(
-                            BundleUploadRequest.newBuilder().setSender(transportSenderId).build());
-                    uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setBundleId(toSend).build());
-                    byte[] data = new byte[1024 * 1024];
-                    int rc;
-                    while ((rc = is.read(data)) > 0) {
-                        var uploadRequest = BundleUploadRequest.newBuilder()
-                                .setChunk(BundleChunk.newBuilder().setChunk(ByteString.copyFrom(data, 0, rc)).build())
-                                .build();
-                        uploadRequestStreamObserver.onNext(uploadRequest);
-                    }
-                    uploadRequestStreamObserver.onCompleted();
-                    if (responseObserver != null) {
-                        responseObserver.onCompleted();
-                        Files.delete(path);
-                    }
-                } catch (IOException e) {
-                    logger.log(SEVERE, "Failed to upload file: " + path, e);
-                    if (responseObserver != null) responseObserver.onError(e);
-                }
-            }
-
-            for (var toReceive : inventoryResponse.getBundlesToDownloadList()) {
-                var path = fromServerPath.resolve(toReceive.getEncryptedId());
-                try (OutputStream os = Files.newOutputStream(path, StandardOpenOption.CREATE,
-                                                             StandardOpenOption.TRUNCATE_EXISTING)) {
-                    var completion = new CompletableFuture<Boolean>();
-                    exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                            .downloadBundle(BundleDownloadRequest.newBuilder().setBundleId(toReceive)
-                                                    .setSender(transportSenderId).build(), new StreamObserver<>() {
-                                @Override
-                                public void onNext(BundleDownloadResponse value) {
-                                    try {
-                                        os.write(value.getChunk().getChunk().toByteArray());
-                                    } catch (IOException e) {
-                                        onError(e);
-                                    }
-                                }
-
-                                @Override
-                                public void onError(Throwable t) {
-                                    logger.log(SEVERE, "Failed to download file: " + path, t);
-                                    completion.completeExceptionally(t);
-                                }
-
-                                @Override
-                                public void onCompleted() {
-                                    logger.log(INFO, "Downloaded " + path);
-                                    completion.complete(true);
-                                }
-                            });
-
-                    completion.get(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS);
-                } catch (IOException | ExecutionException | InterruptedException | TimeoutException e) {
-                    logger.log(SEVERE, "Failed to download file: " + path, e);
-
-                }
-            }
-
-            var recencyBlobReq = GetRecencyBlobRequest.newBuilder().setSender(transportSenderId).build();
-
-            var recencyBlob =
-                    blockingExchangeStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                            .getRecencyBlob(recencyBlobReq);
-
-            Path blobPath = fromServerPath.resolve(RECENCY_BLOB_BIN);
-            try (var os = Files.newOutputStream(blobPath, StandardOpenOption.CREATE,
-                                                StandardOpenOption.TRUNCATE_EXISTING)) {
-                logger.log(INFO, "Writing blob to " + blobPath);
-                recencyBlob.writeTo(os);
-            } catch (IOException e) {
-                logger.log(SEVERE, "Failed to write recency blob", e);
-            }
+            processDeleteBundles(inventoryResponse.getBundlesToDeleteList());
+            processUploadBundles(inventoryResponse.getBundlesToUploadList(), exchangeStub);
+            processDownloadBundles(inventoryResponse.getBundlesToDownloadList(), exchangeStub);
+            processRecencyBlob(blockingExchangeStub);
 
             logger.log(INFO, "Connect server completed");
             connectComplete.apply(null);
@@ -191,6 +105,104 @@ public class TransportToBundleServerManager implements Runnable {
                 }
             } catch (InterruptedException e) {
                 logger.log(SEVERE, "could not shutdown channel, error: " + e.getMessage() + ", cause: " + e.getCause());
+            }
+        }
+    }
+
+    private void processRecencyBlob(BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub blockingExchangeStub) {
+        var recencyBlobReq = GetRecencyBlobRequest.newBuilder().setSender(transportSenderId).build();
+        var recencyBlob =
+                blockingExchangeStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                        .getRecencyBlob(recencyBlobReq);
+
+        Path blobPath = fromServerPath.resolve(RECENCY_BLOB_BIN);
+        try (var os = Files.newOutputStream(blobPath, StandardOpenOption.CREATE,
+                                            StandardOpenOption.TRUNCATE_EXISTING)) {
+            logger.log(INFO, "Writing blob to " + blobPath);
+            recencyBlob.writeTo(os);
+        } catch (IOException e) {
+            logger.log(SEVERE, "Failed to write recency blob", e);
+        }
+    }
+
+    private void processDownloadBundles(List<EncryptedBundleId> bundlesToDownloadList, BundleExchangeServiceGrpc.BundleExchangeServiceStub exchangeStub) {
+        for (var toReceive : bundlesToDownloadList) {
+            var path = fromServerPath.resolve(toReceive.getEncryptedId());
+            try (OutputStream os = Files.newOutputStream(path, StandardOpenOption.CREATE,
+                                                         StandardOpenOption.TRUNCATE_EXISTING)) {
+                var completion = new CompletableFuture<Boolean>();
+                exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                        .downloadBundle(BundleDownloadRequest.newBuilder().setBundleId(toReceive)
+                                                .setSender(transportSenderId).build(), new StreamObserver<>() {
+                            @Override
+                            public void onNext(BundleDownloadResponse value) {
+                                try {
+                                    os.write(value.getChunk().getChunk().toByteArray());
+                                } catch (IOException e) {
+                                    onError(e);
+                                }
+                            }
+
+                            @Override
+                            public void onError(Throwable t) {
+                                logger.log(SEVERE, "Failed to download file: " + path, t);
+                                completion.completeExceptionally(t);
+                            }
+
+                            @Override
+                            public void onCompleted() {
+                                logger.log(INFO, "Downloaded " + path);
+                                completion.complete(true);
+                            }
+                        });
+
+                completion.get(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            } catch (IOException | ExecutionException | InterruptedException | TimeoutException e) {
+                logger.log(SEVERE, "Failed to download file: " + path, e);
+
+            }
+        }
+    }
+
+    private void processUploadBundles(List<EncryptedBundleId> bundlesToUploadList, BundleExchangeServiceGrpc.BundleExchangeServiceStub exchangeStub) {
+        for (var toSend : bundlesToUploadList) {
+            var path = fromClientPath.resolve(toSend.getEncryptedId());
+            StreamObserver<BundleUploadResponse> responseObserver = null;
+            try (var is = Files.newInputStream(path, StandardOpenOption.READ)) {
+                responseObserver = new BundleUploadResponseObserver();
+                var uploadRequestStreamObserver =
+                        exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                                .uploadBundle(responseObserver);
+                uploadRequestStreamObserver.onNext(
+                        BundleUploadRequest.newBuilder().setSender(transportSenderId).build());
+                uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setBundleId(toSend).build());
+                byte[] data = new byte[1024 * 1024];
+                int rc;
+                while ((rc = is.read(data)) > 0) {
+                    var uploadRequest = BundleUploadRequest.newBuilder()
+                            .setChunk(BundleChunk.newBuilder().setChunk(ByteString.copyFrom(data, 0, rc)).build())
+                            .build();
+                    uploadRequestStreamObserver.onNext(uploadRequest);
+                }
+                uploadRequestStreamObserver.onCompleted();
+                if (responseObserver != null) {
+                    responseObserver.onCompleted();
+                    Files.delete(path);
+                }
+            } catch (IOException e) {
+                logger.log(SEVERE, "Failed to upload file: " + path, e);
+                if (responseObserver != null) responseObserver.onError(e);
+            }
+        }
+    }
+
+    private void processDeleteBundles(List<EncryptedBundleId> bundlesToDeleteList) {
+        for (var toDelete : bundlesToDeleteList) {
+            var delPath = fromServerPath.resolve(toDelete.getEncryptedId());
+            try {
+                Files.delete(delPath);
+            } catch (IOException e) {
+                logger.log(SEVERE, "Failed to delete file: " + delPath, e);
             }
         }
     }
