@@ -11,6 +11,7 @@ import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
 import net.discdd.grpc.BundleSender;
 import net.discdd.grpc.GetRecencyBlobRequest;
 import net.discdd.grpc.GetRecencyBlobResponse;
+import net.discdd.pathutils.TransportPaths;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -42,13 +43,12 @@ public class RpcServer {
         this.listener = listener;
     }
 
-    public void startServer(Context context) {
+    public void startServer(Context context, TransportPaths transportPaths) {
         if (server != null && !server.isShutdown()) {
             return;
         }
-        this.transportPaths = transportPaths;
-//        var toServerPath = context.getExternalFilesDir(null).toPath().resolve("BundleTransmission/server");
-//        var toClientPath = context.getExternalFilesDir(null).toPath().resolve("BundleTransmission/client");
+        var toServerPath = transportPaths.getToServer();
+        var toClientPath = transportPaths.getToClient();
         var bundleExchangeService = new BundleExchangeServiceImpl() {
             @Override
             protected void onBundleExchangeEvent(BundleExchangeEvent bundleExchangeEvent) {
@@ -57,8 +57,8 @@ public class RpcServer {
 
             @Override
             protected Path pathProducer(BundleExchangeName bundleExchangeName, BundleSender bundleSender) {
-                return bundleExchangeName.isDownload() ? getTransportPaths.getToClient()resolve(bundleExchangeName.encryptedBundleId()) :
-                        getTransportPaths.getToServer().resolve(bundleExchangeName.encryptedBundleId());
+                return bundleExchangeName.isDownload() ? toClientPath.resolve(bundleExchangeName.encryptedBundleId()) :
+                toServerPath.resolve(bundleExchangeName.encryptedBundleId());
             }
 
             @Override
@@ -69,7 +69,7 @@ public class RpcServer {
             public void getRecencyBlob(GetRecencyBlobRequest request,
                                        StreamObserver<GetRecencyBlobResponse> responseObserver) {
                 var recencyBlobResponse = GetRecencyBlobResponse.getDefaultInstance();
-                var recencyBlobPath = geTransportPaths.getToClient().resolve(TransportToBundleServerManager.RECENCY_BLOB_BIN);
+                var recencyBlobPath = toClientPath.resolve(TransportToBundleServerManager.RECENCY_BLOB_BIN);
                 try (var is = Files.newInputStream(recencyBlobPath)) {
                     recencyBlobResponse = GetRecencyBlobResponse.parseFrom(is);
                 } catch (IOException e) {

@@ -15,6 +15,8 @@ import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
 
+import net.discdd.pathutils.TransportPaths;
+
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.SubmissionPublisher;
@@ -89,7 +91,7 @@ public class ServerUploadFragment extends Fragment {
 
             TransportToBundleServerManager transportToBundleServerManager =
                     new TransportToBundleServerManager(transportPaths,
-                                                       serverDomain, serverPort, transportID,
+                                                       serverDomain, serverPort,
                                                        this::connectToServerComplete,
                                                        e -> connectToServerError(e, serverDomain + ":" + serverPort));
             executor.execute(transportToBundleServerManager);
