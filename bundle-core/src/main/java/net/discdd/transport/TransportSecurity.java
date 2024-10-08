@@ -62,8 +62,10 @@ public class TransportSecurity {
     }
 
     private void loadKeysfromFiles(Path tranportKeyPath) throws IOException, InvalidKeyException {
-        byte[] transportKeyPvt = SecurityUtils.decodePrivateKeyFromFile(tranportKeyPath.resolve(SecurityUtils.TRANSPORT_IDENTITY_PRIVATE_KEY));
-        byte[] transportKeyPub = SecurityUtils.decodePublicKeyfromFile(tranportKeyPath.resolve(SecurityUtils.TRANSPORT_IDENTITY_KEY));
+        byte[] transportKeyPvt = SecurityUtils.decodePrivateKeyFromFile(
+                tranportKeyPath.resolve(SecurityUtils.TRANSPORT_IDENTITY_PRIVATE_KEY));
+        byte[] transportKeyPub =
+                SecurityUtils.decodePublicKeyfromFile(tranportKeyPath.resolve(SecurityUtils.TRANSPORT_IDENTITY_KEY));
 
         ECPublicKey basePublicKey = Curve.decodePoint(transportKeyPvt, 0);
         ECPrivateKey basePrivateKey = Curve.decodePrivatePoint(transportKeyPub);
