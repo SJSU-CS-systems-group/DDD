@@ -22,6 +22,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import net.discdd.android.fragments.LogFragment;
 import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
+import net.discdd.pathutils.TransportPaths;
 import net.discdd.wifidirect.WifiDirectManager;
 import net.discdd.wifidirect.WifiDirectStateListener;
 
@@ -46,6 +47,7 @@ public class TransportWifiDirectService extends Service
     public static final String WIFI_DIRECT_PREFERENCE_BG_SERVICE = "background_wifi";
     private final IBinder binder = new TransportWifiDirectServiceBinder();
     private final RpcServer grpcServer = new RpcServer(this);
+    private TransportPaths transportPaths;
     private WifiDirectManager wifiDirectManager;
     private SharedPreferences sharedPreferences;
 
@@ -125,7 +127,7 @@ public class TransportWifiDirectService extends Service
             if (grpcServer.isShutdown()) {
                 appendToClientLog("Starting gRPC server");
                 logger.log(INFO, "starting grpc server from main activity!!!!!!!");
-                grpcServer.startServer(getApplicationContext());
+                grpcServer.startServer(getApplicationContext(), this.transportPaths);
                 appendToClientLog("server started");
             }
         }
@@ -180,5 +182,9 @@ public class TransportWifiDirectService extends Service
         TransportWifiDirectService getService() {
             return TransportWifiDirectService.this;
         }
+    }
+
+    public void setTransportPaths(TransportPaths transportPaths) {
+        this.transportPaths = transportPaths;
     }
 }
