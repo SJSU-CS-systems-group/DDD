@@ -52,8 +52,9 @@ public class TransportToBundleServerManager implements Runnable {
     private final Function<Exception, Void> connectError;
     private final String transportTarget;
 
-    public TransportToBundleServerManager(Path filePath, String host, String port, Function<Void,
-            Void> connectComplete, Function<Exception, Void> connectError) {
+    public TransportToBundleServerManager(Path filePath, String host, String port,
+                                          Function<Void, Void> connectComplete,
+                                          Function<Exception, Void> connectError) {
         this.connectComplete = connectComplete;
         this.connectError = connectError;
         this.transportTarget = host + ":" + port;
@@ -111,9 +112,8 @@ public class TransportToBundleServerManager implements Runnable {
 
     private void processRecencyBlob(BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub blockingExchangeStub) {
         var recencyBlobReq = GetRecencyBlobRequest.newBuilder().setSender(transportSenderId).build();
-        var recencyBlob =
-                blockingExchangeStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                        .getRecencyBlob(recencyBlobReq);
+        var recencyBlob = blockingExchangeStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                .getRecencyBlob(recencyBlobReq);
 
         Path blobPath = fromServerPath.resolve(RECENCY_BLOB_BIN);
         try (var os = Files.newOutputStream(blobPath, StandardOpenOption.CREATE,
@@ -125,15 +125,16 @@ public class TransportToBundleServerManager implements Runnable {
         }
     }
 
-    private void processDownloadBundles(List<EncryptedBundleId> bundlesToDownloadList, BundleExchangeServiceGrpc.BundleExchangeServiceStub exchangeStub) {
+    private void processDownloadBundles(List<EncryptedBundleId> bundlesToDownloadList,
+                                        BundleExchangeServiceGrpc.BundleExchangeServiceStub exchangeStub) {
         for (var toReceive : bundlesToDownloadList) {
             var path = fromServerPath.resolve(toReceive.getEncryptedId());
             try (OutputStream os = Files.newOutputStream(path, StandardOpenOption.CREATE,
                                                          StandardOpenOption.TRUNCATE_EXISTING)) {
                 var completion = new CompletableFuture<Boolean>();
-                exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                        .downloadBundle(BundleDownloadRequest.newBuilder().setBundleId(toReceive)
-                                                .setSender(transportSenderId).build(), new StreamObserver<>() {
+                exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).downloadBundle(
+                        BundleDownloadRequest.newBuilder().setBundleId(toReceive).setSender(transportSenderId).build(),
+                        new StreamObserver<>() {
                             @Override
                             public void onNext(BundleDownloadResponse value) {
                                 try {
@@ -164,7 +165,8 @@ public class TransportToBundleServerManager implements Runnable {
         }
     }
 
-    private void processUploadBundles(List<EncryptedBundleId> bundlesToUploadList, BundleExchangeServiceGrpc.BundleExchangeServiceStub exchangeStub) {
+    private void processUploadBundles(List<EncryptedBundleId> bundlesToUploadList,
+                                      BundleExchangeServiceGrpc.BundleExchangeServiceStub exchangeStub) {
         for (var toSend : bundlesToUploadList) {
             var path = fromClientPath.resolve(toSend.getEncryptedId());
             StreamObserver<BundleUploadResponse> responseObserver = null;
