@@ -48,7 +48,7 @@ public class SecurityUtils {
     public static final String SERVER_KEY_PATH = "Server_Keys";
     public static final String TRANSPORT_KEY_PATH = "Transport_Keys";
     public static final String TRANSPORT_IDENTITY_KEY = "transport_identity.pub";
-    public static final String TRANSPORT_IDENTITY_PRIVATE_KEY = "transport_identity.pvt";
+    public static final String TRANSPORT_IDENTITY_PRIVATE_KEY = "transportIdentity.pvt";
     public static final String SESSION_STORE_FILE = "Session.store";
     public static final String CLIENT_IDENTITY_KEY = "clientIdentity.pub";
     public static final String CLIENT_IDENTITY_PRIVATE_KEY = "clientIdentity.pvt";
