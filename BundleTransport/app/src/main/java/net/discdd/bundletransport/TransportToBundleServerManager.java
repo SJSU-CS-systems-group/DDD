@@ -66,8 +66,8 @@ public class TransportToBundleServerManager implements Runnable {
         this.transportTarget = host + ":" + port;
         this.transportSenderId =
                 BundleSender.newBuilder().setId("bundle_transport").setType(BundleSenderType.TRANSPORT).build();
+
         this.fromClientPath = transportPaths.getFromClient();
-        this.fromServerPath = transportPaths.getFromServer();
     }
 
     @Override
@@ -130,6 +130,42 @@ public class TransportToBundleServerManager implements Runnable {
             logger.log(SEVERE, "Failed to write recency blob", e);
         }
     }
+
+    private void processDownloadBundles(List<EncryptedBundleId> bundlesToDownloadList,
+                                        BundleExchangeServiceGrpc.BundleExchangeServiceStub exchangeStub) {
+        for (var toReceive : bundlesToDownloadList) {
+            var path = fromServerPath.resolve(toReceive.getEncryptedId());
+            try (OutputStream os = Files.newOutputStream(path, StandardOpenOption.CREATE,
+                                                         StandardOpenOption.TRUNCATE_EXISTING)) {
+                var completion = new CompletableFuture<Boolean>();
+                exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).downloadBundle(
+                        BundleDownloadRequest.newBuilder().setBundleId(toReceive).setSender(transportSenderId).build(),
+                        new StreamObserver<>() {
+                            @Override
+                            public void onNext(BundleDownloadResponse value) {
+                                try {
+                                    os.write(value.getChunk().getChunk().toByteArray());
+                                } catch (IOException e) {
+                                    onError(e);
+                                }
+                            }
+
+                            @Override
+                            public void onError(Throwable t) {
+                                logger.log(SEVERE, "Failed to download file: " + path, t);
+                                completion.completeExceptionally(t);
+                            }
+
+                            @Override
+                            public void onCompleted() {
+                                logger.log(INFO, "Downloaded " + path);
+                                completion.complete(true);
+                            }
+                        });
+
+                completion.get(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            } catch (IOException | ExecutionException | InterruptedException | TimeoutException e) {
+                logger.log(SEVERE, "Failed to download file: " + path, e);
 
     private void processDownloadBundles(List<EncryptedBundleId> bundlesToDownloadList,
                                         BundleExchangeServiceGrpc.BundleExchangeServiceStub exchangeStub) {
