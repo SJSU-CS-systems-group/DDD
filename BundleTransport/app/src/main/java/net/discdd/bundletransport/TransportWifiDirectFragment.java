@@ -103,7 +103,6 @@ public class TransportWifiDirectFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         getBundleTransportActivity().transportWifiServiceConnection.thenAccept(btService -> {
             this.btService = btService;
-            btService.setTransportPaths(this.transportPaths);
             processDeviceInfoChange();
             updateGroupInfo();
         });

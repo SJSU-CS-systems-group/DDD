@@ -53,8 +53,8 @@ public class TransportWifiDirectService extends Service
     Context getApplicationContext;
 
     @Override
-    public int onStartCommand(Intent intent, int flags, int startId, TransportPaths transportPaths) {
-        this.transportPaths = new TransportPaths(this.getExternalFilesDir(null).toPath());
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
         super.onStartCommand(intent, flags, startId);
         // TransportWifiDirectService doesn't use LogFragment directly, but we do want our
         // logs to go to its logger
@@ -129,7 +129,7 @@ public class TransportWifiDirectService extends Service
             if (grpcServer.isShutdown()) {
                 appendToClientLog("Starting gRPC server");
                 logger.log(INFO, "starting grpc server from main activity!!!!!!!");
-                grpcServer.startServer(getApplicationContext(), this.transportPaths);
+                grpcServer.startServer(this.transportPaths);
                 appendToClientLog("server started");
             }
         }
