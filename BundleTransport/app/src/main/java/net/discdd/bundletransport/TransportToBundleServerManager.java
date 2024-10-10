@@ -85,15 +85,6 @@ public class TransportToBundleServerManager implements Runnable {
                                              .addAllBundlesFromClientsOnTransport(bundlesFromClients)
                                              .addAllBundlesFromServerOnTransport(bundlesFromServer).build());
 
-            try {
-                if (!Files.exists(fromServerPath) || !Files.isDirectory(fromClientPath)) {
-                    Files.createDirectories(fromServerPath);
-                    Files.createDirectories(fromClientPath);
-                }
-            } catch (Exception e) {
-                logger.log(SEVERE, "Failed to get inventory", e);
-            }
-
             processDeleteBundles(inventoryResponse.getBundlesToDeleteList());
             processUploadBundles(inventoryResponse.getBundlesToUploadList(), exchangeStub);
             processDownloadBundles(inventoryResponse.getBundlesToDownloadList(), exchangeStub);
