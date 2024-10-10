@@ -1,5 +1,5 @@
 package net.discdd.bundletransport;
-
+import android.content.Context;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
@@ -50,9 +50,11 @@ public class TransportWifiDirectService extends Service
     private TransportPaths transportPaths;
     private WifiDirectManager wifiDirectManager;
     private SharedPreferences sharedPreferences;
+    Context getApplicationContext;
 
     @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
+    public int onStartCommand(Intent intent, int flags, int startId, TransportPaths transportPaths) {
+        this.transportPaths = new TransportPaths(this.getExternalFilesDir(null).toPath());
         super.onStartCommand(intent, flags, startId);
         // TransportWifiDirectService doesn't use LogFragment directly, but we do want our
         // logs to go to its logger
@@ -184,7 +186,4 @@ public class TransportWifiDirectService extends Service
         }
     }
 
-    public void setTransportPaths(TransportPaths transportPaths) {
-        this.transportPaths = transportPaths;
-    }
 }

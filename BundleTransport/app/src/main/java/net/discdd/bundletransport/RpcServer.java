@@ -43,7 +43,7 @@ public class RpcServer {
         this.listener = listener;
     }
 
-    public void startServer(Context context, TransportPaths transportPaths) {
+    public void startServer(TransportPaths transportPaths) {
         if (server != null && !server.isShutdown()) {
             return;
         }
