@@ -256,7 +256,8 @@ public class BundleTransmission {
 
         // the bundleIdsPresent.stream().toList() doesn't actually contain the bundlesToUpload
         // in this method it's just as a placeholder, because we don't have the bundlesToUpload here
-        // look at net.discdd.server.service.BundleServerServiceImpl.bundleInventory to see how the return object is used
+        // look at net.discdd.server.service.BundleServerServiceImpl.bundleInventory to see how the return object is
+        // used
         return new BundlesToExchange(bundlesToSend, bundleIdsPresent.stream().toList(), new ArrayList<>(deletionSet));
     }
 
