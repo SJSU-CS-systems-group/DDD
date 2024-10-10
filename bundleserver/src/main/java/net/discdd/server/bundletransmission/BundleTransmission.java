@@ -244,14 +244,6 @@ public class BundleTransmission {
         Set<String> deletionSet = new HashSet<>(bundleIdsPresent);
         List<String> bundlesToSend = new ArrayList<>();
 
-        // get the latest
-        Map<String, Set<String>> clientIdToBundleIds = new HashMap<>();
-
-        for (String clientId : clientIds) {
-            clientIdToBundleIds.put(clientId, new HashSet<>());
-            logger.log(INFO, "[BT/inventBundle] Processing client " + clientId);
-        }
-
         for (String clientId : clientIds) {
             try {
                 var clientBundle = this.generateBundleForClient(clientId);
@@ -262,6 +254,9 @@ public class BundleTransmission {
         }
         bundlesToSend.forEach(deletionSet::remove);
 
+        // the bundleIdsPresent.stream().toList() doesn't actually contain the bundlesToUpload
+        // in this method it's just as a placeholder, because we don't have the bundlesToUpload here
+        // look at net.discdd.server.service.BundleServerServiceImpl.bundleInventory to see how the return object is used
         return new BundlesToExchange(bundlesToSend, bundleIdsPresent.stream().toList(), new ArrayList<>(deletionSet));
     }
 
