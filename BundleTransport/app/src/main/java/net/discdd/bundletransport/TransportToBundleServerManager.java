@@ -3,7 +3,6 @@ package net.discdd.bundletransport;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
-import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.widget.Toast;

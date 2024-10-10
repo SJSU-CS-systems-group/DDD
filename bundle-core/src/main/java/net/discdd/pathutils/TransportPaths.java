@@ -6,16 +6,15 @@ import lombok.Setter;
 import java.nio.file.Path;
 
 @Getter
-@Setter
 public class TransportPaths{
     @Getter
-    public Path fromClient;
+    public final Path fromClient;
     @Getter
-    public Path fromServer;
+    public final Path fromServer;
     @Getter
-    public Path toClient;
+    public final Path toClient;
     @Getter
-    public Path toServer;
+    public final Path toServer;
 
     public TransportPaths(Path rootDir){
         this.toServer = rootDir.resolve("BundleTransmission/server");
