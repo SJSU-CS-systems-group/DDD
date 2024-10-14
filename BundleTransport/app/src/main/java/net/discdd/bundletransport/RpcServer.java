@@ -5,8 +5,6 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
-import android.content.Context;
-
 import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
 import net.discdd.grpc.BundleSender;
 import net.discdd.grpc.GetRecencyBlobRequest;
@@ -14,8 +12,6 @@ import net.discdd.grpc.GetRecencyBlobResponse;
 import net.discdd.pathutils.TransportPaths;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
@@ -24,8 +20,6 @@ import java.util.logging.Logger;
 import io.grpc.Grpc;
 import io.grpc.InsecureServerCredentials;
 import io.grpc.Server;
-import io.grpc.ServerBuilder;
-import io.grpc.okhttp.OkHttpServerBuilder;
 import io.grpc.stub.StreamObserver;
 
 public class RpcServer {
