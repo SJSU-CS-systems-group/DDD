@@ -2,13 +2,7 @@ package net.discdd.bundletransport;
 
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
-
-import android.os.Handler;
-import android.os.Looper;
-import android.widget.Toast;
-
 import com.google.protobuf.ByteString;
-
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
 import net.discdd.grpc.BundleChunk;
 import net.discdd.grpc.BundleDownloadRequest;
@@ -65,8 +59,8 @@ public class TransportToBundleServerManager implements Runnable {
         this.transportTarget = host + ":" + port;
         this.transportSenderId =
                 BundleSender.newBuilder().setId("bundle_transport").setType(BundleSenderType.TRANSPORT).build();
-        this.fromClientPath = transportPaths.getFromClient();
-        this.fromServerPath = transportPaths.getFromServer();
+        this.fromClientPath = transportPaths.toServerPath;
+        this.fromServerPath = transportPaths.toClientPath;
     }
 
     @Override

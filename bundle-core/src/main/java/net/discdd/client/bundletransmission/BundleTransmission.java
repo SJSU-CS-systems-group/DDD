@@ -1,11 +1,10 @@
 package net.discdd.client.bundletransmission;
 
 import com.google.protobuf.ByteString;
+import io.grpc.Grpc;
 import io.grpc.InsecureChannelCredentials;
-import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
-import io.grpc.Grpc;
 import lombok.Getter;
 import net.discdd.bundlerouting.RoutingExceptions;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
@@ -56,7 +55,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -70,7 +68,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
@@ -477,6 +474,7 @@ public class BundleTransmission {
             } finally {
                 if (fileOutputStream != null) {
                     try {
+                        fileOutputStream.flush();
                         fileOutputStream.close();
                     } catch (IOException e) {
                         logger.log(SEVERE, "Failed to close file output stream", e);
