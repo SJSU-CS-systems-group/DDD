@@ -47,8 +47,8 @@ public class RpcServer {
         if (server != null && !server.isShutdown()) {
             return;
         }
-        var toServerPath = transportPaths.getToServer();
-        var toClientPath = transportPaths.getToClient();
+        var toServerPath = transportPaths.toServerPath;
+        var toClientPath = transportPaths.toClientPath;
         var bundleExchangeService = new BundleExchangeServiceImpl() {
             @Override
             protected void onBundleExchangeEvent(BundleExchangeEvent bundleExchangeEvent) {
