@@ -2,9 +2,7 @@ package net.discdd.bundletransport;
 
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
-
 import com.google.protobuf.ByteString;
-
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
 import net.discdd.grpc.BundleChunk;
 import net.discdd.grpc.BundleDownloadRequest;
@@ -18,6 +16,7 @@ import net.discdd.grpc.BundleUploadRequest;
 import net.discdd.grpc.BundleUploadResponse;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.grpc.GetRecencyBlobRequest;
+import net.discdd.pathutils.TransportPaths;
 import net.discdd.utils.Constants;
 
 import java.io.File;
@@ -52,7 +51,7 @@ public class TransportToBundleServerManager implements Runnable {
     private final Function<Exception, Void> connectError;
     private final String transportTarget;
 
-    public TransportToBundleServerManager(Path filePath, String host, String port,
+    public TransportToBundleServerManager(TransportPaths transportPaths, String host, String port,
                                           Function<Void, Void> connectComplete,
                                           Function<Exception, Void> connectError) {
         this.connectComplete = connectComplete;
@@ -60,8 +59,8 @@ public class TransportToBundleServerManager implements Runnable {
         this.transportTarget = host + ":" + port;
         this.transportSenderId =
                 BundleSender.newBuilder().setId("bundle_transport").setType(BundleSenderType.TRANSPORT).build();
-        this.fromClientPath = filePath.resolve("BundleTransmission/server");
-        this.fromServerPath = filePath.resolve("BundleTransmission/client");
+        this.fromClientPath = transportPaths.toServerPath;
+        this.fromServerPath = transportPaths.toClientPath;
     }
 
     @Override
@@ -79,15 +78,6 @@ public class TransportToBundleServerManager implements Runnable {
                     .bundleInventory(BundleInventoryRequest.newBuilder().setSender(transportSenderId)
                                              .addAllBundlesFromClientsOnTransport(bundlesFromClients)
                                              .addAllBundlesFromServerOnTransport(bundlesFromServer).build());
-
-            try {
-                if (!Files.exists(fromServerPath) || !Files.isDirectory(fromClientPath)) {
-                    Files.createDirectories(fromServerPath);
-                    Files.createDirectories(fromClientPath);
-                }
-            } catch (Exception e) {
-                logger.log(SEVERE, "Failed to get inventory", e);
-            }
 
             processDeleteBundles(inventoryResponse.getBundlesToDeleteList());
             processUploadBundles(inventoryResponse.getBundlesToUploadList(), exchangeStub);
