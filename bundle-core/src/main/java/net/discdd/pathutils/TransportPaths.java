@@ -3,6 +3,7 @@ package net.discdd.pathutils;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.logging.Logger;
+
 import static java.util.logging.Level.SEVERE;
 
 // BundleTransport
@@ -14,14 +15,14 @@ import static java.util.logging.Level.SEVERE;
 //            |_ client - bundles to send to client + recencyBlob
 //            |_ server - bundles to send to server
 
-public class TransportPaths{
+public class TransportPaths {
     private static final Logger logger = Logger.getLogger(TransportPaths.class.getName());
 
     public final Path toClientPath;
 
     public final Path toServerPath;
 
-    public TransportPaths(Path rootDir){
+    public TransportPaths(Path rootDir) {
         this.toClientPath = rootDir.resolve("BundleTransmission/client");
         this.toServerPath = rootDir.resolve("BundleTransmission/server");
 
