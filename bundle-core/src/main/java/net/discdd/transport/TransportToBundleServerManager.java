@@ -1,4 +1,4 @@
-package net.discdd.bundletransport;
+package net.discdd.transport;
 
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
@@ -94,6 +94,7 @@ public class TransportToBundleServerManager implements Runnable {
             processRecencyBlob(blockingExchangeStub);
             logger.log(INFO, "Connect server completed");
             connectComplete.apply(null);
+
         } catch (IllegalArgumentException | StatusRuntimeException e) {
             logger.log(SEVERE, "Failed to connect to server", e);
             connectError.apply(e);
