@@ -1,5 +1,6 @@
 package net.discdd.bundletransport;
 
+import android.content.Context;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
@@ -7,7 +8,6 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
@@ -22,6 +22,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import net.discdd.android.fragments.LogFragment;
 import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
+import net.discdd.pathutils.TransportPaths;
 import net.discdd.wifidirect.WifiDirectManager;
 import net.discdd.wifidirect.WifiDirectStateListener;
 
@@ -46,11 +47,14 @@ public class TransportWifiDirectService extends Service
     public static final String WIFI_DIRECT_PREFERENCE_BG_SERVICE = "background_wifi";
     private final IBinder binder = new TransportWifiDirectServiceBinder();
     private final RpcServer grpcServer = new RpcServer(this);
+    private TransportPaths transportPaths;
     private WifiDirectManager wifiDirectManager;
     private SharedPreferences sharedPreferences;
+    Context getApplicationContext;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
         super.onStartCommand(intent, flags, startId);
         // TransportWifiDirectService doesn't use LogFragment directly, but we do want our
         // logs to go to its logger
@@ -125,7 +129,7 @@ public class TransportWifiDirectService extends Service
             if (grpcServer.isShutdown()) {
                 appendToClientLog("Starting gRPC server");
                 logger.log(INFO, "starting grpc server from main activity!!!!!!!");
-                grpcServer.startServer(getApplicationContext());
+                grpcServer.startServer(this.transportPaths);
                 appendToClientLog("server started");
             }
         }
@@ -181,4 +185,5 @@ public class TransportWifiDirectService extends Service
             return TransportWifiDirectService.this;
         }
     }
+
 }

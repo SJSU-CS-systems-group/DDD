@@ -6,7 +6,6 @@ import io.grpc.ManagedChannelBuilder;
 import net.discdd.grpc.BundleExchangeServiceGrpc;
 
 import net.discdd.grpc.EncryptedBundleId;
-import net.discdd.transport.TransportToBundleServerManager;
 import org.junit.jupiter.api.*;
 
 import org.springframework.boot.test.context.SpringBootTest;
