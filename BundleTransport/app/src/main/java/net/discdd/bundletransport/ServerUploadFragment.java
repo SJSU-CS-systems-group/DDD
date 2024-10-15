@@ -91,8 +91,7 @@ public class ServerUploadFragment extends Fragment {
                     "Initiating server exchange to " + serverDomain + ":" + serverPort + "...\n"));
 
             TransportToBundleServerManager transportToBundleServerManager =
-                    new TransportToBundleServerManager(transportPaths,
-                                                       serverDomain, serverPort,
+                    new TransportToBundleServerManager(transportPaths, serverDomain, serverPort,
                                                        this::connectToServerComplete,
                                                        e -> connectToServerError(e, serverDomain + ":" + serverPort));
             executor.execute(transportToBundleServerManager);

@@ -2,6 +2,7 @@ package net.discdd.bundletransport;
 
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
+
 import com.google.protobuf.ByteString;
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
 import net.discdd.grpc.BundleChunk;
@@ -51,9 +52,8 @@ public class TransportToBundleServerManager implements Runnable {
     private final Function<Exception, Void> connectError;
     private final String transportTarget;
 
-    public TransportToBundleServerManager(TransportPaths transportPaths, String host, String port,
-                                          Function<Void, Void> connectComplete,
-                                          Function<Exception, Void> connectError) {
+    public TransportToBundleServerManager(TransportPaths transportPaths, String host, String port, Function<Void,
+            Void> connectComplete, Function<Exception, Void> connectError) {
         this.connectComplete = connectComplete;
         this.connectError = connectError;
         this.transportTarget = host + ":" + port;
