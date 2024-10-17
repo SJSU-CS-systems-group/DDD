@@ -13,7 +13,6 @@ import static java.util.logging.Level.SEVERE;
 //        |_ BundleTransmission
 //            |_ client - bundles to send to client + recencyBlob
 //            |_ server - bundles to send to server
-
 public class TransportPaths{
     private static final Logger logger = Logger.getLogger(TransportPaths.class.getName());
 

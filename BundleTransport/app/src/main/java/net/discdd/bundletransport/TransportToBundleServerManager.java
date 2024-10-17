@@ -1,11 +1,14 @@
 package net.discdd.transport;
 
 import com.google.protobuf.ByteString;
+<<<<<<< HEAD
 import io.grpc.Grpc;
 import io.grpc.InsecureChannelCredentials;
 import io.grpc.ManagedChannel;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
+=======
+>>>>>>> a9d38f31871ecc0e3dc7323e7983bffc23894193
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
 import net.discdd.grpc.BundleChunk;
 import net.discdd.grpc.BundleDownloadRequest;
@@ -51,9 +54,8 @@ public class TransportToBundleServerManager implements Runnable {
     private final Function<Exception, Void> connectError;
     private final String transportTarget;
 
-    public TransportToBundleServerManager(TransportPaths transportPaths, String host, String port,
-                                          Function<Void, Void> connectComplete,
-                                          Function<Exception, Void> connectError) {
+    public TransportToBundleServerManager(TransportPaths transportPaths, String host, String port, Function<Void,
+            Void> connectComplete, Function<Exception, Void> connectError) {
         this.connectComplete = connectComplete;
         this.connectError = connectError;
         this.transportTarget = host + ":" + port;
