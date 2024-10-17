@@ -86,14 +86,12 @@ public class UsbFragment extends Fragment {
                 scheduledExecutor.execute(() -> {
                     try {
                         bundleCreation();
-                        logger.log(Level.INFO, "Starting bundle creation");
+                        logger.log(INFO, "Starting bundle creation");
                         BundleDTO bundleDTO = bundleTransmission.generateBundleForTransmission();
-                        logger.log(Level.INFO, "Bundletransmission created successfully");
                         File bundleFile = bundleDTO.getBundle().getSource();
-                        updateUsbStatus(false, "Checkpoint 3", Color.GREEN);
                         File targetFile = new File(usbDirectory, bundleFile.getName());
-                        updateUsbStatus(false, "file checkpoint successful", Color.GREEN);
                         Files.copy(bundleFile.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                        logger.log(INFO, "Bundle creation and transfer successful");
                         updateUsbStatus(false, "Bundle created and transferred to USB", Color.GREEN);
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -184,7 +182,7 @@ public class UsbFragment extends Fragment {
 
     private void bundleCreation () {
         try {
-            bundleTransmission = new BundleTransmission(usbDirectory.toPath(), this::processIncomingADU);
+            bundleTransmission = new BundleTransmission(getActivity().getApplicationContext().getDataDir().toPath(), this::processIncomingADU);
         } catch (Exception e) {
             e.printStackTrace();
             updateUsbStatus(false, "Error creating or transferring bundle in bundleCreation", Color.RED);
@@ -192,7 +190,6 @@ public class UsbFragment extends Fragment {
     }
 
     private void processIncomingADU(ADU adu) {
-        //notify app that someone sent data for the app
         Intent intent = new Intent("android.intent.dtn.DATA_RECEIVED");
         intent.setPackage(adu.getAppId());
         intent.setType("text/plain");
