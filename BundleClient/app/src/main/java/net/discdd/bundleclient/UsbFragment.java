@@ -81,7 +81,7 @@ public class UsbFragment extends Fragment {
 
         usbExchangeButton.setOnClickListener(v -> {
             logger.log(Level.INFO, "usbExchangeButton clicked");
-            if(usbConnected) {
+            if (usbConnected) {
                 //Bundle we want to send to usb.
                 scheduledExecutor.execute(() -> {
                     try {
@@ -99,7 +99,8 @@ public class UsbFragment extends Fragment {
                     }
                 });
             } else {
-                Toast.makeText(getActivity(), "No bundle created as usb device not connected", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getActivity(), "No bundle created as usb device not connected", Toast.LENGTH_SHORT)
+                        .show();
             }
         });
 
@@ -151,11 +152,11 @@ public class UsbFragment extends Fragment {
 
     //Method to update USB status
     public void updateUsbStatus(boolean isConnected, String statusText, int color) {
-       getActivity().runOnUiThread(() -> {
-           usbExchangeButton.setEnabled(isConnected);
-           usbConnectionText.setText(statusText);
-           usbConnectionText.setTextColor(color);
-       });
+        getActivity().runOnUiThread(() -> {
+            usbExchangeButton.setEnabled(isConnected);
+            usbConnectionText.setText(statusText);
+            usbConnectionText.setTextColor(color);
+        });
     }
 
     private void showUsbAttachedToast() {
@@ -180,9 +181,10 @@ public class UsbFragment extends Fragment {
         Toast.makeText(getActivity(), getString(R.string.usb_device_detached), Toast.LENGTH_SHORT).show();
     }
 
-    private void bundleCreation () {
+    private void bundleCreation() {
         try {
-            bundleTransmission = new BundleTransmission(getActivity().getApplicationContext().getDataDir().toPath(), this::processIncomingADU);
+            bundleTransmission = new BundleTransmission(getActivity().getApplicationContext().getDataDir().toPath(),
+                                                        this::processIncomingADU);
         } catch (Exception e) {
             e.printStackTrace();
             updateUsbStatus(false, "Error creating or transferring bundle in bundleCreation", Color.RED);
