@@ -1,9 +1,11 @@
-package net.discdd.bundletransport;
-
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
+package net.discdd.transport;
 
 import com.google.protobuf.ByteString;
+import io.grpc.Grpc;
+import io.grpc.InsecureChannelCredentials;
+import io.grpc.ManagedChannel;
+import io.grpc.StatusRuntimeException;
+import io.grpc.stub.StreamObserver;
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
 import net.discdd.grpc.BundleChunk;
 import net.discdd.grpc.BundleDownloadRequest;
@@ -35,11 +37,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.logging.Logger;
 
-import io.grpc.Grpc;
-import io.grpc.InsecureChannelCredentials;
-import io.grpc.ManagedChannel;
-import io.grpc.StatusRuntimeException;
-import io.grpc.stub.StreamObserver;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 
 public class TransportToBundleServerManager implements Runnable {
 
