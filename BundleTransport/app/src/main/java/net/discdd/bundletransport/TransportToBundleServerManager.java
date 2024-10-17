@@ -1,10 +1,11 @@
 package net.discdd.transport;
 
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-
 import com.google.protobuf.ByteString;
-
+import io.grpc.Grpc;
+import io.grpc.InsecureChannelCredentials;
+import io.grpc.ManagedChannel;
+import io.grpc.StatusRuntimeException;
+import io.grpc.stub.StreamObserver;
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
 import net.discdd.grpc.BundleChunk;
 import net.discdd.grpc.BundleDownloadRequest;
@@ -18,6 +19,7 @@ import net.discdd.grpc.BundleUploadRequest;
 import net.discdd.grpc.BundleUploadResponse;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.grpc.GetRecencyBlobRequest;
+import net.discdd.pathutils.TransportPaths;
 import net.discdd.utils.Constants;
 
 import java.io.File;
@@ -35,11 +37,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.logging.Logger;
 
-import io.grpc.Grpc;
-import io.grpc.InsecureChannelCredentials;
-import io.grpc.ManagedChannel;
-import io.grpc.StatusRuntimeException;
-import io.grpc.stub.StreamObserver;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 
 public class TransportToBundleServerManager implements Runnable {
 
@@ -52,15 +51,16 @@ public class TransportToBundleServerManager implements Runnable {
     private final Function<Exception, Void> connectError;
     private final String transportTarget;
 
-    public TransportToBundleServerManager(Path filePath, String host, String port, Function<Void,
-            Void> connectComplete, Function<Exception, Void> connectError) {
+    public TransportToBundleServerManager(TransportPaths transportPaths, String host, String port,
+                                          Function<Void, Void> connectComplete,
+                                          Function<Exception, Void> connectError) {
         this.connectComplete = connectComplete;
         this.connectError = connectError;
         this.transportTarget = host + ":" + port;
         this.transportSenderId =
                 BundleSender.newBuilder().setId("bundle_transport").setType(BundleSenderType.TRANSPORT).build();
-        this.fromClientPath = filePath.resolve("BundleTransmission/server");
-        this.fromServerPath = filePath.resolve("BundleTransmission/client");
+        this.fromClientPath = transportPaths.toServerPath;
+        this.fromServerPath = transportPaths.toClientPath;
     }
 
     @Override
@@ -79,22 +79,13 @@ public class TransportToBundleServerManager implements Runnable {
                                              .addAllBundlesFromClientsOnTransport(bundlesFromClients)
                                              .addAllBundlesFromServerOnTransport(bundlesFromServer).build());
 
-            try {
-                if (!Files.exists(fromServerPath) || !Files.isDirectory(fromClientPath)) {
-                    Files.createDirectories(fromServerPath);
-                    Files.createDirectories(fromClientPath);
-                }
-            } catch (Exception e) {
-                logger.log(SEVERE, "Failed to get inventory", e);
-            }
-
             processDeleteBundles(inventoryResponse.getBundlesToDeleteList());
             processUploadBundles(inventoryResponse.getBundlesToUploadList(), exchangeStub);
             processDownloadBundles(inventoryResponse.getBundlesToDownloadList(), exchangeStub);
             processRecencyBlob(blockingExchangeStub);
+
             logger.log(INFO, "Connect server completed");
             connectComplete.apply(null);
-
         } catch (IllegalArgumentException | StatusRuntimeException e) {
             logger.log(SEVERE, "Failed to connect to server", e);
             connectError.apply(e);
@@ -111,9 +102,8 @@ public class TransportToBundleServerManager implements Runnable {
 
     private void processRecencyBlob(BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub blockingExchangeStub) {
         var recencyBlobReq = GetRecencyBlobRequest.newBuilder().setSender(transportSenderId).build();
-        var recencyBlob =
-                blockingExchangeStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                        .getRecencyBlob(recencyBlobReq);
+        var recencyBlob = blockingExchangeStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                .getRecencyBlob(recencyBlobReq);
 
         Path blobPath = fromServerPath.resolve(RECENCY_BLOB_BIN);
         try (var os = Files.newOutputStream(blobPath, StandardOpenOption.CREATE,
@@ -125,15 +115,16 @@ public class TransportToBundleServerManager implements Runnable {
         }
     }
 
-    private void processDownloadBundles(List<EncryptedBundleId> bundlesToDownloadList, BundleExchangeServiceGrpc.BundleExchangeServiceStub exchangeStub) {
+    private void processDownloadBundles(List<EncryptedBundleId> bundlesToDownloadList,
+                                        BundleExchangeServiceGrpc.BundleExchangeServiceStub exchangeStub) {
         for (var toReceive : bundlesToDownloadList) {
             var path = fromServerPath.resolve(toReceive.getEncryptedId());
             try (OutputStream os = Files.newOutputStream(path, StandardOpenOption.CREATE,
                                                          StandardOpenOption.TRUNCATE_EXISTING)) {
                 var completion = new CompletableFuture<Boolean>();
-                exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                        .downloadBundle(BundleDownloadRequest.newBuilder().setBundleId(toReceive)
-                                                .setSender(transportSenderId).build(), new StreamObserver<>() {
+                exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).downloadBundle(
+                        BundleDownloadRequest.newBuilder().setBundleId(toReceive).setSender(transportSenderId).build(),
+                        new StreamObserver<>() {
                             @Override
                             public void onNext(BundleDownloadResponse value) {
                                 try {
@@ -164,7 +155,8 @@ public class TransportToBundleServerManager implements Runnable {
         }
     }
 
-    private void processUploadBundles(List<EncryptedBundleId> bundlesToUploadList, BundleExchangeServiceGrpc.BundleExchangeServiceStub exchangeStub) {
+    private void processUploadBundles(List<EncryptedBundleId> bundlesToUploadList,
+                                      BundleExchangeServiceGrpc.BundleExchangeServiceStub exchangeStub) {
         for (var toSend : bundlesToUploadList) {
             var path = fromClientPath.resolve(toSend.getEncryptedId());
             StreamObserver<BundleUploadResponse> responseObserver = null;
