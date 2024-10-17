@@ -1,5 +1,9 @@
 package net.discdd.bundleclient;
 
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -21,11 +25,19 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import net.discdd.client.bundletransmission.BundleTransmission;
+import net.discdd.model.ADU;
+import net.discdd.model.BundleDTO;
+
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class UsbFragment extends Fragment {
@@ -38,6 +50,8 @@ public class UsbFragment extends Fragment {
     private static final Logger logger = Logger.getLogger(UsbFragment.class.getName());
     private static final String usbDirName = "/DDD_transport";
     private ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
+    private BundleTransmission bundleTransmission;
+    private File usbDirectory;
 
     @Override
     public View onCreateView(
@@ -63,7 +77,31 @@ public class UsbFragment extends Fragment {
         getActivity().registerReceiver(mUsbReceiver, filter);
 
         // Check initial USB connection
-        checkUsbConnection(1);
+        checkUsbConnection(2);
+
+        usbExchangeButton.setOnClickListener(v -> {
+            logger.log(Level.INFO, "usbExchangeButton clicked");
+            if(usbConnected) {
+                //Bundle we want to send to usb.
+                scheduledExecutor.execute(() -> {
+                    try {
+                        bundleCreation();
+                        logger.log(INFO, "Starting bundle creation");
+                        BundleDTO bundleDTO = bundleTransmission.generateBundleForTransmission();
+                        File bundleFile = bundleDTO.getBundle().getSource();
+                        File targetFile = new File(usbDirectory, bundleFile.getName());
+                        Files.copy(bundleFile.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                        logger.log(INFO, "Bundle creation and transfer successful");
+                        updateUsbStatus(false, "Bundle created and transferred to USB", Color.GREEN);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        updateUsbStatus(false, "Error creating or transferring bundle", Color.RED);
+                    }
+                });
+            } else {
+                Toast.makeText(getActivity(), "No bundle created as usb device not connected", Toast.LENGTH_SHORT).show();
+            }
+        });
 
         return view;
     }
@@ -81,11 +119,11 @@ public class UsbFragment extends Fragment {
         String action = intent.getAction();
         if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
             updateUsbStatus(false, getString(R.string.no_usb_connection_detected), Color.RED);
-            UsbFragment.usbConnected = false;
+            usbConnected = false;
             showUsbDetachedToast();
         } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
             updateUsbStatus(false, getString(R.string.usb_device_attached_checking_for_storage_volumes), Color.BLUE);
-            scheduledExecutor.schedule(() -> checkUsbConnection(1), 1, TimeUnit.SECONDS);
+            scheduledExecutor.schedule(() -> checkUsbConnection(2), 1, TimeUnit.SECONDS);
             showUsbAttachedToast();
         }
     }
@@ -113,9 +151,11 @@ public class UsbFragment extends Fragment {
 
     //Method to update USB status
     public void updateUsbStatus(boolean isConnected, String statusText, int color) {
-        usbExchangeButton.setEnabled(isConnected);
-        usbConnectionText.setText(statusText);
-        usbConnectionText.setTextColor(color);
+       getActivity().runOnUiThread(() -> {
+           usbExchangeButton.setEnabled(isConnected);
+           usbConnectionText.setText(statusText);
+           usbConnectionText.setTextColor(color);
+       });
     }
 
     private void showUsbAttachedToast() {
@@ -127,8 +167,8 @@ public class UsbFragment extends Fragment {
         List<StorageVolume> storageVolumeList = storageManager.getStorageVolumes();
         for (StorageVolume storageVolume : storageVolumeList) {
             if (storageVolume.isRemovable()) {
-                File fileUsb = new File(storageVolume.getDirectory().getPath() + usbDirName);
-                if (fileUsb.exists()) {
+                usbDirectory = new File(storageVolume.getDirectory().getPath() + usbDirName);
+                if (usbDirectory.exists()) {
                     return true;
                 }
             }
@@ -138,5 +178,21 @@ public class UsbFragment extends Fragment {
 
     private void showUsbDetachedToast() {
         Toast.makeText(getActivity(), getString(R.string.usb_device_detached), Toast.LENGTH_SHORT).show();
+    }
+
+    private void bundleCreation () {
+        try {
+            bundleTransmission = new BundleTransmission(getActivity().getApplicationContext().getDataDir().toPath(), this::processIncomingADU);
+        } catch (Exception e) {
+            e.printStackTrace();
+            updateUsbStatus(false, "Error creating or transferring bundle in bundleCreation", Color.RED);
+        }
+    }
+
+    private void processIncomingADU(ADU adu) {
+        Intent intent = new Intent("android.intent.dtn.DATA_RECEIVED");
+        intent.setPackage(adu.getAppId());
+        intent.setType("text/plain");
+        getActivity().getApplicationContext().sendBroadcast(intent);
     }
 }
