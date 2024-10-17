@@ -1,4 +1,4 @@
-package net.discdd.bundletransport;
+package net.discdd.transport;
 
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
