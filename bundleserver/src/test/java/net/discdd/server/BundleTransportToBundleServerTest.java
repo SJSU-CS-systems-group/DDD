@@ -5,7 +5,7 @@ import io.grpc.ManagedChannelBuilder;
 import net.discdd.grpc.BundleExchangeServiceGrpc;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.pathutils.TransportPaths;
-import net.discdd.transport.TransportToBundleServerManager;
+import net.discdd.testTransport.TransportToBundleServerManager;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -23,7 +23,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.logging.Logger;
 
-import static net.discdd.transport.TransportToBundleServerManager.RECENCY_BLOB_BIN;
+import static net.discdd.testTransport.TransportToBundleServerManager.RECENCY_BLOB_BIN;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
