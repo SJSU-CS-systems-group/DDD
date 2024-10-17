@@ -1,4 +1,4 @@
-package net.discdd.testTransport;
+package net.discdd.transport;
 
 import com.google.protobuf.ByteString;
 import io.grpc.Grpc;
