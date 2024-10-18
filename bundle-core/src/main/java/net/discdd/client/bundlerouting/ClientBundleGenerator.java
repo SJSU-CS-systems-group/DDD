@@ -1,21 +1,18 @@
 package net.discdd.client.bundlerouting;
 
-import static java.util.logging.Level.WARNING;
-
 import net.discdd.bundlesecurity.BundleIDGenerator;
-
 import net.discdd.client.bundlesecurity.ClientSecurity;
-
+import net.discdd.pathutils.ClientPaths;
 import org.whispersystems.libsignal.InvalidKeyException;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.util.Objects;
 import java.util.logging.Logger;
+
+import static java.util.logging.Level.WARNING;
 
 public class ClientBundleGenerator {
 
@@ -27,14 +24,14 @@ public class ClientBundleGenerator {
     /* Counter value used as unsigned long */
     private long currentCounter = 0;
 
-    final private Path counterFilePath;
+    private ClientPaths clientPaths;
 
-    private ClientBundleGenerator(ClientSecurity clientSecurity, Path rootPath) throws IOException {
+    private ClientBundleGenerator(ClientSecurity clientSecurity, ClientPaths clientPaths) throws IOException {
         this.clientSecurity = clientSecurity;
-        counterFilePath = rootPath.resolve(Paths.get("BundleRouting", "sentBundle.id"));
+        this.clientPaths = clientPaths;
 
         try {
-            byte[] counterFromFile = Files.readAllBytes(counterFilePath);
+            byte[] counterFromFile = Files.readAllBytes(clientPaths.counterFilePath);
             currentCounter = Long.parseUnsignedLong(new String(counterFromFile, StandardCharsets.UTF_8));
         } catch (IOException e) {
             updateBundleIDFile();
@@ -42,13 +39,13 @@ public class ClientBundleGenerator {
     }
 
     private void updateBundleIDFile() throws IOException {
-        counterFilePath.getParent().toFile().mkdirs();
-        Files.write(counterFilePath, Long.toUnsignedString(currentCounter).getBytes());
+        clientPaths.counterFilePath.getParent().toFile().mkdirs();
+        Files.write(clientPaths.counterFilePath, Long.toUnsignedString(currentCounter).getBytes());
     }
 
-    synchronized public static ClientBundleGenerator initializeInstance(ClientSecurity clientSecurity, Path rootPath) throws IOException {
+    synchronized public static ClientBundleGenerator initializeInstance(ClientSecurity clientSecurity, ClientPaths clientPaths) throws IOException {
         if (singleGeneratorInstance == null) {
-            singleGeneratorInstance = new ClientBundleGenerator(clientSecurity, rootPath);
+            singleGeneratorInstance = new ClientBundleGenerator(clientSecurity, clientPaths);
         } else {
             logger.log(WARNING, "[BR]: Client bundle generator instance is already created!");
         }
