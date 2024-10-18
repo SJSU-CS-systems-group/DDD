@@ -5,8 +5,8 @@ import net.discdd.client.bundlerouting.ClientBundleGenerator;
 import net.discdd.client.bundlerouting.ClientWindow;
 import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
+import net.discdd.pathutils.ClientPaths;
 import net.discdd.utils.Constants;
-import net.discdd.utils.FileUtils;
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.InvalidMessageException;
@@ -27,64 +27,36 @@ import static java.util.logging.Level.INFO;
 
 public class BundleSecurity {
     private static final Logger logger = Logger.getLogger(BundleSecurity.class.getName());
-
-    public static final String BUNDLE_SECURITY_DIR = "BundleSecurity";
-    private static final String LARGEST_BUNDLE_ID_RECEIVED = "Shared/DB/LARGEST_BUNDLE_ID_RECEIVED.txt";
-    private static final String BUNDLE_ID_NEXT_COUNTER = "Shared/DB/BUNDLE_ID_NEXT_COUNTER.txt";
-    public static final String SERVER_IDENTITY_PUB = "server_identity.pub";
-    public static final String SERVER_SIGNED_PRE_PUB = "server_signed_pre.pub";
-    public static final String SERVER_RATCHET_PUB = "server_ratchet.pub";
-    public static final String SERVER_KEYS_SUBDIR = "Server_Keys";
-    private static Path rootFolder;
+    private static ClientPaths clientPaths;
     private final ClientWindow clientWindow;
     private final ClientBundleGenerator clientBundleGenerator;
     private final boolean isEncryptionEnabled = true;
-    private final Path serverKeyPath;
     private ClientSecurity client = null;
     private int counter = 0;
 
-    public BundleSecurity(Path rootFolder) throws IOException, InvalidKeyException, WindowExceptions.BufferOverflow,
+    public BundleSecurity(ClientPaths clientPaths) throws IOException, InvalidKeyException, WindowExceptions.BufferOverflow,
             NoSuchAlgorithmException {
-        BundleSecurity.rootFolder = rootFolder;
+        this.clientPaths = clientPaths;
 
-        Path bundleSecurityPath = rootFolder.resolve(BUNDLE_SECURITY_DIR);
-
-        serverKeyPath = bundleSecurityPath.resolve(SERVER_KEYS_SUBDIR);
-
-        Path bundleIdNextCounter = rootFolder.resolve(BUNDLE_ID_NEXT_COUNTER);
-        FileUtils.createFileWithDefaultIfNeeded(bundleIdNextCounter, "0".getBytes());
-
-        Path largestBundleIdReceived = rootFolder.resolve(LARGEST_BUNDLE_ID_RECEIVED);
-        FileUtils.createFileWithDefaultIfNeeded(largestBundleIdReceived, "0".getBytes());
-
-        this.counter = Integer.valueOf(Files.readAllLines(bundleIdNextCounter).get(0));
+        this.counter = Integer.valueOf(Files.readAllLines(clientPaths.bundleIdNextCounter).get(0));
 
         /* Initializing Security Module*/
-
-        client = ClientSecurity.initializeInstance(1, bundleSecurityPath, serverKeyPath);
-        clientBundleGenerator = ClientBundleGenerator.initializeInstance(client, rootFolder);
-        clientWindow = ClientWindow.initializeInstance(5, client.getClientID(), rootFolder);
+        client = ClientSecurity.initializeInstance(1, clientPaths.bundleSecurityPath, clientPaths.serverKeyPath);
+        clientBundleGenerator = ClientBundleGenerator.initializeInstance(client, clientPaths.rootDir);
+        clientWindow = ClientWindow.initializeInstance(5, client.getClientID(), clientPaths.rootDir);
     }
 
     // TODO: this function makes me sad! it should not be static. We should probably inject BundleSecurity
     // into Bundle transport so that everything can be set up properly
     public static void initializeKeyPaths(InputStream inServerIdentity, InputStream inServerSignedPre,
                                           InputStream inServerRatchet, Path rootFolder) throws IOException {
-        var bundleSecurityPath = rootFolder.resolve(BUNDLE_SECURITY_DIR);
-        var serverKeyPath = bundleSecurityPath.resolve(SERVER_KEYS_SUBDIR);
-        serverKeyPath.toFile().mkdirs();
-
-        Path outServerIdentity = serverKeyPath.resolve(SERVER_IDENTITY_PUB);
-        Path outServerSignedPre = serverKeyPath.resolve(SERVER_SIGNED_PRE_PUB);
-        Path outServerRatchet = serverKeyPath.resolve(SERVER_RATCHET_PUB);
-
-        Files.copy(inServerIdentity, outServerIdentity, StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(inServerIdentity, clientPaths.outServerIdentity, StandardCopyOption.REPLACE_EXISTING);
         inServerIdentity.close();
 
-        Files.copy(inServerSignedPre, outServerSignedPre, StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(inServerSignedPre, clientPaths.outServerSignedPre, StandardCopyOption.REPLACE_EXISTING);
         inServerSignedPre.close();
 
-        Files.copy(inServerRatchet, outServerRatchet, StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(inServerRatchet, clientPaths.outServerRatchet, StandardCopyOption.REPLACE_EXISTING);
         inServerRatchet.close();
     }
 

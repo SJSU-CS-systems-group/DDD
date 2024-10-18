@@ -1,12 +1,20 @@
 package net.discdd.pathutils;
 
 import net.discdd.utils.Constants;
-
+import net.discdd.utils.FileUtils;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class ClientPaths {
+    // BundleSecurity directory
+    public static final String BUNDLE_SECURITY_DIR = "BundleSecurity";
+    private static final String BUNDLE_ID_NEXT_COUNTER = "Shared/DB/BUNDLE_ID_NEXT_COUNTER.txt";
+    public static final String SERVER_IDENTITY_PUB = "server_identity.pub";
+    public static final String SERVER_SIGNED_PRE_PUB = "server_signed_pre.pub";
+    public static final String SERVER_RATCHET_PUB = "server_ratchet.pub";
+    public static final String SERVER_KEYS_SUBDIR = "Server_Keys";
+
     /* Bundle generation directory */
     private static final String BUNDLE_GENERATION_DIRECTORY = "BundleTransmission/bundle-generation";
     private static final String TO_BE_BUNDLED_DIRECTORY = "to-be-bundled";
@@ -42,7 +50,19 @@ public class ClientPaths {
     public final Path sendBundleDetailsPath;
     public final Path lastSentBundleStructurePath;
 
+    // Bundle security directory
+    public final Path bundleSecurityPath;
+    public final Path serverKeyPath;
+    public final Path bundleIdNextCounter;
+
+    // initialize key paths
+    public final Path outServerIdentity;
+    public final Path outServerSignedPre;
+    public final Path outServerRatchet;
+    public final Path rootDir;
+
     public ClientPaths(Path rootDir) throws IOException {
+        this.rootDir = rootDir;
         bundleGenerationDir = rootDir.resolve(BUNDLE_GENERATION_DIRECTORY);
         toBeBundledDir = rootDir.resolve(TO_BE_BUNDLED_DIRECTORY);
         ackRecordPath = toBeBundledDir.resolve(Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME);
@@ -72,5 +92,19 @@ public class ClientPaths {
         receiveADUsPath = rootDir.resolve("receive");
         sendBundleDetailsPath = rootDir.resolve(SENT_BUNDLE_DETAILS);
         lastSentBundleStructurePath = rootDir.resolve(LAST_SENT_BUNDLE_STRUCTURE);
+
+        // Bundle security directory
+        bundleSecurityPath = rootDir.resolve(BUNDLE_SECURITY_DIR);
+        serverKeyPath = bundleSecurityPath.resolve(SERVER_KEYS_SUBDIR);
+        serverKeyPath.toFile().mkdirs();
+
+        bundleIdNextCounter = rootDir.resolve(BUNDLE_ID_NEXT_COUNTER);
+        FileUtils.createFileWithDefaultIfNeeded(bundleIdNextCounter, "0".getBytes());
+        FileUtils.createFileWithDefaultIfNeeded(largestBundleIdReceived, "0".getBytes());
+
+        // initialize key paths
+        outServerIdentity = serverKeyPath.resolve(SERVER_IDENTITY_PUB);
+        outServerSignedPre = serverKeyPath.resolve(SERVER_SIGNED_PRE_PUB);
+        outServerRatchet = serverKeyPath.resolve(SERVER_RATCHET_PUB);
     }
 }
