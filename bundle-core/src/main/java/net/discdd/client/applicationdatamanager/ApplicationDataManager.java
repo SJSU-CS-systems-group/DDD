@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import net.discdd.model.ADU;
 import net.discdd.model.UncompressedPayload;
+import net.discdd.pathutils.ClientPaths;
 import net.discdd.utils.BundleUtils;
 import net.discdd.utils.StoreADUs;
 import net.discdd.utils.StreamExt;
@@ -15,7 +16,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -38,27 +38,22 @@ public class ApplicationDataManager {
     private StoreADUs receiveADUsStorage;
     private Consumer<ADU> aduConsumer;
     /* Database tables */
-    private static String SENT_BUNDLE_DETAILS = "Shared/DB/SENT_BUNDLE_DETAILS.json";
-
-    private static String LAST_SENT_BUNDLE_STRUCTURE = "Shared/DB/LAST_SENT_BUNDLE_STRUCTURE.json";
-
-    private Long APP_DATA_SIZE_LIMIT = 1000000000L;
 
     private static List<String> REGISTER_APP_IDS = List.of("com.example.mysignal", "com.fsck.k9.debug", "testAppId");
 
-    private final Path ROOT_DIR;
+    private ClientPaths clientPaths;
 
-    public ApplicationDataManager(Path rootDir, Consumer<ADU> aduConsumer) {
-        ROOT_DIR = rootDir;
-        sendADUsStorage = new StoreADUs(rootDir.resolve("send"));
-        receiveADUsStorage = new StoreADUs(rootDir.resolve("receive"));
+    public ApplicationDataManager(ClientPaths clientPaths, Consumer<ADU> aduConsumer) {
+        this.clientPaths = clientPaths;
+        sendADUsStorage = new StoreADUs(clientPaths.sendADUsPath);
+        receiveADUsStorage = new StoreADUs(clientPaths.receiveADUsPath);
         this.aduConsumer = aduConsumer;
 
         try {
-            File sentBundleDetails = ROOT_DIR.resolve(SENT_BUNDLE_DETAILS).toFile();
+            File sentBundleDetails = clientPaths.sendBundleDetailsPath.toFile();
             sentBundleDetails.createNewFile();
 
-            File lastSentBundleStructure = ROOT_DIR.resolve(LAST_SENT_BUNDLE_STRUCTURE).toFile();
+            File lastSentBundleStructure = clientPaths.lastSentBundleStructurePath.toFile();
             lastSentBundleStructure.createNewFile();
         } catch (IOException e) {
             e.printStackTrace();
@@ -109,7 +104,7 @@ public class ApplicationDataManager {
 
     public List<ADU> fetchADUsToSend(long initialSize, String clientId) throws IOException {
         List<ADU> adusToSend = new ArrayList<>();
-        final long dataSizeLimit = this.APP_DATA_SIZE_LIMIT;
+        final long dataSizeLimit = clientPaths.APP_DATA_SIZE_LIMIT;
         var sizeLimiter = new SizeLimiter(dataSizeLimit - initialSize);
         for (String appId : this.getRegisteredAppIds()) {
             StreamExt.takeWhile(sendADUsStorage.getADUs(clientId, appId), a -> sizeLimiter.test(a.getSize()))
@@ -141,17 +136,17 @@ public class ApplicationDataManager {
     }
 
     public Optional<UncompressedPayload.Builder> getLastSentBundleBuilder() {
-        return BundleUtils.jsonToBundleBuilder(ROOT_DIR.resolve(LAST_SENT_BUNDLE_STRUCTURE).toFile());
+        return BundleUtils.jsonToBundleBuilder(clientPaths.lastSentBundleStructurePath.toFile());
     }
 
     private void writeLastSentBundleStructure(UncompressedPayload lastSentBundle) {
-        BundleUtils.writeBundleStructureToJson(lastSentBundle, ROOT_DIR.resolve(LAST_SENT_BUNDLE_STRUCTURE).toFile());
+        BundleUtils.writeBundleStructureToJson(lastSentBundle,clientPaths.lastSentBundleStructurePath.toFile());
     }
 
     private void writeSentBundleDetails(Map<String, Map<String, Long>> sentBundleDetails) {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         String jsonString = gson.toJson(sentBundleDetails);
-        try (FileWriter writer = new FileWriter(ROOT_DIR.resolve(SENT_BUNDLE_DETAILS).toFile())) {
+        try (FileWriter writer = new FileWriter(clientPaths.sendBundleDetailsPath.toFile())) {
             writer.write(jsonString);
         } catch (IOException e) {
             e.printStackTrace();
@@ -179,7 +174,7 @@ public class ApplicationDataManager {
     private Map<String, Map<String, Long>> getSentBundleDetails() {
         Gson gson = new Gson();
         Map<String, Map<String, Long>> ret = new HashMap<>();
-        try (FileReader reader = new FileReader(ROOT_DIR.resolve(SENT_BUNDLE_DETAILS).toFile())) {
+        try (FileReader reader = new FileReader(clientPaths.sendBundleDetailsPath.toFile())) {
             Type mapType = new TypeToken<Map<String, Map<String, Long>>>() {}.getType();
             ret = gson.fromJson(reader, mapType);
             if (ret == null) {

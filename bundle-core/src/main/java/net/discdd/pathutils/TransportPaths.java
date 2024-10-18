@@ -27,7 +27,7 @@ public class TransportPaths {
         this.toServerPath = rootDir.resolve("BundleTransmission/server");
 
         try {
-            if (!Files.exists(toClientPath) || !Files.isDirectory(toServerPath)) {
+            if (!Files.exists(toClientPath) || !Files.exists(toServerPath)) {
                 Files.createDirectories(toClientPath);
                 Files.createDirectories(toServerPath);
             }
