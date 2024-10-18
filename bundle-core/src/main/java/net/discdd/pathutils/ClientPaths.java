@@ -1,5 +1,6 @@
 package net.discdd.pathutils;
 
+import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.utils.Constants;
 import net.discdd.utils.FileUtils;
 import java.io.IOException;
@@ -7,6 +8,22 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class ClientPaths {
+    // client security
+    public final Path sessionStorePath;
+    public final Path clientKeyPath;
+    // client window
+    public static final String CLIENT_WINDOW_SUBDIR = "ClientWindow";
+    private final String WINDOW_FILE = "clientWindow.csv";
+    public final Path clientWindowDataPath;
+    public final Path dbFile;
+
+    // client bundle generator
+    public final Path counterFilePath;
+    public final java.io.File metadataFile;
+
+    // client routing
+    private final String METADATAFILE = "routing.metadata";
+
     // BundleSecurity directory
     public static final String BUNDLE_SECURITY_DIR = "BundleSecurity";
     private static final String BUNDLE_ID_NEXT_COUNTER = "Shared/DB/BUNDLE_ID_NEXT_COUNTER.txt";
@@ -59,10 +76,8 @@ public class ClientPaths {
     public final Path outServerIdentity;
     public final Path outServerSignedPre;
     public final Path outServerRatchet;
-    public final Path rootDir;
-
     public ClientPaths(Path rootDir) throws IOException {
-        this.rootDir = rootDir;
+        // Bundle generation directory
         bundleGenerationDir = rootDir.resolve(BUNDLE_GENERATION_DIRECTORY);
         toBeBundledDir = rootDir.resolve(TO_BE_BUNDLED_DIRECTORY);
         ackRecordPath = toBeBundledDir.resolve(Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME);
@@ -106,5 +121,22 @@ public class ClientPaths {
         outServerIdentity = serverKeyPath.resolve(SERVER_IDENTITY_PUB);
         outServerSignedPre = serverKeyPath.resolve(SERVER_SIGNED_PRE_PUB);
         outServerRatchet = serverKeyPath.resolve(SERVER_RATCHET_PUB);
+
+        // client routing
+        var metaDataPath = rootDir.resolve("BundleRouting");
+        metaDataPath.toFile().mkdirs();
+        metadataFile = metaDataPath.resolve(METADATAFILE).toFile();
+
+        // client bundle generator
+        counterFilePath = rootDir.resolve(Paths.get("BundleRouting", "sentBundle.id"));
+
+        // client window
+        clientWindowDataPath = rootDir.resolve(CLIENT_WINDOW_SUBDIR);
+        clientWindowDataPath.toFile().mkdirs();
+        dbFile = clientWindowDataPath.resolve(WINDOW_FILE);
+
+        // client security
+        clientKeyPath = bundleSecurityPath.resolve(SecurityUtils.CLIENT_KEY_PATH);
+        sessionStorePath = bundleSecurityPath.resolve(SecurityUtils.SESSION_STORE_FILE);
     }
 }

@@ -7,11 +7,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.gson.JsonParseException;
 import net.discdd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
+import net.discdd.pathutils.ClientPaths;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.logging.Logger;
 
@@ -23,8 +22,7 @@ public class ClientRouting {
 
     private static ClientRouting singleClientRoutingInstance = null;
     HashMap<String, Long> metadata = null;
-    Path metaDataPath = null;
-    private final String METADATAFILE = "routing.metadata";
+    ClientPaths clientPaths;
 
     /* Initialize client routing score table
      * Reads from json file if it exists, creates a new table otherwise
@@ -33,31 +31,26 @@ public class ClientRouting {
      * Return:
      * None
      */
-    private ClientRouting(Path rootPath) throws IOException, ClientMetaDataFileException {
-        this.metaDataPath = rootPath.resolve("BundleRouting");
-        metaDataPath.toFile().mkdirs();
-
-        metaDataPath = metaDataPath.resolve(METADATAFILE);
-
-        File metadataFile = metaDataPath.toFile();
+    private ClientRouting(ClientPaths clientPaths) throws IOException, ClientMetaDataFileException {
+        this.clientPaths = clientPaths;
         ObjectMapper objectMapper = new ObjectMapper();
 
         metadata = new HashMap<>();
 
-        if (metadataFile.exists()) {
+        if (clientPaths.metadataFile.exists()) {
             try {
-                metadata = objectMapper.readValue(metadataFile, new TypeReference<HashMap<String, Long>>() {});
+                metadata = objectMapper.readValue(clientPaths.metadataFile, new TypeReference<HashMap<String, Long>>() {});
             } catch (JsonParseException | JsonMappingException e) {
                 throw new ClientMetaDataFileException("Corrupted JSON File:" + e);
             }
         } else {
-            objectMapper.writeValue(metadataFile, metadata);
+            objectMapper.writeValue(clientPaths.metadataFile, metadata);
         }
     }
 
-    public static ClientRouting initializeInstance(Path metaDataPath) throws ClientMetaDataFileException, IOException {
+    public static ClientRouting initializeInstance(ClientPaths clientPaths) throws ClientMetaDataFileException, IOException {
         if (singleClientRoutingInstance == null) {
-            singleClientRoutingInstance = new ClientRouting(metaDataPath);
+            singleClientRoutingInstance = new ClientRouting(clientPaths);
         } else {
             logger.log(INFO, "[BR]: Client Routing Instance already Exists!");
         }
@@ -89,10 +82,9 @@ public class ClientRouting {
 
         ObjectMapper mapper = new ObjectMapper();
         try {
-            File metadataFile = metaDataPath.toFile();
-            JsonNode rootNode = mapper.readTree(metadataFile);
+            JsonNode rootNode = mapper.readTree(clientPaths.metadataFile);
             ((ObjectNode) rootNode).put(senderId, count);
-            mapper.writeValue(metadataFile, rootNode);
+            mapper.writeValue(clientPaths.metadataFile, rootNode);
         } catch (Exception e) {
             throw new ClientMetaDataFileException("Error updating Routing Meta Data:" + e);
         }
@@ -105,6 +97,6 @@ public class ClientRouting {
      * None
      */
     public byte[] bundleMetaData() throws IOException {
-        return Files.readAllBytes(metaDataPath);
+        return Files.readAllBytes(clientPaths.metadataFile.toPath());
     }
 }

@@ -41,9 +41,9 @@ public class BundleSecurity {
         this.counter = Integer.valueOf(Files.readAllLines(clientPaths.bundleIdNextCounter).get(0));
 
         /* Initializing Security Module*/
-        client = ClientSecurity.initializeInstance(1, clientPaths.bundleSecurityPath, clientPaths.serverKeyPath);
-        clientBundleGenerator = ClientBundleGenerator.initializeInstance(client, clientPaths.rootDir);
-        clientWindow = ClientWindow.initializeInstance(5, client.getClientID(), clientPaths.rootDir);
+        client = ClientSecurity.initializeInstance(1, clientPaths);
+        clientBundleGenerator = ClientBundleGenerator.initializeInstance(client, clientPaths);
+        clientWindow = ClientWindow.initializeInstance(5, client.getClientID(), clientPaths);
     }
 
     // TODO: this function makes me sad! it should not be static. We should probably inject BundleSecurity

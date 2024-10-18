@@ -87,7 +87,7 @@ public class BundleTransmission {
         this.clientPaths = new ClientPaths(rootFolder);
         this.bundleSecurity = new BundleSecurity(clientPaths);
         this.applicationDataManager = new ApplicationDataManager(clientPaths, aduConsumer);
-        this.clientRouting = ClientRouting.initializeInstance(rootFolder);
+        this.clientRouting = ClientRouting.initializeInstance(clientPaths);
     }
 
     public void registerBundleId(String bundleId) throws IOException, WindowExceptions.BufferOverflow,
