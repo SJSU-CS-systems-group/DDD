@@ -75,7 +75,6 @@ import static net.discdd.utils.Constants.GRPC_LONG_TIMEOUT_MS;
 public class BundleTransmission {
     private static final Logger logger = Logger.getLogger(BundleTransmission.class.getName());
 
-
     private final BundleSecurity bundleSecurity;
     private final ApplicationDataManager applicationDataManager;
 

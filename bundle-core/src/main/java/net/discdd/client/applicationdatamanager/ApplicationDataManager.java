@@ -140,7 +140,7 @@ public class ApplicationDataManager {
     }
 
     private void writeLastSentBundleStructure(UncompressedPayload lastSentBundle) {
-        BundleUtils.writeBundleStructureToJson(lastSentBundle,clientPaths.lastSentBundleStructurePath.toFile());
+        BundleUtils.writeBundleStructureToJson(lastSentBundle, clientPaths.lastSentBundleStructurePath.toFile());
     }
 
     private void writeSentBundleDetails(Map<String, Map<String, Long>> sentBundleDetails) {

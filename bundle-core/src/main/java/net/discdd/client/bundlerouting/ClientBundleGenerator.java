@@ -43,7 +43,8 @@ public class ClientBundleGenerator {
         Files.write(clientPaths.counterFilePath, Long.toUnsignedString(currentCounter).getBytes());
     }
 
-    synchronized public static ClientBundleGenerator initializeInstance(ClientSecurity clientSecurity, ClientPaths clientPaths) throws IOException {
+    synchronized public static ClientBundleGenerator initializeInstance(ClientSecurity clientSecurity,
+                                                                        ClientPaths clientPaths) throws IOException {
         if (singleGeneratorInstance == null) {
             singleGeneratorInstance = new ClientBundleGenerator(clientSecurity, clientPaths);
         } else {

@@ -34,8 +34,8 @@ public class BundleSecurity {
     private ClientSecurity client = null;
     private int counter = 0;
 
-    public BundleSecurity(ClientPaths clientPaths) throws IOException, InvalidKeyException, WindowExceptions.BufferOverflow,
-            NoSuchAlgorithmException {
+    public BundleSecurity(ClientPaths clientPaths) throws IOException, InvalidKeyException,
+            WindowExceptions.BufferOverflow, NoSuchAlgorithmException {
         this.clientPaths = clientPaths;
 
         this.counter = Integer.valueOf(Files.readAllLines(clientPaths.bundleIdNextCounter).get(0));

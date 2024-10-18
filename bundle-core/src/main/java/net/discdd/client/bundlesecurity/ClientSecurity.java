@@ -63,8 +63,8 @@ public class ClientSecurity {
     private String clientID;
     private ClientPaths clientPaths;
 
-    private ClientSecurity(int deviceID, ClientPaths clientPaths) throws InvalidKeyException,
-            IOException, NoSuchAlgorithmException {
+    private ClientSecurity(int deviceID, ClientPaths clientPaths) throws InvalidKeyException, IOException,
+            NoSuchAlgorithmException {
         this.clientPaths = clientPaths;
 
         // Read Server Keys from specified directory
@@ -171,8 +171,8 @@ public class ClientSecurity {
             byte[] sessionStoreBytes = Files.readAllBytes(clientPaths.sessionStorePath);
             clientSessionRecord = new SessionRecord(sessionStoreBytes);
         } catch (IOException e) {
-            logger.log(WARNING,
-                       "Error Reading Session record from " + clientPaths.sessionStorePath + "\nCreating New Session Record!");
+            logger.log(WARNING, "Error Reading Session record from " + clientPaths.sessionStorePath +
+                    "\nCreating New Session Record!");
             clientSessionRecord = new SessionRecord();
             initializeRatchet(clientSessionRecord.getSessionState());
         }
@@ -198,8 +198,7 @@ public class ClientSecurity {
     /* Add Headers (Identity, Base Key & Bundle ID) to Bundle Path */
 
     /* Initialize or get previous client Security Instance */
-    public static synchronized ClientSecurity initializeInstance(int deviceID, ClientPaths clientPaths) throws IOException,
-            NoSuchAlgorithmException, InvalidKeyException {
+    public static synchronized ClientSecurity initializeInstance(int deviceID, ClientPaths clientPaths) throws IOException, NoSuchAlgorithmException, InvalidKeyException {
         if (singleClientInstance == null) {
             singleClientInstance = new ClientSecurity(deviceID, clientPaths);
         } else {

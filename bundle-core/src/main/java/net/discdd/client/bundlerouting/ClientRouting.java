@@ -39,7 +39,8 @@ public class ClientRouting {
 
         if (clientPaths.metadataFile.exists()) {
             try {
-                metadata = objectMapper.readValue(clientPaths.metadataFile, new TypeReference<HashMap<String, Long>>() {});
+                metadata =
+                        objectMapper.readValue(clientPaths.metadataFile, new TypeReference<HashMap<String, Long>>() {});
             } catch (JsonParseException | JsonMappingException e) {
                 throw new ClientMetaDataFileException("Corrupted JSON File:" + e);
             }
@@ -48,7 +49,8 @@ public class ClientRouting {
         }
     }
 
-    public static ClientRouting initializeInstance(ClientPaths clientPaths) throws ClientMetaDataFileException, IOException {
+    public static ClientRouting initializeInstance(ClientPaths clientPaths) throws ClientMetaDataFileException,
+            IOException {
         if (singleClientRoutingInstance == null) {
             singleClientRoutingInstance = new ClientRouting(clientPaths);
         } else {

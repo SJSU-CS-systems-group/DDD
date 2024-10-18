@@ -3,6 +3,7 @@ package net.discdd.pathutils;
 import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.utils.Constants;
 import net.discdd.utils.FileUtils;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -76,6 +77,7 @@ public class ClientPaths {
     public final Path outServerIdentity;
     public final Path outServerSignedPre;
     public final Path outServerRatchet;
+
     public ClientPaths(Path rootDir) throws IOException {
         // Bundle generation directory
         bundleGenerationDir = rootDir.resolve(BUNDLE_GENERATION_DIRECTORY);

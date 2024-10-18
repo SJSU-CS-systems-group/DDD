@@ -29,6 +29,7 @@ public class ClientWindow {
     private static final Logger logger = Logger.getLogger(ClientWindow.class.getName());
 
     static private ClientWindow singleClientWindowInstance = null;
+
     record UnencryptedBundleId(String bundleId, long bundleCounter) {}
 
     private final LinkedList<UnencryptedBundleId> windowOfUnencryptedBundleIds = new LinkedList<>();
@@ -55,8 +56,9 @@ public class ClientWindow {
     }
 
     private void updateDBWindow() throws IOException {
-        Files.write(clientPaths.dbFile, String.format(Locale.US, "%d,%d", windowOfUnencryptedBundleIds.getFirst().bundleCounter(),
-                                          windowOfUnencryptedBundleIds.getLast().bundleCounter()).getBytes());
+        Files.write(clientPaths.dbFile,
+                    String.format(Locale.US, "%d,%d", windowOfUnencryptedBundleIds.getFirst().bundleCounter(),
+                                  windowOfUnencryptedBundleIds.getLast().bundleCounter()).getBytes());
 
         logger.log(FINE, "Update window: " + windowOfUnencryptedBundleIds.getFirst().bundleCounter() + " - " +
                 windowOfUnencryptedBundleIds.getLast().bundleCounter());
