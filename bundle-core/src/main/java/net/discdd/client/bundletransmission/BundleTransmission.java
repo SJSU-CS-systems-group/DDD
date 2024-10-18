@@ -46,6 +46,7 @@ import org.whispersystems.libsignal.LegacyMessageException;
 import org.whispersystems.libsignal.NoSessionException;
 import org.whispersystems.libsignal.ecc.Curve;
 
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
@@ -66,9 +67,11 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
+
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
@@ -336,7 +339,7 @@ public class BundleTransmission {
         return clientRouting;
     }
 
-    public record BundleExchangeCounts(int bundlesSent, int bundlesReceived) {}
+    public record BundleExchangeCounts(int bundlesSent, int bundlesReceived,int bundleStatus) {}
 
     private static final int INITIAL_CONNECT_RETRIES = 8;
 
@@ -367,7 +370,7 @@ public class BundleTransmission {
         var channel =
                 Grpc.newChannelBuilderForAddress(transportAddress, port, InsecureChannelCredentials.create()).build();
         var blockingStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
-        int bundlesUploaded = 0;
+        int bundleStatus = 0;
         BundleSender transportSender = null;
         try {
             if (isServerRunning(transportAddress, port)) {
@@ -397,7 +400,8 @@ public class BundleTransmission {
                 }
 
                 var stub = BundleExchangeServiceGrpc.newStub(channel);
-                bundlesUploaded = uploadBundle(stub);
+                //Called Here
+                bundleStatus = uploadBundle(stub);
             }
         } catch (Exception e) {
             logger.log(WARNING, "Exchange failed", e);
@@ -407,11 +411,12 @@ public class BundleTransmission {
         } catch (InterruptedException e) {
             logger.log(SEVERE, "could not shutdown channel, error: " + e.getMessage() + ", cause: " + e.getCause());
         }
-        return new BundleExchangeCounts(bundlesUploaded, 1);
+        return new BundleExchangeCounts(1, 1, bundleStatus);
     }
 
     private int uploadBundle(BundleExchangeServiceGrpc.BundleExchangeServiceStub stub) throws RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException, GeneralSecurityException {
         BundleDTO toSend = generateBundleForTransmission();
+
         var bundleUploadResponseObserver = new BundleUploadResponseObserver();
         BundleSender clientSender = BundleSender.newBuilder().setId(bundleSecurity.getClientSecurity().getClientID())
                 .setType(BundleSenderType.CLIENT).build();
@@ -438,8 +443,15 @@ public class BundleTransmission {
         uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setSender(clientSender).build());
         uploadRequestStreamObserver.onCompleted();
         bundleUploadResponseObserver.waitForCompletion(GRPC_LONG_TIMEOUT_MS);
-        return bundleUploadResponseObserver.bundleUploadResponse != null &&
-                bundleUploadResponseObserver.bundleUploadResponse.getStatus() == Status.SUCCESS ? 1 : 0;
+        // -1 Indicates failed upload
+        if(bundleUploadResponseObserver.bundleUploadResponse == null){
+            logger.log(SEVERE, "Upload failed: No response received from server.");
+            return -1;
+        }
+        //Here
+        //0 there was a bundleUploadResponse but Status was not SUCCESS
+        //1 indicates successful
+        return bundleUploadResponseObserver.bundleUploadResponse.getStatus() == Status.SUCCESS ? 1 : 0;
     }
 
     private Path downloadBundles(List<String> bundleRequests, BundleSender sender,
