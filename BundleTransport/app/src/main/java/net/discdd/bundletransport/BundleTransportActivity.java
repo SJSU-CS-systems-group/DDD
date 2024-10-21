@@ -94,11 +94,8 @@ public class BundleTransportActivity extends AppCompatActivity {
         }
 
         serverUploadFragment = new TitledFragment(getString(R.string.upload),
-                                                  new ServerUploadFragment(connectivityEventPublisher,
-                                                                           transportSecurity.getTransportID(),
-                                                                           this.transportPaths));
-        transportWifiFragment = new TitledFragment(getString(R.string.local_wifi),
-                                                   new TransportWifiDirectFragment(this.transportPaths));
+                new ServerUploadFragment(connectivityEventPublisher, transportSecurity.getTransportID(), this.transportPaths));
+        transportWifiFragment = new TitledFragment(getString(R.string.local_wifi), new TransportWifiDirectFragment(this.transportPaths));
         storageFragment = new TitledFragment("Storage Settings", new StorageFragment());
 
         permissionsFragment = new PermissionsFragment();

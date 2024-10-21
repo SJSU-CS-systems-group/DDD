@@ -1,7 +1,6 @@
 package net.discdd.bundletransport;
 
 import android.content.Context;
-
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
