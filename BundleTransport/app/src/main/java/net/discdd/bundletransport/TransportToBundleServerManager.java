@@ -67,6 +67,7 @@ public class TransportToBundleServerManager implements Runnable {
         logger.log(INFO, "Connect server started");
 
         ManagedChannel channel = null;
+
         try {
             channel = Grpc.newChannelBuilder(transportTarget, InsecureChannelCredentials.create()).build();
             var bsStub = BundleServerServiceGrpc.newBlockingStub(channel);

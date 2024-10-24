@@ -1,0 +1,377 @@
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\java\net\discdd\bundleclient\ServerFragment.java:89: Warning: Implicitly using the default locale is a common source of bugs: Use String.format(Locale, ...) instead [DefaultLocale]
+                        Toast.makeText(requireContext(), String.format("%d bundles sent %d received", bec.bundlesSent(),
+                                                         ^
+
+   Explanation for issues of type "DefaultLocale":
+   Calling String#toLowerCase() or #toUpperCase() without specifying an
+   explicit locale is a common source of bugs. The reason for that is that
+   those methods will use the current locale on the user's device, and even
+   though the code appears to work correctly when you are developing the app,
+   it will fail in some locales. For example, in the Turkish locale, the
+   uppercase replacement for i is not I.
+
+   If you want the methods to just perform ASCII replacement, for example to
+   convert an enum name, call String#toUpperCase(Locale.ROOT) instead. If you
+   really want to use the current locale, call
+   String#toUpperCase(Locale.getDefault()) instead.
+
+   https://developer.android.com/reference/java/util/Locale.html#default_locale
+
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\build.gradle:73: Warning: A newer version of androidx.work:work-runtime than 2.7.0 is available: 2.9.1 [GradleDependency]
+    implementation "androidx.work:work-runtime:$work_version"
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\build.gradle:75: Warning: A newer version of androidx.appcompat:appcompat than 1.3.1 is available: 1.7.0 [GradleDependency]
+    implementation 'androidx.appcompat:appcompat:1.3.1'
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\build.gradle:76: Warning: A newer version of com.google.android.material:material than 1.4.0 is available: 1.12.0 [GradleDependency]
+    implementation 'com.google.android.material:material:1.4.0'
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\build.gradle:77: Warning: A newer version of androidx.constraintlayout:constraintlayout than 2.1.1 is available: 2.1.4 [GradleDependency]
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.1'
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\build.gradle:78: Warning: A newer version of androidx.lifecycle:lifecycle-common-java8 than 2.3.1 is available: 2.8.6 [GradleDependency]
+    implementation 'androidx.lifecycle:lifecycle-common-java8:2.3.1'
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\build.gradle:79: Warning: A newer version of androidx.test.ext:junit than 1.1.3 is available: 1.2.1 [GradleDependency]
+    androidTestImplementation 'androidx.test.ext:junit:1.1.3'
+                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\build.gradle:80: Warning: A newer version of androidx.test.espresso:espresso-core than 3.4.0 is available: 3.6.1 [GradleDependency]
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
+                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\build.gradle:88: Warning: A newer version of com.google.code.gson:gson than 2.8.7 is available: 2.10.1 [GradleDependency]
+    implementation 'com.google.code.gson:gson:2.8.7'
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\build.gradle:89: Warning: A newer version of commons-io:commons-io than 2.4 is available: 2.16.1 [GradleDependency]
+    implementation group: 'commons-io', name: 'commons-io', version: '2.4'
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\build.gradle:92: Warning: A newer version of com.fasterxml.jackson.core:jackson-databind than 2.8.9 is available: 2.14.2 [GradleDependency]
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.8.9'
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\build.gradle:93: Warning: A newer version of com.google.guava:guava than 30.1.1-jre is available: 33.2.1-jre [GradleDependency]
+    implementation 'com.google.guava:guava:30.1.1-jre'
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\build.gradle:97: Warning: A newer version of androidx.test.ext:junit than 1.1.3 is available: 1.2.1 [GradleDependency]
+    androidTestImplementation 'androidx.test.ext:junit:1.1.3'
+                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "GradleDependency":
+   This detector looks for usages of libraries where the version you are using
+   is not the current stable release. Using older versions is fine, and there
+   are cases where you deliberately want to stick with an older version.
+   However, you may simply not be aware that a more recent version is
+   available, and that is what this lint check helps find.
+
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\build.gradle:101: Warning: Avoid using + in version numbers; can lead to unpredictable and unrepeatable builds (junit:junit:4.+) [GradleDynamicVersion]
+    testImplementation 'junit:junit:4.+'
+                       ~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "GradleDynamicVersion":
+   Using + in dependencies lets you automatically pick up the latest available
+   version rather than a specific, named version. However, this is not
+   recommended; your builds are not repeatable; you may have tested with a
+   slightly different version than what the build server used. (Using a
+   dynamic version as the major version number is more problematic than using
+   it in the minor version position.)
+
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:13: Error: "server_tab" is not translated in "ar" (Arabic), "uk" (Ukrainian), "es" (Spanish) [MissingTranslation]
+    <string name="server_tab">Server></string>
+            ~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:42: Error: "transfers_in_the_background" is not translated in "ar" (Arabic), "uk" (Ukrainian), "es" (Spanish) [MissingTranslation]
+    <string name="transfers_in_the_background">Do transfers in the background</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:43: Error: "PeerDetailedDescription" is not translated in "ar" (Arabic), "uk" (Ukrainian), "es" (Spanish) [MissingTranslation]
+    <string name="PeerDetailedDescription">Last seen: %s\nLast exchange: %s\nLast Server Contact: %s\n</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:44: Error: "never" is not translated in "ar" (Arabic), "uk" (Ukrainian), "es" (Spanish) [MissingTranslation]
+    <string name="never">Never</string>
+            ~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:45: Error: "sending_adu_s_d_from_s" is not translated in "ar" (Arabic), "uk" (Ukrainian), "es" (Spanish) [MissingTranslation]
+    <string name="sending_adu_s_d_from_s">Sending ADU %s:%d from %s</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:46: Error: "exchanged_d_bundles_to_and_d_bundles_from_s" is not translated in "ar" (Arabic), "uk" (Ukrainian), "es" (Spanish) [MissingTranslation]
+    <string name="exchanged_d_bundles_to_and_d_bundles_from_s">Exchanged %d bundles to and %d bundles from %s</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:47: Error: "exchanged_d_bundles_to_and_d_bundles_from_server" is not translated in "ar" (Arabic), "uk" (Ukrainian), "es" (Spanish) [MissingTranslation]
+    <string name="exchanged_d_bundles_to_and_d_bundles_from_server">Exchanged %d bundles to and %d bundles from server</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "MissingTranslation":
+   If an application has more than one locale, then all the strings declared
+   in one language should also be translated in all other languages.
+
+   If the string should not be translated, you can add the attribute
+   translatable="false" on the <string> element, or you can define all your
+   non-translatable strings in a resource file called donottranslate.xml. Or,
+   you can ignore the issue with a tools:ignore="MissingTranslation"
+   attribute.
+
+   You can tell lint (and other tools) which language is the default language
+   in your res/values/ folder by specifying tools:locale="languageCode" for
+   the root <resources> element in your resource file. (The tools prefix
+   refers to the namespace declaration http://schemas.android.com/tools.)
+
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:45: Warning: Formatting %d followed by words ("from"): This should probably be a plural rather than a string [PluralsCandidate]
+    <string name="sending_adu_s_d_from_s">Sending ADU %s:%d from %s</string>
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:46: Warning: Formatting %d followed by words ("bundles"): This should probably be a plural rather than a string [PluralsCandidate]
+    <string name="exchanged_d_bundles_to_and_d_bundles_from_s">Exchanged %d bundles to and %d bundles from %s</string>
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:47: Warning: Formatting %d followed by words ("bundles"): This should probably be a plural rather than a string [PluralsCandidate]
+    <string name="exchanged_d_bundles_to_and_d_bundles_from_server">Exchanged %d bundles to and %d bundles from server</string>
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "PluralsCandidate":
+   This lint check looks for potential errors in internationalization where
+   you have translated a message which involves a quantity and it looks like
+   other parts of the string may need grammatical changes.
+
+   For example, rather than something like this:
+     <string name="try_again">Try again in %d seconds.</string>
+   you should be using a plural:
+      <plurals name="try_again">
+           <item quantity="one">Try again in %d second</item>
+           <item quantity="other">Try again in %d seconds</item>
+       </plurals>
+   This will ensure that in other languages the right set of translations are
+   provided for the different quantity classes.
+
+   (This check depends on some heuristics, so it may not accurately determine
+   whether a string really should be a quantity. You can use tools:ignore to
+   filter out false positives.
+
+   https://developer.android.com/guide/topics/resources/string-resource.html#Plurals
+
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\java\net\discdd\bundleclient\BundleClientWifiDirectFragment.java:182: Warning: It will always be more efficient to use more specific change events if you can. Rely on notifyDataSetChanged as a last resort. [NotifyDataSetChanged]
+            peersList.getAdapter().notifyDataSetChanged();
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "NotifyDataSetChanged":
+   The RecyclerView adapter's onNotifyDataSetChanged method does not specify
+   what about the data set has changed, forcing any observers to assume that
+   all existing items and structure may no longer be valid. `LayoutManager`s
+   will be forced to fully rebind and relayout all visible views.
+
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\java\net\discdd\datastore\sqlite\DBHelper.java:47: Warning: This Cursor should be freed up after use with #close() [Recycle]
+        Cursor cursor = DB.rawQuery("select * from MessageTable where receiver=? and appName=?",
+                           ~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\java\net\discdd\datastore\sqlite\DBHelper.java:63: Warning: This Cursor should be freed up after use with #close() [Recycle]
+        Cursor cursor = DB.rawQuery("select * from MessageTable where receiver=? and appName=?",
+                           ~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\java\net\discdd\bundleclient\FileUtils.java:230: Warning: This Cursor should be freed up after use with #close() [Recycle]
+        Cursor returnCursor = contentResolver.query(returnUri, null, null, null, null);
+                                              ~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\java\net\discdd\bundleclient\FileUtils.java:269: Warning: This Cursor should be freed up after use with #close() [Recycle]
+        Cursor returnCursor = context.getContentResolver().query(returnUri, null, null, null, null);
+                                                           ~~~~~
+
+   Explanation for issues of type "Recycle":
+   Many resources, such as TypedArrays, VelocityTrackers, etc., should be
+   recycled (with a recycle() call) after use. This lint check looks for
+   missing recycle() calls.
+
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\java\net\discdd\bundleclient\FileUtils.java:47: Warning: Unnecessary; SDK_INT is always >= 33 [ObsoleteSdkInt]
+        final boolean isKitKat = Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT;
+                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\java\net\discdd\bundleclient\FileUtils.java:68: Warning: Unnecessary; SDK_INT is always >= 33 [ObsoleteSdkInt]
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\java\net\discdd\bundleclient\FileUtils.java:111: Warning: Unnecessary;` Build.VERSION.SDK_INT >= Build.VERSION_CODES.O` is never true here [ObsoleteSdkInt]
+                    final boolean isOreo = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O;
+                                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\java\net\discdd\bundleclient\FileUtils.java:161: Warning: Unnecessary; SDK_INT is never < 33 [ObsoleteSdkInt]
+            if (Build.VERSION.SDK_INT == Build.VERSION_CODES.N) {
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "ObsoleteSdkInt":
+   This check flags version checks that are not necessary, because the
+   minSdkVersion (or surrounding known API level) is already at least as high
+   as the version checked for.
+
+   Similarly, it also looks for resources in -vNN folders, such as values-v14
+   where the version qualifier is less than or equal to the minSdkVersion,
+   where the contents should be merged into the best folder.
+
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\drawable\bundleclient_icon.xml:7: Warning: Very long vector path (813 characters), which is bad for performance. Considering reducing precision, removing minor details or rasterizing vector. [VectorPath]
+      android:pathData="m15.98,15.26v83.78,21.21c0,2.08 -1.01,6.44 0.67,8.16 1.31,1.34 4.69,0.85 6.53,0.85h17.01c24.35,0 51.95,-0.35 69.96,-15.91C137.39,89.82 134.59,38.7 97.78,22.32 73.61,11.56 42.51,15.26 15.98,15.26m16.36,94.92c15.7,0 33.2,1.1 46.46,-7.17C101.36,88.92 102.48,54.21 78.14,40.76 64.56,33.26 47.95,34.35 32.34,34.35V26.39c19.18,0 41.48,-2.34 58.24,6.92 27.03,14.94 27.24,58.48 2.62,75.1 -12.33,8.32 -29.76,9.72 -45.15,9.72 -3.45,0 -11.87,1.25 -14.66,-0.55 -2.02,-1.3 -1.05,-5.55 -1.05,-7.41m1.31,-9.01v-4.77c9.45,0 19.66,0.08 27.48,-4.97C75.18,82.34 75.06,61.34 59.82,53.1 51.98,48.86 42.66,49.2 33.65,49.2v-5.83c11.93,0 25.59,-1.55 35.99,4.27 17.58,9.84 16.94,38.78 0,48.8 -10.32,6.1 -23.97,4.73 -35.99,4.73m0,-11.14V55.56c6.6,0 14.56,-0.79 20.28,2.47 9.76,5.55 10.49,22.17 1.2,28.33 -6.07,4.02 -14.11,3.67 -21.48,3.67z"
+                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "VectorPath":
+   Using long vector paths is bad for performance. There are several ways to
+   make the pathData shorter:
+   * Using less precision
+   * Removing some minor details
+   * Using the Android Studio vector conversion tool
+   * Rasterizing the image (converting to PNG)
+
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:2: Warning: The resource R.string.android_permission_ACCESS_FINE_LOCATION appears to be unused [UnusedResources]
+    <string name="android.permission.ACCESS_FINE_LOCATION">Fine location access</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:3: Warning: The resource R.string.android_permission_ACCESS_WIFI_STATE appears to be unused [UnusedResources]
+    <string name="android.permission.ACCESS_WIFI_STATE">Check Wifi Status</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:4: Warning: The resource R.string.android_permission_CHANGE_WIFI_STATE appears to be unused [UnusedResources]
+    <string name="android.permission.CHANGE_WIFI_STATE">Change Wifi</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:5: Warning: The resource R.string.android_permission_INTERNET appears to be unused [UnusedResources]
+    <string name="android.permission.INTERNET">Use the Network</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:6: Warning: The resource R.string.android_permission_NEARBY_WIFI_DEVICES appears to be unused [UnusedResources]
+    <string name="android.permission.NEARBY_WIFI_DEVICES">Find nearby Wifi devices</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:8: Warning: The resource R.string.tansport_host appears to be unused [UnusedResources]
+    <string name="tansport_host">ddd_transport</string>
+            ~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:14: Warning: The resource R.string.starting_file_receive appears to be unused [UnusedResources]
+    <string name="starting_file_receive">Starting File Receive...\n</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:15: Warning: The resource R.string.incomplete_bundle_request appears to be unused [UnusedResources]
+    <string name="incomplete_bundle_request">Incomplete %1$ %2$</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:16: Warning: The resource R.string.failed appears to be unused [UnusedResources]
+    <string name="failed">Failed</string>
+            ~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:17: Warning: The resource R.string.completed appears to be unused [UnusedResources]
+    <string name="completed">Completed</string>
+            ~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:18: Warning: The resource R.string.incomplete appears to be unused [UnusedResources]
+    <string name="incomplete">Incomplete</string>
+            ~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:19: Warning: The resource R.string.complete appears to be unused [UnusedResources]
+    <string name="complete">Complete</string>
+            ~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:20: Warning: The resource R.string.failed_file_transfer appears to be unused [UnusedResources]
+    <string name="failed_file_transfer">Failed... : %s</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:23: Warning: The resource R.string.usb_transport_directory_was_not_detected appears to be unused [UnusedResources]
+    <string name="usb_transport_directory_was_not_detected">USB was connected, but /DDD_transport directory was not detected\n</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:26: Warning: The resource R.string.bundleserver_domain appears to be unused [UnusedResources]
+    <string name="bundleserver_domain">BundleServer Domain</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:27: Warning: The resource R.string.bundleserver_port appears to be unused [UnusedResources]
+    <string name="bundleserver_port">BundleServer Port</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:28: Warning: The resource R.string.connect_to_bundle_server appears to be unused [UnusedResources]
+    <string name="connect_to_bundle_server">connect to bundle server</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:31: Warning: The resource R.string.exchange_data appears to be unused [UnusedResources]
+    <string name="exchange_data">Exchange Data</string>
+            ~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:32: Warning: The resource R.string.permission_caption appears to be unused [UnusedResources]
+    <string name="permission_caption">Permission caption</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:33: Warning: The resource R.string.needed_permissions appears to be unused [UnusedResources]
+    <string name="needed_permissions">Needed Permissions</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:45: Warning: The resource R.string.sending_adu_s_d_from_s appears to be unused [UnusedResources]
+    <string name="sending_adu_s_d_from_s">Sending ADU %s:%d from %s</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "UnusedResources":
+   Unused resources make applications larger and slow down builds.
+
+
+   The unused resource check can ignore tests. If you want to include
+   resources that are only referenced from tests, consider packaging them in a
+   test source set instead.
+
+   You can include test sources in the unused resource check by setting the
+   system property lint.unused-resources.include-tests =true, and to exclude
+   them (usually for performance reasons), use
+   lint.unused-resources.exclude-tests =true.
+   ,
+
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values-b+ar\strings.xml:13: Warning: Replace "..." with ellipsis character (…, &#8230;) ? [TypographyEllipsis]
+    <string name="starting_file_receive">بدء استلام الملف...\n</string>
+                                         ~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values-b+es\strings.xml:13: Warning: Replace "..." with ellipsis character (…, &#8230;) ? [TypographyEllipsis]
+    <string name="starting_file_receive">Iniciando recepción de archivo...\n</string>
+                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values-b+uk\strings.xml:13: Warning: Replace "..." with ellipsis character (…, &#8230;) ? [TypographyEllipsis]
+    <string name="starting_file_receive">Розпочато прийом файлу...\n</string>
+                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:14: Warning: Replace "..." with ellipsis character (…, &#8230;) ? [TypographyEllipsis]
+    <string name="starting_file_receive">Starting File Receive...\n</string>
+                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values-b+ar\strings.xml:19: Warning: Replace "..." with ellipsis character (…, &#8230;) ? [TypographyEllipsis]
+    <string name="failed_file_transfer">فشل... : %s</string>
+                                        ~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values-b+es\strings.xml:19: Warning: Replace "..." with ellipsis character (…, &#8230;) ? [TypographyEllipsis]
+    <string name="failed_file_transfer">Fallido... : %s</string>
+                                        ~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values-b+uk\strings.xml:19: Warning: Replace "..." with ellipsis character (…, &#8230;) ? [TypographyEllipsis]
+    <string name="failed_file_transfer">Не вдалося... : %s</string>
+                                        ~~~~~~~~~~~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\values\strings.xml:20: Warning: Replace "..." with ellipsis character (…, &#8230;) ? [TypographyEllipsis]
+    <string name="failed_file_transfer">Failed... : %s</string>
+                                        ~~~~~~~~~~~~~~
+
+   Explanation for issues of type "TypographyEllipsis":
+   You can replace the string "..." with a dedicated ellipsis character,
+   ellipsis character (u2026, &#8230;). This can help make the text more
+   readable.
+
+   https://en.wikipedia.org/wiki/Ellipsis
+
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\layout\server_fragment.xml:9: Warning: This text field does not specify an inputType [TextFields]
+    <EditText
+     ~~~~~~~~
+
+   Explanation for issues of type "TextFields":
+   Providing an inputType attribute on a text field improves usability because
+   depending on the data to be input, optimized keyboards can be shown to the
+   user (such as just digits and parentheses for a phone number). 
+
+   The lint detector also looks at the id of the view, and if the id offers a
+   hint of the purpose of the field (for example, the id contains the phrase
+   phone or email), then lint will also ensure that the inputType contains the
+   corresponding type attributes.
+
+   If you really want to keep the text field generic, you can suppress this
+   warning by setting inputType="text".
+
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\layout\server_fragment.xml:9: Warning: Missing autofillHints attribute [Autofill]
+    <EditText
+     ~~~~~~~~
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\res\layout\server_fragment.xml:19: Warning: Missing autofillHints attribute [Autofill]
+    <EditText
+     ~~~~~~~~
+
+   Explanation for issues of type "Autofill":
+   Specify an autofillHints attribute when targeting SDK version 26 or higher
+   or explicitly specify that the view is not important for autofill. Your app
+   can help an autofill service classify the data correctly by providing the
+   meaning of each view that could be autofillable, such as views representing
+   usernames, passwords, credit card fields, email addresses, etc.
+
+   The hints can have any value, but it is recommended to use predefined
+   values like 'username' for a username or 'creditCardNumber' for a credit
+   card number. For a list of all predefined autofill hint constants, see the
+   AUTOFILL_HINT_ constants in the View reference at
+   https://developer.android.com/reference/android/view/View.html.
+
+   You can mark a view unimportant for autofill by specifying an
+   importantForAutofill attribute on that view or a parent view. See
+   https://developer.android.com/reference/android/view/View.html#setImportant
+   ForAutofill(int).
+
+   https://developer.android.com/guide/topics/text/autofill.html
+
+C:\Users\ngngo\OneDrive\Desktop\ddd-research\DDD\BundleClient\app\src\main\java\net\discdd\bundleclient\ServerFragment.java:149: Warning: Number formatting does not take into account locale settings. Consider using String.format instead. [SetTextI18n]
+        portInput.setText(Integer.toString(sharedPref.getInt("port", 0)));
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "SetTextI18n":
+   When calling TextView#setText
+   * Never call Number#toString() to format numbers; it will not handle
+   fraction separators and locale-specific digits properly. Consider using
+   String#format with proper format specifications (%d or %f) instead.
+   * Do not pass a string literal (e.g. "Hello") to display text. Hardcoded
+   text can not be properly translated to other languages. Consider using
+   Android resource strings instead.
+   * Do not build messages by concatenating text chunks. Such messages can not
+   be properly translated.
+
+   https://developer.android.com/guide/topics/resources/localization.html
+
+7 errors, 60 warnings

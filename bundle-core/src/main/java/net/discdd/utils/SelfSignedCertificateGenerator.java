@@ -1,70 +1,38 @@
 package net.discdd.utils;
 
 import net.discdd.bundlesecurity.SecurityUtils;
-import org.bouncycastle.asn1.ASN1Encodable;
-import org.bouncycastle.asn1.ASN1Integer;
-import org.bouncycastle.asn1.ASN1Sequence;
-import org.bouncycastle.asn1.DEROctetString;
-import org.bouncycastle.asn1.DERSequence;
-import org.bouncycastle.asn1.DERTaggedObject;
-import org.bouncycastle.asn1.edec.EdECObjectIdentifiers;
-import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.asn1.x500.X500Name;
-import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
-import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
-import org.bouncycastle.asn1.x9.X9ObjectIdentifiers;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
-import org.bouncycastle.crypto.params.ECKeyParameters;
-import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters;
-import org.bouncycastle.crypto.params.X25519PrivateKeyParameters;
-import org.bouncycastle.crypto.params.X25519PublicKeyParameters;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-//import org.bouncycastle.jce.spec.ECParameterSpec;
-//import org.bouncycastle.jce.spec.ECPrivateKeySpec;
-import org.bouncycastle.openssl.PEMParser;
-import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
-import org.bouncycastle.pkcs.PKCS8EncryptedPrivateKeyInfo;
 import org.whispersystems.libsignal.ecc.Curve;
-import org.whispersystems.libsignal.ecc.DjbECPrivateKey;
 import org.whispersystems.libsignal.ecc.DjbECPublicKey;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
 import org.whispersystems.libsignal.ecc.ECPrivateKey;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
 
-import java.io.*;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.math.BigInteger;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.AlgorithmParameters;
 import java.security.KeyFactory;
 import java.security.KeyPair;
-import java.security.KeyPairGenerator;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.security.SecureRandom;
 import java.security.Security;
 import java.security.cert.X509Certificate;
 import java.security.spec.ECGenParameterSpec;
+import java.security.spec.ECParameterSpec;
 import java.security.spec.ECPoint;
 import java.security.spec.ECPrivateKeySpec;
-import java.security.spec.ECParameterSpec;
 import java.security.spec.ECPublicKeySpec;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.NamedParameterSpec;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.X509EncodedKeySpec;
-import java.security.spec.XECPrivateKeySpec;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.Date;
-
-
-import static org.bouncycastle.jce.provider.BouncyCastleProvider.getPrivateKey;
 
 // thank you for this class copilot!
 // -Djavax.net.debug=ssl:handshake
@@ -144,7 +112,7 @@ public class SelfSignedCertificateGenerator {
         // Get the public key bytes
         byte[] publicKeyBytes = ((DjbECPublicKey) ecPublicKey).getPublicKey();
 
-        // Initialize BouncyCastle Provider
+        // Initialize BouncyCastle Provider 
         Security.addProvider(new BouncyCastleProvider());
 
         // Generate EC Parameters for secp256r1

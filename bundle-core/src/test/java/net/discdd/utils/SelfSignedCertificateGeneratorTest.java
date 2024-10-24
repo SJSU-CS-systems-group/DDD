@@ -1,22 +1,27 @@
 package net.discdd.utils;
 
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Test;
 import org.whispersystems.libsignal.ecc.Curve;
-import org.whispersystems.libsignal.ecc.DjbECPublicKey;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
 import org.whispersystems.libsignal.ecc.ECPrivateKey;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
 
-import javax.net.ssl.*;
-import java.io.*;
-import java.nio.file.Path;
-import java.security.KeyPair;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLServerSocketFactory;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManagerFactory;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.security.KeyStore;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class SelfSignedCertificateGeneratorTest {

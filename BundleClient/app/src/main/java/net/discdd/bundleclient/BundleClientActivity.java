@@ -25,6 +25,7 @@ import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
 import net.discdd.client.bundlerouting.ClientWindow;
 import net.discdd.client.bundlesecurity.BundleSecurity;
+import net.discdd.pathutils.ClientPaths;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -46,6 +47,7 @@ public class BundleClientActivity extends AppCompatActivity {
     BundleClientWifiDirectService wifiBgService;
     private final ServiceConnection connection;
     CompletableFuture<BundleClientActivity> serviceReady = new CompletableFuture<>();
+
 
     public BundleClientActivity() {
         connection = new ServiceConnection() {
@@ -104,6 +106,12 @@ public class BundleClientActivity extends AppCompatActivity {
         var tabMediator = new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> tab.setText(
                 fragmentsWithTitles.get(position).title()));
         tabMediator.attach();
+
+        try {
+            ClientPaths clientPaths = new ClientPaths(Paths.get(getApplicationContext().getApplicationInfo().dataDir));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
         //Application context
         var resources = getApplicationContext().getResources();
