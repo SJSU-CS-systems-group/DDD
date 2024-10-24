@@ -25,9 +25,11 @@ import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
 import net.discdd.client.bundlerouting.ClientWindow;
 import net.discdd.client.bundlesecurity.BundleSecurity;
+import net.discdd.pathutils.ClientPaths;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
@@ -104,6 +106,13 @@ public class BundleClientActivity extends AppCompatActivity {
                 fragmentsWithTitles.get(position).title()));
         tabMediator.attach();
 
+        try {
+            ClientPaths clientPaths = new ClientPaths(
+                    Paths.get(getApplicationContext().getApplicationInfo().dataDir));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
         //Application context
         var resources = getApplicationContext().getResources();
         try (InputStream inServerIdentity = resources.openRawResource(
@@ -112,8 +121,7 @@ public class BundleClientActivity extends AppCompatActivity {
                 net.discdd.android_core.R.raw.server_signed_pre); InputStream inServerRatchet =
                 resources.openRawResource(
                 net.discdd.android_core.R.raw.server_ratchet)) {
-            BundleSecurity.initializeKeyPaths(inServerIdentity, inServerSignedPre, inServerRatchet,
-                                              Paths.get(getApplicationContext().getApplicationInfo().dataDir));
+            BundleSecurity.initializeKeyPaths(inServerIdentity, inServerSignedPre, inServerRatchet);
         } catch (IOException e) {
             logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
         }
