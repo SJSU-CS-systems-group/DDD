@@ -50,6 +50,7 @@ public class TransportToBundleServerManager implements Runnable {
     private final Function<Void, Void> connectComplete;
     private final Function<Exception, Void> connectError;
     private final String transportTarget;
+    private Context applicationContext;
 
     public TransportToBundleServerManager(TransportPaths transportPaths, String host, String port, Function<Void,
             Void> connectComplete, Function<Exception, Void> connectError) {

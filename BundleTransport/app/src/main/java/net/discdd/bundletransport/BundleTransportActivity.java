@@ -26,7 +26,6 @@ import com.google.android.material.tabs.TabLayoutMediator;
 
 import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
-import net.discdd.pathutils.TransportPaths;
 import net.discdd.transport.TransportSecurity;
 
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -47,7 +46,6 @@ public class BundleTransportActivity extends AppCompatActivity {
     private TitledFragment serverUploadFragment;
     private TitledFragment transportWifiFragment;
     private TitledFragment storageFragment;
-    private TransportPaths transportPaths;
 
     record ConnectivityEvent(boolean internetAvailable) {}
 
@@ -83,7 +81,6 @@ public class BundleTransportActivity extends AppCompatActivity {
 
         LogFragment.registerLoggerHandler();
 
-        this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
         var resources = getApplicationContext().getResources();
 
         try (InputStream inServerIdentity = resources.openRawResource(

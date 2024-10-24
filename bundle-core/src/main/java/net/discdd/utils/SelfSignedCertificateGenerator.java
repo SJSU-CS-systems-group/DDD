@@ -112,7 +112,7 @@ public class SelfSignedCertificateGenerator {
         // Get the public key bytes
         byte[] publicKeyBytes = ((DjbECPublicKey) ecPublicKey).getPublicKey();
 
-        // Initialize BouncyCastle Provider 
+        // Initialize BouncyCastle Provider
         Security.addProvider(new BouncyCastleProvider());
 
         // Generate EC Parameters for secp256r1

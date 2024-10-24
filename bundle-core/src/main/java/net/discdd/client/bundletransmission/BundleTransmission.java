@@ -376,7 +376,7 @@ public class BundleTransmission {
     }
 
     private int uploadBundle(BundleExchangeServiceGrpc.BundleExchangeServiceStub stub) throws RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException, GeneralSecurityException {
-        BundleDTO toSend = generateBundleForTransmission();
+        BundleDTO toSend =  generateBundleForTransmission();
         var bundleUploadResponseObserver = new BundleUploadResponseObserver();
         BundleSender clientSender = BundleSender.newBuilder().setId(bundleSecurity.getClientSecurity().getClientID())
                 .setType(BundleSenderType.CLIENT).build();

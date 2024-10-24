@@ -2,8 +2,6 @@ package net.discdd.transport;
 
 import lombok.Getter;
 import net.discdd.bundlesecurity.SecurityUtils;
-import net.discdd.utils.SelfSignedCertificateGenerator;
-import net.discdd.bundlesecurity.ServerSecurity;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.ecc.Curve;
@@ -107,15 +105,10 @@ public class TransportSecurity{
         byte[] privateKeyBytes = SecurityUtils.decodePrivateKeyFromFile(tranportKeyPath.resolve(SecurityUtils.TRANSPORT_IDENTITY_PRIVATE_KEY));
         byte[] publicKeyBytes = SecurityUtils.decodePublicKeyfromFile(tranportKeyPath.resolve(SecurityUtils.TRANSPORT_IDENTITY_KEY));
 
-        KeyFactory keyFactory = KeyFactory.getInstance("EC", "BC");
+        ECPublicKey basePublicKey = Curve.decodePoint(transportKeyPvt, 0);
+        ECPrivateKey basePrivateKey = Curve.decodePrivatePoint(transportKeyPub);
 
-        X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(publicKeyBytes);
-        PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
-
-        PKCS8EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(privateKeyBytes);
-        PrivateKey privateKey = keyFactory.generatePrivate(privateKeySpec);
-
-        transportKeyPair = new KeyPair(publicKey, privateKey);
+        transportKeyPair = new ECKeyPair(basePublicKey, basePrivateKey);
     }
 
     private void InitializeServerKeysFromFiles(Path path) throws InvalidKeyException, IOException {
