@@ -140,7 +140,7 @@ public class ClientSecurity {
         theirIdentityKey = new IdentityKey(serverIdentityKey, 0);
 
         byte[] serverSignedPreKey =
-                SecurityUtils.decodePublicKeyfromFile(path.resolve(SecurityUtils.SERVER_SIGNEDPRE_KEY));
+                SecurityUtils.decodePublicKeyfromFile(path.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY));
         theirSignedPreKey = Curve.decodePoint(serverSignedPreKey, 0);
 
         byte[] serverRatchetKey = SecurityUtils.decodePublicKeyfromFile(path.resolve(SecurityUtils.SERVER_RATCHET_KEY));

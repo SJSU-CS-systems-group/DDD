@@ -13,7 +13,7 @@ public class ClientPaths {
     public final Path sessionStorePath;
     public final Path clientKeyPath;
     // client window
-    public static final String CLIENT_WINDOW_SUBDIR = "ClientWindow";
+    public final String CLIENT_WINDOW_SUBDIR = "ClientWindow";
     private final String WINDOW_FILE = "clientWindow.csv";
     public final Path clientWindowDataPath;
     public final Path dbFile;
@@ -26,27 +26,22 @@ public class ClientPaths {
     private final String METADATAFILE = "routing.metadata";
 
     // BundleSecurity directory
-    public static final String BUNDLE_SECURITY_DIR = "BundleSecurity";
-    private static final String BUNDLE_ID_NEXT_COUNTER = "Shared/DB/BUNDLE_ID_NEXT_COUNTER.txt";
-    public static final String SERVER_IDENTITY_PUB = "server_identity.pub";
-    public static final String SERVER_SIGNED_PRE_PUB = "server_signed_pre.pub";
-    public static final String SERVER_RATCHET_PUB = "server_ratchet.pub";
-    public static final String SERVER_KEYS_SUBDIR = "Server_Keys";
+    private String BUNDLE_ID_NEXT_COUNTER = "Shared/DB/BUNDLE_ID_NEXT_COUNTER.txt";
 
     /* Bundle generation directory */
-    private static final String BUNDLE_GENERATION_DIRECTORY = "BundleTransmission/bundle-generation";
-    private static final String TO_BE_BUNDLED_DIRECTORY = "to-be-bundled";
-    private static final String TO_SEND_DIRECTORY = "to-send";
-    private static final String UNCOMPRESSED_PAYLOAD = "uncompressed-payload";
-    private static final String COMPRESSED_PAYLOAD = "compressed-payload";
-    private static final String ENCRYPTED_PAYLOAD = "encrypted-payload";
-    private static final String RECEIVED_PROCESSING = "received-processing";
-    private static final String LARGEST_BUNDLE_ID_RECEIVED = "Shared/DB/LARGEST_BUNDLE_ID_RECEIVED.txt";
-    private static final String RECEIVED_BUNDLES_DIRECTORY = "Shared/received-bundles";
+    private String BUNDLE_GENERATION_DIRECTORY = "BundleTransmission/bundle-generation";
+    private String TO_BE_BUNDLED_DIRECTORY = "to-be-bundled";
+    private String TO_SEND_DIRECTORY = "to-send";
+    private String UNCOMPRESSED_PAYLOAD = "uncompressed-payload";
+    private String COMPRESSED_PAYLOAD = "compressed-payload";
+    private String ENCRYPTED_PAYLOAD = "encrypted-payload";
+    private String RECEIVED_PROCESSING = "received-processing";
+    private String LARGEST_BUNDLE_ID_RECEIVED = "Shared/DB/LARGEST_BUNDLE_ID_RECEIVED.txt";
+    private String RECEIVED_BUNDLES_DIRECTORY = "Shared/received-bundles";
 
-    private static String SENT_BUNDLE_DETAILS = "Shared/DB/SENT_BUNDLE_DETAILS.json";
+    private String SENT_BUNDLE_DETAILS = "Shared/DB/SENT_BUNDLE_DETAILS.json";
 
-    private static String LAST_SENT_BUNDLE_STRUCTURE = "Shared/DB/LAST_SENT_BUNDLE_STRUCTURE.json";
+    private String LAST_SENT_BUNDLE_STRUCTURE = "Shared/DB/LAST_SENT_BUNDLE_STRUCTURE.json";
 
     public Long APP_DATA_SIZE_LIMIT = 1000000000L;
     public final long BUNDLE_SIZE_LIMIT = 100_000_000L;
@@ -111,8 +106,8 @@ public class ClientPaths {
         lastSentBundleStructurePath = rootDir.resolve(LAST_SENT_BUNDLE_STRUCTURE);
 
         // Bundle security directory
-        bundleSecurityPath = rootDir.resolve(BUNDLE_SECURITY_DIR);
-        serverKeyPath = bundleSecurityPath.resolve(SERVER_KEYS_SUBDIR);
+        bundleSecurityPath = rootDir.resolve(SecurityUtils.BUNDLE_SECURITY_DIR);
+        serverKeyPath = bundleSecurityPath.resolve(SecurityUtils.SERVER_KEY_PATH);
         serverKeyPath.toFile().mkdirs();
 
         bundleIdNextCounter = rootDir.resolve(BUNDLE_ID_NEXT_COUNTER);
@@ -120,9 +115,9 @@ public class ClientPaths {
         FileUtils.createFileWithDefaultIfNeeded(largestBundleIdReceived, "0".getBytes());
 
         // initialize key paths
-        outServerIdentity = serverKeyPath.resolve(SERVER_IDENTITY_PUB);
-        outServerSignedPre = serverKeyPath.resolve(SERVER_SIGNED_PRE_PUB);
-        outServerRatchet = serverKeyPath.resolve(SERVER_RATCHET_PUB);
+        outServerIdentity = serverKeyPath.resolve(SecurityUtils.SERVER_IDENTITY_KEY);
+        outServerSignedPre = serverKeyPath.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY);
+        outServerRatchet = serverKeyPath.resolve(SecurityUtils.SERVER_RATCHET_KEY);
 
         // client routing
         var metaDataPath = rootDir.resolve("BundleRouting");

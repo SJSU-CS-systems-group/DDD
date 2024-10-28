@@ -7,6 +7,7 @@ import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import net.discdd.bundlerouting.RoutingExceptions;
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
+import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.client.bundletransmission.BundleTransmission;
 import net.discdd.grpc.AppDataUnit;
 import net.discdd.grpc.BundleChunk;
@@ -24,6 +25,7 @@ import net.discdd.model.BundleDTO;
 import net.discdd.pathutils.ClientPaths;
 import net.discdd.utils.Constants;
 import net.discdd.utils.StoreADUs;
+import org.apache.catalina.security.SecurityUtil;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,11 +67,11 @@ public class BundleClientToBundleServerTest extends End2EndTest {
     @BeforeAll
     static void setUp() throws Exception {
         var securityDir =
-                clientTestRoot.resolve(Path.of(ClientPaths.BUNDLE_SECURITY_DIR, ClientPaths.SERVER_KEYS_SUBDIR));
+                clientTestRoot.resolve(Path.of(SecurityUtils.BUNDLE_SECURITY_DIR, SecurityUtils.SERVER_KEY_PATH));
         securityDir.toFile().mkdirs();
-        Files.copy(serverIdentityKeyPath, securityDir.resolve(ClientPaths.SERVER_IDENTITY_PUB));
-        Files.copy(serverSignedPreKeyPath, securityDir.resolve(ClientPaths.SERVER_SIGNED_PRE_PUB));
-        Files.copy(serverRatchetKeyPath, securityDir.resolve(ClientPaths.SERVER_RATCHET_PUB));
+        Files.copy(serverIdentityKeyPath, securityDir.resolve(SecurityUtils.SERVER_IDENTITY_KEY));
+        Files.copy(serverSignedPreKeyPath, securityDir.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY));
+        Files.copy(serverRatchetKeyPath, securityDir.resolve(SecurityUtils.SERVER_RATCHET_KEY));
 
         sendStore = new StoreADUs(clientTestRoot.resolve("send"));
         recieveStore = new StoreADUs(clientTestRoot.resolve("receive"));

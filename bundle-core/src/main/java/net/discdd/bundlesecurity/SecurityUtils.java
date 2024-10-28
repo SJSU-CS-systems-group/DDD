@@ -40,6 +40,7 @@ public class SecurityUtils {
     public static final String BUNDLEID_FILENAME = "bundle.id";
     public static final String DECRYPTED_FILE_EXT = ".decrypted";
     public static final String BUNDLE_FILE_EXT = ".bundle";
+    public static final String BUNDLE_SECURITY_DIR = "BundleSecurity";
     public static final String PUB_KEY_HEADER = "-----BEGIN EC PUBLIC KEY-----";
     public static final String PUB_KEY_FOOTER = "-----END EC PUBLIC KEY-----";
     public static final String PVT_KEY_HEADER = "-----BEGIN EC PRIVATE KEY-----";
@@ -55,7 +56,7 @@ public class SecurityUtils {
     public static final String CLIENT_BASE_KEY = "clientBase.pub";
     public static final String CLIENT_BASE_PRIVATE_KEY = "clientBase.pvt";
     public static final String SERVER_IDENTITY_KEY = "server_identity.pub";
-    public static final String SERVER_SIGNEDPRE_KEY = "server_signed_pre.pub";
+    public static final String SERVER_SIGNED_PRE_KEY = "server_signed_pre.pub";
     public static final String SERVER_RATCHET_KEY = "server_ratchet.pub";
     public static final String SERVER_IDENTITY_PRIVATE_KEY = "serverIdentity.pvt";
     public static final String SERVER_SIGNEDPRE_PRIVATE_KEY = "serverSignedPreKey.pvt";
