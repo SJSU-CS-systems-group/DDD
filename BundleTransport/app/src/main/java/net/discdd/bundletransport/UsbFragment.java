@@ -23,7 +23,11 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -122,16 +126,21 @@ public class UsbFragment extends Fragment {
 //        }
         File dddTransportDir = new File(String.valueOf(usbDirPath), "DDD_transport");
         logger.log(INFO, "Made the following file for directories creation: " + dddTransportDir);
-        dddTransportDir = new File(String.valueOf(usbDirPath), "/DDD_transport/BundleTransmission/server");
+        dddTransportDir = new File(String.valueOf(usbDirPath), "/BundleTransmission/server");
         dddTransportDir.mkdirs();
         logger.log(INFO, "Made the following directory: " + dddTransportDir);
-        dddTransportDir = new File(String.valueOf(usbDirPath), "/DDD_transport/BundleTransmission/client");
+        dddTransportDir = new File(String.valueOf(usbDirPath), "/BundleTransmission/client");
         dddTransportDir.mkdirs();
         logger.log(INFO, "Made the following directory: " + dddTransportDir);
 //    }
     // after making proper directories, copy for-client files from transport
         logger.log(INFO, "copying client files from device");
-        copyClientFilesFromDevice(dddTransportDir);
+        try {
+            copyClientFilesFromDevice(dddTransportDir);
+        } catch (IOException e) {
+            logger.log(INFO, "Copying client files from device was unsuccessful");
+            throw new RuntimeException(e);
+        }
         logger.log(INFO, "copied client files from device");
     }
 
@@ -144,21 +153,49 @@ public class UsbFragment extends Fragment {
     private void copyClientFilesFromDevice(File dddTransportDir) throws IOException {
         //for every client bundle in device, copy onto usb
         //how will client know which bundle is THEIRS (does bundle or file-path hv client ID?)
-        List<Path> storageList;
-        String s = requireActivity().getExternalFilesDir(null) + "/client";
-        Path devicePathForClient = Paths.get(s);
-        try (Stream<Path> walk = Files.walk(devicePathForClient)) {
-            storageList = walk.filter(Files::isRegularFile).collect(Collectors.toList());
+        try {
+            List<Path> storageList;
+            String s = requireActivity().getExternalFilesDir(null) + "/BundleTransmission/client";
+            Path devicePathForClient = Paths.get(s);
+            Files.copy(devicePathForClient, devicePathForClient,
+                       StandardCopyOption.REPLACE_EXISTING);
+            try (Stream<Path> walk = Files.walk(devicePathForClient)) {
+                storageList = walk.filter(Files::isRegularFile).collect(Collectors.toList());
+            }
+            if (storageList.isEmpty()) {
+                //TODO: inform no bundles to download onto USB
+                logger.log(INFO, "No bundles to download from device to USB");
+                return;
+            }
+            //for every client file in transport, copy onto USBs designated dir
+            for (Path deviceFilePath : storageList) {
+                logger.log(INFO, "copying" + deviceFilePath + "onto " + dddTransportDir.toPath());
+//                Files.copy(deviceFilePath, targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                copy(deviceFilePath.toFile(),dddTransportDir);
         }
-        if (storageList.isEmpty()) {
-            //TODO: inform no bundles to download onto USB
-            logger.log(INFO, "No bundles to download from device to USB");
-            return;
+        } catch (IOException e) {
+            logger.log(INFO, "Copying client files from device was unsuccessful");
+            throw new RuntimeException(e);
         }
-        //for every client file in transport, copy onto USBs designated dir
-        for (Path deviceFilePath : storageList) {
-            logger.log(INFO, "copying" + deviceFilePath + "onto " + dddTransportDir.toPath());
-            Files.copy(deviceFilePath, dddTransportDir.toPath(), StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    public static void copy(File src, File dest) throws IOException {
+        InputStream is = null;
+        OutputStream os = null;
+        try {
+            is = new FileInputStream(src);
+            os = new FileOutputStream(dest);
+
+            // buffer size 1K
+            byte[] buf = new byte[1024];
+
+            int bytesRead;
+            while ((bytesRead = is.read(buf)) > 0) {
+                os.write(buf, 0, bytesRead);
+            }
+        } finally {
+            is.close();
+            os.close();
         }
     }
 
