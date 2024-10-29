@@ -47,4 +47,6 @@
     <string name="usb_device_not_connected">USB device not connected</string>
     <string name="usb_device_attached">USB device attached</string>
     <string name="usb_device_detached">USB device detached</string>
+    <string name="exchange_usb_data">Exchange USB Data</string>
+    <string name="usb_connection_status">USB Connection Status</string>
 </resources>

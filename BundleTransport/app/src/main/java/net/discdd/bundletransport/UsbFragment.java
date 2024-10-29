@@ -37,78 +37,54 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class UsbFragment extends Fragment {
-    private static final Logger logger = Logger.getLogger(StorageManager.class.getName());
+    private Button usbExchangeButton;
     private TextView usbConnectionText;
-    private static final String usbDirName = "/DDD_transport";
     private UsbManager usbManager;
     private BroadcastReceiver mUsbReceiver;
-    private StorageManager storageManager;
     public static boolean usbConnected = false;
+    private StorageManager storageManager;
+    private static final Logger logger = Logger.getLogger(UsbFragment.class.getName());
+    private static final String usbDirName = "/DDD_transport";
+    private Path usbDirPath;
     private ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
-    private Button usbExchangeButton;
+    private File usbDirectory;
 
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable
-    Bundle savedInstanceState) {
-        View mainView = inflater.inflate(R.layout.usb_fragment, container, false);
-        usbConnectionText = mainView.findViewById(R.id.usbconnection_response_text);
-        usbExchangeButton = mainView.findViewById(R.id.usb_exchange_button);
-        //initialize usbManager such that we can check device attachment/ detachment later
+    public View onCreateView(
+            @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        View view = inflater.inflate(R.layout.usb_fragment, container, false);
+
+        usbExchangeButton = view.findViewById(R.id.usb_exchange_button);
+        usbConnectionText = view.findViewById(R.id.usbconnection_response_text);
+
         usbManager = (UsbManager) getActivity().getSystemService(Context.USB_SERVICE);
-        //initialize storageManager such that we can check storage volumes later
-        storageManager = (StorageManager) getActivity().getSystemService(Context.STORAGE_SERVICE);
-        //FIX?
-        //catches usb related broadcasts
         mUsbReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 handleUsbBroadcast(intent);
             }
         };
+        storageManager = (StorageManager) getActivity().getSystemService(Context.STORAGE_SERVICE);
+
         //Register USB broadcast receiver
         IntentFilter filter = new IntentFilter();
         filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
         filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
         getActivity().registerReceiver(mUsbReceiver, filter);
-        // Check initial USB connection
-        checkUsbConnection(1);
 
-        usbExchangeButton.setOnClickListener(view -> {
+        // Check initial USB connection
+        checkUsbConnection(3);
+
+        usbExchangeButton.setOnClickListener(v -> {
             try {
                 populateUsb();
             } catch (IOException e) {
+                logger.log(INFO, "Populate USB was unsuccessful");
                 throw new RuntimeException(e);
             }
             logger.log(INFO, "Sync button was hit");
         });
-        return mainView;
-    }
-
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        if (mUsbReceiver != null) {
-            getActivity().unregisterReceiver(mUsbReceiver);
-        }
-    }
-
-    //Method to handle USB broadcasts
-    private void handleUsbBroadcast(Intent intent) {
-        String action = intent.getAction();
-        if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
-            updateUsbStatus(false, getString(R.string.no_usb_connection_detected), Color.RED);
-            UsbFragment.usbConnected = false;
-            showUsbDetachedToast();
-        } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
-            updateUsbStatus(false, getString(R.string.usb_device_attached_checking_for_storage_volumes), Color.BLUE);
-            scheduledExecutor.schedule(() -> checkUsbConnection(1), 1, TimeUnit.SECONDS);
-            showUsbAttachedToast();
-            try {
-                populateUsb();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
+        return view;
     }
 
     /**
@@ -117,33 +93,46 @@ public class UsbFragment extends Fragment {
      * @throws IOException
      */
     private void populateUsb() throws IOException {
-        //check if ddd dir exists and write bundles over
-        //else create ddd dir where it should be and write bundles over
-        List<StorageVolume> storageVolumes = storageManager.getStorageVolumes();
-        for (StorageVolume volume : storageVolumes) {
-            // Check that volume is not internal storage, SSD, or hard drive
-            // ie. non-removable storage is internal storage, SSD, and hard drives
-            if (volume.isRemovable()) {
-                // Get the root directory for the USB storage
-                File usbStorageDir = volume.getDirectory();
-                // If the root dir exists
-                if (usbStorageDir != null) {
-                    // Create the new directory under the USB storage
-                    File dddTransportDir = new File(usbStorageDir, "DDD_transport");
-                    // Check if the DDD_transport directory exists
-                    if (!dddTransportDir.exists()) {
-                        // Directory does not exist, so create it
-                        dddTransportDir = new File(usbStorageDir, "DDD_transport/BundleTransmission/for_server");
-                        dddTransportDir.mkdirs();
-                        dddTransportDir = new File(usbStorageDir, "DDD_transport/BundleTransmission/for_client");
-                        dddTransportDir.mkdirs();
-                    }
-                    // after making proper directories, copy for-client files from transport
-                    copyClientFilesFromDevice(dddTransportDir);
-                }
-                break; //once first removable volume is found exit for loop (handles USBs with multiple partitions/volumes)
-            }
-        }
+//        //check if ddd dir exists and write bundles over
+//        //else create ddd dir where it should be and write bundles over
+//        List<StorageVolume> storageVolumes = storageManager.getStorageVolumes();
+//        for (StorageVolume volume : storageVolumes) {
+//            // Check that volume is not internal storage, SSD, or hard drive
+//            // ie. non-removable storage is internal storage, SSD, and hard drives
+//            if (volume.isRemovable()) {
+//                // Get the root directory for the USB storage
+//                File usbStorageDir = volume.getDirectory();
+//                // If the root dir exists
+//                if (usbStorageDir != null) {
+//                    // Create the new directory under the USB storage
+//                    File dddTransportDir = new File(usbStorageDir, "DDD_transport");
+//                    // Check if the DDD_transport directory exists
+//                    if (!dddTransportDir.exists()) {
+//                        // Directory does not exist, so create it
+//                        dddTransportDir = new File(usbStorageDir, "/DDD_transport/BundleTransmission/server");
+//                        dddTransportDir.mkdirs();
+//                        dddTransportDir = new File(usbStorageDir, "DDD_transport/BundleTransmission/client");
+//                        dddTransportDir.mkdirs();
+//                    }
+//                    // after making proper directories, copy for-client files from transport
+//                    copyClientFilesFromDevice(dddTransportDir);
+//                }
+//                break; //once first removable volume is found exit for loop (handles USBs with multiple partitions/volumes)
+////            }
+//        }
+        File dddTransportDir = new File(String.valueOf(usbDirPath), "DDD_transport");
+        logger.log(INFO, "Made the following file for directories creation: " + dddTransportDir);
+        dddTransportDir = new File(String.valueOf(usbDirPath), "/DDD_transport/BundleTransmission/server");
+        dddTransportDir.mkdirs();
+        logger.log(INFO, "Made the following directory: " + dddTransportDir);
+        dddTransportDir = new File(String.valueOf(usbDirPath), "/DDD_transport/BundleTransmission/client");
+        dddTransportDir.mkdirs();
+        logger.log(INFO, "Made the following directory: " + dddTransportDir);
+//    }
+    // after making proper directories, copy for-client files from transport
+        logger.log(INFO, "copying client files from device");
+        copyClientFilesFromDevice(dddTransportDir);
+        logger.log(INFO, "copied client files from device");
     }
 
     /**
@@ -168,12 +157,33 @@ public class UsbFragment extends Fragment {
         }
         //for every client file in transport, copy onto USBs designated dir
         for (Path deviceFilePath : storageList) {
+            logger.log(INFO, "copying" + deviceFilePath + "onto " + dddTransportDir.toPath());
             Files.copy(deviceFilePath, dddTransportDir.toPath(), StandardCopyOption.REPLACE_EXISTING);
         }
     }
 
-    //TODO delete and replace with an improved broadcast receiver
-    //Method to check initial USB connection
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (mUsbReceiver != null) {
+            getActivity().unregisterReceiver(mUsbReceiver);
+        }
+    }
+
+    //Method to handle USB broadcasts
+    private void handleUsbBroadcast(Intent intent) {
+        String action = intent.getAction();
+        if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
+            updateUsbStatus(false, getString(R.string.no_usb_connection_detected), Color.RED);
+            usbConnected = false;
+            showUsbDetachedToast();
+        } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
+            updateUsbStatus(false, getString(R.string.usb_device_attached_checking_for_storage_volumes), Color.BLUE);
+            scheduledExecutor.schedule(() -> checkUsbConnection(2), 1, TimeUnit.SECONDS);
+            showUsbAttachedToast();
+        }
+    }
+
     //Method to check initial USB connection
     private void checkUsbConnection(int tries) {
         usbConnected = !usbManager.getDeviceList().isEmpty() && usbDirExists();
@@ -197,9 +207,11 @@ public class UsbFragment extends Fragment {
 
     //Method to update USB status
     public void updateUsbStatus(boolean isConnected, String statusText, int color) {
-        usbExchangeButton.setEnabled(isConnected);
-        usbConnectionText.setText(statusText);
-        usbConnectionText.setTextColor(color);
+        getActivity().runOnUiThread(() -> {
+            usbExchangeButton.setEnabled(isConnected);
+            usbConnectionText.setText(statusText);
+            usbConnectionText.setTextColor(color);
+        });
     }
 
     private void showUsbAttachedToast() {
@@ -210,9 +222,12 @@ public class UsbFragment extends Fragment {
     private boolean usbDirExists() {
         List<StorageVolume> storageVolumeList = storageManager.getStorageVolumes();
         for (StorageVolume storageVolume : storageVolumeList) {
+            logger.info("STORAGE " + storageVolume.getDirectory().getPath());
             if (storageVolume.isRemovable()) {
-                File fileUsb = new File(storageVolume.getDirectory().getPath() + usbDirName);
-                if (fileUsb.exists()) {
+                usbDirectory = new File(storageVolume.getDirectory().getPath() + usbDirName);
+                logger.info("CHECKING FOR  " + usbDirectory);
+                if (usbDirectory.exists()) {
+                    usbDirPath = usbDirectory.toPath();
                     return true;
                 }
             }
