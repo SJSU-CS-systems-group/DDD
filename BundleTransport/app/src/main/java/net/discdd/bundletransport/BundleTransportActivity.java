@@ -48,6 +48,7 @@ public class BundleTransportActivity extends AppCompatActivity {
     private TitledFragment transportWifiFragment;
     private TitledFragment storageFragment;
     private TransportPaths transportPaths;
+    private TitledFragment usbFrag;
 
     record ConnectivityEvent(boolean internetAvailable) {}
 
@@ -100,9 +101,11 @@ public class BundleTransportActivity extends AppCompatActivity {
         transportWifiFragment = new TitledFragment(getString(R.string.local_wifi),
                                                    new TransportWifiDirectFragment(this.transportPaths));
         storageFragment = new TitledFragment("Storage Settings", new StorageFragment());
+        usbFrag = new TitledFragment("USB", new UsbFragment());
 
         permissionsFragment = new PermissionsFragment();
         fragments.add(serverUploadFragment);
+        fragments.add(usbFrag);
         fragments.add(transportWifiFragment);
         fragments.add(storageFragment);
         fragments.add(new TitledFragment(getString(R.string.permissions), permissionsFragment));
