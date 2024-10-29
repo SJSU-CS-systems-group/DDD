@@ -58,6 +58,68 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
             />
+        />
+        <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+            <TextView
+                    android:id="@+id/toClient"
+                    android:layout_width="40dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="toClient:"
+                    android:textSize="20sp"
+                    android:gravity="center"
+                    android:padding="0dp" />
+
+            <TextView
+                    android:id="@+id/numberBundlestoClient"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="0"
+                    android:textSize="20sp"
+                    android:gravity="left"
+                    android:layout_marginEnd="2dp"
+                    android:padding="0dp" />
+
+            <TextView
+                    android:id="@+id/toServer"
+                    android:layout_width="40dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="toServer:"
+                    android:textSize="20sp"
+                    android:gravity="center"
+                    android:padding="0dp" />
+
+            <TextView
+                    android:id="@+id/numberBundlestoServer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="0"
+                    android:textSize="20sp"
+                    android:gravity="left"
+                    android:layout_marginEnd="2dp"
+                    android:padding="0dp"/>
+
+            <Button
+                    android:id="@+id/reload"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Reload"
+                    android:textSize="18sp"
+                    android:gravity="center"
+                    android:layout_marginEnd="2dp"
+                    android:padding="0dp" />
+
+        </LinearLayout>
+
+
 
     </LinearLayout>
 </FrameLayout>
