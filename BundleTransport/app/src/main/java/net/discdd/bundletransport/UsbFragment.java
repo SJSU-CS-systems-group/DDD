@@ -232,6 +232,7 @@ public class UsbFragment extends Fragment {
         Toast.makeText(getActivity(), getString(R.string.usb_device_attached), Toast.LENGTH_SHORT).show();
     }
 
+
     private void showUsbDetachedToast() {
         Toast.makeText(getActivity(), getString(R.string.usb_device_detached), Toast.LENGTH_SHORT).show();
     }
