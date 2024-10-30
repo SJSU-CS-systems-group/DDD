@@ -63,7 +63,7 @@ public class ClientSecurity {
     private String clientID;
     private ClientPaths clientPaths;
 
-    private ClientSecurity(int deviceID, ClientPaths clientPaths) throws InvalidKeyException, IOException,
+    ClientSecurity(int deviceID, ClientPaths clientPaths) throws InvalidKeyException, IOException,
             NoSuchAlgorithmException {
         this.clientPaths = clientPaths;
 

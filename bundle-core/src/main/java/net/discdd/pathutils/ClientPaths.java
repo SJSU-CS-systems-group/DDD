@@ -23,28 +23,26 @@ public class ClientPaths {
     public final java.io.File metadataFile;
 
     // client routing
-    private final String METADATAFILE = "routing.metadata";
+    private static final String METADATAFILE = "routing.metadata";
 
     // BundleSecurity directory
-    private String BUNDLE_ID_NEXT_COUNTER = "Shared/DB/BUNDLE_ID_NEXT_COUNTER.txt";
+    private static final String BUNDLE_ID_NEXT_COUNTER = "Shared/DB/BUNDLE_ID_NEXT_COUNTER.txt";
 
     /* Bundle generation directory */
-    private String BUNDLE_GENERATION_DIRECTORY = "BundleTransmission/bundle-generation";
-    private String TO_BE_BUNDLED_DIRECTORY = "to-be-bundled";
-    private String TO_SEND_DIRECTORY = "to-send";
-    private String UNCOMPRESSED_PAYLOAD = "uncompressed-payload";
-    private String COMPRESSED_PAYLOAD = "compressed-payload";
-    private String ENCRYPTED_PAYLOAD = "encrypted-payload";
-    private String RECEIVED_PROCESSING = "received-processing";
-    private String LARGEST_BUNDLE_ID_RECEIVED = "Shared/DB/LARGEST_BUNDLE_ID_RECEIVED.txt";
-    private String RECEIVED_BUNDLES_DIRECTORY = "Shared/received-bundles";
+    private static final  String BUNDLE_GENERATION_DIRECTORY = "BundleTransmission/bundle-generation";
+    private static final String TO_BE_BUNDLED_DIRECTORY = "to-be-bundled";
+    private static final String TO_SEND_DIRECTORY = "to-send";
+    private static final String UNCOMPRESSED_PAYLOAD = "uncompressed-payload";
+    private static final  String COMPRESSED_PAYLOAD = "compressed-payload";
+    private static final String ENCRYPTED_PAYLOAD = "encrypted-payload";
+    private static final String RECEIVED_PROCESSING = "received-processing";
+    private static final String LARGEST_BUNDLE_ID_RECEIVED = "Shared/DB/LARGEST_BUNDLE_ID_RECEIVED.txt";
+    private static final String RECEIVED_BUNDLES_DIRECTORY = "Shared/received-bundles";
+    private static final String SENT_BUNDLE_DETAILS = "Shared/DB/SENT_BUNDLE_DETAILS.json";
+    private static final String LAST_SENT_BUNDLE_STRUCTURE = "Shared/DB/LAST_SENT_BUNDLE_STRUCTURE.json";
 
-    private String SENT_BUNDLE_DETAILS = "Shared/DB/SENT_BUNDLE_DETAILS.json";
-
-    private String LAST_SENT_BUNDLE_STRUCTURE = "Shared/DB/LAST_SENT_BUNDLE_STRUCTURE.json";
-
-    public Long APP_DATA_SIZE_LIMIT = 1000000000L;
-    public final long BUNDLE_SIZE_LIMIT = 100_000_000L;
+    public static final Long APP_DATA_SIZE_LIMIT = 1000000000L;
+    public static final Long BUNDLE_SIZE_LIMIT = 100_000_000L;
 
     public final Path ackRecordPath;
     public final Path tosendDir;
