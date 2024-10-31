@@ -13,8 +13,8 @@ public class ClientPaths {
     public final Path sessionStorePath;
     public final Path clientKeyPath;
     // client window
-    public final String CLIENT_WINDOW_SUBDIR = "ClientWindow";
-    private final String WINDOW_FILE = "clientWindow.csv";
+    public static final String CLIENT_WINDOW_SUBDIR = "ClientWindow";
+    private static final String WINDOW_FILE = "clientWindow.csv";
     public final Path clientWindowDataPath;
     public final Path dbFile;
 

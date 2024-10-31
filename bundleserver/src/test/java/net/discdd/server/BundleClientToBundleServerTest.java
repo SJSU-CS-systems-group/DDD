@@ -7,7 +7,6 @@ import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import net.discdd.bundlerouting.RoutingExceptions;
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
-import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.client.bundletransmission.BundleTransmission;
 import net.discdd.grpc.AppDataUnit;
 import net.discdd.grpc.BundleChunk;

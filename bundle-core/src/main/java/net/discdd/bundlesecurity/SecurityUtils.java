@@ -39,7 +39,6 @@ public class SecurityUtils {
     public static final String PAYLOAD_DIR = "payloads";
     public static final String BUNDLEID_FILENAME = "bundle.id";
     public static final String DECRYPTED_FILE_EXT = ".decrypted";
-    public static final String BUNDLE_FILE_EXT = ".bundle";
     public static final String BUNDLE_SECURITY_DIR = "BundleSecurity";
     public static final String PUB_KEY_HEADER = "-----BEGIN EC PUBLIC KEY-----";
     public static final String PUB_KEY_FOOTER = "-----END EC PUBLIC KEY-----";
