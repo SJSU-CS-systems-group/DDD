@@ -113,17 +113,16 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
             var resources = getApplicationContext().getResources();
             try (InputStream inServerIdentity = resources.openRawResource(
                     net.discdd.android_core.R.raw.server_identity); InputStream inServerSignedPre =
-                         resources.openRawResource(
-                                 net.discdd.android_core.R.raw.server_signed_pre); InputStream inServerRatchet =
-                         resources.openRawResource(
-                                 net.discdd.android_core.R.raw.server_ratchet)) {
+                    resources.openRawResource(
+                    net.discdd.android_core.R.raw.server_signed_pre); InputStream inServerRatchet =
+                    resources.openRawResource(
+                    net.discdd.android_core.R.raw.server_ratchet)) {
                 BundleSecurity.initializeKeyPaths(clientPaths, inServerIdentity, inServerSignedPre, inServerRatchet);
             } catch (IOException e) {
                 logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
             }
 
-            bundleTransmission =
-                    new BundleTransmission(clientPaths, this::processIncomingADU);
+            bundleTransmission = new BundleTransmission(clientPaths, this::processIncomingADU);
         } catch (Exception e) {
             logger.log(SEVERE, "Failed to initialize BundleTransmission", e);
         }

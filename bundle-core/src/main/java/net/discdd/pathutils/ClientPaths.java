@@ -29,11 +29,11 @@ public class ClientPaths {
     private static final String BUNDLE_ID_NEXT_COUNTER = "Shared/DB/BUNDLE_ID_NEXT_COUNTER.txt";
 
     /* Bundle generation directory */
-    private static final  String BUNDLE_GENERATION_DIRECTORY = "BundleTransmission/bundle-generation";
+    private static final String BUNDLE_GENERATION_DIRECTORY = "BundleTransmission/bundle-generation";
     private static final String TO_BE_BUNDLED_DIRECTORY = "to-be-bundled";
     private static final String TO_SEND_DIRECTORY = "to-send";
     private static final String UNCOMPRESSED_PAYLOAD = "uncompressed-payload";
-    private static final  String COMPRESSED_PAYLOAD = "compressed-payload";
+    private static final String COMPRESSED_PAYLOAD = "compressed-payload";
     private static final String ENCRYPTED_PAYLOAD = "encrypted-payload";
     private static final String RECEIVED_PROCESSING = "received-processing";
     private static final String LARGEST_BUNDLE_ID_RECEIVED = "Shared/DB/LARGEST_BUNDLE_ID_RECEIVED.txt";

@@ -74,7 +74,6 @@ public class BundleClientToBundleServerTest extends End2EndTest {
         sendStore = new StoreADUs(clientPaths.sendADUsPath);
         recieveStore = new StoreADUs(clientPaths.receiveADUsPath);
 
-
         bundleTransmission = new BundleTransmission(clientPaths, adu -> {});
         clientId = bundleTransmission.getBundleSecurity().getClientSecurity().getClientID();
     }

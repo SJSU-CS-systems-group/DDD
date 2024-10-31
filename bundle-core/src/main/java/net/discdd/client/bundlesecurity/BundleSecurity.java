@@ -48,7 +48,8 @@ public class BundleSecurity {
 
     // TODO: this function makes me sad! it should not be static. We should probably inject BundleSecurity
     // into Bundle transport so that everything can be set up properly
-    public static void initializeKeyPaths(ClientPaths clientPaths, InputStream inServerIdentity, InputStream inServerSignedPre, InputStream inServerRatchet) throws IOException {
+    public static void initializeKeyPaths(ClientPaths clientPaths, InputStream inServerIdentity,
+                                          InputStream inServerSignedPre, InputStream inServerRatchet) throws IOException {
         Files.copy(inServerIdentity, clientPaths.outServerIdentity, StandardCopyOption.REPLACE_EXISTING);
         inServerIdentity.close();
 

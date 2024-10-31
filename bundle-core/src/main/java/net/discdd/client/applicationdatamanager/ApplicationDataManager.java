@@ -9,6 +9,7 @@ import net.discdd.pathutils.ClientPaths;
 import net.discdd.utils.BundleUtils;
 import net.discdd.utils.StoreADUs;
 import net.discdd.utils.StreamExt;
+
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
