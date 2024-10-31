@@ -7,7 +7,6 @@ import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import net.discdd.bundlerouting.RoutingExceptions;
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
-import net.discdd.client.bundlesecurity.BundleSecurity;
 import net.discdd.client.bundletransmission.BundleTransmission;
 import net.discdd.grpc.AppDataUnit;
 import net.discdd.grpc.BundleChunk;
@@ -22,6 +21,7 @@ import net.discdd.grpc.GetRecencyBlobRequest;
 import net.discdd.grpc.Status;
 import net.discdd.model.Bundle;
 import net.discdd.model.BundleDTO;
+import net.discdd.pathutils.ClientPaths;
 import net.discdd.utils.Constants;
 import net.discdd.utils.StoreADUs;
 import org.junit.jupiter.api.Assertions;
@@ -61,20 +61,20 @@ public class BundleClientToBundleServerTest extends End2EndTest {
     private static StoreADUs recieveStore;
     private static BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub blockingStub;
     private static ManagedChannel channel;
+    private static ClientPaths clientPaths;
 
     @BeforeAll
     static void setUp() throws Exception {
-        var securityDir =
-                clientTestRoot.resolve(Path.of(BundleSecurity.BUNDLE_SECURITY_DIR, BundleSecurity.SERVER_KEYS_SUBDIR));
-        securityDir.toFile().mkdirs();
-        Files.copy(serverIdentityKeyPath, securityDir.resolve(BundleSecurity.SERVER_IDENTITY_PUB));
-        Files.copy(serverSignedPreKeyPath, securityDir.resolve(BundleSecurity.SERVER_SIGNED_PRE_PUB));
-        Files.copy(serverRatchetKeyPath, securityDir.resolve(BundleSecurity.SERVER_RATCHET_PUB));
+        clientPaths = new ClientPaths(clientTestRoot);
 
-        sendStore = new StoreADUs(clientTestRoot.resolve("send"));
-        recieveStore = new StoreADUs(clientTestRoot.resolve("receive"));
+        Files.copy(serverIdentityKeyPath, clientPaths.outServerIdentity);
+        Files.copy(serverSignedPreKeyPath, clientPaths.outServerSignedPre);
+        Files.copy(serverRatchetKeyPath, clientPaths.outServerRatchet);
 
-        bundleTransmission = new BundleTransmission(clientTestRoot, adu -> {});
+        sendStore = new StoreADUs(clientPaths.sendADUsPath);
+        recieveStore = new StoreADUs(clientPaths.receiveADUsPath);
+
+        bundleTransmission = new BundleTransmission(clientPaths, adu -> {});
         clientId = bundleTransmission.getBundleSecurity().getClientSecurity().getClientID();
     }
 

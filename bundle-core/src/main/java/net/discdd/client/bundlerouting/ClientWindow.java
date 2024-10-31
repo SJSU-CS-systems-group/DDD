@@ -3,13 +3,13 @@ package net.discdd.client.bundlerouting;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
 import net.discdd.bundlesecurity.BundleIDGenerator;
 import net.discdd.client.bundlesecurity.ClientSecurity;
+import net.discdd.pathutils.ClientPaths;
 import net.discdd.utils.Constants;
 import org.whispersystems.libsignal.InvalidKeyException;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.util.LinkedList;
 import java.util.List;
@@ -27,17 +27,15 @@ import static java.util.logging.Level.WARNING;
 public class ClientWindow {
 
     private static final Logger logger = Logger.getLogger(ClientWindow.class.getName());
-    public static final String CLIENT_WINDOW_SUBDIR = "ClientWindow";
 
     static private ClientWindow singleClientWindowInstance = null;
-    final private Path clientWindowDataPath;
-    final private String WINDOW_FILE = "clientWindow.csv";
 
     record UnencryptedBundleId(String bundleId, long bundleCounter) {}
 
     private final LinkedList<UnencryptedBundleId> windowOfUnencryptedBundleIds = new LinkedList<>();
     private final String clientID;
     private int windowLength = 10; /* Default Value */
+    private final ClientPaths clientPaths;
 
     /* Generates bundleIDs for window slots
      * Parameter:
@@ -58,23 +56,22 @@ public class ClientWindow {
     }
 
     private void updateDBWindow() throws IOException {
-        var dbFile = clientWindowDataPath.resolve(WINDOW_FILE);
-
-        Files.write(dbFile, String.format(Locale.US, "%d,%d", windowOfUnencryptedBundleIds.getFirst().bundleCounter(),
-                                          windowOfUnencryptedBundleIds.getLast().bundleCounter()).getBytes());
+        Files.write(clientPaths.dbFile,
+                    String.format(Locale.US, "%d,%d", windowOfUnencryptedBundleIds.getFirst().bundleCounter(),
+                                  windowOfUnencryptedBundleIds.getLast().bundleCounter()).getBytes());
 
         logger.log(FINE, "Update window: " + windowOfUnencryptedBundleIds.getFirst().bundleCounter() + " - " +
                 windowOfUnencryptedBundleIds.getLast().bundleCounter());
     }
 
     private void initializeWindow() throws IOException {
-        var dbFile = clientWindowDataPath.resolve(WINDOW_FILE);
+
         var start = 0L;
         windowLength = Constants.DEFAULT_WINDOW_SIZE;
         var end = start + windowLength - 1;
 
         try {
-            String dbData = new String(Files.readAllBytes(dbFile));
+            String dbData = new String(Files.readAllBytes(clientPaths.dbFile));
             String[] dbCSV = dbData.split(",");
             start = Long.parseLong(dbCSV[0]);
             end = Long.parseLong(dbCSV[1]);
@@ -94,10 +91,9 @@ public class ClientWindow {
      * Returns:
      * None
      */
-    private ClientWindow(int length, String clientID, Path rootPath) {
-        clientWindowDataPath = rootPath.resolve(CLIENT_WINDOW_SUBDIR);
-        clientWindowDataPath.toFile().mkdirs();
+    private ClientWindow(int length, String clientID, ClientPaths clientPaths) {
         this.clientID = clientID;
+        this.clientPaths = clientPaths;
 
         try {
             initializeWindow();
@@ -111,9 +107,9 @@ public class ClientWindow {
         }
     }
 
-    public static ClientWindow initializeInstance(int windowLength, String clientID, Path rootPath) throws BufferOverflow, IOException {
+    public static ClientWindow initializeInstance(int windowLength, String clientID, ClientPaths clientPaths) throws BufferOverflow, IOException {
         if (singleClientWindowInstance == null) {
-            singleClientWindowInstance = new ClientWindow(windowLength, clientID, rootPath);
+            singleClientWindowInstance = new ClientWindow(windowLength, clientID, clientPaths);
         } else {
             logger.log(INFO, "[WIN]: Client Window Instance is already initialized!");
         }

@@ -1,6 +1,7 @@
 package net.discdd.transport;
 
 import net.discdd.bundlesecurity.SecurityUtils;
+import net.discdd.bundlesecurity.ServerSecurity;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.ecc.Curve;
@@ -61,9 +62,10 @@ public class TransportSecurity {
     }
 
     private void loadKeysfromFiles(Path tranportKeyPath) throws IOException, InvalidKeyException {
-        byte[] transportKeyPvt =
-                Files.readAllBytes(tranportKeyPath.resolve(SecurityUtils.TRANSPORT_IDENTITY_PRIVATE_KEY));
-        byte[] transportKeyPub = Files.readAllBytes(tranportKeyPath.resolve(SecurityUtils.TRANSPORT_IDENTITY_KEY));
+        byte[] transportKeyPvt = SecurityUtils.decodePrivateKeyFromFile(
+                tranportKeyPath.resolve(SecurityUtils.TRANSPORT_IDENTITY_PRIVATE_KEY));
+        byte[] transportKeyPub =
+                SecurityUtils.decodePublicKeyfromFile(tranportKeyPath.resolve(SecurityUtils.TRANSPORT_IDENTITY_KEY));
 
         ECPublicKey basePublicKey = Curve.decodePoint(transportKeyPvt, 0);
         ECPrivateKey basePrivateKey = Curve.decodePrivatePoint(transportKeyPub);

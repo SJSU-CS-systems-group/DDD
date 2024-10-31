@@ -17,6 +17,7 @@ import android.widget.TextView;
 import androidx.fragment.app.Fragment;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import net.discdd.pathutils.TransportPaths;
 import net.discdd.wifidirect.WifiDirectManager;
 
 import java.net.Inet4Address;
@@ -37,10 +38,12 @@ public class TransportWifiDirectFragment extends Fragment {
     private TextView myWifiStatusView;
     private SharedPreferences sharedPreferences;
     private TransportWifiDirectService btService;
+    private TransportPaths transportPaths;
 
-    public TransportWifiDirectFragment() {
+    public TransportWifiDirectFragment(TransportPaths transportPaths) {
         intentFilter.addAction(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_WIFI_EVENT_ACTION);
         intentFilter.addAction(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION);
+        this.transportPaths = transportPaths;
     }
 
     private void processDeviceInfoChange() {
