@@ -81,9 +81,9 @@ public class BundleTransmission {
     private ClientRouting clientRouting;
     private ClientPaths clientPaths;
 
-    public BundleTransmission(Path rootFolder, Consumer<ADU> aduConsumer) throws WindowExceptions.BufferOverflow,
+    public BundleTransmission(ClientPaths clientPaths, Consumer<ADU> aduConsumer) throws WindowExceptions.BufferOverflow,
             IOException, InvalidKeyException, RoutingExceptions.ClientMetaDataFileException, NoSuchAlgorithmException {
-        this.clientPaths = new ClientPaths(rootFolder);
+        this.clientPaths = clientPaths;
         this.bundleSecurity = new BundleSecurity(clientPaths);
         this.applicationDataManager = new ApplicationDataManager(clientPaths, aduConsumer);
         this.clientRouting = ClientRouting.initializeInstance(clientPaths);

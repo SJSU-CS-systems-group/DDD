@@ -135,7 +135,7 @@ public class ServerSecurity {
         byte[] signedPreKeyPvt = SecurityUtils.decodePrivateKeyFromFile(
                 serverKeyPath.resolve(SecurityUtils.SERVER_SIGNEDPRE_PRIVATE_KEY));
         byte[] signedPreKeyPub =
-                SecurityUtils.decodePublicKeyfromFile(serverKeyPath.resolve(SecurityUtils.SERVER_SIGNEDPRE_KEY));
+                SecurityUtils.decodePublicKeyfromFile(serverKeyPath.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY));
 
         ECPublicKey signedPreKeyPublicKey = Curve.decodePoint(signedPreKeyPub, 0);
         ECPrivateKey signedPreKeyPrivateKey = Curve.decodePrivatePoint(signedPreKeyPvt);
@@ -166,7 +166,7 @@ public class ServerSecurity {
         Files.createDirectories(path);
 
         Path[] serverKeypaths =
-                { path.resolve(SecurityUtils.SERVER_IDENTITY_KEY), path.resolve(SecurityUtils.SERVER_SIGNEDPRE_KEY),
+                { path.resolve(SecurityUtils.SERVER_IDENTITY_KEY), path.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY),
                         path.resolve(SecurityUtils.SERVER_RATCHET_KEY) };
 
         if (writePvt) {
