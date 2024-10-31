@@ -85,6 +85,9 @@ public class BundleTransmission {
     public void processReceivedBundle(BundleSender sender, Bundle bundle) throws Exception {
         logger.log(INFO, "Processing received bundle: " + bundle.getSource().getName() + " from " +
                 bundleSenderToString(sender));
+        if (!bundle.getSource().exists() || bundle.getSource().length() == 0) {
+            return;
+        }
 
         Path bundleRecvProcDir = TRANSPORT == sender.getType() ?
                 this.config.getBundleTransmission().getReceivedProcessingDirectory().resolve(sender.getId()) :
@@ -241,14 +244,6 @@ public class BundleTransmission {
         Set<String> deletionSet = new HashSet<>(bundleIdsPresent);
         List<String> bundlesToSend = new ArrayList<>();
 
-        // get the latest
-        Map<String, Set<String>> clientIdToBundleIds = new HashMap<>();
-
-        for (String clientId : clientIds) {
-            clientIdToBundleIds.put(clientId, new HashSet<>());
-            logger.log(INFO, "[BT/inventBundle] Processing client " + clientId);
-        }
-
         for (String clientId : clientIds) {
             try {
                 var clientBundle = this.generateBundleForClient(clientId);
@@ -259,6 +254,10 @@ public class BundleTransmission {
         }
         bundlesToSend.forEach(deletionSet::remove);
 
+        // the bundleIdsPresent.stream().toList() doesn't actually contain the bundlesToUpload
+        // in this method it's just as a placeholder, because we don't have the bundlesToUpload here
+        // look at net.discdd.server.service.BundleServerServiceImpl.bundleInventory to see how the return object is
+        // used
         return new BundlesToExchange(bundlesToSend, bundleIdsPresent.stream().toList(), new ArrayList<>(deletionSet));
     }
 

@@ -26,6 +26,7 @@ import com.google.android.material.tabs.TabLayoutMediator;
 
 import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
+import net.discdd.pathutils.TransportPaths;
 import net.discdd.transport.TransportSecurity;
 
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -46,6 +47,7 @@ public class BundleTransportActivity extends AppCompatActivity {
     private TitledFragment serverUploadFragment;
     private TitledFragment transportWifiFragment;
     private TitledFragment storageFragment;
+    private TransportPaths transportPaths;
 
     record ConnectivityEvent(boolean internetAvailable) {}
 
@@ -81,6 +83,7 @@ public class BundleTransportActivity extends AppCompatActivity {
 
         LogFragment.registerLoggerHandler();
 
+        this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
         var resources = getApplicationContext().getResources();
 
         try (InputStream inServerIdentity = resources.openRawResource(net.discdd.android_core.R.raw.server_identity)) {
@@ -92,8 +95,10 @@ public class BundleTransportActivity extends AppCompatActivity {
 
         serverUploadFragment = new TitledFragment(getString(R.string.upload),
                                                   new ServerUploadFragment(connectivityEventPublisher,
-                                                                           transportSecurity.getTransportID()));
-        transportWifiFragment = new TitledFragment(getString(R.string.local_wifi), new TransportWifiDirectFragment());
+                                                                           transportSecurity.getTransportID(),
+                                                                           this.transportPaths));
+        transportWifiFragment = new TitledFragment(getString(R.string.local_wifi),
+                                                   new TransportWifiDirectFragment(this.transportPaths));
         storageFragment = new TitledFragment("Storage Settings", new StorageFragment());
 
         permissionsFragment = new PermissionsFragment();
