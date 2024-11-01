@@ -6,7 +6,6 @@ import net.discdd.grpc.RecencyBlob;
 import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
 import net.discdd.utils.Constants;
-import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -15,10 +14,10 @@ import org.whispersystems.libsignal.InvalidKeyException;
 import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
@@ -56,12 +55,12 @@ public class BundleSecurity {
 
         File bundleIdFile = bundleDir.resolve(Constants.BUNDLE_IDENTIFIER_FILE_NAME).toFile();
         try {
-            FileUtils.writeLines(bundleIdFile, Arrays.asList(bundleID));
+            Files.write(bundleIdFile.toPath(), bundleID.getBytes());
         } catch (IOException e1) {
             e1.printStackTrace();
         }
         try {
-            FileUtils.copyFile(new File(toBeEncPath), bundleDir.resolve(bundleID + ".jar").toFile());
+            Files.copy(new File(toBeEncPath).toPath(), bundleDir.resolve(bundleID + ".jar"));
         } catch (IOException e) {
             e.printStackTrace();
         }

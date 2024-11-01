@@ -63,7 +63,7 @@ public class ClientSecurity {
     private String clientID;
     private ClientPaths clientPaths;
 
-    private ClientSecurity(int deviceID, ClientPaths clientPaths) throws InvalidKeyException, IOException,
+    ClientSecurity(int deviceID, ClientPaths clientPaths) throws InvalidKeyException, IOException,
             NoSuchAlgorithmException {
         this.clientPaths = clientPaths;
 
@@ -140,7 +140,7 @@ public class ClientSecurity {
         theirIdentityKey = new IdentityKey(serverIdentityKey, 0);
 
         byte[] serverSignedPreKey =
-                SecurityUtils.decodePublicKeyfromFile(path.resolve(SecurityUtils.SERVER_SIGNEDPRE_KEY));
+                SecurityUtils.decodePublicKeyfromFile(path.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY));
         theirSignedPreKey = Curve.decodePoint(serverSignedPreKey, 0);
 
         byte[] serverRatchetKey = SecurityUtils.decodePublicKeyfromFile(path.resolve(SecurityUtils.SERVER_RATCHET_KEY));

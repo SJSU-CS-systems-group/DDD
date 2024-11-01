@@ -27,7 +27,7 @@ import static java.util.logging.Level.INFO;
 
 public class BundleSecurity {
     private static final Logger logger = Logger.getLogger(BundleSecurity.class.getName());
-    private static ClientPaths clientPaths;
+    private ClientPaths clientPaths;
     private final ClientWindow clientWindow;
     private final ClientBundleGenerator clientBundleGenerator;
     private final boolean isEncryptionEnabled = true;
@@ -48,8 +48,8 @@ public class BundleSecurity {
 
     // TODO: this function makes me sad! it should not be static. We should probably inject BundleSecurity
     // into Bundle transport so that everything can be set up properly
-    public static void initializeKeyPaths(InputStream inServerIdentity, InputStream inServerSignedPre,
-                                          InputStream inServerRatchet, Path rootFolder) throws IOException {
+    public static void initializeKeyPaths(ClientPaths clientPaths, InputStream inServerIdentity,
+                                          InputStream inServerSignedPre, InputStream inServerRatchet) throws IOException {
         Files.copy(inServerIdentity, clientPaths.outServerIdentity, StandardCopyOption.REPLACE_EXISTING);
         inServerIdentity.close();
 
