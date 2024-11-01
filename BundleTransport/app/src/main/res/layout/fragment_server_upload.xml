@@ -1,63 +1,124 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:tools="http://schemas.android.com/tools"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        tools:context=".ServerUploadFragment">
+             xmlns:tools="http://schemas.android.com/tools"
+             android:layout_width="match_parent"
+             android:layout_height="match_parent"
+             tools:context=".ServerUploadFragment">
     <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-    <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btn_connect_bundle_server"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/connect_to_bundle_server"
-            android:layout_marginTop="10dp"/>
-
-    <EditText
-            android:id="@+id/domain_input"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="@string/domain"
-            android:lines="1"
-            android:textAlignment="center"
-            android:padding="10dp"
-            android:layout_marginTop="10dp"
-            android:background="@drawable/border"
-            />
-
-    <EditText
-            android:id="@+id/port_input"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="@string/port"
-            android:lines="1"
-            android:textAlignment="center"
-            android:padding="10dp"
-            android:layout_marginTop="10dp"
-            android:background="@drawable/border"
-            android:inputType="number"
-            />
-    <Button
-            android:id="@+id/save_domain_port"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/save_domain_and_port"
-            />
-
-    <Button
-            android:id="@+id/restore_domain_port"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/restore_domain_and_port"
-            />
-        <TextView
-            android:id="@+id/server_upload_status"
+        <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btn_connect_bundle_server"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-            />
+                android:text="@string/connect_to_bundle_server"
+                android:layout_marginTop="10dp"/>
+
+        <EditText
+                android:id="@+id/domain_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/domain"
+                android:lines="1"
+                android:textAlignment="center"
+                android:padding="10dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/border"
+        />
+
+        <EditText
+                android:id="@+id/port_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/port"
+                android:lines="1"
+                android:textAlignment="center"
+                android:padding="10dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/border"
+                android:inputType="number"
+        />
+        <Button
+                android:id="@+id/save_domain_port"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/save_domain_and_port"
+        />
+
+        <Button
+                android:id="@+id/restore_domain_port"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/restore_domain_and_port"
+        />
+        <TextView
+                android:id="@+id/server_upload_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+        />
+        />
+        <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+            <TextView
+                    android:id="@+id/toClient"
+                    android:layout_width="40dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="toClient:"
+                    android:textSize="20sp"
+                    android:gravity="center"
+                    android:padding="0dp"/>
+
+            <TextView
+                    android:id="@+id/numberBundlestoClient"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="0"
+                    android:textSize="20sp"
+                    android:gravity="left"
+                    android:layout_marginEnd="2dp"
+                    android:padding="0dp"/>
+
+            <TextView
+                    android:id="@+id/toServer"
+                    android:layout_width="40dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="toServer:"
+                    android:textSize="20sp"
+                    android:gravity="center"
+                    android:padding="0dp"/>
+
+            <TextView
+                    android:id="@+id/numberBundlestoServer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="0"
+                    android:textSize="20sp"
+                    android:gravity="left"
+                    android:layout_marginEnd="2dp"
+                    android:padding="0dp"/>
+
+            <Button
+                    android:id="@+id/reloadCounts"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/reload"
+                    android:textSize="12sp"
+                    android:gravity="center"
+                    android:layout_marginEnd="2dp"
+                    android:padding="0dp"/>
+
+        </LinearLayout>
+
 
     </LinearLayout>
 </FrameLayout>

@@ -17,6 +17,7 @@ import androidx.fragment.app.Fragment;
 
 import net.discdd.pathutils.TransportPaths;
 
+import java.io.File;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.SubmissionPublisher;
@@ -38,6 +39,10 @@ public class ServerUploadFragment extends Fragment {
     private String transportID;
     private ExecutorService executor = Executors.newFixedThreadPool(2);
     private TransportPaths transportPaths;
+
+    private TextView numberBundlestoClient;
+    private TextView numberBundlestoServer;
+    private Button reloadButton;
 
     public ServerUploadFragment(SubmissionPublisher<BundleTransportActivity.ConnectivityEvent> connectivityFlow,
                                 String transportID, TransportPaths transportPaths) {
@@ -68,6 +73,16 @@ public class ServerUploadFragment extends Fragment {
         saveDomainAndPortBtn.setOnClickListener(view -> {
             saveDomainPort();
             Toast.makeText(getContext(), "Saved", Toast.LENGTH_SHORT).show();
+        });
+
+        numberBundlestoClient = mainView.findViewById(R.id.numberBundlestoClient);
+        numberBundlestoServer = mainView.findViewById(R.id.numberBundlestoServer);
+        reloadButton = mainView.findViewById(R.id.reloadCounts); // Assuming this ID is for the reload button
+
+        // Set click listener for the Reload button
+        reloadButton.setOnClickListener(view -> {
+            numberBundlestoClient.setText(String.valueOf(transportPaths.toClientPath.toFile().list().length));
+            numberBundlestoServer.setText(String.valueOf(transportPaths.toServerPath.toFile().list().length));
         });
 
         // set saved domain and port to inputs
