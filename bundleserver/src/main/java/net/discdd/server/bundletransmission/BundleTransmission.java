@@ -20,7 +20,7 @@ import net.discdd.server.bundlerouting.ServerWindowService;
 import net.discdd.server.bundlesecurity.BundleSecurity;
 import net.discdd.server.config.BundleServerConfig;
 import net.discdd.utils.BundleUtils;
-import org.apache.commons.io.FileUtils;
+import net.discdd.utils.FileUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -151,12 +151,8 @@ public class BundleTransmission {
                        "[BundleTransmission] Failed to process received bundle from: " + bundleSenderToString(sender),
                        e);
         } finally {
-            try {
-                FileUtils.delete(bundleFile);
-                FileUtils.deleteDirectory(bundle.getSource());
-            } catch (IOException e) {
-                logger.log(SEVERE, "Delete bundle file: " + bundleFile.getName() + " failed");
-            }
+            bundleFile.delete();
+            FileUtils.recursiveDelete(bundle.getSource().toPath());
         }
     }
 
