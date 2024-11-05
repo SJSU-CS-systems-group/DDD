@@ -22,12 +22,19 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import net.discdd.bundlerouting.RoutingExceptions;
+import net.discdd.client.bundletransmission.BundleTransmission;
+import net.discdd.model.BundleDTO;
+
+import org.whispersystems.libsignal.InvalidKeyException;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -48,11 +55,13 @@ public class UsbFragment extends Fragment {
     private Path usbDirPath;
     private ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
     private File usbDirectory;
+    private BundleTransmission bundleTransmission;
 
     @Override
     public View onCreateView(
             @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.usb_fragment, container, false);
+        bundleTransmission = ((BundleTransportActivity) getActivity()).btService.getBundleTransmission();
 
         usbExchangeButton = view.findViewById(R.id.usb_exchange_button);
         usbConnectionText = view.findViewById(R.id.usbconnection_response_text);
@@ -131,7 +140,11 @@ public class UsbFragment extends Fragment {
 //    }
     // after making proper directories, copy for-client files from transport
         logger.log(INFO, "copying client files from device");
-        copyClientFilesFromDevice(dddTransportDir);
+        try {
+            copyClientFilesFromDevice(dddTransportDir);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
         logger.log(INFO, "copied client files from device");
     }
 
@@ -141,25 +154,29 @@ public class UsbFragment extends Fragment {
      * @param dddTransportDir target directory; USBs directory
      * @throws IOException
      */
-    private void copyClientFilesFromDevice(File dddTransportDir) throws IOException {
+    private void copyClientFilesFromDevice(File dddTransportDir) throws IOException, GeneralSecurityException, RoutingExceptions.ClientMetaDataFileException, InvalidKeyException {
         //for every client bundle in device, copy onto usb
         //how will client know which bundle is THEIRS (does bundle or file-path hv client ID?)
-        List<Path> storageList;
-        String s = requireActivity().getExternalFilesDir(null) + "/client";
-        Path devicePathForClient = Paths.get(s);
-        try (Stream<Path> walk = Files.walk(devicePathForClient)) {
-            storageList = walk.filter(Files::isRegularFile).collect(Collectors.toList());
-        }
-        if (storageList.isEmpty()) {
-            //TODO: inform no bundles to download onto USB
-            logger.log(INFO, "No bundles to download from device to USB");
-            return;
-        }
-        //for every client file in transport, copy onto USBs designated dir
-        for (Path deviceFilePath : storageList) {
-            logger.log(INFO, "copying" + deviceFilePath + "onto " + dddTransportDir.toPath());
-            Files.copy(deviceFilePath, dddTransportDir.toPath(), StandardCopyOption.REPLACE_EXISTING);
-        }
+//        List<Path> storageList;
+//        String s = requireActivity().getExternalFilesDir(null) + "/BundleTransmission/client";
+//        Path devicePathForClient = Paths.get(s);
+//        try (Stream<Path> walk = Files.walk(devicePathForClient)) {
+//            storageList = walk.filter(Files::isRegularFile).collect(Collectors.toList());
+//        }
+//        if (storageList.isEmpty()) {
+//            //TODO: inform no bundles to download onto USB
+//            logger.log(INFO, "No bundles to download from device to USB");
+//            return;
+//        }
+//        //for every client file in transport, copy onto USBs designated dir
+//        for (Path deviceFilePath : storageList) {
+//            logger.log(INFO, "copying" + deviceFilePath + "onto " + dddTransportDir.toPath());
+//            Files.copy(deviceFilePath, dddTransportDir.toPath(), StandardCopyOption.REPLACE_EXISTING);
+//        }
+        BundleDTO bundleDTO = bundleTransmission.generateBundleForTransmission();
+        File bundleFile = bundleDTO.getBundle().getSource();
+        File targetFile = new File(usbDirectory, bundleFile.getName());
+        Files.copy(bundleFile.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
     }
 
     @Override
