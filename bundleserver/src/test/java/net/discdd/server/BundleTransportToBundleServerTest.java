@@ -6,9 +6,7 @@ import net.discdd.grpc.BundleExchangeServiceGrpc;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.transport.TransportToBundleServerManager;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
@@ -20,6 +18,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -36,12 +36,11 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
     private static BundleExchangeServiceGrpc.BundleExchangeServiceStub stub;
     private static BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub blockingStub;
     private static ManagedChannel channel;
-    private static Path toClientPath;
-    private static Path toServerPath;
+    private Path toClientPath;
+    private Path toServerPath;
 
-
-    @BeforeAll
-    static void setUp() throws Exception {
+    @BeforeEach
+    void setUp() {
         // Initialize the TransportPaths class
         TransportPaths transportPaths = new TransportPaths(End2EndTest.tempRootDir);
 
@@ -51,7 +50,7 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
         manager = new TransportToBundleServerManager(
                 transportPaths,
                 "localhost",
-                Integer.toString(TEST_ADAPTER_GRPC_PORT),
+                Integer.toString(BUNDLESERVER_GRPC_PORT),
                 (Void) -> {System.out.println("connectComplete"); return null;},
                 (Exception e) -> {System.out.println("connectError"); return null;}
         );
@@ -59,7 +58,7 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
 
     @BeforeEach
     void setUpEach() {
-        channel = ManagedChannelBuilder.forAddress("127.0.0.1", BUNDLESERVER_GRPC_PORT).usePlaintext().build();
+        channel = ManagedChannelBuilder.forAddress("localhost", BUNDLESERVER_GRPC_PORT).usePlaintext().build();
         stub = BundleExchangeServiceGrpc.newStub(channel);
         blockingStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
 
@@ -69,45 +68,52 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
 
     @AfterEach
     void tearDownEach() throws IOException {
-        // Clean up directories and files
-        if (Files.exists(toClientPath)) {
-            Files.walk(toClientPath)
-                    .sorted((a, b) -> b.compareTo(a)) // Delete files before directories
-                    .forEach(file -> {
-                        try {
-                            Files.deleteIfExists(file);
-                        } catch (IOException e) {
-                            logger.severe("Failed to delete file: " + file + ", error: " + e.getMessage());
-                        }
-                    });
-        }
-
-        if (Files.exists(toServerPath)) {
-            Files.walk(toServerPath)
-                    .sorted((a, b) -> b.compareTo(a)) // Delete files before directories
-                    .forEach(file -> {
-                        try {
-                            Files.deleteIfExists(file);
-                        } catch (IOException e) {
-                            logger.severe("Failed to delete file: " + file + ", error: " + e.getMessage());
-                        }
-                    });
-        }
-
+        // Delete the files and directories
+        recursiveDelete(toClientPath);
+        recursiveDelete(toServerPath);
         // Shutdown the channel
         if (channel != null) {
             channel.shutdownNow();
         }
     }
 
-    @AfterAll
-    static void tearDownAll() throws IOException {
-        if (Files.exists(toClientPath)) {
-            Files.deleteIfExists(toClientPath);
+    private void recursiveDelete(Path path) throws IOException {
+        if (Files.exists(path)) {
+            Files.walk(path)
+                    .sorted(Comparator.reverseOrder()) // Delete files before directories
+                    .forEach(file -> {
+                        try {
+                            Files.deleteIfExists(file);
+                        } catch (IOException e) {
+                            logger.severe("Failed to delete file: " + file + ", error: " + e.getMessage());
+                        }
+                    });
         }
-        if (Files.exists(toServerPath)) {
-            Files.deleteIfExists(toServerPath);
-        }
+    }
+
+    @Test
+    void testRun() throws IOException {
+        // Create files for upload
+        Files.createFile(toServerPath.resolve("bundle1"));
+        Files.createFile(toServerPath.resolve("bundle2"));
+        Files.createFile(toServerPath.resolve("bundle3"));
+
+        // Create files for download
+        Files.createFile(toClientPath.resolve("bundle4"));
+        Files.createFile(toClientPath.resolve("bundle5"));
+        Files.createFile(toClientPath.resolve("bundle6"));
+
+        // Create files for deletion
+        Files.createFile(toClientPath.resolve("bundle7"));
+        Files.createFile(toClientPath.resolve("bundle8"));
+        Files.createFile(toClientPath.resolve("bundle9"));
+
+        manager.run();
+
+        // Verify that the files were deleted after upload, download, and deletion
+        assertEquals(0, Files.list(toServerPath).count(), "/server is not empty");
+        // /client should have one file for recency blob
+        assertEquals(1, Files.list(toClientPath).count(), "/client should only be left with recencyBlob.bin");
     }
 
     @Test
@@ -127,6 +133,13 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
         assertTrue(blobData.length > 0, "Recency Blob should contain data.");
 
         logger.info("Recency Blob processed successfully with size: " + blobData.length);
+
+        // Check timestamp of recency blob
+        FileTime lastModifiedTime = Files.getLastModifiedTime(blobPath);
+        logger.info("Recency Blob last modified time: " + lastModifiedTime);
+        long currentTime = System.currentTimeMillis();
+        long lastModifiedMillis = lastModifiedTime.toMillis();
+        assertTrue((currentTime - lastModifiedMillis) < 50000, "Recency Blob should have been modified within the last 5 seconds.");
     }
 
     @Test
@@ -156,6 +169,8 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
             Path uploadPath = toServerPath.resolve(toUpload.getEncryptedId());
             assertFalse(Files.exists(uploadPath), toUpload.getEncryptedId() + " should have been deleted after upload.");
         }
+
+        assertEquals(0, Files.list(toServerPath).count());
     }
 
     @Test
@@ -180,11 +195,37 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
         // Download all bundles from the server
         processDownloadBundles.invoke(manager, bundlesToDownload, stub);
 
-        // Check that the bundles were downloaded to the client
+        // Check that the bundles were downloaded to /client
         for (EncryptedBundleId toDownload : bundlesToDownload) {
             Path downloadPath = toClientPath.resolve(toDownload.getEncryptedId());
             assertTrue(Files.exists(downloadPath), toDownload.getEncryptedId() + " should have been downloaded.");
         }
+        assertEquals(3, Files.list(toClientPath).count());
+    }
+
+    @Test
+    void testDownloadWithSendingBundles() throws Exception {
+        var toSendDir = End2EndTest.tempRootDir.resolve("BundleTransmission/bundle-generation/to-send");
+        // create bundle files to be sent
+        Files.createFile(toSendDir.resolve("bundle1"));
+        Files.createFile(toSendDir.resolve("bundle2"));
+        Files.createFile(toSendDir.resolve("bundle3"));
+
+        Method populateListFromPath = TransportToBundleServerManager.class.getDeclaredMethod("populateListFromPath", Path.class);
+        populateListFromPath.setAccessible(true);
+        List<EncryptedBundleId> bundlesToDownload = (List<EncryptedBundleId>) populateListFromPath.invoke(manager, toSendDir);
+
+        Method processDownloadBundles = TransportToBundleServerManager.class.getDeclaredMethod("processDownloadBundles", List.class, BundleExchangeServiceGrpc.BundleExchangeServiceStub.class);
+        processDownloadBundles.setAccessible(true);
+
+        processDownloadBundles.invoke(manager, bundlesToDownload, stub);
+
+        // check if /client contains those EncryptedBundleIds
+        for (EncryptedBundleId toDownload : bundlesToDownload) {
+            Path downloadPath = toClientPath.resolve(toDownload.getEncryptedId());
+            assertTrue(Files.exists(downloadPath), toDownload.getEncryptedId() + " should have been sent and downloaded.");
+        }
+        assertEquals(3, Files.list(toClientPath).count());
     }
 
     @Test
