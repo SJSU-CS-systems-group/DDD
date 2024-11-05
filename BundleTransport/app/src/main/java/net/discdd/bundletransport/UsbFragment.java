@@ -64,6 +64,7 @@ public class UsbFragment extends Fragment {
     private static final Logger logger = Logger.getLogger(UsbFragment.class.getName());
     private ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
     private File usbDirectory;
+    private BundleTransmission bundleTransmission;
 
     public UsbFragment(TransportPaths transportPaths) {
         this.transportPaths = transportPaths;
@@ -73,6 +74,7 @@ public class UsbFragment extends Fragment {
     public View onCreateView(
             @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.usb_fragment, container, false);
+        bundleTransmission = ((BundleTransportActivity) getActivity()).btService.getBundleTransmission();
 
         usbExchangeButton = view.findViewById(R.id.usb_exchange_button);
         usbConnectionText = view.findViewById(R.id.usbconnection_response_text);
