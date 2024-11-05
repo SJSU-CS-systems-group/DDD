@@ -1,10 +1,8 @@
 package net.discdd.bundletransport;
 
-import static android.content.Context.MODE_PRIVATE;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
-import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.LayoutInflater;

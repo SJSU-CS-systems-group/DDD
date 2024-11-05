@@ -20,12 +20,12 @@ public class TransportPaths{
 
     public final Path toServerPath;
 
-    public TransportPaths(Path rootDir){
+    public TransportPaths(Path rootDir) {
         this.toClientPath = rootDir.resolve("BundleTransmission/client");
         this.toServerPath = rootDir.resolve("BundleTransmission/server");
 
         try {
-            if (!Files.exists(toClientPath) || !Files.isDirectory(toServerPath)) {
+            if (!Files.exists(toClientPath) || !Files.exists(toServerPath)) {
                 Files.createDirectories(toClientPath);
                 Files.createDirectories(toServerPath);
             }
