@@ -176,8 +176,10 @@ public class TransportToBundleServerManager implements Runnable {
                     uploadRequestStreamObserver.onNext(uploadRequest);
                 }
                 uploadRequestStreamObserver.onCompleted();
+                logger.log(INFO, "Completed upload for bundle: " + toSend.getEncryptedId());
                 if (responseObserver != null) {
                     responseObserver.onCompleted();
+                    logger.log(INFO, "Deleting bundle file: " + path);
                     Files.delete(path);
                 }
             } catch (IOException e) {
