@@ -28,7 +28,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-@SpringBootTest(classes = {BundleServerApplication.class, End2EndTest.End2EndTestInitializer.class})
+
+@SpringBootTest(classes = { BundleServerApplication.class, End2EndTest.End2EndTestInitializer.class })
 @TestMethodOrder(MethodOrderer.MethodName.class)
 public class BundleTransportToBundleServerTest extends End2EndTest {
     private static final Logger logger = Logger.getLogger(BundleTransportToBundleServerTest.class.getName());
@@ -47,13 +48,14 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
         toClientPath = transportPaths.toClientPath;
         toServerPath = transportPaths.toServerPath;
 
-        manager = new TransportToBundleServerManager(
-                transportPaths,
-                "localhost",
-                Integer.toString(BUNDLESERVER_GRPC_PORT),
-                (Void) -> {System.out.println("connectComplete"); return null;},
-                (Exception e) -> {System.out.println("connectError"); return null;}
-        );
+        manager = new TransportToBundleServerManager(transportPaths, "localhost",
+                                                     Integer.toString(BUNDLESERVER_GRPC_PORT), (Void) -> {
+            System.out.println("connectComplete");
+            return null;
+        }, (Exception e) -> {
+            System.out.println("connectError");
+            return null;
+        });
     }
 
     @BeforeEach
@@ -79,8 +81,7 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
 
     private void recursiveDelete(Path path) throws IOException {
         if (Files.exists(path)) {
-            Files.walk(path)
-                    .sorted(Comparator.reverseOrder()) // Delete files before directories
+            Files.walk(path).sorted(Comparator.reverseOrder()) // Delete files before directories
                     .forEach(file -> {
                         try {
                             Files.deleteIfExists(file);
@@ -117,9 +118,11 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
     }
 
     @Test
-    void testRecencyBlob() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, IOException {
+    void testRecencyBlob() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException,
+            IOException {
         // Prepare to process recency blob
-        Method processRecencyBlob = TransportToBundleServerManager.class.getDeclaredMethod("processRecencyBlob", BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub.class);
+        Method processRecencyBlob = TransportToBundleServerManager.class.getDeclaredMethod("processRecencyBlob",
+                                                                                           BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub.class);
         processRecencyBlob.setAccessible(true);
         processRecencyBlob.invoke(manager, blockingStub);
 
@@ -139,26 +142,32 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
         logger.info("Recency Blob last modified time: " + lastModifiedTime);
         long currentTime = System.currentTimeMillis();
         long lastModifiedMillis = lastModifiedTime.toMillis();
-        assertTrue((currentTime - lastModifiedMillis) < 50000, "Recency Blob should have been modified within the last 5 seconds.");
+        assertTrue((currentTime - lastModifiedMillis) < 50000,
+                   "Recency Blob should have been modified within the last 5 seconds.");
     }
 
     @Test
-    void testUploadBundles() throws IOException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+    void testUploadBundles() throws IOException, NoSuchMethodException, InvocationTargetException,
+            IllegalAccessException {
         // Create files on client side
         Files.createFile(toServerPath.resolve("bundle1"));
         Files.createFile(toServerPath.resolve("bundle2"));
         Files.createFile(toServerPath.resolve("bundle3"));
-        Method populateListFromPath = TransportToBundleServerManager.class.getDeclaredMethod("populateListFromPath", Path.class);
+        Method populateListFromPath =
+                TransportToBundleServerManager.class.getDeclaredMethod("populateListFromPath", Path.class);
         populateListFromPath.setAccessible(true);
 
         // Retrieve the bundles from the client
-        List<EncryptedBundleId> bundlesToUpload = (List<EncryptedBundleId>) populateListFromPath.invoke(manager, toServerPath);
+        List<EncryptedBundleId> bundlesToUpload =
+                (List<EncryptedBundleId>) populateListFromPath.invoke(manager, toServerPath);
 
         // Assert that bundles are successfully added to /server path
         assertEquals(3, bundlesToUpload.size(), "The number of bundles should be 3.");
 
         // Prepare to upload the bundles
-        Method processUploadBundles = TransportToBundleServerManager.class.getDeclaredMethod("processUploadBundles", List.class, BundleExchangeServiceGrpc.BundleExchangeServiceStub.class);
+        Method processUploadBundles =
+                TransportToBundleServerManager.class.getDeclaredMethod("processUploadBundles", List.class,
+                                                                       BundleExchangeServiceGrpc.BundleExchangeServiceStub.class);
         processUploadBundles.setAccessible(true);
 
         // Upload all bundles
@@ -167,29 +176,35 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
         // Check that the bundles were uploaded to server
         for (EncryptedBundleId toUpload : bundlesToUpload) {
             Path uploadPath = toServerPath.resolve(toUpload.getEncryptedId());
-            assertFalse(Files.exists(uploadPath), toUpload.getEncryptedId() + " should have been deleted after upload.");
+            assertFalse(Files.exists(uploadPath),
+                        toUpload.getEncryptedId() + " should have been deleted after upload.");
         }
 
         assertEquals(0, Files.list(toServerPath).count());
     }
 
     @Test
-    void testDownloadBundles() throws IOException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+    void testDownloadBundles() throws IOException, NoSuchMethodException, InvocationTargetException,
+            IllegalAccessException {
         // Create files on server side
         Files.createFile(toClientPath.resolve("bundle1"));
         Files.createFile(toClientPath.resolve("bundle2"));
         Files.createFile(toClientPath.resolve("bundle3"));
-        Method populateListFromPath = TransportToBundleServerManager.class.getDeclaredMethod("populateListFromPath", Path.class);
+        Method populateListFromPath =
+                TransportToBundleServerManager.class.getDeclaredMethod("populateListFromPath", Path.class);
         populateListFromPath.setAccessible(true);
 
         // Retrieve the bundles from the server
-        List<EncryptedBundleId> bundlesToDownload = (List<EncryptedBundleId>) populateListFromPath.invoke(manager, toClientPath);
+        List<EncryptedBundleId> bundlesToDownload =
+                (List<EncryptedBundleId>) populateListFromPath.invoke(manager, toClientPath);
 
         // Assert that bundles are successfully created
         assertEquals(3, bundlesToDownload.size(), "The number of bundles should be 3.");
 
         // Prepare to download the bundles
-        Method processDownloadBundles = TransportToBundleServerManager.class.getDeclaredMethod("processDownloadBundles", List.class, BundleExchangeServiceGrpc.BundleExchangeServiceStub.class);
+        Method processDownloadBundles =
+                TransportToBundleServerManager.class.getDeclaredMethod("processDownloadBundles", List.class,
+                                                                       BundleExchangeServiceGrpc.BundleExchangeServiceStub.class);
         processDownloadBundles.setAccessible(true);
 
         // Download all bundles from the server
@@ -211,11 +226,15 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
         Files.createFile(toSendDir.resolve("bundle2"));
         Files.createFile(toSendDir.resolve("bundle3"));
 
-        Method populateListFromPath = TransportToBundleServerManager.class.getDeclaredMethod("populateListFromPath", Path.class);
+        Method populateListFromPath =
+                TransportToBundleServerManager.class.getDeclaredMethod("populateListFromPath", Path.class);
         populateListFromPath.setAccessible(true);
-        List<EncryptedBundleId> bundlesToDownload = (List<EncryptedBundleId>) populateListFromPath.invoke(manager, toSendDir);
+        List<EncryptedBundleId> bundlesToDownload =
+                (List<EncryptedBundleId>) populateListFromPath.invoke(manager, toSendDir);
 
-        Method processDownloadBundles = TransportToBundleServerManager.class.getDeclaredMethod("processDownloadBundles", List.class, BundleExchangeServiceGrpc.BundleExchangeServiceStub.class);
+        Method processDownloadBundles =
+                TransportToBundleServerManager.class.getDeclaredMethod("processDownloadBundles", List.class,
+                                                                       BundleExchangeServiceGrpc.BundleExchangeServiceStub.class);
         processDownloadBundles.setAccessible(true);
 
         processDownloadBundles.invoke(manager, bundlesToDownload, stub);
@@ -223,7 +242,8 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
         // check if /client contains those EncryptedBundleIds
         for (EncryptedBundleId toDownload : bundlesToDownload) {
             Path downloadPath = toClientPath.resolve(toDownload.getEncryptedId());
-            assertTrue(Files.exists(downloadPath), toDownload.getEncryptedId() + " should have been sent and downloaded.");
+            assertTrue(Files.exists(downloadPath),
+                       toDownload.getEncryptedId() + " should have been sent and downloaded.");
         }
         assertEquals(3, Files.list(toClientPath).count());
     }
@@ -234,17 +254,20 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
         Files.createFile(toClientPath.resolve("bundle1"));
         Files.createFile(toClientPath.resolve("bundle2"));
         Files.createFile(toClientPath.resolve("bundle3"));
-        Method populateListFromPath = TransportToBundleServerManager.class.getDeclaredMethod("populateListFromPath", Path.class);
+        Method populateListFromPath =
+                TransportToBundleServerManager.class.getDeclaredMethod("populateListFromPath", Path.class);
         populateListFromPath.setAccessible(true);
 
         // Retrieve the bundles from the server
-        List<EncryptedBundleId> bundlesToDelete = (List<EncryptedBundleId>) populateListFromPath.invoke(manager, toClientPath);
+        List<EncryptedBundleId> bundlesToDelete =
+                (List<EncryptedBundleId>) populateListFromPath.invoke(manager, toClientPath);
 
         // Assert that bundles are successfully added to /client path
         assertEquals(3, bundlesToDelete.size(), "The number of bundles should be 3.");
 
         // Prepare to delete bundles
-        Method processDeleteBundles = TransportToBundleServerManager.class.getDeclaredMethod("processDeleteBundles", List.class);
+        Method processDeleteBundles =
+                TransportToBundleServerManager.class.getDeclaredMethod("processDeleteBundles", List.class);
         processDeleteBundles.setAccessible(true);
 
         // Delete all bundles
@@ -253,21 +276,26 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
         // Assert that the bundles have been deleted on client side
         for (EncryptedBundleId toDelete : bundlesToDelete) {
             Path deletePath = toClientPath.resolve(toDelete.getEncryptedId());
-            assertFalse(Files.exists(deletePath),  toDelete.getEncryptedId() + " should be deleted: " + deletePath);
+            assertFalse(Files.exists(deletePath), toDelete.getEncryptedId() + " should be deleted: " + deletePath);
         }
     }
 
     @Test
-    void testUploadNonExistentBundle() throws InvocationTargetException, IllegalAccessException, IOException, NoSuchMethodException {
-        Method populateListFromPath = TransportToBundleServerManager.class.getDeclaredMethod("populateListFromPath", Path.class);
+    void testUploadNonExistentBundle() throws InvocationTargetException, IllegalAccessException, IOException,
+            NoSuchMethodException {
+        Method populateListFromPath =
+                TransportToBundleServerManager.class.getDeclaredMethod("populateListFromPath", Path.class);
         populateListFromPath.setAccessible(true);
 
         // Retrieve the bundles from the empty directory
-        List<EncryptedBundleId> bundlesToUpload = (List<EncryptedBundleId>) populateListFromPath.invoke(manager, toServerPath);
+        List<EncryptedBundleId> bundlesToUpload =
+                (List<EncryptedBundleId>) populateListFromPath.invoke(manager, toServerPath);
         assertTrue(bundlesToUpload.isEmpty(), "The list of bundles should be empty.");
 
         // Attempt to upload bundles
-        Method processUploadBundles = TransportToBundleServerManager.class.getDeclaredMethod("processUploadBundles", List.class, BundleExchangeServiceGrpc.BundleExchangeServiceStub.class);
+        Method processUploadBundles =
+                TransportToBundleServerManager.class.getDeclaredMethod("processUploadBundles", List.class,
+                                                                       BundleExchangeServiceGrpc.BundleExchangeServiceStub.class);
         processUploadBundles.setAccessible(true);
         processUploadBundles.invoke(manager, bundlesToUpload, stub);
 
@@ -276,16 +304,21 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
     }
 
     @Test
-    void testDownloadNonExistentBundle() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, IOException {
-        Method populateListFromPath = TransportToBundleServerManager.class.getDeclaredMethod("populateListFromPath", Path.class);
+    void testDownloadNonExistentBundle() throws NoSuchMethodException, InvocationTargetException,
+            IllegalAccessException, IOException {
+        Method populateListFromPath =
+                TransportToBundleServerManager.class.getDeclaredMethod("populateListFromPath", Path.class);
         populateListFromPath.setAccessible(true);
 
         // Retrieve the bundles from the empty directory
-        List<EncryptedBundleId> bundlesToDownload = (List<EncryptedBundleId>) populateListFromPath.invoke(manager, toClientPath);
+        List<EncryptedBundleId> bundlesToDownload =
+                (List<EncryptedBundleId>) populateListFromPath.invoke(manager, toClientPath);
         assertTrue(bundlesToDownload.isEmpty(), "The list of bundles should be empty.");
 
         // Attempt to download bundles
-        Method processDownloadBundles = TransportToBundleServerManager.class.getDeclaredMethod("processDownloadBundles", List.class, BundleExchangeServiceGrpc.BundleExchangeServiceStub.class);
+        Method processDownloadBundles =
+                TransportToBundleServerManager.class.getDeclaredMethod("processDownloadBundles", List.class,
+                                                                       BundleExchangeServiceGrpc.BundleExchangeServiceStub.class);
         processDownloadBundles.setAccessible(true);
         processDownloadBundles.invoke(manager, bundlesToDownload, stub);
 
