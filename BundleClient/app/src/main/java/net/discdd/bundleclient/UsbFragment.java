@@ -28,6 +28,7 @@ import androidx.fragment.app.Fragment;
 import net.discdd.client.bundletransmission.BundleTransmission;
 import net.discdd.model.ADU;
 import net.discdd.model.BundleDTO;
+import net.discdd.pathutils.ClientPaths;
 
 import java.io.File;
 import java.io.IOException;
@@ -57,6 +58,7 @@ public class UsbFragment extends Fragment {
     public View onCreateView(
             @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.usb_fragment, container, false);
+        bundleTransmission = ((BundleClientActivity) getActivity()).wifiBgService.getBundleTransmission();
 
         usbExchangeButton = view.findViewById(R.id.usb_exchange_button);
         usbConnectionText = view.findViewById(R.id.usbconnection_response_text);

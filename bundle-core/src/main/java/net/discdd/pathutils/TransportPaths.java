@@ -3,7 +3,6 @@ package net.discdd.pathutils;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.logging.Logger;
-
 import static java.util.logging.Level.SEVERE;
 
 // BundleTransport
@@ -36,3 +35,4 @@ public class TransportPaths {
         }
     }
 }
+

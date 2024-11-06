@@ -53,7 +53,7 @@ public class RpcServer {
             @Override
             protected Path pathProducer(BundleExchangeName bundleExchangeName, BundleSender bundleSender) {
                 return bundleExchangeName.isDownload() ? toClientPath.resolve(bundleExchangeName.encryptedBundleId()) :
-                        toServerPath.resolve(bundleExchangeName.encryptedBundleId());
+                toServerPath.resolve(bundleExchangeName.encryptedBundleId());
             }
 
             @Override

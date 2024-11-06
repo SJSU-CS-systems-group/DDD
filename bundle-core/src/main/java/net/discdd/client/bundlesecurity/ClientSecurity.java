@@ -1,6 +1,7 @@
 package net.discdd.client.bundlesecurity;
 
 import net.discdd.bundlesecurity.SecurityUtils;
+import net.discdd.pathutils.ClientPaths;
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
@@ -60,17 +61,17 @@ public class ClientSecurity {
     private SignalProtocolStore clientProtocolStore;
 
     private String clientID;
-    private Path clientRootPath;
+    private ClientPaths clientPaths;
 
-    private ClientSecurity(int deviceID, Path clientRootPath, Path serverKeyPath) throws InvalidKeyException,
-            IOException, NoSuchAlgorithmException {
-        var clientKeyPath = clientRootPath.resolve(SecurityUtils.CLIENT_KEY_PATH);
+    ClientSecurity(int deviceID, ClientPaths clientPaths) throws InvalidKeyException, IOException,
+            NoSuchAlgorithmException {
+        this.clientPaths = clientPaths;
 
         // Read Server Keys from specified directory
-        InitializeServerKeysFromFiles(serverKeyPath);
+        InitializeServerKeysFromFiles(clientPaths.serverKeyPath);
 
         try {
-            loadKeysfromFiles(clientKeyPath);
+            loadKeysfromFiles(clientPaths.clientKeyPath);
             logger.log(FINE, "[Sec]: Using Existing Keys");
         } catch (IOException | InvalidKeyException e) {
             logger.log(WARNING, "[Sec]: Error Loading Keys from files, generating new keys instead");
@@ -81,7 +82,7 @@ public class ClientSecurity {
 
             ourBaseKey = Curve.generateKeyPair();
             // Write generated keys to files
-            writeKeysToFiles(clientKeyPath, true);
+            writeKeysToFiles(clientPaths.clientKeyPath, true);
         }
 
         clientProtocolStore = SecurityUtils.createInMemorySignalProtocolStore();
@@ -90,7 +91,6 @@ public class ClientSecurity {
         clientID = SecurityUtils.generateID(ourIdentityKeyPair.getPublicKey().getPublicKey().serialize());
         ourAddress = new SignalProtocolAddress(clientID, deviceID);
         theirOneTimePreKey = Optional.<ECPublicKey>absent();
-        this.clientRootPath = clientRootPath;
 
         // Create Client Cipher
         createCipher();
@@ -140,7 +140,7 @@ public class ClientSecurity {
         theirIdentityKey = new IdentityKey(serverIdentityKey, 0);
 
         byte[] serverSignedPreKey =
-                SecurityUtils.decodePublicKeyfromFile(path.resolve(SecurityUtils.SERVER_SIGNEDPRE_KEY));
+                SecurityUtils.decodePublicKeyfromFile(path.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY));
         theirSignedPreKey = Curve.decodePoint(serverSignedPreKey, 0);
 
         byte[] serverRatchetKey = SecurityUtils.decodePublicKeyfromFile(path.resolve(SecurityUtils.SERVER_RATCHET_KEY));
@@ -156,26 +156,23 @@ public class ClientSecurity {
     }
 
     private void updateSessionRecord() {
-        String sessionStorePath = clientRootPath.resolve(SecurityUtils.SESSION_STORE_FILE).toString();
-
-        try (FileOutputStream stream = new FileOutputStream(sessionStorePath)) {
+        try (FileOutputStream stream = new FileOutputStream(clientPaths.sessionStorePath.toString())) {
             SessionRecord clientSessionRecord = clientProtocolStore.loadSession(ourAddress);
             stream.write(clientSessionRecord.serialize());
         } catch (IOException e) {
-            logger.log(SEVERE, "Error Writing Session record to " + sessionStorePath, e);
+            logger.log(SEVERE, "Error Writing Session record to " + clientPaths.sessionStorePath, e);
         }
     }
 
     private void createCipher() throws InvalidKeyException {
-        var sessionStorePath = clientRootPath.resolve(SecurityUtils.SESSION_STORE_FILE);
         SessionRecord clientSessionRecord = null;
 
         try {
-            byte[] sessionStoreBytes = Files.readAllBytes(sessionStorePath);
+            byte[] sessionStoreBytes = Files.readAllBytes(clientPaths.sessionStorePath);
             clientSessionRecord = new SessionRecord(sessionStoreBytes);
         } catch (IOException e) {
-            logger.log(WARNING,
-                       "Error Reading Session record from " + sessionStorePath + "\nCreating New Session Record!");
+            logger.log(WARNING, "Error Reading Session record from " + clientPaths.sessionStorePath +
+                    "\nCreating New Session Record!");
             clientSessionRecord = new SessionRecord();
             initializeRatchet(clientSessionRecord.getSessionState());
         }
@@ -201,11 +198,9 @@ public class ClientSecurity {
     /* Add Headers (Identity, Base Key & Bundle ID) to Bundle Path */
 
     /* Initialize or get previous client Security Instance */
-    public static synchronized ClientSecurity initializeInstance(int deviceID, Path clientRootPath,
-                                                                 Path serverKeyPath) throws IOException,
-            NoSuchAlgorithmException, InvalidKeyException {
+    public static synchronized ClientSecurity initializeInstance(int deviceID, ClientPaths clientPaths) throws IOException, NoSuchAlgorithmException, InvalidKeyException {
         if (singleClientInstance == null) {
-            singleClientInstance = new ClientSecurity(deviceID, clientRootPath, serverKeyPath);
+            singleClientInstance = new ClientSecurity(deviceID, clientPaths);
         } else {
             logger.log(FINE, "[Sec]: Client Security Instance is already initialized!");
         }
@@ -278,7 +273,7 @@ public class ClientSecurity {
     }
 
     public Path getClientRootPath() {
-        return clientRootPath;
+        return clientPaths.bundleSecurityPath;
     }
 
     public ECPublicKey getServerPublicKey() {
