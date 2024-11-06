@@ -21,6 +21,7 @@ import io.grpc.Grpc;
 import io.grpc.InsecureServerCredentials;
 import io.grpc.Server;
 import io.grpc.stub.StreamObserver;
+import net.discdd.transport.TransportToBundleServerManager;
 
 public class RpcServer {
     private static final Logger logger = Logger.getLogger(RpcServer.class.getName());
@@ -52,7 +53,7 @@ public class RpcServer {
             @Override
             protected Path pathProducer(BundleExchangeName bundleExchangeName, BundleSender bundleSender) {
                 return bundleExchangeName.isDownload() ? toClientPath.resolve(bundleExchangeName.encryptedBundleId()) :
-                        toServerPath.resolve(bundleExchangeName.encryptedBundleId());
+                toServerPath.resolve(bundleExchangeName.encryptedBundleId());
             }
 
             @Override
