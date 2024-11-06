@@ -1,5 +1,6 @@
 package net.discdd.bundletransport;
 
+import static android.content.Context.MODE_PRIVATE;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
