@@ -87,7 +87,6 @@ public class UsbFragment extends Fragment {
                 //Bundle we want to send to usb.
                 scheduledExecutor.execute(() -> {
                     try {
-                        bundleCreation();
                         logger.log(INFO, "Starting bundle creation");
                         BundleDTO bundleDTO = bundleTransmission.generateBundleForTransmission();
                         File bundleFile = bundleDTO.getBundle().getSource();
@@ -181,16 +180,6 @@ public class UsbFragment extends Fragment {
 
     private void showUsbDetachedToast() {
         Toast.makeText(getActivity(), getString(R.string.usb_device_detached), Toast.LENGTH_SHORT).show();
-    }
-
-    private void bundleCreation() {
-        try {
-            bundleTransmission = new BundleTransmission(getActivity().getApplicationContext().getDataDir().toPath(),
-                                                        this::processIncomingADU);
-        } catch (Exception e) {
-            e.printStackTrace();
-            updateUsbStatus(false, "Error creating or transferring bundle in bundleCreation", Color.RED);
-        }
     }
 
     private void processIncomingADU(ADU adu) {
