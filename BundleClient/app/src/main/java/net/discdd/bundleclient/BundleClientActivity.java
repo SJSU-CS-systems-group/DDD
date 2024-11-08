@@ -1,5 +1,6 @@
 package net.discdd.bundleclient;
 
+import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
@@ -10,11 +11,14 @@ import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.viewpager2.widget.ViewPager2;
 
@@ -23,6 +27,7 @@ import com.google.android.material.tabs.TabLayoutMediator;
 
 import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
+import net.discdd.android.fragments.PermissionsViewModel;
 import net.discdd.client.bundlerouting.ClientWindow;
 import net.discdd.client.bundlesecurity.BundleSecurity;
 import net.discdd.pathutils.ClientPaths;
@@ -47,6 +52,14 @@ public class BundleClientActivity extends AppCompatActivity {
     BundleClientWifiDirectService wifiBgService;
     private final ServiceConnection connection;
     CompletableFuture<BundleClientActivity> serviceReady = new CompletableFuture<>();
+    private PermissionsFragment permissionsFragment;
+    private BundleClientWifiDirectFragment homeFragment;
+    private UsbFragment usbFragment;
+    private ServerFragment serverFragment;
+    private LogFragment logFragment;
+    private ViewPager2 viewPager;
+    private TabLayout tabLayout;
+    private TabLayoutMediator tabLayoutMediator;
 
     public BundleClientActivity() {
         connection = new ServiceConnection() {
@@ -84,27 +97,64 @@ public class BundleClientActivity extends AppCompatActivity {
         var intent = new Intent(this, BundleClientWifiDirectService.class);
         var svc = bindService(intent, connection, Context.BIND_AUTO_CREATE);
 
-        BundleClientWifiDirectFragment bundleClientWifiDirectFragment = new BundleClientWifiDirectFragment();
-        fragmentsWithTitles.add(new FragmentWithTitle(bundleClientWifiDirectFragment, getString(R.string.home_tab)));
-        var permissionsFragment = new PermissionsFragment();
+        PermissionsViewModel permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
+        permissionsFragment = new PermissionsFragment(permissionsViewModel);
+        homeFragment = new BundleClientWifiDirectFragment();
+        usbFragment = new UsbFragment();
+        serverFragment = new ServerFragment();
+        logFragment = new LogFragment();
         fragmentsWithTitles.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
-        fragmentsWithTitles.add(new FragmentWithTitle(new UsbFragment(), getString(R.string.usb_tab)));
-        fragmentsWithTitles.add(new FragmentWithTitle(new ServerFragment(), getString(R.string.server_tab)));
-        fragmentsWithTitles.add(new FragmentWithTitle(new LogFragment(), getString(R.string.logs_tab)));
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
         //set up view
         setContentView(R.layout.activity_bundle_client);
 
         //Set up ViewPager and TabLayout
-        ViewPager2 viewPager = findViewById(R.id.view_pager);
-        TabLayout tabLayout = findViewById(R.id.tab_layout);
+        viewPager = findViewById(R.id.view_pager);
+        tabLayout = findViewById(R.id.tab_layout);
         ViewPagerAdapter adapter = new ViewPagerAdapter(this);
         viewPager.setAdapter(adapter);
 
-        var tabMediator = new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> tab.setText(
+        tabLayoutMediator = new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> tab.setText(
                 fragmentsWithTitles.get(position).title()));
-        tabMediator.attach();
+        tabLayoutMediator.attach();
+
+        //set observer on view model for permissions
+        permissionsViewModel.getPermissionSatisfied().observe(this, this::updateTabs);
+    }
+
+    private void updateTabs(Boolean satisfied) {
+        logger.log(INFO, "UPDATING TABS ... Permissions satisfied: " + satisfied);
+
+        ArrayList<FragmentWithTitle> newFragments = new ArrayList<>();
+        if (satisfied) {
+            logger.log(INFO, "ALL TABS BEING SHOWN");
+            newFragments.add(new FragmentWithTitle(homeFragment, getString(R.string.home_tab)));
+            newFragments.add(new FragmentWithTitle(usbFragment, getString(R.string.usb_tab)));
+            newFragments.add(new FragmentWithTitle(serverFragment, getString(R.string.server_tab)));
+            newFragments.add(new FragmentWithTitle(logFragment, getString(R.string.logs_tab)));
+        } else {
+            logger.log(INFO, "ONLY PERMISSIONS TAB IS BEING SHOWN");
+            newFragments.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
+        }
+
+        if (!newFragments.equals(fragmentsWithTitles)) {
+            new Handler(Looper.getMainLooper()).post(() -> {
+                if (tabLayoutMediator != null) {
+                    tabLayoutMediator.detach();
+                }
+
+                fragmentsWithTitles.clear();
+                fragmentsWithTitles.addAll(newFragments);
+
+                ViewPagerAdapter adapter = new ViewPagerAdapter(this);
+                viewPager.setAdapter(adapter);
+
+                tabLayoutMediator = new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> tab.setText(
+                        fragmentsWithTitles.get(position).title()));
+                tabLayoutMediator.attach();
+            });
+        }
     }
 
     @Override
