@@ -9,6 +9,7 @@ import android.content.IntentFilter;
 import android.graphics.Color;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.storage.StorageManager;
 import android.os.storage.StorageVolume;
 import android.view.LayoutInflater;
@@ -46,6 +47,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import static java.nio.file.StandardCopyOption.*;
 
 import static java.nio.file.StandardCopyOption.*;
 import static java.util.logging.Level.WARNING;
@@ -64,7 +66,6 @@ public class UsbFragment extends Fragment {
     private static final Logger logger = Logger.getLogger(UsbFragment.class.getName());
     private ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
     private File usbDirectory;
-    private BundleTransmission bundleTransmission;
 
     public UsbFragment(TransportPaths transportPaths) {
         this.transportPaths = transportPaths;
@@ -74,7 +75,7 @@ public class UsbFragment extends Fragment {
     public View onCreateView(
             @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.usb_fragment, container, false);
-        bundleTransmission = ((BundleTransportActivity) getActivity()).btService.getBundleTransmission();
+        context = view.getContext();
 
         usbExchangeButton = view.findViewById(R.id.usb_exchange_button);
         usbConnectionText = view.findViewById(R.id.usbconnection_response_text);
@@ -212,7 +213,6 @@ public class UsbFragment extends Fragment {
         usbConnected = !usbManager.getDeviceList().isEmpty();
         getActivity().getMainExecutor().execute(() -> {
             if (!usbManager.getDeviceList().isEmpty()) {
-                updateUsbStatus(true, getString(R.string.usb_connection_detected), Color.GREEN);
             } else {
                 updateUsbStatus(false, getString(R.string.usb_device_not_connected), Color.RED);
             }
@@ -233,7 +233,6 @@ public class UsbFragment extends Fragment {
     private void showUsbAttachedToast() {
         Toast.makeText(getActivity(), getString(R.string.usb_device_attached), Toast.LENGTH_SHORT).show();
     }
-
 
     private void showUsbDetachedToast() {
         Toast.makeText(getActivity(), getString(R.string.usb_device_detached), Toast.LENGTH_SHORT).show();
