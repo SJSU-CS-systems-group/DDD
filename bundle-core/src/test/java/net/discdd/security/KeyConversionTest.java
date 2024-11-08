@@ -79,9 +79,19 @@ public class KeyConversionTest {
     }
 
     @Test
-    void testSignalSignature() throws org.whispersystems.libsignal.InvalidKeyException {
+    void testSignalSignature() throws org.whispersystems.libsignal.InvalidKeyException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, SignatureException {
+        var keyPair = convertToKeyPair(ecKeyPair);
         byte[] signature = Curve.calculateSignature(ecPrivateKey, message);
 
+        assertTrue(Curve.verifySignature(ecPublicKey, message, signature));
+        java.security.Signature javaSignature = Signature.getInstance("Ed25519");
+        //javaSignature.initVerify(keyPair.getPublic());
+        //javaSignature.update(message);
+        //assertTrue(javaSignature.verify(signature));
+        message[0] = '!';
+        javaSignature.initSign(keyPair.getPrivate());
+        javaSignature.update(message);
+        signature = javaSignature.sign();
         assertTrue(Curve.verifySignature(ecPublicKey, message, signature));
     }
 

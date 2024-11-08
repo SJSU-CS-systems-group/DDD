@@ -35,7 +35,7 @@ import java.security.spec.NamedParameterSpec;
 
 public class KeyUtils {
 
-    public static byte[] reverseEndian(byte[] byteArray) {
+    public static byte[] reverseEndian(final byte[] byteArray) {
         if (byteArray == null) {
             return null; // Return null if input is null
         }
@@ -77,7 +77,7 @@ public class KeyUtils {
         fe_tobytes.fe_tobytes(ed25519_pubkey, ed_y);
 
         ed25519_pubkey[31] &= 0x7F;
-        ed25519_pubkey[31] |= (curve25519_pubkey[31] & 0x80);
+        //ed25519_pubkey[31] |= (curve25519_pubkey[31] & 0x80);
         return ed25519_pubkey;
     }
 
@@ -107,17 +107,9 @@ public class KeyUtils {
         ECPrivateKey ecPrivateKey = ecKeyPair.getPrivateKey();
         ECPublicKey ecPublicKey = ecKeyPair.getPublicKey();
 
-//        byte[] publicKeyBytes = ((DjbECPublicKey) ecPublicKey).getPublicKey();
         byte[] privateKeyBytes = ((DjbECPrivateKey) ecPrivateKey).getPrivateKey();
 
         byte[] publicKeyBytes = convertToEdType(ecPublicKey);
-//        byte[] privateKeyBytes = convertToEd25519(ecPrivateKey);
-
-//        Ed25519PrivateKeyParameters privateKeyRebuild = new Ed25519PrivateKeyParameters(privateKeyBytes);
-//        Ed25519PublicKeyParameters publicKeyRebuild = privateKeyRebuild.generatePublicKey();
-
-//        byte[] publicKeyBytes = publicKeyRebuild.getEncoded();
-//        byte[] privateKeyBytes2 = privateKeyRebuild.getEncoded();
 
         BigInteger y = new BigInteger(reverseEndian(publicKeyBytes));
         EdECPoint edECPoint = new EdECPoint(false, y);
