@@ -5,6 +5,8 @@
     <uses-permission android:name="Manifest.permission.POST_NOTIFICATIONS"/>
     <permission android:name="net.discdd.bundleclient.permission.MESSAGE_PROVIDER_WRITE" android:protectionLevel="normal" />
     <permission android:name="net.discdd.bundleclient.permission.MESSAGE_PROVIDER_READ" android:protectionLevel="normal" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-feature android:name="android.hardware.usb.host" />
 
     <application
