@@ -48,6 +48,7 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import static java.nio.file.StandardCopyOption.*;
+import static java.util.logging.Level.WARNING;
 
 public class UsbFragment extends Fragment {
     private TransportPaths transportPaths;
@@ -113,37 +114,27 @@ public class UsbFragment extends Fragment {
     private void populateUsb() throws IOException {
         List<StorageVolume> storageVolumes = storageManager.getStorageVolumes();
         for (StorageVolume volume : storageVolumes) {
-            // Check that volume is not internal storage, SSD, or hard drive
-            // Note: internal storage, SSD, and hard drives are "non-removable storage"
-            logger.log(INFO, "This is the volume " + volume);
-            if (volume.isRemovable() && !volume.isEmulated()) { //&& notEmulated
-                // Get the root directory for the USB storage
+            if (volume.isRemovable() && !volume.isEmulated()) {
                 File usbStorageDir = volume.getDirectory();
-                // If the root dir exists
                 if (usbStorageDir != null) {
-                    // Create hypothetical path for usb's DDD_transport
                     File dddTransportDir = new File(usbStorageDir, usbDirName);
-                    // Check if the DDD_transport directory exists
                     if (!dddTransportDir.exists()) {
-                        // Directory does not exist, so create it
                         dddTransportDir = new File(usbStorageDir, "/DDD_transport/server");
                         dddTransportDir.mkdirs();
                         dddTransportDir = new File(usbStorageDir, "DDD_transport/client");
                         dddTransportDir.mkdirs();
                     }
-                    // after making proper directories, copy for-client files from transport
                     try {
                         dddTransportDir = new File(usbStorageDir, "DDD_transport");
                         copyFilesFromDevice(dddTransportDir);
                     } catch (Exception e) {
-                        logger.log(INFO, "copyFilesFromDevice failed to populateUsb");
-                        throw new RuntimeException("Bad call to copy ", e);
+                        logger.log(WARNING, "copyFilesFromDevice failed to populateUsb");
+                        throw new RuntimeException("Bad call to copyFilesFromDevice", e);
                     }
                 }
-                break; //once first removable volume is found exit for loop (handles USBs with multiple partitions/volumes)
+                break;
             }
         }
-        logger.log(INFO, "copied client and server files from device");
     }
 
     /**
@@ -153,39 +144,21 @@ public class UsbFragment extends Fragment {
      * @throws IOException
      */
     private void copyFilesFromDevice(File dddTransportDir) throws IOException, GeneralSecurityException, RoutingExceptions.ClientMetaDataFileException, InvalidKeyException {
-        // List to be populated by device files
         List<Path> storageList;
-        // Device path with device files
         Path devicePathForClient = transportPaths.toClientPath;
-        // Try to walk given path (can we exclude client portion?) and collect all files
-        logger.log(INFO, "Will try to walk this path: " + devicePathForClient);
         try (Stream<Path> walk = Files.walk(devicePathForClient)) {
             storageList = walk.filter(Files::isRegularFile).collect(Collectors.toList());
-            for (Path filePath : storageList) {
-                logger.log(INFO, "Collected file w this name: " + filePath.getFileName());
-            }
         }
-        // If nothing was collected notify in logs and exit this method
         if (storageList.isEmpty()) {
             logger.log(INFO, "No bundles to download from device to USB");
             logger.log(INFO, "Our empty storageList was " + devicePathForClient);
             return;
         }
-        // For every client file in transport, copy onto USBs designated dir
         for (Path deviceFilePath : storageList) {
             Path targetPath = dddTransportDir.toPath().resolve(deviceFilePath.getFileName());
-            logger.log(INFO, "copying " + deviceFilePath + " onto " + targetPath);
             Files.copy(deviceFilePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
         }
-//        ClassLoader cl = UsbFragment.class.getClassLoader();
-////        Path resource = null;
-////        try {
-////            resource = cl.getResource("exampleRes.pages").toPath();
-////        } catch (URISyntaxException e) {
-////            throw new RuntimeException(e);
-////        }
-////        Files.copy(resource, dddTransportDir.toPath(), StandardCopyOption.REPLACE_EXISTING);
-        }
+    }
 
     @Override
     public void onDestroyView() {
@@ -195,7 +168,6 @@ public class UsbFragment extends Fragment {
         }
     }
 
-    //Method to handle USB broadcasts
     private void handleUsbBroadcast(Intent intent) {
         String action = intent.getAction();
         if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
@@ -209,20 +181,11 @@ public class UsbFragment extends Fragment {
         }
     }
 
-    //Method to check initial USB connection
     private void checkUsbConnection(int tries) {
         usbConnected = !usbManager.getDeviceList().isEmpty() && usbDirExists();
         getActivity().getMainExecutor().execute(() -> {
             if (!usbManager.getDeviceList().isEmpty()) {
-                // I 'deleted' the following code b/c if DDD directory doesn't exist, populateUSB should handle creation
-                //if (usbDirExists()) {
                     updateUsbStatus(true, getString(R.string.usb_connection_detected), Color.GREEN);
-                //}
-                //else {
-                //    updateUsbStatus(false,
-                //                    getString(R.string.usb_was_connected_but_ddd_transport_directory_was_not_detected),
-                //                    Color.RED);
-                //}
             } else {
                 updateUsbStatus(false, getString(R.string.usb_device_not_connected), Color.RED);
             }
@@ -232,7 +195,6 @@ public class UsbFragment extends Fragment {
         }
     }
 
-    //Method to update USB status
     public void updateUsbStatus(boolean isConnected, String statusText, int color) {
         getActivity().runOnUiThread(() -> {
             usbExchangeButton.setEnabled(isConnected);
@@ -245,7 +207,6 @@ public class UsbFragment extends Fragment {
         Toast.makeText(getActivity(), getString(R.string.usb_device_attached), Toast.LENGTH_SHORT).show();
     }
 
-    //Method to check if /DDD_transport directory exists
     private boolean usbDirExists() {
         Path usbDirPath;
         List<StorageVolume> storageVolumeList = storageManager.getStorageVolumes();
