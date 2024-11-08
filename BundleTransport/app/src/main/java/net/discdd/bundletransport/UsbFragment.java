@@ -24,14 +24,17 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import net.discdd.bundlerouting.RoutingExceptions;
+import net.discdd.pathutils.TransportPaths;
 
 import org.whispersystems.libsignal.InvalidKeyException;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -47,7 +50,7 @@ import java.util.stream.Stream;
 import static java.nio.file.StandardCopyOption.*;
 
 public class UsbFragment extends Fragment {
-    private Context context;
+    private TransportPaths transportPaths;
     private Button usbExchangeButton;
     private TextView usbConnectionText;
     private UsbManager usbManager;
@@ -58,12 +61,16 @@ public class UsbFragment extends Fragment {
     private static final String usbDirName = "/DDD_transport";
     private ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
     private File usbDirectory;
+    public Path transportPath;
+
+    public UsbFragment(TransportPaths transportPaths) {
+        this.transportPaths = transportPaths;
+    }
 
     @Override
     public View onCreateView(
             @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.usb_fragment, container, false);
-        context = view.getContext();
 
         usbExchangeButton = view.findViewById(R.id.usb_exchange_button);
         usbConnectionText = view.findViewById(R.id.usbconnection_response_text);
@@ -108,6 +115,7 @@ public class UsbFragment extends Fragment {
         for (StorageVolume volume : storageVolumes) {
             // Check that volume is not internal storage, SSD, or hard drive
             // Note: internal storage, SSD, and hard drives are "non-removable storage"
+            logger.log(INFO, "This is the volume " + volume);
             if (volume.isRemovable() && !volume.isEmulated()) { //&& notEmulated
                 // Get the root directory for the USB storage
                 File usbStorageDir = volume.getDirectory();
@@ -118,18 +126,18 @@ public class UsbFragment extends Fragment {
                     // Check if the DDD_transport directory exists
                     if (!dddTransportDir.exists()) {
                         // Directory does not exist, so create it
-                        dddTransportDir = new File(usbStorageDir, "/DDD_transport/BundleTransmission/server");
+                        dddTransportDir = new File(usbStorageDir, "/DDD_transport/server");
                         dddTransportDir.mkdirs();
-                        dddTransportDir = new File(usbStorageDir, "DDD_transport/BundleTransmission/client");
+                        dddTransportDir = new File(usbStorageDir, "DDD_transport/client");
                         dddTransportDir.mkdirs();
                     }
                     // after making proper directories, copy for-client files from transport
                     try {
-                        dddTransportDir = new File(usbStorageDir, "DDD_transport/BundleTransmission");
+                        dddTransportDir = new File(usbStorageDir, "DDD_transport");
                         copyFilesFromDevice(dddTransportDir);
                     } catch (Exception e) {
                         logger.log(INFO, "copyFilesFromDevice failed to populateUsb");
-                        throw new RuntimeException(e);
+                        throw new RuntimeException("Bad call to copy ", e);
                     }
                 }
                 break; //once first removable volume is found exit for loop (handles USBs with multiple partitions/volumes)
@@ -148,12 +156,14 @@ public class UsbFragment extends Fragment {
         // List to be populated by device files
         List<Path> storageList;
         // Device path with device files
-        File devicePathForClient = new File(context.getFilesDir(), "/BundleTransmission/client");
+        Path devicePathForClient = transportPaths.toClientPath;
         // Try to walk given path (can we exclude client portion?) and collect all files
         logger.log(INFO, "Will try to walk this path: " + devicePathForClient);
-        try (Stream<Path> walk = Files.walk(devicePathForClient.toPath())) {
+        try (Stream<Path> walk = Files.walk(devicePathForClient)) {
             storageList = walk.filter(Files::isRegularFile).collect(Collectors.toList());
-            logger.log(INFO, "Collected file from this path: " + devicePathForClient);
+            for (Path filePath : storageList) {
+                logger.log(INFO, "Collected file w this name: " + filePath.getFileName());
+            }
         }
         // If nothing was collected notify in logs and exit this method
         if (storageList.isEmpty()) {
@@ -163,8 +173,9 @@ public class UsbFragment extends Fragment {
         }
         // For every client file in transport, copy onto USBs designated dir
         for (Path deviceFilePath : storageList) {
-            logger.log(INFO, "copying" + deviceFilePath + "onto " + dddTransportDir.toPath());
-            Files.copy(deviceFilePath, dddTransportDir.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            Path targetPath = dddTransportDir.toPath().resolve(deviceFilePath.getFileName());
+            logger.log(INFO, "copying " + deviceFilePath + " onto " + targetPath);
+            Files.copy(deviceFilePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
         }
 //        ClassLoader cl = UsbFragment.class.getClassLoader();
 ////        Path resource = null;

@@ -101,7 +101,7 @@ public class BundleTransportActivity extends AppCompatActivity {
         transportWifiFragment = new TitledFragment(getString(R.string.local_wifi),
                                                    new TransportWifiDirectFragment(this.transportPaths));
         storageFragment = new TitledFragment("Storage Settings", new StorageFragment());
-        usbFrag = new TitledFragment("USB", new UsbFragment());
+        usbFrag = new TitledFragment("USB", new UsbFragment(transportPaths));
 
         permissionsFragment = new PermissionsFragment();
         fragments.add(serverUploadFragment);
