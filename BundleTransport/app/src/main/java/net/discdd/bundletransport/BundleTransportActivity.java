@@ -1,5 +1,6 @@
 package net.discdd.bundletransport;
 
+import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
@@ -13,11 +14,14 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.viewpager2.widget.ViewPager2;
 
@@ -27,6 +31,7 @@ import com.google.android.material.tabs.TabLayoutMediator;
 import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
 import net.discdd.pathutils.TransportPaths;
+import net.discdd.android.fragments.PermissionsViewModel;
 import net.discdd.transport.TransportSecurity;
 
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -48,13 +53,18 @@ public class BundleTransportActivity extends AppCompatActivity {
     private TitledFragment transportWifiFragment;
     private TitledFragment storageFragment;
     private TransportPaths transportPaths;
+    private TitledFragment logFragment;
+    private TitledFragment permissionsTitledFragment;
 
     record ConnectivityEvent(boolean internetAvailable) {}
 
     private final SubmissionPublisher<ConnectivityEvent> connectivityEventPublisher = new SubmissionPublisher<>();
     private ViewPager2 viewPager2;
     private FragmentStateAdapter viewPager2Adapter;
+    private PermissionsViewModel permissionsViewModel;
     private PermissionsFragment permissionsFragment;
+    private TabLayout tabLayout;
+    private TabLayoutMediator mediator;
     private SharedPreferences sharedPreferences;
     TransportWifiServiceConnection transportWifiServiceConnection = new TransportWifiServiceConnection();
 
@@ -100,14 +110,15 @@ public class BundleTransportActivity extends AppCompatActivity {
         transportWifiFragment = new TitledFragment(getString(R.string.local_wifi),
                                                    new TransportWifiDirectFragment(this.transportPaths));
         storageFragment = new TitledFragment("Storage Settings", new StorageFragment());
+        logFragment = new TitledFragment(getString(R.string.logs), new LogFragment());
 
-        permissionsFragment = new PermissionsFragment();
-        fragments.add(serverUploadFragment);
-        fragments.add(transportWifiFragment);
-        fragments.add(storageFragment);
-        fragments.add(new TitledFragment(getString(R.string.permissions), permissionsFragment));
-        fragments.add(new TitledFragment(getString(R.string.logs), new LogFragment()));
-        TabLayout tabLayout = findViewById(R.id.tabs);
+        permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
+        permissionsFragment = new PermissionsFragment(permissionsViewModel);
+        permissionsTitledFragment = new TitledFragment("Permissions",
+                                                 permissionsFragment);
+        fragments.add(permissionsTitledFragment);
+
+        tabLayout = findViewById(R.id.tabs);
         viewPager2 = findViewById(R.id.view_pager);
         viewPager2Adapter = new FragmentStateAdapter(this) {
             @NonNull
@@ -122,10 +133,59 @@ public class BundleTransportActivity extends AppCompatActivity {
             }
         };
         viewPager2.setAdapter(viewPager2Adapter);
-        var mediator = new TabLayoutMediator(tabLayout, viewPager2, (tab, position) -> {
+
+        mediator = new TabLayoutMediator(tabLayout, viewPager2, (tab, position) -> {
             tab.setText(fragments.get(position).title);
         });
         mediator.attach();
+
+        //set observer on view model for permissions
+        permissionsViewModel.getPermissionSatisfied().observe(this, this::updateTabs);
+    }
+
+    private void updateTabs(Boolean satisfied) {
+        logger.log(INFO, "UPDATING TABS ... Permissions satisfied: " + satisfied);
+
+        ArrayList<TitledFragment> newFragments = new ArrayList<>();
+        if (satisfied) {
+            logger.log(INFO, "ALL TABS BEING SHOWN");
+            newFragments.add(serverUploadFragment);
+            newFragments.add(transportWifiFragment);
+            newFragments.add(storageFragment);
+            newFragments.add(logFragment);
+        } else {
+            logger.log(INFO, "ONLY PERMISSIONS TAB IS BEING SHOWN");
+            newFragments.add(permissionsTitledFragment);
+        }
+
+        if (!newFragments.equals(fragments)) {
+            new Handler(Looper.getMainLooper()).post(() -> {
+                if (mediator != null) {
+                    mediator.detach();
+                }
+
+                fragments.clear();
+                fragments.addAll(newFragments);
+
+                viewPager2Adapter = new FragmentStateAdapter(this) {
+                    @NonNull
+                    @Override
+                    public Fragment createFragment(int position) {
+                        return fragments.get(position).fragment;
+                    }
+
+                    @Override
+                    public int getItemCount() {
+                        return fragments.size();
+                    }
+                };
+                viewPager2.setAdapter(viewPager2Adapter);
+
+                mediator = new TabLayoutMediator(tabLayout, viewPager2, (tab, position) -> tab.setText(
+                        fragments.get(position).title()));
+                mediator.attach();
+            });
+        }
     }
 
     protected void onStart() {
