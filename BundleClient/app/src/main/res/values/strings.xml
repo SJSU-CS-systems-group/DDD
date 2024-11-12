@@ -39,10 +39,8 @@
     <string name="PeerDetailedDescription">Last seen: %s\nLast exchange: %s\nLast Server Contact: %s\n</string>
     <string name="never">Never</string>
     <string name="sending_adu_s_d_from_s">Sending ADU %s:%d from %s</string>
-    <string name="exchanged_d_bundles_to_and_d_bundles_from_s">Exchanged %d bundles to and %d bundles from %s</string>
     <string name="exchanged_d_bundles_to_and_d_bundles_from_server">Exchanged %d bundles to and %d bundles from server</string>
     <string name="usb_device_attached_checking_for_storage_volumes">USB device attached, checking for storage volumes</string>
     <string name="usb_connection_detected">USB connection detected</string>
-    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">USB was connected but DDD transport directory was not detected</string>
     <string name="usb_device_not_connected">USB device not connected</string>
 </resources>
