@@ -141,10 +141,10 @@ public class UsbFragment extends Fragment {
     /**
      * Copies for-client files from transport device (handling downstream).
      *
-     * @param dddTransportDir target directory; USBs directory
+     * @param targetDir target directory; USBs client directory
      * @throws IOException
      */
-    private void toClientList(File dddTransportDir) throws IOException, GeneralSecurityException, RoutingExceptions.ClientMetaDataFileException, InvalidKeyException {
+    private void toClientList(File targetDir) throws IOException, GeneralSecurityException, RoutingExceptions.ClientMetaDataFileException, InvalidKeyException {
         List<Path> storageList;
         Path devicePathForClient = transportPaths.toClientPath;
         try (Stream<Path> walk = Files.walk(devicePathForClient)) {
@@ -156,8 +156,33 @@ public class UsbFragment extends Fragment {
             return;
         }
         for (Path deviceFilePath : storageList) {
-            Path targetPath = dddTransportDir.toPath().resolve(deviceFilePath.getFileName());
+            Path targetPath = targetDir.toPath().resolve(deviceFilePath.getFileName());
             Files.copy(deviceFilePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    /**
+     * Copies for-server files from usb (handling upstream)
+     *
+     * @param sourceDir source directory; USBs server directory
+     */
+    private void toServerList(File sourceDir) throws IOException {
+        // create storage list from source dir
+        List<Path> storageList;
+        try (Stream<Path> walk = Files.walk(sourceDir.toPath())) {
+            storageList = walk.filter(Files::isRegularFile).collect(Collectors.toList());
+        }
+        // notify if storage list is empty
+        if (storageList.isEmpty()) {
+            logger.log(INFO, "No bundles to download from USB to device");
+            logger.log(INFO, "Our empty storageList was " + sourceDir);
+            return;
+        }
+        // copy all storage list files onto Android
+        Path devicePathForServer = transportPaths.toServerPath;
+        for (Path usbFilePath : storageList) {
+            Path targetPath = devicePathForServer.resolve(usbFilePath.getFileName());
+            Files.copy(usbFilePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
         }
     }
 
