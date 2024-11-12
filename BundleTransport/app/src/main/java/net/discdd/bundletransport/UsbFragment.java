@@ -127,7 +127,7 @@ public class UsbFragment extends Fragment {
                         usbTransportToClientDir.mkdirs();
                     }
                     try {
-                        copyFilesFromDevice(usbTransportToClientDir);
+                        toClientList(usbTransportToClientDir);
                     } catch (Exception e) {
                         logger.log(WARNING, "copyFilesFromDevice failed to populateUsb");
                         throw new RuntimeException("Bad call to copyFilesFromDevice", e);
@@ -144,7 +144,7 @@ public class UsbFragment extends Fragment {
      * @param dddTransportDir target directory; USBs directory
      * @throws IOException
      */
-    private void copyFilesFromDevice(File dddTransportDir) throws IOException, GeneralSecurityException, RoutingExceptions.ClientMetaDataFileException, InvalidKeyException {
+    private void toClientList(File dddTransportDir) throws IOException, GeneralSecurityException, RoutingExceptions.ClientMetaDataFileException, InvalidKeyException {
         List<Path> storageList;
         Path devicePathForClient = transportPaths.toClientPath;
         try (Stream<Path> walk = Files.walk(devicePathForClient)) {
