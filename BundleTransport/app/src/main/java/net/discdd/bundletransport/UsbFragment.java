@@ -128,9 +128,10 @@ public class UsbFragment extends Fragment {
                     }
                     try {
                         toClientList(usbTransportToClientDir);
+                        toServerList(usbTransportToServerDir);
                     } catch (Exception e) {
-                        logger.log(WARNING, "copyFilesFromDevice failed to populateUsb");
-                        throw new RuntimeException("Bad call to copyFilesFromDevice", e);
+                        logger.log(WARNING, "failed to populate USB and or Android device");
+                        throw new RuntimeException("Bad call to populate USB or Android device", e);
                     }
                 }
                 break;
@@ -180,8 +181,10 @@ public class UsbFragment extends Fragment {
         }
         // copy all storage list files onto Android
         Path devicePathForServer = transportPaths.toServerPath;
+        logger.log(INFO, "will copy usb files from into the following device path: ", devicePathForServer);
         for (Path usbFilePath : storageList) {
             Path targetPath = devicePathForServer.resolve(usbFilePath.getFileName());
+            logger.log(INFO, "copying the following file" + usbFilePath + "into" + targetPath);
             Files.copy(usbFilePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
         }
     }
