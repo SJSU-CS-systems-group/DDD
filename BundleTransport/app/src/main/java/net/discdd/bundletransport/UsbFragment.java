@@ -52,6 +52,8 @@ import static java.util.logging.Level.WARNING;
 
 public class UsbFragment extends Fragment {
     private static final String USB_DIR_NAME = "DDD_transport";
+    private static final String RELATIVE_CLIENT_PATH = "client";
+    private static final String RELATIVE_SERVER_PATH = "server";
     private TransportPaths transportPaths;
     private Button usbExchangeButton;
     private TextView usbConnectionText;
@@ -62,7 +64,6 @@ public class UsbFragment extends Fragment {
     private static final Logger logger = Logger.getLogger(UsbFragment.class.getName());
     private ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
     private File usbDirectory;
-    public Path transportPath;
 
     public UsbFragment(TransportPaths transportPaths) {
         this.transportPaths = transportPaths;
@@ -117,16 +118,16 @@ public class UsbFragment extends Fragment {
             if (volume.isRemovable() && !volume.isEmulated()) {
                 File usbStorageDir = volume.getDirectory();
                 if (usbStorageDir != null) {
-                    File dddTransportDir = new File(usbStorageDir, USB_DIR_NAME);
-                    if (!dddTransportDir.exists()) {
-                        dddTransportDir = new File(usbStorageDir, "/DDD_transport/server");
-                        dddTransportDir.mkdirs();
-                        dddTransportDir = new File(usbStorageDir, "DDD_transport/client");
-                        dddTransportDir.mkdirs();
+                    File usbTransportDir = new File(usbStorageDir, USB_DIR_NAME);
+                    File usbTransportToServerDir = new File(usbTransportDir, RELATIVE_SERVER_PATH);
+                    File usbTransportToClientDir = new File(usbTransportDir, RELATIVE_CLIENT_PATH);
+                    if (!usbTransportDir.exists()) {
+                        usbTransportDir.mkdirs();
+                        usbTransportToServerDir.mkdirs();
+                        usbTransportToClientDir.mkdirs();
                     }
                     try {
-                        dddTransportDir = new File(usbStorageDir, "DDD_transport");
-                        copyFilesFromDevice(dddTransportDir);
+                        copyFilesFromDevice(usbTransportToClientDir);
                     } catch (Exception e) {
                         logger.log(WARNING, "copyFilesFromDevice failed to populateUsb");
                         throw new RuntimeException("Bad call to copyFilesFromDevice", e);
@@ -182,7 +183,7 @@ public class UsbFragment extends Fragment {
     }
 
     private void checkUsbConnection(int tries) {
-        usbConnected = !usbManager.getDeviceList().isEmpty() && usbDirExists();
+        usbConnected = !usbManager.getDeviceList().isEmpty();
         getActivity().getMainExecutor().execute(() -> {
             if (!usbManager.getDeviceList().isEmpty()) {
                     updateUsbStatus(true, getString(R.string.usb_connection_detected), Color.GREEN);
@@ -205,22 +206,6 @@ public class UsbFragment extends Fragment {
 
     private void showUsbAttachedToast() {
         Toast.makeText(getActivity(), getString(R.string.usb_device_attached), Toast.LENGTH_SHORT).show();
-    }
-
-    private boolean usbDirExists() {
-        Path usbDirPath;
-        List<StorageVolume> storageVolumeList = storageManager.getStorageVolumes();
-        for (StorageVolume storageVolume : storageVolumeList) {
-            if (storageVolume.isRemovable()) {
-                usbDirectory = new File(storageVolume.getDirectory(), USB_DIR_NAME);
-                logger.info("CHECKING FOR  " + usbDirectory);
-                if (usbDirectory.exists()) {
-                    usbDirPath = usbDirectory.toPath();
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     private void showUsbDetachedToast() {
