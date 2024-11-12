@@ -168,23 +168,18 @@ public class UsbFragment extends Fragment {
      * @param sourceDir source directory; USBs server directory
      */
     private void toServerList(File sourceDir) throws IOException {
-        // create storage list from source dir
         List<Path> storageList;
         try (Stream<Path> walk = Files.walk(sourceDir.toPath())) {
             storageList = walk.filter(Files::isRegularFile).collect(Collectors.toList());
         }
-        // notify if storage list is empty
         if (storageList.isEmpty()) {
             logger.log(INFO, "No bundles to download from USB to device");
             logger.log(INFO, "Our empty storageList was " + sourceDir);
             return;
         }
-        // copy all storage list files onto Android
         Path devicePathForServer = transportPaths.toServerPath;
-        logger.log(INFO, "will copy usb files from into the following device path: ", devicePathForServer);
         for (Path usbFilePath : storageList) {
             Path targetPath = devicePathForServer.resolve(usbFilePath.getFileName());
-            logger.log(INFO, "copying the following file" + usbFilePath + "into" + targetPath);
             Files.copy(usbFilePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
         }
     }
