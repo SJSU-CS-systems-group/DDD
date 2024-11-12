@@ -114,8 +114,7 @@ public class BundleTransportActivity extends AppCompatActivity {
 
         permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
         permissionsFragment = new PermissionsFragment(permissionsViewModel);
-        permissionsTitledFragment = new TitledFragment("Permissions",
-                                                 permissionsFragment);
+        permissionsTitledFragment = new TitledFragment("Permissions", permissionsFragment);
         fragments.add(permissionsTitledFragment);
 
         tabLayout = findViewById(R.id.tabs);
@@ -181,8 +180,8 @@ public class BundleTransportActivity extends AppCompatActivity {
                 };
                 viewPager2.setAdapter(viewPager2Adapter);
 
-                mediator = new TabLayoutMediator(tabLayout, viewPager2, (tab, position) -> tab.setText(
-                        fragments.get(position).title()));
+                mediator = new TabLayoutMediator(tabLayout, viewPager2,
+                                                 (tab, position) -> tab.setText(fragments.get(position).title()));
                 mediator.attach();
             });
         }
