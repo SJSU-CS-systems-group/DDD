@@ -32,9 +32,14 @@ public class PermissionsFragment extends Fragment {
     final static private Logger logger = Logger.getLogger(PermissionsFragment.class.getName());
     private final HashMap<String, PermissionsAdapter.PermissionViewHolder> neededPermissions = new HashMap<>();
     private ActivityResultLauncher<String> requestPermissionLauncher;
-    private PermissionsAdapter permissionsAdapter;
     private boolean promptPending;
     private Consumer<HashSet<String>> permissionWatcher;
+    private final PermissionsViewModel permissionsViewModel;
+    private final HashSet<String> requiredPermissions = new HashSet<>();
+
+    public PermissionsFragment(PermissionsViewModel permissionsViewModel) {
+        this.permissionsViewModel = permissionsViewModel;
+    }
 
     @Override
     public View onCreateView(
@@ -53,13 +58,21 @@ public class PermissionsFragment extends Fragment {
             //get permissions array from resources
             String[] permissions = getResources().getStringArray(R.array.permissions_array);
 
+            //Store required permissions
+            requiredPermissions.addAll(Arrays.asList(permissions));
+
             //Initialize the adapter
-            permissionsAdapter = new PermissionsAdapter(permissions);
+            PermissionsAdapter permissionsAdapter = new PermissionsAdapter(permissions);
 
             //set the adapter to the RecyclerView
             permissionsRecyclerView.setAdapter(permissionsAdapter);
-
         }
+    }
+
+    public void allSatisfied() {
+        boolean satisfied = !requiredPermissions.isEmpty() && grantedPermissions.containsAll(requiredPermissions);
+        logger.log(Level.INFO, "ALL PERMS SATISFIED: " + satisfied);
+        permissionsViewModel.updatePermissions(satisfied);
     }
 
     private ActivityResultLauncher<String[]> activityResultLauncher =
@@ -86,6 +99,7 @@ public class PermissionsFragment extends Fragment {
                                                   logger.info("Requesting " + Arrays.toString(permissionsToRequest));
                                                   activityResultLauncher.launch(permissionsToRequest);
                                               }
+                                              allSatisfied();
                                           }
                                       });
     ;
@@ -122,6 +136,7 @@ public class PermissionsFragment extends Fragment {
                 activityResultLauncher.launch(permissionsToRequest);
             }
         }
+        allSatisfied();
     }
 
     class PermissionsAdapter extends RecyclerView.Adapter<PermissionsAdapter.PermissionViewHolder> {
