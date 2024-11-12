@@ -186,10 +186,8 @@ public class UsbFragment extends Fragment {
             return;
         }
         Path devicePathForServer = transportPaths.toServerPath;
-        logger.log(INFO, "will copy usb files from into the following device path: ", devicePathForServer);
         for (Path usbFilePath : storageList) {
             Path targetPath = devicePathForServer.resolve(usbFilePath.getFileName());
-            logger.log(INFO, "copying the following file" + usbFilePath + "into" + targetPath);
             Files.copy(usbFilePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
         }
     }
