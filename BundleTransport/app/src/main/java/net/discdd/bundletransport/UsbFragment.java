@@ -51,6 +51,7 @@ import static java.nio.file.StandardCopyOption.*;
 import static java.util.logging.Level.WARNING;
 
 public class UsbFragment extends Fragment {
+    private static final String USB_DIR_NAME = "DDD_transport";
     private TransportPaths transportPaths;
     private Button usbExchangeButton;
     private TextView usbConnectionText;
@@ -59,7 +60,6 @@ public class UsbFragment extends Fragment {
     public static boolean usbConnected = false;
     private StorageManager storageManager;
     private static final Logger logger = Logger.getLogger(UsbFragment.class.getName());
-    private static final String usbDirName = "/DDD_transport";
     private ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
     private File usbDirectory;
     public Path transportPath;
@@ -117,7 +117,7 @@ public class UsbFragment extends Fragment {
             if (volume.isRemovable() && !volume.isEmulated()) {
                 File usbStorageDir = volume.getDirectory();
                 if (usbStorageDir != null) {
-                    File dddTransportDir = new File(usbStorageDir, usbDirName);
+                    File dddTransportDir = new File(usbStorageDir, USB_DIR_NAME);
                     if (!dddTransportDir.exists()) {
                         dddTransportDir = new File(usbStorageDir, "/DDD_transport/server");
                         dddTransportDir.mkdirs();
@@ -212,7 +212,7 @@ public class UsbFragment extends Fragment {
         List<StorageVolume> storageVolumeList = storageManager.getStorageVolumes();
         for (StorageVolume storageVolume : storageVolumeList) {
             if (storageVolume.isRemovable()) {
-                usbDirectory = new File(storageVolume.getDirectory().getPath() + usbDirName);
+                usbDirectory = new File(storageVolume.getDirectory(), USB_DIR_NAME);
                 logger.info("CHECKING FOR  " + usbDirectory);
                 if (usbDirectory.exists()) {
                     usbDirPath = usbDirectory.toPath();
