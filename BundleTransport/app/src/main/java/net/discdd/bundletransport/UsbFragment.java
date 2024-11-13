@@ -42,9 +42,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import static java.util.logging.Level.WARNING;
 
-import static java.nio.file.StandardCopyOption.*;
-import static java.util.logging.Level.WARNING;
-
 public class UsbFragment extends Fragment {
     private static final String USB_DIR_NAME = "DDD_transport";
     private static final String RELATIVE_CLIENT_PATH = "client";
@@ -58,10 +55,6 @@ public class UsbFragment extends Fragment {
     private StorageManager storageManager;
     private static final Logger logger = Logger.getLogger(UsbFragment.class.getName());
     private ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
-
-    public UsbFragment(TransportPaths transportPaths) {
-        this.transportPaths = transportPaths;
-    }
 
     public UsbFragment(TransportPaths transportPaths) {
         this.transportPaths = transportPaths;
