@@ -140,6 +140,7 @@ public class UsbFragment extends Fragment {
                         logger.log(WARNING, "failed to populate USB and or Android device");
                         throw new RuntimeException("Bad call to populate USB or Android device", e);
                     }
+                    reduceUsbFiles(usbTransportToServerDir, usbTransportToClientDir);
                 }
                 break;
             }
@@ -189,6 +190,35 @@ public class UsbFragment extends Fragment {
         for (Path usbFilePath : storageList) {
             Path targetPath = devicePathForServer.resolve(usbFilePath.getFileName());
             Files.copy(usbFilePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    private void reduceUsbFiles(File usbTransportToClientDir, File usbTransportToServerDir) throws IOException {
+        //inside USB to client
+        List<Path> usbToClient;
+        try (Stream<Path> walk = Files.walk(usbTransportToClientDir.toPath())) {
+            usbToClient = walk.filter(Files::isRegularFile).collect(Collectors.toList());
+        }
+        for (Path usbFile : usbToClient) {
+            //if android to client does not contain such file
+            boolean usbFileExistsInAndroid = new File(String.valueOf(transportPaths.toClientPath), usbFile.getFileName().toString()).exists();
+            if (!usbFileExistsInAndroid) {
+                //delete file from USB
+                Files.deleteIfExists(usbFile);
+            }
+        }
+        //inside USB to server
+        List<Path> usbToServer;
+        try (Stream<Path> walk = Files.walk(usbTransportToServerDir.toPath())) {
+            usbToServer = walk.filter(Files::isRegularFile).collect(Collectors.toList());
+        }
+        for (Path usbFile : usbToServer) {
+            //if android contains such a file
+            boolean usbFileExistsInAndroid = new File(String.valueOf(transportPaths.toServerPath), usbFile.getFileName().toString()).exists();
+            if (!usbFileExistsInAndroid) {
+                //delete file from USB
+                Files.deleteIfExists(usbFile);
+            }
         }
     }
 
