@@ -141,6 +141,7 @@ public class UsbFragment extends Fragment {
                         throw new RuntimeException("Bad call to populate USB or Android device", e);
                     }
                     reduceUsbFiles(usbTransportToServerDir, usbTransportToClientDir);
+                    updateUsbStatus(true, "Sync successful", Color.GREEN);
                 }
                 break;
             }
