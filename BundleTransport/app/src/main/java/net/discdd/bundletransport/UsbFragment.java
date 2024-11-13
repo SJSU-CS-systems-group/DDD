@@ -47,6 +47,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import static java.nio.file.StandardCopyOption.*;
 import static java.util.logging.Level.WARNING;
 
@@ -145,7 +146,8 @@ public class UsbFragment extends Fragment {
      * @param targetDir target directory; USBs client directory
      * @throws IOException
      */
-    private void toClientList(File targetDir) throws IOException, GeneralSecurityException, RoutingExceptions.ClientMetaDataFileException, InvalidKeyException {
+    private void toClientList(File targetDir) throws IOException, GeneralSecurityException,
+            RoutingExceptions.ClientMetaDataFileException, InvalidKeyException {
         List<Path> storageList;
         Path devicePathForClient = transportPaths.toClientPath;
         try (Stream<Path> walk = Files.walk(devicePathForClient)) {
@@ -209,7 +211,7 @@ public class UsbFragment extends Fragment {
         usbConnected = !usbManager.getDeviceList().isEmpty();
         getActivity().getMainExecutor().execute(() -> {
             if (!usbManager.getDeviceList().isEmpty()) {
-                    updateUsbStatus(true, getString(R.string.usb_connection_detected), Color.GREEN);
+                updateUsbStatus(true, getString(R.string.usb_connection_detected), Color.GREEN);
             } else {
                 updateUsbStatus(false, getString(R.string.usb_device_not_connected), Color.RED);
             }
