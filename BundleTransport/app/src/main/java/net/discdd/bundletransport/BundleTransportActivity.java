@@ -53,6 +53,7 @@ public class BundleTransportActivity extends AppCompatActivity {
     private TitledFragment transportWifiFragment;
     private TitledFragment storageFragment;
     private TransportPaths transportPaths;
+    private TitledFragment usbFrag;
     private TitledFragment logFragment;
     private TitledFragment permissionsTitledFragment;
 
@@ -110,6 +111,7 @@ public class BundleTransportActivity extends AppCompatActivity {
         transportWifiFragment = new TitledFragment(getString(R.string.local_wifi),
                                                    new TransportWifiDirectFragment(this.transportPaths));
         storageFragment = new TitledFragment("Storage Settings", new StorageFragment());
+        usbFrag = new TitledFragment("USB", new UsbFragment(transportPaths));
         logFragment = new TitledFragment(getString(R.string.logs), new LogFragment());
 
         permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
