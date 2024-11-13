@@ -18,6 +18,7 @@
     <string name="incomplete">Incomplete</string>
     <string name="complete">Complete</string>
     <string name="failed_file_transfer">Failed... : %s</string>
+    <string name="no_usb_connection_detected">No USB connection detected\n</string>
     <string name="usb_transport_directory_was_not_detected">USB was connected, but /DDD_transport directory was not detected\n</string>
     <string name="usb_device_attached">USB device attached</string>
     <string name="usb_device_detached">USB device detached</string>
