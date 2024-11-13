@@ -193,38 +193,30 @@ public class UsbFragment extends Fragment {
      * @throws IOException
      */
     private void reduceUsbFiles(File usbTransportToClientDir, File usbTransportToServerDir) throws IOException {
-        //inside USB to client
         List<Path> usbToClient;
-        logger.log(INFO, "collecting usb's to client files. where? from this path: " + usbTransportToClientDir);
         try (Stream<Path> walk = Files.walk(usbTransportToClientDir.toPath())) {
             usbToClient = walk.filter(Files::isRegularFile).collect(Collectors.toList());
         }
         for (Path usbFile : usbToClient) {
-            //if android to client does not contain such file
             File possibleFile = new File(String.valueOf(transportPaths.toClientPath), usbFile.getFileName().toString());
             boolean usbFileExistsInAndroid = possibleFile.exists();
-            logger.log(INFO, "checking to see if the following file exists: " + possibleFile);
             if (!usbFileExistsInAndroid) {
-                //delete file from USB
-                logger.log(INFO, "deleting: " + usbFile);
                 Files.deleteIfExists(usbFile);
+            } else {
+                logger.log(INFO, "No excess client files to delete from device");
             }
         }
-        //inside Android to server
         List<Path> androidToServer;
-        logger.log(INFO, "collecting android's to server files. where? from this path: " + transportPaths.toServerPath);
         try (Stream<Path> walk = Files.walk(transportPaths.toServerPath)) {
             androidToServer = walk.filter(Files::isRegularFile).collect(Collectors.toList());
         }
         for (Path usbFile : androidToServer) {
-            //if usb contains such a file
             File possibleFile = new File(usbTransportToServerDir, usbFile.getFileName().toString());
             boolean androidFileExistsInUsb = possibleFile.exists();
-            logger.log(INFO, "checking to see if the following file exists: " + possibleFile);
             if (androidFileExistsInUsb) {
-                //delete file from android
-                logger.log(INFO, "deleting: " + possibleFile);
                 Files.deleteIfExists(possibleFile.toPath());
+            } else {
+                logger.log(INFO, "No excess server files to delete from USB");
             }
         }
     }
