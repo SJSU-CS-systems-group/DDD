@@ -9,7 +9,6 @@ import android.content.IntentFilter;
 import android.graphics.Color;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.storage.StorageManager;
 import android.os.storage.StorageVolume;
 import android.view.LayoutInflater;
@@ -29,15 +28,9 @@ import net.discdd.pathutils.TransportPaths;
 import org.whispersystems.libsignal.InvalidKeyException;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.GeneralSecurityException;
 import java.util.List;
@@ -47,7 +40,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import static java.nio.file.StandardCopyOption.*;
 import static java.util.logging.Level.WARNING;
 
 import static java.nio.file.StandardCopyOption.*;
@@ -66,7 +58,6 @@ public class UsbFragment extends Fragment {
     private StorageManager storageManager;
     private static final Logger logger = Logger.getLogger(UsbFragment.class.getName());
     private ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
-    private File usbDirectory;
 
     public UsbFragment(TransportPaths transportPaths) {
         this.transportPaths = transportPaths;
