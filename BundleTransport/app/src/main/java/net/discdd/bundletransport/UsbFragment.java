@@ -103,13 +103,13 @@ public class UsbFragment extends Fragment {
         checkUsbConnection(3);
 
         usbExchangeButton.setOnClickListener(v -> {
+            logger.log(INFO, "Sync button was hit");
             try {
                 populateUsb();
             } catch (IOException e) {
                 logger.log(INFO, "Populate USB was unsuccessful");
                 throw new RuntimeException(e);
             }
-            logger.log(INFO, "Sync button was hit");
         });
         return view;
     }
@@ -140,9 +140,9 @@ public class UsbFragment extends Fragment {
                         logger.log(WARNING, "failed to populate USB and or Android device");
                         throw new RuntimeException("Bad call to populate USB or Android device", e);
                     }
-                    reduceUsbFiles(usbTransportToServerDir, usbTransportToClientDir);
-                    updateUsbStatus(true, "Sync successful", Color.GREEN);
+                    reduceUsbFiles(usbTransportToClientDir, usbTransportToServerDir);
                 }
+                updateUsbStatus(true, "Sync successful", Color.GREEN);
                 break;
             }
         }
@@ -162,7 +162,7 @@ public class UsbFragment extends Fragment {
             storageList = walk.filter(Files::isRegularFile).collect(Collectors.toList());
         }
         if (storageList.isEmpty()) {
-            logger.log(INFO, "No bundles to download from device to USB");
+            logger.log(INFO, "No bundles to download from device to USB (to client files)");
             logger.log(INFO, "Our empty storageList was " + devicePathForClient);
             return;
         }
@@ -173,7 +173,7 @@ public class UsbFragment extends Fragment {
     }
 
     /**
-     * Copies for-server files from usb (handling upstream)
+     * Copies for-server files from usb (handling upstream).
      *
      * @param sourceDir source directory; USBs server directory
      */
@@ -183,7 +183,7 @@ public class UsbFragment extends Fragment {
             storageList = walk.filter(Files::isRegularFile).collect(Collectors.toList());
         }
         if (storageList.isEmpty()) {
-            logger.log(INFO, "No bundles to download from USB to device");
+            logger.log(INFO, "No bundles to download from USB to device (to server files)");
             logger.log(INFO, "Our empty storageList was " + sourceDir);
             return;
         }
@@ -194,31 +194,46 @@ public class UsbFragment extends Fragment {
         }
     }
 
+    /**
+     * Delete USB toClient and toServer files when files missing from transport and already on transport respectively.
+     *
+     * @param usbTransportToClientDir
+     * @param usbTransportToServerDir
+     * @throws IOException
+     */
     private void reduceUsbFiles(File usbTransportToClientDir, File usbTransportToServerDir) throws IOException {
         //inside USB to client
         List<Path> usbToClient;
+        logger.log(INFO, "collecting usb's to client files. where? from this path: " + usbTransportToClientDir);
         try (Stream<Path> walk = Files.walk(usbTransportToClientDir.toPath())) {
             usbToClient = walk.filter(Files::isRegularFile).collect(Collectors.toList());
         }
         for (Path usbFile : usbToClient) {
             //if android to client does not contain such file
-            boolean usbFileExistsInAndroid = new File(String.valueOf(transportPaths.toClientPath), usbFile.getFileName().toString()).exists();
+            File possibleFile = new File(String.valueOf(transportPaths.toClientPath), usbFile.getFileName().toString());
+            boolean usbFileExistsInAndroid = possibleFile.exists();
+            logger.log(INFO, "checking to see if the following file exists: " + possibleFile);
             if (!usbFileExistsInAndroid) {
                 //delete file from USB
+                logger.log(INFO, "deleting: " + usbFile);
                 Files.deleteIfExists(usbFile);
             }
         }
-        //inside USB to server
-        List<Path> usbToServer;
-        try (Stream<Path> walk = Files.walk(usbTransportToServerDir.toPath())) {
-            usbToServer = walk.filter(Files::isRegularFile).collect(Collectors.toList());
+        //inside Android to server
+        List<Path> androidToServer;
+        logger.log(INFO, "collecting android's to server files. where? from this path: " + transportPaths.toServerPath);
+        try (Stream<Path> walk = Files.walk(transportPaths.toServerPath)) {
+            androidToServer = walk.filter(Files::isRegularFile).collect(Collectors.toList());
         }
-        for (Path usbFile : usbToServer) {
-            //if android contains such a file
-            boolean usbFileExistsInAndroid = new File(String.valueOf(transportPaths.toServerPath), usbFile.getFileName().toString()).exists();
-            if (!usbFileExistsInAndroid) {
-                //delete file from USB
-                Files.deleteIfExists(usbFile);
+        for (Path usbFile : androidToServer) {
+            //if usb contains such a file
+            File possibleFile = new File(usbTransportToServerDir, usbFile.getFileName().toString());
+            boolean androidFileExistsInUsb = possibleFile.exists();
+            logger.log(INFO, "checking to see if the following file exists: " + possibleFile);
+            if (androidFileExistsInUsb) {
+                //delete file from android
+                logger.log(INFO, "deleting: " + possibleFile);
+                Files.deleteIfExists(possibleFile.toPath());
             }
         }
     }
