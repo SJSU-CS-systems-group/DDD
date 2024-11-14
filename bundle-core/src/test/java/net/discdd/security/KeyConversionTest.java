@@ -28,6 +28,7 @@ import java.security.spec.InvalidKeySpecException;
 
 import static net.discdd.utils.KeyUtils.convertToECKeyPair;
 import static net.discdd.utils.KeyUtils.convertToKeyPair;
+import static net.discdd.utils.KeyUtils.convertToKeyPair2;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class KeyConversionTest {
@@ -46,12 +47,9 @@ public class KeyConversionTest {
     }
     @Test
     void testSignalConvertSignature() throws InvalidKeySpecException, NoSuchAlgorithmException, IOException, OperatorCreationException, InvalidKeyException, SignatureException, org.whispersystems.libsignal.InvalidKeyException {
-        KeyPair ourKeyPair = convertToKeyPair(ecKeyPair);
+        KeyPair ourKeyPair = convertToKeyPair2(ecKeyPair);
         var publicKey = ourKeyPair.getPublic();
         var privateKey = ourKeyPair.getPrivate();
-
-//        var publicKey = convertToEdECPublicKey(ecPublicKey);
-//        var privateKey = convertToEdECPrivateKey(ecPrivateKey);
 
         ContentSigner signer = new JcaContentSignerBuilder("Ed25519").build(privateKey);
         signer.getOutputStream().write(message);
@@ -67,7 +65,7 @@ public class KeyConversionTest {
 //        java.security.Signature signature = Signature.getInstance("Ed25519");
 //        signature.initSign(privateKey);
 //        signature.update(message);
-
+//
 //        byte[] signedPayload = signature.sign();
 //
 //        signature.initVerify(publicKey);
@@ -79,10 +77,45 @@ public class KeyConversionTest {
     }
 
     @Test
-    void testSignalSignature() throws org.whispersystems.libsignal.InvalidKeyException {
+    void testSignalSignature() throws org.whispersystems.libsignal.InvalidKeyException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, SignatureException, IOException {
+        byte[] sign = Curve.calculateSignature(ecPrivateKey, message);
+        assertTrue(Curve.verifySignature(ecPublicKey, message, sign));
+
+        KeyPair ourKeyPair = convertToKeyPair2(ecKeyPair);
+        var publicKey = ourKeyPair.getPublic();
+        var privateKey = ourKeyPair.getPrivate();
+
+        java.security.Signature signature = Signature.getInstance("Ed25519");
+        signature.initSign(privateKey);
+        signature.update(message);
+
+        byte[] signedPayload = signature.sign();
+
+        signature.initVerify(publicKey);
+        signature.update(message);
+        boolean verified = signature.verify(signedPayload);
+
+        assertTrue(verified);
+    }
+
+    @Test
+    void testSignalSignature2() throws org.whispersystems.libsignal.InvalidKeyException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, SignatureException, IOException {
+        var keyPair = convertToKeyPair(ecKeyPair);
         byte[] signature = Curve.calculateSignature(ecPrivateKey, message);
 
         assertTrue(Curve.verifySignature(ecPublicKey, message, signature));
+        java.security.Signature javaSignature = Signature.getInstance("Ed25519");
+
+        javaSignature.initVerify(keyPair.getPublic());
+        javaSignature.update(message);
+        assertTrue(javaSignature.verify(signature));
+
+        message[0] = '!';
+        javaSignature.initSign(keyPair.getPrivate());
+        javaSignature.update(message);
+        byte[] sign = javaSignature.sign();
+
+        assertTrue(Curve.verifySignature(ecPublicKey, message, sign));
     }
 
     @Test
@@ -119,7 +152,6 @@ public class KeyConversionTest {
         signature.update(message);
 
         boolean verified = signature.verify(signedPayload);
-
 //        ContentSigner signer = new JcaContentSignerBuilder("Ed25519").build(privateKey);
 //        signer.getOutputStream().write(message);
 //        byte[] signedPayload = signer.getSignature();
