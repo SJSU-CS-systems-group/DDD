@@ -190,28 +190,33 @@ public class UsbFragment extends Fragment {
         try (Stream<Path> walk = Files.walk(usbTransportToClientDir.toPath())) {
             usbToClient = walk.filter(Files::isRegularFile).collect(Collectors.toList());
         }
+        boolean deletedClientFiles = false;
         for (Path usbFile : usbToClient) {
-            File possibleFile = new File(String.valueOf(transportPaths.toClientPath), usbFile.getFileName().toString());
+            File possibleFile = new File(String.valueOf(transportPaths.toClientPath),
+                                         usbFile.getFileName().toString());
             boolean usbFileExistsInAndroid = possibleFile.exists();
             if (!usbFileExistsInAndroid) {
                 Files.deleteIfExists(usbFile);
-            } else {
-                logger.log(INFO, "No excess client files to delete from device");
+                deletedClientFiles = true;
             }
         }
+        String res = (deletedClientFiles) ? "Successfully deleted excess client files from USB" : "No excess client files to delete from USB";
+        logger.log(INFO, res);
         List<Path> androidToServer;
         try (Stream<Path> walk = Files.walk(transportPaths.toServerPath)) {
             androidToServer = walk.filter(Files::isRegularFile).collect(Collectors.toList());
         }
+        boolean deletedServerFiles = false;
         for (Path usbFile : androidToServer) {
             File possibleFile = new File(usbTransportToServerDir, usbFile.getFileName().toString());
             boolean androidFileExistsInUsb = possibleFile.exists();
             if (androidFileExistsInUsb) {
                 Files.deleteIfExists(possibleFile.toPath());
-            } else {
-                logger.log(INFO, "No excess server files to delete from USB");
+                deletedServerFiles = true;
             }
         }
+        res = (deletedServerFiles) ? "Successfully deleted excess server files from USB" : "No excess server files to delete from USB";
+        logger.log(INFO, res);
     }
 
     @Override
@@ -238,9 +243,8 @@ public class UsbFragment extends Fragment {
     private void checkUsbConnection(int tries) {
         usbConnected = !usbManager.getDeviceList().isEmpty();
         getActivity().getMainExecutor().execute(() -> {
-            if (!usbManager.getDeviceList().isEmpty()) {
-            } else {
-                updateUsbStatus(false, getString(R.string.usb_device_not_connected), Color.RED);
+            if (usbManager.getDeviceList().isEmpty()) {
+                updateUsbStatus(false, getString(R.string.no_usb_connection_detected), Color.RED);
             }
         });
         if (tries > 0 && !usbConnected) {
