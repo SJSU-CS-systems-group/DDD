@@ -9,7 +9,6 @@ import android.content.IntentFilter;
 import android.graphics.Color;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.storage.StorageManager;
 import android.os.storage.StorageVolume;
 import android.view.LayoutInflater;
@@ -29,15 +28,9 @@ import net.discdd.pathutils.TransportPaths;
 import org.whispersystems.libsignal.InvalidKeyException;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.GeneralSecurityException;
 import java.util.List;
@@ -47,8 +40,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static java.nio.file.StandardCopyOption.*;
 import static java.util.logging.Level.WARNING;
 
 public class UsbFragment extends Fragment {
@@ -64,7 +55,6 @@ public class UsbFragment extends Fragment {
     private StorageManager storageManager;
     private static final Logger logger = Logger.getLogger(UsbFragment.class.getName());
     private ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
-    private File usbDirectory;
 
     public UsbFragment(TransportPaths transportPaths) {
         this.transportPaths = transportPaths;
@@ -97,13 +87,13 @@ public class UsbFragment extends Fragment {
         checkUsbConnection(3);
 
         usbExchangeButton.setOnClickListener(v -> {
+            logger.log(INFO, "Sync button was hit");
             try {
                 populateUsb();
             } catch (IOException e) {
                 logger.log(INFO, "Populate USB was unsuccessful");
                 throw new RuntimeException(e);
             }
-            logger.log(INFO, "Sync button was hit");
         });
         return view;
     }
@@ -134,7 +124,9 @@ public class UsbFragment extends Fragment {
                         logger.log(WARNING, "failed to populate USB and or Android device");
                         throw new RuntimeException("Bad call to populate USB or Android device", e);
                     }
+                    reduceUsbFiles(usbTransportToClientDir, usbTransportToServerDir);
                 }
+                updateUsbStatus(true, "Sync successful", Color.GREEN);
                 break;
             }
         }
@@ -154,7 +146,7 @@ public class UsbFragment extends Fragment {
             storageList = walk.filter(Files::isRegularFile).collect(Collectors.toList());
         }
         if (storageList.isEmpty()) {
-            logger.log(INFO, "No bundles to download from device to USB");
+            logger.log(INFO, "No bundles to download from device to USB (to client files)");
             logger.log(INFO, "Our empty storageList was " + devicePathForClient);
             return;
         }
@@ -165,7 +157,7 @@ public class UsbFragment extends Fragment {
     }
 
     /**
-     * Copies for-server files from usb (handling upstream)
+     * Copies for-server files from usb (handling upstream).
      *
      * @param sourceDir source directory; USBs server directory
      */
@@ -175,7 +167,7 @@ public class UsbFragment extends Fragment {
             storageList = walk.filter(Files::isRegularFile).collect(Collectors.toList());
         }
         if (storageList.isEmpty()) {
-            logger.log(INFO, "No bundles to download from USB to device");
+            logger.log(INFO, "No bundles to download from USB to device (to server files)");
             logger.log(INFO, "Our empty storageList was " + sourceDir);
             return;
         }
@@ -184,6 +176,47 @@ public class UsbFragment extends Fragment {
             Path targetPath = devicePathForServer.resolve(usbFilePath.getFileName());
             Files.copy(usbFilePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
         }
+    }
+
+    /**
+     * Delete USB toClient and toServer files when files missing from transport and already on transport respectively.
+     *
+     * @param usbTransportToClientDir
+     * @param usbTransportToServerDir
+     * @throws IOException
+     */
+    private void reduceUsbFiles(File usbTransportToClientDir, File usbTransportToServerDir) throws IOException {
+        List<Path> usbToClient;
+        try (Stream<Path> walk = Files.walk(usbTransportToClientDir.toPath())) {
+            usbToClient = walk.filter(Files::isRegularFile).collect(Collectors.toList());
+        }
+        boolean deletedClientFiles = false;
+        for (Path usbFile : usbToClient) {
+            File possibleFile = new File(String.valueOf(transportPaths.toClientPath),
+                                         usbFile.getFileName().toString());
+            boolean usbFileExistsInAndroid = possibleFile.exists();
+            if (!usbFileExistsInAndroid) {
+                Files.deleteIfExists(usbFile);
+                deletedClientFiles = true;
+            }
+        }
+        String res = (deletedClientFiles) ? "Successfully deleted excess client files from USB" : "No excess client files to delete from USB";
+        logger.log(INFO, res);
+        List<Path> androidToServer;
+        try (Stream<Path> walk = Files.walk(transportPaths.toServerPath)) {
+            androidToServer = walk.filter(Files::isRegularFile).collect(Collectors.toList());
+        }
+        boolean deletedServerFiles = false;
+        for (Path usbFile : androidToServer) {
+            File possibleFile = new File(usbTransportToServerDir, usbFile.getFileName().toString());
+            boolean androidFileExistsInUsb = possibleFile.exists();
+            if (androidFileExistsInUsb) {
+                Files.deleteIfExists(possibleFile.toPath());
+                deletedServerFiles = true;
+            }
+        }
+        res = (deletedServerFiles) ? "Successfully deleted excess server files from USB" : "No excess server files to delete from USB";
+        logger.log(INFO, res);
     }
 
     @Override
@@ -210,10 +243,8 @@ public class UsbFragment extends Fragment {
     private void checkUsbConnection(int tries) {
         usbConnected = !usbManager.getDeviceList().isEmpty();
         getActivity().getMainExecutor().execute(() -> {
-            if (!usbManager.getDeviceList().isEmpty()) {
-                updateUsbStatus(true, getString(R.string.usb_connection_detected), Color.GREEN);
-            } else {
-                updateUsbStatus(false, getString(R.string.usb_device_not_connected), Color.RED);
+            if (usbManager.getDeviceList().isEmpty()) {
+                updateUsbStatus(false, getString(R.string.no_usb_connection_detected), Color.RED);
             }
         });
         if (tries > 0 && !usbConnected) {

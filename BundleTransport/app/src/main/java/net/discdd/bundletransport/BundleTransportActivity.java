@@ -154,6 +154,8 @@ public class BundleTransportActivity extends AppCompatActivity {
             newFragments.add(transportWifiFragment);
             newFragments.add(storageFragment);
             newFragments.add(logFragment);
+            //usb frag being added for now, need to figure out where to add check
+            newFragments.add(usbFrag);
         } else {
             logger.log(INFO, "ONLY PERMISSIONS TAB IS BEING SHOWN");
             newFragments.add(permissionsTitledFragment);
