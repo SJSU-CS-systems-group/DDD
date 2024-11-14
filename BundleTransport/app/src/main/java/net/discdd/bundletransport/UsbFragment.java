@@ -40,6 +40,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import static java.util.logging.Level.WARNING;
 
 public class UsbFragment extends Fragment {
@@ -192,15 +193,15 @@ public class UsbFragment extends Fragment {
         }
         boolean deletedClientFiles = false;
         for (Path usbFile : usbToClient) {
-            File possibleFile = new File(String.valueOf(transportPaths.toClientPath),
-                                         usbFile.getFileName().toString());
+            File possibleFile = new File(String.valueOf(transportPaths.toClientPath), usbFile.getFileName().toString());
             boolean usbFileExistsInAndroid = possibleFile.exists();
             if (!usbFileExistsInAndroid) {
                 Files.deleteIfExists(usbFile);
                 deletedClientFiles = true;
             }
         }
-        String res = (deletedClientFiles) ? "Successfully deleted excess client files from USB" : "No excess client files to delete from USB";
+        String res = (deletedClientFiles) ? "Successfully deleted excess client files from USB" :
+                "No excess client files to delete from USB";
         logger.log(INFO, res);
         List<Path> androidToServer;
         try (Stream<Path> walk = Files.walk(transportPaths.toServerPath)) {
@@ -215,7 +216,8 @@ public class UsbFragment extends Fragment {
                 deletedServerFiles = true;
             }
         }
-        res = (deletedServerFiles) ? "Successfully deleted excess server files from USB" : "No excess server files to delete from USB";
+        res = (deletedServerFiles) ? "Successfully deleted excess server files from USB" :
+                "No excess server files to delete from USB";
         logger.log(INFO, res);
     }
 
