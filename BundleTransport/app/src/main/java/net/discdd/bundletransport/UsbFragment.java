@@ -245,7 +245,9 @@ public class UsbFragment extends Fragment {
     private void checkUsbConnection(int tries) {
         usbConnected = !usbManager.getDeviceList().isEmpty();
         getActivity().getMainExecutor().execute(() -> {
-            if (usbManager.getDeviceList().isEmpty()) {
+            if (!usbManager.getDeviceList().isEmpty()) {
+                updateUsbStatus(true, getString(R.string.usb_connection_detected), Color.GREEN);
+            } else {
                 updateUsbStatus(false, getString(R.string.no_usb_connection_detected), Color.RED);
             }
         });
