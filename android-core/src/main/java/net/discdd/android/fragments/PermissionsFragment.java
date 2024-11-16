@@ -15,6 +15,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -34,16 +35,21 @@ public class PermissionsFragment extends Fragment {
     private ActivityResultLauncher<String> requestPermissionLauncher;
     private boolean promptPending;
     private Consumer<HashSet<String>> permissionWatcher;
-    private final PermissionsViewModel permissionsViewModel;
+    private PermissionsViewModel permissionsViewModel;
     private final HashSet<String> requiredPermissions = new HashSet<>();
 
     public PermissionsFragment(PermissionsViewModel permissionsViewModel) {
         this.permissionsViewModel = permissionsViewModel;
     }
 
+    public static PermissionsFragment newInstance() {
+        return new PermissionsFragment(new PermissionsViewModel());
+    }
+
     @Override
     public View onCreateView(
             @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        permissionsViewModel = new ViewModelProvider(requireActivity()).get(PermissionsViewModel.class);
         return inflater.inflate(R.layout.permissions_fragment, container, false);
     }
 

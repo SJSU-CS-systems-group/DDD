@@ -98,10 +98,10 @@ public class BundleClientActivity extends AppCompatActivity {
         var svc = bindService(intent, connection, Context.BIND_AUTO_CREATE);
 
         PermissionsViewModel permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
-        permissionsFragment = new PermissionsFragment(permissionsViewModel);
-        homeFragment = new BundleClientWifiDirectFragment();
-        usbFragment = new UsbFragment();
-        serverFragment = new ServerFragment();
+        permissionsFragment = PermissionsFragment.newInstance();
+        homeFragment = BundleClientWifiDirectFragment.newInstance();
+        usbFragment = UsbFragment.newInstance();
+        serverFragment = ServerFragment.newInstance();
         logFragment = new LogFragment();
         fragmentsWithTitles.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);

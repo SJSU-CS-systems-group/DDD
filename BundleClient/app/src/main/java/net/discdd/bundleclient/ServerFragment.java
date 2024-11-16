@@ -31,6 +31,8 @@ public class ServerFragment extends Fragment {
     private EditText portInput;
     private SharedPreferences sharedPref;
 
+    public static ServerFragment newInstance() { return new ServerFragment(); }
+
     @Nullable
     @Override
     public View onCreateView(
