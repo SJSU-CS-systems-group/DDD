@@ -14,8 +14,10 @@ import android.content.pm.ServiceInfo;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
 
+import android.os.Looper;
 import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
@@ -57,7 +59,6 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
     PeriodicRunnable periodicRunnable = new PeriodicRunnable();
     private WifiDirectManager wifiDirectManager;
     private BundleTransmission bundleTransmission;
-
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
@@ -205,11 +206,14 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
             BundleExchangeCounts currentBundle = bundleTransmission.doExchangeWithTransport(device.deviceAddress, device.deviceName,
                                                               wifiDirectManager.getGroupOwnerAddress().getHostAddress(),
                                                               7777);
-            if(currentBundle.bundleStatus() == 1){
-                Toast.makeText(this, "Bundle has Been Completely Uploaded", Toast.LENGTH_SHORT).show();
-            }else{
-                Toast.makeText(this, "Bundle Upload has finished incompletely", Toast.LENGTH_SHORT).show();
-            }
+            //Here
+
+            final String text = currentBundle.bundleStatus() == 1 ? "Bundle has Been Completely Uploaded":"Bundle Upload has finished incompletely";
+            Handler handler = new Handler(Looper.getMainLooper());
+            handler.post(() -> {
+                Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT).show();
+            });
+
             return currentBundle;
 
         } catch (Throwable e) {
