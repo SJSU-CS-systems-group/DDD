@@ -2,10 +2,7 @@ package net.discdd.bundletransport;
 
 import static java.util.logging.Level.INFO;
 
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.graphics.Color;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
@@ -16,7 +13,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -49,8 +45,6 @@ public class UsbFragment extends Fragment {
     private Button usbExchangeButton;
     private TextView usbConnectionText;
     private UsbManager usbManager;
-/*Declaring a broadcast receiver*/
-    private BroadcastReceiver mUsbReceiver;
     public static boolean usbConnected = false;
     private StorageManager storageManager;
     private static final Logger logger = Logger.getLogger(UsbFragment.class.getName());
@@ -71,19 +65,6 @@ public class UsbFragment extends Fragment {
         storageManager = (StorageManager) getActivity().getSystemService(Context.STORAGE_SERVICE);
         usbManager = (UsbManager) getActivity().getSystemService(Context.USB_SERVICE);
         usbFileManager = new UsbFileManager(storageManager, transportPaths);
-/*Instantiating a broadcast receiver*/
-        mUsbReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                handleUsbBroadcast(intent);
-            }
-        };
-
-        //Register USB broadcast receiver
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
-        filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
-        getActivity().registerReceiver(mUsbReceiver, filter);
 
         // Check initial USB connection
         checkUsbConnection(3);
@@ -103,23 +84,6 @@ public class UsbFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        //call new method to do the following from connection manager
-        if (mUsbReceiver != null) {
-            getActivity().unregisterReceiver(mUsbReceiver);
-        }
-    }
-
-    private void handleUsbBroadcast(Intent intent) {
-        String action = intent.getAction();
-        if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) { //shouldn't ever be reached
-            updateUsbStatus(false, getString(R.string.no_usb_connection_detected), Color.RED);
-            usbConnected = false;
-            showUsbDetachedToast();
-        } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) { //should always be the case (barely visible?)
-            updateUsbStatus(false, getString(R.string.usb_device_attached_checking_for_storage_volumes), Color.BLUE);
-            scheduledExecutor.schedule(() -> checkUsbConnection(2), 1, TimeUnit.SECONDS);
-            showUsbAttachedToast();
-        }
     }
 
     public boolean checkUsbConnection(int tries) {
@@ -144,15 +108,5 @@ public class UsbFragment extends Fragment {
             usbConnectionText.setText(statusText);
             usbConnectionText.setTextColor(color);
         });
-    }
-
-    //should be deleted
-    private void showUsbAttachedToast() {
-        Toast.makeText(getActivity(), getString(R.string.usb_device_attached), Toast.LENGTH_SHORT).show();
-    }
-
-    //should proceed with closing tab
-    private void showUsbDetachedToast() {
-        Toast.makeText(getActivity(), getString(R.string.usb_device_detached), Toast.LENGTH_SHORT).show();
     }
 }
