@@ -4,11 +4,15 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.hardware.usb.UsbManager;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -44,6 +48,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.SubmissionPublisher;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 public class BundleTransportActivity extends AppCompatActivity {
@@ -68,6 +73,7 @@ public class BundleTransportActivity extends AppCompatActivity {
     private TabLayoutMediator mediator;
     private SharedPreferences sharedPreferences;
     TransportWifiServiceConnection transportWifiServiceConnection = new TransportWifiServiceConnection();
+    private BroadcastReceiver mUsbReceiver;
 
     record TitledFragment(String title, Fragment fragment) {}
 
@@ -88,6 +94,20 @@ public class BundleTransportActivity extends AppCompatActivity {
             bindService(intent, transportWifiServiceConnection, Context.BIND_AUTO_CREATE);
         } catch (Exception e) {
             logger.log(WARNING, "Failed to start TransportWifiDirectService", e);
+        }
+        mUsbReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                handleUsbBroadcast(intent);
+            }
+        };
+        try {
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
+            filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
+            registerReceiver(mUsbReceiver, filter);
+        } catch (Exception e) {
+            logger.log(WARNING, "Failed to register usb broadcast", e);
         }
 
         setContentView(R.layout.activity_bundle_transport);
@@ -112,6 +132,10 @@ public class BundleTransportActivity extends AppCompatActivity {
                                                    new TransportWifiDirectFragment(this.transportPaths));
         storageFragment = new TitledFragment("Storage Settings", new StorageFragment());
         usbFrag = new TitledFragment("USB", new UsbFragment(transportPaths));
+        getSupportFragmentManager()
+                .beginTransaction()
+                .add(usbFrag.fragment(), "UsbFragmentTag")
+                .commit();
         logFragment = new TitledFragment(getString(R.string.logs), new LogFragment());
 
         permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
@@ -154,8 +178,11 @@ public class BundleTransportActivity extends AppCompatActivity {
             newFragments.add(transportWifiFragment);
             newFragments.add(storageFragment);
             newFragments.add(logFragment);
-            //usb frag being added for now, need to figure out where to add check
-            newFragments.add(usbFrag);
+            UsbFragment usbFragment = (UsbFragment) getSupportFragmentManager().findFragmentByTag("UsbFragmentTag");
+            if (usbFragment.checkUsbConnection(3)) {
+                getSupportFragmentManager().beginTransaction().remove((Fragment) usbFragment).commit();
+                newFragments.add(usbFrag);
+            }
         } else {
             logger.log(INFO, "ONLY PERMISSIONS TAB IS BEING SHOWN");
             newFragments.add(permissionsTitledFragment);
@@ -222,7 +249,9 @@ public class BundleTransportActivity extends AppCompatActivity {
         if (!isBackgroundWifiEnabled()) {
             stopService(new Intent(this, TransportWifiDirectService.class));
         }
-
+        if (mUsbReceiver != null) {
+            unregisterReceiver(mUsbReceiver);
+        }
         unmonitorUploadTab();
         if (transportWifiServiceConnection.btService != null) unbindService(transportWifiServiceConnection);
         super.onDestroy();
@@ -300,6 +329,15 @@ public class BundleTransportActivity extends AppCompatActivity {
                 new NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).build();
 
         connectivityManager.registerNetworkCallback(networkRequest, uploadTabMonitorCallback);
+    }
+
+    private void handleUsbBroadcast(Intent intent) {
+        String action = intent.getAction();
+        if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
+            //hide tab
+        } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
+            permissionsViewModel.getPermissionSatisfied().observe(this, this::updateTabs);
+        }
     }
 
     static class TransportWifiServiceConnection extends CompletableFuture<TransportWifiDirectService>
