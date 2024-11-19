@@ -118,6 +118,14 @@ public class UsbFragment extends Fragment {
                         usbTransportToServerDir.mkdirs();
                         usbTransportToClientDir.mkdirs();
                     }
+                    else {
+                        if(!usbTransportToServerDir.exists()) {
+                            usbTransportToServerDir.mkdirs();
+                        }
+                        if(!usbTransportToClientDir.exists()) {
+                            usbTransportToClientDir.mkdirs();
+                        }
+                    }
                     try {
                         toClientList(usbTransportToClientDir);
                         toServerList(usbTransportToServerDir);
@@ -127,7 +135,7 @@ public class UsbFragment extends Fragment {
                     }
                     reduceUsbFiles(usbTransportToClientDir, usbTransportToServerDir);
                 }
-                updateUsbStatus(true, "Sync successful", Color.GREEN);
+                updateUsbStatus(false, "Sync successful", Color.GREEN);
                 break;
             }
         }
