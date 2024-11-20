@@ -74,6 +74,7 @@ public class BundleTransportActivity extends AppCompatActivity {
     private SharedPreferences sharedPreferences;
     TransportWifiServiceConnection transportWifiServiceConnection = new TransportWifiServiceConnection();
     private BroadcastReceiver mUsbReceiver;
+    private boolean usbExists;
 
     record TitledFragment(String title, Fragment fragment) {}
 
@@ -132,10 +133,6 @@ public class BundleTransportActivity extends AppCompatActivity {
                                                    new TransportWifiDirectFragment(this.transportPaths));
         storageFragment = new TitledFragment("Storage Settings", new StorageFragment());
         usbFrag = new TitledFragment("USB", new UsbFragment(transportPaths));
-        getSupportFragmentManager()
-                .beginTransaction()
-                .add(usbFrag.fragment(), "UsbFragmentTag")
-                .commit();
         logFragment = new TitledFragment(getString(R.string.logs), new LogFragment());
 
         permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
@@ -178,12 +175,8 @@ public class BundleTransportActivity extends AppCompatActivity {
             newFragments.add(transportWifiFragment);
             newFragments.add(storageFragment);
             newFragments.add(logFragment);
-            UsbFragment usbFragment = (UsbFragment) getSupportFragmentManager().findFragmentByTag("UsbFragmentTag");
-            if (usbFragment != null) {
-                if (usbFragment.checkUsbConnection(3)) {
-                    getSupportFragmentManager().beginTransaction().remove(usbFragment).commit();
+            if (usbExists) {
                     newFragments.add(usbFrag);
-                }
             }
         } else {
             logger.log(INFO, "ONLY PERMISSIONS TAB IS BEING SHOWN");
@@ -336,10 +329,16 @@ public class BundleTransportActivity extends AppCompatActivity {
     private void handleUsbBroadcast(Intent intent) {
         String action = intent.getAction();
         if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
+            updateUsbExists(false);
             permissionsViewModel.getPermissionSatisfied().observe(this, this::updateTabs);
         } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
+            updateUsbExists(true);
             permissionsViewModel.getPermissionSatisfied().observe(this, this::updateTabs);
         }
+    }
+
+    public void updateUsbExists(boolean result) {
+        usbExists = result;
     }
 
     static class TransportWifiServiceConnection extends CompletableFuture<TransportWifiDirectService>
