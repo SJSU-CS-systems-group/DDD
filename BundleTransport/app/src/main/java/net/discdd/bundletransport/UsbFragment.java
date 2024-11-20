@@ -3,16 +3,21 @@ package net.discdd.bundletransport;
 import static java.util.logging.Level.INFO;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.hardware.usb.UsbManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.storage.StorageManager;
 import android.os.storage.StorageVolume;
+import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -41,14 +46,16 @@ import static java.util.logging.Level.WARNING;
 
 public class UsbFragment extends Fragment {
     private UsbFileManager usbFileManager;
-    private TransportPaths transportPaths;
+    private final TransportPaths transportPaths;
+    private Button toSettingsButton;
+    private TextView toSettingstext;
     private Button usbExchangeButton;
     private TextView usbConnectionText;
     private UsbManager usbManager;
     public static boolean usbConnected = false;
     private StorageManager storageManager;
     private static final Logger logger = Logger.getLogger(UsbFragment.class.getName());
-    private ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
 
     public UsbFragment(TransportPaths transportPaths) {
         this.transportPaths = transportPaths;
@@ -59,8 +66,8 @@ public class UsbFragment extends Fragment {
             @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.usb_fragment, container, false);
 
-        usbExchangeButton = view.findViewById(R.id.usb_exchange_button);
-        usbConnectionText = view.findViewById(R.id.usbconnection_response_text);
+        toSettingsButton = view.findViewById(R.id.to_settings_button);
+        toSettingstext = view.findViewById(R.id.to_settings_text);
 
         storageManager = (StorageManager) getActivity().getSystemService(Context.STORAGE_SERVICE);
         usbManager = (UsbManager) getActivity().getSystemService(Context.USB_SERVICE);
@@ -68,6 +75,15 @@ public class UsbFragment extends Fragment {
 
         // Check initial USB connection
         checkUsbConnection(3);
+
+        toSettingsButton.setOnClickListener(v -> {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                startActivity(intent);
+            } else {
+                Toast.makeText(requireContext(), "This option is needed/available only on Android 11 or higher.", Toast.LENGTH_SHORT).show();
+            }
+        });
 
         usbExchangeButton.setOnClickListener(v -> {
             logger.log(INFO, "Sync button was hit");
@@ -78,6 +94,12 @@ public class UsbFragment extends Fragment {
                 throw new RuntimeException(e);
             }
         });
+
+        if (isManageAllFilesAccessGranted()) {
+            Toast.makeText(requireContext(), "all files can be accesses", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(requireContext(), "no files can be accesses", Toast.LENGTH_SHORT).show();
+        }
         return view;
     }
 
@@ -108,5 +130,14 @@ public class UsbFragment extends Fragment {
             usbConnectionText.setText(statusText);
             usbConnectionText.setTextColor(color);
         });
+    }
+
+    public boolean isManageAllFilesAccessGranted() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            return Environment.isExternalStorageManager();
+        } else {
+            // For Android versions below 11, this permission doesn't apply.
+            return true;
+        }
     }
 }
