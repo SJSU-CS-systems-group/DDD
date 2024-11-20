@@ -54,12 +54,11 @@ public class UsbFileManager {
                         usbTransportDir.mkdirs();
                         usbTransportToServerDir.mkdirs();
                         usbTransportToClientDir.mkdirs();
-                    }
-                    else {
-                        if(!usbTransportToServerDir.exists()) {
+                    } else {
+                        if (!usbTransportToServerDir.exists()) {
                             usbTransportToServerDir.mkdirs();
                         }
-                        if(!usbTransportToClientDir.exists()) {
+                        if (!usbTransportToClientDir.exists()) {
                             usbTransportToClientDir.mkdirs();
                         }
                     }

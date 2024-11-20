@@ -176,7 +176,7 @@ public class BundleTransportActivity extends AppCompatActivity {
             newFragments.add(storageFragment);
             newFragments.add(logFragment);
             if (usbExists) {
-                    newFragments.add(usbFrag);
+                newFragments.add(usbFrag);
             }
         } else {
             logger.log(INFO, "ONLY PERMISSIONS TAB IS BEING SHOWN");
