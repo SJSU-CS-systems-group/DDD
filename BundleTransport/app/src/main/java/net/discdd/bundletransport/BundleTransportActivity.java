@@ -179,9 +179,11 @@ public class BundleTransportActivity extends AppCompatActivity {
             newFragments.add(storageFragment);
             newFragments.add(logFragment);
             UsbFragment usbFragment = (UsbFragment) getSupportFragmentManager().findFragmentByTag("UsbFragmentTag");
-            if (usbFragment.checkUsbConnection(3)) {
-                getSupportFragmentManager().beginTransaction().remove((Fragment) usbFragment).commit();
-                newFragments.add(usbFrag);
+            if (usbFragment != null) {
+                if (usbFragment.checkUsbConnection(3)) {
+                    getSupportFragmentManager().beginTransaction().remove(usbFragment).commit();
+                    newFragments.add(usbFrag);
+                }
             }
         } else {
             logger.log(INFO, "ONLY PERMISSIONS TAB IS BEING SHOWN");
@@ -334,7 +336,7 @@ public class BundleTransportActivity extends AppCompatActivity {
     private void handleUsbBroadcast(Intent intent) {
         String action = intent.getAction();
         if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
-            //hide tab
+            permissionsViewModel.getPermissionSatisfied().observe(this, this::updateTabs);
         } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
             permissionsViewModel.getPermissionSatisfied().observe(this, this::updateTabs);
         }
