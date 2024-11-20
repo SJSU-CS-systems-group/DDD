@@ -38,12 +38,8 @@ public class PermissionsFragment extends Fragment {
     private PermissionsViewModel permissionsViewModel;
     private final HashSet<String> requiredPermissions = new HashSet<>();
 
-    public PermissionsFragment(PermissionsViewModel permissionsViewModel) {
-        this.permissionsViewModel = permissionsViewModel;
-    }
-
     public static PermissionsFragment newInstance() {
-        return new PermissionsFragment(new PermissionsViewModel());
+        return new PermissionsFragment();
     }
 
     @Override
