@@ -66,40 +66,37 @@ public class UsbFragment extends Fragment {
             @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.usb_fragment, container, false);
 
-        toSettingsButton = view.findViewById(R.id.to_settings_button);
-        toSettingstext = view.findViewById(R.id.to_settings_text);
-
         storageManager = (StorageManager) getActivity().getSystemService(Context.STORAGE_SERVICE);
         usbManager = (UsbManager) getActivity().getSystemService(Context.USB_SERVICE);
         usbFileManager = new UsbFileManager(storageManager, transportPaths);
 
-        // Check initial USB connection
-        checkUsbConnection(3);
-
-        toSettingsButton.setOnClickListener(v -> {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
-                startActivity(intent);
-            } else {
-                Toast.makeText(requireContext(), "This option is needed/available only on Android 11 or higher.", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        usbExchangeButton.setOnClickListener(v -> {
-            logger.log(INFO, "Sync button was hit");
-            try {
-                usbFileManager.populateUsb();
-            } catch (IOException e) {
-                logger.log(INFO, "Populate USB was unsuccessful");
-                throw new RuntimeException(e);
-            }
-        });
-
         if (isManageAllFilesAccessGranted()) {
             Toast.makeText(requireContext(), "all files can be accesses", Toast.LENGTH_SHORT).show();
+            usbExchangeButton = view.findViewById(R.id.usb_exchange_button);
+            usbConnectionText = view.findViewById(R.id.usbconnection_response_text);
+            usbExchangeButton.setOnClickListener(v -> {
+                logger.log(INFO, "Sync button was hit");
+                try {
+                    usbFileManager.populateUsb();
+                } catch (IOException e) {
+                    logger.log(INFO, "Populate USB was unsuccessful");
+                    throw new RuntimeException(e);
+                }
+            });
         } else {
             Toast.makeText(requireContext(), "no files can be accesses", Toast.LENGTH_SHORT).show();
+            toSettingsButton = view.findViewById(R.id.to_settings_button);
+            toSettingstext = view.findViewById(R.id.to_settings_text);
+            toSettingsButton.setOnClickListener(v -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                    startActivity(intent);
+                } else {
+                    Toast.makeText(requireContext(), "This option is needed/available only on Android 11 or higher.", Toast.LENGTH_SHORT).show();
+                }
+            });
         }
+
         return view;
     }
 
@@ -110,26 +107,10 @@ public class UsbFragment extends Fragment {
 
     public boolean checkUsbConnection(int tries) {
         usbConnected = !usbManager.getDeviceList().isEmpty();
-        getActivity().getMainExecutor().execute(() -> {
-            if (usbConnected) {
-                updateUsbStatus(true, getString(R.string.usb_connection_detected), Color.GREEN);
-            } else {
-                updateUsbStatus(false, getString(R.string.no_usb_connection_detected), Color.RED);
-            }
-        });
         if (tries > 0 && !usbConnected) {
             scheduledExecutor.schedule(() -> checkUsbConnection(tries - 1), 1, TimeUnit.SECONDS);
         }
         return usbConnected;
-    }
-
-    public void updateUsbStatus(boolean isConnected, String statusText, int color) {
-        //get parameter info from checkUsbConnection in connection manager
-        getActivity().runOnUiThread(() -> {
-            usbExchangeButton.setEnabled(isConnected);
-            usbConnectionText.setText(statusText);
-            usbConnectionText.setTextColor(color);
-        });
     }
 
     public boolean isManageAllFilesAccessGranted() {
