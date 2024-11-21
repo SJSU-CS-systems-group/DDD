@@ -78,6 +78,7 @@ public class UsbFileManager {
             }
         }
         logger.log(WARNING, "No removable volumes in USB");
+        //notify user with this status
         return false;
     }
 

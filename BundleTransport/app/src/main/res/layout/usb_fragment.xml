@@ -14,25 +14,25 @@
             android:gravity="center"
             android:layout_gravity="center"
             android:lineSpacingExtra="4dp"
-            android:padding="16dp"/>
-
+            android:padding="16dp"
+            android:visibility="visible"/>
     <Button
             android:id="@+id/to_settings_button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/to_settings_button" />
-
+            android:text="@string/to_settings_button"
+            android:visibility="visible"/>
     <Button
             android:id="@+id/usb_exchange_button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/exchange_usb_data" />
-
+            android:text="@string/exchange_usb_data"
+            android:visibility="gone"/>
     <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/usb_connection_status" />
-
+            android:text="@string/usb_action_status"
+            android:visibility="gone"/>
     <TextView
             android:id="@+id/usbconnection_response_text"
             android:layout_width="match_parent"
