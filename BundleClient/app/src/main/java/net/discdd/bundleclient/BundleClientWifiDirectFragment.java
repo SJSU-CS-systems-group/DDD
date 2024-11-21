@@ -209,7 +209,6 @@ public class BundleClientWifiDirectFragment extends Fragment {
     public void exchangeMessage(String deviceAddress, Button exchangeButton) {
         if (getWifiBgService() != null) {
             exchangeButton.setEnabled(false);
-            exchangeButton.setEnabled(false);
             getWifiBgService().initiateExchange(deviceAddress).thenAccept(c -> exchangeButton.setEnabled(true));
         }
     }

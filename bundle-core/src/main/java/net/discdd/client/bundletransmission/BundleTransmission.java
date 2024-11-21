@@ -400,7 +400,6 @@ public class BundleTransmission {
                 }
 
                 var stub = BundleExchangeServiceGrpc.newStub(channel);
-                //Called Here
                 bundleStatus = uploadBundle(stub);
             }
         } catch (Exception e) {
@@ -448,7 +447,6 @@ public class BundleTransmission {
             logger.log(SEVERE, "Upload failed: No response received from server.");
             return -1;
         }
-        //Here
         //0 there was a bundleUploadResponse but Status was not SUCCESS
         //1 indicates successful
         return bundleUploadResponseObserver.bundleUploadResponse.getStatus() == Status.SUCCESS ? 1 : 0;

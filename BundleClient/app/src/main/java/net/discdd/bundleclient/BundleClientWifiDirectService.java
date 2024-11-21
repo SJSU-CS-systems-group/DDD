@@ -1,5 +1,6 @@
 package net.discdd.bundleclient;
 
+import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
@@ -206,7 +207,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
             BundleExchangeCounts currentBundle = bundleTransmission.doExchangeWithTransport(device.deviceAddress, device.deviceName,
                                                               wifiDirectManager.getGroupOwnerAddress().getHostAddress(),
                                                               7777);
-            //Here
+
 
             final String text = currentBundle.bundleStatus() == 1 ? "Bundle has Been Completely Uploaded":"Bundle Upload has finished incompletely";
             Handler handler = new Handler(Looper.getMainLooper());
