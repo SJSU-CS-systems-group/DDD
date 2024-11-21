@@ -24,8 +24,12 @@ import org.whispersystems.libsignal.state.SessionState;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.util.guava.Optional;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -215,9 +219,9 @@ public class ClientSecurity {
     }
 
     /* Encrypts File */
-    public CiphertextMessage encrypt(byte[] bytes) {
+    public CiphertextMessage encrypt(InputStream inputStream, OutputStream outputStream) throws IOException {
         /* Encrypt File */
-        CiphertextMessage cipherText = cipherSession.encrypt(bytes);
+        CiphertextMessage cipherText = cipherSession.encrypt(inputStream, outputStream);
         updateSessionRecord();
         return cipherText;
     }

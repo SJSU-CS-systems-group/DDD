@@ -24,7 +24,11 @@ import org.whispersystems.libsignal.state.SessionState;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.util.guava.Optional;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -309,10 +313,10 @@ public class ServerSecurity {
         return decryptedFile;
     }
 
-    public CiphertextMessage encrypt(String clientID, byte[] data) throws IOException, NoSuchAlgorithmException,
+    public CiphertextMessage encrypt(String clientID, InputStream plaintext, OutputStream outputStream) throws IOException, NoSuchAlgorithmException,
             InvalidKeyException {
         ClientSession client = getClientSession(clientID, null);
-        CiphertextMessage cipherText = client.cipherSession.encrypt(data);
+        CiphertextMessage cipherText = client.cipherSession.encrypt(plaintext, outputStream);
         updateSessionRecord(client);
         return cipherText;
     }

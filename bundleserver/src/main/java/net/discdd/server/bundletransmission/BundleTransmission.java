@@ -28,6 +28,7 @@ import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECPrivateKey;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -199,11 +200,11 @@ public class BundleTransmission {
         try (var bundleOutputStream = Files.newOutputStream(getPathForBundleToSend(encryptedBundleId),
                                                             StandardOpenOption.CREATE,
                                                             StandardOpenOption.TRUNCATE_EXISTING)) {
-            BundleUtils.encryptPayloadAndCreateBundle(bytes -> serverSecurity.encrypt(clientId, bytes),
+            BundleUtils.encryptPayloadAndCreateBundle((inputStream, outputStream) -> serverSecurity.encrypt(clientId, inputStream, outputStream),
                                                       serverSecurity.getClientIdentityPublicKey(clientId),
                                                       serverSecurity.getClientBaseKey(clientId),
                                                       serverSecurity.getIdentityPublicKey().getPublicKey(),
-                                                      encryptedBundleId, byteArrayOsForPayload.toByteArray(),
+                                                      encryptedBundleId, new ByteArrayInputStream(byteArrayOsForPayload.toByteArray()),
                                                       bundleOutputStream);
         }
         return encryptedBundleId;

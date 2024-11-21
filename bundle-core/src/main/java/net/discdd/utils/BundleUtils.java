@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
@@ -327,11 +328,11 @@ public class BundleUtils {
     public static void encryptPayloadAndCreateBundle(Encrypter payloadEncryptor, ECPublicKey clientIdentityPublicKey,
                                                      ECPublicKey clientBaseKeyPairPublicKey,
                                                      ECPublicKey serverIdentityPublicKey, String encryptedBundleId,
-                                                     byte[] payloadBytes, OutputStream outputStream) throws IOException, NoSuchAlgorithmException, InvalidKeyException {
+                                                     InputStream payload, OutputStream outputStream) throws IOException, NoSuchAlgorithmException, InvalidKeyException {
         DDDJarFileCreator outerJar = new DDDJarFileCreator(outputStream);
 
         // encrypt the payload
-        CiphertextMessage cipherTextMessage = payloadEncryptor.encrypt(payloadBytes);
+        CiphertextMessage cipherTextMessage = payloadEncryptor.encrypt(payload, outputStream);
         var cipherTextBytes = cipherTextMessage.serialize();
 
         // store the encrypted payload
@@ -354,7 +355,7 @@ public class BundleUtils {
     }
 
     public interface Encrypter {
-        CiphertextMessage encrypt(byte[] payload) throws IOException, NoSuchAlgorithmException, InvalidKeyException;
+        CiphertextMessage encrypt(InputStream payload, OutputStream outputStream) throws IOException, NoSuchAlgorithmException, InvalidKeyException;
     }
 
     public static void checkIdClean(String s) {
