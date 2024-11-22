@@ -37,6 +37,7 @@ public class UsbFragment extends Fragment {
     private UsbFileManager usbFileManager;
     private final TransportPaths transportPaths;
     private Button toSettingsButton;
+    private Button reloadButton;
     private TextView toSettingstext;
     private Button usbExchangeButton;
     private TextView usbConnectionText;
@@ -55,6 +56,7 @@ public class UsbFragment extends Fragment {
             @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.usb_fragment, container, false);
 
+        reloadButton = view.findViewById(R.id.reload_settings);
         toSettingsButton =view.findViewById(R.id.to_settings_button);
         toSettingstext = view.findViewById(R.id.to_settings_text);
         usbExchangeButton =view.findViewById(R.id.usb_exchange_button);
@@ -64,16 +66,10 @@ public class UsbFragment extends Fragment {
         usbManager = (UsbManager) getActivity().getSystemService(Context.USB_SERVICE);
         usbFileManager = new UsbFileManager(storageManager, transportPaths);
 
+        boolean hasPermission = isManageAllFilesAccessGranted();
         manageAccessGranted(isManageAllFilesAccessGranted());
 
-        ExecutorService backgroundExecutor = Executors.newSingleThreadScheduledExecutor();
-        backgroundExecutor.execute(() -> {
-            boolean hasPermission = isManageAllFilesAccessGranted();
-            manageAccessGranted(hasPermission);
-            logger.log(INFO, "Executing background task.");
-        });
-
-        if (isManageAllFilesAccessGranted()) {
+        if (hasPermission) {
             Toast.makeText(requireContext(), "all files can be accesses", Toast.LENGTH_SHORT).show();
             usbExchangeButton.setOnClickListener(v -> {
                 logger.log(INFO, "Sync button was hit");
@@ -91,6 +87,14 @@ public class UsbFragment extends Fragment {
                 startActivity(intent);
                 manageAccessGranted(isManageAllFilesAccessGranted());
             });
+            reloadButton.setOnClickListener(v -> {
+                if (isManageAllFilesAccessGranted()) {
+                    Toast.makeText(requireContext(), "all files can be accesses", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(requireContext(), "no files can be accesses", Toast.LENGTH_SHORT).show();
+                }
+                manageAccessGranted(isManageAllFilesAccessGranted());
+            });
         }
 
         return view;
@@ -98,6 +102,7 @@ public class UsbFragment extends Fragment {
 
     private void manageAccessGranted(boolean hasPermission) {
         if (hasPermission) {
+            reloadButton.setVisibility(View.GONE);
             toSettingsButton.setVisibility(View.GONE);
             toSettingstext.setVisibility(View.GONE);
             usbExchangeButton.setVisibility(View.VISIBLE);
@@ -105,9 +110,14 @@ public class UsbFragment extends Fragment {
         } else {
             usbExchangeButton.setVisibility(View.GONE);
             usbConnectionText.setVisibility(View.GONE);
+            reloadButton.setVisibility(View.VISIBLE);
             toSettingsButton.setVisibility(View.VISIBLE);
             toSettingstext.setVisibility(View.VISIBLE);
         }
+    }
+
+    public boolean isManageAllFilesAccessGranted() {
+        return Environment.isExternalStorageManager();
     }
 
     @Override
@@ -121,13 +131,5 @@ public class UsbFragment extends Fragment {
             scheduledExecutor.schedule(() -> checkUsbConnection(tries - 1), 1, TimeUnit.SECONDS);
         }
         return usbConnected;
-    }
-
-    public boolean isManageAllFilesAccessGranted() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            return Environment.isExternalStorageManager();
-        } else {
-            return true;
-        }
     }
 }
