@@ -4,11 +4,15 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.hardware.usb.UsbManager;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
 import android.os.Handler;
@@ -38,6 +42,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 public class BundleClientActivity extends AppCompatActivity {
@@ -60,6 +65,9 @@ public class BundleClientActivity extends AppCompatActivity {
     private ViewPager2 viewPager;
     private TabLayout tabLayout;
     private TabLayoutMediator tabLayoutMediator;
+    PermissionsViewModel permissionsViewModel;
+    private BroadcastReceiver mUsbReceiver;
+    private boolean usbExists;
 
     public BundleClientActivity() {
         connection = new ServiceConnection() {
@@ -97,7 +105,23 @@ public class BundleClientActivity extends AppCompatActivity {
         var intent = new Intent(this, BundleClientWifiDirectService.class);
         var svc = bindService(intent, connection, Context.BIND_AUTO_CREATE);
 
-        PermissionsViewModel permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
+        mUsbReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                handleUsbBroadcast(intent);
+            }
+        };
+        try {
+            //Register USB broadcast receiver
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
+            filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
+            registerReceiver(mUsbReceiver, filter);
+        } catch (Exception e) {
+            logger.log(WARNING, "Failed to register usb broadcast", e);
+        }
+
+        permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
         permissionsFragment = new PermissionsFragment(permissionsViewModel);
         homeFragment = new BundleClientWifiDirectFragment();
         usbFragment = new UsbFragment();
@@ -133,6 +157,9 @@ public class BundleClientActivity extends AppCompatActivity {
             newFragments.add(new FragmentWithTitle(usbFragment, getString(R.string.usb_tab)));
             newFragments.add(new FragmentWithTitle(serverFragment, getString(R.string.server_tab)));
             newFragments.add(new FragmentWithTitle(logFragment, getString(R.string.logs_tab)));
+            if (usbExists) {
+                newFragments.add(new FragmentWithTitle(usbFragment, getString(R.string.usb_tab)));
+            }
         } else {
             logger.log(INFO, "ONLY PERMISSIONS TAB IS BEING SHOWN");
             newFragments.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
@@ -173,6 +200,9 @@ public class BundleClientActivity extends AppCompatActivity {
                 BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, false)) {
             stopService(new Intent(this, BundleClientWifiDirectService.class));
         }
+        if (mUsbReceiver != null) {
+            unregisterReceiver(mUsbReceiver);
+        }
         unbindService(connection);
         super.onDestroy();
     }
@@ -196,5 +226,20 @@ public class BundleClientActivity extends AppCompatActivity {
         public int getItemCount() {
             return fragmentsWithTitles.size();
         }
+    }
+
+    private void handleUsbBroadcast(Intent intent) {
+        String action = intent.getAction();
+        if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
+            updateUsbExists(false);
+            permissionsViewModel.getPermissionSatisfied().observe(this, this::updateTabs);
+        } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
+            updateUsbExists(true);
+            permissionsViewModel.getPermissionSatisfied().observe(this, this::updateTabs);
+        }
+    }
+
+    public void updateUsbExists(boolean result) {
+        usbExists = result;
     }
 }
