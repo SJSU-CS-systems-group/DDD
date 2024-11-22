@@ -11,7 +11,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.hardware.usb.UsbManager;
 import android.net.ConnectivityManager;
 import android.net.Network;
@@ -34,21 +33,19 @@ import com.google.android.material.tabs.TabLayoutMediator;
 
 import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
-import net.discdd.pathutils.TransportPaths;
 import net.discdd.android.fragments.PermissionsViewModel;
+import net.discdd.pathutils.TransportPaths;
 import net.discdd.transport.TransportSecurity;
 
 import org.whispersystems.libsignal.InvalidKeyException;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.SubmissionPublisher;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 public class BundleTransportActivity extends AppCompatActivity {
@@ -61,6 +58,7 @@ public class BundleTransportActivity extends AppCompatActivity {
     private TitledFragment usbFrag;
     private TitledFragment logFragment;
     private TitledFragment permissionsTitledFragment;
+    private PermissionsViewModel permissionsViewModel;
 
     record ConnectivityEvent(boolean internetAvailable) {}
 
@@ -135,7 +133,7 @@ public class BundleTransportActivity extends AppCompatActivity {
         usbFrag = new TitledFragment("USB", UsbFragment.newInstance(transportPaths));
         logFragment = new TitledFragment(getString(R.string.logs), LogFragment.newInstance());
 
-        PermissionsViewModel permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
+        permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
         permissionsFragment = PermissionsFragment.newInstance();
         permissionsTitledFragment = new TitledFragment("Permissions", permissionsFragment);
         fragments.add(permissionsTitledFragment);
