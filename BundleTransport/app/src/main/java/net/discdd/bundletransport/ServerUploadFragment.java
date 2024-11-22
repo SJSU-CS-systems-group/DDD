@@ -16,15 +16,12 @@ import android.widget.Toast;
 import androidx.fragment.app.Fragment;
 
 import net.discdd.pathutils.TransportPaths;
+import net.discdd.transport.TransportToBundleServerManager;
 
-import java.io.File;
-import java.io.Serializable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.SubmissionPublisher;
 import java.util.logging.Logger;
-
-import net.discdd.transport.TransportToBundleServerManager;
 
 /**
  * A Fragment to manage server uploads
@@ -50,9 +47,7 @@ public class ServerUploadFragment extends Fragment {
         ServerUploadFragment fragment = new ServerUploadFragment();
         fragment.setTransportPaths(transportPaths);
         fragment.setConnectivityFlow(connectivityFlow);
-        Bundle args = new Bundle();
-        args.putString("transportID", transportID);
-        fragment.setArguments(args);
+        fragment.setTransportID(transportID);
         return fragment;
     }
 
@@ -62,6 +57,10 @@ public class ServerUploadFragment extends Fragment {
 
     public void setTransportPaths(TransportPaths transportPaths) {
         this.transportPaths = transportPaths;
+    }
+
+    public void setTransportID(String transportID) {
+        this.transportID = transportID;
     }
 
     @Override
