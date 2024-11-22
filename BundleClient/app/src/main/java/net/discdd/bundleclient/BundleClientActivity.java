@@ -154,7 +154,6 @@ public class BundleClientActivity extends AppCompatActivity {
         if (satisfied) {
             logger.log(INFO, "ALL TABS BEING SHOWN");
             newFragments.add(new FragmentWithTitle(homeFragment, getString(R.string.home_tab)));
-            newFragments.add(new FragmentWithTitle(usbFragment, getString(R.string.usb_tab)));
             newFragments.add(new FragmentWithTitle(serverFragment, getString(R.string.server_tab)));
             newFragments.add(new FragmentWithTitle(logFragment, getString(R.string.logs_tab)));
             if (usbExists) {

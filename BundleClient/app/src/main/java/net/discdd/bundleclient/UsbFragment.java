@@ -102,18 +102,14 @@ public class UsbFragment extends Fragment {
 
     //Method to check initial USB connection
     private void checkUsbConnection(int tries) {
-        usbConnected = !usbManager.getDeviceList().isEmpty() && usbDirExists();
+        usbConnected = usbDirExists();
         getActivity().getMainExecutor().execute(() -> {
             if (!usbManager.getDeviceList().isEmpty()) {
-                if (usbDirExists()) {
-                    updateUsbStatus(true, getString(R.string.usb_connection_detected), Color.GREEN);
-                } else {
+                if (!usbDirExists()) {
                     updateUsbStatus(false,
                                     getString(R.string.usb_was_connected_but_ddd_transport_directory_was_not_detected),
                                     Color.RED);
                 }
-            } else {
-                updateUsbStatus(false, getString(R.string.usb_device_not_connected), Color.RED);
             }
         });
         if (tries > 0 && !usbConnected) {
