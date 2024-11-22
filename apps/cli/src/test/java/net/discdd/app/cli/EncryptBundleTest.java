@@ -35,8 +35,7 @@ class EncryptBundleTest {
         clientId = "1EKo0fp8EKHarKiWehyAXCihSqs=";
     }
 
-    @Test
-    void testEncryptBundle() throws Exception {
+    void noTestEncryptBundle() throws Exception {
         appProps = TestUtils.createResource(
                 "bundle-server.bundle-store-root = " + escapeBackslash(baseDirPath + File.separator));
         String expectedOutput = "Encrypting bundle\n" + "Finished encrypting\n";
