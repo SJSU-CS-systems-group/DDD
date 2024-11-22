@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -83,6 +84,7 @@ public class PermissionsFragment extends Fragment {
                                           @Override
                                           public void onActivityResult(Map<String, Boolean> results) {
                                               // go through the permissions and result pairs
+                                              AtomicInteger unresolvedPermissionCount = new AtomicInteger();
                                               results.forEach((p, r) -> {
                                                   logger.log(Level.INFO, p + " " + (r ? "granted" : "denied"));
                                                   var view = neededPermissions.remove(p);
@@ -91,11 +93,13 @@ public class PermissionsFragment extends Fragment {
                                                   }
                                                   if (r) {
                                                       trackGrantedPermission(p);
+                                                  } else {
+                                                      unresolvedPermissionCount.getAndIncrement();
                                                   }
                                               });
                                               if (neededPermissions.isEmpty()) {
                                                   promptPending = false;
-                                              } else {
+                                              } else if (unresolvedPermissionCount.get() > 0) {
                                                   String[] permissionsToRequest =
                                                           neededPermissions.keySet().toArray(new String[0]);
                                                   logger.info("Requesting " + Arrays.toString(permissionsToRequest));
@@ -138,7 +142,6 @@ public class PermissionsFragment extends Fragment {
                 activityResultLauncher.launch(permissionsToRequest);
             }
         }
-        allSatisfied();
     }
 
     class PermissionsAdapter extends RecyclerView.Adapter<PermissionsAdapter.PermissionViewHolder> {
