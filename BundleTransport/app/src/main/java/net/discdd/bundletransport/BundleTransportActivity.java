@@ -62,7 +62,6 @@ public class BundleTransportActivity extends AppCompatActivity {
     private final SubmissionPublisher<ConnectivityEvent> connectivityEventPublisher = new SubmissionPublisher<>();
     private ViewPager2 viewPager2;
     private FragmentStateAdapter viewPager2Adapter;
-    private PermissionsViewModel permissionsViewModel;
     private PermissionsFragment permissionsFragment;
     private TabLayout tabLayout;
     private TabLayoutMediator mediator;
@@ -104,18 +103,19 @@ public class BundleTransportActivity extends AppCompatActivity {
             logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
         }
 
+        ServerUploadFragment serverFrag = ServerUploadFragment.newInstance(transportSecurity.getTransportID(),
+                                                                           transportPaths, connectivityEventPublisher);
         serverUploadFragment = new TitledFragment(getString(R.string.upload),
-                                                  new ServerUploadFragment(connectivityEventPublisher,
-                                                                           transportSecurity.getTransportID(),
-                                                                           this.transportPaths));
+                                                  serverFrag);
+        TransportWifiDirectFragment transportFrag = TransportWifiDirectFragment.newInstance(transportPaths);
         transportWifiFragment = new TitledFragment(getString(R.string.local_wifi),
-                                                   new TransportWifiDirectFragment(this.transportPaths));
-        storageFragment = new TitledFragment("Storage Settings", new StorageFragment());
-        usbFrag = new TitledFragment("USB", new UsbFragment(transportPaths));
-        logFragment = new TitledFragment(getString(R.string.logs), new LogFragment());
+                                                   transportFrag);
+        storageFragment = new TitledFragment("Storage Settings", StorageFragment.newInstance());
+        usbFrag = new TitledFragment("USB", UsbFragment.newInstance(transportPaths));
+        logFragment = new TitledFragment(getString(R.string.logs), LogFragment.newInstance());
 
-        permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
-        permissionsFragment = new PermissionsFragment(permissionsViewModel);
+        PermissionsViewModel permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
+        permissionsFragment = PermissionsFragment.newInstance();
         permissionsTitledFragment = new TitledFragment("Permissions", permissionsFragment);
         fragments.add(permissionsTitledFragment);
 

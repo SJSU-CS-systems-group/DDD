@@ -57,7 +57,13 @@ public class UsbFragment extends Fragment {
     private static final Logger logger = Logger.getLogger(UsbFragment.class.getName());
     private ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
 
-    public UsbFragment(TransportPaths transportPaths) {
+    public static UsbFragment newInstance(TransportPaths transportPaths) {
+        UsbFragment fragment = new UsbFragment();
+        fragment.setTransportPaths(transportPaths);
+        return fragment;
+    }
+
+    public void setTransportPaths (TransportPaths transportPaths) {
         this.transportPaths = transportPaths;
     }
 
