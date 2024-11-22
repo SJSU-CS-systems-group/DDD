@@ -1,7 +1,6 @@
 package net.discdd.bundleclient;
 
 import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
 import android.content.ComponentName;
@@ -29,13 +28,7 @@ import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
 import net.discdd.android.fragments.PermissionsViewModel;
 import net.discdd.client.bundlerouting.ClientWindow;
-import net.discdd.client.bundlesecurity.BundleSecurity;
-import net.discdd.pathutils.ClientPaths;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
