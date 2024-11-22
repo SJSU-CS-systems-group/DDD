@@ -169,6 +169,7 @@ public class PermissionsFragment extends Fragment {
             int resid = getResources().getIdentifier(permission, "string", getActivity().getPackageName());
             holder.permissionCaption.setText(resid == 0 ? permission : getString(resid));
             checkPermission(permission, holder);
+            allSatisfied();
         }
 
         @Override
