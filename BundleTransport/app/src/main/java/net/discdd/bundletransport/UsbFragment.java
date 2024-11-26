@@ -57,9 +57,9 @@ public class UsbFragment extends Fragment {
         View view = inflater.inflate(R.layout.usb_fragment, container, false);
 
         reloadButton = view.findViewById(R.id.reload_settings);
-        toSettingsButton =view.findViewById(R.id.to_settings_button);
+        toSettingsButton = view.findViewById(R.id.to_settings_button);
         toSettingstext = view.findViewById(R.id.to_settings_text);
-        usbExchangeButton =view.findViewById(R.id.usb_exchange_button);
+        usbExchangeButton = view.findViewById(R.id.usb_exchange_button);
         usbConnectionText = view.findViewById(R.id.usbconnection_response_text);
 
         storageManager = (StorageManager) getActivity().getSystemService(Context.STORAGE_SERVICE);
