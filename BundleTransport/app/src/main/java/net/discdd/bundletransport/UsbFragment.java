@@ -35,7 +35,7 @@ import java.util.concurrent.ExecutorService;
 
 public class UsbFragment extends Fragment {
     private UsbFileManager usbFileManager;
-    private final TransportPaths transportPaths;
+    private TransportPaths transportPaths;
     private Button toSettingsButton;
     private Button reloadButton;
     private TextView toSettingstext;
