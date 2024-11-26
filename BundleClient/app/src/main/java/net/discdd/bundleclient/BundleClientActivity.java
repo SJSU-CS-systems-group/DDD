@@ -97,7 +97,7 @@ public class BundleClientActivity extends AppCompatActivity {
 
         var intent = new Intent(this, BundleClientWifiDirectService.class);
         var svc = bindService(intent, connection, Context.BIND_AUTO_CREATE);
-
+        
         mUsbReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -115,11 +115,11 @@ public class BundleClientActivity extends AppCompatActivity {
         }
 
         permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
-        permissionsFragment = new PermissionsFragment(permissionsViewModel);
-        homeFragment = new BundleClientWifiDirectFragment();
-        usbFragment = new UsbFragment();
-        serverFragment = new ServerFragment();
-        logFragment = new LogFragment();
+        permissionsFragment = PermissionsFragment.newInstance();
+        homeFragment = BundleClientWifiDirectFragment.newInstance();
+        usbFragment = UsbFragment.newInstance();
+        serverFragment = ServerFragment.newInstance();
+        logFragment = LogFragment.newInstance()
         fragmentsWithTitles.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
