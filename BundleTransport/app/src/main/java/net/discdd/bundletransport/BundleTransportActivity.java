@@ -71,7 +71,6 @@ public class BundleTransportActivity extends AppCompatActivity {
     private SharedPreferences sharedPreferences;
     TransportWifiServiceConnection transportWifiServiceConnection = new TransportWifiServiceConnection();
     private BroadcastReceiver mUsbReceiver;
-    private PermissionsViewModel permissionsViewModel;
     private boolean usbExists;
 
     record TitledFragment(String title, Fragment fragment) {}
