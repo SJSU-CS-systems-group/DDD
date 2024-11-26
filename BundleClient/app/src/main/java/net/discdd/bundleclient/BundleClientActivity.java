@@ -1,7 +1,6 @@
 package net.discdd.bundleclient;
 
 import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
 import android.content.BroadcastReceiver;
@@ -33,13 +32,7 @@ import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
 import net.discdd.android.fragments.PermissionsViewModel;
 import net.discdd.client.bundlerouting.ClientWindow;
-import net.discdd.client.bundlesecurity.BundleSecurity;
-import net.discdd.pathutils.ClientPaths;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -104,7 +97,7 @@ public class BundleClientActivity extends AppCompatActivity {
 
         var intent = new Intent(this, BundleClientWifiDirectService.class);
         var svc = bindService(intent, connection, Context.BIND_AUTO_CREATE);
-
+        
         mUsbReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -122,11 +115,11 @@ public class BundleClientActivity extends AppCompatActivity {
         }
 
         permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
-        permissionsFragment = new PermissionsFragment(permissionsViewModel);
-        homeFragment = new BundleClientWifiDirectFragment();
-        usbFragment = new UsbFragment();
-        serverFragment = new ServerFragment();
-        logFragment = new LogFragment();
+        permissionsFragment = PermissionsFragment.newInstance();
+        homeFragment = BundleClientWifiDirectFragment.newInstance();
+        usbFragment = UsbFragment.newInstance();
+        serverFragment = ServerFragment.newInstance();
+        logFragment = LogFragment.newInstance();
         fragmentsWithTitles.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 

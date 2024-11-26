@@ -26,6 +26,8 @@ public class LogFragment extends Fragment {
     private TextView logMsgs;
     private static LinkedList<String> logRecords;
 
+    public static LogFragment newInstance() { return new LogFragment(); }
+
     static {
         LogFragment.registerLoggerHandler();
     }

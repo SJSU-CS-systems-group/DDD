@@ -35,7 +35,7 @@ import java.util.concurrent.ExecutorService;
 
 public class UsbFragment extends Fragment {
     private UsbFileManager usbFileManager;
-    private final TransportPaths transportPaths;
+    private TransportPaths transportPaths;
     private Button toSettingsButton;
     private Button reloadButton;
     private TextView toSettingstext;
@@ -47,7 +47,13 @@ public class UsbFragment extends Fragment {
     private static final Logger logger = Logger.getLogger(UsbFragment.class.getName());
     private final ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
 
-    public UsbFragment(TransportPaths transportPaths) {
+    public static UsbFragment newInstance(TransportPaths transportPaths) {
+        UsbFragment fragment = new UsbFragment();
+        fragment.setTransportPaths(transportPaths);
+        return fragment;
+    }
+
+    public void setTransportPaths (TransportPaths transportPaths) {
         this.transportPaths = transportPaths;
     }
 
