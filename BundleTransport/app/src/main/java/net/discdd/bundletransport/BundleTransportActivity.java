@@ -122,13 +122,12 @@ public class BundleTransportActivity extends AppCompatActivity {
             logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
         }
 
-        ServerUploadFragment serverFrag = ServerUploadFragment.newInstance(transportSecurity.getTransportID(),
-                                                                           transportPaths, connectivityEventPublisher);
-        serverUploadFragment = new TitledFragment(getString(R.string.upload),
-                                                  serverFrag);
+        ServerUploadFragment serverFrag =
+                ServerUploadFragment.newInstance(transportSecurity.getTransportID(), transportPaths,
+                                                 connectivityEventPublisher);
+        serverUploadFragment = new TitledFragment(getString(R.string.upload), serverFrag);
         TransportWifiDirectFragment transportFrag = TransportWifiDirectFragment.newInstance(transportPaths);
-        transportWifiFragment = new TitledFragment(getString(R.string.local_wifi),
-                                                   transportFrag);
+        transportWifiFragment = new TitledFragment(getString(R.string.local_wifi), transportFrag);
         storageFragment = new TitledFragment("Storage Settings", StorageFragment.newInstance());
         usbFrag = new TitledFragment("USB", UsbFragment.newInstance(transportPaths));
         logFragment = new TitledFragment(getString(R.string.logs), LogFragment.newInstance());

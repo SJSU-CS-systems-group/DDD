@@ -97,7 +97,7 @@ public class BundleClientActivity extends AppCompatActivity {
 
         var intent = new Intent(this, BundleClientWifiDirectService.class);
         var svc = bindService(intent, connection, Context.BIND_AUTO_CREATE);
-        
+
         mUsbReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {

@@ -53,7 +53,7 @@ public class UsbFragment extends Fragment {
         return fragment;
     }
 
-    public void setTransportPaths (TransportPaths transportPaths) {
+    public void setTransportPaths(TransportPaths transportPaths) {
         this.transportPaths = transportPaths;
     }
 

@@ -48,7 +48,7 @@ public class UsbFragment extends Fragment {
     private BundleTransmission bundleTransmission;
     private File usbDirectory;
 
-    public static UsbFragment newInstance() { return new UsbFragment(); }
+    public static UsbFragment newInstance() {return new UsbFragment();}
 
     @Override
     public View onCreateView(

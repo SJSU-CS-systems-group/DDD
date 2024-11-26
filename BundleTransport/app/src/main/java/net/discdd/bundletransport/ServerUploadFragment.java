@@ -43,7 +43,8 @@ public class ServerUploadFragment extends Fragment {
     private TextView numberBundlestoServer;
     private Button reloadButton;
 
-    public static ServerUploadFragment newInstance(String transportID, TransportPaths transportPaths, SubmissionPublisher<BundleTransportActivity.ConnectivityEvent> connectivityFlow) {
+    public static ServerUploadFragment newInstance(String transportID, TransportPaths transportPaths,
+                                                   SubmissionPublisher<BundleTransportActivity.ConnectivityEvent> connectivityFlow) {
         ServerUploadFragment fragment = new ServerUploadFragment();
         fragment.setTransportPaths(transportPaths);
         fragment.setConnectivityFlow(connectivityFlow);
@@ -81,8 +82,9 @@ public class ServerUploadFragment extends Fragment {
         saveDomainAndPortBtn = mainView.findViewById(R.id.save_domain_port);
         restoreDomainAndPortBtn = mainView.findViewById(R.id.restore_domain_port);
         connectServerBtn.setOnClickListener(view -> connectToServer());
-        if (connectivityFlow != null) { connectivityFlow.consume(event -> connectServerBtn.setEnabled(event.internetAvailable())); }
-        else { logger.warning("connectivityFlow is null"); }
+        if (connectivityFlow != null) {
+            connectivityFlow.consume(event -> connectServerBtn.setEnabled(event.internetAvailable()));
+        } else {logger.warning("connectivityFlow is null");}
         serverConnnectedStatus = mainView.findViewById(R.id.server_upload_status);
 
         // save the domain and port inputs
@@ -95,9 +97,7 @@ public class ServerUploadFragment extends Fragment {
         numberBundlestoServer = mainView.findViewById(R.id.numberBundlestoServer);
         reloadButton = mainView.findViewById(R.id.reloadCounts); // Assuming this ID is for the reload button
         reloadButton.setOnClickListener(view -> {
-            if (transportPaths != null &&
-                    transportPaths.toClientPath != null &&
-                    transportPaths.toServerPath != null) {
+            if (transportPaths != null && transportPaths.toClientPath != null && transportPaths.toServerPath != null) {
                 String[] clientFiles = transportPaths.toClientPath.toFile().list();
                 String[] serverFiles = transportPaths.toServerPath.toFile().list();
 

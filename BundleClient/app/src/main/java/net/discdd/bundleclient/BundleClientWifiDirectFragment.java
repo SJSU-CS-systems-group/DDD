@@ -53,7 +53,7 @@ public class BundleClientWifiDirectFragment extends Fragment {
         intentFilter.addAction(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_LOG_ACTION);
     }
 
-    public static BundleClientWifiDirectFragment newInstance() { return new BundleClientWifiDirectFragment(); }
+    public static BundleClientWifiDirectFragment newInstance() {return new BundleClientWifiDirectFragment();}
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {

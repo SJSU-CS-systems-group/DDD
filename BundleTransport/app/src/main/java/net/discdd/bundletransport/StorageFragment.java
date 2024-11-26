@@ -33,7 +33,7 @@ public class StorageFragment extends Fragment {
     private Toast currentToast;
     private int currentValue;
 
-    public static StorageFragment newInstance() { return new StorageFragment(); }
+    public static StorageFragment newInstance() {return new StorageFragment();}
 
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View mainView = inflater.inflate(R.layout.fragment_storage_preferences, container, false);
