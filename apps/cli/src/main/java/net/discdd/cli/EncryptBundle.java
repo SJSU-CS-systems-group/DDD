@@ -59,7 +59,7 @@ public class EncryptBundle implements Callable<Void> {
             BundleUtils.encryptPayloadAndCreateBundle((inputStream, outputStream) -> serverSecurity.encrypt(clientId, inputStream, outputStream),
                                                       identityPublicKey, baseKey,
                                                       serverSecurity.getIdentityPublicKey().getPublicKey(), bundleId,
-                                                      new ByteArrayInputStream(Files.readAllBytes(path)), encryptedBundleOs);
+                                                      Files.newInputStream(path), encryptedBundleOs);
             logger.log(INFO, "Finished encrypting " + bundlePath);
         } catch (Exception e) {
             e.printStackTrace();
