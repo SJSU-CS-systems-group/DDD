@@ -36,6 +36,7 @@ import org.whispersystems.libsignal.util.ByteUtil;
 import org.whispersystems.libsignal.util.Pair;
 import org.whispersystems.libsignal.util.guava.Optional;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -99,10 +100,9 @@ public class SessionCipher {
     /**
      * Encrypt a message.
      *
-     * @param  paddedMessage The plaintext message bytes, optionally padded to a constant multiple.
      * @return A ciphertext message encrypted to the recipient+device tuple.
      */
-    public CiphertextMessage encrypt() {
+    public CiphertextMessage encrypt(InputStream inputStream, OutputStream outputStream) throws IOException {
         synchronized (SESSION_LOCK) {
             SessionRecord sessionRecord   = sessionStore.loadSession(remoteAddress);
             SessionState  sessionState    = sessionRecord.getSessionState();
@@ -112,13 +112,10 @@ public class SessionCipher {
             int           previousCounter = sessionState.getPreviousCounter();
             int           sessionVersion  = sessionState.getSessionVersion();
 
-
-            // TODO (reminder): plaintext is INPUTSTREAM, cipherText is OUTPUTSTREAM, they must be passed in to this method as parameters
-            getCiphertext(sessionVersion, messageKeys, plaintext, cipherText);
-//            byte [] ciphertextBody = cipherText.toByteArray();
+            getCiphertext(sessionVersion, messageKeys, inputStream, outputStream);
             CiphertextMessage ciphertextMessage = new SignalMessage(sessionVersion, messageKeys.getMacKey(),
                                                                     senderEphemeral, chainKey.getIndex(),
-                                                                    previousCounter, ciphertextBody,
+                                                                    previousCounter, null,
                                                                     sessionState.getLocalIdentityKey(),
                                                                     sessionState.getRemoteIdentityKey());
 
@@ -398,8 +395,7 @@ public class SessionCipher {
         return chainKey.getMessageKeys();
     }
 
-    // TODO: update methods calling this method approprately
-    private void getCiphertext(int version, MessageKeys messageKeys, InputStream plaintext, ByteArrayOutputStream cipherText) throws IOException {
+    private void getCiphertext(int version, MessageKeys messageKeys, InputStream plaintext, OutputStream cipherText) throws IOException {
         try {
             Cipher cipher;
 
