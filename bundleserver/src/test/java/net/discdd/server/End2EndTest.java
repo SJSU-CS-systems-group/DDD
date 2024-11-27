@@ -36,6 +36,7 @@ import org.whispersystems.libsignal.state.impl.InMemorySignalProtocolStore;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -162,6 +163,7 @@ public class End2EndTest {
     static File aduTempDir;
 
     protected static Path createBundleForAdus(List<Long> aduIds, String clientId, int bundleCount, Path targetDir) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, InvalidKeySpecException, BadPaddingException, java.security.InvalidKeyException {
+
         var baos = new ByteArrayOutputStream();
         var adus = aduIds.stream().map(aduId -> {
             var aduFile = new File(aduTempDir, Long.toString(aduId));
@@ -179,11 +181,11 @@ public class End2EndTest {
         Path bundleJarPath = targetDir.resolve(encryptedBundleID);
         try (var os = Files.newOutputStream(bundleJarPath, StandardOpenOption.CREATE,
                                             StandardOpenOption.TRUNCATE_EXISTING)) {
-            BundleUtils.encryptPayloadAndCreateBundle(a -> clientSessionCipher.encrypt(a),
+            BundleUtils.encryptPayloadAndCreateBundle((inputStream, outputStream) -> clientSessionCipher.encrypt(inputStream, outputStream),
                                                       clientIdentity.getPublicKey().getPublicKey(),
                                                       baseKeyPair.getPublicKey(),
                                                       serverIdentity.getPublicKey().getPublicKey(), encryptedBundleID,
-                                                      baos.toByteArray(), os);
+                                                      new ByteArrayInputStream(baos.toByteArray()), os);
         }
         return bundleJarPath;
     }
