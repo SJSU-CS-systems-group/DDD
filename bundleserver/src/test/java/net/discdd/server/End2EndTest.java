@@ -185,7 +185,7 @@ public class End2EndTest {
                                                       clientIdentity.getPublicKey().getPublicKey(),
                                                       baseKeyPair.getPublicKey(),
                                                       serverIdentity.getPublicKey().getPublicKey(), encryptedBundleID,
-                                                      new ByteArrayInputStream(baos.toByteArray()), os);
+                                                      Files.newInputStream(bundleJarPath), os);
         }
         return bundleJarPath;
     }
