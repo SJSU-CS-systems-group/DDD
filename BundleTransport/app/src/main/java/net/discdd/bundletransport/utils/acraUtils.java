@@ -22,7 +22,7 @@ public class acraUtils extends Application {
         ACRA.init(this, new CoreConfigurationBuilder()
                 //core configuration:
                 .withBuildConfigClass(BuildConfig.class)
-                .withReportFormat(StringFormat.JSON)
+                .withReportFormat(StringFormat.KEY_VALUE_LIST)
         );
     }
 }
