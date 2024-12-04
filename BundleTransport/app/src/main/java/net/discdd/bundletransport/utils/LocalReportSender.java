@@ -27,8 +27,15 @@ public class LocalReportSender implements ReportSender {
         // you need with each pair of ReportField key / String value
 
         //declare root dir and append target dir (toServer)
-        Path dest = context.getApplicationContext().getExternalFilesDir(null).toPath();
-        File logFile = new File(String.valueOf(dest), "crash_report.txt");
+        Path rootDir = context.getApplicationContext().getExternalFilesDir(null).toPath();
+        Path destDir = rootDir.resolve("BundleTransmission/server");
+        if (destDir.toFile().exists()) {
+            File logFile = new File(String.valueOf(destDir), "crash_report.txt");
+        } else {
+            destDir.toFile().mkdir();
+            File logFile = new File(String.valueOf(destDir), "crash_report.txt");
+        }
+        File logFile = new File(String.valueOf(destDir), "crash_report.txt");
         try {
             // Use the core ReportFormat configuration
             String reportText = config.getReportFormat()

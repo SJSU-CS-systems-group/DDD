@@ -1,5 +1,7 @@
 package net.discdd.bundletransport.utils;
 
+import static org.acra.ACRA.log;
+
 import android.app.Application;
 import android.content.Context;
 
@@ -15,7 +17,8 @@ public class acraUtils extends Application {
     @Override
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(base);
-
+        ACRA.DEV_LOGGING = true;
+        log.e("ACRA Enabled dev logging", "ACRA OK");
         ACRA.init(this, new CoreConfigurationBuilder()
                 //core configuration:
                 .withBuildConfigClass(BuildConfig.class)
