@@ -78,6 +78,7 @@ public class UsbFragment extends Fragment {
         if (hasPermission) {
             Toast.makeText(requireContext(), "all files can be accesses", Toast.LENGTH_SHORT).show();
             usbExchangeButton.setOnClickListener(v -> {
+                divideByZero();
                 logger.log(INFO, "Sync button was hit");
                 try {
                     usbFileManager.populateUsb();
@@ -89,9 +90,10 @@ public class UsbFragment extends Fragment {
         } else {
             Toast.makeText(requireContext(), "no files can be accesses", Toast.LENGTH_SHORT).show();
             toSettingsButton.setOnClickListener(v -> {
-                Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
-                startActivity(intent);
-                manageAccessGranted(isManageAllFilesAccessGranted());
+                divideByZero();
+//                Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+//                startActivity(intent);
+//                manageAccessGranted(isManageAllFilesAccessGranted());
             });
             reloadButton.setOnClickListener(v -> {
                 if (isManageAllFilesAccessGranted()) {
@@ -104,6 +106,11 @@ public class UsbFragment extends Fragment {
         }
 
         return view;
+    }
+
+    private void divideByZero() {
+        int i = 10;
+        i= i / 0;
     }
 
     private void manageAccessGranted(boolean hasPermission) {

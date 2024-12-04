@@ -172,7 +172,7 @@ public class BundleTransportActivity extends AppCompatActivity {
             newFragments.add(transportWifiFragment);
             newFragments.add(storageFragment);
             newFragments.add(logFragment);
-            if (usbExists) {
+            if (!usbExists) {
                 newFragments.add(usbFrag);
             }
         } else {
