@@ -4,6 +4,7 @@ import net.discdd.bundlesecurity.ServerSecurity;
 import net.discdd.utils.BundleUtils;
 import picocli.CommandLine;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -55,10 +56,10 @@ public class EncryptBundle implements Callable<Void> {
                                                            StandardOpenOption.TRUNCATE_EXISTING)) {
             var identityPublicKey = serverSecurity.getClientIdentityPublicKey(clientId);
             var baseKey = serverSecurity.getClientBaseKey(clientId);
-            BundleUtils.encryptPayloadAndCreateBundle(bytes -> serverSecurity.encrypt(clientId, bytes),
+            BundleUtils.encryptPayloadAndCreateBundle((inputStream, outputStream) -> serverSecurity.encrypt(clientId, inputStream, outputStream),
                                                       identityPublicKey, baseKey,
                                                       serverSecurity.getIdentityPublicKey().getPublicKey(), bundleId,
-                                                      Files.readAllBytes(path), encryptedBundleOs);
+                                                      Files.newInputStream(path), encryptedBundleOs);
             logger.log(INFO, "Finished encrypting " + bundlePath);
         } catch (Exception e) {
             e.printStackTrace();
