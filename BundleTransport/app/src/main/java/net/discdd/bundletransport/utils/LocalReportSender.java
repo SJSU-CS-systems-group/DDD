@@ -29,11 +29,8 @@ public class LocalReportSender implements ReportSender {
         //declare root dir and append target dir (toServer)
         Path rootDir = context.getApplicationContext().getExternalFilesDir(null).toPath();
         Path destDir = rootDir.resolve("BundleTransmission/server");
-        if (destDir.toFile().exists()) {
-            File logFile = new File(String.valueOf(destDir), "crash_report.txt");
-        } else {
+        if (!destDir.toFile().exists()) {
             destDir.toFile().mkdir();
-            File logFile = new File(String.valueOf(destDir), "crash_report.txt");
         }
         File logFile = new File(String.valueOf(destDir), "crash_report.txt");
         try {
