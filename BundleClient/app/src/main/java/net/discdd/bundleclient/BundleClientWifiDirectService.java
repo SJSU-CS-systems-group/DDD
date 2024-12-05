@@ -31,7 +31,9 @@ import net.discdd.model.ADU;
 import net.discdd.wifidirect.WifiDirectManager;
 import net.discdd.wifidirect.WifiDirectStateListener;
 
+import java.io.IOException;
 import java.net.InetAddress;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
@@ -214,7 +216,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
             handler.post(() -> {
                 Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT).show();
             });
-
+            logger.log(INFO, "Bundle Has Uploaded");
             return currentBundle;
 
         } catch (Throwable e) {
