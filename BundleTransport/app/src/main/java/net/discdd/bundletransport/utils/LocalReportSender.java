@@ -36,8 +36,7 @@ public class LocalReportSender implements ReportSender {
         try {
             // Use the core ReportFormat configuration
             String reportText = config.getReportFormat()
-                    .toFormattedString(errorContent,
-                                       config.getReportContent(), "\n", "\n\t", false);
+                    .toFormattedString(errorContent, config.getReportContent(), "\n", "\n\t", false);
 
             // Overwrite last report
             FileWriter writer = new FileWriter(logFile, false);

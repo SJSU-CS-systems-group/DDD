@@ -21,8 +21,6 @@ public class acraUtils extends Application {
         log.e("ACRA Enabled dev logging", "ACRA OK");
         ACRA.init(this, new CoreConfigurationBuilder()
                 //core configuration:
-                .withBuildConfigClass(BuildConfig.class)
-                .withReportFormat(StringFormat.KEY_VALUE_LIST)
-        );
+                .withBuildConfigClass(BuildConfig.class).withReportFormat(StringFormat.KEY_VALUE_LIST));
     }
 }
