@@ -27,11 +27,13 @@ public class LocalReportSender implements ReportSender {
     @Override
     public void send(Context context, CrashReportData errorContent) throws ReportSenderException {
         Path rootDir = context.getApplicationContext().getExternalFilesDir(null).toPath();
-        Path destDir = rootDir.resolve("BundleTransmission/server");
-        if (!destDir.toFile().exists()) {
-            destDir.toFile().mkdir();
-        }
-        File logFile = new File(String.valueOf(destDir), "crash_report.txt");
+//        Path destDir = rootDir.resolve("BundleTransmission/server");
+//        if (!destDir.toFile().exists()) {
+//            destDir.toFile().mkdir();
+//        }
+//        File logFile = new File(String.valueOf(destDir), "crash_report.txt");
+        File logFile = new File(String.valueOf(rootDir), "crash_report.txt");
+
         try {
             String reportText = config.getReportFormat()
                     .toFormattedString(errorContent, config.getReportContent(), "\n", "\n\t", false);
