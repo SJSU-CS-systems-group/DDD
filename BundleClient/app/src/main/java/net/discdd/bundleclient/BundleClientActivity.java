@@ -83,10 +83,6 @@ public class BundleClientActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        var num = 0;
-        for (int i = 1; i <= 1; i++) {
-            i /= num;
-        }
         sharedPreferences =
                 getSharedPreferences(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE);
 
