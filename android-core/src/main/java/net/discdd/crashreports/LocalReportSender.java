@@ -1,7 +1,10 @@
 package net.discdd.crashreports;
 
+<<<<<<< HEAD
 import static org.acra.ACRA.log;
 
+=======
+>>>>>>> 327e22fd8 (adds crash report logic to core)
 import android.content.Context;
 
 import com.google.auto.service.AutoService;

@@ -23,4 +23,3 @@ public class AcraApp extends Application {
         );
     }
 }
-
