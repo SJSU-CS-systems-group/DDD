@@ -9,8 +9,6 @@ import org.acra.data.CrashReportData;
 import org.acra.sender.ReportSender;
 import org.acra.sender.ReportSenderException;
 import org.acra.sender.ReportSenderFactory;
-import org.acra.startup.Report;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -27,11 +25,6 @@ public class LocalReportSender implements ReportSender {
     @Override
     public void send(Context context, CrashReportData errorContent) throws ReportSenderException {
         Path rootDir = context.getApplicationContext().getExternalFilesDir(null).toPath();
-//        Path destDir = rootDir.resolve("BundleTransmission/server");
-//        if (!destDir.toFile().exists()) {
-//            destDir.toFile().mkdir();
-//        }
-//        File logFile = new File(String.valueOf(destDir), "crash_report.txt");
         File logFile = new File(String.valueOf(rootDir), "crash_report.txt");
 
         try {
