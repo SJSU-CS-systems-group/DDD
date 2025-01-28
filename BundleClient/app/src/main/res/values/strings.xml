@@ -45,4 +45,5 @@
     <string name="usb_device_attached_checking_for_storage_volumes">USB device attached, checking for storage volumes</string>
     <string name="usb_connection_detected">USB connection detected</string>
     <string name="usb_device_not_connected">USB device not connected</string>
+    <string name="acra_toast_text">Acra creating crash report!</string>
 </resources>
