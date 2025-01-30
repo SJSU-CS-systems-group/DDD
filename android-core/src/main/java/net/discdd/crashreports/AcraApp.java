@@ -1,4 +1,4 @@
-package net.discdd.bundleclient;
+package net.discdd.crashreports;
 
 import static org.acra.ACRA.log;
 
@@ -16,8 +16,10 @@ public class AcraApp extends Application {
         super.attachBaseContext(base);
         ACRA.DEV_LOGGING = true;
         log.e("ACRA Enabled dev logging", "ACRA OK");
-
         ACRA.init(this, new CoreConfigurationBuilder()
-                .withBuildConfigClass(BuildConfig.class).withReportFormat(StringFormat.KEY_VALUE_LIST));
+                //core configuration:
+                .withBuildConfigClass(BuildConfig.class)
+                .withReportFormat(StringFormat.KEY_VALUE_LIST)
+        );
     }
 }
