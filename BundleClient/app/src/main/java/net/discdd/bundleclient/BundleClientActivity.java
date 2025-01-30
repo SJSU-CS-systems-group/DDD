@@ -1,19 +1,13 @@
 package net.discdd.bundleclient;
 
-import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 
-import android.Manifest;
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
-
 import android.content.pm.PackageManager;
-
 import android.hardware.usb.UsbManager;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
@@ -36,7 +30,6 @@ import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
 import net.discdd.bundleclient.screens.ServerFragment;
 import net.discdd.viewmodels.PermissionsViewModel;
-import net.discdd.client.bundlerouting.ClientWindow;
 
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
@@ -123,7 +116,6 @@ public class BundleClientActivity extends AppCompatActivity {
         homeFragment = BundleClientWifiDirectFragment.newInstance();
         usbFragment = UsbFragment.newInstance();
         logFragment = LogFragment.newInstance();
-        bundleManagerFragment = BundleManagerFragment.newInstance();
         fragmentsWithTitles.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         serverFragment = new ServerFragment();
