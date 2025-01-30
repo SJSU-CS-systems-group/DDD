@@ -1,23 +1,30 @@
 package net.discdd.bundletransport;
 
+import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.hardware.usb.UsbManager;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.viewpager2.widget.ViewPager2;
 
@@ -26,6 +33,7 @@ import com.google.android.material.tabs.TabLayoutMediator;
 
 import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
+import net.discdd.android.fragments.PermissionsViewModel;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.transport.TransportSecurity;
 
@@ -33,7 +41,6 @@ import org.whispersystems.libsignal.InvalidKeyException;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,6 +55,10 @@ public class BundleTransportActivity extends AppCompatActivity {
     private TitledFragment transportWifiFragment;
     private TitledFragment storageFragment;
     private TransportPaths transportPaths;
+    private TitledFragment usbFrag;
+    private TitledFragment logFragment;
+    private TitledFragment permissionsTitledFragment;
+    private PermissionsViewModel permissionsViewModel;
 
     record ConnectivityEvent(boolean internetAvailable) {}
 
@@ -55,8 +66,12 @@ public class BundleTransportActivity extends AppCompatActivity {
     private ViewPager2 viewPager2;
     private FragmentStateAdapter viewPager2Adapter;
     private PermissionsFragment permissionsFragment;
+    private TabLayout tabLayout;
+    private TabLayoutMediator mediator;
     private SharedPreferences sharedPreferences;
     TransportWifiServiceConnection transportWifiServiceConnection = new TransportWifiServiceConnection();
+    private BroadcastReceiver mUsbReceiver;
+    private boolean usbExists;
 
     record TitledFragment(String title, Fragment fragment) {}
 
@@ -78,6 +93,20 @@ public class BundleTransportActivity extends AppCompatActivity {
         } catch (Exception e) {
             logger.log(WARNING, "Failed to start TransportWifiDirectService", e);
         }
+        mUsbReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                handleUsbBroadcast(intent);
+            }
+        };
+        try {
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
+            filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
+            registerReceiver(mUsbReceiver, filter);
+        } catch (Exception e) {
+            logger.log(WARNING, "Failed to register usb broadcast", e);
+        }
 
         setContentView(R.layout.activity_bundle_transport);
 
@@ -93,21 +122,22 @@ public class BundleTransportActivity extends AppCompatActivity {
             logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
         }
 
-        serverUploadFragment = new TitledFragment(getString(R.string.upload),
-                                                  new ServerUploadFragment(connectivityEventPublisher,
-                                                                           transportSecurity.getTransportID(),
-                                                                           this.transportPaths));
-        transportWifiFragment = new TitledFragment(getString(R.string.local_wifi),
-                                                   new TransportWifiDirectFragment(this.transportPaths));
-        storageFragment = new TitledFragment("Storage Settings", new StorageFragment());
+        ServerUploadFragment serverFrag =
+                ServerUploadFragment.newInstance(transportSecurity.getTransportID(), transportPaths,
+                                                 connectivityEventPublisher);
+        serverUploadFragment = new TitledFragment(getString(R.string.upload), serverFrag);
+        TransportWifiDirectFragment transportFrag = TransportWifiDirectFragment.newInstance(transportPaths);
+        transportWifiFragment = new TitledFragment(getString(R.string.local_wifi), transportFrag);
+        storageFragment = new TitledFragment("Storage Settings", StorageFragment.newInstance());
+        usbFrag = new TitledFragment("USB", UsbFragment.newInstance(transportPaths));
+        logFragment = new TitledFragment(getString(R.string.logs), LogFragment.newInstance());
 
-        permissionsFragment = new PermissionsFragment();
-        fragments.add(serverUploadFragment);
-        fragments.add(transportWifiFragment);
-        fragments.add(storageFragment);
-        fragments.add(new TitledFragment(getString(R.string.permissions), permissionsFragment));
-        fragments.add(new TitledFragment(getString(R.string.logs), new LogFragment()));
-        TabLayout tabLayout = findViewById(R.id.tabs);
+        permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
+        permissionsFragment = PermissionsFragment.newInstance();
+        permissionsTitledFragment = new TitledFragment("Permissions", permissionsFragment);
+        fragments.add(permissionsTitledFragment);
+
+        tabLayout = findViewById(R.id.tabs);
         viewPager2 = findViewById(R.id.view_pager);
         viewPager2Adapter = new FragmentStateAdapter(this) {
             @NonNull
@@ -122,10 +152,62 @@ public class BundleTransportActivity extends AppCompatActivity {
             }
         };
         viewPager2.setAdapter(viewPager2Adapter);
-        var mediator = new TabLayoutMediator(tabLayout, viewPager2, (tab, position) -> {
+
+        mediator = new TabLayoutMediator(tabLayout, viewPager2, (tab, position) -> {
             tab.setText(fragments.get(position).title);
         });
         mediator.attach();
+
+        //set observer on view model for permissions
+        permissionsViewModel.getPermissionSatisfied().observe(this, this::updateTabs);
+    }
+
+    private void updateTabs(Boolean satisfied) {
+        logger.log(INFO, "UPDATING TABS ... Permissions satisfied: " + satisfied);
+
+        ArrayList<TitledFragment> newFragments = new ArrayList<>();
+        if (satisfied) {
+            logger.log(INFO, "ALL TABS BEING SHOWN");
+            newFragments.add(serverUploadFragment);
+            newFragments.add(transportWifiFragment);
+            newFragments.add(storageFragment);
+            newFragments.add(logFragment);
+            if (usbExists) {
+                newFragments.add(usbFrag);
+            }
+        } else {
+            logger.log(INFO, "ONLY PERMISSIONS TAB IS BEING SHOWN");
+            newFragments.add(permissionsTitledFragment);
+        }
+
+        if (!newFragments.equals(fragments)) {
+            new Handler(Looper.getMainLooper()).post(() -> {
+                if (mediator != null) {
+                    mediator.detach();
+                }
+
+                fragments.clear();
+                fragments.addAll(newFragments);
+
+                viewPager2Adapter = new FragmentStateAdapter(this) {
+                    @NonNull
+                    @Override
+                    public Fragment createFragment(int position) {
+                        return fragments.get(position).fragment;
+                    }
+
+                    @Override
+                    public int getItemCount() {
+                        return fragments.size();
+                    }
+                };
+                viewPager2.setAdapter(viewPager2Adapter);
+
+                mediator = new TabLayoutMediator(tabLayout, viewPager2,
+                                                 (tab, position) -> tab.setText(fragments.get(position).title()));
+                mediator.attach();
+            });
+        }
     }
 
     protected void onStart() {
@@ -159,7 +241,9 @@ public class BundleTransportActivity extends AppCompatActivity {
         if (!isBackgroundWifiEnabled()) {
             stopService(new Intent(this, TransportWifiDirectService.class));
         }
-
+        if (mUsbReceiver != null) {
+            unregisterReceiver(mUsbReceiver);
+        }
         unmonitorUploadTab();
         if (transportWifiServiceConnection.btService != null) unbindService(transportWifiServiceConnection);
         super.onDestroy();
@@ -237,6 +321,21 @@ public class BundleTransportActivity extends AppCompatActivity {
                 new NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).build();
 
         connectivityManager.registerNetworkCallback(networkRequest, uploadTabMonitorCallback);
+    }
+
+    private void handleUsbBroadcast(Intent intent) {
+        String action = intent.getAction();
+        if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
+            updateUsbExists(false);
+            permissionsViewModel.getPermissionSatisfied().observe(this, this::updateTabs);
+        } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
+            updateUsbExists(true);
+            permissionsViewModel.getPermissionSatisfied().observe(this, this::updateTabs);
+        }
+    }
+
+    public void updateUsbExists(boolean result) {
+        usbExists = result;
     }
 
     static class TransportWifiServiceConnection extends CompletableFuture<TransportWifiDirectService>

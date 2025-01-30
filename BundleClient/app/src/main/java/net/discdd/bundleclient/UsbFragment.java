@@ -40,7 +40,6 @@ public class UsbFragment extends Fragment {
     private Button usbExchangeButton;
     private TextView usbConnectionText;
     private UsbManager usbManager;
-    private BroadcastReceiver mUsbReceiver;
     public static boolean usbConnected = false;
     private StorageManager storageManager;
     private static final Logger logger = Logger.getLogger(UsbFragment.class.getName());
@@ -49,29 +48,28 @@ public class UsbFragment extends Fragment {
     private BundleTransmission bundleTransmission;
     private File usbDirectory;
 
+    public static UsbFragment newInstance() {return new UsbFragment();}
+
     @Override
     public View onCreateView(
             @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.usb_fragment, container, false);
-        bundleTransmission = ((BundleClientActivity) getActivity()).wifiBgService.getBundleTransmission();
+        BundleClientActivity activity = (BundleClientActivity) getActivity();
+        if (activity != null && activity.wifiBgService != null) {
+            try {
+                bundleTransmission = activity.wifiBgService.getBundleTransmission();
+            } catch (Exception e) {
+                logger.log(Level.WARNING, "Error getting bundle transmission: ", e);
+            }
+        } else {
+            logger.log(Level.INFO, "BundleClientActivity or wifiBgService is null");
+        }
 
         usbExchangeButton = view.findViewById(R.id.usb_exchange_button);
         usbConnectionText = view.findViewById(R.id.usbconnection_response_text);
 
         usbManager = (UsbManager) getActivity().getSystemService(Context.USB_SERVICE);
-        mUsbReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                handleUsbBroadcast(intent);
-            }
-        };
         storageManager = (StorageManager) getActivity().getSystemService(Context.STORAGE_SERVICE);
-
-        //Register USB broadcast receiver
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
-        filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
-        getActivity().registerReceiver(mUsbReceiver, filter);
 
         // Check initial USB connection
         checkUsbConnection(2);
@@ -106,39 +104,18 @@ public class UsbFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        if (mUsbReceiver != null) {
-            getActivity().unregisterReceiver(mUsbReceiver);
-        }
-    }
-
-    //Method to handle USB broadcasts
-    private void handleUsbBroadcast(Intent intent) {
-        String action = intent.getAction();
-        if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
-            updateUsbStatus(false, getString(R.string.no_usb_connection_detected), Color.RED);
-            usbConnected = false;
-            showUsbDetachedToast();
-        } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
-            updateUsbStatus(false, getString(R.string.usb_device_attached_checking_for_storage_volumes), Color.BLUE);
-            scheduledExecutor.schedule(() -> checkUsbConnection(2), 1, TimeUnit.SECONDS);
-            showUsbAttachedToast();
-        }
     }
 
     //Method to check initial USB connection
     private void checkUsbConnection(int tries) {
-        usbConnected = !usbManager.getDeviceList().isEmpty() && usbDirExists();
+        usbConnected = usbDirExists();
         getActivity().getMainExecutor().execute(() -> {
             if (!usbManager.getDeviceList().isEmpty()) {
-                if (usbDirExists()) {
-                    updateUsbStatus(true, getString(R.string.usb_connection_detected), Color.GREEN);
-                } else {
+                if (!usbDirExists()) {
                     updateUsbStatus(false,
                                     getString(R.string.usb_was_connected_but_ddd_transport_directory_was_not_detected),
                                     Color.RED);
                 }
-            } else {
-                updateUsbStatus(false, getString(R.string.usb_device_not_connected), Color.RED);
             }
         });
         if (tries > 0 && !usbConnected) {

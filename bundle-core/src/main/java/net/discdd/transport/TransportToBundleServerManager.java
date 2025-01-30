@@ -1,9 +1,14 @@
-package net.discdd.bundletransport;
+package net.discdd.transport;
 
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
 import com.google.protobuf.ByteString;
+import io.grpc.Grpc;
+import io.grpc.InsecureChannelCredentials;
+import io.grpc.ManagedChannel;
+import io.grpc.StatusRuntimeException;
+import io.grpc.stub.StreamObserver;
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
 import net.discdd.grpc.BundleChunk;
 import net.discdd.grpc.BundleDownloadRequest;
@@ -34,12 +39,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.logging.Logger;
-
-import io.grpc.Grpc;
-import io.grpc.InsecureChannelCredentials;
-import io.grpc.ManagedChannel;
-import io.grpc.StatusRuntimeException;
-import io.grpc.stub.StreamObserver;
 
 public class TransportToBundleServerManager implements Runnable {
 
@@ -104,7 +103,6 @@ public class TransportToBundleServerManager implements Runnable {
         var recencyBlobReq = GetRecencyBlobRequest.newBuilder().setSender(transportSenderId).build();
         var recencyBlob = blockingExchangeStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                 .getRecencyBlob(recencyBlobReq);
-
         Path blobPath = fromServerPath.resolve(RECENCY_BLOB_BIN);
         try (var os = Files.newOutputStream(blobPath, StandardOpenOption.CREATE,
                                             StandardOpenOption.TRUNCATE_EXISTING)) {
@@ -177,8 +175,10 @@ public class TransportToBundleServerManager implements Runnable {
                     uploadRequestStreamObserver.onNext(uploadRequest);
                 }
                 uploadRequestStreamObserver.onCompleted();
+                logger.log(INFO, "Completed upload for bundle: " + toSend.getEncryptedId());
                 if (responseObserver != null) {
                     responseObserver.onCompleted();
+                    logger.log(INFO, "Deleting bundle file: " + path);
                     Files.delete(path);
                 }
             } catch (IOException e) {
