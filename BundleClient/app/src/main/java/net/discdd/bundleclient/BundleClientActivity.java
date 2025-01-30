@@ -1,6 +1,5 @@
 package net.discdd.bundleclient;
 
-import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
 import android.content.ComponentName;
@@ -24,13 +23,7 @@ import com.google.android.material.tabs.TabLayoutMediator;
 import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
 import net.discdd.client.bundlerouting.ClientWindow;
-import net.discdd.client.bundlesecurity.BundleSecurity;
-import net.discdd.pathutils.ClientPaths;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
@@ -91,6 +84,7 @@ public class BundleClientActivity extends AppCompatActivity {
         fragmentsWithTitles.add(new FragmentWithTitle(new UsbFragment(), getString(R.string.usb_tab)));
         fragmentsWithTitles.add(new FragmentWithTitle(new ServerFragment(), getString(R.string.server_tab)));
         fragmentsWithTitles.add(new FragmentWithTitle(new LogFragment(), getString(R.string.logs_tab)));
+        fragmentsWithTitles.add(new FragmentWithTitle(new BundleManagerFragment(), "BM"));
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
         //set up view
