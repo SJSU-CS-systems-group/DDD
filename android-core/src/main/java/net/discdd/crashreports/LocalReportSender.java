@@ -44,8 +44,8 @@ public class LocalReportSender implements ReportSender {
                     .toFormattedString(errorContent, config.getReportContent(), "\n", "\n\t", false);
 
             // Overwrite last report
-            optimizeReports(logFile);
-            FileWriter writer = new FileWriter(logFile, false);
+            //optimizeReports(logFile);
+            FileWriter writer = new FileWriter(logFile, true);
             writer.append(reportText);
             writer.flush();
             writer.close();
@@ -64,7 +64,7 @@ public class LocalReportSender implements ReportSender {
         try (BufferedReader br = new BufferedReader(new FileReader(logFile))) {
             String line;
             while ((line = br.readLine()) != null) {
-                if (line.equals(reportsFooterTag)) {
+                if (line.contains(reportsFooterTag)) {
                     reportAmount++;
                 }
             }
@@ -79,16 +79,15 @@ public class LocalReportSender implements ReportSender {
                     if (started) {
                         bw.write(line);
                         bw.newLine();
-                    } else if (line.equals(lastLineToRemove)) {
+                    } else if (line.contains(lastLineToRemove)) {
                         started = true;
                     }
                 }
             }
-            if (!logFile.delete()) {
-                throw new IOException("Could not delete original file");
-            }
-            if (!tempFile.renameTo(logFile)) {
-                throw new IOException("Could not rename temporary file");
+            try (FileWriter fw = new FileWriter(logFile, false)) {
+                fw.append((CharSequence) tempFile);
+                fw.flush();
+                fw.close();
             }
         }
     }
