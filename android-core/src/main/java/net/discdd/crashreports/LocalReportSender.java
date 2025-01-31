@@ -44,11 +44,12 @@ public class LocalReportSender implements ReportSender {
                     .toFormattedString(errorContent, config.getReportContent(), "\n", "\n\t", false);
 
             // Overwrite last report
-            //optimizeReports(logFile);
-            FileWriter writer = new FileWriter(logFile, true);
-            writer.append(reportText);
-            writer.flush();
-            writer.close();
+            if (!optimizeReports(logFile)) {
+                FileWriter writer = new FileWriter(logFile, true);
+                writer.append(reportText);
+                writer.flush();
+                writer.close();
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -57,7 +58,8 @@ public class LocalReportSender implements ReportSender {
     /**
      * Does something when we have reported over five crashes
      */
-    public void optimizeReports (File logFile) throws IOException {
+    public boolean optimizeReports (File logFile) throws IOException {
+        //looking for how many reports exist in singular reports file
         String reportsFooterTag, lastLineToRemove;
         reportsFooterTag = lastLineToRemove = "SHARED_PREFERENCES=default=empty";
         int reportAmount = 0;
@@ -69,7 +71,9 @@ public class LocalReportSender implements ReportSender {
                 }
             }
         }
-        if (reportAmount >= 5) {
+        //if there are multiple reports, create a temporary file and copy all lines from
+        //original file after first report recorded
+        if (reportAmount >= 1) {
             File tempFile = new File(logFile + ".tmp");
             try (BufferedReader br = new BufferedReader(new FileReader(logFile));
                  BufferedWriter bw = new BufferedWriter(new FileWriter(tempFile))) {
@@ -84,12 +88,15 @@ public class LocalReportSender implements ReportSender {
                     }
                 }
             }
+            //overwrite the original file to match the temporary file
             try (FileWriter fw = new FileWriter(logFile, false)) {
                 fw.append((CharSequence) tempFile);
                 fw.flush();
                 fw.close();
             }
+            return true;
         }
+        return false;
     }
 
     @AutoService(ReportSenderFactory.class)
