@@ -17,6 +17,7 @@ import android.widget.TextView;
 import androidx.fragment.app.Fragment;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import net.discdd.pathutils.TransportPaths;
 import net.discdd.wifidirect.WifiDirectManager;
 
 import java.net.Inet4Address;
@@ -37,10 +38,16 @@ public class TransportWifiDirectFragment extends Fragment {
     private TextView myWifiStatusView;
     private SharedPreferences sharedPreferences;
     private TransportWifiDirectService btService;
+    private TransportPaths transportPaths;
 
-    public TransportWifiDirectFragment() {
-        intentFilter.addAction(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_WIFI_EVENT_ACTION);
-        intentFilter.addAction(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION);
+    public static TransportWifiDirectFragment newInstance(TransportPaths transportPaths) {
+        TransportWifiDirectFragment fragment = new TransportWifiDirectFragment();
+        fragment.setTransportPaths(transportPaths);
+        return fragment;
+    }
+
+    public void setTransportPaths(TransportPaths transportPaths) {
+        this.transportPaths = transportPaths;
     }
 
     private void processDeviceInfoChange() {
@@ -69,6 +76,8 @@ public class TransportWifiDirectFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        intentFilter.addAction(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_WIFI_EVENT_ACTION);
+        intentFilter.addAction(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION);
         sharedPreferences = requireActivity().getSharedPreferences(TransportWifiDirectService.WIFI_DIRECT_PREFERENCES,
                                                                    Context.MODE_PRIVATE);
     }

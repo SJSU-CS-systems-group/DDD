@@ -15,6 +15,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -24,6 +25,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -32,13 +34,19 @@ public class PermissionsFragment extends Fragment {
     final static private Logger logger = Logger.getLogger(PermissionsFragment.class.getName());
     private final HashMap<String, PermissionsAdapter.PermissionViewHolder> neededPermissions = new HashMap<>();
     private ActivityResultLauncher<String> requestPermissionLauncher;
-    private PermissionsAdapter permissionsAdapter;
     private boolean promptPending;
     private Consumer<HashSet<String>> permissionWatcher;
+    private PermissionsViewModel permissionsViewModel;
+    private final HashSet<String> requiredPermissions = new HashSet<>();
+
+    public static PermissionsFragment newInstance() {
+        return new PermissionsFragment();
+    }
 
     @Override
     public View onCreateView(
             @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        permissionsViewModel = new ViewModelProvider(requireActivity()).get(PermissionsViewModel.class);
         return inflater.inflate(R.layout.permissions_fragment, container, false);
     }
 
@@ -53,13 +61,21 @@ public class PermissionsFragment extends Fragment {
             //get permissions array from resources
             String[] permissions = getResources().getStringArray(R.array.permissions_array);
 
+            //Store required permissions
+            requiredPermissions.addAll(Arrays.asList(permissions));
+
             //Initialize the adapter
-            permissionsAdapter = new PermissionsAdapter(permissions);
+            PermissionsAdapter permissionsAdapter = new PermissionsAdapter(permissions);
 
             //set the adapter to the RecyclerView
             permissionsRecyclerView.setAdapter(permissionsAdapter);
-
         }
+    }
+
+    public void allSatisfied() {
+        boolean satisfied = !requiredPermissions.isEmpty() && grantedPermissions.containsAll(requiredPermissions);
+        logger.log(Level.INFO, "ALL PERMS SATISFIED: " + satisfied);
+        permissionsViewModel.updatePermissions(satisfied);
     }
 
     private ActivityResultLauncher<String[]> activityResultLauncher =
@@ -68,6 +84,7 @@ public class PermissionsFragment extends Fragment {
                                           @Override
                                           public void onActivityResult(Map<String, Boolean> results) {
                                               // go through the permissions and result pairs
+                                              AtomicInteger unresolvedPermissionCount = new AtomicInteger();
                                               results.forEach((p, r) -> {
                                                   logger.log(Level.INFO, p + " " + (r ? "granted" : "denied"));
                                                   var view = neededPermissions.remove(p);
@@ -76,16 +93,19 @@ public class PermissionsFragment extends Fragment {
                                                   }
                                                   if (r) {
                                                       trackGrantedPermission(p);
+                                                  } else {
+                                                      unresolvedPermissionCount.getAndIncrement();
                                                   }
                                               });
                                               if (neededPermissions.isEmpty()) {
                                                   promptPending = false;
-                                              } else {
+                                              } else if (unresolvedPermissionCount.get() > 0) {
                                                   String[] permissionsToRequest =
                                                           neededPermissions.keySet().toArray(new String[0]);
                                                   logger.info("Requesting " + Arrays.toString(permissionsToRequest));
                                                   activityResultLauncher.launch(permissionsToRequest);
                                               }
+                                              allSatisfied();
                                           }
                                       });
     ;
@@ -149,6 +169,7 @@ public class PermissionsFragment extends Fragment {
             int resid = getResources().getIdentifier(permission, "string", getActivity().getPackageName());
             holder.permissionCaption.setText(resid == 0 ? permission : getString(resid));
             checkPermission(permission, holder);
+            allSatisfied();
         }
 
         @Override

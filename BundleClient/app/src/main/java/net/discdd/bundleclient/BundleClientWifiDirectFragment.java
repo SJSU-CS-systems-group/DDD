@@ -49,10 +49,12 @@ public class BundleClientWifiDirectFragment extends Fragment {
     private SharedPreferences preferences;
     private TextView deliveryStatus;
 
-    BundleClientWifiDirectFragment() {
+    public BundleClientWifiDirectFragment() {
         intentFilter.addAction(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_WIFI_EVENT_ACTION);
         intentFilter.addAction(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_LOG_ACTION);
     }
+
+    public static BundleClientWifiDirectFragment newInstance() {return new BundleClientWifiDirectFragment();}
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {

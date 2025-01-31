@@ -19,7 +19,6 @@
     <string name="complete">Complete</string>
     <string name="failed_file_transfer">Failed... : %s</string>
     <string name="no_usb_connection_detected">No USB connection detected\n</string>
-    <string name="usb_connection_detected">USB connection detected\n</string>
     <string name="usb_transport_directory_was_not_detected">USB was connected, but /DDD_transport directory was not detected\n</string>
     <string name="usb_device_attached">USB device attached</string>
     <string name="usb_device_detached">USB device detached</string>
@@ -36,13 +35,15 @@
     <string name="not_connected">Not connected</string>
     <string name="connected_to_transport">Connected to transport</string>
     <string name="refresh_peers">Refresh Peers</string>
-    <string name="usb_device_not_connected">USB device not connected\n</string>
     <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">USB was connected, but /DDD_transport directory was not detected\n</string>
-    <string name="usb_device_attached_checking_for_storage_volumes">USB device attached. Checking for storage volumes.\n</string>
     <string name="transfers_in_the_background">Do transfers in the background</string>
     <string name="PeerDetailedDescription">Last seen: %s\nLast exchange: %s\nLast Server Contact: %s\n</string>
     <string name="never">Never</string>
     <string name="sending_adu_s_d_from_s">Sending ADU %s:%d from %s</string>
     <string name="exchanged_d_bundles_to_and_d_bundles_from_s">Exchanged %d bundles to and %d bundles from %s</string>
     <string name="exchanged_d_bundles_to_and_d_bundles_from_server">Exchanged %d bundles to and %d bundles from server</string>
+    <string name="usb_device_attached_checking_for_storage_volumes">USB device attached, checking for storage volumes</string>
+    <string name="usb_connection_detected">USB connection detected</string>
+    <string name="usb_device_not_connected">USB device not connected</string>
+    <string name="acra_toast_text">Acra creating crash report!</string>
 </resources>

@@ -100,7 +100,7 @@ public class End2EndTest {
                           DDDPEMEncoder.encode(serverIdentity.getPublicKey().serialize(), ECPublicKeyType));
         serverPrivateKeyPath = keysDir.resolve(SecurityUtils.SERVER_IDENTITY_PRIVATE_KEY);
         Files.writeString(serverPrivateKeyPath, DDDPEMEncoder.encode(serverIdentity.serialize(), ECPrivateKeyType));
-        serverSignedPreKeyPath = keysDir.resolve(SecurityUtils.SERVER_SIGNEDPRE_KEY);
+        serverSignedPreKeyPath = keysDir.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY);
         Files.writeString(serverSignedPreKeyPath,
                           DDDPEMEncoder.encode(serverSignedPreKey.getPublicKey().serialize(), ECPublicKeyType));
         serverPrivatePreKeyPath = keysDir.resolve(SecurityUtils.SERVER_SIGNEDPRE_PRIVATE_KEY);

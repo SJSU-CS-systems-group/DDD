@@ -8,7 +8,8 @@ import org.whispersystems.libsignal.ecc.ECKeyPair;
 import org.whispersystems.libsignal.ecc.ECPrivateKey;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -61,9 +62,10 @@ public class TransportSecurity {
     }
 
     private void loadKeysfromFiles(Path tranportKeyPath) throws IOException, InvalidKeyException {
-        byte[] transportKeyPvt =
-                Files.readAllBytes(tranportKeyPath.resolve(SecurityUtils.TRANSPORT_IDENTITY_PRIVATE_KEY));
-        byte[] transportKeyPub = Files.readAllBytes(tranportKeyPath.resolve(SecurityUtils.TRANSPORT_IDENTITY_KEY));
+        byte[] transportKeyPvt = SecurityUtils.decodePrivateKeyFromFile(
+                tranportKeyPath.resolve(SecurityUtils.TRANSPORT_IDENTITY_PRIVATE_KEY));
+        byte[] transportKeyPub =
+                SecurityUtils.decodePublicKeyfromFile(tranportKeyPath.resolve(SecurityUtils.TRANSPORT_IDENTITY_KEY));
 
         ECPublicKey basePublicKey = Curve.decodePoint(transportKeyPvt, 0);
         ECPrivateKey basePrivateKey = Curve.decodePrivatePoint(transportKeyPub);

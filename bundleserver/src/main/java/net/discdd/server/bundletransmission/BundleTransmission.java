@@ -10,7 +10,6 @@ import net.discdd.grpc.BundleSender;
 import net.discdd.grpc.GetRecencyBlobResponse;
 import net.discdd.grpc.RecencyBlob;
 import net.discdd.grpc.RecencyBlobStatus;
-import net.discdd.model.Acknowledgement;
 import net.discdd.model.Bundle;
 import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
@@ -20,10 +19,8 @@ import net.discdd.server.bundlerouting.BundleRouting;
 import net.discdd.server.bundlerouting.ServerWindowService;
 import net.discdd.server.bundlesecurity.BundleSecurity;
 import net.discdd.server.config.BundleServerConfig;
-import net.discdd.utils.AckRecordUtils;
 import net.discdd.utils.BundleUtils;
-import net.discdd.utils.Constants;
-import org.apache.commons.io.FileUtils;
+import net.discdd.utils.FileUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -39,10 +36,8 @@ import java.security.SecureRandom;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
@@ -156,12 +151,8 @@ public class BundleTransmission {
                        "[BundleTransmission] Failed to process received bundle from: " + bundleSenderToString(sender),
                        e);
         } finally {
-            try {
-                FileUtils.delete(bundleFile);
-                FileUtils.deleteDirectory(bundle.getSource());
-            } catch (IOException e) {
-                logger.log(SEVERE, "Delete bundle file: " + bundleFile.getName() + " failed");
-            }
+            bundleFile.delete();
+            FileUtils.recursiveDelete(bundle.getSource().toPath());
         }
     }
 
@@ -244,14 +235,6 @@ public class BundleTransmission {
         Set<String> deletionSet = new HashSet<>(bundleIdsPresent);
         List<String> bundlesToSend = new ArrayList<>();
 
-        // get the latest
-        Map<String, Set<String>> clientIdToBundleIds = new HashMap<>();
-
-        for (String clientId : clientIds) {
-            clientIdToBundleIds.put(clientId, new HashSet<>());
-            logger.log(INFO, "[BT/inventBundle] Processing client " + clientId);
-        }
-
         for (String clientId : clientIds) {
             try {
                 var clientBundle = this.generateBundleForClient(clientId);
@@ -262,6 +245,10 @@ public class BundleTransmission {
         }
         bundlesToSend.forEach(deletionSet::remove);
 
+        // the bundleIdsPresent.stream().toList() doesn't actually contain the bundlesToUpload
+        // in this method it's just as a placeholder, because we don't have the bundlesToUpload here
+        // look at net.discdd.server.service.BundleServerServiceImpl.bundleInventory to see how the return object is
+        // used
         return new BundlesToExchange(bundlesToSend, bundleIdsPresent.stream().toList(), new ArrayList<>(deletionSet));
     }
 

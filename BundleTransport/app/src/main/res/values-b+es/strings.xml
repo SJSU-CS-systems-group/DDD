@@ -39,5 +39,14 @@
     <string name="local_wifi">Wi-Fi Local</string>
     <string name="permissions">Permisos</string>
     <string name="logs">Registros</string>
-
+    <string name="reload">Recargar Contadores</string>
+    <string name="check_permissions_and_that_wifi_is_enabled">Verificar permisos y que el WiFi esté habilitado</string>
+    <string name="no_usb_connection_detected">No se detectó conexión USB</string>
+    <string name="usb_device_attached_checking_for_storage_volumes">Dispositivo USB conectado, verificando volúmenes de almacenamiento</string>
+    <string name="usb_connection_detected">Conexión USB detectada</string>
+    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">El USB estaba conectado, pero no se detectó el directorio de transporte DDD</string>
+    <string name="usb_device_attached">Dispositivo USB conectado</string>
+    <string name="usb_device_detached">Dispositivo USB desconectado</string>
+    <string name="exchange_usb_data">Intercambiar Datos USB</string>
+    <string name="usb_connection_status">Estado de Conexión USB</string>
 </resources>

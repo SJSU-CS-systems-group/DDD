@@ -25,15 +25,19 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import net.discdd.client.bundlesecurity.BundleSecurity;
 import net.discdd.client.bundletransmission.BundleTransmission;
 import net.discdd.client.bundletransmission.BundleTransmission.BundleExchangeCounts;
 import net.discdd.model.ADU;
+import net.discdd.pathutils.ClientPaths;
 import net.discdd.wifidirect.WifiDirectManager;
 import net.discdd.wifidirect.WifiDirectStateListener;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
@@ -105,8 +109,22 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
         wifiDirectManager = new WifiDirectManager(this, this, false);
         wifiDirectManager.initialize();
         try {
-            bundleTransmission =
-                    new BundleTransmission(getApplicationContext().getDataDir().toPath(), this::processIncomingADU);
+            ClientPaths clientPaths = new ClientPaths(getApplicationContext().getDataDir().toPath());
+
+            //Application context
+            var resources = getApplicationContext().getResources();
+            try (InputStream inServerIdentity = resources.openRawResource(
+                    net.discdd.android_core.R.raw.server_identity); InputStream inServerSignedPre =
+                    resources.openRawResource(
+                    net.discdd.android_core.R.raw.server_signed_pre); InputStream inServerRatchet =
+                    resources.openRawResource(
+                    net.discdd.android_core.R.raw.server_ratchet)) {
+                BundleSecurity.initializeKeyPaths(clientPaths, inServerIdentity, inServerSignedPre, inServerRatchet);
+            } catch (IOException e) {
+                logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
+            }
+
+            bundleTransmission = new BundleTransmission(clientPaths, this::processIncomingADU);
         } catch (Exception e) {
             logger.log(SEVERE, "Failed to initialize BundleTransmission", e);
         }
@@ -359,5 +377,9 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
 
     public class BundleClientWifiDirectServiceBinder extends Binder {
         BundleClientWifiDirectService getService() {return BundleClientWifiDirectService.this;}
+    }
+
+    public BundleTransmission getBundleTransmission() {
+        return bundleTransmission;
     }
 }
