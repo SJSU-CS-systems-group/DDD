@@ -58,7 +58,12 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
     public static final String NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE = "background_exchange";
     public static final String NET_DISCDD_BUNDLECLIENT_DEVICEADDRESS_EXTRA = "deviceAddress";
     private static final Logger logger = Logger.getLogger(BundleClientWifiDirectService.class.getName());
-    private static final BundleExchangeCounts ZERO_BUNDLE_EXCHANGE_COUNTS = new BundleExchangeCounts(0, 0,Status.Complete,null);
+    public enum Status {
+        FAILED,
+        EMPTY,
+        COMPLETE;
+    }
+    private static final BundleExchangeCounts ZERO_BUNDLE_EXCHANGE_COUNTS = new BundleExchangeCounts(0, 0,Status.FAILED,Status.FAILED);
     private static SharedPreferences preferences;
     final AtomicReference<CompletableFuture<WifiP2pGroup>> connectionWaiter = new AtomicReference<>();
     private final IBinder binder = new BundleClientWifiDirectServiceBinder();
