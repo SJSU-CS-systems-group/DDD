@@ -302,8 +302,12 @@ public class BundleTransmission {
     public ClientRouting getClientRouting() {
         return clientRouting;
     }
-
-    public record BundleExchangeCounts(int bundlesSent, int bundlesReceived,int bundleStatus) {}
+    public enum Status {
+        FAILED,
+        EMPTY,
+        COMPLETE;
+    }
+    public record BundleExchangeCounts(int bundlesSent, int bundlesReceived, Status uploadStatus, Status downloadStatus) {}
 
     private static final int INITIAL_CONNECT_RETRIES = 8;
 
@@ -331,10 +335,12 @@ public class BundleTransmission {
      */
     public BundleExchangeCounts doExchangeWithTransport(String deviceAddress, String deviceDeviceName,
                                                         String transportAddress, int port) {
+        Status uploadStatus = Status.FAILED;
+        Status downloadStatus = Status.FAILED;
         var channel =
                 Grpc.newChannelBuilderForAddress(transportAddress, port, InsecureChannelCredentials.create()).build();
         var blockingStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
-        int bundleStatus = 0;
+
         BundleSender transportSender = null;
         try {
             if (isServerRunning(transportAddress, port)) {
@@ -359,12 +365,15 @@ public class BundleTransmission {
 
                 try {
                     processReceivedBundle(transportSender, new Bundle(bundlesDownloaded.toFile()));
+                    downloadStatus = Status.COMPLETE;
                 } catch (Exception e) {
+                    downloadStatus = Status.FAILED;
                     logger.log(WARNING, "Processing received bundle failed", e);
                 }
 
                 var stub = BundleExchangeServiceGrpc.newStub(channel);
-                bundleStatus = uploadBundle(stub);
+                uploadBundle(stub);
+
             }
         } catch (Exception e) {
             logger.log(WARNING, "Exchange failed", e);
@@ -374,10 +383,10 @@ public class BundleTransmission {
         } catch (InterruptedException e) {
             logger.log(SEVERE, "could not shutdown channel, error: " + e.getMessage() + ", cause: " + e.getCause());
         }
-        return new BundleExchangeCounts(1, 1, bundleStatus);
+        return new BundleExchangeCounts(1, 1 , uploadStatus, downloadStatus);
     }
 
-    private int uploadBundle(BundleExchangeServiceGrpc.BundleExchangeServiceStub stub) throws RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException, GeneralSecurityException {
+    private Status uploadBundle(BundleExchangeServiceGrpc.BundleExchangeServiceStub stub) throws RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException, GeneralSecurityException {
         BundleDTO toSend = generateBundleForTransmission();
 
         var bundleUploadResponseObserver = new BundleUploadResponseObserver();
@@ -406,14 +415,12 @@ public class BundleTransmission {
         uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setSender(clientSender).build());
         uploadRequestStreamObserver.onCompleted();
         bundleUploadResponseObserver.waitForCompletion(GRPC_LONG_TIMEOUT_MS);
-        // -1 Indicates failed upload
+
         if(bundleUploadResponseObserver.bundleUploadResponse == null){
             logger.log(SEVERE, "Upload failed: No response received from server.");
-            return -1;
+            return Status.FAILED;
         }
-        //0 there was a bundleUploadResponse but Status was not SUCCESS
-        //1 indicates successful
-        return bundleUploadResponseObserver.bundleUploadResponse.getStatus() == Status.SUCCESS ? 1 : 0;
+        return bundleUploadResponseObserver.bundleUploadResponse.getStatus() == Status.SUCCESS ? Status.COMPLETE: Status.EMPTY;
     }
 
     private Path downloadBundles(List<String> bundleRequests, BundleSender sender,

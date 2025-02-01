@@ -58,7 +58,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
     public static final String NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE = "background_exchange";
     public static final String NET_DISCDD_BUNDLECLIENT_DEVICEADDRESS_EXTRA = "deviceAddress";
     private static final Logger logger = Logger.getLogger(BundleClientWifiDirectService.class.getName());
-    private static final BundleExchangeCounts ZERO_BUNDLE_EXCHANGE_COUNTS = new BundleExchangeCounts(0, 0,0);
+    private static final BundleExchangeCounts ZERO_BUNDLE_EXCHANGE_COUNTS = new BundleExchangeCounts(0, 0,Status.Complete,null);
     private static SharedPreferences preferences;
     final AtomicReference<CompletableFuture<WifiP2pGroup>> connectionWaiter = new AtomicReference<>();
     private final IBinder binder = new BundleClientWifiDirectServiceBinder();
@@ -229,22 +229,25 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
                                                               7777);
 
 
-            final String text = currentBundle.bundleStatus() == 1 ? "Bundle has Been Completely Uploaded":"Bundle Upload has finished incompletely";
+            final String text1 = currentBundle.uploadStatus() == Status. ? "Bundle has Been Completely Uploaded":"Bundle Upload has failed";
+            final String text2 = currentBundle.downloadStatus() ? "Bundle has Been Completely Downloaded":"Bundle Download has failed";
+            final String text = text1 + "\n" + text2;
             Handler handler = new Handler(Looper.getMainLooper());
             handler.post(() -> {
                 Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT).show();
             });
-            logger.log(INFO, "Bundle Has Uploaded");
             return currentBundle;
 
         } catch (Throwable e) {
             logger.log(WARNING, "Failed to connect to " + device.deviceName, e);
+
         } finally {
             wifiDirectManager.disconnect();
             broadcastBundleClientWifiEvent(BundleClientWifiDirectEventType.WIFI_DIRECT_CLIENT_EXCHANGE_FINISHED,
                                            device.deviceAddress);
+
         }
-        return new BundleExchangeCounts(0, 0,-1);
+        return new BundleExchangeCounts(0,0,bundlesSent, bundlesRecieved);
     }
 
     private CompletableFuture<WifiP2pGroup> connectTo(WifiP2pDevice transport) {
