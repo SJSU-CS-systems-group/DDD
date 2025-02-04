@@ -230,8 +230,8 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
                                                               7777);
 
 
-            final String text1 = currentBundle.uploadStatus() == Status. ? "Bundle has Been Completely Uploaded":"Bundle Upload has failed";
-            final String text2 = currentBundle.downloadStatus() ? "Bundle has Been Completely Downloaded":"Bundle Download has failed";
+            final String text1 = currentBundle.uploadStatus() == Statuses.COMPLETE ? "Bundle has Been Completely Uploaded":"Bundle Upload has failed";
+            final String text2 = currentBundle.downloadStatus() == Statuses.COMPLETE ? "Bundle has Been Completely Downloaded":"Bundle Download has failed";
             final String text = text1 + "\n" + text2;
             Handler handler = new Handler(Looper.getMainLooper());
             handler.post(() -> {
