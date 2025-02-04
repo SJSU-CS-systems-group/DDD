@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 public class LocalReportSender implements ReportSender {
+    static final int MAX_REPORTS = 5;
+
     CoreConfiguration config;
 
     public LocalReportSender(CoreConfiguration coreConfiguration) {
@@ -39,11 +41,9 @@ public class LocalReportSender implements ReportSender {
         }
         File logFile = new File(String.valueOf(rootDir), "crash_report.txt");
         try {
-            // Use the core ReportFormat configuration
             String reportText = config.getReportFormat()
                     .toFormattedString(errorContent, config.getReportContent(), "\n", "\n\t", false);
-
-            // Overwrite last report
+            // Append or create the report
             if (!optimizeReports(logFile)) {
                 FileWriter writer = new FileWriter(logFile, true);
                 writer.append(reportText);
@@ -56,7 +56,7 @@ public class LocalReportSender implements ReportSender {
     }
 
     /**
-     * Does something when we have reported over five crashes
+     * Deletes old report if over five have been created
      */
     public boolean optimizeReports (File logFile) throws IOException {
         //looking for how many reports exist in singular reports file
@@ -71,9 +71,9 @@ public class LocalReportSender implements ReportSender {
                 }
             }
         }
-        //if there are multiple reports, create a temporary file and copy all lines from
-        //original file after first report recorded
-        if (reportAmount >= 1) {
+        //if max number of reports has been reached
+        if (reportAmount > MAX_REPORTS) {
+            //create a temporary file to copy all lines from original file after first report recorded
             File tempFile = new File(logFile + ".tmp");
             try (BufferedReader br = new BufferedReader(new FileReader(logFile));
                  BufferedWriter bw = new BufferedWriter(new FileWriter(tempFile))) {
@@ -89,11 +89,16 @@ public class LocalReportSender implements ReportSender {
                 }
             }
             //overwrite the original file to match the temporary file
-            try (FileWriter fw = new FileWriter(logFile, false)) {
-                fw.append((CharSequence) tempFile);
-                fw.flush();
-                fw.close();
+            try (BufferedReader br = new BufferedReader(new FileReader(tempFile));
+                 BufferedWriter bw = new BufferedWriter(new FileWriter(logFile, false))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    bw.write(line);
+                    bw.newLine();
+                }
             }
+
+            tempFile.delete();
             return true;
         }
         return false;
