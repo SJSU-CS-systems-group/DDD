@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 public class LocalReportSender implements ReportSender {
-    static final int MAX_REPORTS = 5;
+    static final int MAX_AMOUNT_REPORTS = 5;
 
     CoreConfiguration config;
 
@@ -43,22 +43,24 @@ public class LocalReportSender implements ReportSender {
         try {
             String reportText = config.getReportFormat()
                     .toFormattedString(errorContent, config.getReportContent(), "\n", "\n\t", false);
-            // Append or create the report
-            if (!optimizeReports(logFile)) {
-                FileWriter writer = new FileWriter(logFile, true);
-                writer.append(reportText);
-                writer.flush();
-                writer.close();
-            }
+            optimizeReports(logFile);
+            FileWriter writer = new FileWriter(logFile, true);
+            writer.append(reportText);
+            writer.flush();
+            writer.close();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     /**
-     * Deletes old report if over five have been created
+     * Prepares crash report file for new crash to be appended.
+     * Deletes old report if over the max amount have been created.
+     *
+     * @param logFile the file of crash reports to be optimized
+     * @return whether the
      */
-    public boolean optimizeReports (File logFile) throws IOException {
+    public void optimizeReports (File logFile) throws IOException {
         //looking for how many reports exist in singular reports file
         String reportsFooterTag, lastLineToRemove;
         reportsFooterTag = lastLineToRemove = "SHARED_PREFERENCES=default=empty";
@@ -71,9 +73,8 @@ public class LocalReportSender implements ReportSender {
                 }
             }
         }
-        //if max number of reports has been reached
-        if (reportAmount > MAX_REPORTS) {
-            //create a temporary file to copy all lines from original file after first report recorded
+        if (reportAmount > MAX_AMOUNT_REPORTS) {
+            //create a temp file to copy all reports suceeding first report
             File tempFile = new File(logFile + ".tmp");
             try (BufferedReader br = new BufferedReader(new FileReader(logFile));
                  BufferedWriter bw = new BufferedWriter(new FileWriter(tempFile))) {
@@ -97,11 +98,8 @@ public class LocalReportSender implements ReportSender {
                     bw.newLine();
                 }
             }
-
             tempFile.delete();
-            return true;
         }
-        return false;
     }
 
     @AutoService(ReportSenderFactory.class)
