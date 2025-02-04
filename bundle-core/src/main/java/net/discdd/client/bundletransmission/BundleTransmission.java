@@ -302,12 +302,12 @@ public class BundleTransmission {
     public ClientRouting getClientRouting() {
         return clientRouting;
     }
-    public enum Status {
+    public enum Statuses {
         FAILED,
         EMPTY,
         COMPLETE;
     }
-    public record BundleExchangeCounts(int bundlesSent, int bundlesReceived, Status uploadStatus, Status downloadStatus) {}
+    public record BundleExchangeCounts(int bundlesSent, int bundlesReceived, Statuses uploadStatus, Statuses downloadStatus) {}
 
     private static final int INITIAL_CONNECT_RETRIES = 8;
 
@@ -335,8 +335,8 @@ public class BundleTransmission {
      */
     public BundleExchangeCounts doExchangeWithTransport(String deviceAddress, String deviceDeviceName,
                                                         String transportAddress, int port) {
-        Status uploadStatus = Status.FAILED;
-        Status downloadStatus = Status.FAILED;
+        Statuses uploadStatus = Statuses.FAILED;
+        Statuses downloadStatus = Statuses.FAILED;
         var channel =
                 Grpc.newChannelBuilderForAddress(transportAddress, port, InsecureChannelCredentials.create()).build();
         var blockingStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
@@ -365,9 +365,9 @@ public class BundleTransmission {
 
                 try {
                     processReceivedBundle(transportSender, new Bundle(bundlesDownloaded.toFile()));
-                    downloadStatus = Status.COMPLETE;
+                    downloadStatus = Statuses.COMPLETE;
                 } catch (Exception e) {
-                    downloadStatus = Status.FAILED;
+                    downloadStatus = Statuses.FAILED;
                     logger.log(WARNING, "Processing received bundle failed", e);
                 }
 
@@ -386,7 +386,7 @@ public class BundleTransmission {
         return new BundleExchangeCounts(1, 1 , uploadStatus, downloadStatus);
     }
 
-    private Status uploadBundle(BundleExchangeServiceGrpc.BundleExchangeServiceStub stub) throws RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException, GeneralSecurityException {
+    private Statuses uploadBundle(BundleExchangeServiceGrpc.BundleExchangeServiceStub stub) throws RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException, GeneralSecurityException {
         BundleDTO toSend = generateBundleForTransmission();
 
         var bundleUploadResponseObserver = new BundleUploadResponseObserver();
@@ -418,9 +418,9 @@ public class BundleTransmission {
 
         if(bundleUploadResponseObserver.bundleUploadResponse == null){
             logger.log(SEVERE, "Upload failed: No response received from server.");
-            return Status.FAILED;
+            return Statuses.FAILED;
         }
-        return bundleUploadResponseObserver.bundleUploadResponse.getStatus() == Status.SUCCESS ? Status.COMPLETE: Status.EMPTY;
+        return bundleUploadResponseObserver.bundleUploadResponse.getStatus() == Status.SUCCESS ? Statuses.COMPLETE: Statuses.EMPTY;
     }
 
     private Path downloadBundles(List<String> bundleRequests, BundleSender sender,
