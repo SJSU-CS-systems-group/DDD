@@ -1,4 +1,6 @@
-package net.discdd.bundletransport.utils;
+package net.discdd.crashreports;
+
+import static org.acra.ACRA.log;
 
 import android.content.Context;
 
@@ -29,10 +31,13 @@ public class LocalReportSender implements ReportSender {
         //declare root dir and append target dir (toServer)
         Path rootDir = context.getApplicationContext().getExternalFilesDir(null).toPath();
         Path destDir = rootDir.resolve("BundleTransmission/server");
-        if (!destDir.toFile().exists()) {
-            destDir.toFile().mkdir();
+        if (destDir.toFile().exists()) { // if a to-server path exists, we are dealing with transport
+            log.i("ACRA local reports sender ", "We are dealing with transport");
+            rootDir = destDir;
+        } else {
+            log.i("ACRA local reports sender ", "We are dealing with client");
         }
-        File logFile = new File(String.valueOf(destDir), "crash_report.txt");
+        File logFile = new File(String.valueOf(rootDir), "crash_report.txt"); //append crash report number or time-stamp
         try {
             // Use the core ReportFormat configuration
             String reportText = config.getReportFormat()
