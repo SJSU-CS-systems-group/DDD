@@ -248,7 +248,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
                                            device.deviceAddress);
 
         }
-        return new BundleExchangeCounts(0,0,bundlesSent, bundlesRecieved);
+        return new BundleExchangeCounts(0,0,currentBundle.uploadStatus(), currentBundle.downloadStatus());
     }
 
     private CompletableFuture<WifiP2pGroup> connectTo(WifiP2pDevice transport) {
