@@ -16,19 +16,15 @@ import android.widget.Toast;
 import androidx.fragment.app.Fragment;
 
 import net.discdd.pathutils.TransportPaths;
-
+import net.discdd.transport.TransportToBundleServerManager;
 import java.io.File;
 import java.security.Security;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.SubmissionPublisher;
 import java.util.logging.Logger;
-
 import net.discdd.transport.TransportSecurity;
-import net.discdd.transport.TransportToBundleServerManager;
-
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-
 /**
  * A Fragment to manage server uploads
  */
@@ -52,8 +48,26 @@ public class ServerUploadFragment extends Fragment {
 
     public ServerUploadFragment(SubmissionPublisher<BundleTransportActivity.ConnectivityEvent> connectivityFlow, TransportPaths transportPaths, TransportSecurity transportSecurity) {
         this.connectivityFlow = connectivityFlow;
+    public static ServerUploadFragment newInstance(String transportID, TransportPaths transportPaths,
+                                                   SubmissionPublisher<BundleTransportActivity.ConnectivityEvent> connectivityFlow) {
+        ServerUploadFragment fragment = new ServerUploadFragment();
+        fragment.setTransportPaths(transportPaths);
+        fragment.setConnectivityFlow(connectivityFlow);
+        fragment.setTransportID(transportID);
+        return fragment;
+    }
+
+    public void setConnectivityFlow(SubmissionPublisher<BundleTransportActivity.ConnectivityEvent> connectivityFlow) {
+        this.connectivityFlow = connectivityFlow;
+    }
+
+    public void setTransportPaths(TransportPaths transportPaths) {
         this.transportPaths = transportPaths;
         this.transportSecurity = transportSecurity;
+    }
+
+    public void setTransportID(String transportID) {
+        this.transportID = transportID;
     }
 
     @Override
@@ -61,6 +75,8 @@ public class ServerUploadFragment extends Fragment {
         super.onCreate(savedInstanceState);
         if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
             Security.addProvider(new BouncyCastleProvider());
+        if (getArguments() != null) {
+            transportID = getArguments().getString("transportID");
         }
     }
 
@@ -74,7 +90,9 @@ public class ServerUploadFragment extends Fragment {
         saveDomainAndPortBtn = mainView.findViewById(R.id.save_domain_port);
         restoreDomainAndPortBtn = mainView.findViewById(R.id.restore_domain_port);
         connectServerBtn.setOnClickListener(view -> connectToServer());
-        connectivityFlow.consume(event -> connectServerBtn.setEnabled(event.internetAvailable()));
+        if (connectivityFlow != null) {
+            connectivityFlow.consume(event -> connectServerBtn.setEnabled(event.internetAvailable()));
+        } else {logger.warning("connectivityFlow is null");}
         serverConnnectedStatus = mainView.findViewById(R.id.server_upload_status);
 
         // save the domain and port inputs
@@ -86,11 +104,19 @@ public class ServerUploadFragment extends Fragment {
         numberBundlestoClient = mainView.findViewById(R.id.numberBundlestoClient);
         numberBundlestoServer = mainView.findViewById(R.id.numberBundlestoServer);
         reloadButton = mainView.findViewById(R.id.reloadCounts); // Assuming this ID is for the reload button
-
-        // Set click listener for the Reload button
         reloadButton.setOnClickListener(view -> {
-            numberBundlestoClient.setText(String.valueOf(transportPaths.toClientPath.toFile().list().length));
-            numberBundlestoServer.setText(String.valueOf(transportPaths.toServerPath.toFile().list().length));
+            if (transportPaths != null && transportPaths.toClientPath != null && transportPaths.toServerPath != null) {
+                String[] clientFiles = transportPaths.toClientPath.toFile().list();
+                String[] serverFiles = transportPaths.toServerPath.toFile().list();
+
+                int clientCount = (clientFiles != null) ? clientFiles.length : 0;
+                int serverCount = (serverFiles != null) ? serverFiles.length : 0;
+
+                numberBundlestoClient.setText(String.valueOf(clientCount));
+                numberBundlestoServer.setText(String.valueOf(serverCount));
+            } else {
+                logger.warning("transportPaths or its paths are null when attempting to reload counts");
+            }
         });
 
         // set saved domain and port to inputs

@@ -39,4 +39,14 @@
     <string name="local_wifi">Місцевий Wi-Fi</string>
     <string name="permissions">Дозволи</string>
     <string name="logs">Журнали</string>
+    <string name="reload">Перезавантажити лічильники</string>
+    <string name="check_permissions_and_that_wifi_is_enabled">Перевірте дозволи та чи ввімкнений Wi-Fi</string>
+    <string name="no_usb_connection_detected">USB-з\'єднання не виявлено</string>
+    <string name="usb_device_attached_checking_for_storage_volumes">Пристрій USB підключено, перевірка томів сховища</string>
+    <string name="usb_connection_detected">Виявлено USB-\'єднання</string>
+    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">USB було підключено, але каталог передачі DDD не виявлено</string>
+    <string name="usb_device_attached">Пристрій USB підключено</string>
+    <string name="usb_device_detached">Пристрій USB відключено</string>
+    <string name="exchange_usb_data">Обмін даними USB</string>
+    <string name="usb_connection_status">Статус USB-з\'єднання</string>
 </resources>

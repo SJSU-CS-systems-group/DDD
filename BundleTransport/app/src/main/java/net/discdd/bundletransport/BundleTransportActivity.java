@@ -4,11 +4,14 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.hardware.usb.UsbManager;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -39,6 +42,7 @@ import org.conscrypt.Conscrypt;
 
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
+import java.io.InputStream;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.Security;
@@ -59,18 +63,20 @@ public class BundleTransportActivity extends AppCompatActivity {
     private TitledFragment usbFrag;
     private TitledFragment logFragment;
     private TitledFragment permissionsTitledFragment;
+    private PermissionsViewModel permissionsViewModel;
 
     record ConnectivityEvent(boolean internetAvailable) {}
 
     private final SubmissionPublisher<ConnectivityEvent> connectivityEventPublisher = new SubmissionPublisher<>();
     private ViewPager2 viewPager2;
     private FragmentStateAdapter viewPager2Adapter;
-    private PermissionsViewModel permissionsViewModel;
     private PermissionsFragment permissionsFragment;
     private TabLayout tabLayout;
     private TabLayoutMediator mediator;
     private SharedPreferences sharedPreferences;
     TransportWifiServiceConnection transportWifiServiceConnection = new TransportWifiServiceConnection();
+    private BroadcastReceiver mUsbReceiver;
+    private boolean usbExists;
 
     record TitledFragment(String title, Fragment fragment) {}
 
@@ -94,6 +100,20 @@ public class BundleTransportActivity extends AppCompatActivity {
         } catch (Exception e) {
             logger.log(WARNING, "Failed to start TransportWifiDirectService", e);
         }
+        mUsbReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                handleUsbBroadcast(intent);
+            }
+        };
+        try {
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
+            filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
+            registerReceiver(mUsbReceiver, filter);
+        } catch (Exception e) {
+            logger.log(WARNING, "Failed to register usb broadcast", e);
+        }
 
         setContentView(R.layout.activity_bundle_transport);
 
@@ -108,13 +128,6 @@ public class BundleTransportActivity extends AppCompatActivity {
             logger.log(SEVERE, "[SEC]: Failed to initialize Transport Security", e);
         }
 
-//        try (InputStream inServerIdentity = resources.openRawResource(net.discdd.android_core.R.raw.server_identity)) {
-//            this.transportSecurity =
-//                    new TransportSecurity(transportPaths, inServerIdentity);
-//        } catch (IOException | InvalidKeyException | NoSuchAlgorithmException e) {
-//            logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
-//        }
-
         serverUploadFragment = new TitledFragment(getString(R.string.upload),
                                                   new ServerUploadFragment(connectivityEventPublisher, this.transportPaths, this.transportSecurity));
         transportWifiFragment = new TitledFragment(getString(R.string.local_wifi),
@@ -124,7 +137,7 @@ public class BundleTransportActivity extends AppCompatActivity {
         logFragment = new TitledFragment(getString(R.string.logs), new LogFragment());
 
         permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
-        permissionsFragment = new PermissionsFragment(permissionsViewModel);
+        permissionsFragment = PermissionsFragment.newInstance();
         permissionsTitledFragment = new TitledFragment("Permissions", permissionsFragment);
         fragments.add(permissionsTitledFragment);
 
@@ -163,6 +176,9 @@ public class BundleTransportActivity extends AppCompatActivity {
             newFragments.add(transportWifiFragment);
             newFragments.add(storageFragment);
             newFragments.add(logFragment);
+            if (usbExists) {
+                newFragments.add(usbFrag);
+            }
         } else {
                 logger.log(INFO, "ONLY PERMISSIONS TAB IS BEING SHOWN");
             newFragments.add(permissionsTitledFragment);
@@ -229,7 +245,9 @@ public class BundleTransportActivity extends AppCompatActivity {
         if (!isBackgroundWifiEnabled()) {
             stopService(new Intent(this, TransportWifiDirectService.class));
         }
-
+        if (mUsbReceiver != null) {
+            unregisterReceiver(mUsbReceiver);
+        }
         unmonitorUploadTab();
         if (transportWifiServiceConnection.btService != null) unbindService(transportWifiServiceConnection);
         super.onDestroy();
@@ -307,6 +325,21 @@ public class BundleTransportActivity extends AppCompatActivity {
                 new NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).build();
 
         connectivityManager.registerNetworkCallback(networkRequest, uploadTabMonitorCallback);
+    }
+
+    private void handleUsbBroadcast(Intent intent) {
+        String action = intent.getAction();
+        if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
+            updateUsbExists(false);
+            permissionsViewModel.getPermissionSatisfied().observe(this, this::updateTabs);
+        } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
+            updateUsbExists(true);
+            permissionsViewModel.getPermissionSatisfied().observe(this, this::updateTabs);
+        }
+    }
+
+    public void updateUsbExists(boolean result) {
+        usbExists = result;
     }
 
     static class TransportWifiServiceConnection extends CompletableFuture<TransportWifiDirectService>

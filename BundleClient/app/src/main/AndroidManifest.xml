@@ -1,16 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" /
     <uses-permission android:name="Manifest.permission.POST_NOTIFICATIONS"/>
+    <permission android:name="net.discdd.bundleclient.permission.MESSAGE_PROVIDER_WRITE" android:protectionLevel="normal" />
+    <permission android:name="net.discdd.bundleclient.permission.MESSAGE_PROVIDER_READ" android:protectionLevel="normal" />
     <uses-feature android:name="android.hardware.usb.host" />
 
     <application
-            android:icon="@drawable/bundleclient_icon"
-            android:roundIcon="@drawable/bundleclient_icon"
-            android:label="@string/app_name"
-            android:theme="@style/Theme.AppCompat.DayNight"
-            android:supportsRtl="true">
+        android:name="net.discdd.crashreports.AcraApp"
+        android:icon="@drawable/bundleclient_icon"
+        android:roundIcon="@drawable/bundleclient_icon"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.AppCompat.DayNight"
+        android:supportsRtl="true">
         <service
                 android:name=".BundleClientWifiDirectService"
                 android:enabled="true"
