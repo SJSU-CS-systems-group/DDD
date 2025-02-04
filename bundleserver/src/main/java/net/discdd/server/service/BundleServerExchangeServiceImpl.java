@@ -1,12 +1,12 @@
 package net.discdd.server.service;
 
 import io.grpc.stub.StreamObserver;
-import net.devh.boot.grpc.server.service.GrpcService;
 import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
 import net.discdd.grpc.BundleSender;
 import net.discdd.grpc.BundleSenderType;
 import net.discdd.grpc.GetRecencyBlobRequest;
 import net.discdd.grpc.GetRecencyBlobResponse;
+import net.discdd.grpc.GrpcService;
 import net.discdd.grpc.RecencyBlobStatus;
 import net.discdd.server.bundletransmission.BundleTransmission;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -19,7 +19,7 @@ import java.util.logging.Logger;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
-@GrpcService
+@GrpcService()
 public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
     private static final Logger logger = Logger.getLogger(BundleServerExchangeServiceImpl.class.getName());
     private final BundleTransmission bundleTransmission;

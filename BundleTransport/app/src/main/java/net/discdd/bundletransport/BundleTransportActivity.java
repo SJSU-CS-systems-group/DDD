@@ -30,16 +30,19 @@ import com.google.android.material.tabs.TabLayoutMediator;
 
 import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
-import net.discdd.pathutils.TransportPaths;
 import net.discdd.android.fragments.PermissionsViewModel;
+import net.discdd.pathutils.TransportPaths;
 import net.discdd.transport.TransportSecurity;
 
-import org.whispersystems.libsignal.InvalidKeyException;
+import org.bouncycastle.operator.OperatorCreationException;
+import org.conscrypt.Conscrypt;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Paths;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.Security;
+import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -79,6 +82,8 @@ public class BundleTransportActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        System.setProperty("javax.net.debug", "ssl,handshake");
+        Security.insertProviderAt(Conscrypt.newProvider(), 1);
 
         sharedPreferences = getSharedPreferences(TransportWifiDirectService.WIFI_DIRECT_PREFERENCES, MODE_PRIVATE);
 
@@ -97,17 +102,21 @@ public class BundleTransportActivity extends AppCompatActivity {
         this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
         var resources = getApplicationContext().getResources();
 
-        try (InputStream inServerIdentity = resources.openRawResource(net.discdd.android_core.R.raw.server_identity)) {
-            this.transportSecurity =
-                    new TransportSecurity(getApplicationContext().getExternalFilesDir(null).toPath(), inServerIdentity);
-        } catch (IOException | InvalidKeyException | NoSuchAlgorithmException e) {
-            logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
+        try {
+            this.transportSecurity = new TransportSecurity(transportPaths);
+        } catch (IOException | NoSuchAlgorithmException | CertificateException | OperatorCreationException | NoSuchProviderException | InvalidAlgorithmParameterException e) {
+            logger.log(SEVERE, "[SEC]: Failed to initialize Transport Security", e);
         }
 
+//        try (InputStream inServerIdentity = resources.openRawResource(net.discdd.android_core.R.raw.server_identity)) {
+//            this.transportSecurity =
+//                    new TransportSecurity(transportPaths, inServerIdentity);
+//        } catch (IOException | InvalidKeyException | NoSuchAlgorithmException e) {
+//            logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
+//        }
+
         serverUploadFragment = new TitledFragment(getString(R.string.upload),
-                                                  new ServerUploadFragment(connectivityEventPublisher,
-                                                                           transportSecurity.getTransportID(),
-                                                                           this.transportPaths));
+                                                  new ServerUploadFragment(connectivityEventPublisher, this.transportPaths, this.transportSecurity));
         transportWifiFragment = new TitledFragment(getString(R.string.local_wifi),
                                                    new TransportWifiDirectFragment(this.transportPaths));
         storageFragment = new TitledFragment("Storage Settings", new StorageFragment());
@@ -155,7 +164,7 @@ public class BundleTransportActivity extends AppCompatActivity {
             newFragments.add(storageFragment);
             newFragments.add(logFragment);
         } else {
-            logger.log(INFO, "ONLY PERMISSIONS TAB IS BEING SHOWN");
+                logger.log(INFO, "ONLY PERMISSIONS TAB IS BEING SHOWN");
             newFragments.add(permissionsTitledFragment);
         }
 

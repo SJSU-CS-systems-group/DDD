@@ -7,6 +7,7 @@ import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
 import net.discdd.pathutils.ClientPaths;
 import net.discdd.utils.Constants;
+import org.bouncycastle.operator.OperatorCreationException;
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.InvalidMessageException;
@@ -17,10 +18,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.security.GeneralSecurityException;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.cert.CertificateException;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
@@ -35,7 +38,7 @@ public class BundleSecurity {
     private int counter = 0;
 
     public BundleSecurity(ClientPaths clientPaths) throws IOException, InvalidKeyException,
-            WindowExceptions.BufferOverflow, NoSuchAlgorithmException {
+            WindowExceptions.BufferOverflow, NoSuchAlgorithmException, InvalidAlgorithmParameterException, CertificateException, NoSuchProviderException, OperatorCreationException {
         this.clientPaths = clientPaths;
 
         this.counter = Integer.valueOf(Files.readAllLines(clientPaths.bundleIdNextCounter).get(0));

@@ -13,7 +13,9 @@ import net.discdd.grpc.ServiceAdapterServiceGrpc;
 import net.discdd.model.ADU;
 import net.discdd.server.repository.RegisteredAppAdapterRepository;
 import net.discdd.server.repository.entity.RegisteredAppAdapter;
+import net.discdd.tls.DDDTLSUtil;
 import net.discdd.utils.BundleUtils;
+import org.bouncycastle.operator.OperatorCreationException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.io.TempDir;
@@ -44,7 +46,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.security.InvalidAlgorithmParameterException;
+import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
 import java.util.Base64;
@@ -80,11 +86,15 @@ public class End2EndTest {
     private static Path serverPrivatePreKeyPath;
     static Path serverRatchetKeyPath;
     private static Path serverPrivateRatchetKeyPath;
+    private static Path serverCertPath;
+    private static Path serverJavaPubPath;
+    private static Path serverJavaPvtPath;
+
     @Value("${grpc.server.port}")
     protected int BUNDLESERVER_GRPC_PORT;
 
     @BeforeAll
-    static void setup() throws IOException, NoSuchAlgorithmException, InvalidKeyException {
+    static void setup() throws IOException, NoSuchAlgorithmException, InvalidKeyException, CertificateException, OperatorCreationException, NoSuchProviderException, InvalidAlgorithmParameterException {
         System.setProperty("bundle-server.bundle-store-root", tempRootDir.toString() + '/');
         System.setProperty("serviceadapter.datacheck.interval", "5s");
 
@@ -95,6 +105,10 @@ public class End2EndTest {
         serverIdentity = new IdentityKeyPair(new IdentityKey(keyPair.getPublicKey()), keyPair.getPrivateKey());
         ECKeyPair serverSignedPreKey = Curve.generateKeyPair();
         ECKeyPair serverRatchetKey = Curve.generateKeyPair();
+        KeyPair serverJavaKeyPair = DDDTLSUtil.generateKeyPair();
+        X509Certificate serverCert = DDDTLSUtil.getSelfSignedCertificate(serverJavaKeyPair,
+                                                                        DDDTLSUtil.publicKeyToName(serverJavaKeyPair.getPublic()));
+
         serverIdentityKeyPath = keysDir.resolve(SecurityUtils.SERVER_IDENTITY_KEY);
         Files.writeString(serverIdentityKeyPath,
                           DDDPEMEncoder.encode(serverIdentity.getPublicKey().serialize(), ECPublicKeyType));
@@ -112,6 +126,11 @@ public class End2EndTest {
         serverPrivateRatchetKeyPath = keysDir.resolve(SecurityUtils.SERVER_RATCHET_PRIVATE_KEY);
         Files.writeString(serverPrivateRatchetKeyPath,
                           DDDPEMEncoder.encode(serverRatchetKey.getPrivateKey().serialize(), ECPrivateKeyType));
+        serverCertPath = keysDir.resolve(SecurityUtils.SERVER_CERT);
+        DDDTLSUtil.writeCertToFile(serverCert, serverCertPath);
+        serverJavaPubPath = keysDir.resolve(SecurityUtils.SERVER_JAVA_PUBLIC_KEY);
+        serverJavaPvtPath = keysDir.resolve(SecurityUtils.SERVER_JAVA_PRIVATE_KEY);
+        DDDTLSUtil.writeKeyPairToFile(serverJavaKeyPair, serverJavaPubPath, serverJavaPvtPath);
 
         // set up the client keys
         // create the keypairs for the client
@@ -153,7 +172,6 @@ public class End2EndTest {
         String secretKey = Base64.getUrlEncoder().encodeToString(agreement);
 
         return SecurityUtils.encryptAesCbcPkcs5(secretKey, bundleID);
-
     }
 
     static int jarCounter = 0;

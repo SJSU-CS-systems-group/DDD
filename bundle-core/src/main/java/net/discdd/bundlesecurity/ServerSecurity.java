@@ -1,7 +1,9 @@
 package net.discdd.bundlesecurity;
 
+import lombok.Getter;
 import lombok.NonNull;
 import net.discdd.bundlesecurity.SecurityUtils.ClientSession;
+import net.discdd.tls.DDDTLSUtil;
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
@@ -30,7 +32,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
+import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.X509Certificate;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.logging.Logger;
@@ -56,6 +60,11 @@ public class ServerSecurity {
     private Path clientRootPath;
     private SignalProtocolStore serverProtocolStore;
 
+    @Getter
+    private X509Certificate serverCert;
+    @Getter
+    private KeyPair javaKeyPair;
+
     /* Initializes Security Module on the server
      * Parameters:
      *      serverKeyPath:   Path to store the generated Keys
@@ -69,7 +78,8 @@ public class ServerSecurity {
             loadKeysfromFiles(serverKeyPath);
             this.serverRootPath = serverRootPath;
             serverProtocolStore = SecurityUtils.createInMemorySignalProtocolStore();
-
+            serverCert = DDDTLSUtil.loadCertFromFile(serverKeyPath.resolve(SecurityUtils.SERVER_CERT));
+            javaKeyPair = DDDTLSUtil.loadKeyPairfromFiles(serverKeyPath.resolve(SecurityUtils.SERVER_JAVA_PUBLIC_KEY), serverKeyPath.resolve(SecurityUtils.SERVER_JAVA_PRIVATE_KEY));
             String name = DEFAULT_SERVER_NAME;
             name = SecurityUtils.generateID(ourIdentityKeyPair.getPublicKey().serialize());
             ourAddress = new SignalProtocolAddress(name, ServerDeviceID);
@@ -78,8 +88,6 @@ public class ServerSecurity {
             clientRootPath = serverRootPath.resolve("Clients");
             clientRootPath.toFile().mkdirs();
         } catch (Exception e) {
-//            logger.log(SEVERE,(e.getMessage());
-
             e.printStackTrace();
             logger.log(SEVERE, String.format(
                     "Error loading server keys. Ensure the following key files exist in your application.yml's " +
@@ -207,6 +215,7 @@ public class ServerSecurity {
                         .setTheirBaseKey(clientSession.BaseKey).create();
         RatchetingSession.initializeSession(serverSessionState, parameters);
     }
+
 
     @NonNull
     private ClientSession getClientSession(String clientID, Path keyPathIfNeeded) throws InvalidKeyException,

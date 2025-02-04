@@ -18,12 +18,16 @@ import androidx.fragment.app.Fragment;
 import net.discdd.pathutils.TransportPaths;
 
 import java.io.File;
+import java.security.Security;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.SubmissionPublisher;
 import java.util.logging.Logger;
 
+import net.discdd.transport.TransportSecurity;
 import net.discdd.transport.TransportToBundleServerManager;
+
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 /**
  * A Fragment to manage server uploads
@@ -41,20 +45,23 @@ public class ServerUploadFragment extends Fragment {
     private String transportID;
     private ExecutorService executor = Executors.newFixedThreadPool(2);
     private TransportPaths transportPaths;
+    private TransportSecurity transportSecurity;
     private TextView numberBundlestoClient;
     private TextView numberBundlestoServer;
     private Button reloadButton;
 
-    public ServerUploadFragment(SubmissionPublisher<BundleTransportActivity.ConnectivityEvent> connectivityFlow,
-                                String transportID, TransportPaths transportPaths) {
+    public ServerUploadFragment(SubmissionPublisher<BundleTransportActivity.ConnectivityEvent> connectivityFlow, TransportPaths transportPaths, TransportSecurity transportSecurity) {
         this.connectivityFlow = connectivityFlow;
-        this.transportID = transportID;
         this.transportPaths = transportPaths;
+        this.transportSecurity = transportSecurity;
     }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+            Security.addProvider(new BouncyCastleProvider());
+        }
     }
 
     @Override
@@ -106,7 +113,7 @@ public class ServerUploadFragment extends Fragment {
                     "Initiating server exchange to " + serverDomain + ":" + serverPort + "...\n"));
 
             TransportToBundleServerManager transportToBundleServerManager =
-                    new TransportToBundleServerManager(transportPaths, serverDomain, serverPort,
+                    new TransportToBundleServerManager(transportPaths, transportSecurity, serverDomain, serverPort,
                                                        this::connectToServerComplete,
                                                        e -> connectToServerError(e, serverDomain + ":" + serverPort));
             executor.execute(transportToBundleServerManager);
