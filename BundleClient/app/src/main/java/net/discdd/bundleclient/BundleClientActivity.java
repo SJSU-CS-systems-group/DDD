@@ -35,6 +35,9 @@ import net.discdd.android.fragments.PermissionsFragment;
 import net.discdd.android.fragments.PermissionsViewModel;
 import net.discdd.client.bundlerouting.ClientWindow;
 
+import org.conscrypt.Conscrypt;
+
+import java.security.Security;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;

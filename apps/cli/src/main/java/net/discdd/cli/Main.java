@@ -1,12 +1,11 @@
 package net.discdd.cli;
 
-import java.util.concurrent.Callable;
-
-import net.discdd.cli.DecryptBundle;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
-@Command(name = "cli", subcommands = { DecryptBundle.class, EncryptBundle.class })
+import java.util.concurrent.Callable;
+
+@Command(name = "cli", subcommands = { DecryptBundle.class, EncryptBundle.class, SelfSignedCertCreator.class, JavaKeyCreator.class })
 public class Main implements Callable<Integer> {
 
     @Override
