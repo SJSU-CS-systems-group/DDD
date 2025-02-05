@@ -184,12 +184,6 @@ public class BundleClientActivity extends AppCompatActivity {
     }
 
     @Override
-    public void onPause() {
-        super.onPause();
-        checkRuntimePermission();
-    }
-
-    @Override
     public void onDestroy() {
         if (!sharedPreferences.getBoolean(
                 BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, false)) {
