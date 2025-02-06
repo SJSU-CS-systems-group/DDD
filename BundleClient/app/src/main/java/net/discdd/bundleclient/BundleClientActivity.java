@@ -3,6 +3,7 @@ package net.discdd.bundleclient;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 
+import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -10,7 +11,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
-import android.graphics.Color;
+import android.content.pm.PackageManager;
 import android.hardware.usb.UsbManager;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
@@ -20,6 +21,7 @@ import android.os.Looper;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
@@ -35,7 +37,6 @@ import net.discdd.client.bundlerouting.ClientWindow;
 
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 public class BundleClientActivity extends AppCompatActivity {
@@ -179,11 +180,7 @@ public class BundleClientActivity extends AppCompatActivity {
     @Override
     public void onResume() {
         super.onResume();
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
+        checkRuntimePermission();
     }
 
     @Override
@@ -233,5 +230,11 @@ public class BundleClientActivity extends AppCompatActivity {
 
     public void updateUsbExists(boolean result) {
         usbExists = result;
+    }
+
+    public void checkRuntimePermission() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.NEARBY_WIFI_DEVICES) == PackageManager.PERMISSION_GRANTED) {
+            updateTabs(true);
+        }
     }
 }
