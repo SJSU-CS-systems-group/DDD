@@ -10,4 +10,6 @@
     <string name="any_emoji">*</string>
     <string name="generic_action_button">Action</string>
     <string name="needed_permissions">Needed Permissions</string>
+    <string name="dialog_message" translatable="false">Please enable permission in Settings. Navigate to Settings -> Apps -> All apps -> Bundle Client -> Permissions -> Nearby Devices</string>
+    <string name="dialog_btn_text" translatable="false">Continue</string>
 </resources>
