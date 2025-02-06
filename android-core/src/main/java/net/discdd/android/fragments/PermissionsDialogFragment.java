@@ -16,8 +16,7 @@ public class PermissionsDialogFragment extends DialogFragment {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         builder.setMessage(R.string.dialog_message)
                 .setNeutralButton(R.string.dialog_btn_text,
-                                  (dialog, id) -> System.out.println("dialog clicked."));
+                                  (dialog, id) -> System.out.println("dialog dismissed."));
         return builder.create();
     }
-
 }
