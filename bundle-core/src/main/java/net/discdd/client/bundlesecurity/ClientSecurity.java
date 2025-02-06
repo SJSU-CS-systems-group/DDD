@@ -1,7 +1,10 @@
 package net.discdd.client.bundlesecurity;
 
+import lombok.Getter;
 import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.pathutils.ClientPaths;
+import net.discdd.tls.DDDTLSUtil;
+import org.bouncycastle.operator.OperatorCreationException;
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
@@ -31,7 +34,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
 import java.util.logging.Logger;
 
@@ -62,9 +71,13 @@ public class ClientSecurity {
 
     private String clientID;
     private ClientPaths clientPaths;
+    @Getter
+    private KeyPair clientJavaKeyPair;
+    @Getter
+    private X509Certificate clientCert;
 
     ClientSecurity(int deviceID, ClientPaths clientPaths) throws InvalidKeyException, IOException,
-            NoSuchAlgorithmException {
+            NoSuchAlgorithmException, InvalidAlgorithmParameterException, NoSuchProviderException, CertificateException, OperatorCreationException {
         this.clientPaths = clientPaths;
 
         // Read Server Keys from specified directory
@@ -72,6 +85,8 @@ public class ClientSecurity {
 
         try {
             loadKeysfromFiles(clientPaths.clientKeyPath);
+            clientJavaKeyPair = DDDTLSUtil.loadKeyPairfromFiles(clientPaths.clientJavaPublicKeyPath, clientPaths.clientJavaPrivateKeyPath);
+            clientCert = DDDTLSUtil.loadCertFromFile(clientPaths.clientCertPath);
             logger.log(FINE, "[Sec]: Using Existing Keys");
         } catch (IOException | InvalidKeyException e) {
             logger.log(WARNING, "[Sec]: Error Loading Keys from files, generating new keys instead");
@@ -79,10 +94,19 @@ public class ClientSecurity {
             ECKeyPair identityKeyPair = Curve.generateKeyPair();
             ourIdentityKeyPair = new IdentityKeyPair(new IdentityKey(identityKeyPair.getPublicKey()),
                                                      identityKeyPair.getPrivateKey());
-
             ourBaseKey = Curve.generateKeyPair();
             // Write generated keys to files
             writeKeysToFiles(clientPaths.clientKeyPath, true);
+
+            // Create Client's Java Key pairs
+            clientJavaKeyPair = DDDTLSUtil.generateKeyPair();
+            DDDTLSUtil.writeKeyPairToFile(clientJavaKeyPair, clientPaths.clientJavaPublicKeyPath, clientPaths.clientJavaPrivateKeyPath);
+
+            // Create Client's Certificate
+            clientCert = DDDTLSUtil.getSelfSignedCertificate(clientJavaKeyPair, DDDTLSUtil.publicKeyToName(clientJavaKeyPair.getPublic()));
+            DDDTLSUtil.writeCertToFile(clientCert, clientPaths.clientCertPath);
+        } catch (InvalidKeySpecException | RuntimeException | java.security.InvalidKeyException | NoSuchProviderException | CertificateException e) {
+            throw new RuntimeException(e);
         }
 
         clientProtocolStore = SecurityUtils.createInMemorySignalProtocolStore();
@@ -198,7 +222,7 @@ public class ClientSecurity {
     /* Add Headers (Identity, Base Key & Bundle ID) to Bundle Path */
 
     /* Initialize or get previous client Security Instance */
-    public static synchronized ClientSecurity initializeInstance(int deviceID, ClientPaths clientPaths) throws IOException, NoSuchAlgorithmException, InvalidKeyException {
+    public static synchronized ClientSecurity initializeInstance(int deviceID, ClientPaths clientPaths) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, CertificateException, NoSuchProviderException, OperatorCreationException {
         if (singleClientInstance == null) {
             singleClientInstance = new ClientSecurity(deviceID, clientPaths);
         } else {

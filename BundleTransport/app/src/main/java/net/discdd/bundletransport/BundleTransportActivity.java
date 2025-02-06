@@ -40,11 +40,16 @@ import net.discdd.android.fragments.PermissionsViewModel;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.transport.TransportSecurity;
 
-import org.whispersystems.libsignal.InvalidKeyException;
+import org.bouncycastle.operator.OperatorCreationException;
+import org.conscrypt.Conscrypt;
 
 import java.io.IOException;
+import java.security.InvalidAlgorithmParameterException;
 import java.io.InputStream;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.Security;
+import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -86,6 +91,8 @@ public class BundleTransportActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        System.setProperty("javax.net.debug", "ssl,handshake");
+        Security.insertProviderAt(Conscrypt.newProvider(), 1);
 
         sharedPreferences = getSharedPreferences(TransportWifiDirectService.WIFI_DIRECT_PREFERENCES, MODE_PRIVATE);
 
@@ -118,22 +125,19 @@ public class BundleTransportActivity extends AppCompatActivity {
         this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
         var resources = getApplicationContext().getResources();
 
-        try (InputStream inServerIdentity = resources.openRawResource(net.discdd.android_core.R.raw.server_identity)) {
-            this.transportSecurity =
-                    new TransportSecurity(getApplicationContext().getExternalFilesDir(null).toPath(), inServerIdentity);
-        } catch (IOException | InvalidKeyException | NoSuchAlgorithmException e) {
-            logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
+        try {
+            this.transportSecurity = new TransportSecurity(transportPaths);
+        } catch (IOException | NoSuchAlgorithmException | CertificateException | OperatorCreationException | NoSuchProviderException | InvalidAlgorithmParameterException e) {
+            logger.log(SEVERE, "[SEC]: Failed to initialize Transport Security", e);
         }
 
-        ServerUploadFragment serverFrag =
-                ServerUploadFragment.newInstance(transportSecurity.getTransportID(), transportPaths,
-                                                 connectivityEventPublisher);
-        serverUploadFragment = new TitledFragment(getString(R.string.upload), serverFrag);
-        TransportWifiDirectFragment transportFrag = TransportWifiDirectFragment.newInstance(transportPaths);
-        transportWifiFragment = new TitledFragment(getString(R.string.local_wifi), transportFrag);
-        storageFragment = new TitledFragment("Storage Settings", StorageFragment.newInstance());
-        usbFrag = new TitledFragment("USB", UsbFragment.newInstance(transportPaths));
-        logFragment = new TitledFragment(getString(R.string.logs), LogFragment.newInstance());
+        serverUploadFragment = new TitledFragment(getString(R.string.upload),
+                                                  new ServerUploadFragment(connectivityEventPublisher, this.transportPaths, this.transportSecurity));
+        transportWifiFragment = new TitledFragment(getString(R.string.local_wifi),
+                                                   new TransportWifiDirectFragment(this.transportPaths));
+        storageFragment = new TitledFragment("Storage Settings", new StorageFragment());
+        usbFrag = new TitledFragment("USB", new UsbFragment(transportPaths));
+        logFragment = new TitledFragment(getString(R.string.logs), new LogFragment());
 
         permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
         permissionsFragment = PermissionsFragment.newInstance();
@@ -179,7 +183,7 @@ public class BundleTransportActivity extends AppCompatActivity {
                 newFragments.add(usbFrag);
             }
         } else {
-            logger.log(INFO, "ONLY PERMISSIONS TAB IS BEING SHOWN");
+                logger.log(INFO, "ONLY PERMISSIONS TAB IS BEING SHOWN");
             newFragments.add(permissionsTitledFragment);
         }
 

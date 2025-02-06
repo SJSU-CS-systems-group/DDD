@@ -70,6 +70,9 @@ public class ClientPaths {
     public final Path outServerIdentity;
     public final Path outServerSignedPre;
     public final Path outServerRatchet;
+    public final Path clientJavaPublicKeyPath;
+    public final Path clientJavaPrivateKeyPath;
+    public final Path clientCertPath;
 
     public ClientPaths(Path rootDir) throws IOException {
         // Bundle generation directory
@@ -133,5 +136,8 @@ public class ClientPaths {
         // client security
         clientKeyPath = bundleSecurityPath.resolve(SecurityUtils.CLIENT_KEY_PATH);
         sessionStorePath = bundleSecurityPath.resolve(SecurityUtils.SESSION_STORE_FILE);
+        clientJavaPublicKeyPath = bundleSecurityPath.resolve(SecurityUtils.CLIENT_JAVA_PUBLIC_KEY);
+        clientJavaPrivateKeyPath = bundleSecurityPath.resolve(SecurityUtils.CLIENT_JAVA_PRIVATE_KEY);
+        clientCertPath = bundleSecurityPath.resolve(SecurityUtils.CLIENT_CERT);
     }
 }

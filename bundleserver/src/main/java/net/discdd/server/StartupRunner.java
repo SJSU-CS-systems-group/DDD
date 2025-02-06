@@ -16,7 +16,6 @@ public class StartupRunner implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         this.setUpFileStore();
-
     }
 
     private void setUpFileStore() {

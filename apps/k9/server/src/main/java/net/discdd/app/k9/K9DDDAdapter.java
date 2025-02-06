@@ -2,11 +2,11 @@ package net.discdd.app.k9;
 
 import com.google.protobuf.ByteString;
 import io.grpc.stub.StreamObserver;
-import net.devh.boot.grpc.server.service.GrpcService;
 import net.discdd.app.k9.utils.MailUtils;
 import net.discdd.grpc.AppDataUnit;
 import net.discdd.grpc.ExchangeADUsRequest;
 import net.discdd.grpc.ExchangeADUsResponse;
+import net.discdd.grpc.GrpcService;
 import net.discdd.grpc.PendingDataCheckRequest;
 import net.discdd.grpc.PendingDataCheckResponse;
 import net.discdd.grpc.ServiceAdapterServiceGrpc;
@@ -20,7 +20,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.*;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 @GrpcService
 public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServiceImplBase {
@@ -30,7 +32,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
     private final String APP_ID = "com.fsck.k9.debug";
     private final String RAVLY_DOMAIN = "ravlykmail.com";
 
-    public K9DDDAdapter(@Value("${k9-server.root-dir}") Path rootDir) {
+    public K9DDDAdapter(@Value("${k9-server.rootdir}") Path rootDir) {
         sendADUsStorage = new StoreADUs(rootDir.resolve("send"), true);
     }
 

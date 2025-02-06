@@ -1,76 +1,63 @@
 package net.discdd.transport;
 
+import lombok.Getter;
 import net.discdd.bundlesecurity.SecurityUtils;
+import net.discdd.pathutils.TransportPaths;
+import net.discdd.tls.DDDTLSUtil;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.operator.OperatorCreationException;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.ecc.Curve;
-import org.whispersystems.libsignal.ecc.ECKeyPair;
-import org.whispersystems.libsignal.ecc.ECPrivateKey;
-import org.whispersystems.libsignal.ecc.ECPublicKey;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.Security;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.security.spec.InvalidKeySpecException;
 import java.util.logging.Logger;
 
+
 public class TransportSecurity {
+    static {
+        Security.addProvider(new BouncyCastleProvider());
+    }
+
     private static final Logger logger = Logger.getLogger(TransportSecurity.class.getName());
-    public static final String BUNDLE_SECURITY_DIR = "BundleSecurity";
-    public static final String SERVER_IDENTITY_PUB = "server_identity.pub";
-    public static final String SERVER_KEYS_SUBDIR = "Server_Keys";
     private IdentityKey theirIdentityKey;
-    private ECKeyPair transportKeyPair;
+    @Getter
+    private KeyPair transportKeyPair;
+    @Getter
     private String transportID;
+    @Getter
+    private X509Certificate transportCert;
+    private static TransportPaths transportPaths;
 
-    public TransportSecurity(Path transportRootPath, InputStream inServerIdentity) throws IOException,
-            InvalidKeyException, NoSuchAlgorithmException {
-        var tranportKeyPath =
-                transportRootPath.resolve(Paths.get(BUNDLE_SECURITY_DIR, SecurityUtils.TRANSPORT_KEY_PATH));
-
-        var serverKeyPath = transportRootPath.resolve(Paths.get(BUNDLE_SECURITY_DIR, SERVER_KEYS_SUBDIR));
-
-        initializeServerKeyPaths(inServerIdentity, transportRootPath);
-        InitializeServerKeysFromFiles(serverKeyPath);
+    public TransportSecurity(TransportPaths transportPaths) throws IOException, NoSuchAlgorithmException, CertificateException, OperatorCreationException, NoSuchProviderException, InvalidAlgorithmParameterException {
+        this.transportPaths = transportPaths;
 
         try {
-            loadKeysfromFiles(tranportKeyPath);
-        } catch (IOException | InvalidKeyException e) {
+            transportKeyPair = DDDTLSUtil.loadKeyPairfromFiles(transportPaths.publicKeyPath, transportPaths.privateKeyPath);
+            transportCert = DDDTLSUtil.loadCertFromFile(transportPaths.certPath);
+        } catch (IOException | java.security.InvalidKeyException | InvalidKeySpecException e) {
             logger.severe("Error loading transport keys from files");
-            transportKeyPair = Curve.generateKeyPair();
-            writeKeysToFiles(tranportKeyPath, transportKeyPair);
+
+            transportKeyPair = DDDTLSUtil.generateKeyPair();
+            DDDTLSUtil.writeKeyPairToFile(transportKeyPair, transportPaths.publicKeyPath, transportPaths.privateKeyPath);
+
+            transportCert = DDDTLSUtil.getSelfSignedCertificate(transportKeyPair, DDDTLSUtil.publicKeyToName(transportKeyPair.getPublic()));
+            DDDTLSUtil.writeCertToFile(transportCert, transportPaths.certPath);
         }
 
         // Create Transport ID
-        this.transportID = SecurityUtils.generateID(transportKeyPair.getPublicKey().serialize());
-    }
-
-    private Path[] writeKeysToFiles(Path path, ECKeyPair transportKeyPair) throws IOException {
-        /* Create Directory if it does not exist */
-        path.toFile().mkdirs();
-        Path[] identityKeyPaths = { path.resolve(SecurityUtils.TRANSPORT_IDENTITY_KEY),
-                path.resolve(SecurityUtils.TRANSPORT_IDENTITY_PRIVATE_KEY) };
-        Files.write(path.resolve(SecurityUtils.TRANSPORT_IDENTITY_PRIVATE_KEY),
-                    transportKeyPair.getPrivateKey().serialize());
-
-        SecurityUtils.createEncodedPublicKeyFile(transportKeyPair.getPublicKey(), identityKeyPaths[0]);
-
-        return identityKeyPaths;
-    }
-
-    private void loadKeysfromFiles(Path tranportKeyPath) throws IOException, InvalidKeyException {
-        byte[] transportKeyPvt = SecurityUtils.decodePrivateKeyFromFile(
-                tranportKeyPath.resolve(SecurityUtils.TRANSPORT_IDENTITY_PRIVATE_KEY));
-        byte[] transportKeyPub =
-                SecurityUtils.decodePublicKeyfromFile(tranportKeyPath.resolve(SecurityUtils.TRANSPORT_IDENTITY_KEY));
-
-        ECPublicKey basePublicKey = Curve.decodePoint(transportKeyPvt, 0);
-        ECPrivateKey basePrivateKey = Curve.decodePrivatePoint(transportKeyPub);
-
-        transportKeyPair = new ECKeyPair(basePublicKey, basePrivateKey);
+        this.transportID = DDDTLSUtil.publicKeyToName(transportKeyPair.getPublic());
     }
 
     private void InitializeServerKeysFromFiles(Path path) throws InvalidKeyException, IOException {
@@ -80,26 +67,10 @@ public class TransportSecurity {
         theirIdentityKey = new IdentityKey(serverIdentityKey, 0);
     }
 
-    public static void initializeServerKeyPaths(InputStream inServerIdentity, Path rootFolder) throws IOException {
-        var bundleSecurityPath = rootFolder.resolve(BUNDLE_SECURITY_DIR);
-        var serverKeyPath = bundleSecurityPath.resolve(SERVER_KEYS_SUBDIR);
-        serverKeyPath.toFile().mkdirs();
-
-        Path outServerIdentity = serverKeyPath.resolve(SERVER_IDENTITY_PUB);
+    public static void initializeServerKeyPaths(InputStream inServerIdentity) throws IOException {
+        Path outServerIdentity = transportPaths.serverKeyPath.resolve(SecurityUtils.SERVER_IDENTITY_KEY);
 
         Files.copy(inServerIdentity, outServerIdentity, StandardCopyOption.REPLACE_EXISTING);
         inServerIdentity.close();
-    }
-
-    public ECPublicKey getServerPublicKey() {
-        return theirIdentityKey.getPublicKey();
-    }
-
-    public ECPublicKey getTransportPublicKey() {
-        return transportKeyPair.getPublicKey();
-    }
-
-    public String getTransportID() {
-        return this.transportID;
     }
 }

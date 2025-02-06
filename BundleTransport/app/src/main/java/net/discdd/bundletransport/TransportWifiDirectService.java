@@ -24,9 +24,17 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import net.discdd.android.fragments.LogFragment;
 import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
 import net.discdd.pathutils.TransportPaths;
+import net.discdd.transport.TransportSecurity;
 import net.discdd.wifidirect.WifiDirectManager;
 import net.discdd.wifidirect.WifiDirectStateListener;
 
+import org.bouncycastle.operator.OperatorCreationException;
+
+import java.io.IOException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.cert.CertificateException;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -56,6 +64,7 @@ public class TransportWifiDirectService extends Service
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
+
         super.onStartCommand(intent, flags, startId);
         // TransportWifiDirectService doesn't use LogFragment directly, but we do want our
         // logs to go to its logger
@@ -119,13 +128,17 @@ public class TransportWifiDirectService extends Service
                 } else {
                     appendToClientLog(String.format("%d clients connected. Starting gRPC server",
                                                     groupInfo.getClientList().size()));
-                    startRpcServer();
+                    try {
+                        startRpcServer();
+                    } catch (Exception e) {
+                        logger.log(SEVERE, "Failed to start gRPC server", e);
+                    }
                 }
         }
         broadcastWifiEvent(action);
     }
 
-    private void startRpcServer() {
+    private void startRpcServer() throws Exception {
         synchronized (grpcServer) {
             if (grpcServer.isShutdown()) {
                 appendToClientLog("Starting gRPC server");
