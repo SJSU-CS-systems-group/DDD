@@ -122,6 +122,10 @@ public class BundleClientActivity extends AppCompatActivity {
         serverFragment = ServerFragment.newInstance();
         logFragment = LogFragment.newInstance();
         fragmentsWithTitles.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
+        fragmentsWithTitles.add(new FragmentWithTitle(new UsbFragment(), getString(R.string.usb_tab)));
+        fragmentsWithTitles.add(new FragmentWithTitle(new ServerFragment(), getString(R.string.server_tab)));
+        fragmentsWithTitles.add(new FragmentWithTitle(new LogFragment(), getString(R.string.logs_tab)));
+        fragmentsWithTitles.add(new FragmentWithTitle(new BundleManagerFragment(), "BM"));
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
         //set up view
