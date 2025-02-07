@@ -33,11 +33,10 @@ import java.util.logging.Logger;
 public class PermissionsFragment extends Fragment {
     final static private Logger logger = Logger.getLogger(PermissionsFragment.class.getName());
     private final HashMap<String, PermissionsAdapter.PermissionViewHolder> neededPermissions = new HashMap<>();
-    private ActivityResultLauncher<String> requestPermissionLauncher;
-    private boolean promptPending;
     private Consumer<HashSet<String>> permissionWatcher;
     private PermissionsViewModel permissionsViewModel;
     private final HashSet<String> requiredPermissions = new HashSet<>();
+    private final HashSet<String> grantedPermissions = new HashSet<>();
 
     public static PermissionsFragment newInstance() {
         return new PermissionsFragment();
@@ -81,45 +80,30 @@ public class PermissionsFragment extends Fragment {
         permissionsViewModel.updatePermissions(satisfied);
     }
 
-    private ActivityResultLauncher<String[]> activityResultLauncher =
+    private final ActivityResultLauncher<String[]> activityResultLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(),
-                                      new ActivityResultCallback<Map<String, Boolean>>() {
-                                          @Override
-                                          public void onActivityResult(Map<String, Boolean> results) {
-                                              // go through the permissions and result pairs
-                                              AtomicInteger unresolvedPermissionCount = new AtomicInteger();
-                                              results.forEach((p, r) -> {
-                                                  logger.log(Level.INFO, p + " " + (r ? "granted" : "denied"));
-                                                  var view = neededPermissions.remove(p);
-                                                  if (view != null) {
-                                                      view.permissionCheckbox.setChecked(r);
-                                                  }
-                                                  if (r) {
-                                                      trackGrantedPermission(p);
-                                                  } else {
-                                                      unresolvedPermissionCount.getAndIncrement();
-                                                  }
-                                              });
-                                              if (neededPermissions.isEmpty()) {
-                                                  promptPending = false;
-                                              } else if (unresolvedPermissionCount.get() > 0) {
-                                                  String[] permissionsToRequest =
-                                                          neededPermissions.keySet().toArray(new String[0]);
-                                                  logger.info("Requesting " + Arrays.toString(permissionsToRequest));
-                                                  activityResultLauncher.launch(permissionsToRequest);
+                                      results -> {
+                                          HashMap<String, PermissionsAdapter.PermissionViewHolder> remainingPermissions = new HashMap<>();
+                                          results.forEach((p, r) -> {
+                                              logger.log(Level.INFO, p + " " + (r ? "granted" : "denied"));
+                                              var view = neededPermissions.remove(p);
+                                              if (view != null) {
+                                                  view.permissionCheckbox.setChecked(r);
                                               }
-                                              allSatisfied();
-                                          }
+                                              if (r) {
+                                                  trackGrantedPermission(p);
+                                              } else {
+                                                  remainingPermissions.put(p, view);
+                                              }
+                                          });
+                                          neededPermissions.putAll(remainingPermissions);
+                                          allSatisfied();
                                       });
-    ;
 
     private void triggerPermission() {
         PermissionsDialogFragment dialog = new PermissionsDialogFragment();
         dialog.show(getParentFragmentManager(), "permission");
     }
-
-    // TODO: in the future, we should enable removing from this set
-    HashSet<String> grantedPermissions = new HashSet<>();
 
     private void trackGrantedPermission(String permissions) {
         if (grantedPermissions.contains(permissions)) {
@@ -144,8 +128,7 @@ public class PermissionsFragment extends Fragment {
         } else {
             neededPermissions.put(permission, holder);
             holder.permissionCheckbox.setChecked(false);
-            if (!promptPending) {
-                promptPending = true;
+            if (neededPermissions.containsKey(permission)) {
                 String[] permissionsToRequest = neededPermissions.keySet().toArray(new String[0]);
                 logger.info("Requesting " + Arrays.toString(permissionsToRequest));
                 activityResultLauncher.launch(permissionsToRequest);
@@ -170,9 +153,8 @@ public class PermissionsFragment extends Fragment {
 
         @Override
         public void onBindViewHolder(@NonNull PermissionViewHolder holder, int position) {
+            logger.info("onBindViewHolder invoked!");
             String permission = permissions[position];
-            // we are going to use the string translations keyed on the permission name to get
-            // the description of the permission
 
             int resid = getResources().getIdentifier(permission, "string", getActivity().getPackageName());
             holder.permissionCaption.setText(resid == 0 ? permission : getString(resid));
@@ -200,7 +182,6 @@ public class PermissionsFragment extends Fragment {
         }
 
         public static class PermissionViewHolder extends RecyclerView.ViewHolder {
-
             CheckBox permissionCheckbox;
             TextView permissionCaption;
 
