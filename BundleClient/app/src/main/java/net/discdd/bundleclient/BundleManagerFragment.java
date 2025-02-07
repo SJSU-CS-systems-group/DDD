@@ -35,10 +35,11 @@ public class BundleManagerFragment extends Fragment {
             try {
                 numberBundlesSent.setText(getADUcount(bundleTransmission.getClientPaths().sendADUsPath));
                 numberBundlesReceived.setText(getADUcount(bundleTransmission.getClientPaths().receiveADUsPath));
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+            } catch (Exception e) {
+                System.err.println("Error updating ADU count: " + e.getMessage());
+                numberBundlesSent.setText("Error");
+                numberBundlesReceived.setText("Error");
             }
-
         });
 
         return view;
@@ -55,18 +56,18 @@ public class BundleManagerFragment extends Fragment {
                     // check for "metadata.json" and exclude it
                     if(path.toFile().isDirectory()) {
                         // Get the list of files and exclude "metadata.json"
-                        String[] filteredFiles = path.toFile().list((dir, name) -> !name.equals("metadata.json"));
+                        String[] filteredFiles =
+                                path.toFile().list((dir, name) -> !name.equals("metadata.json"));
+                                return (filteredFiles != null) ? String.valueOf(filteredFiles.length) : "0";
+                            }
 
-                        if (filteredFiles != null) {
-                            return String.valueOf(filteredFiles.length);
-                        }
                         return String.valueOf(path.toFile().list().length);
-                    }
                 }
             }
         }
         catch (IOException | DirectoryIteratorException e) {
             System.err.println("Error reading the directory: " + e.getMessage());
+            return "0";
         }
         return "0";
     }
