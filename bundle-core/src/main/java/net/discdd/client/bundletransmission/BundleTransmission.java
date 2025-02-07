@@ -303,11 +303,12 @@ public class BundleTransmission {
         return clientRouting;
     }
     public enum Statuses {
-        FAILED,
-        EMPTY,
-        COMPLETE;
+        FAILED("Failed"),
+        EMPTY("Empty"),
+        COMPLETE("Complete");
+
     }
-    public record BundleExchangeCounts(int bundlesSent, int bundlesReceived, Statuses uploadStatus, Statuses downloadStatus) {}
+    public record BundleExchangeCounts(Statuses uploadStatus, Statuses downloadStatus) {}
 
     private static final int INITIAL_CONNECT_RETRIES = 8;
 
@@ -383,7 +384,7 @@ public class BundleTransmission {
         } catch (InterruptedException e) {
             logger.log(SEVERE, "could not shutdown channel, error: " + e.getMessage() + ", cause: " + e.getCause());
         }
-        return new BundleExchangeCounts(1, 1 , uploadStatus, downloadStatus);
+        return new BundleExchangeCounts(uploadStatus, downloadStatus);
     }
 
     private Statuses uploadBundle(BundleExchangeServiceGrpc.BundleExchangeServiceStub stub) throws RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException, GeneralSecurityException {
