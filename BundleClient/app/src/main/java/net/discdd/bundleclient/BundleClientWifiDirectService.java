@@ -202,7 +202,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
             wifiDirectManager.getPeerList().stream()
                     .filter(peer -> peer.deviceAddress.equals(transport.getDeviceAddress())).findFirst()
                     .map(this::exchangeWith).ifPresent(bc -> {
-                        logger.log(INFO, String.format("Upload status: %s, Download status: %s",bc.uploadStatus(), bc.downloadStatus()));
+                        logger.log(INFO, String.format("Upload status: %s, Download status: %s",bc.uploadStatus().toString(), bc.downloadStatus().toString()));
                     });
         }
     }
@@ -328,7 +328,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
                 var bundleExchangeCounts =
                         bundleTransmission.doExchangeWithTransport("XX:XX:XX:XX:XX:XX", "BundleServer", serverAddress,
                                                                    port);
-                logger.log(INFO, String.format("Upload status: %s, Download status: %s",bundleExchangeCounts.uploadStatus(), bundleExchangeCounts.downloadStatus()));
+                logger.log(INFO, String.format("Upload status: %s, Download status: %s",bundleExchangeCounts.uploadStatus().toString(), bundleExchangeCounts.downloadStatus().toString()));
                 completableFuture.complete(bundleExchangeCounts);
             } catch (Exception e) {
                 logger.log(WARNING, "Failed to initiate exchange with server", e);

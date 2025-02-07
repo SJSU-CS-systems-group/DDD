@@ -306,7 +306,10 @@ public class BundleTransmission {
         FAILED,
         EMPTY,
         COMPLETE;
-
+        @Override
+        public String toString() {
+            return name().toLowerCase();
+        }
     }
     public record BundleExchangeCounts(Statuses uploadStatus, Statuses downloadStatus) {}
 
