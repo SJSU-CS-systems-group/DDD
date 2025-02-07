@@ -303,9 +303,9 @@ public class BundleTransmission {
         return clientRouting;
     }
     public enum Statuses {
-        FAILED("Failed"),
-        EMPTY("Empty"),
-        COMPLETE("Complete");
+        FAILED,
+        EMPTY,
+        COMPLETE;
 
     }
     public record BundleExchangeCounts(Statuses uploadStatus, Statuses downloadStatus) {}
@@ -373,7 +373,7 @@ public class BundleTransmission {
                 }
 
                 var stub = BundleExchangeServiceGrpc.newStub(channel);
-                uploadBundle(stub);
+                uploadStatus = uploadBundle(stub);
 
             }
         } catch (Exception e) {
