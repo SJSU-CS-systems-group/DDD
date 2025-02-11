@@ -16,6 +16,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -95,9 +96,21 @@ public class SecurityUtils {
 
     }
 
-    public static byte[] createEncodedPublicKeyBytes(ECPublicKey publicKey) {
-        ECKeyPair ephemeralKeyPair = new ECKeyPair(Curve.decodePoint(transportKeyPvt, 0), Curve.decodePrivatePoint(transportKeyPub));
-        return (PUB_KEY_HEADER + "\n" + Base64.getUrlEncoder().encodeToString(publicKey.serialize()) + "\n" +
+    public static byte[] createEncodedPublicKeyBytes(ECPublicKey publicKey, Path serverRootPath) throws GeneralSecurityException, InvalidKeyException {
+        // create ephemeral public key pair
+        ECKeyPair ephemeralKeyPair = Curve.generateKeyPair();
+        // calculate shared secret from server public key and ephemeral private key
+        ServerSecurity serverSecurityInstance = ServerSecurity.getInstance(serverRootPath);
+        IdentityKey ServerIdentityPubKey = serverSecurityInstance.getIdentityPublicKey();
+        byte[] agreement = Curve.calculateAgreement((ECPublicKey) ServerIdentityPubKey, ephemeralKeyPair.getPrivateKey());
+        String sharedSecret = Base64.getUrlEncoder().encodeToString(agreement);
+        // encrypt client public key using shared secret
+        String encryptedClientPubKey = encryptAesCbcPkcs5(sharedSecret, publicKey.toString());
+        // write encrypted client public key to file
+        // write ephemeral public key to file
+        return (PUB_KEY_HEADER + "\n" +
+                Base64.getUrlEncoder().encode(encryptedClientPubKey.getBytes()) + "\n" +
+                Base64.getUrlEncoder().encode((ByteBuffer) ephemeralKeyPair.getPrivateKey()) + "\n" +
                 PUB_KEY_FOOTER).getBytes();
     }
 
