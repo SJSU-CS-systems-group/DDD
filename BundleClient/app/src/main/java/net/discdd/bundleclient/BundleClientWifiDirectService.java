@@ -245,7 +245,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
             final String text = text1 + "\n" + text2;
             Handler handler = new Handler(Looper.getMainLooper());
             handler.post(() -> {
-                Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), text, Toast.LENGTH_LONG).show();
             });
             return currentBundle;
 
