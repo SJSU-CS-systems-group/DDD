@@ -96,6 +96,7 @@ public class SecurityUtils {
     }
 
     public static byte[] createEncodedPublicKeyBytes(ECPublicKey publicKey) {
+        ECKeyPair ephemeralKeyPair = new ECKeyPair(Curve.decodePoint(transportKeyPvt, 0), Curve.decodePrivatePoint(transportKeyPub));
         return (PUB_KEY_HEADER + "\n" + Base64.getUrlEncoder().encodeToString(publicKey.serialize()) + "\n" +
                 PUB_KEY_FOOTER).getBytes();
     }
