@@ -23,10 +23,16 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
+import java.security.KeyFactory;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.logging.Logger;
@@ -101,29 +107,41 @@ public class SecurityUtils {
         ECKeyPair ephemeralKeyPair = Curve.generateKeyPair();
         // calculate shared secret from server public key and ephemeral private key
         ServerSecurity serverSecurityInstance = ServerSecurity.getInstance(serverRootPath);
-        IdentityKey ServerIdentityPubKey = serverSecurityInstance.getIdentityPublicKey();
-        byte[] agreement = Curve.calculateAgreement((ECPublicKey) ServerIdentityPubKey, ephemeralKeyPair.getPrivateKey());
+        IdentityKey ServerPubKey = serverSecurityInstance.getIdentityPublicKey();
+        byte[] agreement = Curve.calculateAgreement((ECPublicKey) ServerPubKey, ephemeralKeyPair.getPrivateKey());
         String sharedSecret = Base64.getUrlEncoder().encodeToString(agreement);
         // encrypt client public key using shared secret
         String encryptedClientPubKey = encryptAesCbcPkcs5(sharedSecret, publicKey.toString());
-        // write encrypted client public key to file
-        // write ephemeral public key to file
         return (PUB_KEY_HEADER + "\n" +
+                // write encrypted client public key to file
                 Base64.getUrlEncoder().encode(encryptedClientPubKey.getBytes()) + "\n" +
-                Base64.getUrlEncoder().encode((ByteBuffer) ephemeralKeyPair.getPrivateKey()) + "\n" +
+                // write ephemeral public key to file
+                Base64.getUrlEncoder().encode(ephemeralKeyPair.getPublicKey().toString().getBytes()) + "\n" +
                 PUB_KEY_FOOTER).getBytes();
     }
 
-    public static byte[] decodePublicKeyfromFile(Path path) throws IOException, InvalidKeyException {
+    public static byte[] decodePublicKeyfromFile(Path path, Path serverKeyPath) throws IOException, InvalidKeyException, GeneralSecurityException {
         List<String> encodedKeyList = Files.readAllLines(path);
-
-        if (encodedKeyList.size() != 3) {
+        if (encodedKeyList.size() != 4) {
             throw new InvalidKeyException(
-                    String.format("Error: %s should have three lines: HEADER, KEY, FOOTER", path.getFileName()));
+                    String.format("Error: %s should have four lines: HEADER, KEY, SECRET, FOOTER", path.getFileName()));
         }
-
-        if ((encodedKeyList.get(0).equals(PUB_KEY_HEADER)) && (encodedKeyList.get(2).equals(PUB_KEY_FOOTER))) {
-            return Base64.getUrlDecoder().decode(encodedKeyList.get(1));
+        if ((encodedKeyList.get(0).equals(PUB_KEY_HEADER)) && (encodedKeyList.get(3).equals(PUB_KEY_FOOTER))) {
+            // read encrypted client public key
+            byte[] encryptedClientPublicKey = Base64.getUrlDecoder().decode(encodedKeyList.get(1));
+            // read ephemeral public key
+            byte[] ephemeralKey = Base64.getUrlDecoder().decode(encodedKeyList.get(2));
+            KeyFactory kf = KeyFactory.getInstance("EC");
+            PublicKey ephemeralPublicKey = kf.generatePublic(new X509EncodedKeySpec(ephemeralKey));
+            // calculate shared secret from server private key and ephemeral public key
+            ServerSecurity serverSecurityInstance = ServerSecurity.getInstance(serverKeyPath);
+            ECPrivateKey ServerPrivKey = serverSecurityInstance.getSigningKey();
+            byte[] agreement = Curve.calculateAgreement((ECPublicKey) ephemeralPublicKey, ServerPrivKey);
+            String sharedSecret = Base64.getUrlEncoder().encodeToString(agreement);
+            // decrypt client public key using shared secret
+            byte[] decryptedClientPubKey = decryptAesCbcPkcs5(sharedSecret, Arrays.toString(encryptedClientPublicKey));
+            // return decrypted client public key
+            return Base64.getUrlDecoder().decode(decryptedClientPubKey);
         } else {
             throw new InvalidKeyException(
                     String.format("Error: %s has invalid public key header or footer", path.getFileName()));
