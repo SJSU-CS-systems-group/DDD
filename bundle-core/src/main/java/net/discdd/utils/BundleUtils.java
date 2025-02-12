@@ -28,6 +28,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.security.GeneralSecurityException;
 import java.security.InvalidParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -337,9 +338,13 @@ public class BundleUtils {
         outerJar.createEntry(SecurityUtils.BUNDLEID_FILENAME, encryptedBundleId.getBytes());
 
         // store the keys
-        outerJar.createEntry(SecurityUtils.CLIENT_IDENTITY_KEY, createEncodedPublicKeyBytes(clientIdentityPublicKey));
-        outerJar.createEntry(SecurityUtils.CLIENT_BASE_KEY, createEncodedPublicKeyBytes(clientBaseKeyPairPublicKey));
-        outerJar.createEntry(SecurityUtils.SERVER_IDENTITY_KEY, createEncodedPublicKeyBytes(serverIdentityPublicKey));
+        try {
+            outerJar.createEntry(SecurityUtils.CLIENT_IDENTITY_KEY, createEncodedPublicKeyBytes(clientIdentityPublicKey, null));
+            outerJar.createEntry(SecurityUtils.CLIENT_BASE_KEY, createEncodedPublicKeyBytes(clientBaseKeyPairPublicKey, null));
+            outerJar.createEntry(SecurityUtils.SERVER_IDENTITY_KEY, createEncodedPublicKeyBytes(serverIdentityPublicKey, null));
+        } catch (GeneralSecurityException e) {
+            throw new RuntimeException(e);
+        }
 
         // bundle is ready
         outerJar.close();

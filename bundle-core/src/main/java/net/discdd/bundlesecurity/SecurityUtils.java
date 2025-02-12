@@ -97,8 +97,14 @@ public class SecurityUtils {
     }
 
     public static void createEncodedPublicKeyFile(ECPublicKey publicKey, Path path) throws IOException {
-        Files.write(path, createEncodedPublicKeyBytes(publicKey), StandardOpenOption.CREATE,
-                    StandardOpenOption.TRUNCATE_EXISTING);
+        try {
+            Files.write(path, createEncodedPublicKeyBytes(publicKey, path), StandardOpenOption.CREATE,
+                        StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (GeneralSecurityException e) {
+            throw new RuntimeException(e);
+        } catch (InvalidKeyException e) {
+            throw new RuntimeException(e);
+        }
 
     }
 
@@ -106,6 +112,7 @@ public class SecurityUtils {
         // create ephemeral public key pair
         ECKeyPair ephemeralKeyPair = Curve.generateKeyPair();
         // calculate shared secret from server public key and ephemeral private key
+        // Unless testing, we're passing null for path b/c server security instance will already be created
         ServerSecurity serverSecurityInstance = ServerSecurity.getInstance(serverRootPath);
         IdentityKey ServerPubKey = serverSecurityInstance.getIdentityPublicKey();
         byte[] agreement = Curve.calculateAgreement((ECPublicKey) ServerPubKey, ephemeralKeyPair.getPrivateKey());
@@ -128,7 +135,7 @@ public class SecurityUtils {
         }
         if ((encodedKeyList.get(0).equals(PUB_KEY_HEADER)) && (encodedKeyList.get(3).equals(PUB_KEY_FOOTER))) {
             // read encrypted client public key
-            byte[] encryptedClientPublicKey = Base64.getUrlDecoder().decode(encodedKeyList.get(1));
+            byte[] encryptedClientPublicKey = Base64.getUrlDecoder().decode(encodedKeyList.get(1)); //should work b/c we wrote keys and next line
             // read ephemeral public key
             byte[] ephemeralKey = Base64.getUrlDecoder().decode(encodedKeyList.get(2));
             KeyFactory kf = KeyFactory.getInstance("EC");
