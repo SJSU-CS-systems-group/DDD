@@ -127,7 +127,7 @@ public class SecurityUtils {
                 PUB_KEY_FOOTER).getBytes();
     }
 
-    public static byte[] decodePublicKeyfromFile(Path path, Path serverKeyPath) throws IOException, InvalidKeyException, GeneralSecurityException {
+    public static byte[] decodePublicKeyfromFile(Path path) throws IOException, InvalidKeyException {
         List<String> encodedKeyList = Files.readAllLines(path);
         if (encodedKeyList.size() != 4) {
             throw new InvalidKeyException(
@@ -138,15 +138,28 @@ public class SecurityUtils {
             byte[] encryptedClientPublicKey = Base64.getUrlDecoder().decode(encodedKeyList.get(1)); //should work b/c we wrote keys and next line
             // read ephemeral public key
             byte[] ephemeralKey = Base64.getUrlDecoder().decode(encodedKeyList.get(2));
-            KeyFactory kf = KeyFactory.getInstance("EC");
-            PublicKey ephemeralPublicKey = kf.generatePublic(new X509EncodedKeySpec(ephemeralKey));
+            KeyFactory kf = null;
+            PublicKey ephemeralPublicKey;
+            try {
+                kf = KeyFactory.getInstance("EC");
+                ephemeralPublicKey = kf.generatePublic(new X509EncodedKeySpec(ephemeralKey));
+            } catch (NoSuchAlgorithmException e) {
+                throw new RuntimeException("EC algorithm is not available in the Java environment.", e);
+            } catch (InvalidKeySpecException e) {
+                throw new RuntimeException("Invalid EC public key provided. Ensure the key encoding is correct.", e);
+            }
             // calculate shared secret from server private key and ephemeral public key
-            ServerSecurity serverSecurityInstance = ServerSecurity.getInstance(serverKeyPath);
+            ServerSecurity serverSecurityInstance = ServerSecurity.getInstance(path);
             ECPrivateKey ServerPrivKey = serverSecurityInstance.getSigningKey();
             byte[] agreement = Curve.calculateAgreement((ECPublicKey) ephemeralPublicKey, ServerPrivKey);
             String sharedSecret = Base64.getUrlEncoder().encodeToString(agreement);
             // decrypt client public key using shared secret
-            byte[] decryptedClientPubKey = decryptAesCbcPkcs5(sharedSecret, Arrays.toString(encryptedClientPublicKey));
+            byte[] decryptedClientPubKey = new byte[0];
+            try {
+                decryptedClientPubKey = decryptAesCbcPkcs5(sharedSecret, Arrays.toString(encryptedClientPublicKey));
+            } catch (GeneralSecurityException e) {
+                throw new RuntimeException("AES decryption failed: " + e.getMessage(), e);
+            }
             // return decrypted client public key
             return Base64.getUrlDecoder().decode(decryptedClientPubKey);
         } else {
