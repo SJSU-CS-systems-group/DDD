@@ -1,0 +1,48 @@
+package net.discdd.app.k9.model;
+
+import net.discdd.grpc.AppDataUnit;
+
+public class RegisterAdu {
+    private String[] prefixes, suffixes;
+    private String password;
+
+    public RegisterAdu(String[] prefixes, String[] suffixes, String password) {
+        this.prefixes = prefixes;
+        this.suffixes = suffixes;
+        this.password = password;
+    }
+
+    public String getPassword() {
+        return this.password;
+    }
+
+    public String[] generateEmails() {
+        String[] emails = new String[prefixes.length*suffixes.length];
+
+        int pos = 0;
+        for (int i = 0; i < prefixes.length; i++) {
+            for (int j = 0; j < suffixes.length; j++) {
+                String email = prefixes[i] + suffixes[j] + "@ravlykmail.com";
+                emails[pos] = email;
+                pos += 1;
+            }
+        }
+
+        return emails;
+    }
+
+    public static RegisterAdu parseAdu(AppDataUnit adu) {
+        String[] lines = new String(adu.getData().toByteArray()).split("\r?\n");
+        if (lines.length != 4) {
+            return null;
+        }
+
+        String[] prefixes = lines[1].split(",");
+        String[] suffixes = lines[2].split(",");
+        if (prefixes.length != 3 || suffixes.length != 3) {
+            return null;
+        }
+
+        return new RegisterAdu(prefixes, suffixes, lines[3]);
+    }
+}
