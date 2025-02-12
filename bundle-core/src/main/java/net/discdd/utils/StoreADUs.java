@@ -108,6 +108,21 @@ public class StoreADUs {
             return Stream.empty();
         }
     }
+    
+    public record AduIdData(String id, byte[] data) {}
+    public List<AduIdData> getAllAppIdAndData(String appId) throws IOException {
+        getMetadata(null, appId);
+        var folder = rootFolder.resolve(appId);
+        return Files.list(folder).map(path -> {
+            try {
+                String id = path.getFileName().toString();
+                return new AduIdData(id, Files.readAllBytes(path));
+            } catch (IOException e) {
+                logger.log(SEVERE, "Failed to read file " + path, e);
+                return null;
+            }
+        }).collect(Collectors.toList());
+    }
 
     public List<byte[]> getAllAppData(String appId) throws IOException {
         getMetadata(null, appId);
