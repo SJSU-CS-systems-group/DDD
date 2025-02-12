@@ -22,6 +22,7 @@ import androidx.annotation.Nullable;
 
 import net.discdd.client.bundlesecurity.ClientSecurity;
 import net.discdd.utils.StoreADUs;
+import net.discdd.utils.StoreADUs.AduIdData;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -66,7 +67,7 @@ public class MessageProvider extends ContentProvider {
 
         try {
             String appId = getCallerAppId();
-            cursor = new MatrixCursor(new String[] { "data" });
+            cursor = new MatrixCursor(new String[] { "data", "id" });
             if (selection != null) {
                 String clientId = ClientSecurity.getInstance().getClientID();
                 switch (selection) {
@@ -88,9 +89,9 @@ public class MessageProvider extends ContentProvider {
                     }
                 }
             } else {
-                List<byte[]> datalist = receiveADUsStorage.getAllAppData(appId);
-                for (byte[] data : datalist) {
-                    cursor.newRow().add("data", new String(data));
+                List<AduIdData> datalist = receiveADUsStorage.getAllAppIdAndData(appId);
+                for (AduIdData adu: datalist) {
+                    cursor.newRow().add("data", new String(adu.data())).add("id", adu.id());
                 }
             }
         } catch (Exception ex) {
