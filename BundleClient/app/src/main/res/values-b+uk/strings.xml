@@ -5,6 +5,12 @@
     <string name="android.permission.INTERNET">Використовувати мережу</string>
     <string name="android.permission.NEARBY_WIFI_DEVICES">Знайти сусідні пристрої WiFi</string>
     <string name="app_name">BundleClient</string>
+    <string name="Upload_Success">Завантаження було успішним</string>
+    <string name="Upload_Empty">Нічого для завантаження</string>
+    <string name="Upload_Failed">Помилка завантаження</string>
+    <string name="Download_Success">Завантаження було успішним</string>
+    <string name="Download_Empty">Завантаження порожнє</string>
+    <string name="Download_Failed">Помилка завантаження</string>
     <string name="tansport_host">ddd_transport</string>
     <string name="home_tab">Головна</string>
     <string name="permissions_tab">Дозволи</string>

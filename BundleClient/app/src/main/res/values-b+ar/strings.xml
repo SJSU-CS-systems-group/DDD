@@ -5,6 +5,12 @@
     <string name="android.permission.INTERNET">استخدام الشبكة</string>
     <string name="android.permission.NEARBY_WIFI_DEVICES">البحث عن أجهزة الواي فاي القريبة</string>
     <string name="app_name">عميلالحزم</string>
+    <string name="Upload_Success">كان التحميل ناجحا</string>
+    <string name="Upload_Empty">لا شيء للتحميل</string>
+    <string name="Upload_Failed">فشل التحميل</string>
+    <string name="Download_Success">التنزيل كان ناجحا</string>
+    <string name="Download_Empty">التنزيل فارغ</string>
+    <string name="Download_Failed">فشل التنزيل</string>
     <string name="tansport_host">ddd_النقل</string>
     <string name="home_tab">الرئيسية</string>
     <string name="permissions_tab">الأذونات</string>

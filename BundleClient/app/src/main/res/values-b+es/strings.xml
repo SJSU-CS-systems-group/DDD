@@ -5,6 +5,12 @@
     <string name="android.permission.INTERNET">Usar la Red</string>
     <string name="android.permission.NEARBY_WIFI_DEVICES">Encontrar dispositivos Wifi cercanos</string>
     <string name="app_name">ClienteDePaquetes</string>
+    <string name="Upload_Success">La carga fue un éxito</string>
+    <string name="Upload_Empty">Nada que subir</string>
+    <string name="Upload_Failed">La carga ha fallado</string>
+    <string name="Download_Success">La descarga fue un éxito</string>
+    <string name="Download_Empty">La descarga está vacía</string>
+    <string name="Download_Failed">La descarga ha fallado</string>
     <string name="tansport_host">ddd_transporte</string>
     <string name="home_tab">Inicio</string>
     <string name="permissions_tab">Permisos</string>

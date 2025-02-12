@@ -5,6 +5,12 @@
     <string name="android.permission.INTERNET">Use the Network</string>
     <string name="android.permission.NEARBY_WIFI_DEVICES">Find nearby Wifi devices</string>
     <string name="app_name">BundleClient</string>
+    <string name="Upload_Success">Upload was a Success</string>
+    <string name="Upload_Empty">Nothing to Upload</string>
+    <string name="Upload_Failed">Upload Has Failed</string>
+    <string name="Download_Success">Download was a Success</string>
+    <string name="Download_Empty">Download is Empty</string>
+    <string name="Download_Failed">Download has Failed</string>
     <string name="tansport_host">ddd_transport</string>
     <string name="home_tab">Home</string>
     <string name="permissions_tab">Permissions</string>
