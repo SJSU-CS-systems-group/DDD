@@ -17,8 +17,6 @@ public class K9ClientIdToEmailMapping {
     @Column(columnDefinition = "text", nullable = false)
     public String password;
 
-    public K9ClientIdToEmailMapping() {}
-
     public K9ClientIdToEmailMapping(String email, String clientId, String password) {
         this.email = email;
         this.clientId = clientId;
