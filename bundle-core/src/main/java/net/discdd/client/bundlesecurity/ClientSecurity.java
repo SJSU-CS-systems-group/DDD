@@ -118,7 +118,7 @@ public class ClientSecurity {
     private void loadKeysfromFiles(Path clientKeyPath) throws IOException, InvalidKeyException {
         byte[] identityKeyPvt = Files.readAllBytes(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_PRIVATE_KEY));
         byte[] identityKeyPub =
-                SecurityUtils.decodePublicKeyfromFile(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
+                SecurityUtils.decodeEncryptedPublicKeyfromFile(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
 
         IdentityKey identityPublicKey = new IdentityKey(identityKeyPub, 0);
         ECPrivateKey identityPrivateKey = Curve.decodePrivatePoint(identityKeyPvt);
@@ -126,7 +126,7 @@ public class ClientSecurity {
         ourIdentityKeyPair = new IdentityKeyPair(identityPublicKey, identityPrivateKey);
 
         byte[] baseKeyPvt = Files.readAllBytes(clientKeyPath.resolve(SecurityUtils.CLIENT_BASE_PRIVATE_KEY));
-        byte[] baseKeyPub = SecurityUtils.decodePublicKeyfromFile(clientKeyPath.resolve(SecurityUtils.CLIENT_BASE_KEY));
+        byte[] baseKeyPub = SecurityUtils.decodeEncryptedPublicKeyfromFile(clientKeyPath.resolve(SecurityUtils.CLIENT_BASE_KEY));
 
         ECPublicKey basePublicKey = Curve.decodePoint(baseKeyPub, 0);
         ECPrivateKey basePrivateKey = Curve.decodePrivatePoint(baseKeyPvt);
@@ -136,14 +136,14 @@ public class ClientSecurity {
 
     private void InitializeServerKeysFromFiles(Path path) throws InvalidKeyException, IOException {
         byte[] serverIdentityKey =
-                SecurityUtils.decodePublicKeyfromFile(path.resolve(SecurityUtils.SERVER_IDENTITY_KEY));
+                SecurityUtils.decodeEncryptedPublicKeyfromFile(path.resolve(SecurityUtils.SERVER_IDENTITY_KEY));
         theirIdentityKey = new IdentityKey(serverIdentityKey, 0);
 
         byte[] serverSignedPreKey =
-                SecurityUtils.decodePublicKeyfromFile(path.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY));
+                SecurityUtils.decodeEncryptedPublicKeyfromFile(path.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY));
         theirSignedPreKey = Curve.decodePoint(serverSignedPreKey, 0);
 
-        byte[] serverRatchetKey = SecurityUtils.decodePublicKeyfromFile(path.resolve(SecurityUtils.SERVER_RATCHET_KEY));
+        byte[] serverRatchetKey = SecurityUtils.decodeEncryptedPublicKeyfromFile(path.resolve(SecurityUtils.SERVER_RATCHET_KEY));
         theirRatchetKey = Curve.decodePoint(serverRatchetKey, 0);
     }
 

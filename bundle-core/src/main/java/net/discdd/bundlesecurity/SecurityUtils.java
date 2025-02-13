@@ -16,7 +16,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -26,11 +25,9 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyFactory;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
-import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
 import java.util.Base64;
@@ -81,7 +78,7 @@ public class SecurityUtils {
      */
     public static String generateID(Path publicKeyPath) throws IOException, InvalidKeyException,
             NoSuchAlgorithmException {
-        byte[] publicKey = decodePublicKeyfromFile(publicKeyPath);
+        byte[] publicKey = decodeEncryptedPublicKeyfromFile(publicKeyPath);
         return generateID(publicKey);
     }
 
@@ -127,15 +124,15 @@ public class SecurityUtils {
                 PUB_KEY_FOOTER).getBytes();
     }
 
-    public static byte[] decodePublicKeyfromFile(Path path) throws IOException, InvalidKeyException {
+    public static byte[] decodeEncryptedPublicKeyfromFile(Path path) throws IOException, InvalidKeyException {
         List<String> encodedKeyList = Files.readAllLines(path);
         if (encodedKeyList.size() != 4) {
             throw new InvalidKeyException(
-                    String.format("Error: %s should have four lines: HEADER, KEY, SECRET, FOOTER", path.getFileName()));
+                    String.format("Error: %s should have four lines: HEADER, ENCRYPTED PUB CLIENT KEY, EPHEMERAL PUB KEY, FOOTER", path.getFileName()));
         }
         if ((encodedKeyList.get(0).equals(PUB_KEY_HEADER)) && (encodedKeyList.get(3).equals(PUB_KEY_FOOTER))) {
             // read encrypted client public key
-            byte[] encryptedClientPublicKey = Base64.getUrlDecoder().decode(encodedKeyList.get(1)); //should work b/c we wrote keys and next line
+            byte[] encryptedClientPublicKey = Base64.getUrlDecoder().decode(encodedKeyList.get(1));
             // read ephemeral public key
             byte[] ephemeralKey = Base64.getUrlDecoder().decode(encodedKeyList.get(2));
             KeyFactory kf = null;
@@ -165,6 +162,20 @@ public class SecurityUtils {
         } else {
             throw new InvalidKeyException(
                     String.format("Error: %s has invalid public key header or footer", path.getFileName()));
+        }
+    }
+
+    public static byte[] decodePublicKeyfromFile(Path path) throws IOException, InvalidKeyException {
+        List<String> encodedKeyList = Files.readAllLines(path);
+        if (encodedKeyList.size() != 3) {
+            throw new InvalidKeyException(
+                    String.format("Error: %s should have three lines: HEADER, PUB CLIENT KEY, FOOTER", path.getFileName()));
+        }
+        if (encodedKeyList.get(0).equals(PVT_KEY_HEADER) && encodedKeyList.get(2).equals(PVT_KEY_FOOTER)) {
+            return Base64.getUrlDecoder().decode(encodedKeyList.get(1));
+        } else {
+            throw new InvalidKeyException(
+                    String.format("Error: %s has invalid private key header or footer", path.getFileName()));
         }
     }
 
@@ -203,7 +214,7 @@ public class SecurityUtils {
 
     public static String getClientID(Path bundlePath) throws IOException, InvalidKeyException,
             NoSuchAlgorithmException {
-        byte[] clientIdentityKey = decodePublicKeyfromFile(bundlePath.resolve(CLIENT_IDENTITY_KEY));
+        byte[] clientIdentityKey = decodeEncryptedPublicKeyfromFile(bundlePath.resolve(CLIENT_IDENTITY_KEY));
         return generateID(clientIdentityKey);
     }
 

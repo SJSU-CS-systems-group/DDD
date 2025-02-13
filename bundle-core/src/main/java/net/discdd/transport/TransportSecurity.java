@@ -65,7 +65,7 @@ public class TransportSecurity {
         byte[] transportKeyPvt = SecurityUtils.decodePrivateKeyFromFile(
                 tranportKeyPath.resolve(SecurityUtils.TRANSPORT_IDENTITY_PRIVATE_KEY));
         byte[] transportKeyPub =
-                SecurityUtils.decodePublicKeyfromFile(tranportKeyPath.resolve(SecurityUtils.TRANSPORT_IDENTITY_KEY));
+                SecurityUtils.decodeEncryptedPublicKeyfromFile(tranportKeyPath.resolve(SecurityUtils.TRANSPORT_IDENTITY_KEY));
 
         ECPublicKey basePublicKey = Curve.decodePoint(transportKeyPvt, 0);
         ECPrivateKey basePrivateKey = Curve.decodePrivatePoint(transportKeyPub);
@@ -76,7 +76,7 @@ public class TransportSecurity {
     private void InitializeServerKeysFromFiles(Path path) throws InvalidKeyException, IOException {
         path.toFile().mkdirs();
         byte[] serverIdentityKey =
-                SecurityUtils.decodePublicKeyfromFile(path.resolve(SecurityUtils.SERVER_IDENTITY_KEY));
+                SecurityUtils.decodeEncryptedPublicKeyfromFile(path.resolve(SecurityUtils.SERVER_IDENTITY_KEY));
         theirIdentityKey = new IdentityKey(serverIdentityKey, 0);
     }
 

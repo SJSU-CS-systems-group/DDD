@@ -135,7 +135,7 @@ public class ServerSecurity {
         byte[] signedPreKeyPvt = SecurityUtils.decodePrivateKeyFromFile(
                 serverKeyPath.resolve(SecurityUtils.SERVER_SIGNEDPRE_PRIVATE_KEY));
         byte[] signedPreKeyPub =
-                SecurityUtils.decodePublicKeyfromFile(serverKeyPath.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY));
+                SecurityUtils.decodeEncryptedPublicKeyfromFile(serverKeyPath.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY));
 
         ECPublicKey signedPreKeyPublicKey = Curve.decodePoint(signedPreKeyPub, 0);
         ECPrivateKey signedPreKeyPrivateKey = Curve.decodePrivatePoint(signedPreKeyPvt);
@@ -145,7 +145,7 @@ public class ServerSecurity {
         byte[] ratchetKeyPvt =
                 SecurityUtils.decodePrivateKeyFromFile(serverKeyPath.resolve(SecurityUtils.SERVER_RATCHET_PRIVATE_KEY));
         byte[] ratchetKeyPub =
-                SecurityUtils.decodePublicKeyfromFile(serverKeyPath.resolve(SecurityUtils.SERVER_RATCHET_KEY));
+                SecurityUtils.decodeEncryptedPublicKeyfromFile(serverKeyPath.resolve(SecurityUtils.SERVER_RATCHET_KEY));
 
         ECPublicKey ratchetKeyPublicKey = Curve.decodePoint(ratchetKeyPub, 0);
         ECPrivateKey ratchetKeyPrivateKey = Curve.decodePrivatePoint(ratchetKeyPvt);
@@ -192,10 +192,10 @@ public class ServerSecurity {
 
     private void initializeClientKeysFromFiles(Path path, ClientSession clientSession) throws IOException,
             InvalidKeyException {
-        byte[] clientIdentityKey = SecurityUtils.decodePublicKeyfromFile(path.resolve(CLIENT_IDENTITY_KEY));
+        byte[] clientIdentityKey = SecurityUtils.decodeEncryptedPublicKeyfromFile(path.resolve(CLIENT_IDENTITY_KEY));
         clientSession.IdentityKey = new IdentityKey(clientIdentityKey, 0);
 
-        byte[] clientBaseKey = SecurityUtils.decodePublicKeyfromFile(path.resolve(CLIENT_BASE_KEY));
+        byte[] clientBaseKey = SecurityUtils.decodeEncryptedPublicKeyfromFile(path.resolve(CLIENT_BASE_KEY));
         clientSession.BaseKey = Curve.decodePoint(clientBaseKey, 0);
     }
 
@@ -377,7 +377,7 @@ public class ServerSecurity {
         byte[] encryptedBundleID = Files.readAllBytes(bundleIDPath);
         String receivedBundleID, latestBundleID;
 
-        byte[] clientIdentityKeyBytes = SecurityUtils.decodePublicKeyfromFile(bundlePath.resolve(CLIENT_IDENTITY_KEY));
+        byte[] clientIdentityKeyBytes = SecurityUtils.decodeEncryptedPublicKeyfromFile(bundlePath.resolve(CLIENT_IDENTITY_KEY));
         IdentityKey clientIdentityKey = new IdentityKey(clientIdentityKeyBytes, 0);
 
         String sharedSecret = getsharedSecret(clientIdentityKey.getPublicKey());
