@@ -3,7 +3,7 @@ package net.discdd.app.k9;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
+@SpringBootTest(classes = { K9Application.class } )
 class K9ApplicationTests {
 
     @Test
