@@ -16,13 +16,20 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/dtn_server_db?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
-    username: ddd
-    password: ddd
+#    username: <add in external properties file>
+#    password: <add in external properties file>
     db-name: dtn_server_db
+
 
 grpc:
   server:
     port: 7778
+#    security:
+#      enabled: true
+##      certificate-chain: file:/Users/ngngo/OneDrive/Desktop/ddd-research/Data/BundleSecurity/Keys/Server/Server_Keys/server.crt
+##      private-key: file:/Users/ngngo/OneDrive/Desktop/ddd-research/Data/BundleSecurity/Keys/Server/Server_Keys/serverJava.pvt
+#      client-auth: REQUIRE
+
 server:
   port: 8081
 bundle-server:

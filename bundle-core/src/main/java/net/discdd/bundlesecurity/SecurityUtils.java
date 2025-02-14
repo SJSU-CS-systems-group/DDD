@@ -44,22 +44,43 @@ public class SecurityUtils {
     public static final String PUB_KEY_FOOTER = "-----END EC PUBLIC KEY-----";
     public static final String PVT_KEY_HEADER = "-----BEGIN EC PRIVATE KEY-----";
     public static final String PVT_KEY_FOOTER = "-----END EC PRIVATE KEY-----";
-    public static final String CLIENT_KEY_PATH = "Client_Keys";
-    public static final String SERVER_KEY_PATH = "Server_Keys";
+
+    // ----------------- TransportSecurity -----------------
     public static final String TRANSPORT_KEY_PATH = "Transport_Keys";
     public static final String TRANSPORT_IDENTITY_KEY = "transport_identity.pub";
     public static final String TRANSPORT_IDENTITY_PRIVATE_KEY = "transportIdentity.pvt";
+    public static final String TRANSPORT_CERT = "transport_cert.crt";
+
+    // ----------------- ClientSecurity -----------------
     public static final String SESSION_STORE_FILE = "Session.store";
+    public static final String CLIENT_KEY_PATH = "Client_Keys";
     public static final String CLIENT_IDENTITY_KEY = "clientIdentity.pub";
     public static final String CLIENT_IDENTITY_PRIVATE_KEY = "clientIdentity.pvt";
+    public static final String CLIENT_JAVA_PUBLIC_KEY = "client_java.pub";
     public static final String CLIENT_BASE_KEY = "clientBase.pub";
     public static final String CLIENT_BASE_PRIVATE_KEY = "clientBase.pvt";
+    public static final String CLIENT_JAVA_PRIVATE_KEY = "clientJava.pvt";
+    public static final String CLIENT_CERT = "client.crt";
+
+    // ----------------- ServerSecurity -----------------
+    public static final String SERVER_KEY_PATH = "Server_Keys";
     public static final String SERVER_IDENTITY_KEY = "server_identity.pub";
     public static final String SERVER_SIGNED_PRE_KEY = "server_signed_pre.pub";
     public static final String SERVER_RATCHET_KEY = "server_ratchet.pub";
+    public static final String SERVER_JAVA_PUBLIC_KEY = "server_java.pub";
     public static final String SERVER_IDENTITY_PRIVATE_KEY = "serverIdentity.pvt";
     public static final String SERVER_SIGNEDPRE_PRIVATE_KEY = "serverSignedPreKey.pvt";
     public static final String SERVER_RATCHET_PRIVATE_KEY = "serverRatchetKey.pvt";
+    public static final String SERVER_JAVA_PRIVATE_KEY = "serverJava.pvt";
+    public static final String SERVER_CERT = "server.crt";
+
+    // ----------------- AdapterSecurity -----------------
+    public static final String ADAPTER_SECURITY_PATH = "AdapterSecurity";
+    public static final String ADAPTER_JAVA_PUBLIC_KEY = "adapter_java.pub";
+    public static final String ADAPTER_JAVA_PRIVATE_KEY = "adapterJava.pvt";
+    public static final String ADAPTER_CERT = "adapter.crt";
+
+    // ----------------- Other Utils -----------------
     public static final int CHUNKSIZE = 1024 * 1024; /* 1MB */
     public static final int ITERATIONS = 65536;
     public static final int KEYLEN = 256;
@@ -92,7 +113,6 @@ public class SecurityUtils {
     public static void createEncodedPublicKeyFile(ECPublicKey publicKey, Path path) throws IOException {
         Files.write(path, createEncodedPublicKeyBytes(publicKey), StandardOpenOption.CREATE,
                     StandardOpenOption.TRUNCATE_EXISTING);
-
     }
 
     public static byte[] createEncodedPublicKeyBytes(ECPublicKey publicKey) {

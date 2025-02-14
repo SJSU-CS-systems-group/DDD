@@ -67,6 +67,7 @@ dependencies {
     implementation 'com.google.firebase:firebase-crashlytics-buildtools:3.0.2'
     implementation 'com.google.protobuf:protobuf-java:3.23.4'
     implementation 'org.conscrypt:conscrypt-android:2.5.3'
+//    implementation "io.netty:netty-tcnative-boringssl-static:2.0.69.Final"
     implementation 'io.grpc:grpc-netty:1.58.0'
     implementation project(':android-core')
     compileOnly 'org.apache.tomcat:annotations-api:6.0.53' // necessary for Java 9+
