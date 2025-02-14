@@ -1,6 +1,8 @@
 package net.discdd.app.k9;
 
-import static java.util.logging.Level.*;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+import static java.util.logging.Level.SEVERE;
 
 import net.discdd.app.k9.repository.entity.K9ClientIdToEmailMapping;
 import net.discdd.app.k9.model.LoginAdu;
