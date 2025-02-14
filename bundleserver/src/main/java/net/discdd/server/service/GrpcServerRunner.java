@@ -6,9 +6,9 @@ import net.discdd.bundlesecurity.ServerSecurity;
 import net.discdd.grpc.GrpcService;
 import net.discdd.tls.DDDNettyTLS;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -17,7 +17,6 @@ import java.util.stream.Collectors;
 
 import static java.util.logging.Level.INFO;
 
-@Profile("!test")
 @Component
 public class GrpcServerRunner implements CommandLineRunner {
     private static final Logger logger = Logger.getLogger(GrpcServerRunner.class.getName());
@@ -28,6 +27,12 @@ public class GrpcServerRunner implements CommandLineRunner {
     @Autowired
     ApplicationContext context;
 
+    int BUNDLE_SERVER_PORT;
+
+    public GrpcServerRunner(@Value("${grpc.server.port}") int port) {
+        BUNDLE_SERVER_PORT = port;
+    }
+
     @Override
     public void run(String... args) throws Exception {
         services = context.getBeansWithAnnotation(GrpcService.class).values().stream().map(o -> (BindableService) o).collect(Collectors.toList());
@@ -35,12 +40,12 @@ public class GrpcServerRunner implements CommandLineRunner {
         server = DDDNettyTLS.createGrpcServer(
                 serverSecurity.getJavaKeyPair(),
                 serverSecurity.getServerCert(),
-                7778,
+                BUNDLE_SERVER_PORT,
                 services.toArray(new BindableService[0])
         );
 
         server.start();
-        logger.log(INFO, "gRPC Server started on port 7778");
+        logger.log(INFO, "gRPC Server started on port " + BUNDLE_SERVER_PORT);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("Shutting down gRPC Server...");

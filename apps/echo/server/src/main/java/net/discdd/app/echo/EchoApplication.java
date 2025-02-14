@@ -13,9 +13,6 @@ import org.springframework.boot.Banner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.support.PropertiesLoaderUtils;
 
 import javax.net.ssl.SSLException;
 import java.nio.file.Path;
@@ -45,58 +42,25 @@ public class EchoApplication {
 
         var app = new SpringApplication(EchoApplication.class);
 
-        Resource resource = new FileSystemResource(args[0]);
-        if (!resource.exists()) {
-            logger.log(SEVERE, String.format("Entered properties file path %s does not exist!", args[0]));
-            System.exit(1);
-        }
-
-        try {
-            var properties = PropertiesLoaderUtils.loadProperties(resource);
-            app.setDefaultProperties(properties);
-            args = Arrays.copyOfRange(args, 1, args.length);
-        } catch (Exception e) {
-            logger.log(SEVERE, "Please enter valid properties file path!");
-            System.exit(1);
-        }
-
         app.setWebApplicationType(WebApplicationType.NONE);
         app.setBannerMode(Banner.Mode.OFF);
         // we need to register with the BundleServer in an application initializer so that
         // the logging will be set up correctly
-        String[] finalArgs = args;
+
         app.addInitializers((actx) -> {
-            var bundleServerURL = finalArgs[0];
+            var bundleServerURL = args[0];
             var myGrpcUrl = actx.getEnvironment().getProperty("my.grpc.url");
             if (myGrpcUrl == null) {
                 logger.log(SEVERE, "my.grpc.url is not set in application.properties");
                 System.exit(1);
             }
 
-//            Path adapterSecurity = Path.of(actx.getEnvironment().getProperty("k9-server.rootdir.adapter-security"));
-//
-//            if (adapterSecurity == null) {
-//                logger.log(SEVERE, "echo-server.rootdir.adapter-security is not set in application.properties");
-//                System.exit(1);
-//            }
-//
-//            var adapterPublicKeyPath = adapterSecurity.resolve("adapter_java.pub");
-//            var adapterPrivateKeyPath = adapterSecurity.resolve("adapterJava.pvt");
-//            var adapterCertPath = adapterSecurity.resolve("adapter.crt");
-//            X509Certificate adapterCert = null;
-//            KeyPair adapterKeyPair = null;
-//
-//            try {
-//                adapterCert = DDDTLSUtil.loadCertFromFile(adapterCertPath);
-//                adapterKeyPair = DDDTLSUtil.loadKeyPairfromFiles(adapterPublicKeyPath, adapterPrivateKeyPath);
-//            } catch (IOException | CertificateException | NoSuchAlgorithmException | InvalidKeySpecException | InvalidKeyException |
-//                     NoSuchProviderException e) {
-//                logger.log(SEVERE, "Could not load adapter certificate: " + e.getMessage());
-//                System.exit(1);
-//            }
-
-            var adapterSecurity = AdapterSecurity.getInstance(Path.of(actx.getEnvironment().getProperty("k9-server.rootdir")));
-
+            AdapterSecurity adapterSecurity = null;
+            try {
+                adapterSecurity = AdapterSecurity.getInstance(Path.of(actx.getEnvironment().getProperty("echo-server.rootdir")));
+            } catch (Exception e) {
+                logger.log(SEVERE, "Could not create AdapterSecurity: " + e.getMessage());
+            }
             SslContext sslClientContext = null;
             try {
                 sslClientContext = GrpcSslContexts.forClient()

@@ -24,8 +24,7 @@ public class DDDNettyTLS {
                 .trustManager(DDDTLSUtil.trustManager)
                 .build();
         var serviceBuilder = NettyServerBuilder.forPort(port)
-                .sslContext(sslServerContext)
-                .intercept(new NettyServerCertificateInterceptor());
+                .sslContext(sslServerContext);
         for (var service : services) {
             serviceBuilder.addService(service);
         }
@@ -50,5 +49,17 @@ public class DDDNettyTLS {
         var stub = maker.apply(channel);
         stub = NettyClientCertificateInterceptor.createServerCertificateOption(stub, certCompletion);
         return new NettyStubWithCertificate<>(stub, certCompletion);
+    }
+
+    public static ManagedChannel createGrpcChannel(KeyPair clientKeyPair, X509Certificate clientCert, String host, int port) throws SSLException {
+        var sslClientContext = GrpcSslContexts.forClient()
+                .keyManager(clientKeyPair.getPrivate(), clientCert)
+                .trustManager(DDDTLSUtil.trustManager)
+                .build();
+
+        return NettyChannelBuilder.forAddress(host, port)
+                .useTransportSecurity()
+                .sslContext(sslClientContext)
+                .build();
     }
 }

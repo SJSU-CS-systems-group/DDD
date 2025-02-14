@@ -181,21 +181,6 @@
 			<artifactId>serviceadapter-core</artifactId>
 			<version>1.0</version>
 		</dependency>
-<!--		<dependency>-->
-<!--			<groupId>net.devh</groupId>-->
-<!--			<artifactId>grpc-server-spring-boot-starter</artifactId>-->
-<!--			<version>${grpc-starters.version}</version>-->
-<!--		</dependency>-->
-<!--		<dependency>-->
-<!--			<groupId>net.devh</groupId>-->
-<!--			<artifactId>grpc-client-spring-boot-starter</artifactId>-->
-<!--			<version>${grpc-starters.version}</version>-->
-<!--		</dependency>-->
-<!--		<dependency>-->
-<!--			<groupId>net.devh</groupId>-->
-<!--			<artifactId>grpc-spring-boot-starter</artifactId>-->
-<!--			<version>${grpc-starters.version}</version>-->
-<!--		</dependency>-->
 		<dependency>
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>

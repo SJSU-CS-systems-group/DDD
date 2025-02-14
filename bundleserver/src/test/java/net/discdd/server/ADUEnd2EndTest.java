@@ -1,7 +1,6 @@
 package net.discdd.server;
 
 import com.google.protobuf.ByteString;
-import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import net.discdd.grpc.AppDataUnit;
 import net.discdd.grpc.BundleChunk;
@@ -13,16 +12,19 @@ import net.discdd.grpc.BundleUploadResponse;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.grpc.ExchangeADUsResponse;
 import net.discdd.grpc.Status;
+import net.discdd.tls.DDDNettyTLS;
+import net.discdd.tls.DDDTLSUtil;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.KeyPair;
+import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
@@ -31,10 +33,21 @@ import java.util.List;
 import java.util.logging.Logger;
 
 @SpringBootTest(classes = { BundleServerApplication.class, End2EndTest.End2EndTestInitializer.class })
-@ActiveProfiles("test")
 @TestMethodOrder(MethodOrderer.MethodName.class)
 public class ADUEnd2EndTest extends End2EndTest {
     private static final Logger logger = Logger.getLogger(ADUEnd2EndTest.class.getName());
+
+    private static KeyPair clientKeyPair;
+    private static X509Certificate clientCert;
+
+    static {
+        try {
+            clientKeyPair = DDDTLSUtil.generateKeyPair();
+            clientCert = DDDTLSUtil.getSelfSignedCertificate(clientKeyPair, DDDTLSUtil.publicKeyToName(clientKeyPair.getPublic()));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     @Test
     void test1ContextLoads() {}
@@ -47,7 +60,7 @@ public class ADUEnd2EndTest extends End2EndTest {
 
         // check if the files are there
         HashSet<String> expectedFileList = new HashSet<>(Arrays.asList("1", "2", "3"));
-        checkReceivedFiles(expectedFileList);
+        checkReceivedFiles(clientId, expectedFileList);
 
         // check the gRPC
         testAppServiceAdapter.handleRequest((req, rsp) -> {
@@ -64,8 +77,8 @@ public class ADUEnd2EndTest extends End2EndTest {
         });
 
         // everything should disappear
-        checkReceivedFiles(new HashSet<String>(List.of()));
-        checkToSendFiles(new HashSet<>(List.of("1")));
+        checkReceivedFiles(clientId, new HashSet<String>(List.of()));
+        checkToSendFiles(clientId, new HashSet<>(List.of("1")));
     }
 
     @Test
@@ -80,7 +93,7 @@ public class ADUEnd2EndTest extends End2EndTest {
 
         HashSet<String> expectedFileList = new HashSet<>(List.of());
         for (int i = 4; i <= adus.get(adus.size() - 1); i++) expectedFileList.add(String.valueOf(i));
-        checkReceivedFiles(expectedFileList);
+        checkReceivedFiles(clientId, expectedFileList);
 
         // check the gRPC
         testAppServiceAdapter.handleRequest((req, rsp) -> {
@@ -95,7 +108,7 @@ public class ADUEnd2EndTest extends End2EndTest {
                     AppDataUnit.newBuilder().setAduId(2).setData(ByteString.copyFromUtf8("SA2")).build()).build());
             rsp.onCompleted();
         });
-        checkToSendFiles(new HashSet<>(List.of("1", "2")));
+        checkToSendFiles(clientId, new HashSet<>(List.of("1", "2")));
     }
 
     @Test
@@ -109,14 +122,15 @@ public class ADUEnd2EndTest extends End2EndTest {
                     AppDataUnit.newBuilder().setAduId(3).setData(ByteString.copyFromUtf8("SA3")).build()).build());
             rsp.onCompleted();
         });
-        checkToSendFiles(new HashSet<>(List.of("1", "2", "3")));
+        checkToSendFiles(clientId, new HashSet<>(List.of("1", "2", "3")));
     }
 
     private void sendBundle(Path bundleJarPath) throws Throwable {
         var testSender = BundleSender.newBuilder().setId("testSenderId").setType(BundleSenderType.CLIENT).build();
 
-        var stub = BundleExchangeServiceGrpc.newStub(
-                ManagedChannelBuilder.forAddress("localhost", BUNDLESERVER_GRPC_PORT).usePlaintext().build());
+        var channel = DDDNettyTLS.createGrpcChannel(clientKeyPair, clientCert, "localhost", BUNDLESERVER_GRPC_PORT);
+
+        var stub = BundleExchangeServiceGrpc.newStub(channel);
 
         // carefull! this is all backwards: we pass an object to receive the response and we get an object back to send
         // requests to the server

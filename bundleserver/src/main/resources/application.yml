@@ -20,12 +20,10 @@ spring:
 #    password: <add in external properties file>
     db-name: dtn_server_db
 
-  autoconfigure:
-    exclude: net.devh.boot.grpc.server.autoconfigure.GrpcServerFactoryAutoConfiguration
 
-#grpc:
-#  server:
-#    port: 7778
+grpc:
+  server:
+    port: 7778
 #    security:
 #      enabled: true
 ##      certificate-chain: file:/Users/ngngo/OneDrive/Desktop/ddd-research/Data/BundleSecurity/Keys/Server/Server_Keys/server.crt

@@ -1,6 +1,5 @@
 package net.discdd.server;
 
-import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
 import net.discdd.bundlesecurity.BundleIDGenerator;
 import net.discdd.bundlesecurity.DDDPEMEncoder;
@@ -13,6 +12,7 @@ import net.discdd.grpc.ServiceAdapterServiceGrpc;
 import net.discdd.model.ADU;
 import net.discdd.server.repository.RegisteredAppAdapterRepository;
 import net.discdd.server.repository.entity.RegisteredAppAdapter;
+import net.discdd.tls.DDDNettyTLS;
 import net.discdd.tls.DDDTLSUtil;
 import net.discdd.utils.BundleUtils;
 import org.bouncycastle.operator.OperatorCreationException;
@@ -155,9 +155,12 @@ public class End2EndTest {
         clientSessionCipher = new SessionCipher(clientSessionStore, address);
 
         // start up the gRPC server
-
-        var server = NettyServerBuilder.forPort(0).addService(testAppServiceAdapter).build();
+        var adapterKeyPair = DDDTLSUtil.generateKeyPair();
+        var adapterCert = DDDTLSUtil.getSelfSignedCertificate(adapterKeyPair,
+                                                              DDDTLSUtil.publicKeyToName(adapterKeyPair.getPublic()));
+        var server = DDDNettyTLS.createGrpcServer(adapterKeyPair, adapterCert, 0, testAppServiceAdapter);
         server.start();
+
         TEST_ADAPTER_GRPC_PORT = server.getPort();
 
         tempRootDir.resolve(Paths.get("send", clientId, TEST_APPID)).toFile().mkdirs();
@@ -206,9 +209,9 @@ public class End2EndTest {
         return bundleJarPath;
     }
 
-    protected static void checkToSendFiles(Set<String> expectedFileList) {
+    protected static void checkToSendFiles(String testClientId, Set<String> expectedFileList) {
         HashSet<String> toSendFiles;
-        File aduDir = tempRootDir.resolve(java.nio.file.Path.of("send", clientId, TEST_APPID)).toFile();
+        File aduDir = tempRootDir.resolve(java.nio.file.Path.of("send", testClientId, TEST_APPID)).toFile();
         logger.info("Checking for files to send in " + aduDir);
         // try for up to 10 seconds to see if the files have arrived
         for (int tries = 0;
@@ -225,9 +228,9 @@ public class End2EndTest {
     }
 
     @SuppressWarnings("BusyWait")
-    protected static void checkReceivedFiles(Set<String> expectedFileList) throws InterruptedException {
+    protected static void checkReceivedFiles(String testClientId, Set<String> expectedFileList) throws InterruptedException {
         HashSet<String> receivedFiles;
-        File aduDir = tempRootDir.resolve(java.nio.file.Path.of("receive", clientId, TEST_APPID)).toFile();
+        File aduDir = tempRootDir.resolve(java.nio.file.Path.of("receive", testClientId, TEST_APPID)).toFile();
         logger.info("Checking for received files in " + aduDir);
         // try for up to 10 seconds to see if the files have arrived
         for (int tries = 0;
