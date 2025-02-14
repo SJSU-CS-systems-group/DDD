@@ -17,19 +17,13 @@ import androidx.fragment.app.Fragment;
 
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.transport.TransportToBundleServerManager;
-
-import java.io.File;
 import java.security.Security;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.SubmissionPublisher;
 import java.util.logging.Logger;
-
 import net.discdd.transport.TransportSecurity;
-import net.discdd.transport.TransportToBundleServerManager;
-
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-
 /**
  * A Fragment to manage server uploads
  */
@@ -71,6 +65,7 @@ public class ServerUploadFragment extends Fragment {
 
     public void setTransportPaths(TransportPaths transportPaths) {
         this.transportPaths = transportPaths;
+        this.transportSecurity = transportSecurity;
     }
 
     public void setTransportID(String transportID) {
@@ -80,6 +75,8 @@ public class ServerUploadFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+            Security.addProvider(new BouncyCastleProvider());
         if (getArguments() != null) {
             transportID = getArguments().getString("transportID");
         }

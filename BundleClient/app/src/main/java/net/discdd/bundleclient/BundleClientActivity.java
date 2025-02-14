@@ -36,7 +36,6 @@ import net.discdd.android.fragments.PermissionsViewModel;
 import net.discdd.client.bundlerouting.ClientWindow;
 
 import org.conscrypt.Conscrypt;
-
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
@@ -87,6 +86,7 @@ public class BundleClientActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Security.insertProviderAt(Conscrypt.newProvider(), 1);
 
         sharedPreferences =
                 getSharedPreferences(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE);
