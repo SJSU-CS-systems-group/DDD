@@ -19,7 +19,6 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
-
     compileSdk 34
 
     defaultConfig {
@@ -32,13 +31,12 @@ android {
     }
     packagingOptions {
         jniLibs {
-            excludes += ['META-INF/*', 'META-INF/*/*']
+            excludes += ['META-INF/*', 'META-INF/*/*', 'LICENSE-BouncyCastle', 'META-INF/versions/9/OSGI-INF/MANIFEST.MF']
         }
         resources {
-            excludes += ['META-INF/*', 'META-INF/*/*']
+            excludes += ['META-INF/*', 'META-INF/*/*', 'LICENSE-BouncyCastle','META-INF/versions/9/OSGI-INF/MANIFEST.MF']
         }
     }
-
 
     buildTypes {
         debug { minifyEnabled false }
@@ -65,10 +63,15 @@ dependencies {
     implementation 'io.grpc:grpc-protobuf:1.58.0'
     implementation 'io.grpc:grpc-stub:1.58.0'
     implementation 'io.grpc:grpc-okhttp:1.58.0'
+    implementation 'io.grpc:grpc-context:1.58.0'
     implementation 'com.google.firebase:firebase-crashlytics-buildtools:3.0.2'
     implementation 'com.google.protobuf:protobuf-java:3.23.4'
+    implementation 'org.conscrypt:conscrypt-android:2.5.3'
+    implementation 'io.grpc:grpc-netty:1.58.0'
     implementation project(':android-core')
     compileOnly 'org.apache.tomcat:annotations-api:6.0.53' // necessary for Java 9+
+    implementation "org.bouncycastle:bcpkix-jdk15to18:1.78"
+    implementation "org.bouncycastle:bcprov-jdk15to18:1.78"
 
     // Exclude protobuf-java from signal-protocol-android to avoid conflicts
     implementation('org.whispersystems:signal-protocol-android:2.2.0') {
