@@ -151,7 +151,6 @@ public class BundleTransmission {
                        "[BundleTransmission] Failed to process received bundle from: " + bundleSenderToString(sender),
                        e);
         } finally {
-            bundleFile.delete();
             FileUtils.recursiveDelete(bundle.getSource().toPath());
         }
     }

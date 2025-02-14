@@ -137,14 +137,6 @@ public class DDDTLSUtil {
     }
 
     public static X509Certificate loadCertFromFile(Path path) throws IOException, CertificateException {
-//        String certContent = Files.readString(path);
-//
-//        String base64Cert = certContent
-//                .replace(CERT_HEADER, "")
-//                .replace(CERT_FOOTER, "")
-//                .replaceAll("\\s+", "");
-//
-//        byte[] decodedCert = Base64.getDecoder().decode(base64Cert);
 
         byte[] decodedCert = DDDPEMEncoder.decodeFromFile(path, DDDPEMEncoder.CERTIFICATE);
 

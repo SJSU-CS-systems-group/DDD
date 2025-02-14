@@ -2,6 +2,7 @@ package net.discdd.app.echo;
 
 import net.discdd.security.AdapterSecurity;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,12 +20,14 @@ public class AdapterSecurityConfig {
     @Autowired
     ApplicationContext context;
 
+    @Value("${echo-server.rootdir}")
+    private Path adapterPath;
+
     @Bean
     AdapterSecurity createAdapterSecurityInstance() {
         try {
             logger.log(INFO, "Creating adapter security instance");
 
-            var adapterPath = Path.of(context.getEnvironment().getProperty("k9-server.rootdir"));
             return AdapterSecurity.getInstance(adapterPath);
         } catch (Exception e) {
             // TODO Auto-generated catch block

@@ -24,7 +24,6 @@ public class NettyClientCertificateInterceptor implements ClientInterceptor {
         return stub.withOption(NettyClientCertificateInterceptor.SERVER_CERTIFICATE_OPTION, certCompletion);
     }
 
-
     @Override
     public <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(MethodDescriptor<ReqT, RespT> method, CallOptions callOptions, Channel next) {
         return new ForwardingClientCall.SimpleForwardingClientCall<>(next.newCall(method, callOptions)) {

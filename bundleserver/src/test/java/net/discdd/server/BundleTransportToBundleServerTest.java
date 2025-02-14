@@ -1,10 +1,10 @@
 package net.discdd.server;
 
 import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 import net.discdd.grpc.BundleExchangeServiceGrpc;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.pathutils.TransportPaths;
+import net.discdd.tls.DDDNettyTLS;
 import net.discdd.transport.TransportSecurity;
 import net.discdd.transport.TransportToBundleServerManager;
 import org.bouncycastle.operator.OperatorCreationException;
@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -67,8 +68,8 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
     }
 
     @BeforeEach
-    void setUpEach() {
-        channel = ManagedChannelBuilder.forAddress("localhost", BUNDLESERVER_GRPC_PORT).usePlaintext().build();
+    void setUpEach() throws SSLException {
+        channel = DDDNettyTLS.createGrpcChannel(transportSecurity.getTransportKeyPair(), transportSecurity.getTransportCert(), "localhost", BUNDLESERVER_GRPC_PORT);
         stub = BundleExchangeServiceGrpc.newStub(channel);
         blockingStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
 

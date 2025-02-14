@@ -6,6 +6,7 @@ import net.discdd.grpc.GrpcService;
 import net.discdd.security.AdapterSecurity;
 import net.discdd.tls.DDDNettyTLS;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
@@ -25,6 +26,8 @@ public class GrpcK9AdapterRunner implements CommandLineRunner {
     private Server server;
     @Autowired
     ApplicationContext context;
+    @Value("${grpc.server.port}")
+    private int port;
 
     @Override
     public void run(String... args) throws Exception {
@@ -33,12 +36,12 @@ public class GrpcK9AdapterRunner implements CommandLineRunner {
         server = DDDNettyTLS.createGrpcServer(
                 adapterSecurity.getAdapterKeyPair(),
                 adapterSecurity.getAdapterCert(),
-                9091,
+                port,
                 services.toArray(new BindableService[0])
         );
 
         server.start();
-        logger.log(INFO, "gRPC Server started on port 9091");
+        logger.log(INFO, "gRPC Server started on port " + port);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("Shutting down gRPC Server...");
@@ -47,6 +50,12 @@ public class GrpcK9AdapterRunner implements CommandLineRunner {
             }
         }));
 
-        server.awaitTermination();
+        if (!isRunningInMaven()) {
+            server.awaitTermination();
+        }
+    }
+
+    private boolean isRunningInMaven() {
+        return System.getProperty("surefire.test.class.path") != null || System.getProperty("maven.home") != null;
     }
 }

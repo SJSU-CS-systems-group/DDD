@@ -31,8 +31,6 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
@@ -133,12 +131,8 @@ public class TransportToBundleServerManager implements Runnable {
         } catch (IllegalArgumentException | StatusRuntimeException | SSLException e) {
             logger.log(SEVERE, "Failed to connect to server", e);
             connectError.apply(e);
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        } catch (KeyManagementException e) {
-            throw new RuntimeException(e);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            logger.log(SEVERE, "Failed to connect to server", e);
         } finally {
             try {
                 if (channel != null) {
