@@ -130,13 +130,10 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
     String dataStr = new String(adu.getData().toByteArray());
 
     if (dataStr.startsWith("login")) {
-      logger.log(INFO, "User is logging in.");
       processLoginAdus(adu, clientId);
     } else if (dataStr.startsWith("register")) {
-      logger.log(INFO, "User is registering.");
       processRegisterAdus(adu, clientId);
     } else {
-      logger.log(INFO, "Unknown command.");
       processEmailAdus(adu);
     }
   }
