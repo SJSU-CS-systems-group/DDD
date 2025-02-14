@@ -1,11 +1,13 @@
 package net.discdd.server;
 
 import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 import net.discdd.grpc.BundleExchangeServiceGrpc;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.pathutils.TransportPaths;
+import net.discdd.tls.DDDNettyTLS;
+import net.discdd.transport.TransportSecurity;
 import net.discdd.transport.TransportToBundleServerManager;
+import org.bouncycastle.operator.OperatorCreationException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
@@ -13,12 +15,17 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.cert.CertificateException;
 import java.util.Comparator;
 import java.util.List;
 import java.util.logging.Logger;
@@ -39,17 +46,19 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
     private static ManagedChannel channel;
     private Path toClientPath;
     private Path toServerPath;
+    private TransportPaths transportPaths;
+    private TransportSecurity transportSecurity;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws CertificateException, IOException, NoSuchAlgorithmException, OperatorCreationException, NoSuchProviderException, InvalidAlgorithmParameterException {
         // Initialize the TransportPaths class
-        TransportPaths transportPaths = new TransportPaths(End2EndTest.tempRootDir);
+        transportPaths = new TransportPaths(End2EndTest.tempRootDir);
+        transportSecurity = new TransportSecurity(transportPaths);
 
         toClientPath = transportPaths.toClientPath;
         toServerPath = transportPaths.toServerPath;
 
-        manager = new TransportToBundleServerManager(transportPaths, "localhost",
-                                                     Integer.toString(BUNDLESERVER_GRPC_PORT), (Void) -> {
+        manager = new TransportToBundleServerManager(transportPaths, transportSecurity, "localhost", Integer.toString(BUNDLESERVER_GRPC_PORT), (Void) -> {
             System.out.println("connectComplete");
             return null;
         }, (Exception e) -> {
@@ -59,8 +68,8 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
     }
 
     @BeforeEach
-    void setUpEach() {
-        channel = ManagedChannelBuilder.forAddress("localhost", BUNDLESERVER_GRPC_PORT).usePlaintext().build();
+    void setUpEach() throws SSLException {
+        channel = DDDNettyTLS.createGrpcChannel(transportSecurity.getTransportKeyPair(), transportSecurity.getTransportCert(), "localhost", BUNDLESERVER_GRPC_PORT);
         stub = BundleExchangeServiceGrpc.newStub(channel);
         blockingStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
 
@@ -122,7 +131,7 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
             IOException {
         // Prepare to process recency blob
         Method processRecencyBlob = TransportToBundleServerManager.class.getDeclaredMethod("processRecencyBlob",
-                                                                                           BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub.class);
+                BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub.class);
         processRecencyBlob.setAccessible(true);
         processRecencyBlob.invoke(manager, blockingStub);
 
@@ -143,7 +152,7 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
         long currentTime = System.currentTimeMillis();
         long lastModifiedMillis = lastModifiedTime.toMillis();
         assertTrue((currentTime - lastModifiedMillis) < 50000,
-                   "Recency Blob should have been modified within the last 5 seconds.");
+                "Recency Blob should have been modified within the last 5 seconds.");
     }
 
     @Test

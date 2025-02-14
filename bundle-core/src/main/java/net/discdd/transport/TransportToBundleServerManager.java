@@ -1,13 +1,9 @@
 package net.discdd.transport;
 
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-
 import com.google.protobuf.ByteString;
-import io.grpc.Grpc;
-import io.grpc.InsecureChannelCredentials;
 import io.grpc.ManagedChannel;
 import io.grpc.StatusRuntimeException;
+import io.grpc.okhttp.OkHttpChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
 import net.discdd.grpc.BundleChunk;
@@ -23,14 +19,19 @@ import net.discdd.grpc.BundleUploadResponse;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.grpc.GetRecencyBlobRequest;
 import net.discdd.pathutils.TransportPaths;
+import net.discdd.tls.DDDTLSUtil;
 import net.discdd.utils.Constants;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.TrustManager;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -38,7 +39,12 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 
 public class TransportToBundleServerManager implements Runnable {
 
@@ -50,12 +56,34 @@ public class TransportToBundleServerManager implements Runnable {
     private final Function<Void, Void> connectComplete;
     private final Function<Exception, Void> connectError;
     private final String transportTarget;
+    private final String serverHost;
+    private final int serverPort;
+    private final TransportSecurity transportSecurity;
+    private final TransportPaths transportPaths;
 
-    public TransportToBundleServerManager(TransportPaths transportPaths, String host, String port, Function<Void,
+    private void configureLogging() {
+        // Set the log level for gRPC OkHttp and internal packages
+        Logger.getLogger("io.grpc.okhttp").setLevel(Level.FINE);
+        Logger.getLogger("io.grpc.internal").setLevel(Level.FINE);
+
+        // Configure the root logger to output logs to the console
+        Logger rootLogger = Logger.getLogger("");
+        ConsoleHandler consoleHandler = new ConsoleHandler();
+        consoleHandler.setLevel(Level.FINE);
+        rootLogger.addHandler(consoleHandler);
+
+        // Ensure the root logger is set to FINE level
+        rootLogger.setLevel(Level.FINE);
+    }
+    public TransportToBundleServerManager(TransportPaths transportPaths, TransportSecurity transportSecurity, String host, String port, Function<Void,
             Void> connectComplete, Function<Exception, Void> connectError) {
+        this.transportPaths = transportPaths;
         this.connectComplete = connectComplete;
         this.connectError = connectError;
         this.transportTarget = host + ":" + port;
+        this.serverHost = host;
+        this.serverPort = Integer.parseInt(port);
+        this.transportSecurity = transportSecurity;
         this.transportSenderId =
                 BundleSender.newBuilder().setId("bundle_transport").setType(BundleSenderType.TRANSPORT).build();
         this.fromClientPath = transportPaths.toServerPath;
@@ -64,9 +92,23 @@ public class TransportToBundleServerManager implements Runnable {
 
     @Override
     public void run() {
+        configureLogging();
         ManagedChannel channel = null;
         try {
-            channel = Grpc.newChannelBuilder(transportTarget, InsecureChannelCredentials.create()).build();
+            var sslClientContext = SSLContext.getInstance("TLS");
+            sslClientContext.init(
+                DDDTLSUtil.getKeyManagerFactory(transportSecurity.getTransportKeyPair(),
+                transportSecurity.getTransportCert()).getKeyManagers(),
+                new TrustManager[] {DDDTLSUtil.trustManager},
+                new SecureRandom()
+            );
+
+            channel = OkHttpChannelBuilder.forAddress(serverHost, serverPort)
+                    .hostnameVerifier((host, session) -> true)
+                    .useTransportSecurity()
+                    .sslSocketFactory(sslClientContext.getSocketFactory())
+                    .build();
+
             var bsStub = BundleServerServiceGrpc.newBlockingStub(channel);
             var exchangeStub = BundleExchangeServiceGrpc.newStub(channel);
             var blockingExchangeStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
@@ -83,11 +125,14 @@ public class TransportToBundleServerManager implements Runnable {
             processDownloadBundles(inventoryResponse.getBundlesToDownloadList(), exchangeStub);
             processRecencyBlob(blockingExchangeStub);
 
+
             logger.log(INFO, "Connect server completed");
             connectComplete.apply(null);
-        } catch (IllegalArgumentException | StatusRuntimeException e) {
+        } catch (IllegalArgumentException | StatusRuntimeException | SSLException e) {
             logger.log(SEVERE, "Failed to connect to server", e);
             connectError.apply(e);
+        } catch (Exception e) {
+            logger.log(SEVERE, "Failed to connect to server", e);
         } finally {
             try {
                 if (channel != null) {

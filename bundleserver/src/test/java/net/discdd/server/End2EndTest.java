@@ -1,6 +1,5 @@
 package net.discdd.server;
 
-import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
 import net.discdd.bundlesecurity.BundleIDGenerator;
 import net.discdd.bundlesecurity.DDDPEMEncoder;
@@ -13,7 +12,10 @@ import net.discdd.grpc.ServiceAdapterServiceGrpc;
 import net.discdd.model.ADU;
 import net.discdd.server.repository.RegisteredAppAdapterRepository;
 import net.discdd.server.repository.entity.RegisteredAppAdapter;
+import net.discdd.tls.DDDNettyTLS;
+import net.discdd.tls.DDDTLSUtil;
 import net.discdd.utils.BundleUtils;
+import org.bouncycastle.operator.OperatorCreationException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.io.TempDir;
@@ -44,7 +46,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.security.InvalidAlgorithmParameterException;
+import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
 import java.util.Base64;
@@ -80,11 +86,15 @@ public class End2EndTest {
     private static Path serverPrivatePreKeyPath;
     static Path serverRatchetKeyPath;
     private static Path serverPrivateRatchetKeyPath;
+    private static Path serverCertPath;
+    private static Path serverJavaPubPath;
+    private static Path serverJavaPvtPath;
+
     @Value("${grpc.server.port}")
     protected int BUNDLESERVER_GRPC_PORT;
 
     @BeforeAll
-    static void setup() throws IOException, NoSuchAlgorithmException, InvalidKeyException {
+    static void setup() throws IOException, NoSuchAlgorithmException, InvalidKeyException, CertificateException, OperatorCreationException, NoSuchProviderException, InvalidAlgorithmParameterException {
         System.setProperty("bundle-server.bundle-store-root", tempRootDir.toString() + '/');
         System.setProperty("serviceadapter.datacheck.interval", "5s");
 
@@ -95,6 +105,10 @@ public class End2EndTest {
         serverIdentity = new IdentityKeyPair(new IdentityKey(keyPair.getPublicKey()), keyPair.getPrivateKey());
         ECKeyPair serverSignedPreKey = Curve.generateKeyPair();
         ECKeyPair serverRatchetKey = Curve.generateKeyPair();
+        KeyPair serverJavaKeyPair = DDDTLSUtil.generateKeyPair();
+        X509Certificate serverCert = DDDTLSUtil.getSelfSignedCertificate(serverJavaKeyPair,
+                                                                        DDDTLSUtil.publicKeyToName(serverJavaKeyPair.getPublic()));
+
         serverIdentityKeyPath = keysDir.resolve(SecurityUtils.SERVER_IDENTITY_KEY);
         Files.writeString(serverIdentityKeyPath,
                           DDDPEMEncoder.encode(serverIdentity.getPublicKey().serialize(), ECPublicKeyType));
@@ -112,6 +126,11 @@ public class End2EndTest {
         serverPrivateRatchetKeyPath = keysDir.resolve(SecurityUtils.SERVER_RATCHET_PRIVATE_KEY);
         Files.writeString(serverPrivateRatchetKeyPath,
                           DDDPEMEncoder.encode(serverRatchetKey.getPrivateKey().serialize(), ECPrivateKeyType));
+        serverCertPath = keysDir.resolve(SecurityUtils.SERVER_CERT);
+        DDDTLSUtil.writeCertToFile(serverCert, serverCertPath);
+        serverJavaPubPath = keysDir.resolve(SecurityUtils.SERVER_JAVA_PUBLIC_KEY);
+        serverJavaPvtPath = keysDir.resolve(SecurityUtils.SERVER_JAVA_PRIVATE_KEY);
+        DDDTLSUtil.writeKeyPairToFile(serverJavaKeyPair, serverJavaPubPath, serverJavaPvtPath);
 
         // set up the client keys
         // create the keypairs for the client
@@ -136,9 +155,12 @@ public class End2EndTest {
         clientSessionCipher = new SessionCipher(clientSessionStore, address);
 
         // start up the gRPC server
-
-        var server = NettyServerBuilder.forPort(0).addService(testAppServiceAdapter).build();
+        var adapterKeyPair = DDDTLSUtil.generateKeyPair();
+        var adapterCert = DDDTLSUtil.getSelfSignedCertificate(adapterKeyPair,
+                                                              DDDTLSUtil.publicKeyToName(adapterKeyPair.getPublic()));
+        var server = DDDNettyTLS.createGrpcServer(adapterKeyPair, adapterCert, 0, testAppServiceAdapter);
         server.start();
+
         TEST_ADAPTER_GRPC_PORT = server.getPort();
 
         tempRootDir.resolve(Paths.get("send", clientId, TEST_APPID)).toFile().mkdirs();
@@ -153,7 +175,6 @@ public class End2EndTest {
         String secretKey = Base64.getUrlEncoder().encodeToString(agreement);
 
         return SecurityUtils.encryptAesCbcPkcs5(secretKey, bundleID);
-
     }
 
     static int jarCounter = 0;
@@ -188,9 +209,9 @@ public class End2EndTest {
         return bundleJarPath;
     }
 
-    protected static void checkToSendFiles(Set<String> expectedFileList) {
+    protected static void checkToSendFiles(String testClientId, Set<String> expectedFileList) {
         HashSet<String> toSendFiles;
-        File aduDir = tempRootDir.resolve(java.nio.file.Path.of("send", clientId, TEST_APPID)).toFile();
+        File aduDir = tempRootDir.resolve(java.nio.file.Path.of("send", testClientId, TEST_APPID)).toFile();
         logger.info("Checking for files to send in " + aduDir);
         // try for up to 10 seconds to see if the files have arrived
         for (int tries = 0;
@@ -207,9 +228,9 @@ public class End2EndTest {
     }
 
     @SuppressWarnings("BusyWait")
-    protected static void checkReceivedFiles(Set<String> expectedFileList) throws InterruptedException {
+    protected static void checkReceivedFiles(String testClientId, Set<String> expectedFileList) throws InterruptedException {
         HashSet<String> receivedFiles;
-        File aduDir = tempRootDir.resolve(java.nio.file.Path.of("receive", clientId, TEST_APPID)).toFile();
+        File aduDir = tempRootDir.resolve(java.nio.file.Path.of("receive", testClientId, TEST_APPID)).toFile();
         logger.info("Checking for received files in " + aduDir);
         // try for up to 10 seconds to see if the files have arrived
         for (int tries = 0;

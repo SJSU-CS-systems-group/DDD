@@ -21,22 +21,21 @@
                 android:exported="false" >
         </service>
         <activity
-            android:name="net.discdd.bundleclient.BundleClientActivity"
-            android:exported="true">
+                android:name="net.discdd.bundleclient.BundleClientActivity"
+                android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
         <provider
-            android:name="net.discdd.datastore.providers.MessageProvider"
-            android:authorities="net.discdd.provider.datastoreprovider"
-            android:exported="true"
-            android:multiprocess="true"
-            android:grantUriPermissions="true"
-            android:writePermission="net.discdd.bundleclient.permission.MESSAGE_PROVIDER_WRITE"
-            android:readPermission="net.discdd.bundleclient.permission.MESSAGE_PROVIDER_READ">
+                android:name="net.discdd.datastore.providers.MessageProvider"
+                android:authorities="net.discdd.provider.datastoreprovider"
+                android:exported="true"
+                android:multiprocess="true"
+                android:grantUriPermissions="true"
+                android:writePermission="net.discdd.bundleclient.permission.MESSAGE_PROVIDER_WRITE"
+                android:readPermission="net.discdd.bundleclient.permission.MESSAGE_PROVIDER_READ">
         </provider>
     </application>
-
 </manifest>

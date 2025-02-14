@@ -6,10 +6,14 @@ import net.discdd.client.bundletransmission.BundleTransmission;
 import net.discdd.model.ADU;
 import net.discdd.model.BundleDTO;
 import net.discdd.pathutils.ClientPaths;
+import org.bouncycastle.operator.OperatorCreationException;
 import org.whispersystems.libsignal.InvalidKeyException;
 
 import java.io.IOException;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.cert.CertificateException;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 
@@ -24,7 +28,7 @@ public class BundleDeliveryAgent {
 
     private BundleTransmission bundleTransmission;
 
-    public BundleDeliveryAgent(ClientPaths clientPaths, Consumer<ADU> aduConsumer) throws WindowExceptions.BufferOverflow, RoutingExceptions.ClientMetaDataFileException, IOException, NoSuchAlgorithmException, InvalidKeyException {
+    public BundleDeliveryAgent(ClientPaths clientPaths, Consumer<ADU> aduConsumer) throws WindowExceptions.BufferOverflow, RoutingExceptions.ClientMetaDataFileException, IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, CertificateException, NoSuchProviderException, OperatorCreationException {
         this.clientPaths = clientPaths;
         bundleTransmission = new BundleTransmission(clientPaths, aduConsumer);
     }

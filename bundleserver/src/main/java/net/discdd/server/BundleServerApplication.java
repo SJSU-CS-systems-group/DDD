@@ -24,7 +24,7 @@ import java.util.logging.Logger;
 import static java.util.logging.Level.SEVERE;
 
 @Slf4j
-@SpringBootApplication
+@SpringBootApplication()
 @EnableJpaRepositories("net.discdd.server")
 @EntityScan("net.discdd.server.repository.entity")
 public class BundleServerApplication {
