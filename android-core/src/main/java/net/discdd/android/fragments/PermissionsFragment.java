@@ -66,6 +66,9 @@ public class PermissionsFragment extends Fragment {
 
             //Initialize the adapter
             PermissionsAdapter permissionsAdapter = new PermissionsAdapter(permissions);
+            permissionsAdapter.setOnClickListener(v -> {
+                triggerPermission();
+            });
 
             //set the adapter to the RecyclerView
             permissionsRecyclerView.setAdapter(permissionsAdapter);
@@ -110,6 +113,11 @@ public class PermissionsFragment extends Fragment {
                                       });
     ;
 
+    private void triggerPermission() {
+        PermissionsDialogFragment dialog = new PermissionsDialogFragment();
+        dialog.show(getParentFragmentManager(), "permission");
+    }
+
     // TODO: in the future, we should enable removing from this set
     HashSet<String> grantedPermissions = new HashSet<>();
 
@@ -129,6 +137,7 @@ public class PermissionsFragment extends Fragment {
     }
 
     public void checkPermission(String permission, PermissionsAdapter.PermissionViewHolder holder) {
+        logger.info("Checking permission " + permission);
         if (ContextCompat.checkSelfPermission(getContext(), permission) == PackageManager.PERMISSION_GRANTED) {
             holder.permissionCheckbox.setChecked(true);
             trackGrantedPermission(permission);
@@ -145,9 +154,8 @@ public class PermissionsFragment extends Fragment {
     }
 
     class PermissionsAdapter extends RecyclerView.Adapter<PermissionsAdapter.PermissionViewHolder> {
-
+        private OnClickListener listener;
         final String[] permissions;
-
         public PermissionsAdapter(String[] permissions) {
             this.permissions = permissions;
         }
@@ -170,11 +178,25 @@ public class PermissionsFragment extends Fragment {
             holder.permissionCaption.setText(resid == 0 ? permission : getString(resid));
             checkPermission(permission, holder);
             allSatisfied();
+
+            holder.itemView.setOnClickListener(v -> {
+                if (listener != null && !holder.permissionCheckbox.isChecked()) {
+                    listener.onClick(v);
+                }
+            });
         }
 
         @Override
         public int getItemCount() {
             return permissions.length;
+        }
+
+        public void setOnClickListener(OnClickListener listener) {
+            this.listener = listener;
+        }
+
+        public interface OnClickListener {
+            void onClick(View v);
         }
 
         public static class PermissionViewHolder extends RecyclerView.ViewHolder {
