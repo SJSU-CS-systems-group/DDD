@@ -17,6 +17,7 @@ import io.grpc.stub.StreamObserver;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
 import java.util.Optional;
@@ -127,7 +128,8 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
   // This method will parse the ToAddress from the mail ADUs and prepares ADUs for the respective
   // client directories
   private void processADUsToSend(AppDataUnit adu, String clientId) throws IOException {
-    String dataStr = new String(adu.getData().toByteArray());
+    byte[] prefixBytes = Arrays.copyOfRange(adu.getData().toByteArray(), 0, 15);
+    String dataStr = new String(prefixBytes);
 
     if (dataStr.startsWith("login")) {
       processLoginAdus(adu, clientId);
