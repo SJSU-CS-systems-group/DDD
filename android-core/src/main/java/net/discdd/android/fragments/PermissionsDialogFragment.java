@@ -1,4 +1,4 @@
-package net.discdd.android.fragments;
+  package net.discdd.android.fragments;
 
 import android.app.AlertDialog;
 import android.app.Dialog;

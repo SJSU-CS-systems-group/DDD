@@ -41,8 +41,7 @@ public class NettyClientCertificateInterceptor implements ClientInterceptor {
                                     callOptions.getOption(SERVER_CERTIFICATE_OPTION).complete(serverCert);
                                 }
                             } catch (SSLPeerUnverifiedException e) {
-                                e.printStackTrace();    
-                                throw new RuntimeException("Server certificate not found " + e.getMessage());
+                                e.printStackTrace();
                             }
                         }
                         super.onHeaders(headers);

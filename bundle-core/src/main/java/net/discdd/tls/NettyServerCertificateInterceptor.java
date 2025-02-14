@@ -26,8 +26,7 @@
                         return Contexts.interceptCall(ctx, call, headers, next);
                     }
                 } catch (SSLPeerUnverifiedException e) {
-                    e.printStackTrace();    
-                    throw new RuntimeException("Client certificate not found " + e.getMessage());
+                    e.printStackTrace();
                 }
             }
             return next.startCall(call, headers);
