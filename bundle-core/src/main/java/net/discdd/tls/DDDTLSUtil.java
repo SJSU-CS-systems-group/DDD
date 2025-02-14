@@ -47,11 +47,6 @@ public class DDDTLSUtil {
     public static final X509ExtendedTrustManager trustManager = new DDDX509ExtendedTrustManager();
     public static String publicKeyToName(PublicKey key) {
         var edKey = (ECPublicKey) key;
-//        var point = edKey.getPointEncoding();
-//        return new String(Base64.getUrlEncoder().encode(point)).replace("=", "");
-
-//        var point = edKey.getPoint();
-//        return new String(Base64.getUrlEncoder().encode(point.getY().toByteArray())).replace("=", "");
         return new String(Base64.getUrlEncoder().encode(edKey.getEncoded())).replace("=", "");
     }
 
@@ -67,9 +62,6 @@ public class DDDTLSUtil {
 
         Files.write(publicKeyPath, DDDPEMEncoder.encode(keyPair.getPublic().getEncoded(), DDDPEMEncoder.publicKeyType).getBytes(), StandardOpenOption.CREATE,
                 StandardOpenOption.TRUNCATE_EXISTING);
-
-        System.out.println("Public key written to " + publicKeyPath);
-        System.out.println("Private key written to " + privateKeyPath);
     }
 
     public static KeyPair loadKeyPairfromFiles(Path publicKeyPath, Path privateKeyPath) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, java.security.InvalidKeyException, NoSuchProviderException {
@@ -108,7 +100,6 @@ public class DDDTLSUtil {
         trustManagerFactory.init(keyStore);
 
         return new TrustManager[] {trustManagerFactory.getTrustManagers()[0], trustManager};
-//        return trustManagerFactory.getTrustManagers();
     }
 
     public static KeyManagerFactory getKeyManagerFactory(KeyPair keyPair, X509Certificate cert) throws Exception {
@@ -118,7 +109,6 @@ public class DDDTLSUtil {
         keyStore.load(null, null);
         keyStore.setKeyEntry("key", keyPair.getPrivate(), null, new X509Certificate[]{cert});
 
-//        keyStore.setCertificateEntry("cert", cert);
         var keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         keyManagerFactory.init(keyStore, null);
 
@@ -126,9 +116,6 @@ public class DDDTLSUtil {
     }
 
     public static void writeCertToFile(X509Certificate cert, Path path) throws IOException, CertificateEncodingException {
-//        String encodedCert = Base64.getEncoder().encodeToString(cert.getEncoded());
-//        String certificateContent = CERT_HEADER + "\n" + encodedCert + "\n" + CERT_FOOTER;
-
         byte[] encodedCert = DDDPEMEncoder.encode(cert.getEncoded(), DDDPEMEncoder.CERTIFICATE).getBytes();
 
         Files.write(path, encodedCert, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
