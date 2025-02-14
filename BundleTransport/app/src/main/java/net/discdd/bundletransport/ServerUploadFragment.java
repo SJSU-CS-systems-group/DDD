@@ -51,13 +51,18 @@ public class ServerUploadFragment extends Fragment {
     private TextView numberBundlestoServer;
     private Button reloadButton;
 
-    public static ServerUploadFragment newInstance(String transportID, TransportPaths transportPaths,
+    public static ServerUploadFragment newInstance(String transportID, TransportPaths transportPaths, TransportSecurity transportSecurity,
                                                    SubmissionPublisher<BundleTransportActivity.ConnectivityEvent> connectivityFlow) {
         ServerUploadFragment fragment = new ServerUploadFragment();
         fragment.setTransportPaths(transportPaths);
         fragment.setConnectivityFlow(connectivityFlow);
         fragment.setTransportID(transportID);
+        fragment.setTransportSecurity(transportSecurity);
         return fragment;
+    }
+
+    public void setTransportSecurity(TransportSecurity transportSecurity) {
+        this.transportSecurity = transportSecurity;
     }
 
     public void setConnectivityFlow(SubmissionPublisher<BundleTransportActivity.ConnectivityEvent> connectivityFlow) {

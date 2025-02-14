@@ -219,7 +219,6 @@ public class BundleClientActivity extends AppCompatActivity {
             return fragmentsWithTitles.size();
         }
     }
-
     private void handleUsbBroadcast(Intent intent) {
         String action = intent.getAction();
         if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
@@ -230,11 +229,9 @@ public class BundleClientActivity extends AppCompatActivity {
             permissionsViewModel.getPermissionSatisfied().observe(this, this::updateTabs);
         }
     }
-
     public void updateUsbExists(boolean result) {
         usbExists = result;
     }
-
     public void checkRuntimePermission() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.NEARBY_WIFI_DEVICES) == PackageManager.PERMISSION_GRANTED) {
             updateTabs(true);

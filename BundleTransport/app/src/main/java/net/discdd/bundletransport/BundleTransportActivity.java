@@ -132,7 +132,7 @@ public class BundleTransportActivity extends AppCompatActivity {
         }
 
         ServerUploadFragment serverFrag =
-                ServerUploadFragment.newInstance(transportSecurity.getTransportID(), transportPaths,
+                ServerUploadFragment.newInstance(transportSecurity.getTransportID(), transportPaths, transportSecurity,
                                                  connectivityEventPublisher);
         serverUploadFragment = new TitledFragment(getString(R.string.upload), serverFrag);
         TransportWifiDirectFragment transportFrag = TransportWifiDirectFragment.newInstance(transportPaths);
