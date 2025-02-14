@@ -18,6 +18,14 @@ public class LoginAdu {
         return this.password;
     }
 
+    /*
+        Login ADU file has the following 4 lines,
+        where [variable] is used to define a variable:
+
+        login
+        [email]
+        [password]
+     */
     public static LoginAdu parseAdu(AppDataUnit adu) {
         String[] lines = new String(adu.getData().toByteArray()).split("\r?\n");
         if (lines.length != 3) {

@@ -31,6 +31,15 @@ public class RegisterAdu {
         return emails;
     }
 
+    /*
+        Register ADU file has the following 4 lines
+        where [variable] is used to define a variable:
+
+        register
+        [prefix1],[prefix2],[prefix3]
+        [suffix1],[suffix2],[suffix3]
+        [password]
+     */
     public static RegisterAdu parseAdu(AppDataUnit adu) {
         String[] lines = new String(adu.getData().toByteArray()).split("\r?\n");
         if (lines.length != 4) {
