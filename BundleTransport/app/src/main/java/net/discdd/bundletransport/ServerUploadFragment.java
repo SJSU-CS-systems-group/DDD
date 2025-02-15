@@ -77,6 +77,7 @@ public class ServerUploadFragment extends Fragment {
         super.onCreate(savedInstanceState);
         if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
             Security.addProvider(new BouncyCastleProvider());
+        }
         if (getArguments() != null) {
             transportID = getArguments().getString("transportID");
         }
