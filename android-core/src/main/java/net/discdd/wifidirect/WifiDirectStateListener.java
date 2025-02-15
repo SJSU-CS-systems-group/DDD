@@ -4,5 +4,5 @@ import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 
 public interface WifiDirectStateListener {
-    void onReceiveAction(WifiDirectManager.WifiDirectEvent action) throws NoSuchAlgorithmException, IOException;
+    void onReceiveAction(WifiDirectManager.WifiDirectEvent action);
 }

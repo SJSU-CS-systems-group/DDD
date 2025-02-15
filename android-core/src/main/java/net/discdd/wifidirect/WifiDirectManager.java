@@ -75,12 +75,8 @@ public class WifiDirectManager {
         } else {
             this.channel = this.manager.initialize(this.context, this.context.getMainLooper(),
                                                    () -> {
-                                                       try {
-                                                           notifyActionToListeners(WIFI_DIRECT_MANAGER_INITIALIZED,
+                                                        notifyActionToListeners(WIFI_DIRECT_MANAGER_INITIALIZED,
                                                                                          "Channel disconnected");
-                                                       } catch (NoSuchAlgorithmException | IOException e) {
-                                                           throw new RuntimeException(e);
-                                                       }
                                                    });
             if (channel == null) {
                 logger.log(WARNING, "Cannot initialize Wi-Fi Direct");
@@ -119,11 +115,7 @@ public class WifiDirectManager {
                 infoChanged = true;
             }
             if (infoChanged) {
-                try {
-                    notifyActionToListeners(WIFI_DIRECT_MANAGER_DEVICE_INFO_CHANGED);
-                } catch (IOException | NoSuchAlgorithmException e) {
-                    throw new RuntimeException(e);
-                }
+                notifyActionToListeners(WIFI_DIRECT_MANAGER_DEVICE_INFO_CHANGED);
             }
         }
     }
@@ -229,11 +221,11 @@ public class WifiDirectManager {
      */
     public Context getContext() {return this.context;}
 
-    void notifyActionToListeners(WifiDirectEventType type) throws NoSuchAlgorithmException, IOException {
+    void notifyActionToListeners(WifiDirectEventType type) {
         notifyActionToListeners(type, null);
     }
 
-    void notifyActionToListeners(WifiDirectEventType action, String message) throws NoSuchAlgorithmException, IOException {
+    void notifyActionToListeners(WifiDirectEventType action, String message) {
         var event = new WifiDirectEvent(action, message);
         for (WifiDirectStateListener listener : listeners) {
             listener.onReceiveAction(event);
@@ -359,11 +351,8 @@ public class WifiDirectManager {
                         logger.log(INFO, "WifiDirect not enabled");
                         wifiDirectEnabled = false;
                     }
-                    try {
-                        notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_INITIALIZED);
-                    } catch (NoSuchAlgorithmException | IOException e) {
-                        throw new RuntimeException(e);
-                    }
+                    notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_INITIALIZED);
+
                 }
                 case WIFI_P2P_PEERS_CHANGED_ACTION -> {
                     // Broadcast intent action indicating that the available peer list has changed.
@@ -374,7 +363,7 @@ public class WifiDirectManager {
                             discoveredPeers = new HashSet<>(newPeerList.getDeviceList());
                         }
                         notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_PEERS_CHANGED);
-                    } catch (SecurityException | NoSuchAlgorithmException | IOException e) {
+                    } catch (SecurityException e) {
                         logger.log(SEVERE, "SecurityException in requestPeers", e);
                     }
                 }
@@ -393,27 +382,15 @@ public class WifiDirectManager {
                     if (ownerAddress == null) {
                         if (groupOwnerAddress != null) {
                             groupOwnerAddress = null;
-                            try {
-                                notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_CONNECTION_CHANGED);
-                            } catch (NoSuchAlgorithmException | IOException e) {
-                                throw new RuntimeException(e);
-                            }
+                            notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_CONNECTION_CHANGED);
                         }
                     } else {
                         if (!ownerAddress.equals(groupOwnerAddress)) {
                             groupOwnerAddress = ownerAddress;
-                            try {
-                                notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_CONNECTION_CHANGED);
-                            } catch (NoSuchAlgorithmException | IOException e) {
-                                throw new RuntimeException(e);
-                            }
+                            notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_CONNECTION_CHANGED);
                         }
                     }
-                    try {
-                        notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_GROUP_INFO_CHANGED);
-                    } catch (NoSuchAlgorithmException | IOException e) {
-                        throw new RuntimeException(e);
-                    }
+                    notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_GROUP_INFO_CHANGED);
                 }
                 case WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> {
                     processDeviceInfo(intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE, WifiP2pDevice.class));
@@ -421,11 +398,7 @@ public class WifiDirectManager {
                 case WIFI_P2P_DISCOVERY_CHANGED_ACTION -> {
                     int discoveryState = intent.getIntExtra(WifiP2pManager.EXTRA_DISCOVERY_STATE, -1);
                     discoveryActive = discoveryState == WifiP2pManager.WIFI_P2P_DISCOVERY_STARTED;
-                    try {
-                        notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_DISCOVERY_CHANGED);
-                    } catch (NoSuchAlgorithmException | IOException e) {
-                        throw new RuntimeException(e);
-                    }
+                    notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_DISCOVERY_CHANGED);
                 }
             }
         }
