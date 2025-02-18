@@ -1,5 +1,8 @@
 package net.discdd.android.fragments;
 
+import static java.util.logging.Level.FINE;
+
+import android.app.AlertDialog;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -8,7 +11,6 @@ import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.TextView;
 
-import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
@@ -24,8 +26,6 @@ import net.discdd.android_core.R;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -65,9 +65,6 @@ public class PermissionsFragment extends Fragment {
 
             //Initialize the adapter
             PermissionsAdapter permissionsAdapter = new PermissionsAdapter(permissions);
-            permissionsAdapter.setOnClickListener(v -> {
-                triggerPermission();
-            });
 
             //set the adapter to the RecyclerView
             permissionsRecyclerView.setAdapter(permissionsAdapter);
@@ -101,8 +98,9 @@ public class PermissionsFragment extends Fragment {
                                       });
 
     private void triggerPermission() {
-        PermissionsDialogFragment dialog = new PermissionsDialogFragment();
-        dialog.show(getParentFragmentManager(), "permission");
+        AlertDialog.Builder dialog = new AlertDialog.Builder(getContext());
+        dialog.setMessage(R.string.dialog_message).setNeutralButton(R.string.dialog_btn_text, null);
+        dialog.create().show();
     }
 
     private void trackGrantedPermission(String permissions) {
@@ -121,7 +119,7 @@ public class PermissionsFragment extends Fragment {
     }
 
     public void checkPermission(String permission, PermissionsAdapter.PermissionViewHolder holder) {
-        logger.info("Checking permission " + permission);
+        logger.log(FINE, "Checking permission " + permission);
         if (ContextCompat.checkSelfPermission(getContext(), permission) == PackageManager.PERMISSION_GRANTED) {
             holder.permissionCheckbox.setChecked(true);
             trackGrantedPermission(permission);
@@ -137,7 +135,6 @@ public class PermissionsFragment extends Fragment {
     }
 
     class PermissionsAdapter extends RecyclerView.Adapter<PermissionsAdapter.PermissionViewHolder> {
-        private OnClickListener listener;
         final String[] permissions;
         public PermissionsAdapter(String[] permissions) {
             this.permissions = permissions;
@@ -153,7 +150,6 @@ public class PermissionsFragment extends Fragment {
 
         @Override
         public void onBindViewHolder(@NonNull PermissionViewHolder holder, int position) {
-            logger.info("onBindViewHolder invoked!");
             String permission = permissions[position];
 
             int resid = getResources().getIdentifier(permission, "string", getActivity().getPackageName());
@@ -162,8 +158,8 @@ public class PermissionsFragment extends Fragment {
             allSatisfied();
 
             holder.itemView.setOnClickListener(v -> {
-                if (listener != null && !holder.permissionCheckbox.isChecked()) {
-                    listener.onClick(v);
+                if (!holder.permissionCheckbox.isChecked()) {
+                    triggerPermission();
                 }
             });
         }
@@ -171,14 +167,6 @@ public class PermissionsFragment extends Fragment {
         @Override
         public int getItemCount() {
             return permissions.length;
-        }
-
-        public void setOnClickListener(OnClickListener listener) {
-            this.listener = listener;
-        }
-
-        public interface OnClickListener {
-            void onClick(View v);
         }
 
         public static class PermissionViewHolder extends RecyclerView.ViewHolder {
