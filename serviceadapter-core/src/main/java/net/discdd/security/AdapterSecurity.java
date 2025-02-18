@@ -44,7 +44,7 @@ public class AdapterSecurity {
             DDDTLSUtil.writeKeyPairToFile(adapterKeyPair, adapterPublicKeyPath, adapterPrivateKeyPath);
             adapterCert = DDDTLSUtil.getSelfSignedCertificate(adapterKeyPair, DDDTLSUtil.publicKeyToName(adapterKeyPair.getPublic()));
             DDDTLSUtil.writeCertToFile(adapterCert, adapterCertPath);
-            logger.log(SEVERE, "Could not load adapter certificate: " + e.getMessage());
+            logger.log(SEVERE, "Could not load adapter certificate ", e);
         }
     }
 

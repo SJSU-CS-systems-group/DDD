@@ -70,7 +70,7 @@ public class RpcServer {
             this.transportSecurity = new TransportSecurity(transportPaths);
         } catch (IOException | InvalidAlgorithmParameterException | NoSuchProviderException |
                  OperatorCreationException | NoSuchAlgorithmException | CertificateException e) {
-            throw new RuntimeException(e);
+            throw e;
         }
         var bundleExchangeService = new BundleExchangeServiceImpl() {
             @Override

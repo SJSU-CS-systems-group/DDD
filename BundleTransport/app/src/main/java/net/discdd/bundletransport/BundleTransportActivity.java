@@ -91,7 +91,6 @@ public class BundleTransportActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        System.setProperty("javax.net.debug", "ssl,handshake");
         Security.insertProviderAt(Conscrypt.newProvider(), 1);
 
         sharedPreferences = getSharedPreferences(TransportWifiDirectService.WIFI_DIRECT_PREFERENCES, MODE_PRIVATE);
@@ -185,7 +184,7 @@ public class BundleTransportActivity extends AppCompatActivity {
                 newFragments.add(usbFrag);
             }
         } else {
-                logger.log(INFO, "ONLY PERMISSIONS TAB IS BEING SHOWN");
+            logger.log(INFO, "ONLY PERMISSIONS TAB IS BEING SHOWN");
             newFragments.add(permissionsTitledFragment);
         }
 
