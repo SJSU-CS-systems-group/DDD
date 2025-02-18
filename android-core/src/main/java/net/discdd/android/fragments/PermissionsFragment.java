@@ -65,6 +65,9 @@ public class PermissionsFragment extends Fragment {
 
             //Initialize the adapter
             PermissionsAdapter permissionsAdapter = new PermissionsAdapter(permissions);
+            permissionsAdapter.setOnClickListener(v -> {
+                triggerPermission();
+            });
 
             //set the adapter to the RecyclerView
             permissionsRecyclerView.setAdapter(permissionsAdapter);
@@ -167,6 +170,14 @@ public class PermissionsFragment extends Fragment {
         @Override
         public int getItemCount() {
             return permissions.length;
+        }
+
+        public void setOnClickListener(OnClickListener listener) {
+            this.listener = listener;
+        }
+
+        public interface OnClickListener {
+            void onClick(View v);
         }
 
         public static class PermissionViewHolder extends RecyclerView.ViewHolder {
