@@ -234,7 +234,7 @@ public class BundleClientActivity extends AppCompatActivity {
 
     public void checkRuntimePermission() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.NEARBY_WIFI_DEVICES) == PackageManager.PERMISSION_GRANTED) {
-            updateTabs(true);
+            permissionsViewModel.updatePermissions(true);
         }
     }
 }

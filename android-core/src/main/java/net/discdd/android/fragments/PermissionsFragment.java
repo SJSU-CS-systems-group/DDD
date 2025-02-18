@@ -1,5 +1,8 @@
 package net.discdd.android.fragments;
 
+import static java.util.logging.Level.FINE;
+
+import android.app.AlertDialog;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -8,7 +11,6 @@ import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.TextView;
 
-import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
@@ -24,8 +26,6 @@ import net.discdd.android_core.R;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -33,11 +33,10 @@ import java.util.logging.Logger;
 public class PermissionsFragment extends Fragment {
     final static private Logger logger = Logger.getLogger(PermissionsFragment.class.getName());
     private final HashMap<String, PermissionsAdapter.PermissionViewHolder> neededPermissions = new HashMap<>();
-    private ActivityResultLauncher<String> requestPermissionLauncher;
-    private boolean promptPending;
     private Consumer<HashSet<String>> permissionWatcher;
     private PermissionsViewModel permissionsViewModel;
     private final HashSet<String> requiredPermissions = new HashSet<>();
+    private final HashSet<String> grantedPermissions = new HashSet<>();
 
     public static PermissionsFragment newInstance() {
         return new PermissionsFragment();
@@ -66,9 +65,6 @@ public class PermissionsFragment extends Fragment {
 
             //Initialize the adapter
             PermissionsAdapter permissionsAdapter = new PermissionsAdapter(permissions);
-            permissionsAdapter.setOnClickListener(v -> {
-                triggerPermission();
-            });
 
             //set the adapter to the RecyclerView
             permissionsRecyclerView.setAdapter(permissionsAdapter);
@@ -81,45 +77,31 @@ public class PermissionsFragment extends Fragment {
         permissionsViewModel.updatePermissions(satisfied);
     }
 
-    private ActivityResultLauncher<String[]> activityResultLauncher =
+    private final ActivityResultLauncher<String[]> activityResultLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(),
-                                      new ActivityResultCallback<Map<String, Boolean>>() {
-                                          @Override
-                                          public void onActivityResult(Map<String, Boolean> results) {
-                                              // go through the permissions and result pairs
-                                              AtomicInteger unresolvedPermissionCount = new AtomicInteger();
-                                              results.forEach((p, r) -> {
-                                                  logger.log(Level.INFO, p + " " + (r ? "granted" : "denied"));
-                                                  var view = neededPermissions.remove(p);
-                                                  if (view != null) {
-                                                      view.permissionCheckbox.setChecked(r);
-                                                  }
-                                                  if (r) {
-                                                      trackGrantedPermission(p);
-                                                  } else {
-                                                      unresolvedPermissionCount.getAndIncrement();
-                                                  }
-                                              });
-                                              if (neededPermissions.isEmpty()) {
-                                                  promptPending = false;
-                                              } else if (unresolvedPermissionCount.get() > 0) {
-                                                  String[] permissionsToRequest =
-                                                          neededPermissions.keySet().toArray(new String[0]);
-                                                  logger.info("Requesting " + Arrays.toString(permissionsToRequest));
-                                                  activityResultLauncher.launch(permissionsToRequest);
+                                      results -> {
+                                          HashMap<String, PermissionsAdapter.PermissionViewHolder> remainingPermissions = new HashMap<>();
+                                          results.forEach((p, r) -> {
+                                              logger.log(Level.INFO, p + " " + (r ? "granted" : "denied"));
+                                              var view = neededPermissions.remove(p);
+                                              if (view != null) {
+                                                  view.permissionCheckbox.setChecked(r);
                                               }
-                                              allSatisfied();
-                                          }
+                                              if (r) {
+                                                  trackGrantedPermission(p);
+                                              } else {
+                                                  remainingPermissions.put(p, view);
+                                              }
+                                          });
+                                          neededPermissions.putAll(remainingPermissions);
+                                          allSatisfied();
                                       });
-    ;
 
     private void triggerPermission() {
-        PermissionsDialogFragment dialog = new PermissionsDialogFragment();
-        dialog.show(getParentFragmentManager(), "permission");
+        AlertDialog.Builder dialog = new AlertDialog.Builder(getContext());
+        dialog.setMessage(R.string.dialog_message).setNeutralButton(R.string.dialog_btn_text, null);
+        dialog.create().show();
     }
-
-    // TODO: in the future, we should enable removing from this set
-    HashSet<String> grantedPermissions = new HashSet<>();
 
     private void trackGrantedPermission(String permissions) {
         if (grantedPermissions.contains(permissions)) {
@@ -137,15 +119,14 @@ public class PermissionsFragment extends Fragment {
     }
 
     public void checkPermission(String permission, PermissionsAdapter.PermissionViewHolder holder) {
-        logger.info("Checking permission " + permission);
+        logger.log(FINE, "Checking permission " + permission);
         if (ContextCompat.checkSelfPermission(getContext(), permission) == PackageManager.PERMISSION_GRANTED) {
             holder.permissionCheckbox.setChecked(true);
             trackGrantedPermission(permission);
         } else {
             neededPermissions.put(permission, holder);
             holder.permissionCheckbox.setChecked(false);
-            if (!promptPending) {
-                promptPending = true;
+            if (neededPermissions.containsKey(permission)) {
                 String[] permissionsToRequest = neededPermissions.keySet().toArray(new String[0]);
                 logger.info("Requesting " + Arrays.toString(permissionsToRequest));
                 activityResultLauncher.launch(permissionsToRequest);
@@ -154,7 +135,6 @@ public class PermissionsFragment extends Fragment {
     }
 
     class PermissionsAdapter extends RecyclerView.Adapter<PermissionsAdapter.PermissionViewHolder> {
-        private OnClickListener listener;
         final String[] permissions;
         public PermissionsAdapter(String[] permissions) {
             this.permissions = permissions;
@@ -171,8 +151,6 @@ public class PermissionsFragment extends Fragment {
         @Override
         public void onBindViewHolder(@NonNull PermissionViewHolder holder, int position) {
             String permission = permissions[position];
-            // we are going to use the string translations keyed on the permission name to get
-            // the description of the permission
 
             int resid = getResources().getIdentifier(permission, "string", getActivity().getPackageName());
             holder.permissionCaption.setText(resid == 0 ? permission : getString(resid));
@@ -180,8 +158,8 @@ public class PermissionsFragment extends Fragment {
             allSatisfied();
 
             holder.itemView.setOnClickListener(v -> {
-                if (listener != null && !holder.permissionCheckbox.isChecked()) {
-                    listener.onClick(v);
+                if (!holder.permissionCheckbox.isChecked()) {
+                    triggerPermission();
                 }
             });
         }
@@ -191,16 +169,7 @@ public class PermissionsFragment extends Fragment {
             return permissions.length;
         }
 
-        public void setOnClickListener(OnClickListener listener) {
-            this.listener = listener;
-        }
-
-        public interface OnClickListener {
-            void onClick(View v);
-        }
-
         public static class PermissionViewHolder extends RecyclerView.ViewHolder {
-
             CheckBox permissionCheckbox;
             TextView permissionCaption;
 
