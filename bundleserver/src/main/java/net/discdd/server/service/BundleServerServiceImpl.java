@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 
 import static java.util.logging.Level.SEVERE;
 
-@GrpcService()
+@GrpcService
 public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServerServiceImplBase {
     private static final Logger logger = Logger.getLogger(BundleServerServiceImpl.class.getName());
     @Autowired

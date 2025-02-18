@@ -30,17 +30,9 @@ class EchoApplicationTests {
     @TempDir
     static Path tempDir;
 
-//    @Autowired
-//    ConfigurableApplicationContext configurableApplicationContext;
-//
-//    @BeforeEach
-//    void setUp() {
-//        TestPropertyValues.of("echo-server.rootdir=" + tempDir).applyTo(configurableApplicationContext.getEnvironment());
-//    }
-
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("echo-server.rootdir", () -> tempDir.toString());
+        registry.add("echo-server.root-dir", () -> tempDir.toString());
     }
 
     @Test

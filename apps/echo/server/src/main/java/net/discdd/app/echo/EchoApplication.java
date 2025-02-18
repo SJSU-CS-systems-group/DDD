@@ -57,7 +57,7 @@ public class EchoApplication {
 
             AdapterSecurity adapterSecurity = null;
             try {
-                adapterSecurity = AdapterSecurity.getInstance(Path.of(actx.getEnvironment().getProperty("echo-server.rootdir")));
+                adapterSecurity = AdapterSecurity.getInstance(Path.of(actx.getEnvironment().getProperty("echo-server.root-dir")));
             } catch (Exception e) {
                 logger.log(SEVERE, "Could not create AdapterSecurity: " + e.getMessage());
             }

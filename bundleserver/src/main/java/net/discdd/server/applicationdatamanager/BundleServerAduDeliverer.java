@@ -80,7 +80,7 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
                             new AppState(appAdapter.getAppId(), Executors.newSingleThreadExecutor(), new HashSet<>(),
                                     stub));
                 } catch (SSLException e) {
-                    throw new RuntimeException(e);
+                    logger.log(INFO, "Skip adapter: " + appAdapter.getAppId(), e);
                 }
             }
         });

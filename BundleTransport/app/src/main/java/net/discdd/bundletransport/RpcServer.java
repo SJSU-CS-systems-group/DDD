@@ -10,6 +10,12 @@ import net.discdd.grpc.BundleSender;
 import net.discdd.grpc.GetRecencyBlobRequest;
 import net.discdd.grpc.GetRecencyBlobResponse;
 import net.discdd.pathutils.TransportPaths;
+import net.discdd.tls.DDDNettyTLS;
+import net.discdd.tls.DDDTLSUtil;
+import net.discdd.transport.TransportSecurity;
+import net.discdd.transport.TransportToBundleServerManager;
+
+import org.bouncycastle.operator.OperatorCreationException;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -22,27 +28,11 @@ import java.security.cert.CertificateException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
-import io.grpc.ChannelCredentials;
-import io.grpc.Grpc;
-import io.grpc.InsecureServerCredentials;
-import io.grpc.Server;
-import io.grpc.ServerCredentials;
-import io.grpc.TlsChannelCredentials;
-import io.grpc.TlsServerCredentials;
-import io.grpc.okhttp.OkHttpServerBuilder;
-import io.grpc.okhttp.OkHttpServerProvider;
-import io.grpc.stub.StreamObserver;
-
-import net.discdd.tls.DDDNettyTLS;
-import net.discdd.tls.DDDTLSUtil;
-import net.discdd.tls.NettyServerCertificateInterceptor;
-import net.discdd.transport.TransportSecurity;
-import net.discdd.transport.TransportToBundleServerManager;
-
-import org.bouncycastle.operator.OperatorCreationException;
-
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
+
+import io.grpc.Server;
+import io.grpc.stub.StreamObserver;
 
 public class RpcServer {
     private static final Logger logger = Logger.getLogger(RpcServer.class.getName());
@@ -60,7 +50,7 @@ public class RpcServer {
         this.listener = listener;
     }
 
-    public void startServer(TransportPaths transportPaths) throws Exception {
+    public void startServer(TransportPaths transportPaths) {
         if (server != null && !server.isShutdown()) {
             return;
         }
@@ -70,7 +60,7 @@ public class RpcServer {
             this.transportSecurity = new TransportSecurity(transportPaths);
         } catch (IOException | InvalidAlgorithmParameterException | NoSuchProviderException |
                  OperatorCreationException | NoSuchAlgorithmException | CertificateException e) {
-            throw e;
+            logger.log(SEVERE, "TransportSecurity exception ", e);
         }
         var bundleExchangeService = new BundleExchangeServiceImpl() {
             @Override
@@ -104,26 +94,24 @@ public class RpcServer {
             }
         };
 
-        ServerCredentials serverCreds = TlsServerCredentials.newBuilder()
-                .keyManager(transportPaths.certPath.toFile(),
-                            transportPaths.privateKeyPath.toFile())
-                .trustManager(DDDTLSUtil.trustManager)
-                .build();
+        try {
+            var sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(
+                    DDDTLSUtil.getKeyManagerFactory(transportSecurity.getTransportKeyPair(),
+                                                    transportSecurity.getTransportCert()).getKeyManagers(),
+                    new TrustManager[] {DDDTLSUtil.trustManager},
+                    new SecureRandom()
+            );
 
-        var sslContext = SSLContext.getInstance("TLS");
-        sslContext.init(
-                DDDTLSUtil.getKeyManagerFactory(transportSecurity.getTransportKeyPair(),
-                                                transportSecurity.getTransportCert()).getKeyManagers(),
-                new TrustManager[] {DDDTLSUtil.trustManager},
-                new SecureRandom()
-        );
-
-        server = DDDNettyTLS.createGrpcServer(
-                transportSecurity.getTransportKeyPair(),
-                transportSecurity.getTransportCert(),
-                7777,
-                bundleExchangeService
-        );
+            server = DDDNettyTLS.createGrpcServer(
+                    transportSecurity.getTransportKeyPair(),
+                    transportSecurity.getTransportCert(),
+                    7777,
+                    bundleExchangeService
+            );
+        } catch (Exception e) {
+            logger.log(SEVERE, "TLS communication exceptions ", e);
+        }
 
         logger.log(INFO, "Starting rpc server at: " + server.toString());
 

@@ -1,7 +1,5 @@
 package net.discdd.bundletransport;
 
-import static java.util.logging.Level.INFO;
-
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -14,9 +12,7 @@ import android.widget.Button;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.fragment.app.Fragment;
-
 import java.io.IOException;
 import java.util.logging.Logger;
 

@@ -19,7 +19,7 @@ import java.util.logging.Logger;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
-@GrpcService()
+@GrpcService
 public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
     private static final Logger logger = Logger.getLogger(BundleServerExchangeServiceImpl.class.getName());
     private final BundleTransmission bundleTransmission;

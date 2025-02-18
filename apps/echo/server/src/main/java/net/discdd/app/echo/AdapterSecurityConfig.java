@@ -20,7 +20,7 @@ public class AdapterSecurityConfig {
     @Autowired
     ApplicationContext context;
 
-    @Value("${echo-server.rootdir}")
+    @Value("${echo-server.root-dir}")
     private Path adapterPath;
 
     @Bean
