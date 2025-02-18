@@ -77,6 +77,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 
+import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
@@ -309,8 +310,16 @@ public class BundleTransmission {
     public ClientRouting getClientRouting() {
         return clientRouting;
     }
-
-    public record BundleExchangeCounts(int bundlesSent, int bundlesReceived) {}
+    public enum Statuses {
+        FAILED,
+        EMPTY,
+        COMPLETE;
+        @Override
+        public String toString() {
+            return name().toLowerCase();
+        }
+    }
+    public record BundleExchangeCounts(Statuses uploadStatus, Statuses downloadStatus) {}
 
     private static final int INITIAL_CONNECT_RETRIES = 8;
 
@@ -336,8 +345,7 @@ public class BundleTransmission {
      * IT IS VERY VERY IMPORTANT THAT TRANSPORT IS THE HOSTNAME WHEN TALKING TO THE SERVER, AND AN ADDRESS
      * WHEN TALKING TO A DEVICE.
      */
-    public BundleExchangeCounts doExchangeWithTransport(String deviceAddress, String deviceDeviceName,
-                                                        String transportAddress, int port) throws Exception {
+    public BundleExchangeCounts doExchangeWithTransport(String deviceAddress, String deviceDeviceName, String transportAddress, int port) throws Exception {
         var sslClientContext = SSLContext.getInstance("TLS");
         sslClientContext.init(
             DDDTLSUtil.getKeyManagerFactory(bundleSecurity.getClientSecurity().getClientJavaKeyPair(), bundleSecurity.getClientSecurity().getClientCert()).getKeyManagers(),
@@ -358,6 +366,9 @@ public class BundleTransmission {
         blockingStub = NettyClientCertificateInterceptor.createServerCertificateOption(blockingStub, certCompletion);
 
         int bundlesUploaded = 0;
+        Statuses uploadStatus = Statuses.FAILED;
+        Statuses downloadStatus = Statuses.FAILED;
+  
         BundleSender transportSender = null;
         try {
             if (isServerRunning(transportAddress, port)) {
@@ -382,12 +393,15 @@ public class BundleTransmission {
 
                 try {
                     processReceivedBundle(transportSender, new Bundle(bundlesDownloaded.toFile()));
+                    downloadStatus = Statuses.COMPLETE;
                 } catch (Exception e) {
+                    downloadStatus = Statuses.FAILED;
                     logger.log(WARNING, "Processing received bundle failed", e);
                 }
 
                 var stub = BundleExchangeServiceGrpc.newStub(channel);
-                bundlesUploaded = uploadBundle(stub);
+                uploadStatus = uploadBundle(stub);
+
             }
         } catch (Exception e) {
             logger.log(WARNING, "Exchange failed", e);
@@ -397,11 +411,12 @@ public class BundleTransmission {
         } catch (InterruptedException e) {
             logger.log(SEVERE, "could not shutdown channel, error: " + e.getMessage() + ", cause: " + e.getCause());
         }
-        return new BundleExchangeCounts(bundlesUploaded, 1);
+        return new BundleExchangeCounts(uploadStatus, downloadStatus);
     }
 
-    private int uploadBundle(BundleExchangeServiceGrpc.BundleExchangeServiceStub stub) throws RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException, GeneralSecurityException {
+    private Statuses uploadBundle(BundleExchangeServiceGrpc.BundleExchangeServiceStub stub) throws RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException, GeneralSecurityException {
         BundleDTO toSend = generateBundleForTransmission();
+
         var bundleUploadResponseObserver = new BundleUploadResponseObserver();
         BundleSender clientSender = BundleSender.newBuilder().setId(bundleSecurity.getClientSecurity().getClientID())
                 .setType(BundleSenderType.CLIENT).build();
@@ -428,8 +443,12 @@ public class BundleTransmission {
         uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setSender(clientSender).build());
         uploadRequestStreamObserver.onCompleted();
         bundleUploadResponseObserver.waitForCompletion(GRPC_LONG_TIMEOUT_MS);
-        return bundleUploadResponseObserver.bundleUploadResponse != null &&
-                bundleUploadResponseObserver.bundleUploadResponse.getStatus() == Status.SUCCESS ? 1 : 0;
+
+        if(bundleUploadResponseObserver.bundleUploadResponse == null){
+            logger.log(SEVERE, "Upload failed: No response received from server.");
+            return Statuses.FAILED;
+        }
+        return bundleUploadResponseObserver.bundleUploadResponse.getStatus() == Status.SUCCESS ? Statuses.COMPLETE: Statuses.EMPTY;
     }
 
     private Path downloadBundles(List<String> bundleRequests, BundleSender sender,
