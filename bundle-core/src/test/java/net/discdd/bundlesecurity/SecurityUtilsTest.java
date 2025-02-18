@@ -83,16 +83,16 @@ public class SecurityUtilsTest {
 
 
 
-        var message = "Hello, World!";
-        var cipherText = new ByteArrayOutputStream();
-        var signalMessage = (SignalMessage) aliceCipher.encrypt(new StringBufferInputStream(message), cipherText);
-        var plainText = aliceCipher.decrypt(signalMessage);
-        Assertions.assertEquals(message, new String(plainText));
+        var message1 = "Hello, World!";
+        var cipherText1 = new ByteArrayOutputStream();
+        var signalMessage1 = (SignalMessage) aliceCipher.encrypt(new StringBufferInputStream(message1), cipherText1);
+        var plainText1 = aliceCipher.decrypt(signalMessage1);
+        Assertions.assertEquals(message1, new String(plainText1));
 
-        var message = "G00dbye Everyone?";
-        var cipherText = new ByteArrayOutputStream();
-        var signalMessage = (SignalMessage) bobCipher.encrypt(new StringBufferInputStream(message), cipherText);
-        var plainText = bobCipher.decrypt(signalMessage);
-        Assertions.assertEquals(message, new String(plainText));
+        var message2 = "G00dbye Everyone?";
+        var cipherText2 = new ByteArrayOutputStream();
+        var signalMessage2 = (SignalMessage) bobCipher.encrypt(new StringBufferInputStream(message2), cipherText2);
+        var plainText2 = bobCipher.decrypt(signalMessage2);
+        Assertions.assertEquals(message2, new String(plainText2));
     }
 }
