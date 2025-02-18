@@ -82,11 +82,17 @@ public class SecurityUtilsTest {
         SessionCipher     bobCipher      = new SessionCipher(bobStore, new SignalProtocolAddress("+14158888888", 1));
 
 
-        SessionCipher sessionCipher = new SessionCipher();
+
         var message = "Hello, World!";
-        var ciperText = new ByteArrayOutputStream();
-        var signalMessage = (SignalMessage) sessionCipher.encrypt(new StringBufferInputStream(message), ciperText);
-        var plainText = sessionCipher.decrypt(signalMessage);
+        var cipherText = new ByteArrayOutputStream();
+        var signalMessage = (SignalMessage) aliceCipher.encrypt(new StringBufferInputStream(message), cipherText);
+        var plainText = aliceCipher.decrypt(signalMessage);
+        Assertions.assertEquals(message, new String(plainText));
+
+        var message = "G00dbye Everyone?";
+        var cipherText = new ByteArrayOutputStream();
+        var signalMessage = (SignalMessage) bobCipher.encrypt(new StringBufferInputStream(message), cipherText);
+        var plainText = bobCipher.decrypt(signalMessage);
         Assertions.assertEquals(message, new String(plainText));
     }
 }
