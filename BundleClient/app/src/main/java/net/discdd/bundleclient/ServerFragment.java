@@ -88,8 +88,7 @@ public class ServerFragment extends Fragment {
             connectServerBtn.setEnabled(false);
             ((BundleClientActivity) requireActivity()).wifiBgService.initiateServerExchange()
                     .thenAccept(bec -> requireActivity().runOnUiThread(() -> {
-                        Toast.makeText(requireContext(), String.format("%d bundles sent %d received", bec.bundlesSent(),
-                                                                       bec.bundlesReceived()), Toast.LENGTH_LONG)
+                        Toast.makeText(requireContext(),  String.format("Upload status: %s, Download status: %s",bec.uploadStatus().toString(), bec.downloadStatus().toString()), Toast.LENGTH_LONG)
                                 .show();
                         connectServerBtn.setEnabled(true);
                     }));
