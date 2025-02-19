@@ -17,12 +17,13 @@ import androidx.fragment.app.Fragment;
 
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.transport.TransportToBundleServerManager;
-
+import java.security.Security;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.SubmissionPublisher;
 import java.util.logging.Logger;
-
+import net.discdd.transport.TransportSecurity;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 /**
  * A Fragment to manage server uploads
  */
@@ -39,17 +40,23 @@ public class ServerUploadFragment extends Fragment {
     private String transportID;
     private ExecutorService executor = Executors.newFixedThreadPool(2);
     private TransportPaths transportPaths;
+    private TransportSecurity transportSecurity;
     private TextView numberBundlestoClient;
     private TextView numberBundlestoServer;
     private Button reloadButton;
 
-    public static ServerUploadFragment newInstance(String transportID, TransportPaths transportPaths,
+    public static ServerUploadFragment newInstance(String transportID, TransportPaths transportPaths, TransportSecurity transportSecurity,
                                                    SubmissionPublisher<BundleTransportActivity.ConnectivityEvent> connectivityFlow) {
         ServerUploadFragment fragment = new ServerUploadFragment();
         fragment.setTransportPaths(transportPaths);
         fragment.setConnectivityFlow(connectivityFlow);
         fragment.setTransportID(transportID);
+        fragment.setTransportSecurity(transportSecurity);
         return fragment;
+    }
+
+    public void setTransportSecurity(TransportSecurity transportSecurity) {
+        this.transportSecurity = transportSecurity;
     }
 
     public void setConnectivityFlow(SubmissionPublisher<BundleTransportActivity.ConnectivityEvent> connectivityFlow) {
@@ -58,6 +65,7 @@ public class ServerUploadFragment extends Fragment {
 
     public void setTransportPaths(TransportPaths transportPaths) {
         this.transportPaths = transportPaths;
+        this.transportSecurity = transportSecurity;
     }
 
     public void setTransportID(String transportID) {
@@ -67,6 +75,9 @@ public class ServerUploadFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+            Security.addProvider(new BouncyCastleProvider());
+        }
         if (getArguments() != null) {
             transportID = getArguments().getString("transportID");
         }
@@ -131,7 +142,7 @@ public class ServerUploadFragment extends Fragment {
                     "Initiating server exchange to " + serverDomain + ":" + serverPort + "...\n"));
 
             TransportToBundleServerManager transportToBundleServerManager =
-                    new TransportToBundleServerManager(transportPaths, serverDomain, serverPort,
+                    new TransportToBundleServerManager(transportPaths, transportSecurity, serverDomain, serverPort,
                                                        this::connectToServerComplete,
                                                        e -> connectToServerError(e, serverDomain + ":" + serverPort));
             executor.execute(transportToBundleServerManager);

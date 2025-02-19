@@ -1,9 +1,8 @@
 package net.discdd.client.bundletransmission;
 
 import com.google.protobuf.ByteString;
-import io.grpc.Grpc;
-import io.grpc.InsecureChannelCredentials;
 import io.grpc.StatusRuntimeException;
+import io.grpc.okhttp.OkHttpChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import lombok.Getter;
 import net.discdd.bundlerouting.RoutingExceptions;
@@ -35,9 +34,12 @@ import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
 import net.discdd.model.UncompressedPayload;
 import net.discdd.pathutils.ClientPaths;
+import net.discdd.tls.DDDTLSUtil;
+import net.discdd.tls.NettyClientCertificateInterceptor;
 import net.discdd.utils.AckRecordUtils;
 import net.discdd.utils.BundleUtils;
 import net.discdd.utils.FileUtils;
+import org.bouncycastle.operator.OperatorCreationException;
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.InvalidMessageException;
@@ -45,7 +47,8 @@ import org.whispersystems.libsignal.LegacyMessageException;
 import org.whispersystems.libsignal.NoSessionException;
 import org.whispersystems.libsignal.ecc.Curve;
 
-
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
@@ -60,7 +63,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.SecureRandom;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -84,7 +92,7 @@ public class BundleTransmission {
     private ClientRouting clientRouting;
     private ClientPaths clientPaths;
 
-    public BundleTransmission(ClientPaths clientPaths, Consumer<ADU> aduConsumer) throws WindowExceptions.BufferOverflow, IOException, InvalidKeyException, RoutingExceptions.ClientMetaDataFileException, NoSuchAlgorithmException {
+    public BundleTransmission(ClientPaths clientPaths, Consumer<ADU> aduConsumer) throws WindowExceptions.BufferOverflow, IOException, InvalidKeyException, RoutingExceptions.ClientMetaDataFileException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, CertificateException, NoSuchProviderException, OperatorCreationException {
         this.clientPaths = clientPaths;
         this.bundleSecurity = new BundleSecurity(clientPaths);
         this.applicationDataManager = new ApplicationDataManager(clientPaths, aduConsumer);
@@ -337,14 +345,30 @@ public class BundleTransmission {
      * IT IS VERY VERY IMPORTANT THAT TRANSPORT IS THE HOSTNAME WHEN TALKING TO THE SERVER, AND AN ADDRESS
      * WHEN TALKING TO A DEVICE.
      */
-    public BundleExchangeCounts doExchangeWithTransport(String deviceAddress, String deviceDeviceName,
-                                                        String transportAddress, int port) {
-        Statuses uploadStatus = Statuses.FAILED;
-        Statuses downloadStatus = Statuses.FAILED;
-        var channel =
-                Grpc.newChannelBuilderForAddress(transportAddress, port, InsecureChannelCredentials.create()).build();
+    public BundleExchangeCounts doExchangeWithTransport(String deviceAddress, String deviceDeviceName, String transportAddress, int port) throws Exception {
+        var sslClientContext = SSLContext.getInstance("TLS");
+        sslClientContext.init(
+            DDDTLSUtil.getKeyManagerFactory(bundleSecurity.getClientSecurity().getClientJavaKeyPair(), bundleSecurity.getClientSecurity().getClientCert()).getKeyManagers(),
+            new TrustManager[] {DDDTLSUtil.trustManager},
+            new SecureRandom()
+        );
+
+        var channel = OkHttpChannelBuilder.forAddress(transportAddress, port)
+                .hostnameVerifier((host, session) -> true)
+                .useTransportSecurity()
+                .sslSocketFactory(sslClientContext.getSocketFactory())
+                .intercept(new NettyClientCertificateInterceptor())
+                .build();
+
         var blockingStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
 
+        var certCompletion = new CompletableFuture<X509Certificate>();
+        blockingStub = NettyClientCertificateInterceptor.createServerCertificateOption(blockingStub, certCompletion);
+
+        int bundlesUploaded = 0;
+        Statuses uploadStatus = Statuses.FAILED;
+        Statuses downloadStatus = Statuses.FAILED;
+  
         BundleSender transportSender = null;
         try {
             if (isServerRunning(transportAddress, port)) {

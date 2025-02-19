@@ -10,18 +10,29 @@ import net.discdd.grpc.BundleSender;
 import net.discdd.grpc.GetRecencyBlobRequest;
 import net.discdd.grpc.GetRecencyBlobResponse;
 import net.discdd.pathutils.TransportPaths;
+import net.discdd.tls.DDDNettyTLS;
+import net.discdd.tls.DDDTLSUtil;
+import net.discdd.transport.TransportSecurity;
+import net.discdd.transport.TransportToBundleServerManager;
+
+import org.bouncycastle.operator.OperatorCreationException;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.SecureRandom;
+import java.security.cert.CertificateException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
-import io.grpc.Grpc;
-import io.grpc.InsecureServerCredentials;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+
 import io.grpc.Server;
 import io.grpc.stub.StreamObserver;
-import net.discdd.transport.TransportToBundleServerManager;
 
 public class RpcServer {
     private static final Logger logger = Logger.getLogger(RpcServer.class.getName());
@@ -31,6 +42,7 @@ public class RpcServer {
 
     private Server server;
     private static RpcServer rpcServerInstance;
+    private TransportSecurity transportSecurity;
 
     private final BundleExchangeServiceImpl.BundleExchangeEventListener listener;
 
@@ -44,6 +56,12 @@ public class RpcServer {
         }
         var toServerPath = transportPaths.toServerPath;
         var toClientPath = transportPaths.toClientPath;
+        try {
+            this.transportSecurity = new TransportSecurity(transportPaths);
+        } catch (IOException | InvalidAlgorithmParameterException | NoSuchProviderException |
+                 OperatorCreationException | NoSuchAlgorithmException | CertificateException e) {
+            logger.log(SEVERE, "TransportSecurity exception ", e);
+        }
         var bundleExchangeService = new BundleExchangeServiceImpl() {
             @Override
             protected void onBundleExchangeEvent(BundleExchangeEvent bundleExchangeEvent) {
@@ -75,9 +93,25 @@ public class RpcServer {
                 responseObserver.onCompleted();
             }
         };
-        server =
-                Grpc.newServerBuilderForPort(7777, InsecureServerCredentials.create()).addService(bundleExchangeService)
-                        .build();
+
+        try {
+            var sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(
+                    DDDTLSUtil.getKeyManagerFactory(transportSecurity.getTransportKeyPair(),
+                                                    transportSecurity.getTransportCert()).getKeyManagers(),
+                    new TrustManager[] {DDDTLSUtil.trustManager},
+                    new SecureRandom()
+            );
+
+            server = DDDNettyTLS.createGrpcServer(
+                    transportSecurity.getTransportKeyPair(),
+                    transportSecurity.getTransportCert(),
+                    7777,
+                    bundleExchangeService
+            );
+        } catch (Exception e) {
+            logger.log(SEVERE, "TLS communication exceptions ", e);
+        }
 
         logger.log(INFO, "Starting rpc server at: " + server.toString());
 

@@ -72,12 +72,13 @@ public class WifiDirectManager {
             logger.log(INFO, "Cannot get Wi-Fi system service");
         } else {
             this.channel = this.manager.initialize(this.context, this.context.getMainLooper(),
-                                                   () -> notifyActionToListeners(WIFI_DIRECT_MANAGER_INITIALIZED,
-                                                                                 "Channel disconnected"));
+                                                   () -> {
+                                                        notifyActionToListeners(WIFI_DIRECT_MANAGER_INITIALIZED,
+                                                                                         "Channel disconnected");
+                                                   });
             if (channel == null) {
                 logger.log(WARNING, "Cannot initialize Wi-Fi Direct");
             }
-
         }
 
         this.receiver = new WifiDirectBroadcastReceiver();
@@ -349,6 +350,7 @@ public class WifiDirectManager {
                         wifiDirectEnabled = false;
                     }
                     notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_INITIALIZED);
+
                 }
                 case WIFI_P2P_PEERS_CHANGED_ACTION -> {
                     // Broadcast intent action indicating that the available peer list has changed.
@@ -388,8 +390,9 @@ public class WifiDirectManager {
                     }
                     notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_GROUP_INFO_CHANGED);
                 }
-                case WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> processDeviceInfo(
-                        intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE, WifiP2pDevice.class));
+                case WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> {
+                    processDeviceInfo(intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE, WifiP2pDevice.class));
+                }
                 case WIFI_P2P_DISCOVERY_CHANGED_ACTION -> {
                     int discoveryState = intent.getIntExtra(WifiP2pManager.EXTRA_DISCOVERY_STATE, -1);
                     discoveryActive = discoveryState == WifiP2pManager.WIFI_P2P_DISCOVERY_STARTED;

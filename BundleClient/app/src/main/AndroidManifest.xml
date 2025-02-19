@@ -15,10 +15,10 @@
         android:theme="@style/Theme.AppCompat.DayNight"
         android:supportsRtl="true">
         <service
-                android:name=".BundleClientWifiDirectService"
-                android:enabled="true"
-                android:foregroundServiceType="dataSync"
-                android:exported="false" >
+            android:name=".BundleClientWifiDirectService"
+            android:enabled="true"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" >
         </service>
         <activity
             android:name="net.discdd.bundleclient.BundleClientActivity"
@@ -38,5 +38,4 @@
             android:readPermission="net.discdd.bundleclient.permission.MESSAGE_PROVIDER_READ">
         </provider>
     </application>
-
 </manifest>

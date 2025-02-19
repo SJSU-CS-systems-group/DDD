@@ -2,10 +2,8 @@ package net.discdd.bundleclient;
 
 import static java.util.logging.Level.INFO;
 
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.graphics.Color;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
