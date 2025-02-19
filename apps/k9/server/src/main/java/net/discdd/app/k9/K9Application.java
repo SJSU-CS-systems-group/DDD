@@ -12,6 +12,9 @@ import net.discdd.tls.NettyClientCertificateInterceptor;
 import org.springframework.boot.Banner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PropertiesLoaderUtils;
 
 import javax.net.ssl.SSLException;
 import java.nio.file.Path;
@@ -40,11 +43,27 @@ public class K9Application {
 
         var app = new SpringApplication(K9Application.class);
 
+        Resource resource = new FileSystemResource(args[0]);
+        if (!resource.exists()) {
+            logger.log(SEVERE, String.format("Entered properties file path %s does not exist!", args[0]));
+            System.exit(1);
+        }
+
+        try {
+            var properties = PropertiesLoaderUtils.loadProperties(resource);
+            app.setDefaultProperties(properties);
+            args = Arrays.copyOfRange(args, 1, args.length);
+        } catch (Exception e) {
+            logger.log(SEVERE, "Please enter valid properties file path!");
+            System.exit(1);
+        }
+
         app.setBannerMode(Banner.Mode.OFF);
         // we need to register with the BundleServer in an application initializer so that
         // the logging will be set up correctly
+        String[] finalArgs = args;
         app.addInitializers((actx) -> {
-            var bundleServerURL = args[0];
+            var bundleServerURL = finalArgs[0];
             var myGrpcUrl = actx.getEnvironment().getProperty("my.grpc.url");
             var appName = actx.getEnvironment().getProperty("spring.application.name");
             if (myGrpcUrl == null) {
@@ -56,7 +75,7 @@ public class K9Application {
             try {
                 adapterSecurity = AdapterSecurity.getInstance(Path.of(actx.getEnvironment().getProperty("k9-server.root-dir")));
             } catch (Exception e) {
-                logger.log(SEVERE, "Could not create AdapterSecurity: " + e.getMessage());
+                logger.log(SEVERE, "Could not create AdapterSecurity: ", e);
             }
             System.out.print(adapterSecurity.getAdapterCert().getSigAlgName());
             SslContext sslClientContext = null;
@@ -99,6 +118,6 @@ public class K9Application {
         });
 
         // now start the app skipping the bundleServerURL argument
-        app.run(Arrays.copyOfRange(args, 1, args.length));
+        app.run(Arrays.copyOfRange(args, 0, args.length));
     }
 }
