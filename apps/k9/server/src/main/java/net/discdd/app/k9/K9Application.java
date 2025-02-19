@@ -7,6 +7,9 @@ import net.discdd.grpc.ServiceAdapterRegistryServiceGrpc;
 import org.springframework.boot.Banner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PropertiesLoaderUtils;
 
 import java.util.Arrays;
 import java.util.logging.Logger;
@@ -27,23 +30,62 @@ public class K9Application {
 
     public static void main(String[] args) {
         if (args.length < 1) {
-            System.out.println("Usage: java -jar jar_file_path.jar BundleServerURL");
+            System.out.println("Usage: java -jar jar_file_path.jar properties_files");
             System.exit(1);
         }
 
         var app = new SpringApplication(K9Application.class);
+
+        Resource resource = new FileSystemResource(args[0]);
+        if (!resource.exists()) {
+            logger.log(SEVERE, String.format("Entered properties file path %s does not exist!", args[0]));
+            System.exit(1);
+        }
+
+        try {
+            var properties = PropertiesLoaderUtils.loadProperties(resource);
+            app.setDefaultProperties(properties);
+            args = Arrays.copyOfRange(args, 1, args.length);
+        } catch (Exception e) {
+            logger.log(SEVERE, "Please enter valid properties file path!");
+            System.exit(1);
+        }
+
         app.setBannerMode(Banner.Mode.OFF);
         // we need to register with the BundleServer in an application initializer so that
         // the logging will be set up correctly
         app.addInitializers((actx) -> {
-            var bundleServerURL = args[0];
+            var bundleServerURL = actx.getEnvironment().getProperty("bundleserver.url");
             var myGrpcUrl = actx.getEnvironment().getProperty("my.grpc.url");
             var appName = actx.getEnvironment().getProperty("spring.application.name");
             if (myGrpcUrl == null) {
                 logger.log(SEVERE, "my.grpc.url is not set in application.properties");
                 System.exit(1);
             }
-            var managedChannel = ManagedChannelBuilder.forTarget(bundleServerURL).usePlaintext().build();
+
+            AdapterSecurity adapterSecurity = null;
+            try {
+                adapterSecurity = AdapterSecurity.getInstance(Path.of(actx.getEnvironment().getProperty("k9-server.root-dir")));
+            } catch (Exception e) {
+                logger.log(SEVERE, "Could not create AdapterSecurity: ", e);
+            }
+            System.out.print(adapterSecurity.getAdapterCert().getSigAlgName());
+            SslContext sslClientContext = null;
+            try {
+                sslClientContext = GrpcSslContexts.forClient()
+                        .keyManager(adapterSecurity.getAdapterKeyPair().getPrivate(), adapterSecurity.getAdapterCert())
+                        .trustManager(DDDTLSUtil.trustManager)
+                        .build();
+            } catch (SSLException e) {
+                logger.log(SEVERE, "Could not create SSL context: " + e.getMessage());
+                System.exit(1);
+            }
+            var managedChannel = NettyChannelBuilder.forTarget(bundleServerURL)
+                    .sslContext(sslClientContext)
+                    .intercept(new NettyClientCertificateInterceptor())
+                    .useTransportSecurity()
+                    .build();
+
             var channelState = managedChannel.getState(true);
             try {
                 // TODO: remove the false when we figure out that the connect is successful!
@@ -68,6 +110,6 @@ public class K9Application {
         });
 
         // now start the app skipping the bundleServerURL argument
-        app.run(Arrays.copyOfRange(args, 1, args.length));
+        app.run(Arrays.copyOfRange(args, 0, args.length));
     }
 }
