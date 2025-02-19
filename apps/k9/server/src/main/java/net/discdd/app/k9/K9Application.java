@@ -54,7 +54,7 @@ public class K9Application {
 
             AdapterSecurity adapterSecurity = null;
             try {
-                adapterSecurity = AdapterSecurity.getInstance(Path.of(actx.getEnvironment().getProperty("k9-server.rootdir")));
+                adapterSecurity = AdapterSecurity.getInstance(Path.of(actx.getEnvironment().getProperty("k9-server.root-dir")));
             } catch (Exception e) {
                 logger.log(SEVERE, "Could not create AdapterSecurity: " + e.getMessage());
             }
