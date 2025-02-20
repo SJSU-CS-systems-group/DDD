@@ -138,11 +138,8 @@ public class SecurityUtils {
     }
 
 
-    public static byte[] decodeEncryptedPublicKeyfromFile(Path path) throws IOException, InvalidKeyException {
+    public static String decodeEncryptedPublicKeyfromFile(Path path) throws IOException, InvalidKeyException, NoSuchAlgorithmException {
         List<String> encodedKeyList = Files.readAllLines(path);
-        if (encodedKeyList.size() == 3) {
-            return decodePublicKeyfromFile(path);
-        }
         if ((encodedKeyList.get(0).equals(PUB_KEY_HEADER)) && (encodedKeyList.get(3).equals(PUB_KEY_FOOTER))) {
             // read encrypted client public key
             byte[] encryptedClientPublicKey = Base64.getUrlDecoder().decode(encodedKeyList.get(1));
@@ -171,7 +168,8 @@ public class SecurityUtils {
                 throw new RuntimeException("AES decryption failed: " + e.getMessage(), e);
             }
             // return decrypted client public key
-            return Base64.getUrlDecoder().decode(decryptedClientPubKey);
+            byte[] publicKey = Base64.getUrlDecoder().decode(decryptedClientPubKey);
+            return Base64.getUrlEncoder().encodeToString(MessageDigest.getInstance("SHA-1").digest(publicKey));
         } else {
             throw new InvalidKeyException(
                     String.format("Error: %s has invalid public key header or footer", path.getFileName()));
