@@ -137,7 +137,7 @@ public class SecurityUtils {
                 PUB_KEY_FOOTER).getBytes();
     }
 
-
+//this is more well said as decodeDecryptedPublicKeyFromFile
     public static String decodeEncryptedPublicKeyfromFile(Path path) throws IOException, InvalidKeyException, NoSuchAlgorithmException {
         List<String> encodedKeyList = Files.readAllLines(path);
         if ((encodedKeyList.get(0).equals(PUB_KEY_HEADER)) && (encodedKeyList.get(3).equals(PUB_KEY_FOOTER))) {
@@ -228,8 +228,7 @@ public class SecurityUtils {
 
     public static String getClientID(Path bundlePath) throws IOException, InvalidKeyException,
             NoSuchAlgorithmException {
-        byte[] clientIdentityKey = decodePublicKeyfromFile(bundlePath.resolve(CLIENT_IDENTITY_KEY));
-        return generateID(clientIdentityKey);
+        return decodeEncryptedPublicKeyfromFile(bundlePath.resolve(CLIENT_IDENTITY_KEY));
     }
 
     public static String encryptAesCbcPkcs5(String sharedSecret, String plainText) throws NoSuchAlgorithmException,

@@ -100,7 +100,7 @@ public class BundleTransmission {
             return;
         }
 
-        clientId = SecurityUtils.generateID(
+        clientId = SecurityUtils.decodeEncryptedPublicKeyfromFile(
                 uncompressedBundle.getSource().toPath().resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
         var counters = this.applicationDataManager.getBundleCountersForClient(clientId);
 
