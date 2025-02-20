@@ -28,9 +28,9 @@ import static java.util.logging.Level.WARNING;
 public class K9Application {
     final static Logger logger = Logger.getLogger(K9Application.class.getName());
 
-    public static void main(String[] args) {
+    public static void main(final String[] args) {
         if (args.length < 1) {
-            System.out.println("Usage: java -jar jar_file_path.jar properties_files");
+            System.out.println("Usage: java -jar <jar_file_path.jar> <app.properties path>");
             System.exit(1);
         }
 
@@ -45,7 +45,6 @@ public class K9Application {
         try {
             var properties = PropertiesLoaderUtils.loadProperties(resource);
             app.setDefaultProperties(properties);
-            args = Arrays.copyOfRange(args, 1, args.length);
         } catch (Exception e) {
             logger.log(SEVERE, "Please enter valid properties file path!");
             System.exit(1);
@@ -80,7 +79,7 @@ public class K9Application {
                 logger.log(SEVERE, "Could not create SSL context: " + e.getMessage());
                 System.exit(1);
             }
-            var managedChannel = NettyChannelBuilder.forTarget(bundleServerURL)
+            var managedChannel = NettyChannelBuilder.forTarget(myGrpcUrl)
                     .sslContext(sslClientContext)
                     .intercept(new NettyClientCertificateInterceptor())
                     .useTransportSecurity()
@@ -90,7 +89,7 @@ public class K9Application {
             try {
                 // TODO: remove the false when we figure out that the connect is successful!
                 if (false && channelState != ConnectivityState.READY) {
-                    logger.log(WARNING, String.format("Could not connect to %s %s", bundleServerURL, channelState));
+                    logger.log(WARNING, String.format("Could not connect to %s %s", myGrpcUrl, channelState));
                 } else {
                     var rsp = ServiceAdapterRegistryServiceGrpc.newBlockingStub(managedChannel)
                             .checkAdapterRegistration(
@@ -100,7 +99,7 @@ public class K9Application {
                                    String.format("Could not register with BundleServer: rc = %d %s", rsp.getCode(),
                                                  rsp.getMessage()));
                     }
-                    logger.log(INFO, String.format("Registered with server at %s", bundleServerURL));
+                    logger.log(INFO, String.format("Registered with server at %s", myGrpcUrl));
                 }
             } catch (Exception e) {
                 logger.log(WARNING, "Could not register with BundleServer: " + e.getMessage());
