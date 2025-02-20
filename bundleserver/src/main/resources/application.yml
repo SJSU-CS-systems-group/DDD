@@ -20,7 +20,7 @@ spring:
     password: ddd
     db-name: dtn_server_db
 
-grpc:
+ssl-grpc:
   server:
     port: 7778
 server:

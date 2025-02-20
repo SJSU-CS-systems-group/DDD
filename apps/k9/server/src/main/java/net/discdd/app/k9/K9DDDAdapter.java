@@ -1,44 +1,39 @@
 package net.discdd.app.k9;
 
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.WARNING;
-import static java.util.logging.Level.SEVERE;
-
-import net.discdd.app.k9.repository.entity.K9ClientIdToEmailMapping;
+import com.google.protobuf.ByteString;
+import io.grpc.stub.StreamObserver;
 import net.discdd.app.k9.model.LoginAdu;
 import net.discdd.app.k9.model.LoginAduAck;
 import net.discdd.app.k9.model.RegisterAdu;
 import net.discdd.app.k9.model.RegisterAduAck;
-
-import org.springframework.beans.factory.annotation.Autowired;
-
-import com.google.protobuf.ByteString;
-import io.grpc.stub.StreamObserver;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.logging.Logger;
-import java.util.Optional;
-
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-
-
-import net.devh.boot.grpc.server.service.GrpcService;
-import net.discdd.app.k9.model.LoginAdu;
 import net.discdd.app.k9.repository.K9ClientIdToEmailMappingRepository;
+import net.discdd.app.k9.repository.entity.K9ClientIdToEmailMapping;
 import net.discdd.app.k9.utils.MailUtils;
 import net.discdd.grpc.AppDataUnit;
 import net.discdd.grpc.ExchangeADUsRequest;
 import net.discdd.grpc.ExchangeADUsResponse;
+import net.discdd.grpc.GrpcService;
 import net.discdd.grpc.PendingDataCheckRequest;
 import net.discdd.grpc.PendingDataCheckResponse;
 import net.discdd.grpc.ServiceAdapterServiceGrpc;
 import net.discdd.model.ADU;
 import net.discdd.utils.StoreADUs;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 @GrpcService
 public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServiceImplBase {

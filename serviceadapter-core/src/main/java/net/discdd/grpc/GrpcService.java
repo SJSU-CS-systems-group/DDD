@@ -45,36 +45,4 @@ import java.lang.annotation.Target;
 @Service
 @Bean
 public @interface GrpcService {
-
-    /**
-     * A list of {@link ServerInterceptor} classes that should be applied to only this service. If a bean of the given
-     * type exists, it will be used; otherwise a new instance of that class will be created via no-args constructor.
-     *
-     * <p>
-     * <b>Note:</b> Please read the javadocs regarding the ordering of interceptors.
-     * </p>
-     *
-     * @return A list of ServerInterceptor classes that should be used.
-     */
-    Class<? extends ServerInterceptor>[] interceptors() default {};
-
-    /**
-     * A list of {@link ServerInterceptor} beans that should be applied to only this service.
-     *
-     * <p>
-     * <b>Note:</b> Please read the javadocs regarding the ordering of interceptors.
-     * </p>
-     *
-     * @return A list of ServerInterceptor beans that should be used.
-     */
-    String[] interceptorNames() default {};
-
-    /**
-     * Whether the custom interceptors should be mixed with the global interceptors and sorted afterwards. Use this
-     * option if you want to add a custom interceptor between global interceptors.
-     *
-     * @return True, if the custom interceptors should be merged with the global ones and sorted afterwards. False
-     *         otherwise.
-     */
-    boolean sortInterceptors() default false;
 }
