@@ -1,7 +1,10 @@
 package net.discdd.pathutils;
 
+import net.discdd.bundlesecurity.SecurityUtils;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.SEVERE;
@@ -21,6 +24,11 @@ public class TransportPaths {
     public final Path toClientPath;
 
     public final Path toServerPath;
+    public final Path tranportKeyPath;
+    public final Path serverKeyPath;
+    public final Path privateKeyPath;
+    public final Path publicKeyPath;
+    public final Path certPath;
 
     public TransportPaths(Path rootDir) {
         this.toClientPath = rootDir.resolve("BundleTransmission/client");
@@ -34,6 +42,15 @@ public class TransportPaths {
         } catch (Exception e) {
             logger.log(SEVERE, "Failed to create transport storage directories", e);
         }
+
+        // ----- Transport Security -----
+        this.tranportKeyPath = rootDir.resolve(Paths.get(SecurityUtils.BUNDLE_SECURITY_DIR, SecurityUtils.TRANSPORT_KEY_PATH));
+        this.tranportKeyPath.toFile().mkdirs();
+        this.serverKeyPath = rootDir.resolve(Paths.get(SecurityUtils.BUNDLE_SECURITY_DIR, SecurityUtils.SERVER_KEY_PATH));
+        serverKeyPath.toFile().mkdirs();
+        this.privateKeyPath = tranportKeyPath.resolve(SecurityUtils.TRANSPORT_IDENTITY_PRIVATE_KEY);
+        this.publicKeyPath = tranportKeyPath.resolve(SecurityUtils.TRANSPORT_IDENTITY_KEY);
+        this.certPath = tranportKeyPath.resolve(SecurityUtils.TRANSPORT_CERT);
     }
 }
 
