@@ -2,10 +2,10 @@ package net.discdd.app.echo;
 
 import com.google.protobuf.ByteString;
 import io.grpc.stub.StreamObserver;
+import net.devh.boot.grpc.server.service.GrpcService;
 import net.discdd.grpc.AppDataUnit;
 import net.discdd.grpc.ExchangeADUsRequest;
 import net.discdd.grpc.ExchangeADUsResponse;
-import net.discdd.grpc.GrpcService;
 import net.discdd.grpc.ServiceAdapterServiceGrpc;
 
 import java.util.HashMap;

@@ -1,8 +1,8 @@
 package net.discdd.server;
 
 import io.grpc.stub.StreamObserver;
+import net.devh.boot.grpc.server.service.GrpcService;
 import net.discdd.grpc.ConnectionData;
-import net.discdd.grpc.GrpcService;
 import net.discdd.grpc.ResponseStatus;
 import net.discdd.grpc.ServiceAdapterRegistryServiceGrpc;
 import net.discdd.server.repository.RegisteredAppAdapterRepository;

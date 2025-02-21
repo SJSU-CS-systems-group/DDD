@@ -80,7 +80,7 @@ public class End2EndTest {
     private static Path serverPrivatePreKeyPath;
     static Path serverRatchetKeyPath;
     private static Path serverPrivateRatchetKeyPath;
-    @Value("${ssl-grpc.server.port}")
+    @Value("${grpc.server.port}")
     protected int BUNDLESERVER_GRPC_PORT;
 
     @BeforeAll

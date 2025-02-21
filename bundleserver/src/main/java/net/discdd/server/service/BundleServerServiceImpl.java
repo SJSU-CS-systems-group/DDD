@@ -1,11 +1,11 @@
 package net.discdd.server.service;
 
 import io.grpc.stub.StreamObserver;
+import net.devh.boot.grpc.server.service.GrpcService;
 import net.discdd.grpc.BundleInventoryRequest;
 import net.discdd.grpc.BundleInventoryResponse;
 import net.discdd.grpc.BundleServerServiceGrpc;
 import net.discdd.grpc.EncryptedBundleId;
-import net.discdd.grpc.GrpcService;
 import net.discdd.server.bundletransmission.BundleTransmission;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;

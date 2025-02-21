@@ -3,13 +3,11 @@ package net.discdd.app.echo;
 import io.grpc.ConnectivityState;
 import io.grpc.ManagedChannelBuilder;
 import net.discdd.grpc.ConnectionData;
-import net.discdd.grpc.GrpcServerRunner;
 import net.discdd.grpc.ServiceAdapterRegistryServiceGrpc;
 import org.springframework.boot.Banner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Import;
 
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
@@ -26,7 +24,6 @@ import static java.util.logging.Level.WARNING;
  * the GrpcService annotation.
  */
 @SpringBootApplication
-@Import(GrpcServerRunner.class)
 public class EchoApplication {
     final static Logger logger = Logger.getLogger(EchoApplication.class.getName());
 
