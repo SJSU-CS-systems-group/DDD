@@ -1,12 +1,12 @@
 package net.discdd.server.service;
 
 import io.grpc.stub.StreamObserver;
-import net.devh.boot.grpc.server.service.GrpcService;
 import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
 import net.discdd.grpc.BundleSender;
 import net.discdd.grpc.BundleSenderType;
 import net.discdd.grpc.GetRecencyBlobRequest;
 import net.discdd.grpc.GetRecencyBlobResponse;
+import net.discdd.grpc.GrpcService;
 import net.discdd.grpc.RecencyBlobStatus;
 import net.discdd.server.bundletransmission.BundleTransmission;
 import org.whispersystems.libsignal.InvalidKeyException;
