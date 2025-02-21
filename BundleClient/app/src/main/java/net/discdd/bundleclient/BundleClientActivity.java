@@ -186,7 +186,11 @@ public class BundleClientActivity extends AppCompatActivity {
     @Override
     public void onResume() {
         super.onResume();
-        checkRuntimePermission();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
     }
 
     @Override
