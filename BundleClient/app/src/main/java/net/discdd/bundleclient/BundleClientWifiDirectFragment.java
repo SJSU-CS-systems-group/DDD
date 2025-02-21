@@ -90,7 +90,7 @@ public class BundleClientWifiDirectFragment extends Fragment {
         peersList.setLayoutManager(new LinearLayoutManager(getContext()));
         peersList.setAdapter(new RecyclerView.Adapter() {
             @NonNull
-            //@Override
+            @Override
             public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
                 return new RecyclerView.ViewHolder(inflater.inflate(R.layout.peers_list_element, parent, false)) {};
             }

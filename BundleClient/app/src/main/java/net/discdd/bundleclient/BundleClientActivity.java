@@ -10,7 +10,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.hardware.usb.UsbManager;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
@@ -35,7 +34,6 @@ import net.discdd.client.bundlerouting.ClientWindow;
 
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 public class BundleClientActivity extends AppCompatActivity {
@@ -121,10 +119,6 @@ public class BundleClientActivity extends AppCompatActivity {
         serverFragment = ServerFragment.newInstance();
         logFragment = LogFragment.newInstance();
         fragmentsWithTitles.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
-        fragmentsWithTitles.add(new FragmentWithTitle(new UsbFragment(), getString(R.string.usb_tab)));
-        fragmentsWithTitles.add(new FragmentWithTitle(new ServerFragment(), getString(R.string.server_tab)));
-        fragmentsWithTitles.add(new FragmentWithTitle(new LogFragment(), getString(R.string.logs_tab)));
-        fragmentsWithTitles.add(new FragmentWithTitle(new BundleManagerFragment(), "BM"));
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
         //set up view
@@ -153,6 +147,8 @@ public class BundleClientActivity extends AppCompatActivity {
             newFragments.add(new FragmentWithTitle(homeFragment, getString(R.string.home_tab)));
             newFragments.add(new FragmentWithTitle(serverFragment, getString(R.string.server_tab)));
             newFragments.add(new FragmentWithTitle(logFragment, getString(R.string.logs_tab)));
+            newFragments.add(new FragmentWithTitle(new BundleManagerFragment(), "BM"));
+            newFragments.add(new FragmentWithTitle(usbFragment, getString(R.string.usb_tab)));
             if (usbExists) {
                 newFragments.add(new FragmentWithTitle(usbFragment, getString(R.string.usb_tab)));
             }

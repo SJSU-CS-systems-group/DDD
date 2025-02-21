@@ -45,7 +45,7 @@ public class BundleManagerFragment extends Fragment {
         return view;
     }
 
-    private String getADUcount(Path sendADUsPath) throws IOException {
+    private String getADUcount(Path sendADUsPath) {
         if (sendADUsPath == null) {
             return "0";
         }
