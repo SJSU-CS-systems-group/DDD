@@ -1,4 +1,4 @@
-grpc:
+ssl-grpc:
   server:
     port: 8780
 server:
