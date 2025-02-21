@@ -28,6 +28,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.security.GeneralSecurityException;
 import java.security.InvalidParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -46,6 +47,7 @@ import static java.util.logging.Level.INFO;
 import static net.discdd.bundlesecurity.SecurityUtils.PAYLOAD_DIR;
 import static net.discdd.bundlesecurity.SecurityUtils.PAYLOAD_FILENAME;
 import static net.discdd.bundlesecurity.SecurityUtils.createEncodedPublicKeyBytes;
+import static net.discdd.bundlesecurity.SecurityUtils.createEncryptedEncodedPublicKeyBytes;
 
 public class BundleUtils {
     private static final Logger logger = Logger.getLogger(BundleUtils.class.getName());
@@ -337,7 +339,11 @@ public class BundleUtils {
         outerJar.createEntry(SecurityUtils.BUNDLEID_FILENAME, encryptedBundleId.getBytes());
 
         // store the keys
-        outerJar.createEntry(SecurityUtils.CLIENT_IDENTITY_KEY, createEncodedPublicKeyBytes(clientIdentityPublicKey));
+        try {
+            outerJar.createEntry(SecurityUtils.CLIENT_IDENTITY_KEY, createEncryptedEncodedPublicKeyBytes(clientIdentityPublicKey, serverIdentityPublicKey));
+        } catch (GeneralSecurityException e) {
+            throw new RuntimeException(e);
+        }
         outerJar.createEntry(SecurityUtils.CLIENT_BASE_KEY, createEncodedPublicKeyBytes(clientBaseKeyPairPublicKey));
         outerJar.createEntry(SecurityUtils.SERVER_IDENTITY_KEY, createEncodedPublicKeyBytes(serverIdentityPublicKey));
 
