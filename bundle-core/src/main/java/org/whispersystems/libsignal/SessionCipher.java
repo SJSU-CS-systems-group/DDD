@@ -115,7 +115,7 @@ public class SessionCipher {
             getCiphertext(sessionVersion, messageKeys, inputStream, outputStream);
             CiphertextMessage ciphertextMessage = new SignalMessage(sessionVersion, messageKeys.getMacKey(),
                                                                     senderEphemeral, chainKey.getIndex(),
-                                                                    previousCounter, null,
+                                                                    previousCounter,((ByteArrayOutputStream) outputStream).toByteArray(),
                                                                     sessionState.getLocalIdentityKey(),
                                                                     sessionState.getRemoteIdentityKey());
 

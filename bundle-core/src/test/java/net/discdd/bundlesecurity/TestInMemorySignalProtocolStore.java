@@ -2,19 +2,57 @@ package net.discdd.bundlesecurity;
 
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.InvalidKeyIdException;
 import org.whispersystems.libsignal.SignalProtocolAddress;
+import org.whispersystems.libsignal.ecc.Curve;
+import org.whispersystems.libsignal.state.PreKeyBundle;
 import org.whispersystems.libsignal.state.PreKeyRecord;
 import org.whispersystems.libsignal.state.SessionRecord;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
+/**
+ * An in-memory implementation of SignalProtocolStore for testing purposes.
+ */
 public class TestInMemorySignalProtocolStore implements SignalProtocolStore {
-    private Map<SignalProtocolAddress, SessionRecord> sessions = new HashMap<>();
+
+    private final Map<SignalProtocolAddress, SessionRecord> sessions = new HashMap<>();
+    private final Map<Integer, PreKeyRecord> preKeys = new HashMap<>();
+    private final Map<Integer, SignedPreKeyRecord> signedPreKeys = new HashMap<>();
+    private final IdentityKeyPair identityKeyPair;
+    private final int registrationId;
+
+    public TestInMemorySignalProtocolStore() throws InvalidKeyException {
+        this.identityKeyPair = generateIdentityKeyPair();
+        this.registrationId = new Random().nextInt(16380) + 1; // Signal uses 1-16380 as valid IDs
+
+        // Generate and store PreKeys
+        int preKeyId = 1;
+        int signedPreKeyId = 1;
+
+        PreKeyRecord preKey = new PreKeyRecord(preKeyId, Curve.generateKeyPair());
+        SignedPreKeyRecord signedPreKey = new SignedPreKeyRecord(
+                signedPreKeyId,
+                System.currentTimeMillis(),
+                Curve.generateKeyPair(),
+                Curve.calculateSignature(
+                        identityKeyPair.getPrivateKey(),
+                        Curve.generateKeyPair().getPublicKey().serialize()
+                )
+        );
+
+        storePreKey(preKeyId, preKey);
+        storeSignedPreKey(signedPreKeyId, signedPreKey);
+    }
+
+
+    private IdentityKeyPair generateIdentityKeyPair() {
+        var keyPair = Curve.generateKeyPair();
+        return new IdentityKeyPair(new IdentityKey(keyPair.getPublicKey()), keyPair.getPrivateKey());
+    }
 
     @Override
     public void storeSession(SignalProtocolAddress address, SessionRecord record) {
@@ -23,12 +61,12 @@ public class TestInMemorySignalProtocolStore implements SignalProtocolStore {
 
     @Override
     public SessionRecord loadSession(SignalProtocolAddress address) {
-        return sessions.get(address);
+        return sessions.getOrDefault(address, new SessionRecord());
     }
 
     @Override
-    public List<Integer> getSubDeviceSessions(String s) {
-        return null;
+    public List<Integer> getSubDeviceSessions(String name) {
+        return new ArrayList<>();
     }
 
     @Override
@@ -42,73 +80,94 @@ public class TestInMemorySignalProtocolStore implements SignalProtocolStore {
     }
 
     @Override
-    public void deleteAllSessions(String s) {
-
+    public void deleteAllSessions(String name) {
+        sessions.clear();
     }
 
     @Override
     public IdentityKeyPair getIdentityKeyPair() {
-        return null;
+        return identityKeyPair;
     }
 
     @Override
     public int getLocalRegistrationId() {
-        return 0;
+        return registrationId;
     }
 
     @Override
-    public void saveIdentity(String s, IdentityKey identityKey) {
-
+    public void saveIdentity(String name, IdentityKey identityKey) {
+        //Not Needed, evrything should occur in memory
     }
 
     @Override
-    public boolean isTrustedIdentity(String s, IdentityKey identityKey) {
-        return false;
+    public boolean isTrustedIdentity(String name, IdentityKey identityKey) {
+        return true; // Assuming trust during testing
     }
 
     @Override
-    public PreKeyRecord loadPreKey(int i) throws InvalidKeyIdException {
-        return null;
+    public PreKeyRecord loadPreKey(int keyId) throws InvalidKeyIdException {
+        if (!preKeys.containsKey(keyId)) {
+            throw new InvalidKeyIdException("PreKey not found for ID: " + keyId);
+        }
+        return preKeys.get(keyId);
     }
 
     @Override
-    public void storePreKey(int i, PreKeyRecord preKeyRecord) {
-
+    public void storePreKey(int keyId, PreKeyRecord preKeyRecord) {
+        preKeys.put(keyId, preKeyRecord);
     }
 
     @Override
-    public boolean containsPreKey(int i) {
-        return false;
+    public boolean containsPreKey(int keyId) {
+        return preKeys.containsKey(keyId);
     }
 
     @Override
-    public void removePreKey(int i) {
-
+    public void removePreKey(int keyId) {
+        preKeys.remove(keyId);
     }
 
     @Override
-    public SignedPreKeyRecord loadSignedPreKey(int i) throws InvalidKeyIdException {
-        return null;
+    public SignedPreKeyRecord loadSignedPreKey(int keyId) throws InvalidKeyIdException {
+        if (!signedPreKeys.containsKey(keyId)) {
+            throw new InvalidKeyIdException("SignedPreKey not found for ID: " + keyId);
+        }
+        return signedPreKeys.get(keyId);
     }
 
     @Override
     public List<SignedPreKeyRecord> loadSignedPreKeys() {
-        return null;
+        return new ArrayList<>(signedPreKeys.values());
     }
 
     @Override
-    public void storeSignedPreKey(int i, SignedPreKeyRecord signedPreKeyRecord) {
-
+    public void storeSignedPreKey(int keyId, SignedPreKeyRecord signedPreKeyRecord) {
+        signedPreKeys.put(keyId, signedPreKeyRecord);
     }
 
     @Override
-    public boolean containsSignedPreKey(int i) {
-        return false;
+    public boolean containsSignedPreKey(int keyId) {
+        return signedPreKeys.containsKey(keyId);
     }
 
     @Override
-    public void removeSignedPreKey(int i) {
-
+    public void removeSignedPreKey(int keyId) {
+        signedPreKeys.remove(keyId);
     }
+    public PreKeyBundle getPreKeyBundle() throws InvalidKeyIdException {
+        int preKeyId = preKeys.keySet().iterator().next();
+        int signedPreKeyId = signedPreKeys.keySet().iterator().next();
+
+        return new PreKeyBundle(
+                getLocalRegistrationId(),
+                1, // Device ID
+                preKeyId,
+                loadPreKey(preKeyId).getKeyPair().getPublicKey(),
+                signedPreKeyId,
+                loadSignedPreKey(signedPreKeyId).getKeyPair().getPublicKey(),
+                loadSignedPreKey(signedPreKeyId).getSignature(),
+                getIdentityKeyPair().getPublicKey()
+        );
+    }
+
 }
-
