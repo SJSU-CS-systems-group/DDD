@@ -171,7 +171,6 @@ public class TransportWifiDirectService extends Service
     }
 
     private void appendToClientLog(String message) {
-
         var intent = new Intent(getApplicationContext(), TransportWifiDirectFragment.class);
         intent.setAction(NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION);
         intent.putExtra("message", message);
