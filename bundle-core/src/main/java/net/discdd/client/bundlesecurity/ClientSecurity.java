@@ -46,6 +46,7 @@ import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 import static net.discdd.bundlesecurity.SecurityUtils.createEncryptedEncodedPublicKeyBytes;
@@ -142,6 +143,7 @@ public class ClientSecurity {
         } catch (InvalidKeyException e) {
             throw new RuntimeException(e);
         }
+//        SecurityUtils.createEncodedPublicKeyFile(ourIdentityKeyPair.getPublicKey().getPublicKey(), identityKeyPaths[0]);
         SecurityUtils.createEncodedPublicKeyFile(ourBaseKey.getPublicKey(), identityKeyPaths[1]);
         SecurityUtils.createEncodedPublicKeyFile(theirIdentityKey.getPublicKey(), identityKeyPaths[2]);
         return identityKeyPaths;
@@ -149,8 +151,15 @@ public class ClientSecurity {
 
     private void loadKeysfromFiles(Path clientKeyPath) throws IOException, InvalidKeyException {
         byte[] identityKeyPvt = Files.readAllBytes(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_PRIVATE_KEY));
-        byte[] identityKeyPub =
-                SecurityUtils.decodePublicKeyfromFile(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
+        byte[] identityKeyPub = SecurityUtils.decodePublicKeyfromFile(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
+//        byte[] identityKeyPub = new byte[0];
+//        try {
+//            logger.log(INFO, "TRYING THE NEW DECODE WHEN TRYING TO READ KEYS FROM FILES");
+//            identityKeyPub = SecurityUtils.decodeEncryptedPublicKeyfromFile(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY))
+//                    .getBytes();
+//        } catch (NoSuchAlgorithmException e) {
+//            throw new RuntimeException(e);
+//        }
 
         IdentityKey identityPublicKey = new IdentityKey(identityKeyPub, 0);
         ECPrivateKey identityPrivateKey = Curve.decodePrivatePoint(identityKeyPvt);
