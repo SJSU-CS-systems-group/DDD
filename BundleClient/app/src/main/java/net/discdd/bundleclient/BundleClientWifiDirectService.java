@@ -14,8 +14,11 @@ import android.content.pm.ServiceInfo;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
 
+import android.os.Looper;
+import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
@@ -23,6 +26,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import net.discdd.client.bundlesecurity.BundleSecurity;
 import net.discdd.client.bundletransmission.BundleTransmission;
+import net.discdd.client.bundletransmission.BundleTransmission.Statuses;
 import net.discdd.client.bundletransmission.BundleTransmission.BundleExchangeCounts;
 import net.discdd.model.ADU;
 import net.discdd.pathutils.ClientPaths;
@@ -52,7 +56,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
     public static final String NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE = "background_exchange";
     public static final String NET_DISCDD_BUNDLECLIENT_DEVICEADDRESS_EXTRA = "deviceAddress";
     private static final Logger logger = Logger.getLogger(BundleClientWifiDirectService.class.getName());
-    private static final BundleExchangeCounts ZERO_BUNDLE_EXCHANGE_COUNTS = new BundleExchangeCounts(0, 0);
+    private static final BundleExchangeCounts FAILED_EXCHANGE_COUNTS = new BundleExchangeCounts(Statuses.FAILED,Statuses.FAILED);
     private static SharedPreferences preferences;
     final AtomicReference<CompletableFuture<WifiP2pGroup>> connectionWaiter = new AtomicReference<>();
     private final IBinder binder = new BundleClientWifiDirectServiceBinder();
@@ -60,7 +64,6 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
     PeriodicRunnable periodicRunnable = new PeriodicRunnable();
     private WifiDirectManager wifiDirectManager;
     private BundleTransmission bundleTransmission;
-
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
@@ -196,10 +199,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
             wifiDirectManager.getPeerList().stream()
                     .filter(peer -> peer.deviceAddress.equals(transport.getDeviceAddress())).findFirst()
                     .map(this::exchangeWith).ifPresent(bc -> {
-                        logger.info(
-                                String.format(getString(R.string.exchanged_d_bundles_to_and_d_bundles_from_s),
-                                              bc.bundlesSent(),
-                                              bc.bundlesReceived(), transport.getDeviceName()));
+                        logger.log(INFO, String.format("Upload status: %s, Download status: %s",bc.uploadStatus().toString(), bc.downloadStatus().toString()));
                     });
         }
     }
@@ -218,17 +218,44 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
         }
         try {
             var newGroup = connectTo(device).get(10, TimeUnit.SECONDS);
-            return bundleTransmission.doExchangeWithTransport(device.deviceAddress, device.deviceName,
+
+            BundleExchangeCounts currentBundle = bundleTransmission.doExchangeWithTransport(device.deviceAddress, device.deviceName,
                                                               wifiDirectManager.getGroupOwnerAddress().getHostAddress(),
                                                               7777);
+            String text1;
+            String text2;
+            if(currentBundle.uploadStatus() == Statuses.FAILED){
+                text1 = getString(R.string.Upload_Failed);
+            }else if(currentBundle.uploadStatus() == Statuses.COMPLETE){
+                text1 = getString(R.string.Upload_Success);
+            }else{
+                text1 = getString(R.string.Upload_Empty);
+            }
+            if(currentBundle.downloadStatus() == Statuses.FAILED){
+                text2 = getString(R.string.Download_Failed);
+            }else if(currentBundle.downloadStatus() == Statuses.COMPLETE){
+                text2 = getString(R.string.Download_Success);
+            }else{
+                text2 = getString(R.string.Download_Empty);
+            }
+
+            final String text = text1 + "\n" + text2;
+            Handler handler = new Handler(Looper.getMainLooper());
+            handler.post(() -> {
+                Toast.makeText(getApplicationContext(), text, Toast.LENGTH_LONG).show();
+            });
+            return currentBundle;
+
         } catch (Throwable e) {
             logger.log(WARNING, "Failed to connect to " + device.deviceName, e);
+
         } finally {
             wifiDirectManager.disconnect();
             broadcastBundleClientWifiEvent(BundleClientWifiDirectEventType.WIFI_DIRECT_CLIENT_EXCHANGE_FINISHED,
                                            device.deviceAddress);
+
         }
-        return new BundleExchangeCounts(0, 0);
+        return FAILED_EXCHANGE_COUNTS;
     }
 
     private CompletableFuture<WifiP2pGroup> connectTo(WifiP2pDevice transport) {
@@ -269,7 +296,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
         var device = wifiDirectManager.getPeerList().stream().filter(peer -> peer.deviceAddress.equals(deviceAddress))
                 .findFirst().orElse(null);
         if (device == null) {
-            completableFuture.complete(ZERO_BUNDLE_EXCHANGE_COUNTS);
+            completableFuture.complete(FAILED_EXCHANGE_COUNTS);
             return completableFuture;
         }
         // we want to use the executor to make sure that only one exchange is going on at a time
@@ -279,7 +306,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
                 completableFuture.complete(bundleExchangeCounts);
             } catch (Exception e) {
                 logger.log(WARNING, "Failed to initiate exchange with " + device.deviceName, e);
-                completableFuture.complete(ZERO_BUNDLE_EXCHANGE_COUNTS);
+                completableFuture.complete(FAILED_EXCHANGE_COUNTS);
             }
         });
         return completableFuture;
@@ -292,19 +319,17 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
                 var serverAddress = preferences.getString("domain", "");
                 var port = preferences.getInt("port", 0);
                 if (serverAddress.isEmpty() || port == 0) {
-                    completableFuture.complete(ZERO_BUNDLE_EXCHANGE_COUNTS);
+                    completableFuture.complete(FAILED_EXCHANGE_COUNTS);
                     return;
                 }
                 var bundleExchangeCounts =
                         bundleTransmission.doExchangeWithTransport("XX:XX:XX:XX:XX:XX", "BundleServer", serverAddress,
                                                                    port);
-                logger.log(INFO, String.format(getString(R.string.exchanged_d_bundles_to_and_d_bundles_from_server),
-                                               bundleExchangeCounts.bundlesSent(),
-                                               bundleExchangeCounts.bundlesReceived()));
+                logger.log(INFO, String.format("Upload status: %s, Download status: %s",bundleExchangeCounts.uploadStatus().toString(), bundleExchangeCounts.downloadStatus().toString()));
                 completableFuture.complete(bundleExchangeCounts);
             } catch (Exception e) {
                 logger.log(WARNING, "Failed to initiate exchange with server", e);
-                completableFuture.complete(ZERO_BUNDLE_EXCHANGE_COUNTS);
+                completableFuture.complete(FAILED_EXCHANGE_COUNTS);
             }
         });
         return completableFuture;

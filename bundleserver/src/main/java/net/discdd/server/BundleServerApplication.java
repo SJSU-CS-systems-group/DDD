@@ -4,6 +4,7 @@ import io.leego.banana.Ansi;
 import io.leego.banana.BananaUtils;
 import io.leego.banana.Font;
 import lombok.extern.slf4j.Slf4j;
+import net.discdd.grpc.GrpcServerRunner;
 import net.discdd.server.commands.CommandProcessor;
 import net.discdd.server.commands.bundleuploader.BundleUploader;
 import org.springframework.boot.Banner;
@@ -12,6 +13,7 @@ import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.Import;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
@@ -25,6 +27,7 @@ import static java.util.logging.Level.SEVERE;
 
 @Slf4j
 @SpringBootApplication
+@Import(GrpcServerRunner.class)
 @EnableJpaRepositories("net.discdd.server")
 @EntityScan("net.discdd.server.repository.entity")
 public class BundleServerApplication {
@@ -85,7 +88,7 @@ public class BundleServerApplication {
             app.setBannerMode(Banner.Mode.OFF);
             app.setLogStartupInfo(false);
             System.setProperty("logging.level.root", "WARN");
-            System.setProperty("grpc.server.port", "-1");
+            System.setProperty("ssl-grpc.server.port", "-1");
             System.setProperty("logging.pattern.console", "%-1level %msg%n");
         }
 

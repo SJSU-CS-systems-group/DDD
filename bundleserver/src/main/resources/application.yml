@@ -16,11 +16,11 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/dtn_server_db?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
-#    username: <add in external properties file>
-#    password: <add in external properties file>
+    username: ddd
+    password: ddd
     db-name: dtn_server_db
 
-grpc:
+ssl-grpc:
   server:
     port: 7778
 server:
