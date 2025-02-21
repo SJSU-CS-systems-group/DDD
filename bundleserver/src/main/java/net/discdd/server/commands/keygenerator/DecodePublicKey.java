@@ -1,5 +1,6 @@
 package net.discdd.server.commands.keygenerator;
 
+import net.discdd.bundlesecurity.DDDPEMEncoder.encode;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.whispersystems.libsignal.IdentityKeyPair;
@@ -7,16 +8,21 @@ import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
 
 import net.discdd.bundlesecurity.SecurityUtils;
+import static net.discdd.bundlesecurity.DDDPEMEncoder.ECPublicKeyType;
+import static net.discdd.bundlesecurity.DDDPEMEncoder.privateKeyType;
+import static net.discdd.bundlesecurity.DDDPEMEncoder.decodeFromFile;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Base64;
 import java.util.concurrent.Callable;
 import java.util.logging.Logger;
+
 
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
@@ -55,7 +61,8 @@ public class DecodePublicKey implements Callable<Void> {
     }
 
     private byte[] decodeFile() throws IOException, InvalidKeyException {
-        return SecurityUtils.decodePrivateKeyFromFile(storePath.resolve(pvtFilename));
+        return decodeFromFile(storePath.resolve(pvtFilename),privateKeyType);
+//        return SecurityUtils.decodePrivateKeyFromFile(storePath.resolve(pvtFilename));
     }
 
     private byte[] decodeBase64() {
@@ -67,7 +74,9 @@ public class DecodePublicKey implements Callable<Void> {
     }
 
     private void writeToFile(ECPublicKey pubKey) throws IOException {
-        SecurityUtils.createEncodedPublicKeyFile(pubKey, storePath.resolve(pubFilename));
+        Files.writeString(storePath.resolve(pubFilename),
+                          encode(pubKey.serialize(), ECPublicKeyType));
+//        SecurityUtils.createEncodedPublicKeyFile(pubKey, storePath.resolve(pubFilename));
         logger.log(INFO, "Written to file");
     }
 

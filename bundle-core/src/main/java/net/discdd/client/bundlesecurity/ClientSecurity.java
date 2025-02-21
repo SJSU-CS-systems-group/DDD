@@ -2,6 +2,11 @@ package net.discdd.client.bundlesecurity;
 
 import lombok.Getter;
 import net.discdd.bundlesecurity.SecurityUtils;
+import static net.discdd.bundlesecurity.DDDPEMEncoder.encode;
+import static net.discdd.bundlesecurity.DDDPEMEncoder.ECPublicKeyType;
+import static net.discdd.bundlesecurity.DDDPEMEncoder.publicKeyType;
+import static net.discdd.bundlesecurity.DDDPEMEncoder.decodeFromFile;
+
 import net.discdd.pathutils.ClientPaths;
 import net.discdd.tls.DDDTLSUtil;
 import org.bouncycastle.operator.OperatorCreationException;
@@ -133,16 +138,25 @@ public class ClientSecurity {
             Files.write(path.resolve(SecurityUtils.CLIENT_BASE_PRIVATE_KEY), ourBaseKey.getPrivateKey().serialize());
         }
 
-        SecurityUtils.createEncodedPublicKeyFile(ourIdentityKeyPair.getPublicKey().getPublicKey(), identityKeyPaths[0]);
-        SecurityUtils.createEncodedPublicKeyFile(ourBaseKey.getPublicKey(), identityKeyPaths[1]);
-        SecurityUtils.createEncodedPublicKeyFile(theirIdentityKey.getPublicKey(), identityKeyPaths[2]);
+        Files.writeString(identityKeyPaths[0],
+                          encode(ourIdentityKeyPair.getPublicKey().getPublicKey().serialize(), ECPublicKeyType));
+        Files.writeString(identityKeyPaths[1],
+                          encode(ourBaseKey.getPublicKey().serialize(), ECPublicKeyType));
+        Files.writeString(identityKeyPaths[2],
+                          encode(theirIdentityKey.getPublicKey().serialize(), ECPublicKeyType));
+
+//        SecurityUtils.createEncodedPublicKeyFile(ourIdentityKeyPair.getPublicKey().getPublicKey(), identityKeyPaths[0]);
+//        SecurityUtils.createEncodedPublicKeyFile(ourBaseKey.getPublicKey(), identityKeyPaths[1]);
+//        SecurityUtils.createEncodedPublicKeyFile(theirIdentityKey.getPublicKey(), identityKeyPaths[2]);
         return identityKeyPaths;
     }
 
     private void loadKeysfromFiles(Path clientKeyPath) throws IOException, InvalidKeyException {
         byte[] identityKeyPvt = Files.readAllBytes(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_PRIVATE_KEY));
         byte[] identityKeyPub =
-                SecurityUtils.decodePublicKeyfromFile(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
+                decodeFromFile(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY),publicKeyType);
+//        byte[] identityKeyPub =
+//                SecurityUtils.decodePublicKeyfromFile(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
 
         IdentityKey identityPublicKey = new IdentityKey(identityKeyPub, 0);
         ECPrivateKey identityPrivateKey = Curve.decodePrivatePoint(identityKeyPvt);
@@ -150,7 +164,9 @@ public class ClientSecurity {
         ourIdentityKeyPair = new IdentityKeyPair(identityPublicKey, identityPrivateKey);
 
         byte[] baseKeyPvt = Files.readAllBytes(clientKeyPath.resolve(SecurityUtils.CLIENT_BASE_PRIVATE_KEY));
-        byte[] baseKeyPub = SecurityUtils.decodePublicKeyfromFile(clientKeyPath.resolve(SecurityUtils.CLIENT_BASE_KEY));
+        byte[] baseKeyPub =
+                decodeFromFile(clientKeyPath.resolve(SecurityUtils.CLIENT_BASE_KEY),publicKeyType);
+//        byte[] baseKeyPub = SecurityUtils.decodePublicKeyfromFile(clientKeyPath.resolve(SecurityUtils.CLIENT_BASE_KEY));
 
         ECPublicKey basePublicKey = Curve.decodePoint(baseKeyPub, 0);
         ECPrivateKey basePrivateKey = Curve.decodePrivatePoint(baseKeyPvt);
@@ -160,14 +176,21 @@ public class ClientSecurity {
 
     private void InitializeServerKeysFromFiles(Path path) throws InvalidKeyException, IOException {
         byte[] serverIdentityKey =
-                SecurityUtils.decodePublicKeyfromFile(path.resolve(SecurityUtils.SERVER_IDENTITY_KEY));
+                decodeFromFile(path.resolve(SecurityUtils.SERVER_IDENTITY_KEY),publicKeyType);
+
+//        byte[] serverIdentityKey =
+//                SecurityUtils.decodePublicKeyfromFile(path.resolve(SecurityUtils.SERVER_IDENTITY_KEY));
         theirIdentityKey = new IdentityKey(serverIdentityKey, 0);
 
         byte[] serverSignedPreKey =
-                SecurityUtils.decodePublicKeyfromFile(path.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY));
+                decodeFromFile(path.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY),publicKeyType);
+//        byte[] serverSignedPreKey =
+//                SecurityUtils.decodePublicKeyfromFile(path.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY));
         theirSignedPreKey = Curve.decodePoint(serverSignedPreKey, 0);
 
-        byte[] serverRatchetKey = SecurityUtils.decodePublicKeyfromFile(path.resolve(SecurityUtils.SERVER_RATCHET_KEY));
+        byte[] serverRatchetKey =
+                decodeFromFile(path.resolve(SecurityUtils.SERVER_RATCHET_KEY),publicKeyType);
+//        byte[] serverRatchetKey = SecurityUtils.decodePublicKeyfromFile(path.resolve(SecurityUtils.SERVER_RATCHET_KEY));
         theirRatchetKey = Curve.decodePoint(serverRatchetKey, 0);
     }
 

@@ -23,6 +23,8 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.util.logging.Logger;
+import static net.discdd.bundlesecurity.DDDPEMEncoder.publicKeyType;
+import static net.discdd.bundlesecurity.DDDPEMEncoder.decodeFromFile;
 
 
 public class TransportSecurity {
@@ -63,7 +65,9 @@ public class TransportSecurity {
     private void InitializeServerKeysFromFiles(Path path) throws InvalidKeyException, IOException {
         path.toFile().mkdirs();
         byte[] serverIdentityKey =
-                SecurityUtils.decodePublicKeyfromFile(path.resolve(SecurityUtils.SERVER_IDENTITY_KEY));
+                decodeFromFile(path.resolve(SecurityUtils.SERVER_IDENTITY_KEY),publicKeyType);
+//        byte[] serverIdentityKey =
+//                SecurityUtils.decodePublicKeyfromFile(path.resolve(SecurityUtils.SERVER_IDENTITY_KEY));
         theirIdentityKey = new IdentityKey(serverIdentityKey, 0);
     }
 

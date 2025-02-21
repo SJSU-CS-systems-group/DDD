@@ -41,11 +41,14 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import net.discdd.bundlesecurity.DDDPEMEncoder.encode;
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
 import static net.discdd.bundlesecurity.SecurityUtils.PAYLOAD_DIR;
 import static net.discdd.bundlesecurity.SecurityUtils.PAYLOAD_FILENAME;
-import static net.discdd.bundlesecurity.SecurityUtils.createEncodedPublicKeyBytes;
+import static net.discdd.bundlesecurity.DDDPEMEncoder.ECPublicKeyType;
+
+//import static net.discdd.bundlesecurity.SecurityUtils.createEncodedPublicKeyBytes;
 
 public class BundleUtils {
     private static final Logger logger = Logger.getLogger(BundleUtils.class.getName());
@@ -336,10 +339,15 @@ public class BundleUtils {
         // store the bundleId
         outerJar.createEntry(SecurityUtils.BUNDLEID_FILENAME, encryptedBundleId.getBytes());
 
+        outerJar.createEntry(SecurityUtils.CLIENT_IDENTITY_KEY, encode(clientIdentityPublicKey.serialize(), ECPublicKeyType).getBytes());
+        outerJar.createEntry(SecurityUtils.CLIENT_BASE_KEY, encode(clientBaseKeyPairPublicKey.serialize(), ECPublicKeyType).getBytes());
+        outerJar.createEntry(SecurityUtils.SERVER_IDENTITY_KEY, encode(serverIdentityPublicKey.serialize(), ECPublicKeyType).getBytes());
+
         // store the keys
-        outerJar.createEntry(SecurityUtils.CLIENT_IDENTITY_KEY, createEncodedPublicKeyBytes(clientIdentityPublicKey));
-        outerJar.createEntry(SecurityUtils.CLIENT_BASE_KEY, createEncodedPublicKeyBytes(clientBaseKeyPairPublicKey));
-        outerJar.createEntry(SecurityUtils.SERVER_IDENTITY_KEY, createEncodedPublicKeyBytes(serverIdentityPublicKey));
+//        outerJar.createEntry(SecurityUtils.CLIENT_IDENTITY_KEY, createEncodedPublicKeyBytes(clientIdentityPublicKey));
+//        outerJar.createEntry(SecurityUtils.CLIENT_BASE_KEY, createEncodedPublicKeyBytes(clientBaseKeyPairPublicKey));
+//        outerJar.createEntry(SecurityUtils.SERVER_IDENTITY_KEY, createEncodedPublicKeyBytes(serverIdentityPublicKey));
+
 
         // bundle is ready
         outerJar.close();

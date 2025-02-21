@@ -31,6 +31,9 @@ import java.util.List;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import static net.discdd.bundlesecurity.DDDPEMEncoder.encode;
+import static net.discdd.bundlesecurity.DDDPEMEncoder.publicKeyType;
+import static net.discdd.bundlesecurity.DDDPEMEncoder.decodeFromFile;
 
 import static java.util.logging.Level.INFO;
 
@@ -95,7 +98,9 @@ public class SecurityUtils {
      */
     public static String generateID(Path publicKeyPath) throws IOException, InvalidKeyException,
             NoSuchAlgorithmException {
-        byte[] publicKey = decodePublicKeyfromFile(publicKeyPath);
+        byte[] publicKey =
+                decodeFromFile(publicKeyPath,DDDPEMEncoder.publicKeyType);
+//        byte[] publicKey = decodePublicKeyfromFile(publicKeyPath);
         return generateID(publicKey);
     }
 
@@ -111,8 +116,10 @@ public class SecurityUtils {
     }
 
     public static void createEncodedPublicKeyFile(ECPublicKey publicKey, Path path) throws IOException {
-        Files.write(path, createEncodedPublicKeyBytes(publicKey), StandardOpenOption.CREATE,
-                    StandardOpenOption.TRUNCATE_EXISTING);
+        Files.writeString(path,
+                          encode(publicKey.serialize(), ECPublicKeyType).getBytes());
+//        Files.write(path, createEncodedPublicKeyBytes(publasdicKey), StandardOpenOption.CREATE,
+//                    StandardOpenOption.TRUNCATE_EXISTING);
     }
 
     public static byte[] createEncodedPublicKeyBytes(ECPublicKey publicKey) {
@@ -171,7 +178,9 @@ public class SecurityUtils {
 
     public static String getClientID(Path bundlePath) throws IOException, InvalidKeyException,
             NoSuchAlgorithmException {
-        byte[] clientIdentityKey = decodePublicKeyfromFile(bundlePath.resolve(CLIENT_IDENTITY_KEY));
+        byte[] clientIdentityKey =
+                decodeFromFile(bundlePath.resolve(CLIENT_IDENTITY_KEY),DDDPEMEncoder.publicKeyType);
+//        byte[] clientIdentityKey = decodePublicKeyfromFile(bundlePath.resolve(CLIENT_IDENTITY_KEY));
         return generateID(clientIdentityKey);
     }
 
