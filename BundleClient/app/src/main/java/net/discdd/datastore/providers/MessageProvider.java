@@ -17,7 +17,7 @@ import androidx.annotation.Nullable;
 
 import net.discdd.client.bundlesecurity.ClientSecurity;
 import net.discdd.utils.StoreADUs;
-import net.discdd.utils.StoreADUs.AduIdData;
+//import net.discdd.utils.StoreADUs.AduIdData;
 
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -87,7 +87,7 @@ public class MessageProvider extends ContentProvider {
             } else {
                 List<byte[]> datalist = receiveADUsStorage.getAllAppData(appId);
                 for (byte[] data : datalist) {
-                    cursor.newRow().add("data", new String(data)).add("id", aduId);
+                    cursor.newRow().add("data", new String(data)).add("id", appId);
 
                 }
             }
