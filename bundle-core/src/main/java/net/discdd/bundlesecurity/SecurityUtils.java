@@ -124,7 +124,6 @@ public class SecurityUtils {
         // create ephemeral public key pair
         ECKeyPair ephemeralKeyPair = Curve.generateKeyPair();
         // calculate shared secret from server public key and ephemeral private key
-        // Unless testing, we're passing null for path b/c server security instance will already be created
         byte[] agreement = Curve.calculateAgreement(serverIdentityPublicKey, ephemeralKeyPair.getPrivateKey());
         String sharedSecret = Base64.getUrlEncoder().encodeToString(agreement);
         // encrypt client public key using shared secret
@@ -140,6 +139,10 @@ public class SecurityUtils {
 //this is more well said as decodeDecryptedPublicKeyFromFile
     public static String decodeEncryptedPublicKeyfromFile(Path path) throws IOException, InvalidKeyException, NoSuchAlgorithmException {
         List<String> encodedKeyList = Files.readAllLines(path);
+        if (encodedKeyList.size() == 3) {
+            logger.log(INFO, "WRONG CALL TO DECODE ENCRYPTED: REDIRECTING TO OG USE ");
+            return generateID(decodePublicKeyfromFile(path));
+        }
         if ((encodedKeyList.get(0).equals(PUB_KEY_HEADER)) && (encodedKeyList.get(3).equals(PUB_KEY_FOOTER))) {
             // read encrypted client public key
             byte[] encryptedClientPublicKey = Base64.getUrlDecoder().decode(encodedKeyList.get(1));
@@ -147,14 +150,17 @@ public class SecurityUtils {
             byte[] ephemeralKeyBytes = Base64.getUrlDecoder().decode(encodedKeyList.get(2));
             KeyFactory kf = null;
             ECPublicKey ephemeralPublicKey;
+            logger.log(INFO, "POSSIBLY INVALID EPHEMERAL PUB KEY " + ephemeralKeyBytes);
             try {
                 kf = KeyFactory.getInstance("EC");
                 ephemeralPublicKey = (ECPublicKey) kf.generatePublic(new X509EncodedKeySpec(ephemeralKeyBytes));
             } catch (NoSuchAlgorithmException e) {
                 throw new RuntimeException("EC algorithm is not available in the Java environment.", e);
             } catch (InvalidKeySpecException e) {
+                logger.log(INFO, "DEF IIIIIINVALID EPHEMERAL PUB KEY " + ephemeralKeyBytes);
                 throw new RuntimeException("Invalid EC public key provided. Ensure the key encoding is correct.", e);
             }
+            logger.log(INFO, "DEF VALID EPHEMERAL PUB KEY " + ephemeralKeyBytes);
             // calculate shared secret from server private key and ephemeral public key
             ServerSecurity serverSecurityInstance = ServerSecurity.getInstance(path);
             ECPrivateKey ServerPrivKey = serverSecurityInstance.getSigningKey();
