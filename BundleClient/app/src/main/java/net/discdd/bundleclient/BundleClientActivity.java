@@ -2,6 +2,7 @@ package net.discdd.bundleclient;
 
 import static java.util.logging.Level.WARNING;
 
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
