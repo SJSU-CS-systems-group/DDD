@@ -16,8 +16,6 @@ package net.discdd.grpc;
  */
 
 import io.grpc.BindableService;
-import io.grpc.ServerInterceptor;
-import io.grpc.ServerInterceptors;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 
@@ -33,8 +31,7 @@ import java.lang.annotation.Target;
  * {@link BindableService} (GrpcService-ImplBase).
  *
  * <p>
- * <b>Note:</b> These annotation allows the specification of custom interceptors. These will be appended to the global
- * interceptors and applied using {@link ServerInterceptors#interceptForward(BindableService, ServerInterceptor...)}.
+ * <b>Note:</b> This is a customized GrpcService annotation for DDD Grpc services.
  * </p>
  *
  * @author Michael (yidongnan@gmail.com)
