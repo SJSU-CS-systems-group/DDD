@@ -52,4 +52,6 @@
     <string name="usb_connection_detected">USB connection detected</string>
     <string name="usb_device_not_connected">USB device not connected</string>
     <string name="acra_toast_text">Acra creating crash report!</string>
+    <string name="exchanging_with_transport">Exchanging with Transport</string>
+    <string name="initiating_bundle_exchange">Initiating Bundle Exchange...</string>
 </resources>
