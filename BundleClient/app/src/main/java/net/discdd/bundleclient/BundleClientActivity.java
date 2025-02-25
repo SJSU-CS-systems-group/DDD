@@ -12,6 +12,7 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.hardware.usb.UsbManager;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
@@ -61,7 +62,7 @@ public class BundleClientActivity extends AppCompatActivity {
     private TabLayoutMediator tabLayoutMediator;
     PermissionsViewModel permissionsViewModel;
     private BroadcastReceiver mUsbReceiver;
-    private boolean usbExists;
+    protected static boolean usbExists;
 
     public BundleClientActivity() {
         connection = new ServiceConnection() {
@@ -139,6 +140,15 @@ public class BundleClientActivity extends AppCompatActivity {
 
         //set observer on view model for permissions
         permissionsViewModel.getPermissionSatisfied().observe(this, this::updateTabs);
+
+        //Checks if USB connected before app started
+        UsbManager usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
+        if(usbManager != null) {
+            updateUsbExists(!usbManager.getDeviceList().isEmpty());
+        }
+        else {
+            logger.log(WARNING, "Usbmanager was null, failed to connect");
+        }
     }
 
     private void updateTabs(Boolean satisfied) {
