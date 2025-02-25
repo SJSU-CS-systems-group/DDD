@@ -88,7 +88,6 @@ public class BundleTransportActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         sharedPreferences = getSharedPreferences(TransportWifiDirectService.WIFI_DIRECT_PREFERENCES, MODE_PRIVATE);
-
         try {
             Intent intent = new Intent(this, TransportWifiDirectService.class);
             getApplicationContext().startForegroundService(intent);

@@ -87,7 +87,6 @@ public class BundleClientActivity extends AppCompatActivity {
 
         sharedPreferences =
                 getSharedPreferences(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE);
-
         ComponentName comp;
         try {
             comp = getApplicationContext().startForegroundService(

@@ -1,6 +1,5 @@
 package net.discdd.bundleclient;
 
-import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
@@ -32,9 +31,6 @@ import net.discdd.wifidirect.WifiDirectStateListener;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetAddress;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
@@ -104,7 +100,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
             logger.log(SEVERE, "Failed to start foreground service", e);
         }
 
-        wifiDirectManager = new WifiDirectManager(this, this, false);
+        wifiDirectManager = new WifiDirectManager(this, this);
         wifiDirectManager.initialize();
         try {
             ClientPaths clientPaths = new ClientPaths(getApplicationContext().getDataDir().toPath());
@@ -169,23 +165,40 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
     public void onReceiveAction(WifiDirectManager.WifiDirectEvent action) {
         switch (action.type()) {
             case WIFI_DIRECT_MANAGER_INITIALIZED -> {
-                logger.info("WifiDirectManager initialized");
+                logger.info("WifiDirectManager initialized, searching for peers");
                 wifiDirectManager.discoverPeers();
             }
             case WIFI_DIRECT_MANAGER_PEERS_CHANGED -> {
                 logger.info("WifiDirectManager peers changed");
-                wifiDirectManager.getPeerList().stream().filter(peer -> peer.deviceName.startsWith("ddd_"))
-                        .forEach(peer -> bundleTransmission.processDiscoveredPeer(peer.deviceAddress, peer.deviceName));
+                wifiDirectManager.getPeerList().stream()
+                        .filter(peer -> peer.deviceName.startsWith("ddd_")).forEach(
+                                peer -> bundleTransmission.processDiscoveredPeer(peer.deviceAddress,
+                                                                                 peer.deviceName));
                 // expire peers that haven't been seen for a minute
                 long expirationTime = System.currentTimeMillis() - 60 * 1000;
                 bundleTransmission.expireNotSeenPeers(expirationTime);
                 if (periodicExecutor == null) processBackgroundExchangeSetting();
             }
-            case WIFI_DIRECT_MANAGER_GROUP_INFO_CHANGED -> {
-                var ownerAddress = wifiDirectManager.getGroupOwnerAddress();
-                if (ownerAddress != null) {
-                    completeConnectionWaiter(wifiDirectManager.getGroupInfo());
-                }
+            case WIFI_DIRECT_MANAGER_PEER_LIST_RECEIVED -> {
+                logger.info("Received peer list, starting service discovery...");
+                discoverServices();
+            }
+            case WIFI_DIRECT_MANAGER_SERVICE_DISCOVERED -> {
+                logger.info("New service discovered.");
+                wifiDirectManager.getDiscoveredServices().stream()
+                        .filter(service -> service.getInstanceName()
+                                .startsWith("ddd_transport_service")).forEach(service -> {
+                            String deviceName = String.valueOf(service.getDevice());
+                            String ipAddress = String.valueOf(service.getIpAddress());
+                            int port = service.getPort();
+
+                            bundleTransmission.processDiscoveredService(deviceName, ipAddress, port);
+                        });
+
+                // Expire services that haven’t been seen for a minute
+                long expirationTime = System.currentTimeMillis() - 60 * 1000;
+                bundleTransmission.expireNotSeenServices(expirationTime);
+                if (periodicExecutor == null) processBackgroundExchangeSetting();
             }
         }
         broadcastWifiEvent(action);
@@ -194,20 +207,20 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
     private void exchangeWithTransports() {
         var recentTransports = bundleTransmission.getRecentTransports();
         for (var transport : recentTransports) {
-            // map the transport deviceAddress to WifiP2pDevice in the peers list
-            // and call exchangeWith if mapping exists
-            wifiDirectManager.getPeerList().stream()
-                    .filter(peer -> peer.deviceAddress.equals(transport.getDeviceAddress())).findFirst()
-                    .map(this::exchangeWith).ifPresent(bc -> {
+            // Find the service matching the transport's device address and exchange bundles
+            wifiDirectManager.getDiscoveredServices().stream()
+                    .filter(service -> service.getDevice().deviceAddress.equals(transport.getDeviceAddress())).findFirst()
+                    .ifPresent(service -> {
+                        var counts = exchangeWith(service.getDevice(), transport.getDeviceAddress());
                         logger.info(
                                 String.format(getString(R.string.exchanged_d_bundles_to_and_d_bundles_from_s),
-                                              bc.bundlesSent(),
-                                              bc.bundlesReceived(), transport.getDeviceName()));
+                                              counts.bundlesSent(),
+                                              counts.bundlesReceived(), transport.getDeviceName()));
                     });
         }
     }
 
-    private BundleExchangeCounts exchangeWith(WifiP2pDevice device) {
+    private BundleExchangeCounts exchangeWith(WifiP2pDevice device, String transportAddress) {
         broadcastBundleClientWifiEvent(BundleClientWifiDirectEventType.WIFI_DIRECT_CLIENT_EXCHANGE_STARTED,
                                        device.deviceAddress);
         // make sure we are disconnected
@@ -220,9 +233,9 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
             }
         }
         try {
-            var newGroup = connectTo(device).get(10, TimeUnit.SECONDS);
+            connectTo(device).get(10, TimeUnit.SECONDS);
             return bundleTransmission.doExchangeWithTransport(device.deviceAddress, device.deviceName,
-                                                              wifiDirectManager.getGroupOwnerAddress().getHostAddress(),
+                                                              transportAddress,
                                                               7777);
         } catch (Throwable e) {
             logger.log(WARNING, "Failed to connect to " + device.deviceName, e);
@@ -267,18 +280,30 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
         wifiDirectManager.discoverPeers();
     }
 
+    public void discoverServices() {
+        wifiDirectManager.discoverServices();
+    }
+
     public CompletableFuture<BundleExchangeCounts> initiateExchange(String deviceAddress) {
         var completableFuture = new CompletableFuture<BundleExchangeCounts>();
-        var device = wifiDirectManager.getPeerList().stream().filter(peer -> peer.deviceAddress.equals(deviceAddress))
-                .findFirst().orElse(null);
-        if (device == null) {
+        var discoveredService = wifiDirectManager.getDiscoveredServices()
+                .stream()
+                .filter(service -> service.getDevice().deviceAddress.equals(deviceAddress))
+                .findFirst()
+                .orElse(null);
+        if (discoveredService == null) {
             completableFuture.complete(ZERO_BUNDLE_EXCHANGE_COUNTS);
             return completableFuture;
         }
+
+        // Extract necessary device information
+        var device = discoveredService.getDevice();
+        String transportIpAddress = discoveredService.getIpAddress();
+
         // we want to use the executor to make sure that only one exchange is going on at a time
         periodicExecutor.submit(() -> {
             try {
-                var bundleExchangeCounts = exchangeWith(device);
+                var bundleExchangeCounts = exchangeWith(device, transportIpAddress);
                 completableFuture.complete(bundleExchangeCounts);
             } catch (Exception e) {
                 logger.log(WARNING, "Failed to initiate exchange with " + device.deviceName, e);
@@ -315,10 +340,6 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
 
     public BundleTransmission.RecentTransport[] getRecentTransports() {
         return bundleTransmission.getRecentTransports();
-    }
-
-    public InetAddress getGroupOwnerAddress() {
-        return wifiDirectManager.getGroupOwnerAddress();
     }
 
     public WifiP2pGroup getGroupInfo() {

@@ -27,7 +27,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import net.discdd.client.bundletransmission.BundleTransmission.RecentTransport;
 import net.discdd.wifidirect.WifiDirectManager;
 
-import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -196,9 +195,7 @@ public class BundleClientWifiDirectFragment extends Fragment {
         });
     }
 
-    public void updateOwnerAndGroupInfo(InetAddress groupOwnerAddress, WifiP2pGroup groupInfo) {
-        // the groupOwnerAddress doesn't seem to be coming through and the groupInfo owner device
-        // name doesn't seem to come through either.
+    public void updateOwnerAndGroupInfo(WifiP2pGroup groupInfo) {
         requireActivity().runOnUiThread(() -> {
             var ownerNameAndAddress =
                     groupInfo == null || groupInfo.getOwner() == null ? getString(R.string.not_connected) :
@@ -237,9 +234,8 @@ public class BundleClientWifiDirectFragment extends Fragment {
                         deliveryStatus.setText(getWifiBgService().isDiscoveryActive() ? "Active" : "Inactive");
                     }
                     case WIFI_DIRECT_MANAGER_PEERS_CHANGED -> updateConnectedDevices();
-                    case WIFI_DIRECT_MANAGER_GROUP_INFO_CHANGED, WIFI_DIRECT_MANAGER_DEVICE_INFO_CHANGED ->
-                            updateOwnerAndGroupInfo(getWifiBgService().getGroupOwnerAddress(),
-                                                    getWifiBgService().getGroupInfo());
+                    case WIFI_DIRECT_MANAGER_SERVICE_DISCOVERED, WIFI_DIRECT_MANAGER_DEVICE_INFO_CHANGED ->
+                            updateOwnerAndGroupInfo(getWifiBgService().getGroupInfo());
 
                     case WIFI_DIRECT_MANAGER_CONNECTION_CHANGED -> discoverPeers();
                     case WIFI_DIRECT_MANAGER_DISCOVERY_CHANGED -> getActivity().runOnUiThread(

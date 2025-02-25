@@ -204,6 +204,8 @@ public class BundleTransmission {
      */
     @Getter
     public static class RecentTransport {
+        public String ipAddress;
+        public int port;
         /**
          * from WifiP2pDevice.deviceAddress
          */
@@ -244,6 +246,16 @@ public class BundleTransmission {
         }
     }
 
+    public void processDiscoveredService(String deviceName, String ipAddress, int port) {
+        synchronized (recentTransports) {
+            RecentTransport recentTransport = recentTransports.computeIfAbsent(deviceName, RecentTransport::new);
+            recentTransport.deviceName = deviceName;
+            recentTransport.ipAddress = ipAddress;
+            recentTransport.port = port;
+            recentTransport.lastSeen = System.currentTimeMillis();
+        }
+    }
+
     public void timestampExchangeWithTransport(String deviceAddress) {
         synchronized (recentTransports) {
             RecentTransport recentTransport = recentTransports.computeIfAbsent(deviceAddress, RecentTransport::new);
@@ -259,6 +271,12 @@ public class BundleTransmission {
         }
     }
 
+    public void expireNotSeenServices(long expirationTime) {
+        synchronized (recentTransports) {
+            recentTransports.values().removeIf(transport -> transport.getLastSeen() < expirationTime);
+        }
+    }
+
     // returns true if the blob is more recent than previously seen
     public boolean processRecencyBlob(String deviceAddress, GetRecencyBlobResponse recencyBlobResponse) throws IOException, InvalidKeyException {
         // first make sure the data is valid
@@ -266,6 +284,7 @@ public class BundleTransmission {
             throw new IOException("Recency request failed");
         }
         var recencyBlob = recencyBlobResponse.getRecencyBlob();
+        logger.log(INFO, "Received recency blob from " + deviceAddress + " with timestamp " + recencyBlob.getBlobTimestamp());
         // we will allow a 1 minute clock skew
         if (recencyBlob.getBlobTimestamp() > System.currentTimeMillis() + 60 * 1000) {
             throw new IOException("Recency blob timestamp is in the future");
@@ -397,6 +416,7 @@ public class BundleTransmission {
                         .setChunk(BundleChunk.newBuilder().setChunk(ByteString.copyFrom(bytes, 0, size)).build())
                         .build();
                 uploadRequestStreamObserver.onNext(uploadRequest);
+                System.out.println("Uploading chunk");
             }
         }
         uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setSender(clientSender).build());

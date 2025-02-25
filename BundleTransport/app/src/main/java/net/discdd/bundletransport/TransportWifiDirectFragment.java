@@ -51,13 +51,13 @@ public class TransportWifiDirectFragment extends Fragment {
     }
 
     private void processDeviceInfoChange() {
-        // NOTE: we aren't using device info here, but be aware that it can be null!
         requireActivity().runOnUiThread(() -> {
-            if (btService == null) return;
+            if (btService == null) {
+                logger.info("btService is null");
+                return;
+            }
             var deviceName = btService.getDeviceName();
             deviceNameView.setText(deviceName != null ? deviceName : getString(R.string.unknown));
-            // only show the changeDeviceNameView if we don't have a valid device name
-            // (transports must have device names starting with ddd_)
             if (deviceName != null) {
                 changeDeviceNameView.setVisibility(deviceName.startsWith("ddd_") ? View.GONE : View.VISIBLE);
             }
@@ -208,7 +208,7 @@ public class TransportWifiDirectFragment extends Fragment {
                             processDeviceInfoChange();
                             updateGroupInfo();
                             break;
-                        case WIFI_DIRECT_MANAGER_GROUP_INFO_CHANGED:
+                        case WIFI_DIRECT_MANAGER_SERVICE_DISCOVERED:
                             updateGroupInfo();
                             break;
                     }
