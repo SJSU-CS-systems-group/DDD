@@ -90,7 +90,7 @@ public class ClientSecurity {
         clientProtocolStore = SecurityUtils.createInMemorySignalProtocolStore();
 
         // Create Client ID
-        clientID = SecurityUtils.decodeEncryptedPublicKeyfromFile(clientPaths.clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
+        clientID = SecurityUtils.generateID(ourIdentityKeyPair.getPublicKey().getPublicKey().serialize());
         ourAddress = new SignalProtocolAddress(clientID, deviceID);
         theirOneTimePreKey = Optional.<ECPublicKey>absent();
 

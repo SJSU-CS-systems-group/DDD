@@ -132,7 +132,7 @@ public class SecurityUtils {
                 // write encrypted client public key to file
                 Base64.getUrlEncoder().encodeToString(encryptedClientPubKey.getBytes()) + "\n" +
                 // write ephemeral public key to file
-                Base64.getUrlEncoder().encodeToString(ephemeralKeyPair.getPublicKey().toString().getBytes()) + "\n" +
+                Base64.getUrlEncoder().encodeToString(ephemeralKeyPair.getPublicKey().serialize()) + "\n" +
                 PUB_KEY_FOOTER).getBytes();
     }
 
