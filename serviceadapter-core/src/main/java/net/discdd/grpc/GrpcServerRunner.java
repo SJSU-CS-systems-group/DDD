@@ -50,5 +50,12 @@ public class GrpcServerRunner implements CommandLineRunner {
                 server.shutdown();
             }
         }));
+        if (!isRunningInMaven()) {
+            server.awaitTermination();
+        }
+    }
+
+    private boolean isRunningInMaven() {
+        return System.getProperty("surefire.test.class.path") != null || System.getProperty("maven.home") != null;
     }
 }
