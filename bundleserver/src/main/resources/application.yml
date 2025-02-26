@@ -16,9 +16,13 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/dtn_server_db?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
-    username: ddd
-    password: ddd
+#    username: <mySQL username>
+#    password: <mySQL password>
     db-name: dtn_server_db
+
+serviceadapter:
+  datacheck:
+    interval: 30s
 
 ssl-grpc:
   server:
