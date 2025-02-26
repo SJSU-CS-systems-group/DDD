@@ -7,6 +7,7 @@
     <permission android:name="net.discdd.bundleclient.permission.MESSAGE_PROVIDER_READ" android:protectionLevel="normal" />
     <uses-feature android:name="android.hardware.usb.host" />
 
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
         android:name="net.discdd.crashreports.AcraApp"
         android:icon="@drawable/bundleclient_icon"

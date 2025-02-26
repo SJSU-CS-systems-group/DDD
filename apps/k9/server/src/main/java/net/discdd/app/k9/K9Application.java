@@ -3,6 +3,7 @@ package net.discdd.app.k9;
 import io.grpc.ConnectivityState;
 import io.grpc.ManagedChannelBuilder;
 import net.discdd.grpc.ConnectionData;
+import net.discdd.grpc.GrpcServerRunner;
 import net.discdd.grpc.ServiceAdapterRegistryServiceGrpc;
 import org.springframework.boot.Banner;
 import org.springframework.boot.SpringApplication;
@@ -26,6 +27,7 @@ import static java.util.logging.Level.WARNING;
  * the GrpcService annotation.
  */
 @SpringBootApplication
+@Import(GrpcServerRunner.class)
 public class K9Application {
     final static Logger logger = Logger.getLogger(K9Application.class.getName());
 
