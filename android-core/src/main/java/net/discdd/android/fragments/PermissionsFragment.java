@@ -22,6 +22,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import net.discdd.android_core.R;
+import net.discdd.viewmodels.PermissionsViewModel;
 
 import java.util.Arrays;
 import java.util.HashMap;
