@@ -12,7 +12,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
-
 import java.util.Arrays;
 import java.util.logging.Logger;
 
@@ -31,7 +30,7 @@ import static java.util.logging.Level.WARNING;
 public class K9Application {
     final static Logger logger = Logger.getLogger(K9Application.class.getName());
 
-    public static void main(final String[] args) {
+    public static void main(String[] args) {
         if (args.length < 1) {
             System.out.println("Usage: java -jar jar_file_path.jar BundleServerURL");
             System.exit(1);
@@ -57,18 +56,19 @@ public class K9Application {
         // we need to register with the BundleServer in an application initializer so that
         // the logging will be set up correctly
         app.addInitializers((actx) -> {
+            var bundleServerURL = actx.getEnvironment().getProperty("bundle-server.url");
             var myGrpcUrl = actx.getEnvironment().getProperty("my.grpc.url");
             var appName = actx.getEnvironment().getProperty("spring.application.name");
             if (myGrpcUrl == null) {
                 logger.log(SEVERE, "my.grpc.url is not set in application.properties");
                 System.exit(1);
             }
-            var managedChannel = ManagedChannelBuilder.forTarget(myGrpcUrl).usePlaintext().build();
+            var managedChannel = ManagedChannelBuilder.forTarget(bundleServerURL).usePlaintext().build();
             var channelState = managedChannel.getState(true);
             try {
                 // TODO: remove the false when we figure out that the connect is successful!
                 if (false && channelState != ConnectivityState.READY) {
-                    logger.log(WARNING, String.format("Could not connect to %s %s", myGrpcUrl, channelState));
+                    logger.log(WARNING, String.format("Could not connect to %s %s", bundleServerURL, channelState));
                 } else {
                     var rsp = ServiceAdapterRegistryServiceGrpc.newBlockingStub(managedChannel)
                             .checkAdapterRegistration(
@@ -78,7 +78,7 @@ public class K9Application {
                                    String.format("Could not register with BundleServer: rc = %d %s", rsp.getCode(),
                                                  rsp.getMessage()));
                     }
-                    logger.log(INFO, String.format("Registered with server at %s", myGrpcUrl));
+                    logger.log(INFO, String.format("Registered with server at %s", bundleServerURL));
                 }
             } catch (Exception e) {
                 logger.log(WARNING, "Could not register with BundleServer: " + e.getMessage());
