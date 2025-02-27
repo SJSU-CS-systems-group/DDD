@@ -10,6 +10,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.storage.StorageManager;
+import android.os.storage.StorageVolume;
 import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -25,7 +26,9 @@ import androidx.fragment.app.Fragment;
 
 import net.discdd.pathutils.TransportPaths;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -43,9 +46,10 @@ public class UsbFragment extends Fragment {
     private TextView usbConnectionText;
     private UsbManager usbManager;
     public static boolean usbConnected = false;
+    private static final String usbDirName = "/DDD_transport";
     private StorageManager storageManager;
     private static final Logger logger = Logger.getLogger(UsbFragment.class.getName());
-    private final ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
+    private File usbDirectory;
 
     public static UsbFragment newInstance(TransportPaths transportPaths) {
         UsbFragment fragment = new UsbFragment();
@@ -76,7 +80,7 @@ public class UsbFragment extends Fragment {
         manageAccessGranted(isManageAllFilesAccessGranted());
 
         if (hasPermission) {
-            Toast.makeText(requireContext(), "all files can be accesses", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "all files can be accessed", Toast.LENGTH_SHORT).show();
             usbExchangeButton.setOnClickListener(v -> {
                 logger.log(INFO, "Sync button was hit");
                 try {
@@ -87,7 +91,7 @@ public class UsbFragment extends Fragment {
                 }
             });
         } else {
-            Toast.makeText(requireContext(), "no files can be accesses", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "no files can be accessed", Toast.LENGTH_SHORT).show();
             toSettingsButton.setOnClickListener(v -> {
                 Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
                 startActivity(intent);
@@ -95,15 +99,32 @@ public class UsbFragment extends Fragment {
             });
             reloadButton.setOnClickListener(v -> {
                 if (isManageAllFilesAccessGranted()) {
-                    Toast.makeText(requireContext(), "all files can be accesses", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), "all files can be accessed", Toast.LENGTH_SHORT).show();
                 } else {
-                    Toast.makeText(requireContext(), "no files can be accesses", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), "no files can be accessed", Toast.LENGTH_SHORT).show();
                 }
                 manageAccessGranted(isManageAllFilesAccessGranted());
             });
         }
 
         return view;
+    }
+
+    @Override
+    public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        BundleTransportActivity activity = (BundleTransportActivity) getActivity();
+        if(activity.usbExists) {
+            if(usbDirExists()) {
+                updateUsbStatus(true,getString(R.string.usb_connection_detected),Color.GREEN);
+            }
+            else {
+                updateUsbStatus(false,getString(R.string.usb_was_connected_but_ddd_transport_directory_was_not_detected),Color.RED);
+            }
+        }
+        else {
+            updateUsbStatus(false, getString(R.string.no_usb_connection_detected), Color.RED);
+        }
     }
 
     private void manageAccessGranted(boolean hasPermission) {
@@ -131,11 +152,27 @@ public class UsbFragment extends Fragment {
         super.onDestroyView();
     }
 
-    public boolean checkUsbConnection(int tries) {
-        usbConnected = !usbManager.getDeviceList().isEmpty();
-        if (tries > 0 && !usbConnected) {
-            scheduledExecutor.schedule(() -> checkUsbConnection(tries - 1), 1, TimeUnit.SECONDS);
+    //Method to update USB status
+    public void updateUsbStatus(boolean isConnected, String statusText, int color) {
+        getActivity().runOnUiThread(() -> {
+            usbExchangeButton.setEnabled(isConnected);
+            usbConnectionText.setText(statusText);
+            usbConnectionText.setTextColor(color);
+        });
+    }
+    //Method to check if /DDD_transport directory exists
+    private boolean usbDirExists() {
+        List<StorageVolume> storageVolumeList = storageManager.getStorageVolumes();
+        for (StorageVolume storageVolume : storageVolumeList) {
+            if (storageVolume.isRemovable()) {
+                usbDirectory = new File(storageVolume.getDirectory().getPath() + usbDirName);
+                if (usbDirectory.exists()) {
+                    logger.log(INFO, "DDD_transport directory exists.");
+                    return true;
+                }
+            }
         }
-        return usbConnected;
+        logger.log(INFO,"DDD_transport directory does not exist.");
+        return false;
     }
 }
