@@ -32,11 +32,9 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class BundleClientWifiDirectFragment extends Fragment {
-    private static final Logger logger = Logger.getLogger(BundleClientWifiDirectFragment.class.getName());
 
     private final BundleClientServiceBroadcastReceiver bundleClientServiceBroadcastReceiver =
             new BundleClientServiceBroadcastReceiver();
@@ -97,6 +95,7 @@ public class BundleClientWifiDirectFragment extends Fragment {
             public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
                 return new RecyclerView.ViewHolder(inflater.inflate(R.layout.peers_list_element, parent, false)) {};
             }
+
 
             @Override
             public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {

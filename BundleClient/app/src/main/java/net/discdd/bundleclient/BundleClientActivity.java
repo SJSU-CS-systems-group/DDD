@@ -11,7 +11,9 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+
 import android.content.pm.PackageManager;
+
 import android.hardware.usb.UsbManager;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
@@ -150,6 +152,8 @@ public class BundleClientActivity extends AppCompatActivity {
             newFragments.add(new FragmentWithTitle(homeFragment, getString(R.string.home_tab)));
             newFragments.add(new FragmentWithTitle(serverFragment, getString(R.string.server_tab)));
             newFragments.add(new FragmentWithTitle(logFragment, getString(R.string.logs_tab)));
+            newFragments.add(new FragmentWithTitle(new BundleManagerFragment(), "BM"));
+            newFragments.add(new FragmentWithTitle(usbFragment, getString(R.string.usb_tab)));
             if (usbExists) {
                 newFragments.add(new FragmentWithTitle(usbFragment, getString(R.string.usb_tab)));
             }
