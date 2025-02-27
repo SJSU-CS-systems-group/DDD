@@ -100,7 +100,9 @@ public class UsbFragment extends Fragment {
     @Override
     public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        if(BundleClientActivity.usbExists) {
+        BundleClientActivity activity = (BundleClientActivity) getActivity();
+
+        if(activity.usbExists) {
             if(usbDirExists()) {
                 updateUsbStatus(true,getString(R.string.usb_connection_detected),Color.GREEN);
             }

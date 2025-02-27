@@ -62,7 +62,7 @@ public class BundleClientActivity extends AppCompatActivity {
     private TabLayoutMediator tabLayoutMediator;
     PermissionsViewModel permissionsViewModel;
     private BroadcastReceiver mUsbReceiver;
-    protected static boolean usbExists;
+    protected boolean usbExists;
 
     public BundleClientActivity() {
         connection = new ServiceConnection() {
