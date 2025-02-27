@@ -100,9 +100,8 @@ class StorageViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private fun getTotalBytes(): Int {
-        val statFs = StatFs(Environment.getExternalStorageDirectory().getPath())
-        val totalBytes = statFs.totalBytes.toInt()
-        val bytesInMB = totalBytes / (1024 * 1024)
-        return bytesInMB
+        return StatFs(Environment.getExternalStorageDirectory().path)
+            .totalBytes.toInt()
+            .div(1024 * 1024)
     }
 }
