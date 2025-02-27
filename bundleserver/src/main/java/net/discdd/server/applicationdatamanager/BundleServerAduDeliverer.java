@@ -45,7 +45,7 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
     private long grpcTimeout = 20_000 /* milliseconds */;
 
     BundleServerAduDeliverer(AduStores aduStores, RegisteredAppAdapterRepository registeredAppAdapterRepository,
-                             @Value("${serviceadapter.datacheck.interval:10m}") Duration dataCheckInterval) {
+                             @Value("${serviceadapter.datacheck.interval}") Duration dataCheckInterval) {
         this.sendFolder = aduStores.getSendADUsStorage();
         this.receiveFolder = aduStores.getReceiveADUsStorage();
         this.registeredAppAdapterRepository = registeredAppAdapterRepository;
