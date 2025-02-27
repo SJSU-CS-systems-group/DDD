@@ -2,7 +2,13 @@ package net.discdd.app.k9.model;
 
 import net.discdd.grpc.AppDataUnit;
 
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.SEVERE;
+
 public class RegisterAdu {
+    static final Logger logger = Logger.getLogger(RegisterAdu.class.getName());
+
     private String[] prefixes, suffixes;
     private String password;
 
@@ -49,6 +55,7 @@ public class RegisterAdu {
         String[] prefixes = lines[1].split(",");
         String[] suffixes = lines[2].split(",");
         if (prefixes.length != 3 || suffixes.length != 3) {
+            logger.log(SEVERE, "No prefixes or suffixes found in the register ADU");
             return null;
         }
 
