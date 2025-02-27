@@ -84,7 +84,9 @@ public class UsbFragment extends Fragment {
             usbExchangeButton.setOnClickListener(v -> {
                 logger.log(INFO, "Sync button was hit");
                 try {
-                    usbFileManager.populateUsb();
+                    if(usbFileManager.populateUsb()) {
+                        updateUsbStatus(false, "Exchange was successful!", Color.GREEN);
+                    }
                 } catch (IOException e) {
                     logger.log(INFO, "Populate USB was unsuccessful");
                     throw new RuntimeException(e);
