@@ -139,7 +139,6 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
   public void exchangeADUs(
       ExchangeADUsRequest request, StreamObserver<ExchangeADUsResponse> responseObserver) {
     String clientId = request.getClientId();
-    logger.log(INFO, "Received ADUs for clientId: " + clientId);
     Long lastADUIdRecvd = request.getLastADUIdReceived();
     var aduListRecvd = request.getAdusList();
     Long lastProcessedADUId = 0L;
