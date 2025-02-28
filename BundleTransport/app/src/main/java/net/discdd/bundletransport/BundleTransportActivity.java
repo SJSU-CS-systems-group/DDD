@@ -38,9 +38,7 @@ import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
 import net.discdd.bundletransport.screens.StorageFragment;
 import net.discdd.pathutils.TransportPaths;
-import net.discdd.screens.PermissionsFrag;
 import net.discdd.tls.GrpcSecurity;
-//import net.discdd.transport.TransportSecurity;
 import net.discdd.viewmodels.PermissionsViewModel;
 
 import org.whispersystems.libsignal.InvalidKeyException;
