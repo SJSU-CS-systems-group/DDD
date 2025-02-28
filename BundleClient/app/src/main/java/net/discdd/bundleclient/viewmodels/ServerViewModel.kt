@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.discdd.bundleclient.BundleClientWifiDirectService
-
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiServiceManager
 
@@ -47,23 +46,19 @@ class ServerViewModel(
         viewModelScope.launch {
             try {
                 _state.update {
-                    it.copy(message = context.getString(R.string.connecting_to_server))
+                    it.copy(message = "Connecting to server...")
                 }
                 val wifiBgService = WifiServiceManager.getService()
                 wifiBgService?.let { service ->
                     service.initiateServerExchange()
                         .thenAccept { bec ->
-                            _state.update { it.copy(message = context.getString(
-                                R.string.upload_status,
-                                bec.uploadStatus(),
-                                bec.downloadStatus()
-                            )) }
+                            _state.update { it.copy(message = "Upload status: ${bec.uploadStatus()}, Download status: ${bec.downloadStatus()}") }
                         }
                 } ?: run {
-                    _state.update { it.copy(message = context.getString(R.string.service_not_available)) }
+                    _state.update { it.copy(message = "Error: Service is not available.") }
                 }
             } catch (e : Exception) {
-                _state.update { it.copy(message = context.getString(R.string.service_not_available)) }
+                _state.update { it.copy(message = "Error: Service is not available.") }
             }
         }
     }
