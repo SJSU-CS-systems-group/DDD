@@ -223,6 +223,7 @@ public class BundleTransportActivity extends AppCompatActivity {
                         transportWifiDirectService -> transportWifiDirectService.requestDeviceInfo());
                 enableFragment(transportWifiFragment);
             } else {
+                ActivityCompat.requestPermissions(this, new String[] {notificationPermission.toString()}, 1000);
                 disableFragment(transportWifiFragment);
             }
         });
