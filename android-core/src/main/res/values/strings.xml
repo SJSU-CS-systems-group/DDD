@@ -4,6 +4,7 @@
     <string name="android.permission.CHANGE_WIFI_STATE">Change Wifi</string>
     <string name="android.permission.INTERNET">Use the Network</string>
     <string name="android.permission.NEARBY_WIFI_DEVICES">Find nearby Wifi devices</string>
+    <string name="android.permission.POST_NOTIFICATIONS">Send Notifications</string>
     <string name="wifidirectinitialized">WifiDirectInitialized</string>
     <string name="peers">Peers</string>
     <string name="waiting_for_permissions">Waiting For Permissions</string>
@@ -11,5 +12,6 @@
     <string name="generic_action_button">Action</string>
     <string name="needed_permissions">Needed Permissions</string>
     <string name="dialog_message" translatable="false">Please enable permission in Settings. Navigate to Settings -> Apps -> All apps -> Bundle Client -> Permissions -> Nearby Devices</string>
+    <string name="dialog_message_notification" translatable="false">Please enable permission in Settings. Navigate to Settings -> Apps -> All apps -> Bundle Client -> Permissions -> Notifications</string>
     <string name="dialog_btn_text" translatable="false">Continue</string>
 </resources>

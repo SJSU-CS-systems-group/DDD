@@ -49,4 +49,6 @@
     <string name="usb_device_detached">Пристрій USB відключено</string>
     <string name="exchange_usb_data">Обмін даними USB</string>
     <string name="usb_connection_status">Статус USB-з\'єднання</string>
+    <string name="exchanging_with_client">Обмін з клієнтом</string>
+    <string name="initiating_bundle_exchange">Ініціювання пакетного обміну...</string>
 </resources>

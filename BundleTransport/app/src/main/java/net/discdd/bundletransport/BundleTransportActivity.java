@@ -82,6 +82,7 @@ public class BundleTransportActivity extends AppCompatActivity {
     private static final List<String> wifiDirectPermissions =
             List.of("android.permission.ACCESS_WIFI_STATE", "android.permission.CHANGE_WIFI_STATE",
                     "android.permission.INTERNET", "android.permission.NEARBY_WIFI_DEVICES");
+    private static final List<String> notificationPermission = List.of("android.permission.POST_NOTIFICATIONS");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -217,7 +218,7 @@ public class BundleTransportActivity extends AppCompatActivity {
         super.onStart();
         permissionsFragment.registerPermissionsWatcher(obtainedPermissions -> {
             logger.info("Permissions obtained: " + obtainedPermissions);
-            if (obtainedPermissions.containsAll(wifiDirectPermissions)) {
+            if (obtainedPermissions.containsAll(wifiDirectPermissions) && obtainedPermissions.containsAll(notificationPermission)) {
                 transportWifiServiceConnection.thenApply(
                         transportWifiDirectService -> transportWifiDirectService.requestDeviceInfo());
                 enableFragment(transportWifiFragment);
@@ -361,7 +362,8 @@ public class BundleTransportActivity extends AppCompatActivity {
     }
 
     public void checkRuntimePermission() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.NEARBY_WIFI_DEVICES) == PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.NEARBY_WIFI_DEVICES) == PackageManager.PERMISSION_GRANTED
+            && ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
             updateTabs(true);
         }
     }
