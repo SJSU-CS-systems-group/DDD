@@ -76,7 +76,7 @@ public class BundleTransportActivity extends AppCompatActivity {
     private final SubmissionPublisher<ConnectivityEvent> connectivityEventPublisher = new SubmissionPublisher<>();
     private ViewPager2 viewPager2;
     private FragmentStateAdapter viewPager2Adapter;
-    private PermissionsFrag permissionsFrag;
+    private PermissionsFragment permissionsFragment;
     private TabLayout tabLayout;
     private TabLayoutMediator mediator;
     private SharedPreferences sharedPreferences;
@@ -222,7 +222,7 @@ public class BundleTransportActivity extends AppCompatActivity {
 
     protected void onStart() {
         super.onStart();
-        permissionsViewModel.registerPermissionsWatcher(obtainedPermissions -> {
+        permissionsFragment.registerPermissionsWatcher(obtainedPermissions -> {
             logger.info("Permissions obtained: " + obtainedPermissions);
             if (obtainedPermissions.containsAll(wifiDirectPermissions)) {
                 transportWifiServiceConnection.thenApply(
