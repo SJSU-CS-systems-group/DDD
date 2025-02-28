@@ -55,9 +55,10 @@ public class UsbFragment extends Fragment {
             @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.usb_fragment, container, false);
         BundleClientActivity activity = (BundleClientActivity) getActivity();
-        if (activity != null && activity.wifiBgService != null) {
+        BundleClientWifiDirectService wifiBgService = WifiServiceManager.INSTANCE.getService();
+        if (activity != null && wifiBgService != null) {
             try {
-                bundleTransmission = activity.wifiBgService.getBundleTransmission();
+                bundleTransmission = wifiBgService.getBundleTransmission();
             } catch (Exception e) {
                 logger.log(Level.WARNING, "Error getting bundle transmission: ", e);
             }

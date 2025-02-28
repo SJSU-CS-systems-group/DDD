@@ -52,4 +52,8 @@
     <string name="usb_connection_detected">USB connection detected</string>
     <string name="usb_device_not_connected">USB device not connected</string>
     <string name="acra_toast_text">Acra creating crash report!</string>
+    <string name="settings_saved">Settings saved</string>
+    <string name="connecting_to_server">Connecting to server...</string>
+    <string name="upload_status">Upload status: %1$s, Download status: %2$s</string>
+    <string name="service_not_available">Error: Service is not available.</string>
 </resources>

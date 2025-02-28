@@ -12,7 +12,6 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.hardware.usb.UsbManager;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
@@ -33,6 +32,7 @@ import com.google.android.material.tabs.TabLayoutMediator;
 
 import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
+import net.discdd.bundleclient.screens.ServerFragment;
 import net.discdd.viewmodels.PermissionsViewModel;
 import net.discdd.client.bundlerouting.ClientWindow;
 
@@ -45,11 +45,9 @@ public class BundleClientActivity extends AppCompatActivity {
     //constant
     private static final Logger logger = Logger.getLogger(BundleClientActivity.class.getName());
     // instantiate window for bundles
-    public static ClientWindow clientWindow;
     ConnectivityManager connectivityManager;
     ArrayList<FragmentWithTitle> fragmentsWithTitles = new ArrayList<>();
     private SharedPreferences sharedPreferences;
-    BundleClientWifiDirectService wifiBgService;
     private final ServiceConnection connection;
     CompletableFuture<BundleClientActivity> serviceReady = new CompletableFuture<>();
     private PermissionsFragment permissionsFragment;
@@ -66,18 +64,17 @@ public class BundleClientActivity extends AppCompatActivity {
 
     public BundleClientActivity() {
         connection = new ServiceConnection() {
-
             @Override
             public void onServiceConnected(ComponentName className, IBinder service) {
-                // We've bound to LocalService, cast the IBinder and get LocalService instance.
+//              We've bound to LocalService, cast the IBinder and get LocalService instance.
                 var binder = (BundleClientWifiDirectService.BundleClientWifiDirectServiceBinder) service;
-                wifiBgService = binder.getService();
+                WifiServiceManager.INSTANCE.setService(binder.getService());
                 serviceReady.complete(BundleClientActivity.this);
             }
 
             @Override
             public void onServiceDisconnected(ComponentName arg0) {
-                wifiBgService = null;
+                WifiServiceManager.INSTANCE.clearService();
             }
         };
     }
@@ -116,14 +113,16 @@ public class BundleClientActivity extends AppCompatActivity {
             logger.log(WARNING, "Failed to register usb broadcast", e);
         }
 
+        LogFragment.registerLoggerHandler();
+
         permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
         permissionsFragment = PermissionsFragment.newInstance();
         homeFragment = BundleClientWifiDirectFragment.newInstance();
         usbFragment = UsbFragment.newInstance();
-        serverFragment = ServerFragment.newInstance();
         logFragment = LogFragment.newInstance();
         fragmentsWithTitles.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        serverFragment = new ServerFragment();
 
         //set up view
         setContentView(R.layout.activity_bundle_client);
@@ -202,6 +201,7 @@ public class BundleClientActivity extends AppCompatActivity {
         if (mUsbReceiver != null) {
             unregisterReceiver(mUsbReceiver);
         }
+        WifiServiceManager.INSTANCE.clearService();
         unbindService(connection);
         super.onDestroy();
     }
