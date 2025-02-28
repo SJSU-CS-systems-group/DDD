@@ -1,16 +1,21 @@
 package net.discdd.datastore.providers;
 
 import static android.net.Uri.fromFile;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
 
 import android.content.ContentProvider;
 import android.content.ContentValues;
+import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
 import android.os.Binder;
+
+import java.nio.file.Paths;
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -20,9 +25,8 @@ import net.discdd.utils.StoreADUs;
 import net.discdd.utils.StoreADUs.AduIdData;
 
 import java.io.IOException;
-import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
-import java.util.logging.Logger;
 
 public class MessageProvider extends ContentProvider {
 
