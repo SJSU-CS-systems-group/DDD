@@ -58,6 +58,7 @@ public class BundleClientActivity extends AppCompatActivity {
     private UsbFragment usbFragment;
     private ServerFragment serverFragment;
     private LogFragment logFragment;
+    private BundleManagerFragment bundleManagerFragment;
     private ViewPager2 viewPager;
     private TabLayout tabLayout;
     private TabLayoutMediator tabLayoutMediator;
@@ -123,6 +124,7 @@ public class BundleClientActivity extends AppCompatActivity {
         usbFragment = UsbFragment.newInstance();
         serverFragment = ServerFragment.newInstance();
         logFragment = LogFragment.newInstance();
+        bundleManagerFragment = BundleManagerFragment.newInstance();
         fragmentsWithTitles.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
@@ -152,8 +154,7 @@ public class BundleClientActivity extends AppCompatActivity {
             newFragments.add(new FragmentWithTitle(homeFragment, getString(R.string.home_tab)));
             newFragments.add(new FragmentWithTitle(serverFragment, getString(R.string.server_tab)));
             newFragments.add(new FragmentWithTitle(logFragment, getString(R.string.logs_tab)));
-            newFragments.add(new FragmentWithTitle(new BundleManagerFragment(), "BM"));
-            newFragments.add(new FragmentWithTitle(usbFragment, getString(R.string.usb_tab)));
+            newFragments.add(new FragmentWithTitle(bundleManagerFragment, getString(R.string.bm_tab)));
             if (usbExists) {
                 newFragments.add(new FragmentWithTitle(usbFragment, getString(R.string.usb_tab)));
             }

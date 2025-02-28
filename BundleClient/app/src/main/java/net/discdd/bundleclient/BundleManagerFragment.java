@@ -24,6 +24,8 @@ public class BundleManagerFragment extends Fragment {
     private TextView numberBundlesReceived;
     private Button reloadButton;
 
+    public static BundleManagerFragment newInstance() { return new BundleManagerFragment(); }
+
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState){
         View view = inflater.inflate(R.layout.bundle_manager_fragment, container, false);
         bundleTransmission = ((BundleClientActivity) getActivity()).wifiBgService.getBundleTransmission();
