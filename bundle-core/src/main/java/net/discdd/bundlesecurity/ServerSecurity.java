@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static net.discdd.bundlesecurity.SecurityUtils.CLIENT_BASE_KEY;
 import static net.discdd.bundlesecurity.SecurityUtils.CLIENT_IDENTITY_KEY;
@@ -377,8 +378,12 @@ public class ServerSecurity {
         byte[] encryptedBundleID = Files.readAllBytes(bundleIDPath);
         String receivedBundleID, latestBundleID;
 
+        //create server secuirty instance
+        //fetch server priv key
+        ServerSecurity serverSecurityInstance = ServerSecurity.getInstance(bundlePath);
+        ECPrivateKey ServerPrivKey = serverSecurityInstance.getSigningKey();
         byte[] clientIdentityKeyBytes =
-                SecurityUtils.decodeEncryptedPublicKeyfromFile(bundlePath.resolve(CLIENT_IDENTITY_KEY)).getBytes();
+                SecurityUtils.decodeEncryptedPublicKeyfromFile(ServerPrivKey, bundlePath.resolve(CLIENT_IDENTITY_KEY)).getBytes();
         IdentityKey clientIdentityKey = new IdentityKey(clientIdentityKeyBytes, 0);
 
         String sharedSecret = getsharedSecret(clientIdentityKey.getPublicKey());

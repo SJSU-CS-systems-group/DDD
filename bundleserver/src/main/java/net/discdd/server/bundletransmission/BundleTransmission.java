@@ -101,7 +101,7 @@ public class BundleTransmission {
         }
 
         clientId = SecurityUtils.decodeEncryptedPublicKeyfromFile(
-                uncompressedBundle.getSource().toPath().resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
+                uncompressedBundle.getSource().toPath().resolve(SecurityUtils.CLIENT_IDENTITY_KEY), uncompressedBundle.getSource().toPath().resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
         var counters = this.applicationDataManager.getBundleCountersForClient(clientId);
 
         var receivedBundleCounter =
