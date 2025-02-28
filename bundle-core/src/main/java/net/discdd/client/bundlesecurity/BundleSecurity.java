@@ -1,12 +1,15 @@
 package net.discdd.client.bundlesecurity;
 
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
+import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.client.bundlerouting.ClientBundleGenerator;
 import net.discdd.client.bundlerouting.ClientWindow;
 import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
 import net.discdd.pathutils.ClientPaths;
+import net.discdd.tls.GrpcSecurity;
 import net.discdd.utils.Constants;
+import org.bouncycastle.operator.OperatorCreationException;
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.InvalidMessageException;
@@ -17,13 +20,16 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.security.GeneralSecurityException;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.cert.CertificateException;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 
 public class BundleSecurity {
     private static final Logger logger = Logger.getLogger(BundleSecurity.class.getName());
@@ -32,6 +38,7 @@ public class BundleSecurity {
     private final ClientBundleGenerator clientBundleGenerator;
     private final boolean isEncryptionEnabled = true;
     private ClientSecurity client = null;
+    private GrpcSecurity clientGrpcSecurity = null;
     private int counter = 0;
 
     public BundleSecurity(ClientPaths clientPaths) throws IOException, InvalidKeyException,
@@ -44,6 +51,14 @@ public class BundleSecurity {
         client = ClientSecurity.initializeInstance(1, clientPaths);
         clientBundleGenerator = ClientBundleGenerator.initializeInstance(client, clientPaths);
         clientWindow = ClientWindow.initializeInstance(5, client.getClientID(), clientPaths);
+        try {
+            this.clientGrpcSecurity = GrpcSecurity.initializeInstance(clientPaths.bundleSecurityPath,
+                    SecurityUtils.CLIENT);
+        } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | InvalidAlgorithmParameterException |
+                 CertificateException | NoSuchProviderException | OperatorCreationException e) {
+            logger.log(SEVERE, "Failed to initialize GrpcSecurity for CLIENT", e);
+        }
+
     }
 
     // TODO: this function makes me sad! it should not be static. We should probably inject BundleSecurity
@@ -103,5 +118,8 @@ public class BundleSecurity {
 
     public ClientSecurity getClientSecurity() {
         return this.client;
+    }
+    public GrpcSecurity getClientGrpcSecurity() {
+        return this.clientGrpcSecurity;
     }
 }

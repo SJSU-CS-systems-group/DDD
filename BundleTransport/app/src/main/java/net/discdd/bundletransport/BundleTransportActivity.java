@@ -37,14 +37,16 @@ import com.google.android.material.tabs.TabLayoutMediator;
 import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
 import net.discdd.android.fragments.PermissionsViewModel;
+import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.pathutils.TransportPaths;
-import net.discdd.transport.TransportSecurity;
-
+import net.discdd.tls.GrpcSecurity;
+import org.bouncycastle.operator.OperatorCreationException;
 import org.whispersystems.libsignal.InvalidKeyException;
-
 import java.io.IOException;
-import java.io.InputStream;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -53,7 +55,7 @@ import java.util.logging.Logger;
 
 public class BundleTransportActivity extends AppCompatActivity {
     Logger logger = Logger.getLogger(BundleTransportActivity.class.getName());
-    private TransportSecurity transportSecurity;
+    private GrpcSecurity transportGrpcSecurity;
     private TitledFragment serverUploadFragment;
     private TitledFragment transportWifiFragment;
     private TitledFragment storageFragment;
@@ -116,17 +118,15 @@ public class BundleTransportActivity extends AppCompatActivity {
         LogFragment.registerLoggerHandler();
 
         this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
-        var resources = getApplicationContext().getResources();
-
-        try (InputStream inServerIdentity = resources.openRawResource(net.discdd.android_core.R.raw.server_identity)) {
-            this.transportSecurity =
-                    new TransportSecurity(getApplicationContext().getExternalFilesDir(null).toPath(), inServerIdentity);
-        } catch (IOException | InvalidKeyException | NoSuchAlgorithmException e) {
-            logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
+        try {
+            this.transportGrpcSecurity = GrpcSecurity.initializeInstance(getApplicationContext().getExternalFilesDir(null).toPath(),
+                                                                         SecurityUtils.TRANSPORT);
+        } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | InvalidAlgorithmParameterException | CertificateException | NoSuchProviderException | OperatorCreationException e) {
+            logger.log(SEVERE, "Failed to initialize GrpcSecurity for transport", e);
         }
 
         ServerUploadFragment serverFrag =
-                ServerUploadFragment.newInstance(transportSecurity.getTransportID(), transportPaths,
+                ServerUploadFragment.newInstance("bundle_transport", transportPaths,
                                                  connectivityEventPublisher);
         serverUploadFragment = new TitledFragment(getString(R.string.upload), serverFrag);
         TransportWifiDirectFragment transportFrag = TransportWifiDirectFragment.newInstance(transportPaths);
