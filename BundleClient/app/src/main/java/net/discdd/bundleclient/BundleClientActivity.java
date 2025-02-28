@@ -30,6 +30,8 @@ import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
 import net.discdd.bundleclient.screens.ServerFragment;
 import net.discdd.viewmodels.PermissionsViewModel;
+import net.discdd.viewmodels.PermissionsViewModel;
+import net.discdd.client.bundlerouting.ClientWindow;
 
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;

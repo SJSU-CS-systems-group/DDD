@@ -142,6 +142,8 @@ public class BundleTransportActivity extends AppCompatActivity {
         logFragment = new TitledFragment(getString(R.string.logs), LogFragment.newInstance());
 
         permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
+        titledPermissionsFragment = new TitledFragment("Permissions", PermissionsFragment.newInstance());
+        fragments.add(titledPermissionsFragment);
         permissionsFragment = PermissionsFragment.newInstance();
         titledPermissionsFragment = new TitledFragment("Permissions", permissionsFragment);
         fragments.add(titledPermissionsFragment);
