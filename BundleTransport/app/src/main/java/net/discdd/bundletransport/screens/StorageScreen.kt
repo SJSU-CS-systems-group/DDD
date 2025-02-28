@@ -26,7 +26,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import net.discdd.bundletransport.viewmodels.StorageViewModel
 
-class StorageFrag: Fragment() {
+class StorageFragment: Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,

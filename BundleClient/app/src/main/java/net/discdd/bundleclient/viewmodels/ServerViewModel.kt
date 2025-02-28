@@ -10,9 +10,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.discdd.bundleclient.BundleClientWifiDirectService
 import net.discdd.bundleclient.WifiServiceManager
-import net.discdd.viewmodels.ConnectivityViewModel
-import java.util.logging.Level
-import java.util.logging.Logger
 
 data class ServerState(
     val domain: String = "",
