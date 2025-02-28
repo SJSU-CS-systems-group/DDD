@@ -12,7 +12,6 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.hardware.usb.UsbManager;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
@@ -33,7 +32,7 @@ import com.google.android.material.tabs.TabLayoutMediator;
 
 import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
-import net.discdd.bundleclient.screens.ServerFrag;
+import net.discdd.bundleclient.screens.ServerFragment;
 import net.discdd.viewmodels.PermissionsViewModel;
 import net.discdd.client.bundlerouting.ClientWindow;
 
@@ -56,7 +55,7 @@ public class BundleClientActivity extends AppCompatActivity {
     private PermissionsFragment permissionsFragment;
     private BundleClientWifiDirectFragment homeFragment;
     private UsbFragment usbFragment;
-    private ServerFrag serverFrag;
+    private ServerFragment serverFragment;
     private LogFragment logFragment;
     private ViewPager2 viewPager;
     private TabLayout tabLayout;
@@ -127,7 +126,7 @@ public class BundleClientActivity extends AppCompatActivity {
         logFragment = LogFragment.newInstance();
         fragmentsWithTitles.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        serverFrag = new ServerFrag();
+        serverFragment = new ServerFragment();
 
         //set up view
         setContentView(R.layout.activity_bundle_client);
@@ -162,7 +161,7 @@ public class BundleClientActivity extends AppCompatActivity {
         if (satisfied) {
             logger.log(INFO, "ALL TABS BEING SHOWN");
             newFragments.add(new FragmentWithTitle(homeFragment, getString(R.string.home_tab)));
-            newFragments.add(new FragmentWithTitle(serverFrag, getString(R.string.server_tab)));
+            newFragments.add(new FragmentWithTitle(serverFragment, getString(R.string.server_tab)));
             newFragments.add(new FragmentWithTitle(logFragment, getString(R.string.logs_tab)));
             if (usbExists) {
                 newFragments.add(new FragmentWithTitle(usbFragment, getString(R.string.usb_tab)));

@@ -36,15 +36,19 @@ import com.google.android.material.tabs.TabLayoutMediator;
 
 import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
-import net.discdd.bundletransport.screens.StorageFrag;
+import net.discdd.bundletransport.screens.StorageFragment;
 import net.discdd.pathutils.TransportPaths;
-import net.discdd.transport.TransportSecurity;
+import net.discdd.screens.PermissionsFrag;
+import net.discdd.tls.GrpcSecurity;
+//import net.discdd.transport.TransportSecurity;
 import net.discdd.viewmodels.PermissionsViewModel;
 
 import org.whispersystems.libsignal.InvalidKeyException;
 
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -60,11 +64,11 @@ public class BundleTransportActivity extends AppCompatActivity {
     private GrpcSecurity transportGrpcSecurity;
     private TitledFragment serverUploadFragment;
     private TitledFragment transportWifiFragment;
-    private TitledFragment storageFrag;
+    private TitledFragment storageFragment;
     private TransportPaths transportPaths;
     private TitledFragment usbFrag;
     private TitledFragment logFragment;
-    private TitledFragment permissionsTitledFragment;
+    private TitledFragment titledPermissionsFragment;
     private PermissionsViewModel permissionsViewModel;
 
     record ConnectivityEvent(boolean internetAvailable) {}
@@ -72,7 +76,7 @@ public class BundleTransportActivity extends AppCompatActivity {
     private final SubmissionPublisher<ConnectivityEvent> connectivityEventPublisher = new SubmissionPublisher<>();
     private ViewPager2 viewPager2;
     private FragmentStateAdapter viewPager2Adapter;
-    private PermissionsFragment permissionsFragment;
+    private PermissionsFrag permissionsFrag;
     private TabLayout tabLayout;
     private TabLayoutMediator mediator;
     private SharedPreferences sharedPreferences;
@@ -123,7 +127,8 @@ public class BundleTransportActivity extends AppCompatActivity {
         try {
             this.transportGrpcSecurity = GrpcSecurity.initializeInstance(transportPaths.grpcSecurityPath,
                                                                          SecurityUtils.TRANSPORT);
-        } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | InvalidAlgorithmParameterException | CertificateException | NoSuchProviderException | OperatorCreationException e) {
+        } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | InvalidAlgorithmParameterException |
+                 CertificateException | NoSuchProviderException | OperatorCreationException e) {
             logger.log(SEVERE, "Failed to initialize GrpcSecurity for transport", e);
         }
 
@@ -134,14 +139,13 @@ public class BundleTransportActivity extends AppCompatActivity {
         serverUploadFragment = new TitledFragment(getString(R.string.upload), serverFrag);
         TransportWifiDirectFragment transportFrag = TransportWifiDirectFragment.newInstance(transportPaths);
         transportWifiFragment = new TitledFragment(getString(R.string.local_wifi), transportFrag);
-        storageFrag = new TitledFragment("Storage", new StorageFrag());
+        storageFragment = new TitledFragment("Storage", new StorageFragment());
         usbFrag = new TitledFragment("USB", UsbFragment.newInstance(transportPaths));
         logFragment = new TitledFragment(getString(R.string.logs), LogFragment.newInstance());
 
         permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
-        permissionsFragment = PermissionsFragment.newInstance();
-        permissionsTitledFragment = new TitledFragment("Permissions", permissionsFragment);
-        fragments.add(permissionsTitledFragment);
+        titledPermissionsFragment = new TitledFragment("Permissions", PermissionsFragment.newInstance());
+        fragments.add(titledPermissionsFragment);
 
         tabLayout = findViewById(R.id.tabs);
         viewPager2 = findViewById(R.id.view_pager);
@@ -176,14 +180,14 @@ public class BundleTransportActivity extends AppCompatActivity {
             logger.log(INFO, "ALL TABS BEING SHOWN");
             newFragments.add(serverUploadFragment);
             newFragments.add(transportWifiFragment);
-            newFragments.add(storageFrag);
+            newFragments.add(storageFragment);
             newFragments.add(logFragment);
             if (usbExists) {
                 newFragments.add(usbFrag);
             }
         } else {
             logger.log(INFO, "ONLY PERMISSIONS TAB IS BEING SHOWN");
-            newFragments.add(permissionsTitledFragment);
+            newFragments.add(titledPermissionsFragment);
         }
 
         if (!newFragments.equals(fragments)) {
@@ -218,7 +222,7 @@ public class BundleTransportActivity extends AppCompatActivity {
 
     protected void onStart() {
         super.onStart();
-        permissionsFragment.registerPermissionsWatcher(obtainedPermissions -> {
+        permissionsViewModel.registerPermissionsWatcher(obtainedPermissions -> {
             logger.info("Permissions obtained: " + obtainedPermissions);
             if (obtainedPermissions.containsAll(wifiDirectPermissions)) {
                 transportWifiServiceConnection.thenApply(

@@ -30,7 +30,7 @@ import kotlinx.coroutines.delay
 import net.discdd.bundleclient.viewmodels.ServerViewModel
 import net.discdd.viewmodels.ConnectivityViewModel
 
-class ServerFrag: Fragment() {
+class ServerFragment: Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -114,6 +114,6 @@ fun ServerScreen(
 
 @Preview(showBackground = true)
 @Composable
-fun ServerPreview() {
+fun ServerScreenPreview() {
     ServerScreen()
 }
