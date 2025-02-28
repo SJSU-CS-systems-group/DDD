@@ -116,6 +116,7 @@ public class BundleClientActivity extends AppCompatActivity {
         homeFragment = BundleClientWifiDirectFragment.newInstance();
         usbFragment = UsbFragment.newInstance();
         logFragment = LogFragment.newInstance();
+        bundleManagerFragment = BundleManagerFragment.newInstance();
         fragmentsWithTitles.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         serverFragment = new ServerFragment();
