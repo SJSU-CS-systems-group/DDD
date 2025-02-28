@@ -37,21 +37,23 @@ import com.google.android.material.tabs.TabLayoutMediator;
 import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
 import net.discdd.android.fragments.PermissionsViewModel;
-import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.tls.GrpcSecurity;
-import org.bouncycastle.operator.OperatorCreationException;
-import org.whispersystems.libsignal.InvalidKeyException;
-import java.io.IOException;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.cert.CertificateException;
+import org.whispersystems.libsignal.InvalidKeyException;
+
+import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.SubmissionPublisher;
 import java.util.logging.Logger;
+import java.security.InvalidAlgorithmParameterException;
+import net.discdd.bundlesecurity.SecurityUtils;
+import org.bouncycastle.operator.OperatorCreationException;
 
 public class BundleTransportActivity extends AppCompatActivity {
     Logger logger = Logger.getLogger(BundleTransportActivity.class.getName());
@@ -119,14 +121,15 @@ public class BundleTransportActivity extends AppCompatActivity {
 
         this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
         try {
-            this.transportGrpcSecurity = GrpcSecurity.initializeInstance(getApplicationContext().getExternalFilesDir(null).toPath(),
+            this.transportGrpcSecurity = GrpcSecurity.initializeInstance(transportPaths.grpcSecurityPath,
                                                                          SecurityUtils.TRANSPORT);
         } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | InvalidAlgorithmParameterException | CertificateException | NoSuchProviderException | OperatorCreationException e) {
             logger.log(SEVERE, "Failed to initialize GrpcSecurity for transport", e);
         }
 
         ServerUploadFragment serverFrag =
-                ServerUploadFragment.newInstance("bundle_transport", transportPaths,
+                ServerUploadFragment.newInstance(Base64.getEncoder().encodeToString(transportGrpcSecurity.getGrpcKeyPair().getPublic()
+                                                                                            .getEncoded()), transportPaths,
                                                  connectivityEventPublisher);
         serverUploadFragment = new TitledFragment(getString(R.string.upload), serverFrag);
         TransportWifiDirectFragment transportFrag = TransportWifiDirectFragment.newInstance(transportPaths);

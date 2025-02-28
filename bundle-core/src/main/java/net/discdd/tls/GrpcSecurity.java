@@ -28,8 +28,7 @@ public class GrpcSecurity {
     private X509Certificate grpcCert;
     @Getter
     private KeyPair grpcKeyPair;
-    public GrpcSecurity(Path rootPath, String type) throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException, CertificateException, OperatorCreationException, IOException {
-        var grpcSecurityPath = rootPath.resolve(SecurityUtils.GRPC_SECURITY_PATH);
+    public GrpcSecurity(Path grpcSecurityPath, String type) throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException, CertificateException, OperatorCreationException, IOException {
         var grpcPublicKeyPath = grpcSecurityPath.resolve(String.format(SecurityUtils.GRPC_PUBLIC_KEY,type));
         var grpcPrivateKeyPath = grpcSecurityPath.resolve(String.format(SecurityUtils.GRPC_PRIVATE_KEY,type));
         var grpcCertPath = grpcSecurityPath.resolve(String.format(SecurityUtils.GRPC_CERT,type));
