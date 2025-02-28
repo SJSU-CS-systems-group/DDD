@@ -45,11 +45,9 @@ public class BundleClientActivity extends AppCompatActivity {
     //constant
     private static final Logger logger = Logger.getLogger(BundleClientActivity.class.getName());
     // instantiate window for bundles
-    public static ClientWindow clientWindow;
     ConnectivityManager connectivityManager;
     ArrayList<FragmentWithTitle> fragmentsWithTitles = new ArrayList<>();
     private SharedPreferences sharedPreferences;
-    BundleClientWifiDirectService wifiBgService;
     private final ServiceConnection connection;
     CompletableFuture<BundleClientActivity> serviceReady = new CompletableFuture<>();
     private PermissionsFragment permissionsFragment;
@@ -70,14 +68,12 @@ public class BundleClientActivity extends AppCompatActivity {
             public void onServiceConnected(ComponentName className, IBinder service) {
 //              We've bound to LocalService, cast the IBinder and get LocalService instance.
                 var binder = (BundleClientWifiDirectService.BundleClientWifiDirectServiceBinder) service;
-                wifiBgService = binder.getService();
-                WifiServiceManager.INSTANCE.setService(wifiBgService);
+                WifiServiceManager.INSTANCE.setService(binder.getService());
                 serviceReady.complete(BundleClientActivity.this);
             }
 
             @Override
             public void onServiceDisconnected(ComponentName arg0) {
-                wifiBgService = null;
                 WifiServiceManager.INSTANCE.clearService();
             }
         };
