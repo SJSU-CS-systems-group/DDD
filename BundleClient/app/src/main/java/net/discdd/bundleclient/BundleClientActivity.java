@@ -125,7 +125,6 @@ public class BundleClientActivity extends AppCompatActivity {
         fragmentsWithTitles.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
-
         //set up view
         setContentView(R.layout.activity_bundle_client);
 
