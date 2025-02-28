@@ -238,14 +238,6 @@ public class BundleTransmission {
         }
     }
 
-    public void processDiscoveredPeer(String deviceAddress, String deviceName) {
-        synchronized (recentTransports) {
-            RecentTransport recentTransport = recentTransports.computeIfAbsent(deviceAddress, RecentTransport::new);
-            recentTransport.deviceName = deviceName;
-            recentTransport.lastSeen = System.currentTimeMillis();
-        }
-    }
-
     public void processDiscoveredService(String deviceName, String ipAddress, int port) {
         synchronized (recentTransports) {
             RecentTransport recentTransport = recentTransports.computeIfAbsent(deviceName, RecentTransport::new);
@@ -262,12 +254,6 @@ public class BundleTransmission {
             var now = System.currentTimeMillis();
             recentTransport.lastExchange = now;
             recentTransport.lastSeen = now;
-        }
-    }
-
-    public void expireNotSeenPeers(long expirationTime) {
-        synchronized (recentTransports) {
-            recentTransports.values().removeIf(transport -> transport.getLastSeen() < expirationTime);
         }
     }
 

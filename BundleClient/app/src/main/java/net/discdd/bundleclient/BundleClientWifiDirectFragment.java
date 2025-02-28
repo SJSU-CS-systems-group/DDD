@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.net.wifi.p2p.WifiP2pGroup;
 import android.os.Bundle;
 import android.text.format.DateUtils;
 import android.text.method.ScrollingMovementMethod;
@@ -39,10 +38,10 @@ public class BundleClientWifiDirectFragment extends Fragment {
     private final BundleClientServiceBroadcastReceiver bundleClientServiceBroadcastReceiver =
             new BundleClientServiceBroadcastReceiver();
     private final IntentFilter intentFilter = new IntentFilter();
-    private final ArrayList<String> peerDeviceAddresses = new ArrayList<>();
+    private final ArrayList<String> serviceDeviceAddresses = new ArrayList<>();
     private TextView resultText;
     private TextView connectedDeviceText;
-    private RecyclerView peersList;
+    private RecyclerView discoveredServicesList;
     private TextView clientIdView;
     private SharedPreferences preferences;
     private TextView deliveryStatus;
@@ -87,42 +86,42 @@ public class BundleClientWifiDirectFragment extends Fragment {
                                 isChecked).apply();
         });
         resultText.setMovementMethod(new ScrollingMovementMethod());
-        peersList = view.findViewById(R.id.peers_list);
-        peersList.setLayoutManager(new LinearLayoutManager(getContext()));
-        peersList.setAdapter(new RecyclerView.Adapter() {
+        discoveredServicesList = view.findViewById(R.id.services_list);
+        discoveredServicesList.setLayoutManager(new LinearLayoutManager(getContext()));
+        discoveredServicesList.setAdapter(new RecyclerView.Adapter() {
             @NonNull
             @Override
             public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-                return new RecyclerView.ViewHolder(inflater.inflate(R.layout.peers_list_element, parent, false)) {};
+                return new RecyclerView.ViewHolder(inflater.inflate(R.layout.services_list_element, parent, false)) {};
             }
 
             @Override
             public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
-                TextView name = holder.itemView.findViewById(R.id.peer_name);
-                String deviceAddress = peerDeviceAddresses.get(position);
-                var peer = getWifiBgService().getPeer(deviceAddress);
-                name.setText(peer.getDeviceName());
+                TextView name = holder.itemView.findViewById(R.id.service_name);
+                String deviceAddress = serviceDeviceAddresses.get(position);
+                var service = getWifiBgService().getService(deviceAddress);
+                name.setText(service.getDeviceName());
                 name.setOnClickListener(v -> {
-                    // fetch the peer again because stats may have changed
-                    var updatedPeer = getWifiBgService().getPeer(deviceAddress);
-                    new AlertDialog.Builder(requireContext()).setTitle(updatedPeer.getDeviceName()).setMessage(
-                            String.format(getString(R.string.PeerDetailedDescription),
-                                          getRelativeTime(updatedPeer.getLastSeen()),
-                                          getRelativeTime(updatedPeer.getLastExchange()),
-                                          getRelativeTime(updatedPeer.getRecencyTime()))).show();
+                    // fetch the service again because stats may have changed
+                    var updatedService = getWifiBgService().getService(deviceAddress);
+                    new AlertDialog.Builder(requireContext()).setTitle(updatedService.getDeviceName()).setMessage(
+                            String.format(getString(R.string.ServiceDetailedDescription),
+                                          getRelativeTime(updatedService.getLastSeen()),
+                                          getRelativeTime(updatedService.getLastExchange()),
+                                          getRelativeTime(updatedService.getRecencyTime()))).show();
                 });
-                Button action = holder.itemView.findViewById(R.id.peer_exchange);
+                Button action = holder.itemView.findViewById(R.id.service_exchange);
                 action.setOnClickListener(click -> exchangeMessage(deviceAddress, action));
             }
 
             @Override
             public int getItemCount() {
-                return peerDeviceAddresses.size();
+                return serviceDeviceAddresses.size();
             }
         });
 
-        Button refreshPeersBtn = view.findViewById(R.id.refresh_peers_button);
-        refreshPeersBtn.setOnClickListener(v -> discoverPeers());
+        Button refreshServicesBtn = view.findViewById(R.id.refresh_services_button);
+        refreshServicesBtn.setOnClickListener(v -> discoverServices());
 
         return view;
     }
@@ -167,20 +166,20 @@ public class BundleClientWifiDirectFragment extends Fragment {
     public void updateConnectedDevices() {
         requireActivity().runOnUiThread(() -> {
             var recentTransports = getWifiBgService().getRecentTransports();
-            var discoveredPeers =
+            var discoveredServices =
                     Arrays.stream(recentTransports).map(RecentTransport::getDeviceAddress).collect(Collectors.toSet());
-            var currentPeers = new HashSet<>(peerDeviceAddresses);
-            // figure out the new names (discoveredPeers - currentPeers)
-            var newNames = new HashSet<>(discoveredPeers);
-            newNames.removeAll(currentPeers);
-            // figure out the removed names (currentPeers - discoveredPeers)
-            var removedNames = new HashSet<>(currentPeers);
-            removedNames.removeAll(discoveredPeers);
-            // remove the removed names from the peers list
-            peerDeviceAddresses.removeIf(removedNames::contains);
+            var currentServices = new HashSet<>(serviceDeviceAddresses);
+            // figure out the new names (discoveredServices - currentServices)
+            var newNames = new HashSet<>(discoveredServices);
+            newNames.removeAll(currentServices);
+            // figure out the removed names (currentServices - discoveredServices)
+            var removedNames = new HashSet<>(currentServices);
+            removedNames.removeAll(discoveredServices);
+            // remove the removed names from the services list
+            serviceDeviceAddresses.removeIf(removedNames::contains);
             // add the new names
-            peerDeviceAddresses.addAll(newNames);
-            peersList.getAdapter().notifyDataSetChanged();
+            serviceDeviceAddresses.addAll(newNames);
+            discoveredServicesList.getAdapter().notifyDataSetChanged();
         });
     }
 
@@ -195,14 +194,14 @@ public class BundleClientWifiDirectFragment extends Fragment {
         });
     }
 
-    public void updateOwnerAndGroupInfo(WifiP2pGroup groupInfo) {
-        requireActivity().runOnUiThread(() -> {
-            var ownerNameAndAddress =
-                    groupInfo == null || groupInfo.getOwner() == null ? getString(R.string.not_connected) :
-                            getString(R.string.connected_to_transport);
-            connectedDeviceText.setText(ownerNameAndAddress);
-        });
-    }
+//    public void updateOwnerAndGroupInfo(WifiP2pGroup groupInfo) {
+//        requireActivity().runOnUiThread(() -> {
+//            var ownerNameAndAddress =
+//                    groupInfo == null || groupInfo.getOwner() == null ? getString(R.string.not_connected) :
+//                            getString(R.string.connected_to_transport);
+//            connectedDeviceText.setText(ownerNameAndAddress);
+//        });
+//    }
 
     public void exchangeMessage(String deviceAddress, Button exchangeButton) {
         if (getWifiBgService() != null) {
@@ -211,8 +210,8 @@ public class BundleClientWifiDirectFragment extends Fragment {
         }
     }
 
-    void discoverPeers() {
-        if (getWifiBgService() != null) getWifiBgService().discoverPeers();
+    void discoverServices() {
+        if (getWifiBgService() != null) getWifiBgService().discoverServices();
     }
 
     class BundleClientServiceBroadcastReceiver extends BroadcastReceiver {
@@ -233,11 +232,11 @@ public class BundleClientWifiDirectFragment extends Fragment {
                     case WIFI_DIRECT_MANAGER_INITIALIZED -> {
                         deliveryStatus.setText(getWifiBgService().isDiscoveryActive() ? "Active" : "Inactive");
                     }
-                    case WIFI_DIRECT_MANAGER_PEERS_CHANGED -> updateConnectedDevices();
-                    case WIFI_DIRECT_MANAGER_SERVICE_DISCOVERED, WIFI_DIRECT_MANAGER_DEVICE_INFO_CHANGED ->
-                            updateOwnerAndGroupInfo(getWifiBgService().getGroupInfo());
+                    case WIFI_DIRECT_MANAGER_SERVICES_CHANGED -> updateConnectedDevices();
+//                    case WIFI_DIRECT_MANAGER_SERVICE_DISCOVERED, WIFI_DIRECT_MANAGER_DEVICE_INFO_CHANGED ->
+//                            updateOwnerAndGroupInfo(getWifiBgService().getGroupInfo());
 
-                    case WIFI_DIRECT_MANAGER_CONNECTION_CHANGED -> discoverPeers();
+                    case WIFI_DIRECT_MANAGER_CONNECTION_CHANGED -> discoverServices();
                     case WIFI_DIRECT_MANAGER_DISCOVERY_CHANGED -> getActivity().runOnUiThread(
                             () -> deliveryStatus.setText(
                                     getWifiBgService().isDiscoveryActive() ? "Active" : "Inactive"));

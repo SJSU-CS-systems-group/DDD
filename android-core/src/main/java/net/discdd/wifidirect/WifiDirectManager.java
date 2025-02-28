@@ -12,7 +12,6 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
-import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -21,7 +20,6 @@ import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pDeviceList;
-import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceRequest;
@@ -50,9 +48,7 @@ public class WifiDirectManager {
     private WifiP2pManager.Channel channel;
     private WifiDirectBroadcastReceiver receiver;
     private WifiDirectStatus status = WifiDirectStatus.UNDEFINED;
-    private HashSet<WifiP2pDevice> discoveredPeers = new HashSet<>();
-    private WifiP2pGroup groupInfo;
-    private final List<DiscoveredService> discoveredServices = new ArrayList<>();
+    private final HashSet<DiscoveredService> discoveredServices = new HashSet<>();
     private boolean wifiDirectEnabled;
     private boolean discoveryActive;
 
@@ -116,6 +112,7 @@ public class WifiDirectManager {
     public String getDeviceName() {
         return deviceName;
     }
+
 
     public WifiDirectStatus getStatus() {
         return status;
@@ -208,30 +205,30 @@ public class WifiDirectManager {
      * @return Completable Future true if discovery is successful false if not
      */
 
-    @SuppressLint("MissingPermission")
-    public CompletableFuture<OptionalInt> discoverPeers() {
-        var completableActionListener = new CompletableActionListener();
-        this.manager.discoverPeers(this.channel, completableActionListener);
-        return completableActionListener;
-    }
+//    @SuppressLint("MissingPermission")
+//    public CompletableFuture<OptionalInt> discoverPeers() {
+//        var completableActionListener = new CompletableActionListener();
+//        this.manager.discoverPeers(this.channel, completableActionListener);
+//        return completableActionListener;
+//    }
 
-    /**
-     * Get the GroupInfo of current WifiDirect devices connected to this group.
-     *
-     * @return WifiP2PGroup object containing list of connected devices.
-     */
+//    /**
+//     * Get the GroupInfo of current WifiDirect devices connected to this group.
+//     *
+//     * @return WifiP2PGroup object containing list of connected devices.
+//     */
 
-    public CompletableFuture<WifiP2pGroup> requestGroupInfo() {
-        CompletableFuture<WifiP2pGroup> cFuture = new CompletableFuture<>();
-        this.manager.requestGroupInfo(channel, gi -> {
-            this.groupInfo = gi;
-            this.manager.requestConnectionInfo(channel, ci -> cFuture.complete(gi));
-        });
-        return cFuture;
-    }
+//    public CompletableFuture<WifiP2pGroup> requestGroupInfo() {
+//        CompletableFuture<WifiP2pGroup> cFuture = new CompletableFuture<>();
+//        this.manager.requestGroupInfo(channel, gi -> {
+//            this.groupInfo = gi;
+//            this.manager.requestConnectionInfo(channel, ci -> cFuture.complete(gi));
+//        });
+//        return cFuture;
+//    }
 
-    public CompletableFuture<WifiP2pGroup> connect(WifiP2pDevice device) {
-        var completableFuture = new CompletableFuture<WifiP2pGroup>();
+    public CompletableFuture<Void> connect(WifiP2pDevice device) {
+        var completableFuture = new CompletableFuture<Void>();
         var config = new WifiP2pConfig();
         config.wps.setup = WpsInfo.PBC;
         config.deviceAddress = device.deviceAddress;
@@ -239,7 +236,7 @@ public class WifiDirectManager {
         this.manager.connect(channel, config, new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
-                requestGroupInfo().thenAccept(completableFuture::complete);
+                completableFuture.complete(null);
             }
 
             @Override
@@ -269,20 +266,20 @@ public class WifiDirectManager {
         }
     }
 
-    public HashSet<WifiP2pDevice> getPeerList() {return discoveredPeers;}
+//    public HashSet<WifiP2pDevice> getPeerList() {return discoveredPeers;}
 
     public CompletableFuture<Boolean> disconnect() {
         CompletableFuture<Boolean> completableFuture = new CompletableFuture<>();
-        manager.removeGroup(channel, new WifiP2pManager.ActionListener() {
+        manager.clearServiceRequests(channel, new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
                 completableFuture.complete(true);
+                logger.log(INFO, "Service requests cleared successfully");
             }
-
             @Override
             public void onFailure(int reason) {
                 completableFuture.complete(false);
-                logger.warning("Failed to disconnect from with reason " + reason);
+                logger.warning("Failed to clear service requests with reason " + reason);
             }
         });
         return completableFuture;
@@ -307,16 +304,16 @@ public class WifiDirectManager {
 
     public CompletableFuture<OptionalInt> shutdown() {
         var cal = new CompletableActionListener();
-        manager.cancelConnect(channel, null);
-        manager.stopPeerDiscovery(channel, null);
+        manager.cancelConnect(channel, cal);
+        manager.stopPeerDiscovery(channel, cal);
         manager.stopListening(channel, cal);
         unregisterWifiIntentReceiver();
         return cal;
     }
 
-    public WifiP2pGroup getGroupInfo() {
-        return groupInfo;
-    }
+//    public WifiP2pGroup getGroupInfo() {
+//        return groupInfo;
+//    }
 
 
     public boolean getWifiDirectEnabled() {
@@ -336,7 +333,12 @@ public class WifiDirectManager {
     public enum WifiDirectStatus {FAILED, INVITED, AVAILABLE, UNAVAILABLE, UNDEFINED, CONNECTED}
 
     public enum WifiDirectEventType {
-        WIFI_DIRECT_MANAGER_INITIALIZED, WIFI_DIRECT_MANAGER_SERVICE_DISCOVERED, WIFI_DIRECT_MANAGER_CONNECTION_CHANGED, WIFI_DIRECT_MANAGER_DISCOVERY_CHANGED, WIFI_DIRECT_MANAGER_PEERS_CHANGED, WIFI_DIRECT_MANAGER_PEER_LIST_RECEIVED, WIFI_DIRECT_MANAGER_DEVICE_INFO_CHANGED
+        WIFI_DIRECT_MANAGER_INITIALIZED,
+        WIFI_DIRECT_MANAGER_SERVICE_DISCOVERED,
+        WIFI_DIRECT_MANAGER_CONNECTION_CHANGED,
+        WIFI_DIRECT_MANAGER_DISCOVERY_CHANGED,
+        WIFI_DIRECT_MANAGER_SERVICES_CHANGED,
+        WIFI_DIRECT_MANAGER_DEVICE_INFO_CHANGED
     }
 
     private static class CompletableActionListener extends CompletableFuture<OptionalInt>
@@ -392,20 +394,23 @@ public class WifiDirectManager {
                         logger.log(INFO, "WifiDirect not enabled");
                         wifiDirectEnabled = false;
                     }
-                    notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_INITIALIZED);
+                    notifyActionToListeners(WIFI_DIRECT_MANAGER_INITIALIZED);
                 }
                 case WIFI_P2P_PEERS_CHANGED_ACTION -> {
-                    // Broadcast intent action indicating that the available peer list has changed.
-                    // This can be sent as a result of peers being found, lost or updated.
+                    // Broadcast intent action indicating that the available service list has changed.
+                    // This can be sent as a result of services being found, lost or updated.
                     try {
-                        var newPeerList = intent.getParcelableExtra(EXTRA_P2P_DEVICE_LIST, WifiP2pDeviceList.class);
-                        if (newPeerList != null) {
-                            discoveredPeers = new HashSet<>(newPeerList.getDeviceList());
-                            notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_PEER_LIST_RECEIVED);
+                        var newServiceList = intent.getParcelableExtra(EXTRA_P2P_DEVICE_LIST, WifiP2pDeviceList.class);
+                        if (newServiceList != null) {
+                            discoveredServices.clear(); // Clear the existing services
+                            for (WifiP2pDevice device : newServiceList.getDeviceList()) {
+                                DiscoveredService discoveredService = new DiscoveredService(device, device.deviceAddress, 7777);
+                                discoveredServices.add(discoveredService);
+                            }
+                            notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_SERVICES_CHANGED);
                         }
-                        notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_PEERS_CHANGED);
                     } catch (SecurityException e) {
-                        logger.log(SEVERE, "SecurityException in getPeersList", e);
+                        logger.log(SEVERE, "SecurityException in getServicesList", e);
                     }
                 }
                 case WIFI_P2P_CONNECTION_CHANGED_ACTION -> {

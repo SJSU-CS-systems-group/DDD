@@ -39,7 +39,7 @@
     <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">USB був підключений, але директорія /DDD_transport не була виявлена\n</string>
     <string name="usb_device_attached_checking_for_storage_volumes">USB пристрій підключено. Перевірка обсягів пам’яті.\n</string>
     <string name="transfers_in_the_background">Виконувати передачі у фоновому режимі</string>
-    <string name="PeerDetailedDescription">Останнє бачення: %s\nОстанній обмін: %s\nОстанній контакт з сервером: %s\n</string>
+    <string name="ServiceDetailedDescription">Останнє бачення: %s\nОстанній обмін: %s\nОстанній контакт з сервером: %s\n</string>
     <string name="never">Ніколи</string>
     <string name="sending_adu_s_d_from_s">Надсилання ADU %s:%d від %s</string>
     <string name="exchanged_d_bundles_to_and_d_bundles_from_s">Обміняно %d пакетів до та %d пакетів від %s</string>

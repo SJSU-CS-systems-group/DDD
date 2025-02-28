@@ -1,8 +1,5 @@
 package net.discdd.transport;
 
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-
 import com.google.protobuf.ByteString;
 import io.grpc.Grpc;
 import io.grpc.InsecureChannelCredentials;
@@ -39,6 +36,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.logging.Logger;
+
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 
 public class TransportToBundleServerManager implements Runnable {
 
