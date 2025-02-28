@@ -55,7 +55,7 @@ public class BundleClientActivity extends AppCompatActivity {
     private PermissionsFragment permissionsFragment;
     private BundleClientWifiDirectFragment homeFragment;
     private UsbFragment usbFragment;
-    private ServerFragment serverFragment;
+    private ServerFrag serverFrag;
     private LogFragment logFragment;
     private ViewPager2 viewPager;
     private TabLayout tabLayout;
@@ -73,6 +73,7 @@ public class BundleClientActivity extends AppCompatActivity {
                 var binder = (BundleClientWifiDirectService.BundleClientWifiDirectServiceBinder) service;
                 wifiBgService = binder.getService();
                 serviceReady.complete(BundleClientActivity.this);
+                serverFrag.setWifiService(wifiBgService);
             }
 
             @Override
@@ -120,10 +121,10 @@ public class BundleClientActivity extends AppCompatActivity {
         permissionsFragment = PermissionsFragment.newInstance();
         homeFragment = BundleClientWifiDirectFragment.newInstance();
         usbFragment = UsbFragment.newInstance();
-        serverFragment = ServerFragment.newInstance();
         logFragment = LogFragment.newInstance();
         fragmentsWithTitles.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        serverFrag = new ServerFrag();
 
         //set up view
         setContentView(R.layout.activity_bundle_client);
@@ -158,7 +159,7 @@ public class BundleClientActivity extends AppCompatActivity {
         if (satisfied) {
             logger.log(INFO, "ALL TABS BEING SHOWN");
             newFragments.add(new FragmentWithTitle(homeFragment, getString(R.string.home_tab)));
-            newFragments.add(new FragmentWithTitle(serverFragment, getString(R.string.server_tab)));
+            newFragments.add(new FragmentWithTitle(serverFrag, getString(R.string.server_tab)));
             newFragments.add(new FragmentWithTitle(logFragment, getString(R.string.logs_tab)));
             if (usbExists) {
                 newFragments.add(new FragmentWithTitle(usbFragment, getString(R.string.usb_tab)));
