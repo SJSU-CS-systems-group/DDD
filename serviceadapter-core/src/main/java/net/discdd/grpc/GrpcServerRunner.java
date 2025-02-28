@@ -9,6 +9,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PreDestroy;
 import java.util.List;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -24,6 +25,7 @@ public class GrpcServerRunner implements CommandLineRunner {
     ApplicationContext context;
 
     int BUNDLE_SERVER_PORT;
+    private Thread awaitThread;
 
     public GrpcServerRunner(@Value("${ssl-grpc.server.port}") int port) {
         BUNDLE_SERVER_PORT = port;
@@ -41,14 +43,31 @@ public class GrpcServerRunner implements CommandLineRunner {
 
         server = serverBuilder.build();
 
-        server.start();
-        logger.log(INFO, "gRPC Server started on port " + BUNDLE_SERVER_PORT);
+        try {
+            server.start();
+            logger.log(INFO, "gRPC Server started on port " + BUNDLE_SERVER_PORT);
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("Shutting down gRPC Server...");
-            if (server != null) {
-                server.shutdown();
-            }
-        }));
+            awaitThread = new Thread(() -> {
+                try {
+                    server.awaitTermination();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            });
+
+            awaitThread.setName("grpc-server-await-thread");
+            awaitThread.setDaemon(false);
+            awaitThread.start();
+
+        } catch (Exception e) {
+            logger.log(INFO, "gRPC Server failed to start on port " + BUNDLE_SERVER_PORT);
+        }
+    }
+
+    @PreDestroy
+    public void stop() {
+        if (server != null) {
+            server.shutdown();
+        }
     }
 }

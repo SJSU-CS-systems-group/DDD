@@ -65,6 +65,7 @@ public class ClientPaths {
     public final Path bundleSecurityPath;
     public final Path serverKeyPath;
     public final Path bundleIdNextCounter;
+    public final Path grpcSecurityPath;
 
     // initialize key paths
     public final Path outServerIdentity;
@@ -133,5 +134,6 @@ public class ClientPaths {
         // client security
         clientKeyPath = bundleSecurityPath.resolve(SecurityUtils.CLIENT_KEY_PATH);
         sessionStorePath = bundleSecurityPath.resolve(SecurityUtils.SESSION_STORE_FILE);
+        grpcSecurityPath = rootDir.resolve(SecurityUtils.GRPC_SECURITY_PATH);
     }
 }
