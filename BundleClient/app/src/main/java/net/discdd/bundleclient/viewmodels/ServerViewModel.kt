@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.discdd.bundleclient.BundleClientWifiDirectService
+import net.discdd.bundleclient.WifiServiceManager
 import net.discdd.viewmodels.ConnectivityViewModel
 import java.util.logging.Level
 import java.util.logging.Logger
@@ -22,10 +23,8 @@ data class ServerState(
 class ServerViewModel(
     application: Application,
 ): AndroidViewModel(application) {
-    private val logger = Logger.getLogger(ConnectivityViewModel::class.java.name)
     private val context get() = getApplication<Application>()
     private val sharedPref = context.getSharedPreferences(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE)
-    private lateinit var wifiBgService: BundleClientWifiDirectService
     private val _state = MutableStateFlow(ServerState())
     val state = _state.asStateFlow()
 
@@ -51,20 +50,17 @@ class ServerViewModel(
                 _state.update {
                     it.copy(message = "Connecting to server...")
                 }
+                val wifiBgService = WifiServiceManager.getService()
                 wifiBgService?.let { service ->
                     service.initiateServerExchange()
                         .thenAccept { bec ->
-                            _state.update {
-                                it.copy(message = "Upload status: ${bec.uploadStatus()}, Download status: ${bec.downloadStatus()}")
-                            }
+                            _state.update { it.copy(message = "Upload status: ${bec.uploadStatus()}, Download status: ${bec.downloadStatus()}") }
                         }
                 } ?: run {
-                    _state.update {
-                        it.copy(message = "Error: Service is not available.")
-                    }
+                    _state.update { it.copy(message = "Error: Service is not available.") }
                 }
             } catch (e : Exception) {
-                logger.log(Level.WARNING, "Failed to connect to server", e)
+                _state.update { it.copy(message = "Error: Service is not available.") }
             }
         }
     }
@@ -86,9 +82,5 @@ class ServerViewModel(
                 .apply()
             _state.update { it.copy(message = "Settings saved") }
         }
-    }
-
-    fun setWifiService(service: BundleClientWifiDirectService) {
-        this.wifiBgService = service
     }
 }

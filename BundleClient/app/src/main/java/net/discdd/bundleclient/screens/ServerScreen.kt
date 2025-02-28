@@ -1,4 +1,4 @@
-package net.discdd.bundleclient
+package net.discdd.bundleclient.screens
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -22,48 +22,34 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import net.discdd.bundleclient.viewmodels.ServerViewModel
 import net.discdd.viewmodels.ConnectivityViewModel
 
 class ServerFrag: Fragment() {
-    private lateinit var viewModel: ServerViewModel
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        viewModel = ViewModelProvider(this)[ServerViewModel::class.java]
-    }
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        setWifiService((requireActivity() as BundleClientActivity).wifiBgService)
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 MaterialTheme {
-                    ServerScreen(viewModel)
+                    ServerScreen()
                 }
             }
-        }
-    }
-
-    fun setWifiService(service: BundleClientWifiDirectService) {
-        if (::viewModel.isInitialized) {
-            viewModel.setWifiService(service)
         }
     }
 }
 
 @Composable
 fun ServerScreen(
-    serverViewModel: ServerViewModel,
+    serverViewModel: ServerViewModel = viewModel(),
     connectivityViewModel: ConnectivityViewModel = viewModel()
 ) {
     val serverState by serverViewModel.state.collectAsState()
@@ -124,4 +110,10 @@ fun ServerScreen(
             )
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ServerPreview() {
+    ServerScreen()
 }
