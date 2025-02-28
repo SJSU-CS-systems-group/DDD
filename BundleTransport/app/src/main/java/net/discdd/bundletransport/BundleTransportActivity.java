@@ -36,9 +36,10 @@ import com.google.android.material.tabs.TabLayoutMediator;
 
 import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
-import net.discdd.android.fragments.PermissionsViewModel;
+import net.discdd.bundletransport.screens.StorageFrag;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.transport.TransportSecurity;
+import net.discdd.viewmodels.PermissionsViewModel;
 
 import org.whispersystems.libsignal.InvalidKeyException;
 
@@ -56,7 +57,7 @@ public class BundleTransportActivity extends AppCompatActivity {
     private TransportSecurity transportSecurity;
     private TitledFragment serverUploadFragment;
     private TitledFragment transportWifiFragment;
-    private TitledFragment storageFragment;
+    private TitledFragment storageFrag;
     private TransportPaths transportPaths;
     private TitledFragment usbFrag;
     private TitledFragment logFragment;
@@ -131,7 +132,7 @@ public class BundleTransportActivity extends AppCompatActivity {
         serverUploadFragment = new TitledFragment(getString(R.string.upload), serverFrag);
         TransportWifiDirectFragment transportFrag = TransportWifiDirectFragment.newInstance(transportPaths);
         transportWifiFragment = new TitledFragment(getString(R.string.local_wifi), transportFrag);
-        storageFragment = new TitledFragment("Storage Settings", StorageFragment.newInstance());
+        storageFrag = new TitledFragment("Storage", new StorageFrag());
         usbFrag = new TitledFragment("USB", UsbFragment.newInstance(transportPaths));
         logFragment = new TitledFragment(getString(R.string.logs), LogFragment.newInstance());
 
@@ -173,7 +174,7 @@ public class BundleTransportActivity extends AppCompatActivity {
             logger.log(INFO, "ALL TABS BEING SHOWN");
             newFragments.add(serverUploadFragment);
             newFragments.add(transportWifiFragment);
-            newFragments.add(storageFragment);
+            newFragments.add(storageFrag);
             newFragments.add(logFragment);
             if (usbExists) {
                 newFragments.add(usbFrag);
