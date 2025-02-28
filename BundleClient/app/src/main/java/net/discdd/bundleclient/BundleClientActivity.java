@@ -33,6 +33,7 @@ import com.google.android.material.tabs.TabLayoutMediator;
 
 import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
+import net.discdd.bundleclient.screens.ServerFrag;
 import net.discdd.viewmodels.PermissionsViewModel;
 import net.discdd.client.bundlerouting.ClientWindow;
 
@@ -66,19 +67,19 @@ public class BundleClientActivity extends AppCompatActivity {
 
     public BundleClientActivity() {
         connection = new ServiceConnection() {
-
             @Override
             public void onServiceConnected(ComponentName className, IBinder service) {
-                // We've bound to LocalService, cast the IBinder and get LocalService instance.
+//              We've bound to LocalService, cast the IBinder and get LocalService instance.
                 var binder = (BundleClientWifiDirectService.BundleClientWifiDirectServiceBinder) service;
                 wifiBgService = binder.getService();
+                WifiServiceManager.INSTANCE.setService(wifiBgService);
                 serviceReady.complete(BundleClientActivity.this);
-                serverFrag.setWifiService(wifiBgService);
             }
 
             @Override
             public void onServiceDisconnected(ComponentName arg0) {
                 wifiBgService = null;
+                WifiServiceManager.INSTANCE.clearService();
             }
         };
     }
@@ -116,6 +117,8 @@ public class BundleClientActivity extends AppCompatActivity {
         } catch (Exception e) {
             logger.log(WARNING, "Failed to register usb broadcast", e);
         }
+
+        LogFragment.registerLoggerHandler();
 
         permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
         permissionsFragment = PermissionsFragment.newInstance();
@@ -203,6 +206,7 @@ public class BundleClientActivity extends AppCompatActivity {
         if (mUsbReceiver != null) {
             unregisterReceiver(mUsbReceiver);
         }
+        WifiServiceManager.INSTANCE.clearService();
         unbindService(connection);
         super.onDestroy();
     }
