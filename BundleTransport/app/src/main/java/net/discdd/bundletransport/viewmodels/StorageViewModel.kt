@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import net.discdd.bundletransport.R
 import net.discdd.bundletransport.StorageManager
 
 data class StorageState(
@@ -47,7 +48,7 @@ class StorageViewModel(application: Application) : AndroidViewModel(application)
                     actualStorageValue = minStorage + it.sliderValue
                 )}
             } catch (e: Exception) {
-                _state.update { it.copy(showMessage = "Error updating storage info") }
+                _state.update { it.copy(showMessage = context.getString(R.string.error_updating_storage_info)) }
             }
         }
     }
@@ -56,7 +57,7 @@ class StorageViewModel(application: Application) : AndroidViewModel(application)
         _state.update { it.copy(
             sliderValue = value,
             actualStorageValue = minStorage + value,
-            showMessage = "Click Set Storage to apply changes"
+            showMessage = context.getString(R.string.apply_changes)
         )}
     }
 
@@ -67,9 +68,9 @@ class StorageViewModel(application: Application) : AndroidViewModel(application)
                 storageManager.updateStorage()
                 updateStorageInfo()
                 savePreference(_state.value.sliderValue)
-                _state.update { it.copy(showMessage = "Storage updated") }
+                _state.update { it.copy(showMessage = context.getString(R.string.storage_updated)) }
             } catch (e: Exception) {
-                _state.update { it.copy(showMessage = "Failed to update storage") }
+                _state.update { it.copy(showMessage = context.getString(R.string.failed_to_update_storage)) }
             }
         }
     }
