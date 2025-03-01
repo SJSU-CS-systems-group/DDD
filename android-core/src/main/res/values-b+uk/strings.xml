@@ -4,6 +4,7 @@
     <string name="android.permission.CHANGE_WIFI_STATE">Змінити Wi-Fi</string>
     <string name="android.permission.INTERNET">Використовувати мережу</string>
     <string name="android.permission.NEARBY_WIFI_DEVICES">Знайти сусідні пристрої Wi-Fi</string>
+    <string name="android.permission.POST_NOTIFICATIONS">Надсилати сповіщення</string>
     <string name="wifidirectinitialized">Wi-Fi Direct ініціалізовано</string>
     <string name="peers">Пари</string>
     <string name="waiting_for_permissions">Очікування дозволів</string>
