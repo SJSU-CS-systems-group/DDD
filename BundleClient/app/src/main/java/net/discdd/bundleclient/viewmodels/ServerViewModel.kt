@@ -46,19 +46,23 @@ class ServerViewModel(
         viewModelScope.launch {
             try {
                 _state.update {
-                    it.copy(message = "Connecting to server...")
+                    it.copy(message = context.getString(R.string.connecting_to_server))
                 }
                 val wifiBgService = WifiServiceManager.getService()
                 wifiBgService?.let { service ->
                     service.initiateServerExchange()
                         .thenAccept { bec ->
-                            _state.update { it.copy(message = "Upload status: ${bec.uploadStatus()}, Download status: ${bec.downloadStatus()}") }
+                            _state.update { it.copy(message = context.getString(
+                                R.string.upload_status,
+                                bec.uploadStatus(),
+                                bec.downloadStatus()
+                            )) }
                         }
                 } ?: run {
-                    _state.update { it.copy(message = "Error: Service is not available.") }
+                    _state.update { it.copy(message = context.getString(R.string.service_not_available)) }
                 }
             } catch (e : Exception) {
-                _state.update { it.copy(message = "Error: Service is not available.") }
+                _state.update { it.copy(message = context.getString(R.string.service_not_available)) }
             }
         }
     }

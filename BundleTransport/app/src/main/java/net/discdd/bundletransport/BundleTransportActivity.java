@@ -44,6 +44,9 @@ import net.discdd.viewmodels.PermissionsViewModel;
 import net.discdd.tls.GrpcSecurity;
 import net.discdd.viewmodels.PermissionsViewModel;
 
+import net.discdd.tls.GrpcSecurity;
+import net.discdd.viewmodels.PermissionsViewModel;
+
 import org.whispersystems.libsignal.InvalidKeyException;
 
 import java.io.IOException;
