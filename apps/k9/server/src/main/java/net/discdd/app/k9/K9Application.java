@@ -9,7 +9,9 @@ import org.springframework.boot.Banner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Import;
-
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PropertiesLoaderUtils;
 import java.util.Arrays;
 import java.util.logging.Logger;
 
@@ -35,11 +37,26 @@ public class K9Application {
         }
 
         var app = new SpringApplication(K9Application.class);
+
+        Resource resource = new FileSystemResource(args[0]);
+        if (!resource.exists()) {
+            logger.log(SEVERE, String.format("Entered properties file path %s does not exist!", args[0]));
+            System.exit(1);
+        }
+
+        try {
+            var properties = PropertiesLoaderUtils.loadProperties(resource);
+            app.setDefaultProperties(properties);
+        } catch (Exception e) {
+            logger.log(SEVERE, "Please enter valid properties file path!");
+            System.exit(1);
+        }
+
         app.setBannerMode(Banner.Mode.OFF);
         // we need to register with the BundleServer in an application initializer so that
         // the logging will be set up correctly
         app.addInitializers((actx) -> {
-            var bundleServerURL = args[0];
+            var bundleServerURL = actx.getEnvironment().getProperty("bundle-server.url");
             var myGrpcUrl = actx.getEnvironment().getProperty("my.grpc.url");
             var appName = actx.getEnvironment().getProperty("spring.application.name");
             if (myGrpcUrl == null) {

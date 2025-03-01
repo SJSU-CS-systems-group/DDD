@@ -1,9 +1,8 @@
 package net.discdd.client.bundletransmission;
 
 import com.google.protobuf.ByteString;
-import io.grpc.Grpc;
-import io.grpc.InsecureChannelCredentials;
 import io.grpc.StatusRuntimeException;
+import io.grpc.okhttp.OkHttpChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import lombok.Getter;
 import net.discdd.bundlerouting.RoutingExceptions;
@@ -35,6 +34,8 @@ import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
 import net.discdd.model.UncompressedPayload;
 import net.discdd.pathutils.ClientPaths;
+import net.discdd.tls.DDDTLSUtil;
+import net.discdd.tls.NettyClientCertificateInterceptor;
 import net.discdd.utils.AckRecordUtils;
 import net.discdd.utils.BundleUtils;
 import net.discdd.utils.FileUtils;
@@ -45,7 +46,8 @@ import org.whispersystems.libsignal.LegacyMessageException;
 import org.whispersystems.libsignal.NoSessionException;
 import org.whispersystems.libsignal.ecc.Curve;
 
-
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
@@ -61,6 +63,8 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -69,7 +73,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
@@ -338,12 +341,29 @@ public class BundleTransmission {
      * WHEN TALKING TO A DEVICE.
      */
     public BundleExchangeCounts doExchangeWithTransport(String deviceAddress, String deviceDeviceName,
-                                                        String transportAddress, int port) {
+                                                        String transportAddress, int port) throws Exception {
+
+        var sslClientContext = SSLContext.getInstance("TLS");
+        sslClientContext.init(
+                DDDTLSUtil.getKeyManagerFactory(bundleSecurity.getClientGrpcSecurity().getGrpcKeyPair(), bundleSecurity.getClientGrpcSecurity().getGrpcCert()).getKeyManagers(),
+                new TrustManager[] {DDDTLSUtil.trustManager},
+                new SecureRandom()
+        );
+
+        var channel = OkHttpChannelBuilder.forAddress(transportAddress, port)
+                .hostnameVerifier((host, session) -> true)
+                .useTransportSecurity()
+                .sslSocketFactory(sslClientContext.getSocketFactory())
+                .intercept(new NettyClientCertificateInterceptor())
+                .build();
+
+        var blockingStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
+
+        var certCompletion = new CompletableFuture<X509Certificate>();
+        blockingStub = NettyClientCertificateInterceptor.createServerCertificateOption(blockingStub, certCompletion);
+
         Statuses uploadStatus = Statuses.FAILED;
         Statuses downloadStatus = Statuses.FAILED;
-        var channel =
-                Grpc.newChannelBuilderForAddress(transportAddress, port, InsecureChannelCredentials.create()).build();
-        var blockingStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
 
         BundleSender transportSender = null;
         try {

@@ -54,4 +54,8 @@
     <string name="to_settings_text">To enable our app to manage app-related files on this device and your USB storage, please toggle "Yes" for BundleTransport in your settings. We assure you that only files created by our app will be accessed. Protecting user privacy and maintaining ethical practices are our top priorities.</string>
     <string name="exchanging_with_client">Exchanging with Client</string>
     <string name="initiating_bundle_exchange">Initiating Bundle Exchange...</string>
+    <string name="error_updating_storage_info">Error updating storage info</string>
+    <string name="apply_changes">Click Set Storage to apply changes</string>
+    <string name="storage_updated">Storage updated</string>
+    <string name="failed_to_update_storage">Failed to update storage</string>
 </resources>

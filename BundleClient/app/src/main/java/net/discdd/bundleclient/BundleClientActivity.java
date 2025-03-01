@@ -32,7 +32,8 @@ import com.google.android.material.tabs.TabLayoutMediator;
 
 import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
-import net.discdd.android.fragments.PermissionsViewModel;
+import net.discdd.bundleclient.screens.ServerFragment;
+import net.discdd.viewmodels.PermissionsViewModel;
 import net.discdd.client.bundlerouting.ClientWindow;
 
 import java.util.ArrayList;
@@ -44,11 +45,9 @@ public class BundleClientActivity extends AppCompatActivity {
     //constant
     private static final Logger logger = Logger.getLogger(BundleClientActivity.class.getName());
     // instantiate window for bundles
-    public static ClientWindow clientWindow;
     ConnectivityManager connectivityManager;
     ArrayList<FragmentWithTitle> fragmentsWithTitles = new ArrayList<>();
     private SharedPreferences sharedPreferences;
-    BundleClientWifiDirectService wifiBgService;
     private final ServiceConnection connection;
     CompletableFuture<BundleClientActivity> serviceReady = new CompletableFuture<>();
     private PermissionsFragment permissionsFragment;
@@ -61,22 +60,21 @@ public class BundleClientActivity extends AppCompatActivity {
     private TabLayoutMediator tabLayoutMediator;
     PermissionsViewModel permissionsViewModel;
     private BroadcastReceiver mUsbReceiver;
-    private boolean usbExists;
+    protected boolean usbExists;
 
     public BundleClientActivity() {
         connection = new ServiceConnection() {
-
             @Override
             public void onServiceConnected(ComponentName className, IBinder service) {
-                // We've bound to LocalService, cast the IBinder and get LocalService instance.
+//              We've bound to LocalService, cast the IBinder and get LocalService instance.
                 var binder = (BundleClientWifiDirectService.BundleClientWifiDirectServiceBinder) service;
-                wifiBgService = binder.getService();
+                WifiServiceManager.INSTANCE.setService(binder.getService());
                 serviceReady.complete(BundleClientActivity.this);
             }
 
             @Override
             public void onServiceDisconnected(ComponentName arg0) {
-                wifiBgService = null;
+                WifiServiceManager.INSTANCE.clearService();
             }
         };
     }
@@ -115,14 +113,16 @@ public class BundleClientActivity extends AppCompatActivity {
             logger.log(WARNING, "Failed to register usb broadcast", e);
         }
 
+        LogFragment.registerLoggerHandler();
+
         permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
         permissionsFragment = PermissionsFragment.newInstance();
         homeFragment = BundleClientWifiDirectFragment.newInstance();
         usbFragment = UsbFragment.newInstance();
-        serverFragment = ServerFragment.newInstance();
         logFragment = LogFragment.newInstance();
         fragmentsWithTitles.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        serverFragment = new ServerFragment();
 
         //set up view
         setContentView(R.layout.activity_bundle_client);
@@ -139,6 +139,15 @@ public class BundleClientActivity extends AppCompatActivity {
 
         //set observer on view model for permissions
         permissionsViewModel.getPermissionSatisfied().observe(this, this::updateTabs);
+
+        //Checks if USB connected before app started
+        UsbManager usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
+        if(usbManager != null) {
+            updateUsbExists(!usbManager.getDeviceList().isEmpty());
+        }
+        else {
+            logger.log(WARNING, "Usbmanager was null, failed to connect");
+        }
     }
 
     private void updateTabs(Boolean satisfied) {
@@ -192,6 +201,7 @@ public class BundleClientActivity extends AppCompatActivity {
         if (mUsbReceiver != null) {
             unregisterReceiver(mUsbReceiver);
         }
+        WifiServiceManager.INSTANCE.clearService();
         unbindService(connection);
         super.onDestroy();
     }

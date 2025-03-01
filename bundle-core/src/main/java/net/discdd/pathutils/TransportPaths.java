@@ -1,5 +1,7 @@
 package net.discdd.pathutils;
 
+import net.discdd.bundlesecurity.SecurityUtils;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.logging.Logger;
@@ -19,8 +21,8 @@ public class TransportPaths {
     private static final Logger logger = Logger.getLogger(TransportPaths.class.getName());
 
     public final Path toClientPath;
-
     public final Path toServerPath;
+    public final Path grpcSecurityPath;
 
     public TransportPaths(Path rootDir) {
         this.toClientPath = rootDir.resolve("BundleTransmission/client");
@@ -34,6 +36,8 @@ public class TransportPaths {
         } catch (Exception e) {
             logger.log(SEVERE, "Failed to create transport storage directories", e);
         }
+
+        this.grpcSecurityPath = rootDir.resolve(SecurityUtils.GRPC_SECURITY_PATH);
     }
 }
 
