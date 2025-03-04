@@ -36,31 +36,37 @@ import com.google.android.material.tabs.TabLayoutMediator;
 
 import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
-import net.discdd.android.fragments.PermissionsViewModel;
+import net.discdd.bundletransport.screens.StorageFragment;
 import net.discdd.pathutils.TransportPaths;
-import net.discdd.transport.TransportSecurity;
+import net.discdd.tls.GrpcSecurity;
+import net.discdd.viewmodels.PermissionsViewModel;
 
 import org.whispersystems.libsignal.InvalidKeyException;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.cert.CertificateException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.SubmissionPublisher;
 import java.util.logging.Logger;
+import java.security.InvalidAlgorithmParameterException;
+import net.discdd.bundlesecurity.SecurityUtils;
+import org.bouncycastle.operator.OperatorCreationException;
 
 public class BundleTransportActivity extends AppCompatActivity {
     Logger logger = Logger.getLogger(BundleTransportActivity.class.getName());
-    private TransportSecurity transportSecurity;
+    private GrpcSecurity transportGrpcSecurity;
     private TitledFragment serverUploadFragment;
     private TitledFragment transportWifiFragment;
     private TitledFragment storageFragment;
     private TransportPaths transportPaths;
     private TitledFragment usbFrag;
     private TitledFragment logFragment;
-    private TitledFragment permissionsTitledFragment;
+    private TitledFragment titledPermissionsFragment;
     private PermissionsViewModel permissionsViewModel;
 
     record ConnectivityEvent(boolean internetAvailable) {}
@@ -116,29 +122,29 @@ public class BundleTransportActivity extends AppCompatActivity {
         LogFragment.registerLoggerHandler();
 
         this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
-        var resources = getApplicationContext().getResources();
-
-        try (InputStream inServerIdentity = resources.openRawResource(net.discdd.android_core.R.raw.server_identity)) {
-            this.transportSecurity =
-                    new TransportSecurity(getApplicationContext().getExternalFilesDir(null).toPath(), inServerIdentity);
-        } catch (IOException | InvalidKeyException | NoSuchAlgorithmException e) {
-            logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
+        try {
+            this.transportGrpcSecurity = GrpcSecurity.initializeInstance(transportPaths.grpcSecurityPath,
+                                                                         SecurityUtils.TRANSPORT);
+        } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | InvalidAlgorithmParameterException |
+                 CertificateException | NoSuchProviderException | OperatorCreationException e) {
+            logger.log(SEVERE, "Failed to initialize GrpcSecurity for transport", e);
         }
 
         ServerUploadFragment serverFrag =
-                ServerUploadFragment.newInstance(transportSecurity.getTransportID(), transportPaths,
+                ServerUploadFragment.newInstance(Base64.getEncoder().encodeToString(transportGrpcSecurity.getGrpcKeyPair().getPublic()
+                                                                                            .getEncoded()), transportPaths,
                                                  connectivityEventPublisher);
         serverUploadFragment = new TitledFragment(getString(R.string.upload), serverFrag);
         TransportWifiDirectFragment transportFrag = TransportWifiDirectFragment.newInstance(transportPaths);
         transportWifiFragment = new TitledFragment(getString(R.string.local_wifi), transportFrag);
-        storageFragment = new TitledFragment("Storage Settings", StorageFragment.newInstance());
+        storageFragment = new TitledFragment("Storage", new StorageFragment());
         usbFrag = new TitledFragment("USB", UsbFragment.newInstance(transportPaths));
         logFragment = new TitledFragment(getString(R.string.logs), LogFragment.newInstance());
 
         permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
         permissionsFragment = PermissionsFragment.newInstance();
-        permissionsTitledFragment = new TitledFragment("Permissions", permissionsFragment);
-        fragments.add(permissionsTitledFragment);
+        titledPermissionsFragment = new TitledFragment("Permissions", permissionsFragment);
+        fragments.add(titledPermissionsFragment);
 
         tabLayout = findViewById(R.id.tabs);
         viewPager2 = findViewById(R.id.view_pager);
@@ -180,7 +186,7 @@ public class BundleTransportActivity extends AppCompatActivity {
             }
         } else {
             logger.log(INFO, "ONLY PERMISSIONS TAB IS BEING SHOWN");
-            newFragments.add(permissionsTitledFragment);
+            newFragments.add(titledPermissionsFragment);
         }
 
         if (!newFragments.equals(fragments)) {

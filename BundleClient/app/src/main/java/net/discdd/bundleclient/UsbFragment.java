@@ -55,9 +55,10 @@ public class UsbFragment extends Fragment {
             @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.usb_fragment, container, false);
         BundleClientActivity activity = (BundleClientActivity) getActivity();
-        if (activity != null && activity.wifiBgService != null) {
+        BundleClientWifiDirectService wifiBgService = WifiServiceManager.INSTANCE.getService();
+        if (activity != null && wifiBgService != null) {
             try {
-                bundleTransmission = activity.wifiBgService.getBundleTransmission();
+                bundleTransmission = wifiBgService.getBundleTransmission();
             } catch (Exception e) {
                 logger.log(Level.WARNING, "Error getting bundle transmission: ", e);
             }
@@ -67,12 +68,8 @@ public class UsbFragment extends Fragment {
 
         usbExchangeButton = view.findViewById(R.id.usb_exchange_button);
         usbConnectionText = view.findViewById(R.id.usbconnection_response_text);
-
         usbManager = (UsbManager) getActivity().getSystemService(Context.USB_SERVICE);
         storageManager = (StorageManager) getActivity().getSystemService(Context.STORAGE_SERVICE);
-
-        // Check initial USB connection
-        checkUsbConnection(2);
 
         usbExchangeButton.setOnClickListener(v -> {
             logger.log(Level.INFO, "usbExchangeButton clicked");
@@ -102,26 +99,28 @@ public class UsbFragment extends Fragment {
     }
 
     @Override
+    public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        BundleClientActivity activity = (BundleClientActivity) getActivity();
+
+        if(activity.usbExists) {
+            if(usbDirExists()) {
+                updateUsbStatus(true,getString(R.string.usb_connection_detected),Color.GREEN);
+            }
+            else {
+                updateUsbStatus(false,getString(R.string.usb_was_connected_but_ddd_transport_directory_was_not_detected),Color.RED);
+            }
+        }
+        else {
+            updateUsbStatus(false, getString(R.string.no_usb_connection_detected), Color.RED);
+        }
+    }
+
+    @Override
     public void onDestroyView() {
         super.onDestroyView();
     }
 
-    //Method to check initial USB connection
-    private void checkUsbConnection(int tries) {
-        usbConnected = usbDirExists();
-        getActivity().getMainExecutor().execute(() -> {
-            if (!usbManager.getDeviceList().isEmpty()) {
-                if (!usbDirExists()) {
-                    updateUsbStatus(false,
-                                    getString(R.string.usb_was_connected_but_ddd_transport_directory_was_not_detected),
-                                    Color.RED);
-                }
-            }
-        });
-        if (tries > 0 && !usbConnected) {
-            scheduledExecutor.schedule(() -> checkUsbConnection(tries - 1), 1, TimeUnit.SECONDS);
-        }
-    }
 
     //Method to update USB status
     public void updateUsbStatus(boolean isConnected, String statusText, int color) {
@@ -143,10 +142,12 @@ public class UsbFragment extends Fragment {
             if (storageVolume.isRemovable()) {
                 usbDirectory = new File(storageVolume.getDirectory().getPath() + usbDirName);
                 if (usbDirectory.exists()) {
+                    logger.log(INFO, "DDD_transport directory exists.");
                     return true;
                 }
             }
         }
+        logger.log(INFO,"DDD_transport directory does not exist.");
         return false;
     }
 

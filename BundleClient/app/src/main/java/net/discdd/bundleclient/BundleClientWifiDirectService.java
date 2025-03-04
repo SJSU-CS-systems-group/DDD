@@ -8,6 +8,7 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
@@ -299,6 +300,22 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
             completableFuture.complete(FAILED_EXCHANGE_COUNTS);
             return completableFuture;
         }
+
+        NotificationChannel channel =
+                new NotificationChannel("DDD-Exchange", "DDD Bundle Client", NotificationManager.IMPORTANCE_HIGH);
+        channel.setDescription("Initiating Bundle Exchange...");
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "DDD-Client")
+                .setSmallIcon(R.drawable.bundleclient_icon)
+                .setContentTitle("Exchanging with Transport")
+                .setContentText("Initiating Bundle Exchange...")
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(false)
+                .setOngoing(true);
+
+        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        notificationManager.notify(1002, builder.build());
+
         // we want to use the executor to make sure that only one exchange is going on at a time
         periodicExecutor.submit(() -> {
             try {
@@ -309,6 +326,12 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
                 completableFuture.complete(FAILED_EXCHANGE_COUNTS);
             }
         });
+
+        completableFuture.thenApply(ex -> {
+            notificationManager.cancel(1002);
+            return null;
+        });
+
         return completableFuture;
     }
 

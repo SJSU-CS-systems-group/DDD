@@ -161,7 +161,7 @@ public class BundleClientWifiDirectFragment extends Fragment {
     }
 
     private BundleClientWifiDirectService getWifiBgService() {
-        return ((BundleClientActivity) requireActivity()).wifiBgService;
+        return WifiServiceManager.INSTANCE.getService();
     }
 
     // Method to update connected devices text

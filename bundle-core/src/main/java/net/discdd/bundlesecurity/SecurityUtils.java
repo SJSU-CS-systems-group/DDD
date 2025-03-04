@@ -44,22 +44,37 @@ public class SecurityUtils {
     public static final String PUB_KEY_FOOTER = "-----END EC PUBLIC KEY-----";
     public static final String PVT_KEY_HEADER = "-----BEGIN EC PRIVATE KEY-----";
     public static final String PVT_KEY_FOOTER = "-----END EC PRIVATE KEY-----";
-    public static final String CLIENT_KEY_PATH = "Client_Keys";
-    public static final String SERVER_KEY_PATH = "Server_Keys";
+
+    // ----------------- TransportSecurity -----------------
     public static final String TRANSPORT_KEY_PATH = "Transport_Keys";
-    public static final String TRANSPORT_IDENTITY_KEY = "transport_identity.pub";
-    public static final String TRANSPORT_IDENTITY_PRIVATE_KEY = "transportIdentity.pvt";
+    public static final String TRANSPORT = "transport";
+
+    // ----------------- ClientSecurity -----------------
+    public static final String CLIENT = "client";
     public static final String SESSION_STORE_FILE = "Session.store";
+    public static final String CLIENT_KEY_PATH = "Client_Keys";
     public static final String CLIENT_IDENTITY_KEY = "clientIdentity.pub";
     public static final String CLIENT_IDENTITY_PRIVATE_KEY = "clientIdentity.pvt";
     public static final String CLIENT_BASE_KEY = "clientBase.pub";
     public static final String CLIENT_BASE_PRIVATE_KEY = "clientBase.pvt";
+
+    // ----------------- ServerSecurity -----------------
+    public static final String SERVER = "server";
+    public static final String SERVER_KEY_PATH = "Server_Keys";
     public static final String SERVER_IDENTITY_KEY = "server_identity.pub";
     public static final String SERVER_SIGNED_PRE_KEY = "server_signed_pre.pub";
     public static final String SERVER_RATCHET_KEY = "server_ratchet.pub";
     public static final String SERVER_IDENTITY_PRIVATE_KEY = "serverIdentity.pvt";
     public static final String SERVER_SIGNEDPRE_PRIVATE_KEY = "serverSignedPreKey.pvt";
     public static final String SERVER_RATCHET_PRIVATE_KEY = "serverRatchetKey.pvt";
+
+    // ----------------- GrpcSecurity -----------------
+    public static final String GRPC_SECURITY_PATH = "GrpcSecurity";
+    public static final String GRPC_PUBLIC_KEY = "%sGrpcPub.pub";
+    public static final String GRPC_PRIVATE_KEY = "%sGrpcPvt.pvt";
+    public static final String GRPC_CERT = "%sGrpcCert.crt";
+
+    // ----------------- Other Utils -----------------
     public static final int CHUNKSIZE = 1024 * 1024; /* 1MB */
     public static final int ITERATIONS = 65536;
     public static final int KEYLEN = 256;
