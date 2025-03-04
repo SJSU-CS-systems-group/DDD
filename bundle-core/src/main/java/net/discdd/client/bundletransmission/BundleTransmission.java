@@ -94,6 +94,10 @@ public class BundleTransmission {
         this.clientRouting = ClientRouting.initializeInstance(clientPaths);
     }
 
+    public ClientPaths getClientPaths() {
+        return clientPaths;
+    }
+
     public void registerBundleId(String bundleId) throws IOException, WindowExceptions.BufferOverflow,
             GeneralSecurityException, InvalidKeyException {
         try (BufferedWriter bufferedWriter = new BufferedWriter(
