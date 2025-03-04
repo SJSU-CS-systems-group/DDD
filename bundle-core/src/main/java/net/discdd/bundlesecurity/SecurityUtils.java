@@ -121,10 +121,12 @@ public class SecurityUtils {
     }
 
     public static byte[] createEncryptedEncodedPublicKeyBytes(ECPublicKey clientPublicKey, ECPublicKey serverIdentityPublicKey) throws GeneralSecurityException, InvalidKeyException {
+        logger.log(INFO, "Encrypted Client Identity Public Key (Encryption): " + clientPublicKey);
+        logger.log(INFO, "Encrypted Server Identity Public Key (Encryption): " + serverIdentityPublicKey);
         // Create ephemeral public key pair and log it
         ECKeyPair ephemeralKeyPair = Curve.generateKeyPair();
-        logger.log(INFO, "Ephemeral Public Key: " + Base64.getUrlEncoder().encodeToString(ephemeralKeyPair.getPublicKey().serialize()));
-
+        logger.log(INFO, "Ephemeral Public Key (Encryption): " + Base64.getUrlEncoder().encodeToString(ephemeralKeyPair.getPublicKey().serialize()));
+        logger.log(INFO, "Ephemeral Private Key (Encryption): " + Base64.getUrlEncoder().encodeToString(ephemeralKeyPair.getPrivateKey().serialize()));
         // Calculate shared secret from server public key and ephemeral private key and log it
         byte[] agreement = Curve.calculateAgreement(serverIdentityPublicKey, ephemeralKeyPair.getPrivateKey());
         String sharedSecret = Base64.getUrlEncoder().encodeToString(agreement);
@@ -132,7 +134,7 @@ public class SecurityUtils {
 
         // Encrypt client public key using shared secret and log it
         String encryptedClientPubKey = encryptAesCbcPkcs5(sharedSecret, Base64.getUrlEncoder().encodeToString(clientPublicKey.serialize()));
-        logger.log(INFO, "Encrypted Client Public Key: " + encryptedClientPubKey);
+        logger.log(INFO, "Encrypted Client Public Key (Encryption): " + encryptedClientPubKey);
 
         return (PUB_KEY_HEADER + "\n" +
                 // Write encrypted client public key to file
@@ -145,14 +147,15 @@ public class SecurityUtils {
     public static String decodeEncryptedPublicKeyfromFile(ECPrivateKey ServerPrivKey, Path clientEncFile) throws IOException, InvalidKeyException, NoSuchAlgorithmException {
         List<String> encodedKeyList = Files.readAllLines(clientEncFile);
         if (encodedKeyList.size() == 3) {
+            logger.log(INFO, "Ephemeral keys missing, calling OG decode method... (Decryption)");
             return generateID(decodePublicKeyfromFile(clientEncFile));
         }
+        logger.log(INFO, "Server Identity Private Key (Decryption): " + Base64.getUrlEncoder().encodeToString(ServerPrivKey.serialize()));
         if ((encodedKeyList.get(0).equals(PUB_KEY_HEADER)) && (encodedKeyList.get(3).equals(PUB_KEY_FOOTER))) {
             // Read encrypted client public key and ephemeral public key from file
             byte[] encryptedClientPublicKey = Base64.getUrlDecoder().decode(encodedKeyList.get(1));
+            logger.log(INFO, "Encrypted Client Identity Public Key (Decryption): " + Base64.getUrlEncoder().encodeToString(encryptedClientPublicKey));
             byte[] ephemeralKeyBytes = Base64.getUrlDecoder().decode(encodedKeyList.get(2));
-            logger.log(INFO, "Ephemeral Public Key Bytes (Decryption): " + Base64.getUrlEncoder().encodeToString(ephemeralKeyBytes));
-
             // Decode ephemeral public key and log it
             ECPublicKey ephemeralPublicKey = Curve.decodePoint(ephemeralKeyBytes, 0);
             logger.log(INFO, "Ephemeral Public Key (Decryption): " + Base64.getUrlEncoder().encodeToString(ephemeralPublicKey.serialize()));
@@ -233,9 +236,7 @@ public class SecurityUtils {
 
     public static String getClientID(Path bundlePath) throws IOException, InvalidKeyException,
             NoSuchAlgorithmException {
-        //create server secuirty instance
-        //fetch server priv key
-        ServerSecurity serverSecurityInstance = ServerSecurity.getInstance(bundlePath);
+        ServerSecurity serverSecurityInstance = ServerSecurity.getInstance(bundlePath.getParent());
         ECPrivateKey ServerPrivKey = serverSecurityInstance.getSigningKey();
         return decodeEncryptedPublicKeyfromFile(ServerPrivKey, bundlePath.resolve(CLIENT_IDENTITY_KEY));
     }

@@ -380,7 +380,7 @@ public class ServerSecurity {
 
         //create server secuirty instance
         //fetch server priv key
-        ServerSecurity serverSecurityInstance = ServerSecurity.getInstance(bundlePath);
+        ServerSecurity serverSecurityInstance = ServerSecurity.getInstance(bundlePath.getParent());
         ECPrivateKey ServerPrivKey = serverSecurityInstance.getSigningKey();
         byte[] clientIdentityKeyBytes =
                 SecurityUtils.decodeEncryptedPublicKeyfromFile(ServerPrivKey, bundlePath.resolve(CLIENT_IDENTITY_KEY)).getBytes();

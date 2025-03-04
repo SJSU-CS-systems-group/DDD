@@ -40,7 +40,6 @@ import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
-import static net.discdd.bundlesecurity.SecurityUtils.createEncryptedEncodedPublicKeyBytes;
 
 public class ClientSecurity {
 
@@ -111,15 +110,15 @@ public class ClientSecurity {
             Files.write(path.resolve(SecurityUtils.CLIENT_BASE_PRIVATE_KEY), ourBaseKey.getPrivateKey().serialize());
         }
 
-        try {
-            Files.write(identityKeyPaths[0], createEncryptedEncodedPublicKeyBytes(ourIdentityKeyPair.getPublicKey().getPublicKey(), theirIdentityKey.getPublicKey()), StandardOpenOption.CREATE,
-                        StandardOpenOption.TRUNCATE_EXISTING);
-        } catch (GeneralSecurityException e) {
-            throw new RuntimeException(e);
-        } catch (InvalidKeyException e) {
-            throw new RuntimeException(e);
-        }
-//        SecurityUtils.createEncodedPublicKeyFile(ourIdentityKeyPair.getPublicKey().getPublicKey(), identityKeyPaths[0]);
+//        try {
+//            Files.write(identityKeyPaths[0], createEncryptedEncodedPublicKeyBytes(ourIdentityKeyPair.getPublicKey().getPublicKey(), theirIdentityKey.getPublicKey()), StandardOpenOption.CREATE,
+//                        StandardOpenOption.TRUNCATE_EXISTING);
+//        } catch (GeneralSecurityException e) {
+//            throw new RuntimeException(e);
+//        } catch (InvalidKeyException e) {
+//            throw new RuntimeException(e);
+//        }
+        SecurityUtils.createEncodedPublicKeyFile(ourIdentityKeyPair.getPublicKey().getPublicKey(), identityKeyPaths[0]);
         SecurityUtils.createEncodedPublicKeyFile(ourBaseKey.getPublicKey(), identityKeyPaths[1]);
         SecurityUtils.createEncodedPublicKeyFile(theirIdentityKey.getPublicKey(), identityKeyPaths[2]);
         return identityKeyPaths;

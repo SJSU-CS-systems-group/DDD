@@ -340,7 +340,7 @@ public class BundleUtils {
 
         // store the keys
         try {
-            outerJar.createEntry(SecurityUtils.CLIENT_IDENTITY_KEY, createEncryptedEncodedPublicKeyBytes(clientIdentityPublicKey, serverIdentityPublicKey));
+            outerJar.createEntry(SecurityUtils.CLIENT_IDENTITY_KEY, createEncryptedEncodedPublicKeyBytes(serverIdentityPublicKey, clientIdentityPublicKey));
         } catch (GeneralSecurityException e) {
             throw new RuntimeException(e);
         }
