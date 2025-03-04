@@ -15,10 +15,10 @@ import net.discdd.bundletransport.StorageManager
 
 data class StorageState(
     val sliderValue: Int = 0,
-    val freeSpace: Int = 0,
-    val usedSpace: Int = 0,
-    val totalBytes: Int = 0,
-    val actualStorageValue: Int = 0,
+    val freeSpace: Long = 0L,
+    val usedSpace: Long = 0L,
+    val totalBytes: Long = 100L,
+    val actualStorageValue: Int = 100,
     val showMessage: String? = null
 )
 
@@ -79,10 +79,10 @@ class StorageViewModel(application: Application) : AndroidViewModel(application)
         _state.update { it.copy(showMessage = null) }
     }
 
-    private fun getUsedBytes(): Int {
+    private fun getUsedBytes(): Long {
         return try {
             val totalFiles = storageManager.getStorageList()
-            storageManager.getStorageSize(totalFiles).toInt()
+            storageManager.getStorageSize(totalFiles)
         } catch (e: Exception) {
             throw RuntimeException(e)
         }
@@ -100,9 +100,9 @@ class StorageViewModel(application: Application) : AndroidViewModel(application)
             .getInt("seekBarPosition", 0)
     }
 
-    private fun getTotalBytes(): Int {
+    private fun getTotalBytes(): Long {
         return StatFs(Environment.getExternalStorageDirectory().path)
-            .totalBytes.toInt()
+            .totalBytes
             .div(1024 * 1024)
     }
 }

@@ -48,6 +48,8 @@ fun StorageScreen(
     viewModel: StorageViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val sliderRange = 0f..maxOf(1000f, state.totalBytes.toFloat())
+    val maxSliderValue = minOf(state.totalBytes.toFloat(), state.sliderValue.toFloat())
 
     LaunchedEffect(state.showMessage) {
         if (state.showMessage != null) {
@@ -63,7 +65,7 @@ fun StorageScreen(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Slider(
-            value = state.sliderValue.toFloat(),
+            value = maxOf(0f, minOf(maxSliderValue, sliderRange.endInclusive)),
             onValueChange = { viewModel.onSliderValueChange(it.toInt()) },
             valueRange = 0f..state.totalBytes.toFloat(),
         )
