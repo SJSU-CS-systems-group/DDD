@@ -1,11 +1,14 @@
 package net.discdd.bundleclient;
 
+import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 
+import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -31,7 +34,6 @@ import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
 import net.discdd.bundleclient.screens.ServerFragment;
 import net.discdd.viewmodels.PermissionsViewModel;
-import net.discdd.client.bundlerouting.ClientWindow;
 
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
