@@ -49,7 +49,6 @@
     <string name="sending_adu_s_d_from_s">Sending ADU %s:%d from %s</string>
     <string name="exchanged_d_bundles_to_and_d_bundles_from_s">Exchanged %d bundles to and %d bundles from %s</string>
     <string name="exchanged_d_bundles_to_and_d_bundles_from_server">Exchanged %d bundles to and %d bundles from server</string>
-    <string name="reload">Reload</string>
     <string name="usb_device_attached_checking_for_storage_volumes">USB device attached, checking for storage volumes</string>
     <string name="usb_connection_detected">USB connection detected</string>
     <string name="usb_device_not_connected">USB device not connected</string>
