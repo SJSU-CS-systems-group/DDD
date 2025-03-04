@@ -56,4 +56,6 @@
     <string name="connecting_to_server">Connecting to server...</string>
     <string name="upload_status">Upload status: %1$s, Download status: %2$s</string>
     <string name="service_not_available">Error: Service is not available.</string>
+    <string name="initiating_bundle_exchange">Initiating Bundle Exchange...</string>
+    <string name="exchanging_with_transport">Exchanging with Transport</string>
 </resources>

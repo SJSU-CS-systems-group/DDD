@@ -49,4 +49,7 @@
     <string name="usb_device_detached">Dispositivo USB desconectado</string>
     <string name="exchange_usb_data">Intercambiar Datos USB</string>
     <string name="usb_connection_status">Estado de Conexión USB</string>
+    <string name="initiating_bundle_exchange">Iniciando intercambio de paquetes...
+</string>
+    <string name="exchanging_with_client">Intercambio con el cliente</string>
 </resources>
