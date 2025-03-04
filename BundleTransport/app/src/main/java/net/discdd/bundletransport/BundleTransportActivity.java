@@ -123,7 +123,7 @@ public class BundleTransportActivity extends AppCompatActivity {
 
         this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
         try {
-            this.transportGrpcSecurity = GrpcSecurity.initializeInstance(transportPaths.grpcSecurityPath,
+            this.transportGrpcSecurity = GrpcSecurity.getInstance(transportPaths.grpcSecurityPath,
                                                                          SecurityUtils.TRANSPORT);
         } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | InvalidAlgorithmParameterException |
                  CertificateException | NoSuchProviderException | OperatorCreationException e) {

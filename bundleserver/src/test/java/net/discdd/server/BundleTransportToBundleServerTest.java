@@ -1,10 +1,12 @@
 package net.discdd.server;
 
 import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
+import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.grpc.BundleExchangeServiceGrpc;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.pathutils.TransportPaths;
+import net.discdd.tls.DDDNettyTLS;
+import net.discdd.tls.GrpcSecurity;
 import net.discdd.transport.TransportToBundleServerManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -39,6 +42,7 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
     private static ManagedChannel channel;
     private Path toClientPath;
     private Path toServerPath;
+    private GrpcSecurity transportGrpcSecurity;
 
     @BeforeEach
     void setUp() {
@@ -47,6 +51,12 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
 
         toClientPath = transportPaths.toClientPath;
         toServerPath = transportPaths.toServerPath;
+
+        try {
+            transportGrpcSecurity = GrpcSecurity.getInstance(transportPaths.grpcSecurityPath, SecurityUtils.TRANSPORT);
+        } catch (Exception e) {
+            logger.severe("Failed to initialize GrpcSecurity: " + e.getMessage());
+        }
 
         manager = new TransportToBundleServerManager(transportPaths, "localhost",
                                                      Integer.toString(BUNDLESERVER_GRPC_PORT), (Void) -> {
@@ -59,8 +69,8 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
     }
 
     @BeforeEach
-    void setUpEach() {
-        channel = ManagedChannelBuilder.forAddress("localhost", BUNDLESERVER_GRPC_PORT).usePlaintext().build();
+    void setUpEach() throws SSLException {
+        channel = DDDNettyTLS.createGrpcChannel(transportGrpcSecurity.getGrpcKeyPair(), transportGrpcSecurity.getGrpcCert(), "localhost", BUNDLESERVER_GRPC_PORT);
         stub = BundleExchangeServiceGrpc.newStub(channel);
         blockingStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
 

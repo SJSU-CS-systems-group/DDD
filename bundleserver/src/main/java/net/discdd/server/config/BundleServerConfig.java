@@ -17,6 +17,7 @@ public class BundleServerConfig {
     private BundleTransmission bundleTransmission = new BundleTransmission();
     private ApplicationDataManager applicationDataManager = new ApplicationDataManager();
     private BundleSecurity bundleSecurity = new BundleSecurity();
+    private GrpcSecurity grpcSecurity = new GrpcSecurity();
 
     @Getter
     @Setter
@@ -51,5 +52,11 @@ public class BundleServerConfig {
     @Setter
     public static class BundleSecurity {
         private Path serverKeyPath;
+    }
+
+    @Getter
+    @Setter
+    public static class GrpcSecurity {
+        private Path grpcSecurityPath;
     }
 }

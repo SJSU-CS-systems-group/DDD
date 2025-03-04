@@ -62,9 +62,10 @@ public class RpcServer {
         }
 
         try {
-            this.transportGrpcSecurity = GrpcSecurity.getInstance();
-        } catch (IOException | NoSuchAlgorithmException | InvalidAlgorithmParameterException | CertificateException |
-                 NoSuchProviderException | OperatorCreationException e) {
+            this.transportGrpcSecurity = GrpcSecurity.getInstance(transportPaths.grpcSecurityPath, SecurityUtils.TRANSPORT);
+        } catch (IOException | NoSuchAlgorithmException | InvalidAlgorithmParameterException |
+                 CertificateException | NoSuchProviderException | OperatorCreationException |
+                 InvalidKeyException e) {
             logger.log(SEVERE, "Failed to initialize GrpcSecurity for transport", e);
         }
 

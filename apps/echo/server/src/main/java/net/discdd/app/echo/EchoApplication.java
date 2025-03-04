@@ -1,16 +1,34 @@
 package net.discdd.app.echo;
 
 import io.grpc.ConnectivityState;
-import io.grpc.ManagedChannelBuilder;
+import io.grpc.netty.GrpcSslContexts;
+import io.grpc.netty.NettyChannelBuilder;
+import io.netty.handler.ssl.SslContext;
+import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.grpc.ConnectionData;
 import net.discdd.grpc.GrpcServerRunner;
 import net.discdd.grpc.ServiceAdapterRegistryServiceGrpc;
+import net.discdd.tls.DDDTLSUtil;
+import net.discdd.tls.GrpcSecurity;
+import net.discdd.tls.NettyClientCertificateInterceptor;
+import org.bouncycastle.operator.OperatorCreationException;
 import org.springframework.boot.Banner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Import;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PropertiesLoaderUtils;
+import org.whispersystems.libsignal.InvalidKeyException;
 
+import javax.net.ssl.SSLException;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.cert.CertificateException;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
@@ -37,18 +55,58 @@ public class EchoApplication {
         }
 
         var app = new SpringApplication(EchoApplication.class);
+
+        Resource resource = new FileSystemResource(args[0]);
+        if (!resource.exists()) {
+            logger.log(SEVERE, String.format("Entered properties file path %s does not exist!", args[0]));
+            System.exit(1);
+        }
+
+        try {
+            var properties = PropertiesLoaderUtils.loadProperties(resource);
+            app.setDefaultProperties(properties);
+        } catch (Exception e) {
+            logger.log(SEVERE, "Please enter valid properties file path!");
+            System.exit(1);
+        }
+
         app.setWebApplicationType(WebApplicationType.NONE);
         app.setBannerMode(Banner.Mode.OFF);
         // we need to register with the BundleServer in an application initializer so that
         // the logging will be set up correctly
         app.addInitializers((actx) -> {
-            var bundleServerURL = args[0];
+            var bundleServerURL = actx.getEnvironment().getProperty("bundle-server.url");
             var myGrpcUrl = actx.getEnvironment().getProperty("my.grpc.url");
             if (myGrpcUrl == null) {
                 logger.log(SEVERE, "my.grpc.url is not set in application.properties");
                 System.exit(1);
             }
-            var managedChannel = ManagedChannelBuilder.forTarget(bundleServerURL).usePlaintext().build();
+
+            GrpcSecurity grpcSecurity = null;
+
+            try {
+                grpcSecurity = GrpcSecurity.getInstance(Path.of(actx.getEnvironment().getProperty("echo-server.root-dir")), SecurityUtils.ADAPTER);
+            } catch (IOException | NoSuchAlgorithmException | InvalidAlgorithmParameterException |
+                     CertificateException | NoSuchProviderException | InvalidKeyException |  OperatorCreationException e) {
+                logger.log(SEVERE, "Failed to initialize GrpcSecurity for transport", e);
+            }
+
+            SslContext sslClientContext = null;
+            try {
+                sslClientContext = GrpcSslContexts.forClient()
+                        .keyManager(grpcSecurity.getGrpcKeyPair().getPrivate(), grpcSecurity.getGrpcCert())
+                        .trustManager(DDDTLSUtil.trustManager)
+                        .build();
+            } catch (SSLException e) {
+                logger.log(SEVERE, "Could not create SSL context: " + e.getMessage());
+                System.exit(1);
+            }
+            var managedChannel = NettyChannelBuilder.forTarget(bundleServerURL)
+                    .sslContext(sslClientContext)
+                    .intercept(new NettyClientCertificateInterceptor())
+                    .useTransportSecurity()
+                    .build();
+
             var channelState = managedChannel.getState(true);
             try {
                 // TODO: remove the false when we figure out that the connect is successful!

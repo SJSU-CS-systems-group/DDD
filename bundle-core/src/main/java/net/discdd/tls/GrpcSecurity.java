@@ -52,11 +52,12 @@ public class GrpcSecurity {
         }
     }
 
-    public static synchronized GrpcSecurity initializeInstance(Path rootPath, String type) throws IOException, NoSuchAlgorithmException, org.whispersystems.libsignal.InvalidKeyException, InvalidAlgorithmParameterException, CertificateException, NoSuchProviderException, OperatorCreationException {
+    public static synchronized GrpcSecurity getInstance(Path rootPath, String type) throws IOException, NoSuchAlgorithmException, org.whispersystems.libsignal.InvalidKeyException, InvalidAlgorithmParameterException, CertificateException, NoSuchProviderException, OperatorCreationException {
         if (GrpcSecurityInstance == null) {
             GrpcSecurityInstance = new GrpcSecurity(rootPath, type);
+            logger.log(INFO, "GrpcSecurity Instance initialized!");
         } else {
-            logger.log(FINE, "[Sec]: Client Security Instance is already initialized!");
+            logger.log(FINE, "GrpcSecurity Instance is already initialized!");
         }
 
         return GrpcSecurityInstance;

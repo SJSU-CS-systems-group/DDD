@@ -52,7 +52,7 @@ public class BundleSecurity {
         clientBundleGenerator = ClientBundleGenerator.initializeInstance(client, clientPaths);
         clientWindow = ClientWindow.initializeInstance(5, client.getClientID(), clientPaths);
         try {
-            this.clientGrpcSecurity = GrpcSecurity.initializeInstance(clientPaths.grpcSecurityPath,
+            this.clientGrpcSecurity = GrpcSecurity.getInstance(clientPaths.grpcSecurityPath,
                     SecurityUtils.CLIENT);
         } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | InvalidAlgorithmParameterException |
                  CertificateException | NoSuchProviderException | OperatorCreationException e) {

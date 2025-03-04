@@ -1,11 +1,14 @@
 package net.discdd.app.k9;
 
+import net.discdd.grpc.GrpcServerRunner;
 import org.junit.jupiter.api.Test;
-// import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 
 @DataJpaTest
 class K9ApplicationTests {
+    @MockBean
+    private GrpcServerRunner grpcServerRunner;
 
     @Test
     void contextLoads() {

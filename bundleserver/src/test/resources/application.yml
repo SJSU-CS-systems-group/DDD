@@ -28,6 +28,8 @@ bundle-server:
   bundle-security:
     server-key-path: "${bundle-server.bundle-store-root}BundleSecurity/Keys/Server"
     server-serverkeys-path: "${bundle-server.bundle-store-root}BundleSecurity/Keys/Server/Server_Keys"
+  grpc-security:
+    grpc-security-path: "${bundle-server.bundle-store-root}GrpcSecurity"
 
 jdbc:
   driverClassName: org.h2.Driver
