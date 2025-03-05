@@ -5,6 +5,7 @@ import io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.NettyChannelBuilder;
 import io.netty.handler.ssl.SslContext;
 import net.discdd.bundlesecurity.SecurityUtils;
+import net.discdd.config.GrpcSecurityConfig;
 import net.discdd.grpc.ConnectionData;
 import net.discdd.grpc.GrpcServerRunner;
 import net.discdd.grpc.ServiceAdapterRegistryServiceGrpc;
@@ -42,7 +43,7 @@ import static java.util.logging.Level.WARNING;
  * the GrpcService annotation.
  */
 @SpringBootApplication
-@Import(GrpcServerRunner.class)
+@Import({GrpcServerRunner.class, GrpcSecurityConfig.class})
 public class K9Application {
     final static Logger logger = Logger.getLogger(K9Application.class.getName());
 
@@ -83,7 +84,7 @@ public class K9Application {
             GrpcSecurity grpcSecurity = null;
 
             try {
-                grpcSecurity = GrpcSecurity.getInstance(Path.of(actx.getEnvironment().getProperty("k9-server.root-dir")), SecurityUtils.ADAPTER);
+                grpcSecurity = GrpcSecurity.getInstance(Path.of(actx.getEnvironment().getProperty("k9-server.root-dir"), SecurityUtils.GRPC_SECURITY_PATH), SecurityUtils.ADAPTER);
             } catch (IOException | NoSuchAlgorithmException | InvalidAlgorithmParameterException | InvalidKeyException |
                      CertificateException | NoSuchProviderException | OperatorCreationException e) {
                 logger.log(SEVERE, "Failed to initialize GrpcSecurity for transport", e);

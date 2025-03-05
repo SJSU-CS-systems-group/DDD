@@ -5,6 +5,7 @@ import io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.NettyChannelBuilder;
 import io.netty.handler.ssl.SslContext;
 import net.discdd.bundlesecurity.SecurityUtils;
+import net.discdd.config.GrpcSecurityConfig;
 import net.discdd.grpc.ConnectionData;
 import net.discdd.grpc.GrpcServerRunner;
 import net.discdd.grpc.ServiceAdapterRegistryServiceGrpc;
@@ -44,7 +45,7 @@ import static java.util.logging.Level.WARNING;
  * the GrpcService annotation.
  */
 @SpringBootApplication
-@Import(GrpcServerRunner.class)
+@Import({GrpcServerRunner.class, GrpcSecurityConfig.class})
 public class EchoApplication {
     final static Logger logger = Logger.getLogger(EchoApplication.class.getName());
 
