@@ -34,7 +34,6 @@ import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
 import net.discdd.bundleclient.screens.ServerFragment;
 import net.discdd.viewmodels.PermissionsViewModel;
-import net.discdd.client.bundlerouting.ClientWindow;
 
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
@@ -55,6 +54,7 @@ public class BundleClientActivity extends AppCompatActivity {
     private UsbFragment usbFragment;
     private ServerFragment serverFragment;
     private LogFragment logFragment;
+    private BundleManagerFragment bundleManagerFragment;
     private ViewPager2 viewPager;
     private TabLayout tabLayout;
     private TabLayoutMediator tabLayoutMediator;
@@ -120,6 +120,7 @@ public class BundleClientActivity extends AppCompatActivity {
         homeFragment = BundleClientWifiDirectFragment.newInstance();
         usbFragment = UsbFragment.newInstance();
         logFragment = LogFragment.newInstance();
+        bundleManagerFragment = BundleManagerFragment.newInstance();
         fragmentsWithTitles.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         serverFragment = new ServerFragment();
@@ -159,6 +160,7 @@ public class BundleClientActivity extends AppCompatActivity {
             newFragments.add(new FragmentWithTitle(homeFragment, getString(R.string.home_tab)));
             newFragments.add(new FragmentWithTitle(serverFragment, getString(R.string.server_tab)));
             newFragments.add(new FragmentWithTitle(logFragment, getString(R.string.logs_tab)));
+            newFragments.add(new FragmentWithTitle(bundleManagerFragment, getString(R.string.bm_tab)));
             if (usbExists) {
                 newFragments.add(new FragmentWithTitle(usbFragment, getString(R.string.usb_tab)));
             }
@@ -189,7 +191,11 @@ public class BundleClientActivity extends AppCompatActivity {
     @Override
     public void onResume() {
         super.onResume();
-        checkRuntimePermission();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
     }
 
     @Override
