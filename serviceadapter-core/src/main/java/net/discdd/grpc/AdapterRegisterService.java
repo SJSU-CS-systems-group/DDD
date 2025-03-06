@@ -53,7 +53,7 @@ public class AdapterRegisterService {
 
         GrpcSecurity grpcSecurity;
         try {
-            grpcSecurity = GrpcSecurity.getInstance(Path.of(rootDir, SecurityUtils.GRPC_SECURITY_PATH), SecurityUtils.ADAPTER);
+            grpcSecurity = GrpcSecurity.getInstance(Path.of(rootDir, SecurityUtils.GRPC_SECURITY_PATH), SecurityUtils.SERVER);
         } catch (IOException | NoSuchAlgorithmException | InvalidAlgorithmParameterException |
                  CertificateException | NoSuchProviderException | InvalidKeyException | OperatorCreationException e) {
             logger.log(SEVERE, "Failed to initialize GrpcSecurity", e);

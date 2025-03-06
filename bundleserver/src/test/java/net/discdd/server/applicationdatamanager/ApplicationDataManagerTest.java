@@ -1,6 +1,5 @@
 package net.discdd.server.applicationdatamanager;
 
-import net.discdd.grpc.GrpcServerRunner;
 import net.discdd.model.ADU;
 import net.discdd.server.config.BundleServerConfig;
 import net.discdd.server.repository.BundleMetadataRepository;
@@ -14,7 +13,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -26,8 +26,13 @@ import java.util.ArrayList;
  */
 @DataJpaTest
 public class ApplicationDataManagerTest {
-    @MockBean
-    private GrpcServerRunner grpcServerRunner;
+    @TempDir
+    static Path tempDir;
+
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        registry.add("bundle-server.bundle-store-root", () -> tempDir.toString());
+    }
 
     @Autowired
     private RegisteredAppAdapterRepository registeredAppAdapterRepository;
