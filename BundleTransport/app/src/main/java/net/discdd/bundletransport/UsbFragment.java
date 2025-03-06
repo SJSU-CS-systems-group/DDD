@@ -44,7 +44,6 @@ public class UsbFragment extends Fragment {
     private TextView toSettingstext;
     private Button usbExchangeButton;
     private TextView usbConnectionText;
-//    private UsbManager usbManager;
     public static boolean usbConnected = false;
     private static final String usbDirName = "/DDD_transport";
     private StorageManager storageManager;
