@@ -34,10 +34,10 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
-import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
 import net.discdd.bundletransport.screens.StorageFragment;
 import net.discdd.pathutils.TransportPaths;
+import net.discdd.screens.LogFragment;
 import net.discdd.tls.GrpcSecurity;
 import net.discdd.transport.GrpcSecurityHolder;
 import net.discdd.viewmodels.PermissionsViewModel;
@@ -139,7 +139,7 @@ public class BundleTransportActivity extends AppCompatActivity {
         transportWifiFragment = new TitledFragment(getString(R.string.local_wifi), transportFrag);
         storageFragment = new TitledFragment("Storage", new StorageFragment());
         usbFrag = new TitledFragment("USB", UsbFragment.newInstance(transportPaths));
-        logFragment = new TitledFragment(getString(R.string.logs), LogFragment.newInstance());
+        logFragment = new TitledFragment(getString(R.string.logs), new LogFragment());
 
         permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
         titledPermissionsFragment = new TitledFragment("Permissions", PermissionsFragment.newInstance());

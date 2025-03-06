@@ -30,9 +30,9 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
-import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
 import net.discdd.bundleclient.screens.ServerFragment;
+import net.discdd.screens.LogFragment;
 import net.discdd.viewmodels.PermissionsViewModel;
 
 import java.util.ArrayList;
@@ -119,7 +119,7 @@ public class BundleClientActivity extends AppCompatActivity {
         permissionsFragment = PermissionsFragment.newInstance();
         homeFragment = BundleClientWifiDirectFragment.newInstance();
         usbFragment = UsbFragment.newInstance();
-        logFragment = LogFragment.newInstance();
+        logFragment = new LogFragment();
         bundleManagerFragment = BundleManagerFragment.newInstance();
         fragmentsWithTitles.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
