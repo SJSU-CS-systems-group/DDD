@@ -22,7 +22,7 @@ spring:
 
 serviceadapter:
   datacheck:
-    interval: 10m
+    interval: 10s
 
 ssl-grpc:
   server:

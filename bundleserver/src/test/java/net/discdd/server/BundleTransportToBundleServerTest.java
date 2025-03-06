@@ -1,12 +1,12 @@
 package net.discdd.server;
 
 import io.grpc.ManagedChannel;
-import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.grpc.BundleExchangeServiceGrpc;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.tls.DDDNettyTLS;
 import net.discdd.tls.GrpcSecurity;
+import net.discdd.transport.GrpcSecurityHolder;
 import net.discdd.transport.TransportToBundleServerManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,7 +53,7 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
         toServerPath = transportPaths.toServerPath;
 
         try {
-            transportGrpcSecurity = GrpcSecurity.getInstance(transportPaths.grpcSecurityPath, SecurityUtils.TRANSPORT);
+            transportGrpcSecurity = GrpcSecurityHolder.setGrpcSecurityHolder(transportPaths.grpcSecurityPath);
         } catch (Exception e) {
             logger.severe("Failed to initialize GrpcSecurity: " + e.getMessage());
         }

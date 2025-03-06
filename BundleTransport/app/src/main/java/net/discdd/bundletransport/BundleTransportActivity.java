@@ -39,6 +39,7 @@ import net.discdd.android.fragments.PermissionsFragment;
 import net.discdd.bundletransport.screens.StorageFragment;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.tls.GrpcSecurity;
+import net.discdd.transport.GrpcSecurityHolder;
 import net.discdd.viewmodels.PermissionsViewModel;
 
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -123,9 +124,8 @@ public class BundleTransportActivity extends AppCompatActivity {
 
         this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
         try {
-            this.transportGrpcSecurity = GrpcSecurity.getInstance(transportPaths.grpcSecurityPath,
-                                                                         SecurityUtils.TRANSPORT);
-        } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | InvalidAlgorithmParameterException |
+            this.transportGrpcSecurity = GrpcSecurityHolder.setGrpcSecurityHolder(transportPaths.grpcSecurityPath);
+        } catch (IOException | NoSuchAlgorithmException | InvalidAlgorithmParameterException |
                  CertificateException | NoSuchProviderException | OperatorCreationException e) {
             logger.log(SEVERE, "Failed to initialize GrpcSecurity for transport", e);
         }

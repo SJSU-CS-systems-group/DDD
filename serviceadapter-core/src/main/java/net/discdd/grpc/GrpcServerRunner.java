@@ -31,15 +31,15 @@ public class GrpcServerRunner implements CommandLineRunner {
     private Thread awaitThread;
 
 
-    public GrpcServerRunner(@Value("${ssl-grpc.server.port}") int port) {
+    public GrpcServerRunner(@Value("${ssl-grpc.server.port}") int port, GrpcSecurity grpcSecurity) {
         BUNDLE_SERVER_PORT = port;
+        this.grpcSecurity = grpcSecurity;
     }
 
     @Override
     public void run(String... args) throws Exception {
         services = context.getBeansWithAnnotation(GrpcService.class).values().stream().map(o -> (BindableService) o).collect(Collectors.toList());
 
-        grpcSecurity = GrpcSecurity.getInstance();
         server = DDDNettyTLS.createGrpcServer(
                 grpcSecurity.getGrpcKeyPair(),
                 grpcSecurity.getGrpcCert(),

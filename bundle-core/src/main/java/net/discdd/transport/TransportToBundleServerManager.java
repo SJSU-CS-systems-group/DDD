@@ -5,7 +5,6 @@ import io.grpc.ManagedChannel;
 import io.grpc.okhttp.OkHttpChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
-import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.grpc.BundleChunk;
 import net.discdd.grpc.BundleDownloadRequest;
 import net.discdd.grpc.BundleDownloadResponse;
@@ -68,7 +67,7 @@ public class TransportToBundleServerManager implements Runnable {
         this.fromClientPath = transportPaths.toServerPath;
         this.fromServerPath = transportPaths.toClientPath;
         try {
-            this.transportGrpcSecurity = GrpcSecurity.getInstance(transportPaths.grpcSecurityPath, SecurityUtils.TRANSPORT);
+            this.transportGrpcSecurity = GrpcSecurityHolder.getGrpcSecurityHolder();
         } catch (Exception e) {
             logger.log(SEVERE, "Failed to get GrpcSecurity instance", e);
         }

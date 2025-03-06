@@ -23,7 +23,7 @@ public class GrpcSecurityConfig {
         try {
             logger.log(INFO, "Creating GrpcSecurity instance");
 
-            return GrpcSecurity.getInstance(grpcSecurityPath, SecurityUtils.SERVER);
+            return new GrpcSecurity(grpcSecurityPath, SecurityUtils.SERVER);
         } catch (Exception e) {
             logger.log(SEVERE, "Catch adapter security failures");
             e.printStackTrace();
