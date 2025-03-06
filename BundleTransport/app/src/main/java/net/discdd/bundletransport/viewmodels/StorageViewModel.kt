@@ -14,11 +14,11 @@ import net.discdd.bundletransport.R
 import net.discdd.bundletransport.StorageManager
 
 data class StorageState(
-    val sliderValue: Int = 0,
+    val sliderValue: Long = 0,
     val freeSpace: Long = 0L,
     val usedSpace: Long = 0L,
     val totalBytes: Long = 100L,
-    val actualStorageValue: Int = 100,
+    val actualStorageValue: Long = 100L,
     val showMessage: String? = null
 )
 
@@ -53,7 +53,7 @@ class StorageViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun onSliderValueChange(value: Int) {
+    fun onSliderValueChange(value: Long) {
         _state.update { it.copy(
             sliderValue = value,
             actualStorageValue = minStorage + value,
@@ -88,10 +88,10 @@ class StorageViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    private fun savePreference(value: Int) {
+    private fun savePreference(value: Long) {
         context.getSharedPreferences("SeekBarPrefs", Context.MODE_PRIVATE)
             .edit()
-            .putInt("seekBarPosition", value)
+            .putLong("seekBarPosition", value)
             .apply()
     }
 

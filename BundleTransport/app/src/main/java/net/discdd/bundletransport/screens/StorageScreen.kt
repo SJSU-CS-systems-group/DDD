@@ -66,7 +66,7 @@ fun StorageScreen(
     ) {
         Slider(
             value = maxOf(0f, minOf(maxSliderValue, sliderRange.endInclusive)),
-            onValueChange = { viewModel.onSliderValueChange(it.toInt()) },
+            onValueChange = { viewModel.onSliderValueChange(it.toLong()) },
             valueRange = 0f..state.totalBytes.toFloat(),
         )
         Text("Storage: ${state.actualStorageValue} MB")
