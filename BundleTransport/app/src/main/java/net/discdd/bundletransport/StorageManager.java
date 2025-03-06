@@ -104,7 +104,7 @@ public class StorageManager {
         return s;
     }
 
-    public void setUserStoragePreference(int newPreference) {
+    public void setUserStoragePreference(Long newPreference) {
         this.userStoragePreference = newPreference;
         logger.log(INFO, "getting new preference: " + newPreference);
     }
