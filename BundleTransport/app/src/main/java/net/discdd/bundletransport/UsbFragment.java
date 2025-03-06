@@ -44,7 +44,7 @@ public class UsbFragment extends Fragment {
     private TextView toSettingstext;
     private Button usbExchangeButton;
     private TextView usbConnectionText;
-    private UsbManager usbManager;
+//    private UsbManager usbManager;
     public static boolean usbConnected = false;
     private static final String usbDirName = "/DDD_transport";
     private StorageManager storageManager;
@@ -73,7 +73,6 @@ public class UsbFragment extends Fragment {
         usbConnectionText = view.findViewById(R.id.usbconnection_response_text);
 
         storageManager = (StorageManager) getActivity().getSystemService(Context.STORAGE_SERVICE);
-        usbManager = (UsbManager) getActivity().getSystemService(Context.USB_SERVICE);
         usbFileManager = new UsbFileManager(storageManager, transportPaths);
 
         boolean hasPermission = isManageAllFilesAccessGranted();
@@ -145,7 +144,7 @@ public class UsbFragment extends Fragment {
         }
     }
 
-    public boolean isManageAllFilesAccessGranted() {
+    private boolean isManageAllFilesAccessGranted() {
         return Environment.isExternalStorageManager();
     }
 
