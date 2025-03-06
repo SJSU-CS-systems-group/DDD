@@ -28,7 +28,7 @@ class EchoApplicationTests {
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("echo-server.root-dir", () -> tempDir.toString());
+        registry.add("adapter-server.root-dir", () -> tempDir.toString());
     }
     private static KeyPair clientKeyPair;
     private static X509Certificate clientCert;

@@ -9,9 +9,8 @@ import net.discdd.tls.DDDTLSUtil;
 import net.discdd.tls.GrpcSecurity;
 import net.discdd.tls.NettyClientCertificateInterceptor;
 import org.bouncycastle.operator.OperatorCreationException;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.support.PropertiesLoaderUtils;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 import org.whispersystems.libsignal.InvalidKeyException;
 
 import javax.net.ssl.SSLException;
@@ -21,30 +20,23 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.cert.CertificateException;
-import java.util.Properties;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
+@Service
 public class AdapterRegisterService {
     private static final Logger logger = Logger.getLogger(AdapterRegisterService.class.getName());
 
-    public static Properties loadProperties(String filePath) {
-        Resource resource = new FileSystemResource(filePath);
-        if (!resource.exists()) {
-            logger.log(SEVERE, "Properties file does not exist: " + filePath);
-            System.exit(1);
-        }
-        try {
-            return PropertiesLoaderUtils.loadProperties(resource);
-        } catch (IOException e) {
-            logger.log(SEVERE, "Invalid properties file: " + filePath);
-            System.exit(1);
-        }
-        return new Properties();
+    public AdapterRegisterService(@Value("${bundle-server.url}") String bundleServerURL,
+                                  @Value("${my.grpc.url}") String myGrpcUrl,
+                                  @Value("${spring.application.name}") String appName,
+                                  @Value("${adapter-server.root-dir}") String rootDir) {
+        registerWithBundleServer(bundleServerURL, myGrpcUrl, rootDir, appName);
     }
+
     public static void registerWithBundleServer(String bundleServerURL, String myGrpcUrl, String rootDir, String appName) {
         if (myGrpcUrl == null) {
             logger.log(SEVERE, "my.grpc.url is not set in application.properties");

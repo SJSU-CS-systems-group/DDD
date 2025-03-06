@@ -15,7 +15,7 @@ class K9ApplicationTests {
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("k9-server.root-dir", () -> tempDir.toString());
+        registry.add("adapter-server.root-dir", () -> tempDir.toString());
     }
 
     @Test
