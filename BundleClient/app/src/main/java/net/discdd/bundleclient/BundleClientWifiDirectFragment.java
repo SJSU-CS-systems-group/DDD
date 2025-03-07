@@ -232,7 +232,7 @@ public class BundleClientWifiDirectFragment extends Fragment {
                     case WIFI_DIRECT_MANAGER_INITIALIZED -> {
                         deliveryStatus.setText(getWifiBgService().isDiscoveryActive() ? "Active" : "Inactive");
                     }
-                    case WIFI_DIRECT_MANAGER_SERVICES_CHANGED -> updateConnectedDevices();
+                    case WIFI_DIRECT_MANAGER_SERVICE_DISCOVERED -> updateConnectedDevices();
 //                    case WIFI_DIRECT_MANAGER_SERVICE_DISCOVERED, WIFI_DIRECT_MANAGER_DEVICE_INFO_CHANGED ->
 //                            updateOwnerAndGroupInfo(getWifiBgService().getGroupInfo());
 

@@ -1,5 +1,6 @@
 package net.discdd.bundleclient;
 
+import static net.discdd.wifidirect.WifiDirectManager.WifiDirectEventType.WIFI_DIRECT_MANAGER_SERVICE_DISCOVERED;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
@@ -8,14 +9,21 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.net.wifi.p2p.WifiP2pDevice;
+import android.net.wifi.p2p.WifiP2pManager;
+import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceRequest;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 
 import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -32,6 +40,9 @@ import net.discdd.wifidirect.WifiDirectStateListener;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -166,33 +177,23 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
         switch (action.type()) {
             case WIFI_DIRECT_MANAGER_INITIALIZED -> {
                 logger.info("WifiDirectManager initialized, searching for services");
-                wifiDirectManager.discoverServices();
+                discoverServices();
             }
-//            case WIFI_DIRECT_MANAGER_PEERS_CHANGED -> {
-//                logger.info("WifiDirectManager peers changed");
-//                wifiDirectManager.getPeerList().stream()
-//                        .filter(peer -> peer.deviceName.startsWith("ddd_")).forEach(
-//                                peer -> bundleTransmission.processDiscoveredPeer(peer.deviceAddress,
-//                                                                                 peer.deviceName));
-//                // expire peers that haven't been seen for a minute
-//                long expirationTime = System.currentTimeMillis() - 60 * 1000;
-//                bundleTransmission.expireNotSeenPeers(expirationTime);
-//                if (periodicExecutor == null) processBackgroundExchangeSetting();
-//            }
-//            case WIFI_DIRECT_MANAGER_PEER_LIST_RECEIVED -> {
-//                logger.info("Received peer list, starting service discovery...");
-//                discoverServices();
-//            }
             case WIFI_DIRECT_MANAGER_SERVICE_DISCOVERED -> {
                 logger.info("New transport service discovered.");
-                wifiDirectManager.getDiscoveredServices().stream()
+                List<DiscoveredService> services = wifiDirectManager.getDiscoveredServices();
+
+                services.stream()
                         .filter(service -> service.getRegistrationType().equals("ddd_transport_service"))
                         .forEach(service -> {
+                            logger.info("Discovered service details - Device: " + service.getDevice().deviceName +
+                                                ", MAC Address: " + service.getDeviceAddress() +
+                                                ", Port: " + service.getPort());
                             String deviceName = String.valueOf(service.getDevice());
-                            String ipAddress = String.valueOf(service.getIpAddress());
+                            String deviceAddress = String.valueOf(service.getDeviceAddress());
                             int port = service.getPort();
 
-                            bundleTransmission.processDiscoveredService(deviceName, ipAddress, port);
+                            bundleTransmission.processDiscoveredService(deviceName, deviceAddress, port);
                         });
 
                 // Expire services that haven’t been seen for a minute
@@ -213,11 +214,11 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
                     .filter(service -> service.getDeviceName().equals(transport.getDeviceName()))
                     .findFirst()
                     .ifPresent(service -> {
-                        String ipAddress = String.valueOf(service.getIpAddress());
+                        String deviceAddress = String.valueOf(service.getDeviceAddress());
                         int port = service.getPort();
 
                         WifiP2pDevice transportDevice = service.getDevice();
-                        var counts = exchangeWith(ipAddress, port, transport.getDeviceName(), transportDevice);
+                        var counts = exchangeWith(deviceAddress, port, transport.getDeviceName(), transportDevice);
                         logger.info(
                                 String.format(getString(R.string.exchanged_d_bundles_to_and_d_bundles_from_s),
                                               counts.bundlesSent(), counts.bundlesReceived(),
@@ -226,13 +227,13 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
         }
     }
 
-    private BundleExchangeCounts exchangeWith(String ipAddress, int port, String transportName, WifiP2pDevice transport) {
+    private BundleExchangeCounts exchangeWith(String deviceAddress, int port, String transportName, WifiP2pDevice transport) {
         // transport.deviceAddress is the address of the client
         broadcastBundleClientWifiEvent(BundleClientWifiDirectEventType.WIFI_DIRECT_CLIENT_EXCHANGE_STARTED, transport.deviceAddress);;
         try {
             connectTo(transport).get(10, TimeUnit.SECONDS);
             return bundleTransmission.doExchangeWithTransport(transport.deviceAddress, transport.deviceName,
-                                                              ipAddress, port);
+                                                              deviceAddress, port);
         } catch (Throwable e) {
             logger.log(WARNING, "Failed to connect to " + transportName, e);
         } finally {
@@ -276,8 +277,114 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
 //        wifiDirectManager.discoverPeers();
 //    }
 
+//    public void discoverServices() {
+//        wifiDirectManager.discoverServices();
+//    }
+
+
     public void discoverServices() {
-        wifiDirectManager.discoverServices();
+        WifiP2pManager manager = wifiDirectManager.getManager();
+        WifiP2pManager.Channel channel = wifiDirectManager.getChannel();
+
+        if (manager == null || channel == null) {
+            logger.log(SEVERE, "WiFi P2P Manager or Channel is null, aborting discovery");
+            return;
+        }
+
+        Map<String, String> buddies = new HashMap<>();
+
+        WifiP2pManager.DnsSdTxtRecordListener txtListener =
+                (fullDomain, record, device) -> {
+                    logger.log(INFO, "DnsSd TXT record available - " + record.toString());
+                    // Store the device name from the record
+                    if (record.containsKey("device_name")) {
+                        buddies.put(device.deviceAddress, record.get("device_name"));
+                    }
+                };
+
+        // Updates the list of available services
+        WifiP2pManager.DnsSdServiceResponseListener servListener =
+                (instanceName, registrationType, device) -> {
+                    logger.log(INFO, "Current buddies: " + buddies);
+                    if (!registrationType.contains("_dddtransport._tcp")) {
+                        logger.log(INFO, "Ignoring service with non-matching type: " + registrationType);
+                        return;
+                    }
+
+                    device.deviceName = buddies.containsKey(device.deviceAddress) ?
+                            buddies.get(device.deviceAddress) : device.deviceName;
+
+                    logger.log(INFO, "DnsSd service available - Instance: " + instanceName);
+                    logger.log(INFO, "Device: " + device.deviceName + " - Type: " + registrationType);
+                    logger.log(INFO, "Device: " + device.deviceName + " - " +
+                            device.deviceAddress);
+
+                    logger.log(INFO, "Discovered service: " + device.deviceName + " (" + device.deviceAddress + ")");
+
+                    List<DiscoveredService> discoveredServices = wifiDirectManager.getDiscoveredServices();
+                    synchronized (discoveredServices) {
+                        discoveredServices.add(new DiscoveredService(device, device.deviceAddress, 7777));
+                    }
+                };
+        wifiDirectManager.notifyActionToListeners(WIFI_DIRECT_MANAGER_SERVICE_DISCOVERED);
+
+        logger.log(INFO, "Setting up service discovery...");
+        manager.setDnsSdResponseListeners(channel, servListener, txtListener);
+        logger.log(INFO, "Service discovery listener set.");
+
+        Context context = getApplicationContext();
+        if (context instanceof BundleClientActivity) {
+            BundleClientActivity activity = (BundleClientActivity) context;
+            BundleClientWifiDirectFragment fragment =
+                    (BundleClientWifiDirectFragment) activity.getSupportFragmentManager()
+                            .findFragmentById(R.id.services_list);
+
+            if (fragment != null) {
+                fragment.updateConnectedDevices();
+            }
+        }
+
+        // Create and add service request
+        WifiP2pDnsSdServiceRequest
+                serviceRequest = WifiP2pDnsSdServiceRequest.newInstance("_dddtransport._tcp");
+        manager.addServiceRequest(channel, serviceRequest, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+                logger.log(INFO, "Service request added successfully");
+            }
+
+            @Override
+            public void onFailure(int reason) {
+                logger.log(SEVERE, "Service request failed. Reason: " + reason);
+            }
+        });
+
+        if (ActivityCompat.checkSelfPermission(this,
+                                               android.Manifest.permission.ACCESS_FINE_LOCATION) !=
+                PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(this,
+                                                                                        android.Manifest.permission.NEARBY_WIFI_DEVICES) !=
+                PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        manager.discoverServices(channel, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+                logger.log(INFO, "Service discovery successful");
+            }
+
+            @Override
+            public void onFailure(int code) {
+                logger.log(SEVERE, "Service discovery failed with code " + code);
+                new Handler(Looper.getMainLooper()).postDelayed(() -> discoverServices(), 5000);
+            }
+        });
     }
 
     public CompletableFuture<BundleExchangeCounts> initiateExchange(String deviceAddress) {
@@ -293,14 +400,14 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
         }
 
         // Extract necessary device information
-        String transportIpAddress = discoveredService.getIpAddress();
+        String transportAddress = discoveredService.getDeviceAddress();
         int transportPort = discoveredService.getPort();
         String transportName = discoveredService.getDeviceName();
         WifiP2pDevice transportDevice = discoveredService.getDevice();
         // we want to use the executor to make sure that only one exchange is going on at a time
         periodicExecutor.submit(() -> {
             try {
-                var bundleExchangeCounts = exchangeWith(transportIpAddress, transportPort, transportName, transportDevice);
+                var bundleExchangeCounts = exchangeWith(transportAddress, transportPort, transportName, transportDevice);
                 completableFuture.complete(bundleExchangeCounts);
             } catch (Exception e) {
                 logger.log(WARNING, "Failed to initiate exchange with " + transportName, e);

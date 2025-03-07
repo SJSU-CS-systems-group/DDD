@@ -204,7 +204,6 @@ public class BundleTransmission {
      */
     @Getter
     public static class RecentTransport {
-        public String ipAddress;
         public int port;
         /**
          * from WifiP2pDevice.deviceAddress
@@ -238,11 +237,11 @@ public class BundleTransmission {
         }
     }
 
-    public void processDiscoveredService(String deviceName, String ipAddress, int port) {
+    public void processDiscoveredService(String deviceName, String deviceAddress, int port) {
         synchronized (recentTransports) {
             RecentTransport recentTransport = recentTransports.computeIfAbsent(deviceName, RecentTransport::new);
             recentTransport.deviceName = deviceName;
-            recentTransport.ipAddress = ipAddress;
+            recentTransport.deviceAddress = deviceAddress;
             recentTransport.port = port;
             recentTransport.lastSeen = System.currentTimeMillis();
         }

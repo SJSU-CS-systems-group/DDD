@@ -53,6 +53,7 @@ public class MessageProvider extends ContentProvider {
         var appRootDataDir = Paths.get(getContext().getApplicationInfo().dataDir);
         sendADUsStorage = new StoreADUs(appRootDataDir.resolve("send"));
         receiveADUsStorage = new StoreADUs(appRootDataDir.resolve("receive"));
+        logger.info("MessageProvider initialized successfully");
         return true;
     }
 

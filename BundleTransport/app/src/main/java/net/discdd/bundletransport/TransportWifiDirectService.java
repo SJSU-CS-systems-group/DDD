@@ -11,9 +11,9 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.net.wifi.p2p.WifiP2pDevice;
-import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
 import android.os.Binder;
@@ -21,6 +21,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 
+import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -32,8 +33,6 @@ import net.discdd.wifidirect.DiscoveredService;
 import net.discdd.wifidirect.WifiDirectManager;
 import net.discdd.wifidirect.WifiDirectStateListener;
 
-import java.net.Inet4Address;
-import java.net.NetworkInterface;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -107,14 +106,24 @@ public class TransportWifiDirectService extends Service
 
     /**
      * This method registers a local service for service discovery
-     * Once registered, it automatically responds to service discovery requests from peers
+     * Once registered, it automatically responds to service discovery requests from bundle clients
      */
+
     private void startRegistration() {
         if (!wifiDirectManager.getWifiDirectEnabled()) {
             logger.log(INFO, "WiFi Direct is not enabled. Retrying in 1 second...");
 
             // Retry in 1 second to wait for wifi direct to be enabled
             new Handler(Looper.getMainLooper()).postDelayed(this::startRegistration, 1000);
+            return;
+        }
+
+        WifiP2pManager manager = wifiDirectManager.getManager();
+        WifiP2pManager.Channel channel = wifiDirectManager.getChannel();
+
+        if (manager == null || channel == null) {
+            logger.log(SEVERE, "WiFi P2P Manager or Channel is null, aborting registration");
+            new Handler(Looper.getMainLooper()).postDelayed(this::startRegistration, 5000);
             return;
         }
 
@@ -127,68 +136,42 @@ public class TransportWifiDirectService extends Service
         record.put("service_type", "ddd_transport_service");
         record.put("port", "7777");
 
-        // If we have a group, add group-specific info
-        wifiDirectManager.requestGroupInfo().thenAccept(group -> {
-            if (group == null) {
-                logger.log(INFO, "No WiFi Direct group found. Registering service without group info.");
-                registerServiceWithCurrentInfo(record);
-            } else {
-                try {
-                    NetworkInterface ni = NetworkInterface.getByName(group.getInterface());
-                    if (ni == null) {
-                        logger.log(INFO,
-                                   "No network interface found. Registering service without group info.");
-                    } else {
-                        String ipAddress = ni.getInterfaceAddresses().stream()
-                                .filter(ia -> ia.getAddress() instanceof Inet4Address)
-                                .map(ia -> ia.getAddress().getHostAddress()).findFirst()
-                                .orElse(null);
-
-                        record.put("ip_address", ipAddress);
-                        logger.log(INFO, "Added group information to service record");
-                    }
-                } catch (Exception e) {
-                    logger.log(INFO, "Error getting network interface: " + e.getMessage());
-                }
-
-                // Register service regardless of group existence
-                logger.log(INFO, "Calling registerServiceWithCurrentInfo");
-                registerServiceWithCurrentInfo(record);
-            }
-
-        // Exceptionally happens when exception is thrown in any of the stages of the CompletableFuture pipeline
-        }).exceptionally(ex -> {
-            logger.log(INFO, "Error checking group info: " + ex.getMessage());
-            // Register service even if group check fails
-            logger.log(INFO, "Calling registerServiceWithCurrentInfo");
-            registerServiceWithCurrentInfo(record);
-            return null;
-        });
-    }
-
-    private void registerServiceWithCurrentInfo(Map<String, String> record) {
-        String deviceName = wifiDirectManager.getDeviceName();
         WifiP2pDnsSdServiceInfo serviceInfo =
                 WifiP2pDnsSdServiceInfo.newInstance(
                         "ddd_transport_" + deviceName,
-                        "_presence._tcp",
+                        "_dddtransport._tcp",
                         record);
 
-        wifiDirectManager.addLocalService(
-                wifiDirectManager.getChannel(),
+        if (ActivityCompat.checkSelfPermission(this,
+                                               android.Manifest.permission.ACCESS_FINE_LOCATION) !=
+                PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(this,
+                                                                                        android.Manifest.permission.NEARBY_WIFI_DEVICES) !=
+                PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+
+        manager.addLocalService(
+                channel,
                 serviceInfo,
                 new WifiP2pManager.ActionListener() {
                     @Override
                     public void onSuccess() {
-                        logger.log(INFO, "Service registered successfully.");
+
+                        logger.log(INFO, "Service registered successfully with records: " + record);
                     }
 
                     @Override
                     public void onFailure(int reason) {
                         logger.log(INFO, "Failed to register service. Reason: " + reason);
-                        // Retry after delay
-                        new Handler(Looper.getMainLooper()).postDelayed(
-                                () -> startRegistration(), 5000);
+                        // Retry on failure
+                        new Handler(Looper.getMainLooper()).postDelayed(() -> startRegistration(), 5000);
                     }
                 });
     }
@@ -209,7 +192,7 @@ public class TransportWifiDirectService extends Service
     @Override
     public void onReceiveAction(WifiDirectManager.WifiDirectEvent action) {
         if (action.type() == WIFI_DIRECT_MANAGER_SERVICE_DISCOVERED) {
-            List<DiscoveredService> discoveredServices = wifiDirectManager.getDiscoveredServices();
+            List<DiscoveredService> discoveredServices = getDiscoveredServices();
 
             if (discoveredServices.isEmpty()) {
                 appendToClientLog("No services discovered. Shutting down gRPC server");
@@ -220,6 +203,10 @@ public class TransportWifiDirectService extends Service
             }
         }
         broadcastWifiEvent(action);
+    }
+
+    public List<DiscoveredService> getDiscoveredServices() {
+        return wifiDirectManager.getDiscoveredServices();
     }
 
     private void startRpcServer() {
@@ -274,9 +261,9 @@ public class TransportWifiDirectService extends Service
         return wifiDirectManager.getStatus();
     }
 
-    public WifiP2pGroup getGroupInfo() {
-        return wifiDirectManager.getGroupInfo();
-    }
+//    public WifiP2pGroup getGroupInfo() {
+//        return wifiDirectManager.getGroupInfo();
+//    }
 
     public class TransportWifiDirectServiceBinder extends Binder {
         TransportWifiDirectService getService() {

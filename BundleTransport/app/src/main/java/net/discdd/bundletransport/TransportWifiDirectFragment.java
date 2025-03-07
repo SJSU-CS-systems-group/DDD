@@ -18,14 +18,11 @@ import androidx.fragment.app.Fragment;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import net.discdd.pathutils.TransportPaths;
+import net.discdd.wifidirect.DiscoveredService;
 import net.discdd.wifidirect.WifiDirectManager;
 
-import java.net.Inet4Address;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 public class TransportWifiDirectFragment extends Fragment {
     private static final Logger logger = Logger.getLogger(TransportWifiDirectFragment.class.getName());
@@ -86,7 +83,6 @@ public class TransportWifiDirectFragment extends Fragment {
     public void onResume() {
         super.onResume();
         registerBroadcastReceiver();
-        updateGroupInfo();
         processDeviceInfoChange();
     }
 
@@ -110,19 +106,15 @@ public class TransportWifiDirectFragment extends Fragment {
         getBundleTransportActivity().transportWifiServiceConnection.thenAccept(btService -> {
             this.btService = btService;
             processDeviceInfoChange();
-            updateGroupInfo();
         });
+
         // Inflate the layout for this fragment
         View rootView = inflater.inflate(R.layout.fragment_transport_wifi_direct, container, false);
         myWifiInfoView = rootView.findViewById(R.id.my_wifi_info);
         myWifiInfoView.setOnClickListener(v -> {
-            var gi = btService.getGroupInfo();
-            final var connectedPeers = new ArrayList<String>();
-            if (gi != null) {
-                gi.getClientList().forEach(c -> connectedPeers.add(c.deviceName));
-            }
             AlertDialog.Builder builder = new AlertDialog.Builder(requireContext()).setTitle("Connected clients")
-                    .setItems(connectedPeers.toArray(new String[0]), null);
+                    .setItems(btService.getDiscoveredServices().stream()
+                                      .map(DiscoveredService::getDeviceName).toArray(String[]::new), null);
             builder.create().show();
         });
         myWifiStatusView = rootView.findViewById(R.id.my_wifi_status);
@@ -146,7 +138,6 @@ public class TransportWifiDirectFragment extends Fragment {
 
     private void registerBroadcastReceiver() {
         LocalBroadcastManager.getInstance(requireActivity()).registerReceiver(bundleTransportWifiEvent, intentFilter);
-        updateGroupInfo();
         processDeviceInfoChange();
     }
 
@@ -154,31 +145,44 @@ public class TransportWifiDirectFragment extends Fragment {
         LocalBroadcastManager.getInstance(requireActivity()).unregisterReceiver(bundleTransportWifiEvent);
     }
 
-    private void updateGroupInfo() {
+//    private void updateGroupInfo() {
+//        if (btService != null) {
+//            var gi = btService.getGroupInfo();
+//            logger.info("Group info: " + gi);
+//            requireActivity().runOnUiThread(() -> {
+//                String info;
+//                if (gi == null) {
+//                    info = getString(R.string.wifi_transport_not_active);
+//                } else {
+//                    String addresses;
+//                    try {
+//                        NetworkInterface ni = NetworkInterface.getByName(gi.getInterface());
+//                        addresses = ni == null ? "N/A" : ni.getInterfaceAddresses().stream()
+//                                .filter(ia -> ia.getAddress() instanceof Inet4Address)
+//                                .map(ia -> ia.getAddress().getHostAddress()).collect(Collectors.joining(", "));
+//                    } catch (SocketException e) {
+//                        addresses = "unknown";
+//                    }
+//                    info = String.format("SSID: %s\nPassword: %s\nAddress: %s\nConnected devices: %d",
+//                                         gi.getNetworkName(), gi.getPassphrase(), addresses, gi.getClientList().size());
+//                }
+//                myWifiInfoView.setText(info);
+//            });
+//        }
+//
+//    }
+
+    private void updateServiceInfo() {
         if (btService != null) {
-            var gi = btService.getGroupInfo();
-            logger.info("Group info: " + gi);
+            List<DiscoveredService> discoveredServices = btService.getDiscoveredServices();
             requireActivity().runOnUiThread(() -> {
-                String info;
-                if (gi == null) {
-                    info = getString(R.string.wifi_transport_not_active);
-                } else {
-                    String addresses;
-                    try {
-                        NetworkInterface ni = NetworkInterface.getByName(gi.getInterface());
-                        addresses = ni == null ? "N/A" : ni.getInterfaceAddresses().stream()
-                                .filter(ia -> ia.getAddress() instanceof Inet4Address)
-                                .map(ia -> ia.getAddress().getHostAddress()).collect(Collectors.joining(", "));
-                    } catch (SocketException e) {
-                        addresses = "unknown";
-                    }
-                    info = String.format("SSID: %s\nPassword: %s\nAddress: %s\nConnected devices: %d",
-                                         gi.getNetworkName(), gi.getPassphrase(), addresses, gi.getClientList().size());
+                StringBuilder serviceInfo = new StringBuilder();
+                for (DiscoveredService service : discoveredServices) {
+                    serviceInfo.append(service).append("\n");
                 }
-                myWifiInfoView.setText(info);
+                myWifiInfoView.setText(serviceInfo.toString());
             });
         }
-
     }
 
     private void appendToClientLog(String message) {
@@ -206,10 +210,9 @@ public class TransportWifiDirectFragment extends Fragment {
                         case WIFI_DIRECT_MANAGER_DEVICE_INFO_CHANGED:
                         case WIFI_DIRECT_MANAGER_INITIALIZED:
                             processDeviceInfoChange();
-                            updateGroupInfo();
                             break;
                         case WIFI_DIRECT_MANAGER_SERVICE_DISCOVERED:
-                            updateGroupInfo();
+                            updateServiceInfo();
                             break;
                     }
                 }
