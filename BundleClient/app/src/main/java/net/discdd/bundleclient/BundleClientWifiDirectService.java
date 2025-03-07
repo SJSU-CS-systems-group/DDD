@@ -307,8 +307,8 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "DDD-Client")
                 .setSmallIcon(R.drawable.bundleclient_icon)
-                .setContentTitle("Exchanging with Transport")
-                .setContentText("Initiating Bundle Exchange...")
+                .setContentTitle(getString(R.string.exchanging_with_transport))
+                .setContentText(getString(R.string.initiating_bundle_exchange))
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(false)
                 .setOngoing(true);

@@ -98,9 +98,9 @@ public class PermissionsFragment extends Fragment {
                                           allSatisfied();
                                       });
 
-    private void triggerPermission() {
+    private void triggerPermission(int msgID) {
         AlertDialog.Builder dialog = new AlertDialog.Builder(getContext());
-        dialog.setMessage(R.string.dialog_message).setNeutralButton(R.string.dialog_btn_text, null);
+        dialog.setMessage(msgID).setNeutralButton(R.string.dialog_btn_text, null);
         dialog.create().show();
     }
 
@@ -160,7 +160,10 @@ public class PermissionsFragment extends Fragment {
 
             holder.itemView.setOnClickListener(v -> {
                 if (!holder.permissionCheckbox.isChecked()) {
-                    triggerPermission();
+                    if (holder.getAdapterPosition() == 3)
+                        triggerPermission(R.string.dialog_message);
+                    else if (holder.getAdapterPosition() == 4)
+                        triggerPermission(R.string.dialog_message_notification);
                 }
             });
         }
