@@ -2,7 +2,6 @@ package net.discdd.server;
 
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import net.discdd.bundlerouting.RoutingExceptions;
@@ -22,6 +21,7 @@ import net.discdd.grpc.Status;
 import net.discdd.model.Bundle;
 import net.discdd.model.BundleDTO;
 import net.discdd.pathutils.ClientPaths;
+import net.discdd.tls.DDDNettyTLS;
 import net.discdd.utils.Constants;
 import net.discdd.utils.StoreADUs;
 import org.junit.jupiter.api.Assertions;
@@ -34,6 +34,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.whispersystems.libsignal.InvalidKeyException;
 
+import javax.net.ssl.SSLException;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -41,6 +42,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
+import java.security.KeyPair;
+import java.security.cert.X509Certificate;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
@@ -62,6 +65,8 @@ public class BundleClientToBundleServerTest extends End2EndTest {
     private static BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub blockingStub;
     private static ManagedChannel channel;
     private static ClientPaths clientPaths;
+    private static KeyPair clientKeyPair;
+    private static X509Certificate clientCert;
 
     @BeforeAll
     static void setUp() throws Exception {
@@ -76,12 +81,14 @@ public class BundleClientToBundleServerTest extends End2EndTest {
 
         bundleTransmission = new BundleTransmission(clientPaths, adu -> {});
         clientId = bundleTransmission.getBundleSecurity().getClientSecurity().getClientID();
+        clientKeyPair = bundleTransmission.getBundleSecurity().getClientGrpcSecurity().getGrpcKeyPair();
+        clientCert = bundleTransmission.getBundleSecurity().getClientGrpcSecurity().getGrpcCert();
     }
 
     @BeforeEach
-    void setUpEach() {
+    void setUpEach() throws SSLException {
         if (stub == null) {
-            channel = ManagedChannelBuilder.forAddress("127.0.0.1", BUNDLESERVER_GRPC_PORT).usePlaintext().build();
+            channel = DDDNettyTLS.createGrpcChannel(clientKeyPair, clientCert, "localhost", BUNDLESERVER_GRPC_PORT);
             stub = BundleExchangeServiceGrpc.newStub(channel);
             blockingStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
         }
@@ -94,7 +101,7 @@ public class BundleClientToBundleServerTest extends End2EndTest {
     void test2UploadFirstEmptyBundle() throws Exception {
         // this first one should be empty
         sendBundle();
-        checkReceivedFiles(Set.of());
+        checkReceivedFiles(clientId, Set.of());
 
         Assertions.assertEquals(0, sendStore.getADUs(null, TEST_APPID).count());
         Assertions.assertEquals(0, recieveStore.getADUs(null, TEST_APPID).count());
@@ -109,7 +116,7 @@ public class BundleClientToBundleServerTest extends End2EndTest {
 
         sendBundle();
 
-        checkReceivedFiles(Set.of("1", "2"));
+        checkReceivedFiles(clientId, Set.of("1", "2"));
     }
 
     @Test
@@ -127,10 +134,10 @@ public class BundleClientToBundleServerTest extends End2EndTest {
                     AppDataUnit.newBuilder().setAduId(1).setData(ByteString.copyFromUtf8("SA1")).build()).build());
             rsp.onCompleted();
         });
-        checkReceivedFiles(Set.of());
-        checkToSendFiles(Set.of("1"));
+        checkReceivedFiles(clientId, Set.of());
+        checkToSendFiles(clientId, Set.of("1"));
         receiveBundle();
-        checkToSendFiles(Set.of("1"));
+        checkToSendFiles(clientId, Set.of("1"));
         Assertions.assertEquals(1, recieveStore.getADUs(null, TEST_APPID).count());
 
         sendBundle();

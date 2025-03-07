@@ -1,13 +1,8 @@
 package net.discdd.transport;
 
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-
 import com.google.protobuf.ByteString;
-import io.grpc.Grpc;
-import io.grpc.InsecureChannelCredentials;
 import io.grpc.ManagedChannel;
-import io.grpc.StatusRuntimeException;
+import io.grpc.okhttp.OkHttpChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
 import net.discdd.grpc.BundleChunk;
@@ -23,14 +18,19 @@ import net.discdd.grpc.BundleUploadResponse;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.grpc.GetRecencyBlobRequest;
 import net.discdd.pathutils.TransportPaths;
+import net.discdd.tls.DDDTLSUtil;
+import net.discdd.tls.GrpcSecurity;
 import net.discdd.utils.Constants;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -39,6 +39,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.logging.Logger;
+
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 
 public class TransportToBundleServerManager implements Runnable {
 
@@ -49,24 +52,45 @@ public class TransportToBundleServerManager implements Runnable {
     private final Path fromServerPath;
     private final Function<Void, Void> connectComplete;
     private final Function<Exception, Void> connectError;
-    private final String transportTarget;
+    private final String serverHost;
+    private final int serverPort;
+    private GrpcSecurity transportGrpcSecurity;
 
     public TransportToBundleServerManager(TransportPaths transportPaths, String host, String port, Function<Void,
             Void> connectComplete, Function<Exception, Void> connectError) {
         this.connectComplete = connectComplete;
         this.connectError = connectError;
-        this.transportTarget = host + ":" + port;
+        this.serverHost = host;
+        this.serverPort = Integer.parseInt(port);
         this.transportSenderId =
                 BundleSender.newBuilder().setId("bundle_transport").setType(BundleSenderType.TRANSPORT).build();
         this.fromClientPath = transportPaths.toServerPath;
         this.fromServerPath = transportPaths.toClientPath;
+        try {
+            this.transportGrpcSecurity = GrpcSecurityHolder.getGrpcSecurityHolder();
+        } catch (Exception e) {
+            logger.log(SEVERE, "Failed to get GrpcSecurity instance", e);
+        }
     }
 
     @Override
     public void run() {
         ManagedChannel channel = null;
         try {
-            channel = Grpc.newChannelBuilder(transportTarget, InsecureChannelCredentials.create()).build();
+            var sslClientContext = SSLContext.getInstance("TLS");
+            sslClientContext.init(
+                    DDDTLSUtil.getKeyManagerFactory(transportGrpcSecurity.getGrpcKeyPair(),
+                            transportGrpcSecurity.getGrpcCert()).getKeyManagers(),
+                    new TrustManager[] {DDDTLSUtil.trustManager},
+                    new SecureRandom()
+            );
+
+            channel = OkHttpChannelBuilder.forAddress(serverHost, serverPort)
+                    .hostnameVerifier((host, session) -> true)
+                    .useTransportSecurity()
+                    .sslSocketFactory(sslClientContext.getSocketFactory())
+                    .build();
+
             var bsStub = BundleServerServiceGrpc.newBlockingStub(channel);
             var exchangeStub = BundleExchangeServiceGrpc.newStub(channel);
             var blockingExchangeStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
@@ -85,7 +109,7 @@ public class TransportToBundleServerManager implements Runnable {
 
             logger.log(INFO, "Connect server completed");
             connectComplete.apply(null);
-        } catch (IllegalArgumentException | StatusRuntimeException e) {
+        } catch (Exception e) {
             logger.log(SEVERE, "Failed to connect to server", e);
             connectError.apply(e);
         } finally {
