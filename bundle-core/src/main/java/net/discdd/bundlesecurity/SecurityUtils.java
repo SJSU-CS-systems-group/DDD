@@ -134,7 +134,10 @@ public class SecurityUtils {
      * @throws InvalidKeyException
      */
     public static byte[] createEncryptedEncodedPublicKeyBytes(ECPublicKey clientPublicKey, ECPublicKey serverIdentityPublicKey) throws GeneralSecurityException, InvalidKeyException {
+        logger.log(INFO, "Client Public Key (Encryption): " + Base64.getUrlEncoder().encodeToString(clientPublicKey.serialize()));
         ECKeyPair ephemeralKeyPair = Curve.generateKeyPair();
+        logger.log(INFO, "Server Identity Public Key (Encryption): " + Base64.getUrlEncoder().encodeToString(serverIdentityPublicKey.serialize()));
+        logger.log(INFO, "Ephemeral Public Key (Encryption): " + Base64.getUrlEncoder().encodeToString(ephemeralKeyPair.getPublicKey().serialize()));
         byte[] agreement = Curve.calculateAgreement(serverIdentityPublicKey, ephemeralKeyPair.getPrivateKey());
         //this should be getDecoder
         String sharedSecret = Base64.getEncoder().encodeToString(agreement);
@@ -177,7 +180,7 @@ public class SecurityUtils {
             ECPublicKey ephemeralPublicKey = Curve.decodePoint(ephemeralKeyBytes, 0);
             logger.log(INFO, "Ephemeral Public Key (Decryption): " + Base64.getUrlEncoder().encodeToString(ephemeralPublicKey.serialize()));
             byte[] agreement = Curve.calculateAgreement(ephemeralPublicKey, ServerPrivKey);
-            //this should be getEcoder()
+            //this should be getEncoder()
             String sharedSecret = Base64.getEncoder().encodeToString(agreement);
             logger.log(INFO, "Shared Secret (Decryption): " + sharedSecret);
             byte[] decryptedClientPubKey;
@@ -187,10 +190,11 @@ public class SecurityUtils {
             } catch (GeneralSecurityException e) {
                 throw new RuntimeException("AES decryption failed: " + e.getMessage(), e);
             }
-            logger.log(INFO, "Decrypted Client Public Key: " + new String(decryptedClientPubKey));
             //i think a base64 encoded key gets decrypted, so you can use new String()
             String keyInStandardBase64Characters = new String (decryptedClientPubKey);
-            return keyInStandardBase64Characters.replace('+', '-').replace('/', '_');
+            keyInStandardBase64Characters = keyInStandardBase64Characters.replace('+', '-').replace('/', '_');
+            logger.log(INFO, "Decrypted Client Public Key (Decryption): " + keyInStandardBase64Characters);
+            return keyInStandardBase64Characters;
         } else {
             throw new InvalidKeyException(String.format("Error: %s has invalid public key header or footer", clientEncFile.getFileName()));
         }
@@ -222,6 +226,7 @@ public class SecurityUtils {
         }
 
         if (encodedKeyList.get(0).equals(PVT_KEY_HEADER) && encodedKeyList.get(2).equals(PVT_KEY_FOOTER)) {
+            logger.log(INFO, "This is the server identity key bytes we are using BETWEEN HEADER & FOOTER " + encodedKeyList.get(1));
             return Base64.getUrlDecoder().decode(encodedKeyList.get(1));
         } else {
             throw new InvalidKeyException(

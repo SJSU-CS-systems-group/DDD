@@ -193,7 +193,14 @@ public class ServerSecurity {
 
     private void initializeClientKeysFromFiles(Path path, ClientSession clientSession) throws IOException,
             InvalidKeyException {
-        byte[] clientIdentityKey = SecurityUtils.decodePublicKeyfromFile(path.resolve(CLIENT_IDENTITY_KEY));
+        byte[] clientIdentityKey;
+        try {
+            String clientIdentityKeyBase64 =
+                    SecurityUtils.decodeEncryptedPublicKeyfromFile(ourIdentityKeyPair.getPrivateKey(), path.resolve(CLIENT_IDENTITY_KEY));
+            clientIdentityKey = Base64.getUrlDecoder().decode(clientIdentityKeyBase64);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
         clientSession.IdentityKey = new IdentityKey(clientIdentityKey, 0);
 
         byte[] clientBaseKey = SecurityUtils.decodePublicKeyfromFile(path.resolve(CLIENT_BASE_KEY));
@@ -382,8 +389,9 @@ public class ServerSecurity {
         //fetch server priv key
         ServerSecurity serverSecurityInstance = ServerSecurity.getInstance(bundlePath.getParent());
         ECPrivateKey ServerPrivKey = serverSecurityInstance.getSigningKey();
-        byte[] clientIdentityKeyBytes =
-                SecurityUtils.decodeEncryptedPublicKeyfromFile(ServerPrivKey, bundlePath.resolve(CLIENT_IDENTITY_KEY)).getBytes();
+        var clientIdentityKeyBase64 =
+                SecurityUtils.decodeEncryptedPublicKeyfromFile(ServerPrivKey, bundlePath.resolve(CLIENT_IDENTITY_KEY));
+        byte[] clientIdentityKeyBytes = Base64.getUrlDecoder().decode(clientIdentityKeyBase64);
         IdentityKey clientIdentityKey = new IdentityKey(clientIdentityKeyBytes, 0);
 
         String sharedSecret = getsharedSecret(clientIdentityKey.getPublicKey());

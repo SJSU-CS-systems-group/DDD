@@ -102,7 +102,6 @@ public class BundleTransmission {
         Files.createDirectories(bundleRecvProcDir);
 
         UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, bundleRecvProcDir);
-        String clientId = "";
         String serverIdReceived = generateID(
                 uncompressedBundle.getSource().toPath().resolve(SecurityUtils.SERVER_IDENTITY_KEY));
         if (!bundleSecurity.bundleServerIdMatchesCurrentServer(serverIdReceived)) {
@@ -111,22 +110,9 @@ public class BundleTransmission {
             return;
         }
 
-        Path receivedProcessingPath = Path.of(uncompressedBundle.getSource().getParent());
-        Path bundleTransmissionPath = receivedProcessingPath.getParent();
-        Path bundleRootPath = bundleTransmissionPath.getParent();
-        Path serverPrivKeyPath = bundleRootPath.resolve("BundleSecurity").resolve("Keys").resolve("Server").resolve("Server_Keys");
-        List<Path> result = null;
-        try (Stream<Path> pathStream = Files.walk(bundleRootPath)) {
-            result = pathStream.filter(Files::isRegularFile)
-                    .collect(Collectors.toList());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        logger.log(INFO, "Here is our resulting list of file in bundle root path " + result);
-        byte[] ServerPrivKeyBytes = decodePrivateKeyFromFile(serverPrivKeyPath.resolve(SecurityUtils.SERVER_IDENTITY_PRIVATE_KEY));
-        ECPrivateKey ServerPrivKey = Curve.decodePrivatePoint(ServerPrivKeyBytes);
-        logger.log(INFO, "This is the client ID we are using, check if it act exists: " + uncompressedBundle.getSource().toPath().resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
-        clientId = SecurityUtils.decodeEncryptedPublicKeyfromFile(ServerPrivKey, uncompressedBundle.getSource().toPath().resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
+        String clientIdBase64 = SecurityUtils.decodeEncryptedPublicKeyfromFile(serverSecurity.getSigningKey(), uncompressedBundle.getSource().toPath().resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
+        byte[] clientIdBase64Bytes = Base64.getUrlDecoder().decode(clientIdBase64);
+        String clientId = generateID(clientIdBase64Bytes);
         var counters = this.applicationDataManager.getBundleCountersForClient(clientId);
 
         var receivedBundleCounter =

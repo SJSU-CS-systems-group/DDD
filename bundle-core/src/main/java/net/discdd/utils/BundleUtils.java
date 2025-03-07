@@ -6,6 +6,7 @@ import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import net.discdd.bundlesecurity.SecurityUtils;
+import net.discdd.bundlesecurity.ServerSecurity;
 import net.discdd.model.ADU;
 import net.discdd.model.Acknowledgement;
 import net.discdd.model.Bundle;
@@ -32,6 +33,7 @@ import java.security.GeneralSecurityException;
 import java.security.InvalidParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -340,7 +342,7 @@ public class BundleUtils {
 
         // store the keys
         try {
-            outerJar.createEntry(SecurityUtils.CLIENT_IDENTITY_KEY, createEncryptedEncodedPublicKeyBytes(serverIdentityPublicKey, clientIdentityPublicKey));
+            outerJar.createEntry(SecurityUtils.CLIENT_IDENTITY_KEY, createEncryptedEncodedPublicKeyBytes(clientIdentityPublicKey, serverIdentityPublicKey));
         } catch (GeneralSecurityException e) {
             throw new RuntimeException(e);
         }
