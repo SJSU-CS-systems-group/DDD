@@ -4,6 +4,7 @@ import io.leego.banana.Ansi;
 import io.leego.banana.BananaUtils;
 import io.leego.banana.Font;
 import lombok.extern.slf4j.Slf4j;
+import net.discdd.config.GrpcSecurityConfig;
 import net.discdd.grpc.GrpcServerRunner;
 import net.discdd.server.commands.CommandProcessor;
 import net.discdd.server.commands.bundleuploader.BundleUploader;
@@ -27,7 +28,7 @@ import static java.util.logging.Level.SEVERE;
 
 @Slf4j
 @SpringBootApplication
-@Import(GrpcServerRunner.class)
+@Import({GrpcServerRunner.class, GrpcSecurityConfig.class})
 @EnableJpaRepositories("net.discdd.server")
 @EntityScan("net.discdd.server.repository.entity")
 public class BundleServerApplication {

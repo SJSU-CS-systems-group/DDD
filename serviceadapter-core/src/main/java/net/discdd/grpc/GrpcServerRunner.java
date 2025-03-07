@@ -2,7 +2,8 @@ package net.discdd.grpc;
 
 import io.grpc.BindableService;
 import io.grpc.Server;
-import io.grpc.netty.NettyServerBuilder;
+import net.discdd.tls.DDDNettyTLS;
+import net.discdd.tls.GrpcSecurity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -23,25 +24,28 @@ public class GrpcServerRunner implements CommandLineRunner {
     private Server server;
     @Autowired
     ApplicationContext context;
+    
+    private GrpcSecurity grpcSecurity;
 
     int BUNDLE_SERVER_PORT;
     private Thread awaitThread;
 
-    public GrpcServerRunner(@Value("${ssl-grpc.server.port}") int port) {
+
+    public GrpcServerRunner(@Value("${ssl-grpc.server.port}") int port, GrpcSecurity grpcSecurity) {
         BUNDLE_SERVER_PORT = port;
+        this.grpcSecurity = grpcSecurity;
     }
 
     @Override
     public void run(String... args) throws Exception {
         services = context.getBeansWithAnnotation(GrpcService.class).values().stream().map(o -> (BindableService) o).collect(Collectors.toList());
 
-        var serverBuilder = NettyServerBuilder.forPort(BUNDLE_SERVER_PORT);
-
-        for (var service : services) {
-            serverBuilder.addService(service);
-        }
-
-        server = serverBuilder.build();
+        server = DDDNettyTLS.createGrpcServer(
+                grpcSecurity.getGrpcKeyPair(),
+                grpcSecurity.getGrpcCert(),
+                BUNDLE_SERVER_PORT,
+                services.toArray(new BindableService[0])
+        );
 
         try {
             server.start();

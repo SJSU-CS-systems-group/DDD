@@ -29,7 +29,6 @@ import java.security.NoSuchProviderException;
 import java.security.PublicKey;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.ECGenParameterSpec;
@@ -103,8 +102,6 @@ public class DDDTLSUtil {
     }
 
     public static KeyManagerFactory getKeyManagerFactory(KeyPair keyPair, X509Certificate cert) throws Exception {
-        System.out.println(cert);
-
         var keyStore = KeyStore.getInstance("PKCS12");
         keyStore.load(null, null);
         keyStore.setKeyEntry("key", keyPair.getPrivate(), null, new X509Certificate[]{cert});
@@ -124,10 +121,7 @@ public class DDDTLSUtil {
     }
 
     public static X509Certificate loadCertFromFile(Path path) throws IOException, CertificateException {
-
         byte[] decodedCert = DDDPEMEncoder.decodeFromFile(path, DDDPEMEncoder.CERTIFICATE);
-
-        CertificateFactory factory = CertificateFactory.getInstance("X.509");
 
         org.bouncycastle.jcajce.provider.asymmetric.x509.CertificateFactory cf = new org.bouncycastle.jcajce.provider.asymmetric.x509.CertificateFactory();
 

@@ -34,11 +34,12 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
-import net.discdd.android.fragments.LogFragment;
 import net.discdd.android.fragments.PermissionsFragment;
 import net.discdd.bundletransport.screens.StorageFragment;
 import net.discdd.pathutils.TransportPaths;
+import net.discdd.screens.LogFragment;
 import net.discdd.tls.GrpcSecurity;
+import net.discdd.transport.GrpcSecurityHolder;
 import net.discdd.viewmodels.PermissionsViewModel;
 
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -80,7 +81,7 @@ public class BundleTransportActivity extends AppCompatActivity {
     private SharedPreferences sharedPreferences;
     TransportWifiServiceConnection transportWifiServiceConnection = new TransportWifiServiceConnection();
     private BroadcastReceiver mUsbReceiver;
-    private boolean usbExists;
+    protected boolean usbExists;
 
     record TitledFragment(String title, Fragment fragment) {}
 
@@ -123,9 +124,8 @@ public class BundleTransportActivity extends AppCompatActivity {
 
         this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
         try {
-            this.transportGrpcSecurity = GrpcSecurity.initializeInstance(transportPaths.grpcSecurityPath,
-                                                                         SecurityUtils.TRANSPORT);
-        } catch (IOException | NoSuchAlgorithmException | InvalidKeyException | InvalidAlgorithmParameterException |
+            this.transportGrpcSecurity = GrpcSecurityHolder.setGrpcSecurityHolder(transportPaths.grpcSecurityPath);
+        } catch (IOException | NoSuchAlgorithmException | InvalidAlgorithmParameterException |
                  CertificateException | NoSuchProviderException | OperatorCreationException e) {
             logger.log(SEVERE, "Failed to initialize GrpcSecurity for transport", e);
         }
@@ -139,9 +139,11 @@ public class BundleTransportActivity extends AppCompatActivity {
         transportWifiFragment = new TitledFragment(getString(R.string.local_wifi), transportFrag);
         storageFragment = new TitledFragment("Storage", new StorageFragment());
         usbFrag = new TitledFragment("USB", UsbFragment.newInstance(transportPaths));
-        logFragment = new TitledFragment(getString(R.string.logs), LogFragment.newInstance());
+        logFragment = new TitledFragment(getString(R.string.logs), new LogFragment());
 
         permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
+        titledPermissionsFragment = new TitledFragment("Permissions", PermissionsFragment.newInstance());
+        fragments.add(titledPermissionsFragment);
         permissionsFragment = PermissionsFragment.newInstance();
         titledPermissionsFragment = new TitledFragment("Permissions", permissionsFragment);
         fragments.add(titledPermissionsFragment);
@@ -169,6 +171,15 @@ public class BundleTransportActivity extends AppCompatActivity {
 
         //set observer on view model for permissions
         permissionsViewModel.getPermissionSatisfied().observe(this, this::updateTabs);
+
+        //Check if USB is connected before app start
+        UsbManager usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
+        if(usbManager != null) {
+            updateUsbExists(!usbManager.getDeviceList().isEmpty());
+        }
+        else {
+            logger.log(WARNING, "Usbmanager was null, failed to connect");
+        }
     }
 
     private void updateTabs(Boolean satisfied) {
@@ -337,10 +348,10 @@ public class BundleTransportActivity extends AppCompatActivity {
         String action = intent.getAction();
         if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
             updateUsbExists(false);
-            permissionsViewModel.getPermissionSatisfied().observe(this, this::updateTabs);
+            updateTabs(true);
         } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
             updateUsbExists(true);
-            permissionsViewModel.getPermissionSatisfied().observe(this, this::updateTabs);
+            updateTabs(true);
         }
     }
 

@@ -32,6 +32,7 @@ import io.grpc.Server;
 import io.grpc.stub.StreamObserver;
 
 import net.discdd.tls.GrpcSecurity;
+import net.discdd.transport.GrpcSecurityHolder;
 import net.discdd.transport.TransportToBundleServerManager;
 
 import org.bouncycastle.operator.OperatorCreationException;
@@ -61,12 +62,7 @@ public class RpcServer {
             return;
         }
 
-        try {
-            this.transportGrpcSecurity = GrpcSecurity.getInstance();
-        } catch (IOException | NoSuchAlgorithmException | InvalidAlgorithmParameterException | CertificateException |
-                 NoSuchProviderException | OperatorCreationException e) {
-            logger.log(SEVERE, "Failed to initialize GrpcSecurity for transport", e);
-        }
+        this.transportGrpcSecurity = GrpcSecurityHolder.getGrpcSecurityHolder();
 
         var toServerPath = transportPaths.toServerPath;
         var toClientPath = transportPaths.toClientPath;

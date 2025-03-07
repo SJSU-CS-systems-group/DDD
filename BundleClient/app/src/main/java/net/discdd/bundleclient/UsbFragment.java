@@ -9,8 +9,10 @@ import android.content.IntentFilter;
 import android.graphics.Color;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.storage.StorageManager;
 import android.os.storage.StorageVolume;
+import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -38,8 +40,10 @@ import java.util.logging.Logger;
 
 public class UsbFragment extends Fragment {
     private Button usbExchangeButton;
+    private Button reloadButton;
+    private Button toSettingsButton;
+    private TextView toSettingstext;
     private TextView usbConnectionText;
-    private UsbManager usbManager;
     public static boolean usbConnected = false;
     private StorageManager storageManager;
     private static final Logger logger = Logger.getLogger(UsbFragment.class.getName());
@@ -66,34 +70,58 @@ public class UsbFragment extends Fragment {
             logger.log(Level.INFO, "BundleClientActivity or wifiBgService is null");
         }
 
+        reloadButton = view.findViewById(R.id.reload_settings);
+        toSettingsButton = view.findViewById(R.id.to_settings_button);
+        toSettingstext = view.findViewById(R.id.to_settings_text);
         usbExchangeButton = view.findViewById(R.id.usb_exchange_button);
         usbConnectionText = view.findViewById(R.id.usbconnection_response_text);
-        usbManager = (UsbManager) getActivity().getSystemService(Context.USB_SERVICE);
         storageManager = (StorageManager) getActivity().getSystemService(Context.STORAGE_SERVICE);
 
-        usbExchangeButton.setOnClickListener(v -> {
-            logger.log(Level.INFO, "usbExchangeButton clicked");
-            if (usbConnected) {
-                //Bundle we want to send to usb.
-                scheduledExecutor.execute(() -> {
-                    try {
-                        logger.log(INFO, "Starting bundle creation");
-                        BundleDTO bundleDTO = bundleTransmission.generateBundleForTransmission();
-                        File bundleFile = bundleDTO.getBundle().getSource();
-                        File targetFile = new File(usbDirectory, bundleFile.getName());
-                        Files.copy(bundleFile.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                        logger.log(INFO, "Bundle creation and transfer successful");
-                        updateUsbStatus(false, "Bundle created and transferred to USB", Color.GREEN);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        updateUsbStatus(false, "Error creating or transferring bundle", Color.RED);
-                    }
-                });
-            } else {
-                Toast.makeText(getActivity(), "No bundle created as usb device not connected", Toast.LENGTH_SHORT)
-                        .show();
-            }
-        });
+        boolean hasPermission = isManageAllFilesAccessGranted();
+        manageAccessGranted(isManageAllFilesAccessGranted());
+
+        if(hasPermission) {
+            Toast.makeText(requireContext(), "all files can be accessed", Toast.LENGTH_SHORT).show();
+            usbExchangeButton.setOnClickListener(v -> {
+                logger.log(Level.INFO, "usbExchangeButton clicked");
+                if (usbConnected) {
+                    scheduledExecutor.execute(() -> {
+                        try {
+                            //Bundle we want to send to usb.
+                            logger.log(INFO, "Starting bundle creation");
+                            BundleDTO bundleDTO = bundleTransmission.generateBundleForTransmission();
+                            File bundleFile = bundleDTO.getBundle().getSource();
+                            File targetFile = new File(usbDirectory, bundleFile.getName());
+                            Files.copy(bundleFile.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                            logger.log(INFO, "Bundle creation and transfer successful");
+                            updateUsbStatus(false, "Bundle created and transferred to USB", Color.GREEN);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            updateUsbStatus(false, "Error creating or transferring bundle", Color.RED);
+                        }
+                    });
+                } else {
+                    Toast.makeText(getActivity(), "No bundle created as usb device not connected", Toast.LENGTH_SHORT)
+                            .show();
+                }
+            });
+        }
+        else {
+            Toast.makeText(requireContext(), "no files can be accessed", Toast.LENGTH_SHORT).show();
+            toSettingsButton.setOnClickListener(v -> {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                startActivity(intent);
+                manageAccessGranted(isManageAllFilesAccessGranted());
+            });
+            reloadButton.setOnClickListener(v -> {
+                if (isManageAllFilesAccessGranted()) {
+                    Toast.makeText(requireContext(), "all files can be accessed", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(requireContext(), "no files can be accessed", Toast.LENGTH_SHORT).show();
+                }
+                manageAccessGranted(isManageAllFilesAccessGranted());
+            });
+        }
 
         return view;
     }
@@ -149,6 +177,26 @@ public class UsbFragment extends Fragment {
         }
         logger.log(INFO,"DDD_transport directory does not exist.");
         return false;
+    }
+
+    private void manageAccessGranted(boolean hasPermission) {
+        if (hasPermission) {
+            reloadButton.setVisibility(View.GONE);
+            toSettingsButton.setVisibility(View.GONE);
+            toSettingstext.setVisibility(View.GONE);
+            usbExchangeButton.setVisibility(View.VISIBLE);
+            usbConnectionText.setVisibility(View.VISIBLE);
+        } else {
+            usbExchangeButton.setVisibility(View.GONE);
+            usbConnectionText.setVisibility(View.GONE);
+            reloadButton.setVisibility(View.VISIBLE);
+            toSettingsButton.setVisibility(View.VISIBLE);
+            toSettingstext.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private boolean isManageAllFilesAccessGranted() {
+        return Environment.isExternalStorageManager();
     }
 
     private void showUsbDetachedToast() {

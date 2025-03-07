@@ -21,10 +21,10 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import net.discdd.android.fragments.LogFragment;
 import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
 import net.discdd.client.bundletransmission.BundleTransmission;
 import net.discdd.pathutils.TransportPaths;
+import net.discdd.screens.LogFragment;
 import net.discdd.wifidirect.WifiDirectManager;
 import net.discdd.wifidirect.WifiDirectStateListener;
 

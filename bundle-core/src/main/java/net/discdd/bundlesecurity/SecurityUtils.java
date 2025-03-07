@@ -68,6 +68,8 @@ public class SecurityUtils {
     public static final String SERVER_SIGNEDPRE_PRIVATE_KEY = "serverSignedPreKey.pvt";
     public static final String SERVER_RATCHET_PRIVATE_KEY = "serverRatchetKey.pvt";
 
+    public static final String ADAPTER = "adapter";
+
     // ----------------- GrpcSecurity -----------------
     public static final String GRPC_SECURITY_PATH = "GrpcSecurity";
     public static final String GRPC_PUBLIC_KEY = "%sGrpcPub.pub";

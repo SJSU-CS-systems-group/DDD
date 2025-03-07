@@ -1,17 +1,22 @@
 package net.discdd.server.applicationdatamanager;
 
 import com.google.protobuf.ByteString;
-import io.grpc.ManagedChannelBuilder;
+import io.grpc.netty.GrpcSslContexts;
+import io.grpc.netty.NettyChannelBuilder;
 import net.discdd.grpc.AppDataUnit;
 import net.discdd.grpc.ExchangeADUsRequest;
 import net.discdd.grpc.PendingDataCheckRequest;
 import net.discdd.grpc.ServiceAdapterServiceGrpc;
 import net.discdd.server.repository.RegisteredAppAdapterRepository;
+import net.discdd.tls.DDDTLSUtil;
+import net.discdd.tls.GrpcSecurity;
 import net.discdd.utils.StoreADUs;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
+import javax.net.ssl.SSLException;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.Set;
@@ -43,6 +48,8 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
     private final Duration dataCheckInterval;
     private long grpcTimeout = 20_000 /* milliseconds */;
+    @Autowired
+    private GrpcSecurity serverGrpcSecurity;
 
     BundleServerAduDeliverer(AduStores aduStores, RegisteredAppAdapterRepository registeredAppAdapterRepository,
                              @Value("${serviceadapter.datacheck.interval}") Duration dataCheckInterval) {
@@ -59,11 +66,23 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
             foundApps.add(appAdapter.getAppId());
             // TODO: we should also check if the location matches
             if (!apps.containsKey(appAdapter.getAppId())) {
-                var stub = ServiceAdapterServiceGrpc.newBlockingStub(
-                        ManagedChannelBuilder.forTarget(appAdapter.getAddress()).usePlaintext().build());
-                apps.put(appAdapter.getAppId(),
-                         new AppState(appAdapter.getAppId(), Executors.newSingleThreadExecutor(), new HashSet<>(),
-                                      stub));
+                try {
+                    var sslClientContext = GrpcSslContexts.forClient()
+                            .keyManager(serverGrpcSecurity.getGrpcKeyPair().getPrivate(), serverGrpcSecurity.getGrpcCert())
+                            .trustManager(DDDTLSUtil.trustManager)
+                            .build();
+                    var channel = NettyChannelBuilder.forTarget(appAdapter.getAddress())
+                            .useTransportSecurity()
+                            .sslContext(sslClientContext)
+                            .build();
+
+                    var stub = ServiceAdapterServiceGrpc.newBlockingStub(channel);
+                    apps.put(appAdapter.getAppId(),
+                            new AppState(appAdapter.getAppId(), Executors.newSingleThreadExecutor(), new HashSet<>(),
+                                    stub));
+                } catch (SSLException e) {
+                    throw new RuntimeException(e);
+                }
             }
         });
         // remove any apps that went away

@@ -1,11 +1,22 @@
 package net.discdd.app.k9;
 
 import org.junit.jupiter.api.Test;
-// import org.springframework.boot.test.context.SpringBootTest;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+
+import java.nio.file.Path;
 
 @DataJpaTest
 class K9ApplicationTests {
+    @TempDir
+    static Path tempDir;
+
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        registry.add("adapter-server.root-dir", () -> tempDir.toString());
+    }
 
     @Test
     void contextLoads() {
