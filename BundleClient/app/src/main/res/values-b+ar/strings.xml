@@ -53,4 +53,12 @@
     <string name="exchanged_d_bundles_to_and_d_bundles_from_server">تم تبادل %d حزم إلى و %d حزم من الخادم</string>
     <string name="initiating_bundle_exchange">جارٍ بدء تبادل الحزمة...</string>
     <string name="exchanging_with_transport">التبادل مع النقل</string>
+    <string name="acra_toast_text">أكرا إنشاء تقرير الأعطال!</string>
+    <string name="settings_saved">تم حفظ الإعدادات</string>
+    <string name="connecting_to_server">جارٍ الاتصال بالخادم...</string>
+    <string name="upload_status">حالة التحميل: %1$s، حالة التنزيل: %2$s</string>
+    <string name="service_not_available">خطأ: الخدمة غير متوفرة.</string>
+    <string name="reload">إعادة تحميل</string>
+    <string name="to_settings_text">لتمكين تطبيقنا من إدارة الملفات المتعلقة بالتطبيقات على هذا الجهاز ووحدة تخزين USB الخاصة بك، يرجى تبديل \"نعم\" لـ BundleClient في إعداداتك. نؤكد لك أنه سيتم الوصول فقط إلى الملفات التي أنشأها تطبيقنا. تعد حماية خصوصية المستخدم والحفاظ على الممارسات الأخلاقية من أهم أولوياتنا.</string>
+    <string name="to_settings_button">إلى الإعدادات</string>
 </resources>

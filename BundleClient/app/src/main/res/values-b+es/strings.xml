@@ -53,4 +53,12 @@
     <string name="exchanged_d_bundles_to_and_d_bundles_from_server">Intercambiado %d paquetes a y %d paquetes desde el servidor</string>
     <string name="initiating_bundle_exchange">Iniciando intercambio de paquetes...</string>
     <string name="exchanging_with_transport">Intercambiar con Transporte</string>
+    <string name="acra_toast_text">¡Acra crea un informe de fallos!</string>
+    <string name="settings_saved">Configuración guardada</string>
+    <string name="connecting_to_server">Conectándose al servidor...</string>
+    <string name="upload_status">Estado de carga: %1$s, Estado de descarga: %2$s</string>
+    <string name="service_not_available">Error: el servicio no está disponible.</string>
+    <string name="reload">Recargar</string>
+    <string name="to_settings_text">Para permitir que nuestra aplicación administre archivos relacionados con la aplicación en este dispositivo y su almacenamiento USB, active \"Sí\" para BundleClient en su configuración. Le aseguramos que solo se accederá a los archivos creados por nuestra aplicación. Proteger la privacidad del usuario y mantener prácticas éticas son nuestras principales prioridades.</string>
+    <string name="to_settings_button">A configuraciónes</string>
 </resources>
