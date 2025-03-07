@@ -17,6 +17,7 @@
     <string name="usb_tab">يو إس بي</string>
     <string name="logs_tab">السجلات</string>
     <string name="bm_tab">مدير الحزم</string>
+    <string name="server_tab">>الخادم</string>
     <string name="starting_file_receive">بدء استلام الملف...\n</string>
     <string name="incomplete_bundle_request">طلب غير مكتمل %1$ %2$</string>
     <string name="failed">فشل</string>

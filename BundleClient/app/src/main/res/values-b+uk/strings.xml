@@ -17,6 +17,7 @@
     <string name="usb_tab">USB</string>
     <string name="logs_tab">Журнали</string>
     <string name="bm_tab">Менеджер пакетов</string>
+    <string name="server_tab">Сервер></string>
     <string name="starting_file_receive">Розпочато прийом файлу...\n</string>
     <string name="incomplete_bundle_request">Неповний %1$ %2$</string>
     <string name="failed">Не вдалося</string>

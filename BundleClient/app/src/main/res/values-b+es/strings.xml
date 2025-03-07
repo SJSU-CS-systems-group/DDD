@@ -17,6 +17,7 @@
     <string name="usb_tab">Usb</string>
     <string name="logs_tab">Registros</string>
     <string name="bm_tab">Administrador de paquetes</string>
+    <string name="server_tab">Servidor informático></string>
     <string name="starting_file_receive">Iniciando recepción de archivo...\n</string>
     <string name="incomplete_bundle_request">Incompleto %1$ %2$</string>
     <string name="failed">Fallido</string>
