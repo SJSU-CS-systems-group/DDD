@@ -56,4 +56,6 @@
     <string name="apply_changes">Click Set Storage to apply changes</string>
     <string name="storage_updated">Storage updated</string>
     <string name="failed_to_update_storage">Failed to update storage</string>
+    <string name="initiating_bundle_exchange">Initiating Bundle Exchange...</string>
+    <string name="exchanging_with_client">Exchanging with Client</string>
 </resources>

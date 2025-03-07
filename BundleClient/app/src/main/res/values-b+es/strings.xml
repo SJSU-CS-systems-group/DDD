@@ -51,4 +51,6 @@
     <string name="sending_adu_s_d_from_s">Enviando ADU %s:%d desde %s</string>
     <string name="exchanged_d_bundles_to_and_d_bundles_from_s">Intercambiado %d paquetes a y %d paquetes desde %s</string>
     <string name="exchanged_d_bundles_to_and_d_bundles_from_server">Intercambiado %d paquetes a y %d paquetes desde el servidor</string>
+    <string name="initiating_bundle_exchange">Iniciando intercambio de paquetes...</string>
+    <string name="exchanging_with_transport">Intercambiar con Transporte</string>
 </resources>

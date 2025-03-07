@@ -51,4 +51,6 @@
     <string name="sending_adu_s_d_from_s">إرسال ADU %s:%d من %s</string>
     <string name="exchanged_d_bundles_to_and_d_bundles_from_s">تم تبادل %d حزم إلى و %d حزم من %s</string>
     <string name="exchanged_d_bundles_to_and_d_bundles_from_server">تم تبادل %d حزم إلى و %d حزم من الخادم</string>
+    <string name="initiating_bundle_exchange">جارٍ بدء تبادل الحزمة...</string>
+    <string name="exchanging_with_transport">التبادل مع النقل</string>
 </resources>

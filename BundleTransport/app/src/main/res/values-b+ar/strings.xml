@@ -50,4 +50,6 @@
     <string name="usb_device_detached">تم فصل جهاز USB</string>
     <string name="exchange_usb_data">تبادل بيانات USB</string>
     <string name="usb_connection_status">حالة اتصال USB</string>
+    <string name="initiating_bundle_exchange">جارٍ بدء تبادل الحزمة...</string>
+    <string name="exchanging_with_client">التبادل مع العميل</string>
 </resources>
