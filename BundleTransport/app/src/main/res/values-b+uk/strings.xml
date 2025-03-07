@@ -51,4 +51,12 @@
     <string name="usb_connection_status">Статус USB-з\'єднання</string>
     <string name="initiating_bundle_exchange">Ініціювання пакетного обміну...</string>
     <string name="exchanging_with_client">Обмін з клієнтом</string>
+    <string name="usb_action_status">Статус дії USB</string>
+    <string name="reload_settings">Перезавантажити</string>
+    <string name="to_settings_button">До налаштувань</string>
+    <string name="to_settings_text">Щоб увімкнути нашу програму для керування пов’язаними з програмою файлами на цьому пристрої та вашому USB-накопичувачі, перемкніть \"Так\" для BundleTransport у своїх налаштуваннях. Ми запевняємо вас, що доступ буде лише до файлів, створених нашим додатком. Захист конфіденційності користувачів і дотримання етичних правил є нашими головними пріоритетами.</string>
+    <string name="error_updating_storage_info">Помилка оновлення інформації про сховище</string>
+    <string name="apply_changes">Натисніть «Налаштувати пам’ять», щоб застосувати зміни</string>
+    <string name="storage_updated">Сховище оновлено</string>
+    <string name="failed_to_update_storage">Не вдалося оновити сховище</string>
 </resources>

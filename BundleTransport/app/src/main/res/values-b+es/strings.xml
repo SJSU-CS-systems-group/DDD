@@ -49,7 +49,14 @@
     <string name="usb_device_detached">Dispositivo USB desconectado</string>
     <string name="exchange_usb_data">Intercambiar Datos USB</string>
     <string name="usb_connection_status">Estado de Conexión USB</string>
-    <string name="initiating_bundle_exchange">Iniciando intercambio de paquetes...
-</string>
+    <string name="initiating_bundle_exchange">Iniciando intercambio de paquetes...</string>
     <string name="exchanging_with_client">Intercambio con el cliente</string>
+    <string name="usb_action_status">Estado de acción USB</string>
+    <string name="reload_settings">Recargar</string>
+    <string name="to_settings_button">A la configuración</string>
+    <string name="to_settings_text">Para permitir que nuestra aplicación administre archivos relacionados con la aplicación en este dispositivo y su almacenamiento USB, active \"Sí\" para BundleTransport en su configuración. Le aseguramos que solo se accederá a los archivos creados por nuestra aplicación. Proteger la privacidad del usuario y mantener prácticas éticas son nuestras principales prioridades.</string>
+    <string name="error_updating_storage_info">Error al actualizar la información de almacenamiento</string>
+    <string name="apply_changes">Haga clic en Establecer almacenamiento para aplicar los cambios.</string>
+    <string name="storage_updated">Almacenamiento actualizado</string>
+    <string name="failed_to_update_storage">No se pudo actualizar el almacenamiento</string>
 </resources>

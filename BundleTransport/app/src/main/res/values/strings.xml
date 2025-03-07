@@ -48,6 +48,7 @@
     <string name="usb_device_attached">USB device attached</string>
     <string name="usb_device_detached">USB device detached</string>
     <string name="exchange_usb_data">Exchange USB Data</string>
+    <string name="usb_connection_status">Status of USB connection</string>
     <string name="usb_action_status">USB Action Status</string>
     <string name="reload_settings">Reload</string>
     <string name="to_settings_button">To Settings</string>
