@@ -46,7 +46,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
   @Autowired
   private K9ClientIdToEmailMappingRepository clientToEmailRepository;
 
-  public K9DDDAdapter(@Value("${k9-server.root-dir}") Path rootDir) {
+  public K9DDDAdapter(@Value("${adapter-server.root-dir}") Path rootDir) {
     sendADUsStorage = new StoreADUs(rootDir.resolve("send"), true);
     passwordEncoder = new BCryptPasswordEncoder();
   }

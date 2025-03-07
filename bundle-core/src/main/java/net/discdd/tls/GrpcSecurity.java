@@ -16,18 +16,17 @@ import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
 public class GrpcSecurity {
     private static final Logger logger = Logger.getLogger(GrpcSecurity.class.getName());
-    private static GrpcSecurity GrpcSecurityInstance = null;
 
     @Getter
     private X509Certificate grpcCert;
     @Getter
     private KeyPair grpcKeyPair;
+
     public GrpcSecurity(Path grpcSecurityPath, String type) throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException, CertificateException, OperatorCreationException, IOException {
         var grpcPublicKeyPath = grpcSecurityPath.resolve(String.format(SecurityUtils.GRPC_PUBLIC_KEY,type));
         var grpcPrivateKeyPath = grpcSecurityPath.resolve(String.format(SecurityUtils.GRPC_PRIVATE_KEY,type));
@@ -51,19 +50,4 @@ public class GrpcSecurity {
             logger.log(INFO, "Generated new certificate and keypair");
         }
     }
-
-    public static synchronized GrpcSecurity initializeInstance(Path rootPath, String type) throws IOException, NoSuchAlgorithmException, org.whispersystems.libsignal.InvalidKeyException, InvalidAlgorithmParameterException, CertificateException, NoSuchProviderException, OperatorCreationException {
-        if (GrpcSecurityInstance == null) {
-            GrpcSecurityInstance = new GrpcSecurity(rootPath, type);
-        } else {
-            logger.log(FINE, "[Sec]: Client Security Instance is already initialized!");
-        }
-
-        return GrpcSecurityInstance;
-    }
-
-    synchronized public static GrpcSecurity getInstance() throws InvalidAlgorithmParameterException, CertificateException, NoSuchAlgorithmException, IOException, NoSuchProviderException, OperatorCreationException {
-        return GrpcSecurityInstance;
-    }
-
 }
