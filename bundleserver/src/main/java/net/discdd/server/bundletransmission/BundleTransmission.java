@@ -24,27 +24,38 @@ import net.discdd.utils.FileUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.ecc.Curve;
+import org.whispersystems.libsignal.ecc.ECPrivateKey;
+import org.whispersystems.libsignal.ecc.ECPublicKey;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
+import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
+import static net.discdd.bundlesecurity.SecurityUtils.decodePrivateKeyFromFile;
+import static net.discdd.bundlesecurity.SecurityUtils.decodePublicKeyfromFile;
+import static net.discdd.bundlesecurity.SecurityUtils.generateID;
 import static net.discdd.grpc.BundleSenderType.CLIENT;
 import static net.discdd.grpc.BundleSenderType.TRANSPORT;
 
@@ -91,8 +102,7 @@ public class BundleTransmission {
         Files.createDirectories(bundleRecvProcDir);
 
         UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, bundleRecvProcDir);
-        String clientId = "";
-        String serverIdReceived = SecurityUtils.generateID(
+        String serverIdReceived = generateID(
                 uncompressedBundle.getSource().toPath().resolve(SecurityUtils.SERVER_IDENTITY_KEY));
         if (!bundleSecurity.bundleServerIdMatchesCurrentServer(serverIdReceived)) {
             logger.log(WARNING, "Received bundle's serverIdentity didn't match with current server, " +
@@ -100,8 +110,8 @@ public class BundleTransmission {
             return;
         }
 
-        clientId = SecurityUtils.generateID(
-                uncompressedBundle.getSource().toPath().resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
+        String clientIdBase64 = SecurityUtils.decodeEncryptedPublicKeyfromFile(serverSecurity.getSigningKey(), uncompressedBundle.getSource().toPath().resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
+        String clientId = generateID(clientIdBase64);
         var counters = this.applicationDataManager.getBundleCountersForClient(clientId);
 
         var receivedBundleCounter =
