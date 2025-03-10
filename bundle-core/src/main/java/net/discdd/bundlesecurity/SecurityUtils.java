@@ -109,6 +109,11 @@ public class SecurityUtils {
         return Base64.getUrlEncoder().encodeToString(MessageDigest.getInstance("SHA-1").digest(publicKey));
     }
 
+    public static String generateID(String publicKeyBase64) throws NoSuchAlgorithmException {
+        byte[] publicKeyBytes = Base64.getUrlDecoder().decode(publicKeyBase64);
+        return generateID(publicKeyBytes);
+    }
+
     public static void createEncodedPublicKeyFile(ECPublicKey publicKey, Path path) throws IOException {
         Files.write(path, createEncodedPublicKeyBytes(publicKey), StandardOpenOption.CREATE,
                     StandardOpenOption.TRUNCATE_EXISTING);
@@ -255,7 +260,8 @@ public class SecurityUtils {
             NoSuchAlgorithmException {
         ServerSecurity serverSecurityInstance = ServerSecurity.getInstance(bundlePath.getParent());
         ECPrivateKey ServerPrivKey = serverSecurityInstance.getSigningKey();
-        return decodeEncryptedPublicKeyfromFile(ServerPrivKey, bundlePath.resolve(CLIENT_IDENTITY_KEY));
+        String publicKey = decodeEncryptedPublicKeyfromFile(ServerPrivKey, bundlePath.resolve(CLIENT_IDENTITY_KEY));
+        return generateID(publicKey);
     }
 
     public static String encryptAesCbcPkcs5(String sharedSecret, String plainText) throws NoSuchAlgorithmException,

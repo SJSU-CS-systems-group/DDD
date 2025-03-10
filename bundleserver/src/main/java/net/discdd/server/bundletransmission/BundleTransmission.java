@@ -111,8 +111,7 @@ public class BundleTransmission {
         }
 
         String clientIdBase64 = SecurityUtils.decodeEncryptedPublicKeyfromFile(serverSecurity.getSigningKey(), uncompressedBundle.getSource().toPath().resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
-        byte[] clientIdBase64Bytes = Base64.getUrlDecoder().decode(clientIdBase64);
-        String clientId = generateID(clientIdBase64Bytes);
+        String clientId = generateID(clientIdBase64);
         var counters = this.applicationDataManager.getBundleCountersForClient(clientId);
 
         var receivedBundleCounter =
