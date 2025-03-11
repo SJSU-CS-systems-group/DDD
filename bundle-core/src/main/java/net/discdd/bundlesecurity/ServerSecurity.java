@@ -199,7 +199,7 @@ public class ServerSecurity {
                     SecurityUtils.decodeEncryptedPublicKeyfromFile(ourIdentityKeyPair.getPrivateKey(), path.resolve(CLIENT_IDENTITY_KEY));
             clientIdentityKey = Base64.getUrlDecoder().decode(clientIdentityKeyBase64);
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
+            throw new InvalidKeyException("No such algorithm", e);
         }
         clientSession.IdentityKey = new IdentityKey(clientIdentityKey, 0);
 
@@ -385,8 +385,6 @@ public class ServerSecurity {
         byte[] encryptedBundleID = Files.readAllBytes(bundleIDPath);
         String receivedBundleID, latestBundleID;
 
-        //create server secuirty instance
-        //fetch server priv key
         ServerSecurity serverSecurityInstance = ServerSecurity.getInstance(bundlePath.getParent());
         ECPrivateKey ServerPrivKey = serverSecurityInstance.getSigningKey();
         var clientIdentityKeyBase64 =
