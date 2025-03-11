@@ -16,7 +16,6 @@ import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiServiceManager
 import java.net.InetAddress
 import java.util.concurrent.CompletableFuture
-import java.util.logging.Logger
 
 data class PeerDevice(
     val deviceAddress: String,
@@ -42,7 +41,6 @@ class WifiDirectViewModel(
     application: Application,
 ): AndroidViewModel(application) {
     private val context get() = getApplication<Application>()
-    private val logger = Logger.getLogger(WifiDirectViewModel::class.java.name)
     private val bundleClientServiceBroadcastReceiver = BundleClientServiceBroadcastReceiver().apply {
         setViewModel(this@WifiDirectViewModel)
     }
@@ -158,7 +156,7 @@ class WifiDirectViewModel(
         val newNames = HashSet(discoveredPeers)
         newNames.removeAll(currentPeers)
 
-        // figure out the removed names (currentPeers - discoveredPeers)
+        // removed names (currentPeers - discoveredPeers)
         val removedNames = HashSet(currentPeers)
         removedNames.removeAll(discoveredPeers.toSet())
         peerDeviceAddresses.removeIf { removedNames.contains(it) }
