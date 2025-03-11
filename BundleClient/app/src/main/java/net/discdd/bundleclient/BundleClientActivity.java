@@ -31,6 +31,7 @@ import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
 import net.discdd.android.fragments.PermissionsFragment;
+import net.discdd.bundleclient.screens.BundleClientWifiDirectFragment;
 import net.discdd.bundleclient.screens.ServerFragment;
 import net.discdd.screens.LogFragment;
 import net.discdd.viewmodels.PermissionsViewModel;
@@ -79,6 +80,10 @@ public class BundleClientActivity extends AppCompatActivity {
         };
     }
 
+    public CompletableFuture<BundleClientActivity> getServiceReady() {
+        return serviceReady;
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -117,7 +122,7 @@ public class BundleClientActivity extends AppCompatActivity {
 
         permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
         permissionsFragment = PermissionsFragment.newInstance();
-        homeFragment = BundleClientWifiDirectFragment.newInstance();
+        homeFragment = new BundleClientWifiDirectFragment();
         usbFragment = UsbFragment.newInstance();
         logFragment = new LogFragment();
         bundleManagerFragment = BundleManagerFragment.newInstance();
