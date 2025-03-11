@@ -57,7 +57,7 @@ class BundleClientWifiDirectFragment: Fragment() {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 MaterialTheme {
-                    WifiDirectScreen(serviceReadyFuture = (activity as? BundleClientActivity)?.serviceReady)
+                    WifiDirectScreen(serviceReadyFuture = (activity as BundleClientActivity).serviceReady)
                 }
             }
         }
@@ -67,7 +67,7 @@ class BundleClientWifiDirectFragment: Fragment() {
 @Composable
 fun WifiDirectScreen(
     viewModel: WifiDirectViewModel = viewModel(),
-    serviceReadyFuture: CompletableFuture<BundleClientActivity>? = null,
+    serviceReadyFuture: CompletableFuture<BundleClientActivity>,
     preferences: SharedPreferences = LocalContext.current.getSharedPreferences(
         BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTINGS,
         Context.MODE_PRIVATE
@@ -77,9 +77,7 @@ fun WifiDirectScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
 
     LaunchedEffect(Unit) {
-        serviceReadyFuture?.let { future ->
-            viewModel.initialize(future)
-        }
+        viewModel.initialize(serviceReadyFuture)
     }
 
     DisposableEffect(lifecycleOwner) {
@@ -202,5 +200,5 @@ fun PeerItem(
 @Preview(showBackground = true)
 @Composable
 fun WifiDirectScreenPreview() {
-    WifiDirectScreen()
+    WifiDirectScreen(serviceReadyFuture = CompletableFuture())
 }
