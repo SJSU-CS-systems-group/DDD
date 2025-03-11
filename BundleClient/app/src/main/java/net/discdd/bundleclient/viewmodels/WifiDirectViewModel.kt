@@ -16,6 +16,7 @@ import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiServiceManager
 import java.net.InetAddress
 import java.util.concurrent.CompletableFuture
+import java.util.logging.Logger
 
 data class PeerDevice(
     val deviceAddress: String,
@@ -41,6 +42,7 @@ class WifiDirectViewModel(
     application: Application,
 ): AndroidViewModel(application) {
     private val context get() = getApplication<Application>()
+    private val logger = Logger.getLogger(WifiDirectViewModel::class.java.name)
     private val bundleClientServiceBroadcastReceiver = BundleClientServiceBroadcastReceiver().apply {
         setViewModel(this@WifiDirectViewModel)
     }
@@ -146,31 +148,44 @@ class WifiDirectViewModel(
         }
     }
 
-    // Method to update connected devices text
+    // method to update connected peers list in client
     fun updateConnectedDevices() {
         val recentTransports = wifiService?.recentTransports ?: return
-
         val discoveredPeers = recentTransports.map { it.deviceAddress }
-        // figure out the new names (discoveredPeers - currentPeers)
         val currentPeers = HashSet(peerDeviceAddresses)
-        // figure out the new names (discoveredPeers - currentPeers)
+
+        // new names (discoveredPeers - currentPeers)
         val newNames = HashSet(discoveredPeers)
         newNames.removeAll(currentPeers)
+
         // figure out the removed names (currentPeers - discoveredPeers)
         val removedNames = HashSet(currentPeers)
         removedNames.removeAll(discoveredPeers.toSet())
-
         peerDeviceAddresses.removeIf { removedNames.contains(it) }
         peerDeviceAddresses.addAll(newNames)
 
-        _state.update { it.copy(connectedDeviceText = peerDeviceAddresses.toString()) }
+        val updatedPeers = peerDeviceAddresses.mapNotNull { deviceAddress ->
+            val peer = wifiService?.getPeer(deviceAddress)
+            if (peer != null) {
+                PeerDevice(
+                    deviceAddress = deviceAddress,
+                    deviceName = peer.deviceName,
+                    lastSeen = peer.lastSeen,
+                    lastExchange = peer.lastExchange,
+                    recencyTime = peer.recencyTime
+                )
+            } else {
+                null
+            }
+        }
+        _state.update { it.copy(peers = updatedPeers) }
     }
 
     fun updateOwnerAndGroupInfo(groupOwnerAddress: InetAddress?, groupInfo: WifiP2pGroup?) {
         val ownerNameAndAddress = if (groupInfo == null || groupInfo.owner == null) {
-            R.string.not_connected.toString()
+            context.getString(R.string.not_connected)
         } else {
-            R.string.connected_to_transport.toString()
+            context.getString(R.string.connected_to_transport)
         }
         _state.update { it.copy(connectedDeviceText = ownerNameAndAddress) }
     }
