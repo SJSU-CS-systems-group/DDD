@@ -109,15 +109,6 @@ public class ClientSecurity {
                         ourIdentityKeyPair.getPrivateKey().serialize());
             Files.write(path.resolve(SecurityUtils.CLIENT_BASE_PRIVATE_KEY), ourBaseKey.getPrivateKey().serialize());
         }
-
-//        try {
-//            Files.write(identityKeyPaths[0], createEncryptedEncodedPublicKeyBytes(ourIdentityKeyPair.getPublicKey().getPublicKey(), theirIdentityKey.getPublicKey()), StandardOpenOption.CREATE,
-//                        StandardOpenOption.TRUNCATE_EXISTING);
-//        } catch (GeneralSecurityException e) {
-//            throw new RuntimeException(e);
-//        } catch (InvalidKeyException e) {
-//            throw new RuntimeException(e);
-//        }
         SecurityUtils.createEncodedPublicKeyFile(ourIdentityKeyPair.getPublicKey().getPublicKey(), identityKeyPaths[0]);
         SecurityUtils.createEncodedPublicKeyFile(ourBaseKey.getPublicKey(), identityKeyPaths[1]);
         SecurityUtils.createEncodedPublicKeyFile(theirIdentityKey.getPublicKey(), identityKeyPaths[2]);
@@ -127,14 +118,6 @@ public class ClientSecurity {
     private void loadKeysfromFiles(Path clientKeyPath) throws IOException, InvalidKeyException {
         byte[] identityKeyPvt = Files.readAllBytes(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_PRIVATE_KEY));
         byte[] identityKeyPub = SecurityUtils.decodePublicKeyfromFile(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
-//        byte[] identityKeyPub = new byte[0];
-//        try {
-//            logger.log(INFO, "TRYING THE NEW DECODE WHEN TRYING TO READ KEYS FROM FILES");
-//            identityKeyPub = SecurityUtils.decodeEncryptedPublicKeyfromFile(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY))
-//                    .getBytes();
-//        } catch (NoSuchAlgorithmException e) {
-//            throw new RuntimeException(e);
-//        }
 
         IdentityKey identityPublicKey = new IdentityKey(identityKeyPub, 0);
         ECPrivateKey identityPrivateKey = Curve.decodePrivatePoint(identityKeyPvt);
