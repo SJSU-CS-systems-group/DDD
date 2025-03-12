@@ -42,8 +42,6 @@ import net.discdd.tls.GrpcSecurity;
 import net.discdd.transport.GrpcSecurityHolder;
 import net.discdd.viewmodels.PermissionsViewModel;
 
-import org.whispersystems.libsignal.InvalidKeyException;
-
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
@@ -55,7 +53,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.SubmissionPublisher;
 import java.util.logging.Logger;
 import java.security.InvalidAlgorithmParameterException;
-import net.discdd.bundlesecurity.SecurityUtils;
 import org.bouncycastle.operator.OperatorCreationException;
 
 public class BundleTransportActivity extends AppCompatActivity {
@@ -75,7 +72,6 @@ public class BundleTransportActivity extends AppCompatActivity {
     private final SubmissionPublisher<ConnectivityEvent> connectivityEventPublisher = new SubmissionPublisher<>();
     private ViewPager2 viewPager2;
     private FragmentStateAdapter viewPager2Adapter;
-    private PermissionsFragment permissionsFragment;
     private TabLayout tabLayout;
     private TabLayoutMediator mediator;
     private SharedPreferences sharedPreferences;
@@ -142,8 +138,7 @@ public class BundleTransportActivity extends AppCompatActivity {
         logFragment = new TitledFragment(getString(R.string.logs), new LogFragment());
 
         permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
-        permissionsFragment = new PermissionsFragment();
-        titledPermissionsFragment = new TitledFragment("Permissions", permissionsFragment);
+        titledPermissionsFragment = new TitledFragment("Permissions", new PermissionsFragment());
         fragments.add(titledPermissionsFragment);
 
         tabLayout = findViewById(R.id.tabs);
@@ -230,11 +225,11 @@ public class BundleTransportActivity extends AppCompatActivity {
 
     protected void onStart() {
         super.onStart();
-        permissionsFragment.registerPermissionsWatcher(obtainedPermissions -> {
+        permissionsViewModel.registerPermissionsWatcher(obtainedPermissions -> {
             logger.info("Permissions obtained: " + obtainedPermissions);
             if (obtainedPermissions.containsAll(wifiDirectPermissions)) {
                 transportWifiServiceConnection.thenApply(
-                        transportWifiDirectService -> transportWifiDirectService.requestDeviceInfo());
+                        TransportWifiDirectService::requestDeviceInfo);
                 enableFragment(transportWifiFragment);
             } else {
                 disableFragment(transportWifiFragment);
@@ -315,7 +310,7 @@ public class BundleTransportActivity extends AppCompatActivity {
                 }
 
                 @Override
-                public void onLost(Network ni) {
+                public void onLost(@NonNull Network network) {
                     logger.info("Network unavailable");
                     disableFragment(serverUploadFragment);
                     connectivityEventPublisher.submit(new ConnectivityEvent(false));
@@ -377,7 +372,7 @@ public class BundleTransportActivity extends AppCompatActivity {
 
     public void checkRuntimePermission() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.NEARBY_WIFI_DEVICES) == PackageManager.PERMISSION_GRANTED) {
-            updateTabs(true);
+            permissionsViewModel.updatePermissions(true);
         }
     }
 }
