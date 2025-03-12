@@ -144,9 +144,6 @@ public class BundleTransportActivity extends AppCompatActivity {
         permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
         titledPermissionsFragment = new TitledFragment("Permissions", PermissionsFragment.newInstance());
         fragments.add(titledPermissionsFragment);
-        permissionsFragment = PermissionsFragment.newInstance();
-        titledPermissionsFragment = new TitledFragment("Permissions", permissionsFragment);
-        fragments.add(titledPermissionsFragment);
 
         tabLayout = findViewById(R.id.tabs);
         viewPager2 = findViewById(R.id.view_pager);
@@ -379,7 +376,8 @@ public class BundleTransportActivity extends AppCompatActivity {
 
     public void checkRuntimePermission() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.NEARBY_WIFI_DEVICES) == PackageManager.PERMISSION_GRANTED) {
-            updateTabs(true);
+            permissionsViewModel.updatePermissions(true);
+
         }
     }
 }
