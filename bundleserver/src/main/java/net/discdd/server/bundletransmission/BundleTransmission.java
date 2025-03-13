@@ -24,9 +24,8 @@ import net.discdd.utils.FileUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.ecc.Curve;
-import org.whispersystems.libsignal.ecc.ECPrivateKey;
-import org.whispersystems.libsignal.ecc.ECPublicKey;
+import org.whispersystems.libsignal.InvalidMessageException;
+import org.whispersystems.libsignal.LegacyMessageException;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -206,6 +205,10 @@ public class BundleTransmission {
                                                       serverSecurity.getIdentityPublicKey().getPublicKey(),
                                                       encryptedBundleId, new ByteArrayInputStream(byteArrayOsForPayload.toByteArray()),
                                                       bundleOutputStream);
+        } catch (InvalidMessageException e) {
+            throw new RuntimeException(e);
+        } catch (LegacyMessageException e) {
+            throw new RuntimeException(e);
         }
         return encryptedBundleId;
     }

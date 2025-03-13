@@ -302,23 +302,25 @@ public class ServerSecurity {
         var clientId = SecurityUtils.getClientID(bundlePath);
         SecurityUtils.ClientSession client = getClientSession(clientId, bundlePath);
 
-        byte[] encryptedData = Files.readAllBytes(payloadPath.resolve(payloadName));
-        byte[] serverDecryptedMessage = client.cipherSession.decrypt(new SignalMessage(encryptedData));
+
+        var encryptedData = Files.newInputStream(payloadPath.resolve(payloadName));
+        var output = Files.newOutputStream(decryptedFile, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
+
+        System.out.println("Before Decryption");
+        client.cipherSession.decrypt(encryptedData, output);
+
         updateSessionRecord(client);
 
-        Files.write(decryptedFile, serverDecryptedMessage, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
-
-        logger.log(FINE, "[ServerSecurity]:Decrypted Size = %d", serverDecryptedMessage.length);
+        logger.log(FINE, "[ServerSecurity]:Decrypted Size = %d");
 
         return decryptedFile;
     }
 
-    public CiphertextMessage encrypt(String clientID, InputStream plaintext, OutputStream outputStream) throws IOException, NoSuchAlgorithmException,
+    public void encrypt(String clientID, InputStream plaintext, OutputStream outputStream) throws IOException, NoSuchAlgorithmException,
             InvalidKeyException {
         ClientSession client = getClientSession(clientID, null);
-        CiphertextMessage cipherText = client.cipherSession.encrypt(plaintext, outputStream);
+        client.cipherSession.encrypt(plaintext, outputStream);
         updateSessionRecord(client);
-        return cipherText;
     }
 
     public Path[] createEncryptionHeader(Path encPath, String bundleID, ClientSession client) throws IOException {

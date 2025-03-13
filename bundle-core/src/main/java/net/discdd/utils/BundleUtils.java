@@ -15,9 +15,13 @@ import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
 import net.discdd.model.UncompressedPayload;
 import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.InvalidMessageException;
+import org.whispersystems.libsignal.LegacyMessageException;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
 import org.whispersystems.libsignal.protocol.CiphertextMessage;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -34,7 +38,6 @@ import java.security.GeneralSecurityException;
 import java.security.InvalidParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -57,12 +60,16 @@ public class BundleUtils {
     private static final String BUNDLE_EXTENSION = ".bundle";
     private static final String stringToMatch = "^[a-zA-Z0-9-_=]+$";
 
-    public static UncompressedBundle extractBundle(Bundle bundle, Path extractDirPath) {
+    public static UncompressedBundle extractBundle(Bundle bundle, Path extractDirPath) throws IOException {
         String bundleFileName = bundle.getSource().getName();
         logger.log(INFO, "Extracting bundle for bundle name: " + bundleFileName);
         Path extractedBundlePath = extractDirPath.resolve(bundleFileName);
         JarUtils.jarToDir(bundle.getSource().getAbsolutePath(), extractedBundlePath.toString());
-        File[] payloads = extractedBundlePath.resolve("payloads").toFile().listFiles();
+        Files.walk(extractedBundlePath, 2) // Limit depth to 2 for better readability
+                .filter(Files::isDirectory) // Only print directories
+                .forEach(dir -> System.out.println("Directory: " + dir));
+
+        File[] payloads = extractDirPath.resolve("payloads").toFile().listFiles();
         EncryptedPayload encryptedPayload = new EncryptedPayload(null, payloads[0]);
         return new UncompressedBundle( // TODO get encryption header, payload signature and get bundle id from BS
                                        null, extractedBundlePath.toFile(), null, encryptedPayload);
@@ -328,15 +335,18 @@ public class BundleUtils {
     public static void encryptPayloadAndCreateBundle(Encrypter payloadEncryptor, ECPublicKey clientIdentityPublicKey,
                                                      ECPublicKey clientBaseKeyPairPublicKey,
                                                      ECPublicKey serverIdentityPublicKey, String encryptedBundleId,
-                                                     InputStream payload, OutputStream outputStream) throws IOException, NoSuchAlgorithmException, InvalidKeyException {
-        DDDJarFileCreator outerJar = new DDDJarFileCreator(outputStream);
+                                                     InputStream payload, OutputStream outputStream) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidMessageException, LegacyMessageException {
+
+
 
         // encrypt the payload
-        CiphertextMessage cipherTextMessage = payloadEncryptor.encrypt(payload, outputStream);
-        var cipherTextBytes = cipherTextMessage.serialize();
+        try {
+            payloadEncryptor.encrypt(payload, outputStream);
+        }catch(InvalidMessageException e){
+            throw new InvalidMessageException(e);
+        }
 
-        // store the encrypted payload
-        outerJar.createEntry(Paths.get(PAYLOAD_DIR, PAYLOAD_FILENAME), cipherTextBytes);
+        DDDJarFileCreator outerJar = new DDDJarFileCreator(outputStream);
 
         // store the bundleId
         outerJar.createEntry(SecurityUtils.BUNDLEID_FILENAME, encryptedBundleId.getBytes());
@@ -355,7 +365,7 @@ public class BundleUtils {
     }
 
     public interface Encrypter {
-        CiphertextMessage encrypt(InputStream payload, OutputStream outputStream) throws IOException, NoSuchAlgorithmException, InvalidKeyException;
+        void encrypt(InputStream payload, OutputStream outputStream) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidMessageException, LegacyMessageException;
     }
 
     public static void checkIdClean(String s) {

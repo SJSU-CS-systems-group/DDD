@@ -184,8 +184,11 @@ public class BundleTransmission {
                                                       clientSecurity.getClientBaseKeyPairPublicKey(),
                                                       clientSecurity.getServerPublicKey(), bundleId, inputStream,
                                                       os);
-        }
-        finally {
+        } catch (InvalidMessageException e) {
+            throw new RuntimeException(e);
+        } catch (LegacyMessageException e) {
+            throw new RuntimeException(e);
+        } finally {
             Files.delete(tmpPath);
         }
         return new BundleDTO(bundleId, new Bundle(bundleFile.toFile()));

@@ -219,11 +219,10 @@ public class ClientSecurity {
     }
 
     /* Encrypts File */
-    public CiphertextMessage encrypt(InputStream inputStream, OutputStream outputStream) throws IOException {
+    public void encrypt(InputStream inputStream, OutputStream outputStream) throws IOException, InvalidMessageException, LegacyMessageException {
         /* Encrypt File */
-        CiphertextMessage cipherText = cipherSession.encrypt(inputStream, outputStream);
+        cipherSession.encrypt(inputStream, outputStream);
         updateSessionRecord();
-        return cipherText;
     }
 
     public void decrypt(Path bundlePath, Path decryptedPath) throws IOException, InvalidMessageException,

@@ -26,6 +26,8 @@ import org.springframework.context.annotation.Configuration;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.InvalidMessageException;
+import org.whispersystems.libsignal.LegacyMessageException;
 import org.whispersystems.libsignal.SessionCipher;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.ecc.Curve;
@@ -41,6 +43,7 @@ import javax.crypto.NoSuchPaddingException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -193,8 +196,14 @@ public class End2EndTest {
                                                       clientIdentity.getPublicKey().getPublicKey(),
                                                       baseKeyPair.getPublicKey(),
                                                       serverIdentity.getPublicKey().getPublicKey(), encryptedBundleID,
-                                                      Files.newInputStream(bundleJarPath), os);
+                                                      new ByteArrayInputStream(baos.toByteArray()), os);
+
+        } catch (InvalidMessageException e) {
+            throw new RuntimeException(e);
+        } catch (LegacyMessageException e) {
+            throw new RuntimeException(e);
         }
+
         return bundleJarPath;
     }
 
