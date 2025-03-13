@@ -6,9 +6,11 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,6 +19,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -45,6 +48,7 @@ import net.discdd.bundleclient.BundleClientWifiDirectService
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.viewmodels.PeerDevice
 import net.discdd.bundleclient.viewmodels.WifiDirectViewModel
+import net.discdd.theme.ComposableTheme
 import java.util.concurrent.CompletableFuture
 
 class BundleClientWifiDirectFragment: Fragment() {
@@ -56,7 +60,7 @@ class BundleClientWifiDirectFragment: Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                MaterialTheme {
+                ComposableTheme {
                     WifiDirectScreen(serviceReadyFuture = (activity as BundleClientActivity).serviceReady)
                 }
             }
@@ -66,6 +70,7 @@ class BundleClientWifiDirectFragment: Fragment() {
 
 @Composable
 fun WifiDirectScreen(
+    darkTheme: Boolean = isSystemInDarkTheme(),
     viewModel: WifiDirectViewModel = viewModel(),
     serviceReadyFuture: CompletableFuture<BundleClientActivity>,
     preferences: SharedPreferences = LocalContext.current.getSharedPreferences(
@@ -76,77 +81,98 @@ fun WifiDirectScreen(
     val state by viewModel.state.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    LaunchedEffect(Unit) {
-        viewModel.initialize(serviceReadyFuture)
-    }
-
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_RESUME -> viewModel.registerBroadcastReceiver()
-                Lifecycle.Event.ON_PAUSE -> viewModel.unregisterBroadcastReceiver()
-                else -> {}
-            }
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        LaunchedEffect(Unit) {
+            viewModel.initialize(serviceReadyFuture)
         }
 
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-
-    state.dialogPeer?.let { peer ->
-        AlertDialog(
-            onDismissRequest = { viewModel.dismissDialog() },
-            title = { Text(text = peer.deviceName) },
-            text = {
-                Column {
-                    Text(text = "Last seen: ${viewModel.getRelativeTime(peer.lastSeen)}")
-                    Text(text = "Last exchange: ${viewModel.getRelativeTime(peer.lastExchange)}")
-                    Text(text = "Recency: ${viewModel.getRelativeTime(peer.recencyTime)}")
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { viewModel.dismissDialog() }) {
-                    Text("Close")
+        DisposableEffect(lifecycleOwner) {
+            val observer = LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_RESUME -> viewModel.registerBroadcastReceiver()
+                    Lifecycle.Event.ON_PAUSE -> viewModel.unregisterBroadcastReceiver()
+                    else -> {}
                 }
             }
-        )
-    }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(text = "ClientId: ${state.clientId}")
-        Text(text = "Connected Device Addresses: ${state.connectedDeviceText}")
-        Text(text = "Discovery Status: ${state.deliveryStatus}")
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        }
 
-        var checked by remember { mutableStateOf(preferences.getBoolean(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, false)) }
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Checkbox(
-                checked = checked,
-                onCheckedChange = {
-                    checked = it
-                    preferences.edit().putBoolean(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, it).apply()
+        state.dialogPeer?.let { peer ->
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissDialog() },
+                title = { Text(text = peer.deviceName) },
+                text = {
+                    Column {
+                        Text(text = "Last seen: ${viewModel.getRelativeTime(peer.lastSeen)}")
+                        Text(text = "Last exchange: ${viewModel.getRelativeTime(peer.lastExchange)}")
+                        Text(text = "Recency: ${viewModel.getRelativeTime(peer.recencyTime)}")
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.dismissDialog() }) {
+                        Text("Close")
+                    }
                 }
             )
-            Text(text = "Do transfers in the background")
         }
-        // peers list
-        PeersList(
-            peers = state.peers,
-            viewModel = viewModel
-        )
 
-        Button(
-            onClick = {
-                viewModel.discoverPeers()
-            }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(text = stringResource(id = R.string.refresh_peers))
+            Text(text = "ClientId: ${state.clientId}")
+            Text(text = "Connected Device Addresses: ${state.connectedDeviceText}")
+            Text(text = "Discovery Status: ${state.deliveryStatus}")
+
+            var checked by remember {
+                mutableStateOf(
+                    preferences.getBoolean(
+                        BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE,
+                        false
+                    )
+                )
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(
+                    checked = checked,
+                    onCheckedChange = {
+                        checked = it
+                        preferences.edit().putBoolean(
+                            BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE,
+                            it
+                        ).apply()
+                    }
+                )
+                Text(text = "Do transfers in the background")
+            }
+            // peers list
+            PeersList(
+                peers = state.peers,
+                viewModel = viewModel
+            )
+
+            Button(
+                onClick = {
+                    viewModel.discoverPeers()
+                }
+            ) {
+                Text(text = stringResource(id = R.string.refresh_peers))
+            }
+
+            Button(
+                onClick = {}
+            ) {
+                Text(text = "dark mode? $darkTheme")
+            }
         }
     }
 }
