@@ -65,11 +65,8 @@ public class BundleUtils {
         logger.log(INFO, "Extracting bundle for bundle name: " + bundleFileName);
         Path extractedBundlePath = extractDirPath.resolve(bundleFileName);
         JarUtils.jarToDir(bundle.getSource().getAbsolutePath(), extractedBundlePath.toString());
-        Files.walk(extractedBundlePath, 2) // Limit depth to 2 for better readability
-                .filter(Files::isDirectory) // Only print directories
-                .forEach(dir -> System.out.println("Directory: " + dir));
-
-        File[] payloads = extractDirPath.resolve("payloads").toFile().listFiles();
+        Path path = extractDirPath.resolve(bundleFileName + "/payloads");
+        File[] payloads = path.toFile().listFiles();
         EncryptedPayload encryptedPayload = new EncryptedPayload(null, payloads[0]);
         return new UncompressedBundle( // TODO get encryption header, payload signature and get bundle id from BS
                                        null, extractedBundlePath.toFile(), null, encryptedPayload);
@@ -335,18 +332,15 @@ public class BundleUtils {
     public static void encryptPayloadAndCreateBundle(Encrypter payloadEncryptor, ECPublicKey clientIdentityPublicKey,
                                                      ECPublicKey clientBaseKeyPairPublicKey,
                                                      ECPublicKey serverIdentityPublicKey, String encryptedBundleId,
-                                                     InputStream payload, OutputStream outputStream) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidMessageException, LegacyMessageException {
+                                                     InputStream payloadStream, OutputStream outputStream) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidMessageException, LegacyMessageException {
 
-
-
-        // encrypt the payload
-        try {
-            payloadEncryptor.encrypt(payload, outputStream);
-        }catch(InvalidMessageException e){
-            throw new InvalidMessageException(e);
-        }
 
         DDDJarFileCreator outerJar = new DDDJarFileCreator(outputStream);
+
+        var os = outerJar.createEntry(Paths.get(PAYLOAD_DIR, PAYLOAD_FILENAME));
+        // encrypt the payload
+        payloadEncryptor.encrypt(payloadStream, os);
+
 
         // store the bundleId
         outerJar.createEntry(SecurityUtils.BUNDLEID_FILENAME, encryptedBundleId.getBytes());

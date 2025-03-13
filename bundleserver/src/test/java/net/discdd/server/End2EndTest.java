@@ -190,13 +190,17 @@ public class End2EndTest {
         String bundleId = BundleIDGenerator.generateBundleID(clientId, bundleCount, BundleIDGenerator.UPSTREAM);
         String encryptedBundleID = encryptBundleID(bundleId);
         Path bundleJarPath = targetDir.resolve(encryptedBundleID);
+        ByteArrayInputStream is = new ByteArrayInputStream(baos.toByteArray());
+
         try (var os = Files.newOutputStream(bundleJarPath, StandardOpenOption.CREATE,
-                                            StandardOpenOption.TRUNCATE_EXISTING)) {
+                                            StandardOpenOption.TRUNCATE_EXISTING))
+
+        {
             BundleUtils.encryptPayloadAndCreateBundle((inputStream, outputStream) -> clientSessionCipher.encrypt(inputStream, outputStream),
                                                       clientIdentity.getPublicKey().getPublicKey(),
                                                       baseKeyPair.getPublicKey(),
                                                       serverIdentity.getPublicKey().getPublicKey(), encryptedBundleID,
-                                                      new ByteArrayInputStream(baos.toByteArray()), os);
+                                                      is, os);
 
         } catch (InvalidMessageException e) {
             throw new RuntimeException(e);
