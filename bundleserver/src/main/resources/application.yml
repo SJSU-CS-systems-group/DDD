@@ -20,6 +20,10 @@ spring:
 #    password: <mySQL password>
     db-name: dtn_server_db
 
+serviceadapter:
+  datacheck:
+    interval: 10s
+
 ssl-grpc:
   server:
     port: 7778
