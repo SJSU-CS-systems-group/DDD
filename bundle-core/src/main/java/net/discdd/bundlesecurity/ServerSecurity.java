@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
@@ -231,8 +232,8 @@ public class ServerSecurity {
                 throw new InvalidKeyException("Keys for " + clientID + " not found and none provided");
             }
             keyPath.toFile().mkdirs();
-            Files.copy(keyPathIfNeeded.resolve(CLIENT_IDENTITY_KEY), keyPath.resolve(CLIENT_IDENTITY_KEY));
-            Files.copy(keyPathIfNeeded.resolve(CLIENT_BASE_KEY), keyPath.resolve(CLIENT_BASE_KEY));
+            Files.copy(keyPathIfNeeded.resolve(CLIENT_IDENTITY_KEY), keyPath.resolve(CLIENT_IDENTITY_KEY), StandardCopyOption.REPLACE_EXISTING);
+            Files.copy(keyPathIfNeeded.resolve(CLIENT_BASE_KEY), keyPath.resolve(CLIENT_BASE_KEY), StandardCopyOption.REPLACE_EXISTING);
             clientSessionRecord = new SessionRecord();
             initializeClientKeysFromFiles(keyPath, clientSession);
             initializeRatchet(clientSessionRecord.getSessionState(), clientSession);
