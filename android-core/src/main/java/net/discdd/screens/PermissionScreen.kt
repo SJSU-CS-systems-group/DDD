@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -33,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.viewmodel.compose.viewModel
+import net.discdd.theme.ComposableTheme
 import net.discdd.viewmodels.PermissionItemData
 import net.discdd.viewmodels.PermissionsViewModel
 
@@ -50,7 +52,9 @@ class PermissionsFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                PermissionScreen(viewModel, activityResultLauncher)
+                ComposableTheme {
+                    PermissionScreen(viewModel, activityResultLauncher)
+                }
             }
         }
     }
@@ -61,26 +65,32 @@ fun PermissionScreen(
     viewModel: PermissionsViewModel = viewModel(),
     activityResultLauncher: ActivityResultLauncher<Array<String>>
 ) {
+
     val permissionItems by viewModel.permissionItems.collectAsState()
     val context = LocalContext.current
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize()
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
     ) {
-        items(permissionItems) { itemData ->
-            PermissionItem(
-                permissionItem = itemData,
-                onClick = {
-                    if (!itemData.isBoxChecked) viewModel.triggerPermissionDialog(context)
-                },
-                onCheckPermission = {
-                    viewModel.checkPermission(itemData.permissionName)
-                    val remainingPermissions = viewModel.getPermissionsToRequest()
-                    if (remainingPermissions.isNotEmpty()) {
-                        activityResultLauncher.launch(remainingPermissions)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            items(permissionItems) { itemData ->
+                PermissionItem(
+                    permissionItem = itemData,
+                    onClick = {
+                        if (!itemData.isBoxChecked) viewModel.triggerPermissionDialog(context)
+                    },
+                    onCheckPermission = {
+                        viewModel.checkPermission(itemData.permissionName)
+                        val remainingPermissions = viewModel.getPermissionsToRequest()
+                        if (remainingPermissions.isNotEmpty()) {
+                            activityResultLauncher.launch(remainingPermissions)
+                        }
                     }
-                }
-            )
+                )
+            }
         }
     }
 }
