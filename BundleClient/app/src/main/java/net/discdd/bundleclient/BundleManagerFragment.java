@@ -60,10 +60,10 @@ public class BundleManagerFragment extends Fragment {
                         // Get the list of files and exclude "metadata.json"
                         String[] filteredFiles =
                                 path.toFile().list((dir, name) -> !name.equals("metadata.json"));
-                                return (filteredFiles != null) ? String.valueOf(filteredFiles.length) : "0";
-                            }
+                        return (filteredFiles != null) ? String.valueOf(filteredFiles.length) : "0";
+                    }
 
-                        return String.valueOf(path.toFile().list().length);
+                    return String.valueOf(path.toFile().list().length);
                 }
             }
         }

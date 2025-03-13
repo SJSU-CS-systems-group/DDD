@@ -10,6 +10,8 @@ import net.discdd.bundleclient.WifiServiceManager
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.fragment.app.Fragment;
 import net.discdd.client.bundletransmission.BundleTransmission;
 
@@ -26,7 +28,7 @@ data class BundleManagerState(
     val bundleTransmission: BundleTransmission? = null,
 )
 
-class ServerViewModel(
+class BundleManagerViewModel(
     application: Application,
 ): AndroidViewModel(application) {
     private val _state = MutableStateFlow(BundleManagerState())
@@ -53,24 +55,33 @@ class ServerViewModel(
                     if (path.toFile().isDirectory()) {
                         // Get the list of files and exclude "metadata.json"
                         val filteredFiles =
-                            path.toFile().list((Paths.get("").toAbsolutePath().toString()))
+                            path.toFile().listFiles {dir, name -> name != "metadata.json" }
+                                ?.map { it.name }?.toTypedArray() ?: emptyArray()
+                        if (filteredFiles.isNullOrEmpty())
+                            return "0"
+                        return filteredFiles.size.toString()
                     }
+                    return path.toFile().list()?.size?.toString() ?: "0"
                 }
             }
         }
-        catch (e : IOException) {
-            System.err.println("Error reading the directory: " + e.getMessage());
-            return "0";
+        catch (e : Exception) {
+            when (e) {
+                is IOException, is DirectoryIteratorException -> {
+                    System.err.println("Error reading the directory: + ${e.message}");
+                    return "0";
+                }
+            }
         }
-        catch (e : DirectoryIteratorException) {
-            System.err.println("Error reading the directory: " + e.getMessage());
-            return "0";
-        }
-    return "0"
+        return "0"
     }
 
     fun refresh() {
-
+        _state.update {
+            bundleViewModel: BundleManagerViewModel = viewModel(),
+            val managerState by bundleViewModel.state.collectAsState()
+            it.copy(numberBundlesSent = getADUcount(bundleTransmission.getClientPaths().sendADUsPath))
+        }
     }
 }
 
