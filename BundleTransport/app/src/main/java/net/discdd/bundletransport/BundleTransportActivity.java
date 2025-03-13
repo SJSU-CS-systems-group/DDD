@@ -142,7 +142,8 @@ public class BundleTransportActivity extends AppCompatActivity {
         logFragment = new TitledFragment(getString(R.string.logs), new LogFragment());
 
         permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
-        titledPermissionsFragment = new TitledFragment("Permissions", PermissionsFragment.newInstance());
+        permissionsFragment = PermissionsFragment.newInstance();
+        titledPermissionsFragment = new TitledFragment("Permissions", permissionsFragment);
         fragments.add(titledPermissionsFragment);
 
         tabLayout = findViewById(R.id.tabs);
