@@ -1,5 +1,6 @@
 package net.discdd.bundlesecurity;
 
+import org.whispersystems.libsignal.SessionCipher;
 import org.whispersystems.libsignal.*;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
@@ -22,13 +23,10 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
-import java.security.KeyFactory;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
-import java.security.spec.X509EncodedKeySpec;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.logging.Logger;
@@ -123,6 +121,11 @@ public class SecurityUtils {
     }
 
     public static byte[] createEncodedPublicKeyBytes(ECPublicKey publicKey) {
+        // create ephemeral public key pair
+        // calculate shared secret from server public key and ephemeral private key
+        // write ephemeral public key to file
+        // encrypt client public key using shared secret
+        // write encrypted client public key to file
         return (PUB_KEY_HEADER + "\n" + Base64.getUrlEncoder().encodeToString(publicKey.serialize()) + "\n" +
                 PUB_KEY_FOOTER).getBytes();
     }
@@ -192,6 +195,11 @@ public class SecurityUtils {
 
 
     public static byte[] decodePublicKeyfromFile(Path path) throws IOException, InvalidKeyException {
+        // read ephemeral public key
+        // read encrypted client public key
+        // calculate shared secret from server private key and ephmeral public key
+        // decrypt client public key using shared secret
+        // return decrypted client public key
         List<String> encodedKeyList = Files.readAllLines(path);
 
         if (encodedKeyList.size() != 3) {

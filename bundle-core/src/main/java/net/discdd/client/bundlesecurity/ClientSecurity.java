@@ -15,8 +15,6 @@ import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
 import org.whispersystems.libsignal.ecc.ECPrivateKey;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
-import org.whispersystems.libsignal.protocol.CiphertextMessage;
-import org.whispersystems.libsignal.protocol.SignalMessage;
 import org.whispersystems.libsignal.ratchet.AliceSignalProtocolParameters;
 import org.whispersystems.libsignal.ratchet.RatchetingSession;
 import org.whispersystems.libsignal.state.SessionRecord;
@@ -24,8 +22,12 @@ import org.whispersystems.libsignal.state.SessionState;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.util.guava.Optional;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -37,7 +39,6 @@ import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.FINER;
-import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
@@ -215,11 +216,10 @@ public class ClientSecurity {
     }
 
     /* Encrypts File */
-    public CiphertextMessage encrypt(byte[] bytes) {
+    public void encrypt(InputStream inputStream, OutputStream outputStream) throws IOException, InvalidMessageException, LegacyMessageException {
         /* Encrypt File */
-        CiphertextMessage cipherText = cipherSession.encrypt(bytes);
+        cipherSession.encrypt(inputStream, outputStream);
         updateSessionRecord();
-        return cipherText;
     }
 
     public void decrypt(Path bundlePath, Path decryptedPath) throws IOException, InvalidMessageException,
@@ -235,12 +235,13 @@ public class ClientSecurity {
         String payloadName = SecurityUtils.PAYLOAD_FILENAME;
 
         byte[] encryptedData = Files.readAllBytes(payloadPath.resolve(payloadName));
-        byte[] serverDecryptedMessage = cipherSession.decrypt(new SignalMessage(encryptedData));
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        cipherSession.decrypt(new ByteArrayInputStream(encryptedData), baos);
         updateSessionRecord();
 
-        Files.write(decryptedFile, serverDecryptedMessage, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
+        Files.write(decryptedFile, baos.toByteArray(), StandardOpenOption.APPEND, StandardOpenOption.CREATE);
 
-        logger.log(FINER, "Decrypted Size = %d\n", serverDecryptedMessage.length);
+        logger.log(FINER, "Decrypted Size = %d\n", baos.toByteArray().length);
     }
 
     public String decryptBundleID(String encryptedBundleID) throws GeneralSecurityException, InvalidKeyException {
