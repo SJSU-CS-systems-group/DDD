@@ -74,7 +74,7 @@ public class BundleServerApplication {
 
         try {
             var properties = PropertiesLoaderUtils.loadProperties(resource);
-            app.setDefaultProperties(properties);
+            properties.forEach((key, value) -> System.setProperty(key.toString(), value.toString()));
             args = Arrays.copyOfRange(args, 1, args.length);
         } catch (Exception e) {
             logger.log(SEVERE, "Please enter valid properties file path!");
