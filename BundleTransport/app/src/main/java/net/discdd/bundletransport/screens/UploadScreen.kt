@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -33,8 +35,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.delay
-import net.discdd.viewmodels.ConnectivityViewModel
+import androidx.compose.ui.unit.sp
 
 
 
@@ -86,11 +87,11 @@ fun UploadScreen(
                 .fillMaxWidth()
                 .padding(8.dp),
         )
-        FilledTonalButton(onClick = {uploadViewModel.connectServer()},
+        FilledTonalButton(onClick = {uploadViewModel.saveDomainPort()},
             modifier = Modifier.fillMaxWidth()) {
             Text("Save Domain and Port")
         }
-        FilledTonalButton(onClick = {uploadViewModel.connectServer()},
+        FilledTonalButton(onClick = {uploadViewModel.restoreDomainPort()},
             modifier = Modifier.fillMaxWidth()) {
             Text("Restore Domain and Port")
         }
@@ -100,6 +101,39 @@ fun UploadScreen(
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium
             )
+        }
+        Row (
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "toClient: ",
+                fontSize = 20.sp
+            )
+            Text (
+                text = uploadState.clientCount,
+                fontSize = 20.sp
+            )
+            Text(
+                text = "   toServer: ",
+                fontSize = 20.sp
+            )
+            Text (
+                text = uploadState.serverCount,
+                fontSize = 20.sp
+            )
+            Text (text = "   ")
+            FilledTonalButton(onClick = {
+                uploadViewModel.reloadCount()
+            },
+                modifier = Modifier.size(170.dp, 60.dp)) {
+                Text(
+                    text = "Reload Counts",
+                    fontSize = 15.sp
+                )
+            }
         }
     }
 }
