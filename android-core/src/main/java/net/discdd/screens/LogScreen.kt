@@ -27,7 +27,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.viewmodel.compose.viewModel
-import net.discdd.theme.ComposableTheme
+import net.discdd.components.ComposableTheme
 import net.discdd.viewmodels.LogViewModel
 
 class LogFragment : Fragment() {

@@ -48,7 +48,7 @@ import net.discdd.bundleclient.BundleClientWifiDirectService
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.viewmodels.PeerDevice
 import net.discdd.bundleclient.viewmodels.WifiDirectViewModel
-import net.discdd.theme.ComposableTheme
+import net.discdd.components.ComposableTheme
 import java.util.concurrent.CompletableFuture
 
 class BundleClientWifiDirectFragment: Fragment() {

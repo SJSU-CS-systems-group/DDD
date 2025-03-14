@@ -27,7 +27,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import net.discdd.bundletransport.viewmodels.StorageViewModel
-import net.discdd.theme.ComposableTheme
+import net.discdd.components.ComposableTheme
 
 class StorageFragment: Fragment() {
     override fun onCreateView(

@@ -1,4 +1,4 @@
-package net.discdd.theme
+package net.discdd.components
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme

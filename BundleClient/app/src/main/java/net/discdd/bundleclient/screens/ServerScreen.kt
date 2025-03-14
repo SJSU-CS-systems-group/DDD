@@ -30,7 +30,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import net.discdd.bundleclient.viewmodels.ServerViewModel
-import net.discdd.theme.ComposableTheme
+import net.discdd.components.ComposableTheme
 import net.discdd.viewmodels.ConnectivityViewModel
 
 class ServerFragment: Fragment() {
