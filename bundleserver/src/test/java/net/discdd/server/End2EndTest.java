@@ -173,7 +173,7 @@ public class End2EndTest {
     @TempDir
     static File aduTempDir;
 
-    protected static Path createBundleForAdus(List<Long> aduIds, String clientId, int bundleCount, Path targetDir) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, InvalidKeySpecException, BadPaddingException, java.security.InvalidKeyException {
+    protected static Path createBundleForAdus(List<Long> aduIds, String clientId, int bundleCount, Path targetDir) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, InvalidKeySpecException, BadPaddingException, java.security.InvalidKeyException, InvalidMessageException {
 
         var baos = new ByteArrayOutputStream();
         var adus = aduIds.stream().map(aduId -> {
@@ -202,10 +202,8 @@ public class End2EndTest {
                                                       serverIdentity.getPublicKey().getPublicKey(), encryptedBundleID,
                                                       is, os);
 
-        } catch (InvalidMessageException e) {
-            throw new RuntimeException(e);
-        } catch (LegacyMessageException e) {
-            throw new RuntimeException(e);
+        } catch (InvalidMessageException | LegacyMessageException e) {
+            throw new InvalidMessageException(e);
         }
 
         return bundleJarPath;
