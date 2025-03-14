@@ -122,7 +122,7 @@ public class BundleClientActivity extends AppCompatActivity {
         LogFragment.registerLoggerHandler();
 
         permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
-        permissionsFragment = PermissionsFragment.newInstance();
+        permissionsFragment = new PermissionsFragment();
         homeFragment = new BundleClientWifiDirectFragment();
         usbFragment = UsbFragment.newInstance();
         logFragment = new LogFragment();
