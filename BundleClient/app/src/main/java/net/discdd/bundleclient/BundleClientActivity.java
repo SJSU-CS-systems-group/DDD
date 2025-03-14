@@ -87,9 +87,11 @@ public class BundleClientActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        logger.log(INFO, "onCreate method invoked!");
 
-        sharedPreferences =
-                getSharedPreferences(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE);
+        sharedPreferences = getSharedPreferences(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE);
+        var appPreferences = getSharedPreferences("app_prefs", MODE_PRIVATE);
+        boolean isFirstLaunch = appPreferences.getBoolean("is_first_launch", true);
 
         ComponentName comp;
         try {
@@ -119,6 +121,7 @@ public class BundleClientActivity extends AppCompatActivity {
         }
 
         LogFragment.registerLoggerHandler();
+        logger.log(INFO, "This log runs right after log registration");
 
         permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
         permissionsFragment = PermissionsFragment.newInstance();
@@ -153,6 +156,14 @@ public class BundleClientActivity extends AppCompatActivity {
         }
         else {
             logger.log(WARNING, "Usbmanager was null, failed to connect");
+        }
+
+        if (isFirstLaunch) {
+            logger.log(INFO, "this is the FIRST launch!");
+            appPreferences.edit().putBoolean("is_first_launch", false).apply();
+            logger.log(INFO, "value of is_first_launch: " + appPreferences.getBoolean("is_first_launch", true));
+        } else {
+            logger.log(INFO, "nope this NOT the FIRST launch!");
         }
     }
 
