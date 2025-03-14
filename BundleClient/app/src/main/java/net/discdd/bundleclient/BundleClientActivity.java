@@ -130,9 +130,14 @@ public class BundleClientActivity extends AppCompatActivity {
         usbFragment = UsbFragment.newInstance();
         logFragment = new LogFragment();
         bundleManagerFragment = BundleManagerFragment.newInstance();
-        fragmentsWithTitles.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         serverFragment = new ServerFragment();
+
+        fragmentsWithTitles.add(new FragmentWithTitle(homeFragment, getString(R.string.home_tab)));
+        fragmentsWithTitles.add(new FragmentWithTitle(serverFragment, getString(R.string.server_tab)));
+        fragmentsWithTitles.add(new FragmentWithTitle(logFragment, getString(R.string.logs_tab)));
+        fragmentsWithTitles.add(new FragmentWithTitle(bundleManagerFragment, getString(R.string.bm_tab)));
+        fragmentsWithTitles.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
 
         //set up view
         setContentView(R.layout.activity_bundle_client);
@@ -168,41 +173,46 @@ public class BundleClientActivity extends AppCompatActivity {
         }
     }
 
+//    private void updateTabs(Boolean satisfied) {
+//        logger.log(INFO, "UPDATING TABS ... Permissions satisfied: " + satisfied);
+//
+//        ArrayList<FragmentWithTitle> newFragments = new ArrayList<>();
+//        if (satisfied) {
+//            logger.log(INFO, "ALL TABS BEING SHOWN");
+//            newFragments.add(new FragmentWithTitle(homeFragment, getString(R.string.home_tab)));
+//            newFragments.add(new FragmentWithTitle(serverFragment, getString(R.string.server_tab)));
+//            newFragments.add(new FragmentWithTitle(logFragment, getString(R.string.logs_tab)));
+//            newFragments.add(new FragmentWithTitle(bundleManagerFragment, getString(R.string.bm_tab)));
+//            newFragments.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
+//            if (usbExists) {
+//                newFragments.add(new FragmentWithTitle(usbFragment, getString(R.string.usb_tab)));
+//            }
+//        } else {
+//            logger.log(INFO, "ONLY PERMISSIONS TAB IS BEING SHOWN");
+//            newFragments.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
+//        }
+//
+//        if (!newFragments.equals(fragmentsWithTitles)) {
+//            new Handler(Looper.getMainLooper()).post(() -> {
+//                if (tabLayoutMediator != null) {
+//                    tabLayoutMediator.detach();
+//                }
+//
+//                fragmentsWithTitles.clear();
+//                fragmentsWithTitles.addAll(newFragments);
+//
+//                ViewPagerAdapter adapter = new ViewPagerAdapter(this);
+//                viewPager.setAdapter(adapter);
+//
+//                tabLayoutMediator = new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> tab.setText(
+//                        fragmentsWithTitles.get(position).title()));
+//                tabLayoutMediator.attach();
+//            });
+//        }
+//    }
+
     private void updateTabs(Boolean satisfied) {
         logger.log(INFO, "UPDATING TABS ... Permissions satisfied: " + satisfied);
-
-        ArrayList<FragmentWithTitle> newFragments = new ArrayList<>();
-        if (satisfied) {
-            logger.log(INFO, "ALL TABS BEING SHOWN");
-            newFragments.add(new FragmentWithTitle(homeFragment, getString(R.string.home_tab)));
-            newFragments.add(new FragmentWithTitle(serverFragment, getString(R.string.server_tab)));
-            newFragments.add(new FragmentWithTitle(logFragment, getString(R.string.logs_tab)));
-            newFragments.add(new FragmentWithTitle(bundleManagerFragment, getString(R.string.bm_tab)));
-            if (usbExists) {
-                newFragments.add(new FragmentWithTitle(usbFragment, getString(R.string.usb_tab)));
-            }
-        } else {
-            logger.log(INFO, "ONLY PERMISSIONS TAB IS BEING SHOWN");
-            newFragments.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
-        }
-
-        if (!newFragments.equals(fragmentsWithTitles)) {
-            new Handler(Looper.getMainLooper()).post(() -> {
-                if (tabLayoutMediator != null) {
-                    tabLayoutMediator.detach();
-                }
-
-                fragmentsWithTitles.clear();
-                fragmentsWithTitles.addAll(newFragments);
-
-                ViewPagerAdapter adapter = new ViewPagerAdapter(this);
-                viewPager.setAdapter(adapter);
-
-                tabLayoutMediator = new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> tab.setText(
-                        fragmentsWithTitles.get(position).title()));
-                tabLayoutMediator.attach();
-            });
-        }
     }
 
     @Override

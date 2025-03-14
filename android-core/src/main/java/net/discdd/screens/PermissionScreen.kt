@@ -75,6 +75,7 @@ fun PermissionScreen(
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize()
+                .padding(16.dp)
         ) {
             items(permissionItems) { itemData ->
                 PermissionItem(
