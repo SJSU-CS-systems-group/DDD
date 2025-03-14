@@ -14,10 +14,20 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
     <dependencies>
+    <dependency>
+        <groupId>com.distrimind.bouncycastle</groupId>
+        <artifactId>pkix</artifactId>
+        <version>1.77</version>
+    </dependency>
+    <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcpkix-jdk15to18</artifactId>
+        <version>1.78</version>
+    </dependency>
         <dependency>
-            <groupId>org.whispersystems</groupId>
-            <artifactId>signal-protocol-java</artifactId>
-            <version>2.2.0</version>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk15to18</artifactId>
+            <version>1.78</version>
         </dependency>
     </dependencies>
     <build>
