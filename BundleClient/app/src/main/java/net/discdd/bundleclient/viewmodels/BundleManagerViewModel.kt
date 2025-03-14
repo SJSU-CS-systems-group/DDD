@@ -31,9 +31,8 @@ class BundleManagerViewModel(
 
     init {
         _state.update { it.copy(
-            numberBundlesSent = R.id.bungles
-            R.id.numberBundlesSent.toString(),
-            numberBundlesReceived = R.id.numberBundlesReceived.toString(),
+            numberBundlesSent = "0",
+            numberBundlesReceived = "0",
         ) }
         bundleTransmission = WifiServiceManager.getService()?.getBundleTransmission()
     }
