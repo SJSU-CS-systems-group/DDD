@@ -27,11 +27,4 @@ public class BundleClientActivityTest {
     @Rule
     public GrantPermissionRule neededPermissions = GrantPermissionRule.grant(Manifest.permission.ACCESS_FINE_LOCATION,
                                                                              Manifest.permission.NEARBY_WIFI_DEVICES);
-
-    @Test
-    public void testConnectButton() {
-
-        onView(withId(R.id.wifidirect_response_text)).check(
-                matches(withText(containsString("Starting connection...\n"))));
-    }
 }

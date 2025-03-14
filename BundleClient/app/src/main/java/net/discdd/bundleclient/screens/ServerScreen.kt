@@ -6,11 +6,13 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,6 +30,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import net.discdd.bundleclient.viewmodels.ServerViewModel
+import net.discdd.theme.ComposableTheme
 import net.discdd.viewmodels.ConnectivityViewModel
 
 class ServerFragment: Fragment() {
@@ -39,7 +42,7 @@ class ServerFragment: Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                MaterialTheme {
+                ComposableTheme {
                     ServerScreen()
                 }
             }
@@ -67,47 +70,52 @@ fun ServerScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
     ) {
-        OutlinedTextField(
-            value = serverState.domain,
-            onValueChange = { serverViewModel.onDomainChanged(it) },
-            label = { Text("BundleServer Domain") },
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp),
-        )
-        OutlinedTextField(
-            value = serverState.port,
-            onValueChange = { serverViewModel.onPortChanged(it) },
-            label = { Text("Port Input") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-        )
-        FilledTonalButton(onClick = {
-            serverViewModel.connectServer()
-        },
-            enabled = enableConnectBtn,
-            modifier = Modifier.fillMaxWidth()) {
-            Text("Connect to Bundle Server")
-        }
-        FilledTonalButton(onClick = {
-            serverViewModel.saveDomainPort()
-        },
-            modifier = Modifier.fillMaxWidth()) {
-            Text("Save Domain and Port")
-        }
-        serverState.message?.let { message ->
-            Text(
-                text = message,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyMedium
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedTextField(
+                value = serverState.domain,
+                onValueChange = { serverViewModel.onDomainChanged(it) },
+                label = { Text("BundleServer Domain") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
             )
+            OutlinedTextField(
+                value = serverState.port,
+                onValueChange = { serverViewModel.onPortChanged(it) },
+                label = { Text("Port Input") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+            )
+            FilledTonalButton(onClick = {
+                serverViewModel.connectServer()
+            },
+                enabled = enableConnectBtn,
+                modifier = Modifier.fillMaxWidth()) {
+                Text("Connect to Bundle Server")
+            }
+            FilledTonalButton(onClick = {
+                serverViewModel.saveDomainPort()
+            },
+                modifier = Modifier.fillMaxWidth()) {
+                Text("Save Domain and Port")
+            }
+            serverState.message?.let { message ->
+                Text(
+                    text = message,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
         }
     }
 }
