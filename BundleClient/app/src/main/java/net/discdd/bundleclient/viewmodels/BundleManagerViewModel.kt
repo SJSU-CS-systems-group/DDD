@@ -23,7 +23,7 @@ data class BundleManagerState(
 class BundleManagerViewModel(
     application: Application,
 ): AndroidViewModel(application) {
-    var bundleTransmission: BundleTransmission? = null
+    private var bundleTransmission: BundleTransmission ?= null
     private val _state = MutableStateFlow(BundleManagerState())
     val state = _state.asStateFlow()
 
