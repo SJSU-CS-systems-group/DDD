@@ -37,6 +37,7 @@ import java.util.HashMap;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static net.discdd.bundlesecurity.SecurityUtils.CLIENT_BASE_KEY;
 import static net.discdd.bundlesecurity.SecurityUtils.CLIENT_IDENTITY_KEY;
@@ -193,7 +194,14 @@ public class ServerSecurity {
 
     private void initializeClientKeysFromFiles(Path path, ClientSession clientSession) throws IOException,
             InvalidKeyException {
-        byte[] clientIdentityKey = SecurityUtils.decodePublicKeyfromFile(path.resolve(CLIENT_IDENTITY_KEY));
+        byte[] clientIdentityKey;
+        try {
+            String clientIdentityKeyBase64 =
+                    SecurityUtils.decodeEncryptedPublicKeyfromFile(ourIdentityKeyPair.getPrivateKey(), path.resolve(CLIENT_IDENTITY_KEY));
+            clientIdentityKey = Base64.getUrlDecoder().decode(clientIdentityKeyBase64);
+        } catch (NoSuchAlgorithmException e) {
+            throw new InvalidKeyException("No such algorithm", e);
+        }
         clientSession.IdentityKey = new IdentityKey(clientIdentityKey, 0);
 
         byte[] clientBaseKey = SecurityUtils.decodePublicKeyfromFile(path.resolve(CLIENT_BASE_KEY));
@@ -378,7 +386,11 @@ public class ServerSecurity {
         byte[] encryptedBundleID = Files.readAllBytes(bundleIDPath);
         String receivedBundleID, latestBundleID;
 
-        byte[] clientIdentityKeyBytes = SecurityUtils.decodePublicKeyfromFile(bundlePath.resolve(CLIENT_IDENTITY_KEY));
+        ServerSecurity serverSecurityInstance = ServerSecurity.getInstance(bundlePath.getParent());
+        ECPrivateKey ServerPrivKey = serverSecurityInstance.getSigningKey();
+        var clientIdentityKeyBase64 =
+                SecurityUtils.decodeEncryptedPublicKeyfromFile(ServerPrivKey, bundlePath.resolve(CLIENT_IDENTITY_KEY));
+        byte[] clientIdentityKeyBytes = Base64.getUrlDecoder().decode(clientIdentityKeyBase64);
         IdentityKey clientIdentityKey = new IdentityKey(clientIdentityKeyBytes, 0);
 
         String sharedSecret = getsharedSecret(clientIdentityKey.getPublicKey());

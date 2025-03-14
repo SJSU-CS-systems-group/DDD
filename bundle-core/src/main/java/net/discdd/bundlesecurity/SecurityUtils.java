@@ -22,10 +22,13 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
+import java.security.KeyFactory;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.logging.Logger;
@@ -44,6 +47,8 @@ public class SecurityUtils {
     public static final String PUB_KEY_FOOTER = "-----END EC PUBLIC KEY-----";
     public static final String PVT_KEY_HEADER = "-----BEGIN EC PRIVATE KEY-----";
     public static final String PVT_KEY_FOOTER = "-----END EC PRIVATE KEY-----";
+    public static final String EC_ENCRYPTED_PUBLIC_KEY_HEADER = "-----BEGIN EC PRIVATE KEY-----";
+    public static final String EC_ENCRYPTED_PUBLIC_KEY_FOOTER = "-----END EC PRIVATE KEY-----";
 
     // ----------------- TransportSecurity -----------------
     public static final String TRANSPORT_KEY_PATH = "Transport_Keys";
@@ -106,6 +111,11 @@ public class SecurityUtils {
         return Base64.getUrlEncoder().encodeToString(MessageDigest.getInstance("SHA-1").digest(publicKey));
     }
 
+    public static String generateID(String publicKeyBase64) throws NoSuchAlgorithmException {
+        byte[] publicKeyBytes = Base64.getUrlDecoder().decode(publicKeyBase64);
+        return generateID(publicKeyBytes);
+    }
+
     public static void createEncodedPublicKeyFile(ECPublicKey publicKey, Path path) throws IOException {
         Files.write(path, createEncodedPublicKeyBytes(publicKey), StandardOpenOption.CREATE,
                     StandardOpenOption.TRUNCATE_EXISTING);
@@ -116,6 +126,70 @@ public class SecurityUtils {
         return (PUB_KEY_HEADER + "\n" + Base64.getUrlEncoder().encodeToString(publicKey.serialize()) + "\n" +
                 PUB_KEY_FOOTER).getBytes();
     }
+
+    /**
+     * Create ephemeral public key pair and log it
+     * Calculate shared secret from server public key and ephemeral private key and log it
+     * Encrypt client public key using shared secret and log it
+     * Write encrypted client public key to file
+     * Write ephemeral public key to file
+     *
+     * @param clientPublicKey
+     * @param serverIdentityPublicKey
+     * @return File-to-be bytes
+     * @throws GeneralSecurityException
+     * @throws InvalidKeyException
+     */
+    public static byte[] createEncryptedEncodedPublicKeyBytes(ECPublicKey clientPublicKey, ECPublicKey serverIdentityPublicKey) throws GeneralSecurityException, InvalidKeyException {
+        ECKeyPair ephemeralKeyPair = Curve.generateKeyPair();
+        byte[] agreement = Curve.calculateAgreement(serverIdentityPublicKey, ephemeralKeyPair.getPrivateKey());
+        String sharedSecret = Base64.getEncoder().encodeToString(agreement);
+        String encryptedClientPubKey = encryptAesCbcPkcs5(sharedSecret, Base64.getEncoder().encodeToString(clientPublicKey.serialize()));
+        return (EC_ENCRYPTED_PUBLIC_KEY_HEADER + "\n" +
+                Base64.getUrlEncoder().encodeToString(encryptedClientPubKey.getBytes()) + "\n" +
+                Base64.getUrlEncoder().encodeToString(ephemeralKeyPair.getPublicKey().serialize()) + "\n" +
+                EC_ENCRYPTED_PUBLIC_KEY_FOOTER).getBytes();
+    }
+
+    /**
+     * Read encrypted client public key and ephemeral public key from file
+     * Decode ephemeral public key and log it
+     * Calculate shared secret from server private key and ephemeral public key and log it
+     * Decrypt client public key using shared secret
+     * Return decrypted client public key
+     *
+     * @param ServerPrivKey
+     * @param clientEncFile
+     * @return Decrypted public key
+     * @throws IOException
+     * @throws InvalidKeyException
+     * @throws NoSuchAlgorithmException
+     */
+    public static String decodeEncryptedPublicKeyfromFile(ECPrivateKey ServerPrivKey, Path clientEncFile) throws IOException, InvalidKeyException, NoSuchAlgorithmException {
+        List<String> encodedKeyList = Files.readAllLines(clientEncFile);
+        if (encodedKeyList.size() != 4) {
+            throw (new IOException("Wrong use of decode encrypted key... this key is probably not encrypted"));
+        }
+        if ((encodedKeyList.get(0).equals(EC_ENCRYPTED_PUBLIC_KEY_HEADER)) && (encodedKeyList.get(3).equals(EC_ENCRYPTED_PUBLIC_KEY_FOOTER))) {
+            byte[] encryptedClientPublicKey = Base64.getUrlDecoder().decode(encodedKeyList.get(1));
+            var ephemeralKeyBytes = Base64.getUrlDecoder().decode(encodedKeyList.get(2));
+            ECPublicKey ephemeralPublicKey = Curve.decodePoint(ephemeralKeyBytes, 0);
+            byte[] agreement = Curve.calculateAgreement(ephemeralPublicKey, ServerPrivKey);
+            String sharedSecret = Base64.getEncoder().encodeToString(agreement);
+            byte[] decryptedClientPubKey;
+            try {
+                decryptedClientPubKey = decryptAesCbcPkcs5(sharedSecret, new String(encryptedClientPublicKey));
+            } catch (GeneralSecurityException e) {
+                throw new RuntimeException("AES decryption failed: " + e.getMessage(), e);
+            }
+            String keyInStandardBase64Characters = new String (decryptedClientPubKey);
+            keyInStandardBase64Characters = keyInStandardBase64Characters.replace('+', '-').replace('/', '_');
+            return keyInStandardBase64Characters;
+        } else {
+            throw new InvalidKeyException(String.format("Error: %s has invalid public key header or footer", clientEncFile.getFileName()));
+        }
+    }
+
 
     public static byte[] decodePublicKeyfromFile(Path path) throws IOException, InvalidKeyException {
         List<String> encodedKeyList = Files.readAllLines(path);
@@ -168,8 +242,10 @@ public class SecurityUtils {
 
     public static String getClientID(Path bundlePath) throws IOException, InvalidKeyException,
             NoSuchAlgorithmException {
-        byte[] clientIdentityKey = decodePublicKeyfromFile(bundlePath.resolve(CLIENT_IDENTITY_KEY));
-        return generateID(clientIdentityKey);
+        ServerSecurity serverSecurityInstance = ServerSecurity.getInstance(bundlePath.getParent());
+        ECPrivateKey ServerPrivKey = serverSecurityInstance.getSigningKey();
+        String publicKey = decodeEncryptedPublicKeyfromFile(ServerPrivKey, bundlePath.resolve(CLIENT_IDENTITY_KEY));
+        return generateID(publicKey);
     }
 
     public static String encryptAesCbcPkcs5(String sharedSecret, String plainText) throws NoSuchAlgorithmException,

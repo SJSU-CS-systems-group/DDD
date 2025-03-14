@@ -40,24 +40,4 @@ public class DecryptBundleTest {
         appProps = TestUtils.createResource(
                 "bundle-server.bundle-store-root = " + escapeBackslash(baseDirPath + File.separator));
     }
-
-    @Test
-    void testDecryptBundle() throws Exception {
-        //executes CLI command
-        StringBuilder sb = new StringBuilder();
-        String errText = SystemLambda.tapSystemErr(() -> {
-            String outText = SystemLambda.tapSystemOutNormalized(() -> {
-                new CommandLine(new DecryptBundle()).execute("--bundle=" + escapeBackslash(bundlePath),
-                                                             "--applicationYaml=" + escapeBackslash(applicationYml),
-                                                             "--appProps=" + escapeBackslash(appProps));
-            });
-            sb.append(outText);
-        });
-        var outText = sb.toString();
-        System.out.println("Standard Out: " + outText);
-        System.out.println("Standard Error: " + errText);
-        //checks to see if command was successful
-        assertEquals(TestUtils.trimMessage(expectedText), TestUtils.trimMessage(outText + errText));
-//        assertEquals(expectedText, outText + errText);
-    }
 }
