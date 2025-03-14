@@ -14,8 +14,8 @@ data class ServerState(
     val domain: String = "",
     val port: String = "",
     val message: String? = "",
-    val clientCount: String = "",
-    val serverCount: String = ""
+    val clientCount: String = "0",
+    val serverCount: String = "0"
 )
 
 class UploadViewModel(application: Application) : AndroidViewModel(application) {
@@ -27,10 +27,8 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
 
     init {
         restoreDomainPort()
-    }
-
-    fun onCreate() {
-
+        _state.update {
+        }
     }
 
     fun connectServer() {
