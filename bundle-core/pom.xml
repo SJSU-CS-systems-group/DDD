@@ -6,7 +6,7 @@
 
     <groupId>net.discdd</groupId>
     <artifactId>bundle-core</artifactId>
-    <version>0.0.2</version>
+    <version>2.2.0</version>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -75,7 +75,7 @@
             <version>1.78</version>
         </dependency>
         <dependency>
-			<groupId>org.whispersystems</groupId>
+			<groupId>net.discdd</groupId>
 			<artifactId>signal-protocol-java</artifactId>
 			<version>2.2.0</version>
 		</dependency>
