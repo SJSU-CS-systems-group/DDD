@@ -25,6 +25,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import net.discdd.bundletransport.viewmodels.StorageViewModel
+import net.discdd.theme.ComposableTheme
 
 class StorageFragment: Fragment() {
     override fun onCreateView(
@@ -35,7 +36,7 @@ class StorageFragment: Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                MaterialTheme {
+                ComposableTheme {
                     StorageScreen()
                 }
             }
