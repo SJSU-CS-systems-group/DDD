@@ -8,10 +8,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -49,42 +51,49 @@ fun ManagerScreen(
     bundleViewModel: BundleManagerViewModel = viewModel(),
 ) {
     val managerState by bundleViewModel.state.collectAsState()
-    Column (
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
     ) {
-        Text(
-            text = "\n\n  k9:",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Row (
+        Column (
             modifier = Modifier
-                .padding(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "bundleUp:  ",
-                fontSize = 20.sp
+                text = "\n  k9:",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
             )
-            Text(
-                text = managerState.numberBundlesSent,
-                fontSize = 20.sp
-            )
-            Text(
-                text = "        bundleDown:  ",
-                fontSize = 20.sp
-            )
-            Text(
-                text = managerState.numberBundlesReceived,
-                fontSize = 20.sp
-            )
-        }
-        FilledTonalButton(onClick = {bundleViewModel.refresh()},
-            modifier = Modifier.fillMaxWidth()) {
-            Text("RELOAD")
+            Row(
+                modifier = Modifier
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "bundleUp: ",
+                    fontSize = 20.sp
+                )
+                Text(
+                    text = managerState.numberBundlesSent,
+                    fontSize = 20.sp
+                )
+                Text(
+                    text = "        bundleDown: ",
+                    fontSize = 20.sp
+                )
+                Text(
+                    text = managerState.numberBundlesReceived,
+                    fontSize = 20.sp
+                )
+            }
+            FilledTonalButton(
+                onClick = { bundleViewModel.refresh() },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("RELOAD")
+            }
         }
     }
 }
