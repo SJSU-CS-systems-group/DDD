@@ -33,7 +33,6 @@ class BundleManagerViewModel(
             numberBundlesReceived = R.id.numberBundlesReceived.toString(),
         ) }
         bundleTransmission = WifiServiceManager.getService()?.getBundleTransmission()
-
     }
 
     fun getADUcount(ADUPath: Path?): String {
@@ -72,7 +71,6 @@ class BundleManagerViewModel(
 
     fun refresh() {
         var path: Path? = bundleTransmission?.getClientPaths()?.sendADUsPath
-
         try {
             _state.update {
                 it.copy(numberBundlesSent = getADUcount(path),
