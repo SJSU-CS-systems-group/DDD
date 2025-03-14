@@ -18,8 +18,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 data class BundleManagerState(
-    val numberBundlesSent: String = "",
-    val numberBundlesReceived: String = "",
+    val numberBundlesSent: String = "0",
+    val numberBundlesReceived: String = "0",
 )
 
 class BundleManagerViewModel(
@@ -30,11 +30,8 @@ class BundleManagerViewModel(
     val state = _state.asStateFlow()
 
     init {
-        _state.update { it.copy(
-            numberBundlesSent = "0",
-            numberBundlesReceived = "0",
-        ) }
         bundleTransmission = WifiServiceManager.getService()?.getBundleTransmission()
+        refresh()
     }
 
     fun getADUcount(ADUPath: Path?): String {
