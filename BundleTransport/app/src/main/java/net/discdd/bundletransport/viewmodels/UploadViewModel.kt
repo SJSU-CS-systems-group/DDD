@@ -2,6 +2,7 @@ package net.discdd.bundletransport.viewmodels
 
 import android.app.Application
 import android.content.Context
+import android.content.Context.MODE_PRIVATE
 import android.os.Environment
 import android.os.StatFs
 import androidx.lifecycle.AndroidViewModel
@@ -20,7 +21,8 @@ data class ServerState(
 )
 
 class UploadViewModel(application: Application) : AndroidViewModel(application) {
-    private val context get() = getApplication<Application>();
+    private val context get() = getApplication<Application>()
+    private val sharedPref = context.getSharedPreferences("server_endpoint", MODE_PRIVATE)
     private val _state = MutableStateFlow(ServerState())
     val state = _state.asStateFlow()
 
@@ -49,6 +51,16 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun onPortChanged(port: String) {
+        /*
+        viewModelScope.launch {
+            sharedPref
+                .edit()
+                .putString("domain", state.value.domain)
+                .putInt("port", state.value.port.toInt())
+                .apply()
+            _state.update { it.copy(message = context.getString(net.discdd.bundleclient)) }
+        }
 
+         */
     }
 }
