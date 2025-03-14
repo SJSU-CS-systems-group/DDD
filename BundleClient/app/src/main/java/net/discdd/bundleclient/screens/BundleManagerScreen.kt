@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
 import net.discdd.bundleclient.viewmodels.BundleManagerViewModel
+import net.discdd.theme.ComposableTheme
 
 class BundleManagerFragment : Fragment() {
     override fun onCreateView(
@@ -35,7 +36,7 @@ class BundleManagerFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                MaterialTheme {
+                ComposableTheme {
                     ManagerScreen()
                 }
             }

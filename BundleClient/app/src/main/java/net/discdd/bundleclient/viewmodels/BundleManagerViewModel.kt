@@ -2,9 +2,11 @@ package net.discdd.bundleclient.viewmodels
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiServiceManager
 
@@ -27,19 +29,17 @@ class BundleManagerViewModel(
     private val _state = MutableStateFlow(BundleManagerState())
     val state = _state.asStateFlow()
 
-    fun onCreate() {
+    init {
         _state.update { it.copy(
-            numberBundlesSent = R.id.numberBundlesSent.toString(),
+            numberBundlesSent = R.id.bungles
+            R.id.numberBundlesSent.toString(),
             numberBundlesReceived = R.id.numberBundlesReceived.toString(),
         ) }
         bundleTransmission = WifiServiceManager.getService()?.getBundleTransmission()
     }
 
     fun getADUcount(ADUPath: Path?): String {
-        if (ADUPath == null) {
-            return "0"
-        }
-
+        ADUPath ?: "0"
         try {
             val stream = Files.newDirectoryStream(ADUPath)
             for (path in stream) {
@@ -70,17 +70,19 @@ class BundleManagerViewModel(
     }
 
     fun refresh() {
-        var path: Path? = bundleTransmission?.getClientPaths()?.sendADUsPath
-        try {
-            _state.update {
-                it.copy(numberBundlesSent = getADUcount(path),
-                    numberBundlesReceived = getADUcount(path))
-            }
-        } catch (e : Exception) {
-            System.err.println("Error updating ADU count: ${e.message}");
-            _state.update {
-                it.copy(numberBundlesSent = "Error",
-                    numberBundlesReceived = "Error")
+        viewModelScope.launch {
+            var path: Path? = bundleTransmission?.getClientPaths()?.sendADUsPath
+            try {
+                _state.update {
+                    it.copy(numberBundlesSent = getADUcount(path),
+                        numberBundlesReceived = getADUcount(path))
+                }
+            } catch (e : Exception) {
+                System.err.println("Error updating ADU count: ${e.message}");
+                _state.update {
+                    it.copy(numberBundlesSent = "Error",
+                        numberBundlesReceived = "Error")
+                }
             }
         }
     }
