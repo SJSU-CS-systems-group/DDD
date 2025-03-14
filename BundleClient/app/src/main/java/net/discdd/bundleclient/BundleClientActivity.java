@@ -32,6 +32,7 @@ import com.google.android.material.tabs.TabLayoutMediator;
 
 import net.discdd.android.fragments.PermissionsFragment;
 import net.discdd.bundleclient.screens.BundleClientWifiDirectFragment;
+import net.discdd.bundleclient.screens.BundleManagerFragment;
 import net.discdd.bundleclient.screens.ServerFragment;
 import net.discdd.screens.LogFragment;
 import net.discdd.viewmodels.PermissionsViewModel;
@@ -125,7 +126,7 @@ public class BundleClientActivity extends AppCompatActivity {
         homeFragment = new BundleClientWifiDirectFragment();
         usbFragment = UsbFragment.newInstance();
         logFragment = new LogFragment();
-        bundleManagerFragment = BundleManagerFragment.newInstance();
+        bundleManagerFragment = new BundleManagerFragment();
         fragmentsWithTitles.add(new FragmentWithTitle(permissionsFragment, getString(R.string.permissions_tab)));
         connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         serverFragment = new ServerFragment();
