@@ -8,29 +8,22 @@ import kotlinx.coroutines.flow.update
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiServiceManager
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.fragment.app.Fragment;
 import net.discdd.client.bundletransmission.BundleTransmission;
 
 import java.io.IOException;
 import java.nio.file.DirectoryIteratorException;
-import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths
 
 data class BundleManagerState(
     val numberBundlesSent: String = "",
     val numberBundlesReceived: String = "",
-    val bundleTransmission: BundleTransmission? = null,
 )
 
 class BundleManagerViewModel(
     application: Application,
 ): AndroidViewModel(application) {
+    var bundleTransmission: BundleTransmission? = null
     private val _state = MutableStateFlow(BundleManagerState())
     val state = _state.asStateFlow()
 
@@ -38,11 +31,12 @@ class BundleManagerViewModel(
         _state.update { it.copy(
             numberBundlesSent = R.id.numberBundlesSent.toString(),
             numberBundlesReceived = R.id.numberBundlesReceived.toString(),
-            bundleTransmission = WifiServiceManager.getService()?.getBundleTransmission(),
         ) }
+        bundleTransmission = WifiServiceManager.getService()?.getBundleTransmission()
+
     }
 
-    fun getADUcount(ADUPath : Path): String {
+    fun getADUcount(ADUPath: Path?): String {
         if (ADUPath == null) {
             return "0"
         }
@@ -68,7 +62,7 @@ class BundleManagerViewModel(
         catch (e : Exception) {
             when (e) {
                 is IOException, is DirectoryIteratorException -> {
-                    System.err.println("Error reading the directory: + ${e.message}");
+                    System.err.println("Error reading the directory: ${e.message}");
                     return "0";
                 }
             }
@@ -77,10 +71,19 @@ class BundleManagerViewModel(
     }
 
     fun refresh() {
-        _state.update {
-            bundleViewModel: BundleManagerViewModel = viewModel(),
-            val managerState by bundleViewModel.state.collectAsState()
-            it.copy(numberBundlesSent = getADUcount(bundleTransmission.getClientPaths().sendADUsPath))
+        var path: Path? = bundleTransmission?.getClientPaths()?.sendADUsPath
+
+        try {
+            _state.update {
+                it.copy(numberBundlesSent = getADUcount(path),
+                    numberBundlesReceived = getADUcount(path))
+            }
+        } catch (e : Exception) {
+            System.err.println("Error updating ADU count: ${e.message}");
+            _state.update {
+                it.copy(numberBundlesSent = "Error",
+                    numberBundlesReceived = "Error")
+            }
         }
     }
 }
