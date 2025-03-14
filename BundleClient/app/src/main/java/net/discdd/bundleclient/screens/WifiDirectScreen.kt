@@ -70,7 +70,6 @@ class BundleClientWifiDirectFragment: Fragment() {
 
 @Composable
 fun WifiDirectScreen(
-    darkTheme: Boolean = isSystemInDarkTheme(),
     viewModel: WifiDirectViewModel = viewModel(),
     serviceReadyFuture: CompletableFuture<BundleClientActivity>,
     preferences: SharedPreferences = LocalContext.current.getSharedPreferences(
@@ -166,12 +165,6 @@ fun WifiDirectScreen(
                 }
             ) {
                 Text(text = stringResource(id = R.string.refresh_peers))
-            }
-
-            Button(
-                onClick = {}
-            ) {
-                Text(text = "dark mode? $darkTheme")
             }
         }
     }
