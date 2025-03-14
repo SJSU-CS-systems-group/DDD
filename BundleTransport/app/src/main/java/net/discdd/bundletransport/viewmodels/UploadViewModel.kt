@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context.MODE_PRIVATE
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -27,8 +28,7 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
 
     init {
         restoreDomainPort()
-        _state.update {
-        }
+        reloadCount()
     }
 
     fun connectServer() {
@@ -36,11 +36,7 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun reloadCount() {
-        if (transportPaths != null && transportPaths.toClientPath != null && transportPaths.toServerPath != null) {
-            
-        } else {
-
-        }
+        
     }
 
     fun saveDomainPort() {
