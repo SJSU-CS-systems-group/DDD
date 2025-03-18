@@ -54,6 +54,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 
@@ -523,8 +524,8 @@ public class SessionCipher {
 
             cipherOutputStream.close();
             return trailingBuffer;
-        } catch (IllegalBlockSizeException | BadPaddingException e) {
-            throw new InvalidMessageException(e);
+        }catch(Exception e){
+            throw new IOException(e.getMessage());
         }
     }
 
