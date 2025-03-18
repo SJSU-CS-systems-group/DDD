@@ -34,10 +34,10 @@ import androidx.viewpager2.widget.ViewPager2;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
-import net.discdd.android.fragments.PermissionsFragment;
 import net.discdd.bundletransport.screens.StorageFragment;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.screens.LogFragment;
+import net.discdd.screens.PermissionsFragment;
 import net.discdd.tls.GrpcSecurity;
 import net.discdd.transport.GrpcSecurityHolder;
 import net.discdd.viewmodels.PermissionsViewModel;
@@ -142,7 +142,7 @@ public class BundleTransportActivity extends AppCompatActivity {
         logFragment = new TitledFragment(getString(R.string.logs), new LogFragment());
 
         permissionsViewModel = new ViewModelProvider(this).get(PermissionsViewModel.class);
-        permissionsFragment = PermissionsFragment.newInstance();
+        permissionsFragment = new PermissionsFragment();
         titledPermissionsFragment = new TitledFragment("Permissions", permissionsFragment);
         fragments.add(titledPermissionsFragment);
 
@@ -230,7 +230,7 @@ public class BundleTransportActivity extends AppCompatActivity {
 
     protected void onStart() {
         super.onStart();
-        permissionsFragment.registerPermissionsWatcher(obtainedPermissions -> {
+        permissionsViewModel.registerPermissionsWatcher(obtainedPermissions -> {
             logger.info("Permissions obtained: " + obtainedPermissions);
             if (obtainedPermissions.containsAll(wifiDirectPermissions)) {
                 transportWifiServiceConnection.thenApply(
@@ -378,7 +378,6 @@ public class BundleTransportActivity extends AppCompatActivity {
     public void checkRuntimePermission() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.NEARBY_WIFI_DEVICES) == PackageManager.PERMISSION_GRANTED) {
             permissionsViewModel.updatePermissions(true);
-
         }
     }
 }
