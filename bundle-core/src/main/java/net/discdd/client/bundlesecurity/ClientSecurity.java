@@ -223,7 +223,7 @@ public class ClientSecurity {
     }
 
     public void decrypt(Path bundlePath, Path decryptedPath) throws IOException, InvalidMessageException,
-            LegacyMessageException, NoSessionException, DuplicateMessageException, InvalidKeyException {
+             NoSessionException, DuplicateMessageException, InvalidKeyException {
         var payloadPath = bundlePath.resolve(SecurityUtils.PAYLOAD_DIR);
 
         String bundleID = getBundleIDFromFile(bundlePath);

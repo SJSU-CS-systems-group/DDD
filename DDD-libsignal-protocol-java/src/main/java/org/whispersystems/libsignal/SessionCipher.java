@@ -220,7 +220,7 @@ public class SessionCipher {
             }
             int version = versionArr[0];
             if(version < 3){
-                throw new LegacyMessageException("Version is less than 3");
+                throw new InvalidMessageException("Version is less than 3");
             }
             byte[] ratchetKeyInfo = new byte[1];
             if(inputStream.read(ratchetKeyInfo) == -1){
