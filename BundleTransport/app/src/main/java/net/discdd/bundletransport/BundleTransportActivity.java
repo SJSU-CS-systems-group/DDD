@@ -1,5 +1,7 @@
 package net.discdd.bundletransport;
 
+import static androidx.compose.ui.semantics.SemanticsPropertiesKt.dismiss;
+import static androidx.core.content.ContentProviderCompat.requireContext;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
@@ -22,9 +24,14 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.compose.ui.platform.ComposeView;
+import androidx.compose.ui.platform.ViewCompositionStrategy;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
@@ -35,6 +42,8 @@ import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
 import net.discdd.bundletransport.screens.StorageFragment;
+import net.discdd.components.ComposableThemeKt;
+import net.discdd.components.PermissionBottomSheetKt;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.screens.LogFragment;
 import net.discdd.screens.PermissionsFragment;
@@ -42,7 +51,10 @@ import net.discdd.tls.GrpcSecurity;
 import net.discdd.transport.GrpcSecurityHolder;
 import net.discdd.viewmodels.PermissionsViewModel;
 
+import org.bouncycastle.operator.OperatorCreationException;
+
 import java.io.IOException;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.cert.CertificateException;
@@ -52,8 +64,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.SubmissionPublisher;
 import java.util.logging.Logger;
-import java.security.InvalidAlgorithmParameterException;
-import org.bouncycastle.operator.OperatorCreationException;
 
 public class BundleTransportActivity extends AppCompatActivity {
     Logger logger = Logger.getLogger(BundleTransportActivity.class.getName());
