@@ -64,11 +64,14 @@ import java.util.List;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.CipherOutputStream;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static org.whispersystems.libsignal.state.SessionState.UnacknowledgedPreKeyMessageItems;
 
 /**
@@ -387,7 +390,7 @@ public class SessionCipher {
 
                 sessionState.setRootKey(senderChain.first());
                 sessionState.addReceiverChain(theirEphemeral, receiverChain.second());
-                sessionState.setPreviousCounter(Math.max(sessionState.getSenderChainKey().getIndex() - 1, 0));
+                sessionState.setPreviousCounter(max(sessionState.getSenderChainKey().getIndex() - 1, 0));
                 sessionState.setSenderChain(ourNewEphemeral, senderChain.second());
 
                 return receiverChain.second();
@@ -485,37 +488,40 @@ public class SessionCipher {
             } else {
                 cipher = getCipher(Cipher.DECRYPT_MODE, messageKeys.getCipherKey(), messageKeys.getCounter());
             }
+            CipherOutputStream cipherOutputStream = new CipherOutputStream(outputStream,cipher);
 
             byte[] buffer = new byte[8192];  // Improved buffer size for better performance
             byte[] trailingBuffer = new byte[32];
+
+            int TRAILING_SIZE = trailingBuffer.length;
             int trailingCount = 0;
 
-            int rc;
-            while ((rc = inputStream.read(buffer)) > 0) {
-                if (rc > 32) {
 
-                    if (trailingCount > 0) {
-                        outputStream.write(cipher.update(trailingBuffer, 0, trailingCount));
-                    }
-
-                    System.arraycopy(buffer, rc - 32, trailingBuffer, 0, 32);
-                    trailingCount = 32;
-
-                    outputStream.write(cipher.update(buffer, 0, rc - 32));
-                } else {
-                    if (trailingCount + rc <= 32) {
-                        System.arraycopy(buffer, 0, trailingBuffer, trailingCount, rc);
-                        trailingCount += rc;
-                    } else {
-                        int shiftAmount = rc - (32 - trailingCount);
-                        System.arraycopy(trailingBuffer, shiftAmount, trailingBuffer, 0, 32 - shiftAmount);
-                        System.arraycopy(buffer, 0, trailingBuffer, 32 - shiftAmount, shiftAmount);
-                        trailingCount = 32;
-                    }
+            int readCount;
+            while ((readCount = inputStream.read(buffer)) > 0) {
+                if (trailingCount < TRAILING_SIZE) {
+                    int bytesToCopyFromBuffer = min(TRAILING_SIZE - trailingCount, readCount);
+                    System.arraycopy(buffer, 0, trailingBuffer, trailingCount, bytesToCopyFromBuffer);
+                    trailingCount += bytesToCopyFromBuffer;
                 }
+
+                if (trailingCount < TRAILING_SIZE) continue; // Need trailing to always be full
+
+                // Calculate bytes to write
+                int writeFromTrailing = min(readCount, TRAILING_SIZE);
+                int leftInTrailing = TRAILING_SIZE - writeFromTrailing;
+                int writeFromBuffer = max(0, readCount - TRAILING_SIZE); // Avoid writing negative bytes
+
+                // Output data
+                cipherOutputStream.write(trailingBuffer, 0, writeFromTrailing); // Write from trailing buffer
+                cipherOutputStream.write(buffer, writeFromTrailing, writeFromBuffer); // Write from buffer
+
+                // Shift trailing buffer
+                System.arraycopy(trailingBuffer, writeFromTrailing, trailingBuffer, 0, leftInTrailing);
+                System.arraycopy(buffer, writeFromTrailing + writeFromBuffer, trailingBuffer, leftInTrailing, writeFromTrailing);
             }
 
-            outputStream.write(cipher.doFinal());
+            cipherOutputStream.close();
             return trailingBuffer;
         } catch (IllegalBlockSizeException | BadPaddingException e) {
             throw new InvalidMessageException(e);

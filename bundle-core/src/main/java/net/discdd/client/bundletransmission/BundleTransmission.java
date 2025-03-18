@@ -184,7 +184,7 @@ public class BundleTransmission {
                                                       clientSecurity.getClientBaseKeyPairPublicKey(),
                                                       clientSecurity.getServerPublicKey(), bundleId, inputStream,
                                                       os);
-        } catch (InvalidMessageException | LegacyMessageException e) {
+        } catch (InvalidMessageException e) {
             throw new IOException("Error processing message: " + e.getMessage(), e);
         } finally {
             Files.delete(tmpPath);
