@@ -301,12 +301,12 @@ public class ServerSecurity {
         var encryptedData = Files.newInputStream(payloadPath.resolve(payloadName));
         var output = Files.newOutputStream(decryptedFile, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
 
-        
+
         client.cipherSession.decrypt(encryptedData, output);
 
         updateSessionRecord(client);
 
-        logger.log(FINE, "[ServerSecurity]:Decrypted Size = %d");
+        logger.log(FINE, "[ServerSecurity]:Decrypted Size = %d", Files.size(decryptedFile));
 
         return decryptedFile;
     }
