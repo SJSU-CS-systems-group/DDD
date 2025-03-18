@@ -197,7 +197,7 @@ public class SessionCipher {
         }
     }
 
-    public void decrypt(InputStream inputStream, OutputStream outputStream) throws InvalidMessageException, DuplicateMessageException, LegacyMessageException, NoSessionException, IOException, InvalidKeyException {
+    public void decrypt(InputStream inputStream, OutputStream outputStream) throws InvalidMessageException, DuplicateMessageException, NoSessionException, IOException, InvalidKeyException {
         synchronized (SESSION_LOCK) {
             if (!sessionStore.containsSession(remoteAddress)) {
                 throw new NoSessionException("No session for: " + remoteAddress);
