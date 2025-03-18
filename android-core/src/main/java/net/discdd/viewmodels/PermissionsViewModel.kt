@@ -9,9 +9,11 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import net.discdd.android_core.R
 import java.util.function.Consumer
 import java.util.logging.Level
@@ -48,21 +50,23 @@ class PermissionsViewModel(
     }
 
     fun handlePermissionResults(results: Map<String, Boolean>) {
-        val remainingPermissions = mutableMapOf<String, PermissionItemData>()
-        results.forEach { (p, r) ->
-            logger.log(Level.INFO, "$p ${if (r) "granted" else "denied"}")
-            updatePermissionItem(p, r)
-            if (r) {
-                trackGrantedPermission(p)
-            } else {
-                _neededPermissions[p]?.let {
-                    remainingPermissions[p] = it
+        viewModelScope.launch {
+            val remainingPermissions = mutableMapOf<String, PermissionItemData>()
+            results.forEach { (p, r) ->
+                logger.log(Level.INFO, "$p ${if (r) "granted" else "denied"}")
+                updatePermissionItem(p, r)
+                if (r) {
+                    trackGrantedPermission(p)
+                } else {
+                    _neededPermissions[p]?.let {
+                        remainingPermissions[p] = it
+                    }
                 }
             }
+            _neededPermissions.clear()
+            _neededPermissions.putAll(remainingPermissions)
+            allSatisfied()
         }
-        _neededPermissions.clear()
-        _neededPermissions.putAll(remainingPermissions)
-        allSatisfied()
     }
 
     private fun updatePermissionItem(permission: String, isGranted: Boolean) {
@@ -75,15 +79,17 @@ class PermissionsViewModel(
     }
 
     fun checkPermission(permission: String) {
-        logger.log(Level.FINE, "Checking permission $permission")
-        if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
-            updatePermissionItem(permission, true)
-            trackGrantedPermission(permission)
-        } else {
-            val permissionItem = _permissionItems.value.find { it.permissionName == permission }
-            permissionItem?.let {
-                updatePermissionItem(permission, false)
-                _neededPermissions[permission] = it
+        viewModelScope.launch {
+            logger.log(Level.FINE, "Checking permission $permission")
+            if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
+                updatePermissionItem(permission, true)
+                trackGrantedPermission(permission)
+            } else {
+                val permissionItem = _permissionItems.value.find { it.permissionName == permission }
+                permissionItem?.let {
+                    updatePermissionItem(permission, false)
+                    _neededPermissions[permission] = it
+                }
             }
         }
     }
@@ -122,10 +128,12 @@ class PermissionsViewModel(
     }
 
     fun triggerPermissionDialog(context: Context) {
-        AlertDialog.Builder(context)
-            .setMessage(R.string.dialog_message)
-            .setNeutralButton(R.string.dialog_btn_text, null)
-            .create()
-            .show()
+        viewModelScope.launch {
+            AlertDialog.Builder(context)
+                .setMessage(R.string.dialog_message)
+                .setNeutralButton(R.string.dialog_btn_text, null)
+                .create()
+                .show()
+        }
     }
 }
