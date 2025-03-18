@@ -126,7 +126,7 @@ public class BundleTransmission {
 
     public void processReceivedBundle(BundleSender sender, Bundle bundle) throws IOException,
             RoutingExceptions.ClientMetaDataFileException, NoSessionException, InvalidMessageException,
-            DuplicateMessageException, LegacyMessageException, InvalidKeyException, GeneralSecurityException,
+            DuplicateMessageException, InvalidKeyException, GeneralSecurityException,
             WindowExceptions.BufferOverflow {
         String largestBundleIdReceived = this.getLargestBundleIdReceived();
         UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, clientPaths.uncompressedPayloadStore);
@@ -184,10 +184,8 @@ public class BundleTransmission {
                                                       clientSecurity.getClientBaseKeyPairPublicKey(),
                                                       clientSecurity.getServerPublicKey(), bundleId, inputStream,
                                                       os);
-        } catch (InvalidMessageException e) {
-            throw new InvalidMessageException(e);
-        } catch (LegacyMessageException e) {
-            throw new LegacyMessageException(e);
+        } catch (InvalidMessageException | LegacyMessageException e) {
+            throw new IOException("Error processing message: " + e.getMessage(), e);
         } finally {
             Files.delete(tmpPath);
         }

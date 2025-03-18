@@ -234,14 +234,14 @@ public class ClientSecurity {
 
         String payloadName = SecurityUtils.PAYLOAD_FILENAME;
 
-        byte[] encryptedData = Files.readAllBytes(payloadPath.resolve(payloadName));
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        cipherSession.decrypt(new ByteArrayInputStream(encryptedData), baos);
+        InputStream encryptedDataInputStream = Files.newInputStream(payloadPath.resolve(payloadName));
+        OutputStream encryptedDataOutputStream = Files.newOutputStream(decryptedFile);
+        cipherSession.decrypt(encryptedDataInputStream,encryptedDataOutputStream );
         updateSessionRecord();
 
-        Files.write(decryptedFile, baos.toByteArray(), StandardOpenOption.APPEND, StandardOpenOption.CREATE);
 
-        logger.log(FINER, "Decrypted Size = %d\n", baos.toByteArray().length);
+
+        logger.log(FINER, "Decrypted Size = %d\n", Files.size(decryptedPath));
     }
 
     public String decryptBundleID(String encryptedBundleID) throws GeneralSecurityException, InvalidKeyException {
