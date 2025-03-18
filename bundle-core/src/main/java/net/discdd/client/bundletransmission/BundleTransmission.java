@@ -185,9 +185,9 @@ public class BundleTransmission {
                                                       clientSecurity.getServerPublicKey(), bundleId, inputStream,
                                                       os);
         } catch (InvalidMessageException e) {
-            throw new RuntimeException(e);
+            throw new InvalidMessageException(e);
         } catch (LegacyMessageException e) {
-            throw new RuntimeException(e);
+            throw new LegacyMessageException(e);
         } finally {
             Files.delete(tmpPath);
         }

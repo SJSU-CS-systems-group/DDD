@@ -97,23 +97,6 @@ public class SecurityUtilsTest {
         Assertions.assertEquals(message, decrypted);
     }
 
-    /**
-     *
-     * Encrypts with StreamedProcess
-     * Decrypts with Array
-     */
-//    @Test
-//    public void test2StreamingEncryptArrayDecrypt() throws Exception {
-//        String message = "Hello, World!";
-//        ByteArrayOutputStream cipherText = new ByteArrayOutputStream();
-//        aliceCipher.encrypt(new ByteArrayInputStream(message.getBytes()), cipherText);
-//        Field ciphertextField = SignalMessage.class.getDeclaredField("ciphertext");
-//        ciphertextField.setAccessible(true);
-//
-//        byte[] plaintext = plainTextOutPutStream.toByteArray());
-//        String decrypted = new String(plaintext, StandardCharsets.UTF_8);
-//        Assertions.assertEquals(message, decrypted);
-//    }
 
     /**
      *

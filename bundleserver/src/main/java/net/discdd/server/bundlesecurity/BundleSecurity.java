@@ -77,7 +77,8 @@ public class BundleSecurity {
                         .toFile();
 
         try {
-            this.serverSecurity.decrypt(uncompressedBundle.getSource().toPath(), uncompressedBundle.getSource().toPath());
+            this.serverSecurity.decrypt(uncompressedBundle.getSource().toPath(),
+                                        uncompressedBundle.getSource().toPath());
             logger.log(FINE, "[BundleSecurity] decrypted payload");
         } catch (Exception e) {
             // TODO

@@ -65,8 +65,7 @@ public class BundleUtils {
         logger.log(INFO, "Extracting bundle for bundle name: " + bundleFileName);
         Path extractedBundlePath = extractDirPath.resolve(bundleFileName);
         JarUtils.jarToDir(bundle.getSource().getAbsolutePath(), extractedBundlePath.toString());
-        Path path = extractDirPath.resolve(bundleFileName + "/payloads");
-        File[] payloads = path.toFile().listFiles();
+        File[] payloads = extractedBundlePath.resolve("payloads").toFile().listFiles();
         EncryptedPayload encryptedPayload = new EncryptedPayload(null, payloads[0]);
         return new UncompressedBundle( // TODO get encryption header, payload signature and get bundle id from BS
                                        null, extractedBundlePath.toFile(), null, encryptedPayload);
@@ -332,7 +331,7 @@ public class BundleUtils {
     public static void encryptPayloadAndCreateBundle(Encrypter payloadEncryptor, ECPublicKey clientIdentityPublicKey,
                                                      ECPublicKey clientBaseKeyPairPublicKey,
                                                      ECPublicKey serverIdentityPublicKey, String encryptedBundleId,
-                                                     InputStream payloadStream, OutputStream outputStream) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidMessageException, LegacyMessageException {
+                                                     InputStream payloadStream, OutputStream outputStream) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidMessageException {
 
 
         DDDJarFileCreator outerJar = new DDDJarFileCreator(outputStream);
@@ -348,7 +347,7 @@ public class BundleUtils {
         // store the keys
         try {
             outerJar.createEntry(SecurityUtils.CLIENT_IDENTITY_KEY, createEncryptedEncodedPublicKeyBytes(clientIdentityPublicKey, serverIdentityPublicKey));
-        } catch (GeneralSecurityException e) {
+        } catch (GeneralSecurityException | LegacyMessageException e) {
             throw new IOException("General Security Exception", e);
         }
         outerJar.createEntry(SecurityUtils.CLIENT_BASE_KEY, createEncodedPublicKeyBytes(clientBaseKeyPairPublicKey));
