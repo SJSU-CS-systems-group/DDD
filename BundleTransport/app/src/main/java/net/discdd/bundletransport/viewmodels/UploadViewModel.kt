@@ -4,12 +4,13 @@ import android.app.Application
 import android.content.Context.MODE_PRIVATE
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.discdd.pathutils.TransportPaths
+import net.discdd.bundletransport.R
+import net.discdd.transport.TransportToBundleServerManager
 
 data class ServerState(
     val domain: String = "",
@@ -29,9 +30,30 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
     init {
         restoreDomainPort()
         reloadCount()
+
     }
 
     fun connectServer() {
+        viewModelScope.launch {
+            if (state.value.domain.isEmpty() || state.value.port.isEmpty())
+                _state.update { it.copy(message = context.getString(R.string.enter_the_domain_and_port)) }
+
+            try {
+                _state.update {
+                    it.copy(message = context.getString(R.string.connecting_to_server))
+                }
+                var transportToBundleServerManager = TransportToBundleServerManager(transportPaths, state.value.domain, state.value.port)
+            } catch (e : Exception) {
+                _state.update { it.copy(message = context.getString(R.string.bundles_upload_failed)) }
+            }
+        }
+    }
+
+    fun serverConnectComplete() {
+        //_state.update { it.copy(message = context.getString(R.string.)) }
+    }
+
+    fun serverConnectionError() {
 
     }
 
@@ -46,7 +68,7 @@ class UploadViewModel(application: Application) : AndroidViewModel(application) 
                 .putString("domain", state.value.domain)
                 .putInt("port", state.value.port.toInt())
                 .apply()
-            _state.update { it.copy(message = "Settings saved") }
+            _state.update { it.copy(message = context.getString(R.string.saved)) }
         }
     }
 
