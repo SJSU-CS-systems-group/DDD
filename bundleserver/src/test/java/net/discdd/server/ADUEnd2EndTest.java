@@ -58,7 +58,7 @@ public class ADUEnd2EndTest extends End2EndTest {
         Path bundleJarPath = createBundleForAdus(adus, clientId, 1, bundleDir);
         sendBundle(bundleJarPath);
 
-         //check if the files are there
+        // check if the files are there
         HashSet<String> expectedFileList = new HashSet<>(Arrays.asList("1", "2", "3"));
         checkReceivedFiles(clientId, expectedFileList);
 

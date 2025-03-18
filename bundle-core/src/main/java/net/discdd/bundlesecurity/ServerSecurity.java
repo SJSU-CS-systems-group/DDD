@@ -301,7 +301,7 @@ public class ServerSecurity {
         var encryptedData = Files.newInputStream(payloadPath.resolve(payloadName));
         var output = Files.newOutputStream(decryptedFile, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
 
-        System.out.println("Before Decryption");
+        
         client.cipherSession.decrypt(encryptedData, output);
 
         updateSessionRecord(client);

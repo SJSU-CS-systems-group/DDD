@@ -48,6 +48,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
@@ -172,7 +173,7 @@ public class End2EndTest {
     @TempDir
     static File aduTempDir;
 
-    protected static Path createBundleForAdus(List<Long> aduIds, String clientId, int bundleCount, Path targetDir) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, InvalidKeySpecException, BadPaddingException, java.security.InvalidKeyException, InvalidMessageException {
+    protected static Path createBundleForAdus(List<Long> aduIds, String clientId, int bundleCount, Path targetDir) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, InvalidKeySpecException, BadPaddingException, java.security.InvalidKeyException {
 
         var baos = new ByteArrayOutputStream();
         var adus = aduIds.stream().map(aduId -> {
@@ -202,7 +203,7 @@ public class End2EndTest {
                                                       is, os);
 
         } catch (InvalidMessageException | LegacyMessageException e) {
-            throw new InvalidMessageException(e);
+            throw new IOException(e);
         }
 
         return bundleJarPath;

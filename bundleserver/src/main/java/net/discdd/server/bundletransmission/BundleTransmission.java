@@ -206,9 +206,9 @@ public class BundleTransmission {
                                                       encryptedBundleId, new ByteArrayInputStream(byteArrayOsForPayload.toByteArray()),
                                                       bundleOutputStream);
         } catch (InvalidMessageException e) {
-            throw new RuntimeException(e);
+            throw new GeneralSecurityException(e);
         } catch (LegacyMessageException e) {
-            throw new RuntimeException(e);
+            throw new GeneralSecurityException(e);
         }
         return encryptedBundleId;
     }

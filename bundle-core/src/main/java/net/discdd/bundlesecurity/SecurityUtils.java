@@ -121,11 +121,6 @@ public class SecurityUtils {
     }
 
     public static byte[] createEncodedPublicKeyBytes(ECPublicKey publicKey) {
-        // create ephemeral public key pair
-        // calculate shared secret from server public key and ephemeral private key
-        // write ephemeral public key to file
-        // encrypt client public key using shared secret
-        // write encrypted client public key to file
         return (PUB_KEY_HEADER + "\n" + Base64.getUrlEncoder().encodeToString(publicKey.serialize()) + "\n" +
                 PUB_KEY_FOOTER).getBytes();
     }
@@ -195,11 +190,6 @@ public class SecurityUtils {
 
 
     public static byte[] decodePublicKeyfromFile(Path path) throws IOException, InvalidKeyException {
-        // read ephemeral public key
-        // read encrypted client public key
-        // calculate shared secret from server private key and ephmeral public key
-        // decrypt client public key using shared secret
-        // return decrypted client public key
         List<String> encodedKeyList = Files.readAllLines(path);
 
         if (encodedKeyList.size() != 3) {
