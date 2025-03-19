@@ -358,7 +358,7 @@ public class BundleUtils {
     }
 
     public interface Encrypter {
-        void encrypt(InputStream payload, OutputStream outputStream) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidMessageException, LegacyMessageException;
+        void encrypt(InputStream payload, OutputStream outputStream) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidMessageException;
     }
 
     public static void checkIdClean(String s) {
