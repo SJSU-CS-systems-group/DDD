@@ -349,7 +349,7 @@ public class SessionCipher {
     }
 
     private byte[] decrypt(SessionState sessionState, SignalMessage ciphertextMessage) throws InvalidMessageException
-            , DuplicateMessageException, LegacyMessageException {
+            , DuplicateMessageException {
         if (!sessionState.hasSenderChain()) {
             throw new InvalidMessageException("Uninitialized session!");
         }
