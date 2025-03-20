@@ -87,11 +87,13 @@ import static org.whispersystems.libsignal.state.SessionState.UnacknowledgedPreK
 public class SessionCipher {
 
     public static final Object SESSION_LOCK = new Object();
+    public static final int TRAILIN_SIZE = 32;
 
     private final SessionStore sessionStore;
     private final SessionBuilder sessionBuilder;
     private final PreKeyStore preKeyStore;
     private final SignalProtocolAddress remoteAddress;
+    public static int readSize = 8192;
 
     /**
      * Construct a SessionCipher for encrypt/decrypt operations on a session.
@@ -473,13 +475,7 @@ public class SessionCipher {
         }
     }
 
-    /**
-     * Streamed decryption
-     * @param version
 
-     * @throws InvalidMessageException
-     * returns MAC
-     */
     private byte[] getPlaintext(int version, MessageKeys messageKeys, InputStream inputStream,
                                 OutputStream outputStream) throws InvalidMessageException, IOException {
         try {
@@ -492,7 +488,7 @@ public class SessionCipher {
             CipherOutputStream cipherOutputStream = new CipherOutputStream(outputStream,cipher);
 
 
-            byte[] buffer = new byte[8192];  // Improved buffer size for better performance
+            byte[] buffer = new byte[readSize];  // ReadSize was modified during testing
             byte[] trailingBuffer = new byte[32]; // To store the last 32 bytes
 
             int TRAILING_SIZE = 32;
@@ -500,48 +496,22 @@ public class SessionCipher {
 
             int readCount;
             while ((readCount = inputStream.read(buffer)) > 0) {
-                // If We Read in more than 32 bytes
-                // Write whatever is in trailing, if anything
-                // Write the full buffer to cipherOutputStream, excluding the last 32 bytes
-                // Copy The Last 32 into the Trailing Buffer
                 if (readCount > TRAILING_SIZE) {
                     cipherOutputStream.write(trailingBuffer, 0 , trailingCount);
                     cipherOutputStream.write(buffer, 0, readCount - TRAILING_SIZE);
                     System.arraycopy(buffer, 0,trailingBuffer,0, TRAILING_SIZE);
                 }
-
-                // If we read less than 32
-                // Divide Into two cases Trailing = or != to 32
-                // = 32
-                // readCount leaves from Trailing buffer
-                // Shift Over in Trailing
-                // Shift From Buffer to Trailing
-                // != 32
-                // Will the readcount overflow our trailing bufffer
-                // if
-                //  readOut the necessary bytes
-                //  shiftOver
-                //  else
-                //  write the bytes to the Trailing
-                if (readCount < TRAILING_SIZE) {
-                    if(trailingCount == 32){
-                        cipherOutputStream.write(buffer,0, readCount);
-                        System.arraycopy(trailingBuffer, 32 - readCount, trailingBuffer, 0, 32-readCount);
-                        System.arraycopy(buffer, 0, trailingBuffer,32 - readCount , 32-readCount);
-                    }else{
-                        if(readCount + trailingCount > 32){
-                            int leavingTrailing = 32 - (readCount + trailingCount);
-                            cipherOutputStream.write(trailingBuffer, 0, leavingTrailing);
-                            System.arraycopy(trailingBuffer, leavingTrailing, trailingBuffer, 0, TRAILING_SIZE- leavingTrailing);
-                            System.arraycopy(buffer, 0, trailingBuffer, TRAILING_SIZE- leavingTrailing, leavingTrailing);
-                            trailingCount = 32;
-                        }else{
-                            System.arraycopy(buffer, 0, trailingBuffer, trailingCount, readCount);
-                            trailingCount += readCount;
-                        }
+                else {
+                    int bytesToWriteIntoOutPut = max(0,(readCount + trailingCount) - 32); // All data - 32, write to outPutStream
+                    int writeFromTrailing = min(bytesToWriteIntoOutPut, 32);        // Number of Bytes to Send to OutputStream
+                    cipherOutputStream.write(trailingBuffer, 0, writeFromTrailing);
+                    if(writeFromTrailing > 0) { //Avoid SystemCopyIssues
+                        System.arraycopy(trailingBuffer, writeFromTrailing, trailingBuffer, 0,
+                                         trailingCount - writeFromTrailing);
                     }
-
-
+                    int trailingBufferOffset = trailingCount - bytesToWriteIntoOutPut;
+                    System.arraycopy(buffer, 0, trailingBuffer, trailingBufferOffset,  readCount);
+                    trailingCount = min(trailingCount + readCount,32);
                 }
             }
 

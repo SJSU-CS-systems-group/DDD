@@ -104,6 +104,17 @@ public class SecurityUtilsTest {
      * Decrypts with Array
      */
     @Test
+    public void test2StreamingEncryptStreamingDecrypt() throws Exception {
+        String message = "Hello, World!";
+        ByteArrayOutputStream cipherText = new ByteArrayOutputStream();
+        aliceCipher.encrypt(new ByteArrayInputStream(message.getBytes()), cipherText);
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        SessionCipher.readSize = 15;
+        bobCipher.decrypt(new ByteArrayInputStream(cipherText.toByteArray()), outputStream);
+        String decrypted = new String(outputStream.toByteArray(), StandardCharsets.UTF_8);
+        Assertions.assertEquals(message, decrypted);
+    }
+    @Test
     public void test3StreamingEncryptStreamingDecrypt() throws Exception {
         String message = "Hello, World!";
         ByteArrayOutputStream cipherText = new ByteArrayOutputStream();

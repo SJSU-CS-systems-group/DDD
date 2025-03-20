@@ -202,7 +202,7 @@ public class End2EndTest {
                                                       serverIdentity.getPublicKey().getPublicKey(), encryptedBundleID,
                                                       is, os);
 
-        } catch (InvalidMessageException | LegacyMessageException e) {
+        } catch (InvalidMessageException e) {
             throw new IOException(e);
         }
 
