@@ -491,35 +491,58 @@ public class SessionCipher {
             }
             CipherOutputStream cipherOutputStream = new CipherOutputStream(outputStream,cipher);
 
+
             byte[] buffer = new byte[8192];  // Improved buffer size for better performance
-            byte[] trailingBuffer = new byte[32];
+            byte[] trailingBuffer = new byte[32]; // To store the last 32 bytes
 
-            int TRAILING_SIZE = trailingBuffer.length;
+            int TRAILING_SIZE = 32;
             int trailingCount = 0;
-
 
             int readCount;
             while ((readCount = inputStream.read(buffer)) > 0) {
-                if (trailingCount < TRAILING_SIZE) {
-                    int bytesToCopyFromBuffer = min(TRAILING_SIZE - trailingCount, readCount);
-                    System.arraycopy(buffer, 0, trailingBuffer, trailingCount, bytesToCopyFromBuffer);
-                    trailingCount += bytesToCopyFromBuffer;
+                // If We Read in more than 32 bytes
+                // Write whatever is in trailing, if anything
+                // Write the full buffer to cipherOutputStream, excluding the last 32 bytes
+                // Copy The Last 32 into the Trailing Buffer
+                if (readCount > TRAILING_SIZE) {
+                    cipherOutputStream.write(trailingBuffer, 0 , trailingCount);
+                    cipherOutputStream.write(buffer, 0, readCount - TRAILING_SIZE);
+                    System.arraycopy(buffer, 0,trailingBuffer,0, TRAILING_SIZE);
                 }
 
-                if (trailingCount < TRAILING_SIZE) continue; // Need trailing to always be full
+                // If we read less than 32
+                // Divide Into two cases Trailing = or != to 32
+                // = 32
+                // readCount leaves from Trailing buffer
+                // Shift Over in Trailing
+                // Shift From Buffer to Trailing
+                // != 32
+                // Will the readcount overflow our trailing bufffer
+                // if
+                //  readOut the necessary bytes
+                //  shiftOver
+                //  else
+                //  write the bytes to the Trailing
+                if (readCount < TRAILING_SIZE) {
+                    if(trailingCount == 32){
+                        cipherOutputStream.write(buffer,0, readCount);
+                        System.arraycopy(trailingBuffer, 32 - readCount, trailingBuffer, 0, 32-readCount);
+                        System.arraycopy(buffer, 0, trailingBuffer,32 - readCount , 32-readCount);
+                    }else{
+                        if(readCount + trailingCount > 32){
+                            int leavingTrailing = 32 - (readCount + trailingCount);
+                            cipherOutputStream.write(trailingBuffer, 0, leavingTrailing);
+                            System.arraycopy(trailingBuffer, leavingTrailing, trailingBuffer, 0, TRAILING_SIZE- leavingTrailing);
+                            System.arraycopy(buffer, 0, trailingBuffer, TRAILING_SIZE- leavingTrailing, leavingTrailing);
+                            trailingCount = 32;
+                        }else{
+                            System.arraycopy(buffer, 0, trailingBuffer, trailingCount, readCount);
+                            trailingCount += readCount;
+                        }
+                    }
 
-                // Calculate bytes to write
-                int writeFromTrailing = min(readCount, TRAILING_SIZE);
-                int leftInTrailing = TRAILING_SIZE - writeFromTrailing;
-                int writeFromBuffer = max(0, readCount - TRAILING_SIZE); // Avoid writing negative bytes
 
-                // Output data
-                cipherOutputStream.write(trailingBuffer, 0, writeFromTrailing); // Write from trailing buffer
-                cipherOutputStream.write(buffer, writeFromTrailing, writeFromBuffer); // Write from buffer
-
-                // Shift trailing buffer
-                System.arraycopy(trailingBuffer, writeFromTrailing, trailingBuffer, 0, leftInTrailing);
-                System.arraycopy(buffer, writeFromTrailing + writeFromBuffer, trailingBuffer, leftInTrailing, writeFromTrailing);
+                }
             }
 
             cipherOutputStream.close();
