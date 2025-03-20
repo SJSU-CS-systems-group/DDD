@@ -2,11 +2,6 @@ package net.discdd.bundleclient.screens
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,46 +27,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
-import net.discdd.bundleclient.BundleClientActivity
 import net.discdd.bundleclient.BundleClientWifiDirectService
+import net.discdd.bundleclient.MainActivity
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.viewmodels.PeerDevice
 import net.discdd.bundleclient.viewmodels.WifiDirectViewModel
-import net.discdd.theme.ComposableTheme
 import java.util.concurrent.CompletableFuture
-
-class BundleClientWifiDirectFragment: Fragment() {
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        return ComposeView(requireContext()).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-            setContent {
-                ComposableTheme {
-                    WifiDirectScreen(serviceReadyFuture = (activity as BundleClientActivity).serviceReady)
-                }
-            }
-        }
-    }
-}
 
 @Composable
 fun WifiDirectScreen(
     viewModel: WifiDirectViewModel = viewModel(),
-    serviceReadyFuture: CompletableFuture<BundleClientActivity>,
+    serviceReadyFuture: CompletableFuture<MainActivity>,
     preferences: SharedPreferences = LocalContext.current.getSharedPreferences(
         BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTINGS,
         Context.MODE_PRIVATE

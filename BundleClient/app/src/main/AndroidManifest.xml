@@ -22,7 +22,7 @@
                 android:exported="false" >
         </service>
         <activity
-            android:name="net.discdd.bundleclient.BundleClientActivity"
+            android:name="net.discdd.bundleclient.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

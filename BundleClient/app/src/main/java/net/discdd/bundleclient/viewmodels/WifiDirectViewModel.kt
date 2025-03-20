@@ -11,9 +11,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import net.discdd.bundleclient.BundleClientActivity
 import net.discdd.bundleclient.BundleClientServiceBroadcastReceiver
 import net.discdd.bundleclient.BundleClientWifiDirectService
+import net.discdd.bundleclient.MainActivity
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiServiceManager
 import java.net.InetAddress
@@ -59,7 +59,7 @@ class WifiDirectViewModel(
         registerBroadcastReceiver()
     }
 
-    fun initialize(serviceReadyFuture: CompletableFuture<BundleClientActivity>) {
+    fun initialize(serviceReadyFuture: CompletableFuture<MainActivity>) {
         viewModelScope.launch {
             serviceReadyFuture.thenAccept {
                 val service = wifiService
