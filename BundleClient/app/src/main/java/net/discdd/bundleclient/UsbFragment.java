@@ -58,7 +58,7 @@ public class UsbFragment extends Fragment {
     public View onCreateView(
             @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.usb_fragment, container, false);
-        BundleClientActivity activity = (BundleClientActivity) getActivity();
+        MainActivity activity = (MainActivity) getActivity();
         BundleClientWifiDirectService wifiBgService = WifiServiceManager.INSTANCE.getService();
         if (activity != null && wifiBgService != null) {
             try {
