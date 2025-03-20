@@ -207,8 +207,6 @@ public class BundleTransmission {
                                                       bundleOutputStream);
         } catch (InvalidMessageException e) {
             throw new GeneralSecurityException(e);
-        } catch (LegacyMessageException e) {
-            throw new GeneralSecurityException(e);
         }
         return encryptedBundleId;
     }
