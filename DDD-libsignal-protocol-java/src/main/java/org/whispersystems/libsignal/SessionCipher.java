@@ -22,7 +22,7 @@ import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.InvalidKeyIdException;
 import org.whispersystems.libsignal.InvalidMessageException;
-import org.whispersystems.libsignal.LegacyMessageException;
+
 import org.whispersystems.libsignal.NoSessionException;
 import org.whispersystems.libsignal.SessionBuilder;
 import org.whispersystems.libsignal.SignalProtocolAddress;
@@ -268,12 +268,12 @@ public class SessionCipher {
         }
     }
 
-    public byte[] decrypt(PreKeySignalMessage ciphertext) throws DuplicateMessageException, LegacyMessageException,
+    public byte[] decrypt(PreKeySignalMessage ciphertext) throws DuplicateMessageException,
             InvalidMessageException, InvalidKeyIdException, InvalidKeyException, UntrustedIdentityException {
         return decrypt(ciphertext, new NullDecryptionCallback());
     }
 
-    public byte[] decrypt(PreKeySignalMessage ciphertext, DecryptionCallback callback) throws DuplicateMessageException, LegacyMessageException, InvalidMessageException, InvalidKeyIdException, InvalidKeyException, UntrustedIdentityException {
+    public byte[] decrypt(PreKeySignalMessage ciphertext, DecryptionCallback callback) throws DuplicateMessageException, InvalidMessageException, InvalidKeyIdException, InvalidKeyException, UntrustedIdentityException {
         synchronized (SESSION_LOCK) {
             SessionRecord sessionRecord = sessionStore.loadSession(remoteAddress);
             Optional<Integer> unsignedPreKeyId = sessionBuilder.process(sessionRecord, ciphertext);
@@ -292,12 +292,12 @@ public class SessionCipher {
     }
 
     public byte[] decrypt(SignalMessage ciphertext) throws InvalidMessageException, DuplicateMessageException,
-            LegacyMessageException, NoSessionException {
+            NoSessionException {
         return decrypt(ciphertext, new NullDecryptionCallback());
     }
 
     public byte[] decrypt(SignalMessage ciphertext, DecryptionCallback callback) throws InvalidMessageException,
-            DuplicateMessageException, LegacyMessageException, NoSessionException {
+            DuplicateMessageException, NoSessionException {
         synchronized (SESSION_LOCK) {
 
             if (!sessionStore.containsSession(remoteAddress)) {
@@ -315,7 +315,7 @@ public class SessionCipher {
     }
 
     private byte[] decrypt(SessionRecord sessionRecord, SignalMessage ciphertext) throws DuplicateMessageException,
-            LegacyMessageException, InvalidMessageException {
+            InvalidMessageException {
         synchronized (SESSION_LOCK) {
             Iterator<SessionState> previousStates = sessionRecord.getPreviousSessionStates().iterator();
             List<Exception> exceptions = new LinkedList<>();

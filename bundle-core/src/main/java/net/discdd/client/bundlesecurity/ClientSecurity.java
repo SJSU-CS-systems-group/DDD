@@ -216,7 +216,7 @@ public class ClientSecurity {
     }
 
     /* Encrypts File */
-    public void encrypt(InputStream inputStream, OutputStream outputStream) throws IOException, InvalidMessageException, LegacyMessageException {
+    public void encrypt(InputStream inputStream, OutputStream outputStream) throws IOException, InvalidMessageException{
         /* Encrypt File */
         cipherSession.encrypt(inputStream, outputStream);
         updateSessionRecord();
@@ -236,7 +236,7 @@ public class ClientSecurity {
 
         InputStream encryptedDataInputStream = Files.newInputStream(payloadPath.resolve(payloadName));
         OutputStream encryptedDataOutputStream = Files.newOutputStream(decryptedFile);
-        cipherSession.decrypt(encryptedDataInputStream,encryptedDataOutputStream );
+        cipherSession.decrypt(encryptedDataInputStream,encryptedDataOutputStream);
         updateSessionRecord();
 
 
