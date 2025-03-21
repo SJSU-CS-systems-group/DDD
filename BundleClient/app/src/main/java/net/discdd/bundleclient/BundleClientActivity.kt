@@ -29,6 +29,7 @@ class BundleClientActivity: ComponentActivity() {
 
         LogFragment.registerLoggerHandler()
         UsbConnectionManager.initialize(applicationContext)
+        WifiServiceManager.initializeConnection(this)
 
         try {
             applicationContext.startForegroundService(
@@ -58,13 +59,13 @@ class BundleClientActivity: ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
 
-        UsbConnectionManager.cleanup(applicationContext)
-
         if (!sharedPreferences.getBoolean(
             BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, false
         )) {
             stopService(Intent(this, BundleClientWifiDirectService::class.java))
         }
+
+        UsbConnectionManager.cleanup(applicationContext)
         WifiServiceManager.clearService()
         unbindService(WifiServiceManager.getConnection())
     }

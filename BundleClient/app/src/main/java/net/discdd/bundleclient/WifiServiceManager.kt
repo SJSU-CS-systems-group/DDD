@@ -9,18 +9,23 @@ import java.util.logging.Logger
 object WifiServiceManager {
     private val logger = Logger.getLogger(WifiServiceManager::class.java.name)
     private var _wifiBgService: BundleClientWifiDirectService? = null
-    val serviceReady = CompletableFuture<BundleClientActivity>()
 
-    private val connection = object : ServiceConnection {
-        override fun onServiceConnected(className: ComponentName, service: IBinder) {
-            val binder = service as BundleClientWifiDirectService.BundleClientWifiDirectServiceBinder
-            setService(binder.service)
-            serviceReady.complete(BundleClientActivity())
-        }
-        override fun onServiceDisconnected(arg0: ComponentName) {
-            clearService()
+    val serviceReady = CompletableFuture<BundleClientWifiDirectService>()
+    private lateinit var connection: ServiceConnection
+
+    fun initializeConnection(activity: BundleClientActivity) {
+         connection = object : ServiceConnection {
+            override fun onServiceConnected(className: ComponentName, service: IBinder) {
+                val binder = service as BundleClientWifiDirectService.BundleClientWifiDirectServiceBinder
+                setService(binder.service)
+                serviceReady.complete(binder.service)
+            }
+            override fun onServiceDisconnected(arg0: ComponentName) {
+                clearService()
+            }
         }
     }
+
 
     fun setService(service: BundleClientWifiDirectService?) {
         logger.info("Setting WifiService reference: ${service != null}")
