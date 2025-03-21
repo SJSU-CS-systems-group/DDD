@@ -64,7 +64,6 @@ class ServerUploadViewModel(
                         {x: Void -> serverConnectComplete()},
                         {e: Exception -> serverConnectionError(e, state.value.domain + ":" + state.value.port)})
                     executor.execute(transportToBundleServerManager)
-                    //withContext(Dispatchers.Main) run on UI thread?
                 } catch (e : Exception) {
                     _state.update { it.copy(message = context.getString(R.string.bundles_upload_failed)) }
                 }
