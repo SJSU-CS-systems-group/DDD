@@ -27,7 +27,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import net.discdd.bundleclient.MainActivity
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.UsbConnectionManager
 import net.discdd.bundleclient.WifiServiceManager

@@ -15,8 +15,8 @@ import net.discdd.viewmodels.PermissionsViewModel
 import java.util.logging.Level.WARNING
 import java.util.logging.Logger
 
-class MainActivity: ComponentActivity() {
-    private val logger = Logger.getLogger(MainActivity::class.java.name)
+class BundleClientActivity: ComponentActivity() {
+    private val logger = Logger.getLogger(BundleClientActivity::class.java.name)
     private val connectivityManager: ConnectivityManager by lazy {
         getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     }
@@ -27,16 +27,18 @@ class MainActivity: ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        LogFragment.registerLoggerHandler()
         UsbConnectionManager.initialize(applicationContext)
 
         try {
-            applicationContext.startForegroundService(Intent(this, BundleClientWifiDirectService::class.java))
+            applicationContext.startForegroundService(
+                Intent(this, BundleClientWifiDirectService::class.java)
+            )
         } catch (e: Exception) {
             logger.log(WARNING, "Failed to start TransportWifiDirectService")
         }
         val intent = Intent(this, BundleClientWifiDirectService::class.java)
         bindService(intent, WifiServiceManager.getConnection(), Context.BIND_AUTO_CREATE)
-        LogFragment.registerLoggerHandler()
 
         val permissionsViewModel: PermissionsViewModel by viewModels()
         val activityResultLauncher = registerForActivityResult(
@@ -57,6 +59,7 @@ class MainActivity: ComponentActivity() {
         super.onDestroy()
 
         UsbConnectionManager.cleanup(applicationContext)
+
         if (!sharedPreferences.getBoolean(
             BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, false
         )) {

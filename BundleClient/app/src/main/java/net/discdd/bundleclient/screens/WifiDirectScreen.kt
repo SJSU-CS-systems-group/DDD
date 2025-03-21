@@ -36,7 +36,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import net.discdd.bundleclient.BundleClientWifiDirectService
-import net.discdd.bundleclient.MainActivity
+import net.discdd.bundleclient.BundleClientActivity
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.viewmodels.PeerDevice
 import net.discdd.bundleclient.viewmodels.WifiDirectViewModel
@@ -45,7 +45,7 @@ import java.util.concurrent.CompletableFuture
 @Composable
 fun WifiDirectScreen(
     viewModel: WifiDirectViewModel = viewModel(),
-    serviceReadyFuture: CompletableFuture<MainActivity>,
+    serviceReadyFuture: CompletableFuture<BundleClientActivity>,
     preferences: SharedPreferences = LocalContext.current.getSharedPreferences(
         BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTINGS,
         Context.MODE_PRIVATE

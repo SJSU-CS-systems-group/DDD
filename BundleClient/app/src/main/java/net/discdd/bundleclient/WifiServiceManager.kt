@@ -1,23 +1,21 @@
 package net.discdd.bundleclient
 
-import android.app.Activity.MODE_PRIVATE
 import android.content.ComponentName
 import android.content.ServiceConnection
 import android.os.IBinder
-import kotlinx.coroutines.CompletableDeferred
 import java.util.concurrent.CompletableFuture
 import java.util.logging.Logger
 
 object WifiServiceManager {
     private val logger = Logger.getLogger(WifiServiceManager::class.java.name)
     private var _wifiBgService: BundleClientWifiDirectService? = null
-    val serviceReady = CompletableFuture<MainActivity>()
+    val serviceReady = CompletableFuture<BundleClientActivity>()
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
             val binder = service as BundleClientWifiDirectService.BundleClientWifiDirectServiceBinder
             setService(binder.service)
-            serviceReady.complete(MainActivity())
+            serviceReady.complete(BundleClientActivity())
         }
         override fun onServiceDisconnected(arg0: ComponentName) {
             clearService()
