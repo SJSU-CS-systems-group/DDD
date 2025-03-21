@@ -15,8 +15,6 @@ import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
 import org.whispersystems.libsignal.ecc.ECPrivateKey;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
-import org.whispersystems.libsignal.protocol.CiphertextMessage;
-import org.whispersystems.libsignal.protocol.SignalMessage;
 import org.whispersystems.libsignal.ratchet.BobSignalProtocolParameters;
 import org.whispersystems.libsignal.ratchet.RatchetingSession;
 import org.whispersystems.libsignal.state.SessionRecord;
@@ -25,6 +23,8 @@ import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.util.guava.Optional;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -37,7 +37,6 @@ import java.util.HashMap;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static net.discdd.bundlesecurity.SecurityUtils.CLIENT_BASE_KEY;
 import static net.discdd.bundlesecurity.SecurityUtils.CLIENT_IDENTITY_KEY;
@@ -298,23 +297,25 @@ public class ServerSecurity {
         var clientId = SecurityUtils.getClientID(bundlePath);
         SecurityUtils.ClientSession client = getClientSession(clientId, bundlePath);
 
-        byte[] encryptedData = Files.readAllBytes(payloadPath.resolve(payloadName));
-        byte[] serverDecryptedMessage = client.cipherSession.decrypt(new SignalMessage(encryptedData));
+
+        var encryptedData = Files.newInputStream(payloadPath.resolve(payloadName));
+        var output = Files.newOutputStream(decryptedFile, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
+
+
+        client.cipherSession.decrypt(encryptedData, output);
+
         updateSessionRecord(client);
 
-        Files.write(decryptedFile, serverDecryptedMessage, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
-
-        logger.log(FINE, "[ServerSecurity]:Decrypted Size = %d", serverDecryptedMessage.length);
+        logger.log(FINE, "[ServerSecurity]:Decrypted Size = %d", Files.size(decryptedFile));
 
         return decryptedFile;
     }
 
-    public CiphertextMessage encrypt(String clientID, byte[] data) throws IOException, NoSuchAlgorithmException,
+    public void encrypt(String clientID, InputStream plaintext, OutputStream outputStream) throws IOException, NoSuchAlgorithmException,
             InvalidKeyException {
         ClientSession client = getClientSession(clientID, null);
-        CiphertextMessage cipherText = client.cipherSession.encrypt(data);
+        client.cipherSession.encrypt(plaintext, outputStream);
         updateSessionRecord(client);
-        return cipherText;
     }
 
     public Path[] createEncryptionHeader(Path encPath, String bundleID, ClientSession client) throws IOException {

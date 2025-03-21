@@ -53,9 +53,11 @@ import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.file.Files;
@@ -124,7 +126,7 @@ public class BundleTransmission {
 
     public void processReceivedBundle(BundleSender sender, Bundle bundle) throws IOException,
             RoutingExceptions.ClientMetaDataFileException, NoSessionException, InvalidMessageException,
-            DuplicateMessageException, LegacyMessageException, InvalidKeyException, GeneralSecurityException,
+            DuplicateMessageException, InvalidKeyException, GeneralSecurityException,
             WindowExceptions.BufferOverflow {
         String largestBundleIdReceived = this.getLargestBundleIdReceived();
         UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, clientPaths.uncompressedPayloadStore);
@@ -165,19 +167,27 @@ public class BundleTransmission {
         List<ADU> adus = this.applicationDataManager.fetchADUsToSend(clientPaths.BUNDLE_SIZE_LIMIT, null);
         var routingData = clientRouting.bundleMetaData();
 
-        var baos = new ByteArrayOutputStream();
-        var ackedEncryptedBundleId = ackRecord == null ? null : ackRecord.getBundleId();
-        BundleUtils.createBundlePayloadForAdus(adus, routingData, ackedEncryptedBundleId, baos);
+        Path tmpPath = clientPaths.tosendDir.resolve("tmp");
+        try (var outputStream = Files.newOutputStream(tmpPath)) {
+            var ackedEncryptedBundleId = ackRecord == null
+                    ? null : ackRecord.getBundleId();
+            BundleUtils.createBundlePayloadForAdus(adus, routingData, ackedEncryptedBundleId, outputStream);
+        }
 
         ClientSecurity clientSecurity = bundleSecurity.getClientSecurity();
         Path bundleFile = clientPaths.tosendDir.resolve(bundleId);
         try (OutputStream os = Files.newOutputStream(bundleFile, StandardOpenOption.CREATE,
-                                                     StandardOpenOption.TRUNCATE_EXISTING)) {
-            BundleUtils.encryptPayloadAndCreateBundle(bytes -> clientSecurity.encrypt(bytes),
+                                                     StandardOpenOption.TRUNCATE_EXISTING);
+        var inputStream = Files.newInputStream(tmpPath)) {
+            BundleUtils.encryptPayloadAndCreateBundle(clientSecurity::encrypt,
                                                       clientSecurity.getClientIdentityPublicKey(),
                                                       clientSecurity.getClientBaseKeyPairPublicKey(),
-                                                      clientSecurity.getServerPublicKey(), bundleId, baos.toByteArray(),
+                                                      clientSecurity.getServerPublicKey(), bundleId, inputStream,
                                                       os);
+        } catch (InvalidMessageException e) {
+            throw new IOException("Error processing message: " + e.getMessage(), e);
+        } finally {
+            Files.delete(tmpPath);
         }
         return new BundleDTO(bundleId, new Bundle(bundleFile.toFile()));
     }

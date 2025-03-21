@@ -75,7 +75,7 @@
             <version>1.78</version>
         </dependency>
         <dependency>
-			<groupId>org.whispersystems</groupId>
+			<groupId>net.discdd</groupId>
 			<artifactId>signal-protocol-java</artifactId>
 			<version>2.2.0</version>
 		</dependency>
