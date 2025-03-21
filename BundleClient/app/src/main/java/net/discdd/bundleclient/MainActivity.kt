@@ -1,18 +1,17 @@
 package net.discdd.bundleclient
 
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.ServiceConnection
 import android.net.ConnectivityManager
 import android.os.Bundle
-import android.os.IBinder
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import net.discdd.bundleclient.screens.HomeScreen
 import net.discdd.screens.LogFragment
 import net.discdd.theme.ComposableTheme
-import java.util.concurrent.CompletableFuture
+import net.discdd.viewmodels.PermissionsViewModel
 import java.util.logging.Level.WARNING
 import java.util.logging.Logger
 
@@ -24,20 +23,11 @@ class MainActivity: ComponentActivity() {
     private val sharedPreferences by lazy {
         getSharedPreferences(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE)
     }
-    val serviceReady = CompletableFuture<MainActivity>()
-    private val connection = object : ServiceConnection {
-        override fun onServiceConnected(className: ComponentName, service: IBinder) {
-            val binder = service as BundleClientWifiDirectService.BundleClientWifiDirectServiceBinder
-            WifiServiceManager.setService(binder.service)
-            serviceReady.complete(this@MainActivity)
-        }
-        override fun onServiceDisconnected(arg0: ComponentName) {
-            WifiServiceManager.clearService()
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        UsbConnectionManager.initialize(applicationContext)
 
         try {
             applicationContext.startForegroundService(Intent(this, BundleClientWifiDirectService::class.java))
@@ -45,12 +35,20 @@ class MainActivity: ComponentActivity() {
             logger.log(WARNING, "Failed to start TransportWifiDirectService")
         }
         val intent = Intent(this, BundleClientWifiDirectService::class.java)
-        bindService(intent, connection, Context.BIND_AUTO_CREATE)
+        bindService(intent, WifiServiceManager.getConnection(), Context.BIND_AUTO_CREATE)
         LogFragment.registerLoggerHandler()
+
+        val permissionsViewModel: PermissionsViewModel by viewModels()
+        val activityResultLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { results -> permissionsViewModel.handlePermissionResults(results) }
 
         setContent {
             ComposableTheme {
-                HomeScreen()
+                HomeScreen(
+                    permissionsViewModel = permissionsViewModel,
+                    activityResultLauncher = activityResultLauncher,
+                )
             }
         }
     }
@@ -58,12 +56,13 @@ class MainActivity: ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
 
+        UsbConnectionManager.cleanup(applicationContext)
         if (!sharedPreferences.getBoolean(
             BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, false
         )) {
             stopService(Intent(this, BundleClientWifiDirectService::class.java))
         }
         WifiServiceManager.clearService()
-        unbindService(connection)
+        unbindService(WifiServiceManager.getConnection())
     }
 }

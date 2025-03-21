@@ -1,5 +1,6 @@
 package net.discdd.bundleclient.screens
 
+import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,10 +14,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
@@ -24,7 +29,11 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import net.discdd.bundleclient.MainActivity
 import net.discdd.bundleclient.R
+import net.discdd.bundleclient.UsbConnectionManager
+import net.discdd.bundleclient.WifiServiceManager
 import net.discdd.screens.LogScreen
+import net.discdd.screens.PermissionScreen
+import net.discdd.viewmodels.PermissionsViewModel
 
 data class TabItem(
     val title: String,
@@ -32,14 +41,18 @@ data class TabItem(
 )
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    permissionsViewModel: PermissionsViewModel,
+    activityResultLauncher: ActivityResultLauncher<Array<String>>
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val tabItems = remember {
+    val showUsbScreen by UsbConnectionManager.usbConnected.collectAsState()
+    val standardTabs = remember {
         listOf(
             TabItem(
                 title = context.getString(R.string.home_tab),
-                screen = { WifiDirectScreen(serviceReadyFuture = (context as MainActivity).serviceReady) }
+                screen = { WifiDirectScreen(serviceReadyFuture = WifiServiceManager.serviceReady) }
                 ),
             TabItem(
                 title = context.getString(R.string.server_tab),
@@ -52,8 +65,27 @@ fun HomeScreen() {
             TabItem(
                 title = context.getString(R.string.bm_tab),
                 screen = { ManagerScreen() }
+            ),
+            TabItem(
+                title = context.getString(R.string.permissions_tab),
+                screen = { PermissionScreen(permissionsViewModel, activityResultLauncher) }
             )
         )
+    }
+    val usbTab = listOf(TabItem(
+        title = context.getString(R.string.usb_tab),
+        screen = { UsbScreen() }
+    ))
+
+    var tabItems by remember {
+        mutableStateOf(standardTabs)
+    }
+    LaunchedEffect(showUsbScreen) {
+        tabItems = if (showUsbScreen) {
+             usbTab + standardTabs
+        } else {
+            standardTabs
+        }
     }
 
     Surface(
@@ -99,7 +131,9 @@ fun HomeScreen() {
 
             HorizontalPager(
                 state = pagerState,
-                modifier = Modifier.fillMaxWidth().weight(1f)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
             ) { index ->
                 tabItems[index].screen()
             }
@@ -110,5 +144,5 @@ fun HomeScreen() {
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
-    HomeScreen()
+//    HomeScreen()
 }
