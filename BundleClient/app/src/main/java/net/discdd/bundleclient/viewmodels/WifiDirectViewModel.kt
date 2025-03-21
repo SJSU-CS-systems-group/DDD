@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import net.discdd.bundleclient.BundleClientActivity
 import net.discdd.bundleclient.BundleClientServiceBroadcastReceiver
 import net.discdd.bundleclient.BundleClientWifiDirectService
 import net.discdd.bundleclient.R
@@ -59,17 +58,14 @@ class WifiDirectViewModel(
         registerBroadcastReceiver()
     }
 
-    fun initialize(serviceReadyFuture: CompletableFuture<BundleClientActivity>) {
+    fun initialize(serviceReadyFuture: CompletableFuture<BundleClientWifiDirectService>) {
         viewModelScope.launch {
-            serviceReadyFuture.thenAccept {
-                val service = wifiService
-                if (service != null) {
-                    _state.update {
-                        it.copy(
-                            clientId = service.clientId,
-                            deliveryStatus = if (service.isDiscoveryActive) "Active" else "Inactive"
-                        )
-                    }
+            serviceReadyFuture.thenAccept { service ->
+                _state.update {
+                    it.copy(
+                        clientId = service.clientId,
+                        deliveryStatus = if (service.isDiscoveryActive) "Active" else "Inactive"
+                    )
                 }
             }
         }
