@@ -94,7 +94,7 @@ public class BundleSecurity {
     }
 
     public Payload decryptPayload(UncompressedBundle uncompressedBundle) throws NoSessionException,
-            InvalidMessageException, DuplicateMessageException, IOException, LegacyMessageException,
+            InvalidMessageException, DuplicateMessageException, IOException,
             InvalidKeyException {
         File decryptedPayloadJar =
                 uncompressedBundle.getSource().toPath().resolve(Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar")
