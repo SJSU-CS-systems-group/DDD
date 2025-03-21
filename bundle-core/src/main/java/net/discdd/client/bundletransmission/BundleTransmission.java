@@ -455,7 +455,7 @@ public class BundleTransmission {
         bundleUploadResponseObserver.waitForCompletion(GRPC_LONG_TIMEOUT_MS);
 
         if(bundleUploadResponseObserver.bundleUploadResponse == null){
-            logger.log(SEVERE, "Upload failed: No response received from server.");
+            logger.log(SEVERE, "Upload failed: No response received from server.", bundleUploadResponseObserver.throwable);
             return Statuses.FAILED;
         }
         return bundleUploadResponseObserver.bundleUploadResponse.getStatus() == Status.SUCCESS ? Statuses.COMPLETE: Statuses.EMPTY;
