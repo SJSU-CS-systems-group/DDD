@@ -8,12 +8,14 @@
     <packaging>pom</packaging>
 
     <modules>
+        <module>DDD-libsignal-protocol-java</module>
         <module>bundle-core</module>
         <module>serviceadapter-core</module>
         <module>bundleserver</module>
         <module>apps/cli</module>
         <module>apps/echo/server</module>
         <module>apps/k9/server</module>
+
     </modules>
 
 </project>
