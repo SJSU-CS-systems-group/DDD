@@ -410,6 +410,7 @@ public class BundleTransmission {
                 }
 
                 var stub = BundleExchangeServiceGrpc.newStub(channel);
+                stub = NettyClientCertificateInterceptor.createServerCertificateOption(stub, certCompletion);
                 uploadStatus = uploadBundle(stub);
 
             }
