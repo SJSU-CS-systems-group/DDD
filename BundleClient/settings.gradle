@@ -1,1 +1,4 @@
 include ':app'
+include ':android-core'
+
+project(':android-core').projectDir = new File('../android-core')
