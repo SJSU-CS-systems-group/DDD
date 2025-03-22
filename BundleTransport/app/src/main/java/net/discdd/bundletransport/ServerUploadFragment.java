@@ -4,7 +4,11 @@ import static android.content.Context.MODE_PRIVATE;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
+import android.content.Context;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -81,6 +85,7 @@ public class ServerUploadFragment extends Fragment {
         connectServerBtn = mainView.findViewById(R.id.btn_connect_bundle_server);
         saveDomainAndPortBtn = mainView.findViewById(R.id.save_domain_port);
         restoreDomainAndPortBtn = mainView.findViewById(R.id.restore_domain_port);
+        connectServerBtn.setEnabled(isInternetAvailable());
         connectServerBtn.setOnClickListener(view -> connectToServer());
         if (connectivityFlow != null) {
             connectivityFlow.consume(event -> connectServerBtn.setEnabled(event.internetAvailable()));
@@ -118,6 +123,22 @@ public class ServerUploadFragment extends Fragment {
         restoreDomainPort();
 
         return mainView;
+    }
+
+    /**
+     * This method performs a synchronous check of the current internet connectivity status.
+     * Specifically, ConnectivityManager determines if there is an active network
+     * and if that network has internet capability.
+     *
+     * @return true if the internet is currently available, false otherwise.
+     */
+    private boolean isInternetAvailable() {
+        ConnectivityManager
+                connectivityManager = (ConnectivityManager) requireActivity().getSystemService(
+                Context.CONNECTIVITY_SERVICE);
+        Network network = connectivityManager.getActiveNetwork();
+        NetworkCapabilities networkCapabilities = connectivityManager.getNetworkCapabilities(network);
+        return networkCapabilities != null && networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
     }
 
     private void connectToServer() {
