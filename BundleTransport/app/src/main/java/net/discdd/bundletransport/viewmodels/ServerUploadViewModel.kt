@@ -83,9 +83,9 @@ class ServerUploadViewModel(
     }
 
     fun reloadCount() {
-        if (transportPaths != null && transportPaths!!.toClientPath != null && transportPaths!!.toServerPath != null) {
-            val clientFiles: Array<String>? = transportPaths!!.toClientPath.toFile().list()
-            val serverFiles: Array<String>? = transportPaths!!.toServerPath.toFile().list()
+        if (transportPaths != null && transportPaths.toClientPath != null && transportPaths.toServerPath != null) {
+            val clientFiles: Array<String>? = transportPaths.toClientPath.toFile().list()
+            val serverFiles: Array<String>? = transportPaths.toServerPath.toFile().list()
 
             val clientCountFiles = if (clientFiles != null) clientFiles.size else 0
             val serverCountFiles = if (serverFiles != null) serverFiles.size else 0
