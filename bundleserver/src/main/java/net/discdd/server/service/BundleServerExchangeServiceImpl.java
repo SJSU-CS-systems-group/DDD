@@ -41,7 +41,6 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
     @Override
     public void bundleCompletion(BundleExchangeName bundleExchangeName, BundleSenderType senderType, Path path) {
         X509Certificate clientCert = NettyServerCertificateInterceptor.CLIENT_CERTIFICATE_KEY.get(Context.current());
-        logger.log(INFO, "[bundlecompletion] CLIENT CERT " + clientCert.getSubjectX500Principal());
         logger.log(INFO, "Downloaded " + bundleExchangeName.encryptedBundleId());
         bundleTransmission.processBundleFile(path.toFile(), senderType, DDDTLSUtil.publicKeyToName(clientCert.getPublicKey()));
     }
@@ -72,7 +71,6 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
                 senderId = DDDTLSUtil.publicKeyToName(clientCert.getPublicKey());
             }
 
-            logger.log(INFO, "[pathproducer] CLIENT CERT " + clientCert.getSubjectX500Principal());
             logger.log(INFO, senderId + " requested " + bundleExchangeName.encryptedBundleId());
 
             bundleTransmission.getPathForBundleToSend(bundleExchangeName.encryptedBundleId());
@@ -109,7 +107,6 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
         GetRecencyBlobResponse recencyBlob = null;
         X509Certificate clientCert = NettyServerCertificateInterceptor.CLIENT_CERTIFICATE_KEY.get(Context.current());
         String senderId  = DDDTLSUtil.publicKeyToName(clientCert.getPublicKey());
-        logger.log(INFO, "[getrecencyblob] CLIENT CERT " + clientCert.getSubjectX500Principal());
 
         try {
             recencyBlob = bundleTransmission.getRecencyBlob(senderId);
