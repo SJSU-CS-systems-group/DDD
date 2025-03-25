@@ -19,10 +19,6 @@ enum BundleSenderType {
   SERVER = 3;
 }
 
-//message BundleSender {
-//  string id = 1;
-//  BundleSenderType type = 2;
-//}
 
 message EncryptedBundleId {
   string encryptedId = 1;
@@ -76,8 +72,7 @@ message RecencyBlob {
   int32 nonce = 2;
   // milliseconds since epoch (1/1/1970 UTC) https://docs.oracle.com/javase/8/docs/api/java/lang/System.html#currentTimeMillis--
   int64 blobTimestamp = 3;
-  string senderId = 4;
-//  BundleSender sender = 4;
+  string senderId = 5;
 }
 
 message PublicKeyMap {

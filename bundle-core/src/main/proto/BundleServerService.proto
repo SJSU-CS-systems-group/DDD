@@ -9,7 +9,6 @@ import "BundleExchangeService.proto";
 message BundleInventoryRequest {
   repeated EncryptedBundleId bundlesFromServerOnTransport = 2;
   repeated EncryptedBundleId bundlesFromClientsOnTransport = 3;
-  // TODO: once authentication goes in, this should go away
   BundleSenderType senderType = 4;
 }
 

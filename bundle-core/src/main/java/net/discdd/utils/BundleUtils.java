@@ -45,6 +45,7 @@ import java.util.regex.Pattern;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
 import static net.discdd.bundlesecurity.SecurityUtils.PAYLOAD_DIR;
 import static net.discdd.bundlesecurity.SecurityUtils.PAYLOAD_FILENAME;
 import static net.discdd.bundlesecurity.SecurityUtils.createEncodedPublicKeyBytes;
@@ -361,7 +362,7 @@ public class BundleUtils {
         Pattern p = Pattern.compile(stringToMatch);
         final Matcher m = p.matcher(s);
         if (!m.matches() || s.length() > 100) {
-            logger.log(INFO, "Invalid ID: " + s);
+            logger.log(WARNING, "Invalid ID: " + s);
             throw new InvalidParameterException("Not URL Encoded");
         }
     }
