@@ -1,10 +1,15 @@
 
 package net.discdd.viewmodels;
 
+import android.app.Activity
 import android.app.AlertDialog
 import android.app.Application
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.pm.PackageManager
+import androidx.activity.compose.LocalActivityResultRegistryOwner
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
@@ -25,7 +30,7 @@ data class PermissionItemData(
 )
 
 class PermissionsViewModel(
-    application: Application
+    application: Application,
 ) : AndroidViewModel(application) {
     private val context get() = getApplication<Application>()
     private val logger = Logger.getLogger(PermissionsViewModel::class.java.name)
@@ -50,6 +55,7 @@ class PermissionsViewModel(
     }
 
     fun handlePermissionResults(results: Map<String, Boolean>) {
+        logger.log(Level.INFO, "activity launcher launched.")
         viewModelScope.launch {
             val remainingPermissions = mutableMapOf<String, PermissionItemData>()
             results.forEach { (p, r) ->
@@ -78,13 +84,18 @@ class PermissionsViewModel(
         }
     }
 
-    fun checkPermission(permission: String) {
+    fun checkPermission(permission: String, activity: Activity) {
         viewModelScope.launch {
-            logger.log(Level.FINE, "Checking permission $permission")
+            logger.log(Level.INFO, "Checking permission $permission")
+            val permissionResult = ContextCompat.checkSelfPermission(context, permission)
             if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
+                logger.log(Level.INFO, "perm $permission granted!")
                 updatePermissionItem(permission, true)
                 trackGrantedPermission(permission)
             } else {
+                logger.log(Level.INFO, "denied: $permissionResult")
+                val shouldShowRationale = shouldShowRequestPermissionRationale(activity, permission)
+                logger.log(Level.INFO, "shouldShowRationale: $shouldShowRationale")
                 val permissionItem = _permissionItems.value.find { it.permissionName == permission }
                 permissionItem?.let {
                     updatePermissionItem(permission, false)

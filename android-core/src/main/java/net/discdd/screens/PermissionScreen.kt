@@ -1,10 +1,13 @@
 package net.discdd.screens
 
+import android.app.Activity
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
@@ -67,6 +70,7 @@ fun PermissionScreen(
 ) {
     val permissionItems by viewModel.permissionItems.collectAsState()
     val context = LocalContext.current
+    val activity = context as Activity
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -82,7 +86,7 @@ fun PermissionScreen(
                         if (!itemData.isBoxChecked) viewModel.triggerPermissionDialog(context)
                     },
                     onCheckPermission = {
-                        viewModel.checkPermission(itemData.permissionName)
+                        viewModel.checkPermission(itemData.permissionName, activity)
                         val remainingPermissions = viewModel.getPermissionsToRequest()
                         if (remainingPermissions.isNotEmpty()) {
                             activityResultLauncher?.launch(remainingPermissions)

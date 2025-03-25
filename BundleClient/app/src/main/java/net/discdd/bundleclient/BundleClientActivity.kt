@@ -5,13 +5,15 @@ import android.content.Intent
 import android.net.ConnectivityManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.viewModels
+import androidx.lifecycle.viewmodel.compose.viewModel
 import net.discdd.bundleclient.screens.HomeScreen
 import net.discdd.screens.LogFragment
 import net.discdd.theme.ComposableTheme
 import net.discdd.viewmodels.PermissionsViewModel
+import java.util.logging.Level
 import java.util.logging.Level.WARNING
 import java.util.logging.Logger
 
@@ -25,6 +27,7 @@ class BundleClientActivity: ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        logger.log(Level.INFO, "onCreate invoked in BundleClientActivity")
         super.onCreate(savedInstanceState)
 
         LogFragment.registerLoggerHandler()
@@ -41,13 +44,13 @@ class BundleClientActivity: ComponentActivity() {
         val intent = Intent(this, BundleClientWifiDirectService::class.java)
         bindService(intent, WifiServiceManager.getConnection(), Context.BIND_AUTO_CREATE)
 
-        val permissionsViewModel: PermissionsViewModel by viewModels()
-        val activityResultLauncher = registerForActivityResult(
-            ActivityResultContracts.RequestMultiplePermissions()
-        ) { results -> permissionsViewModel.handlePermissionResults(results) }
-
         setContent {
             ComposableTheme {
+                val permissionsViewModel: PermissionsViewModel = viewModel()
+                val activityResultLauncher = rememberLauncherForActivityResult(
+                    ActivityResultContracts.RequestMultiplePermissions()
+                ) { results -> permissionsViewModel.handlePermissionResults(results) }
+
                 HomeScreen(
                     permissionsViewModel = permissionsViewModel,
                     activityResultLauncher = activityResultLauncher,
