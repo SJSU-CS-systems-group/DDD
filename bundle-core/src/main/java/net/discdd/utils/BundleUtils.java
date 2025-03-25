@@ -6,7 +6,6 @@ import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import net.discdd.bundlesecurity.SecurityUtils;
-import net.discdd.bundlesecurity.ServerSecurity;
 import net.discdd.model.ADU;
 import net.discdd.model.Acknowledgement;
 import net.discdd.model.Bundle;
@@ -35,7 +34,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
-import java.security.InvalidParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -366,6 +364,7 @@ public class BundleUtils {
         Pattern p = Pattern.compile(stringToMatch);
         final Matcher m = p.matcher(s);
         if (!m.matches() || s.length() > 100) {
+            logger.log(INFO, "Invalid ID: " + s);
             throw new InvalidParameterException("Not URL Encoded");
         }
     }
