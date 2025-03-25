@@ -2,7 +2,6 @@ package net.discdd.bundletransport.viewmodels
 
 import android.app.Application
 import android.content.Context.MODE_PRIVATE
-import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -78,8 +77,8 @@ class ServerUploadViewModel(
 
     fun serverConnectionError(e: Exception, transportTarget: String): Void? {
         _state.update { it.copy(message = "Server exchange incomplete with error.\n" +
-                "Error: " + e.message + "\n") }
-        toast(transportTarget)
+                "Error: " + e.message + "\n" +
+                "Invalid hostname: " + transportTarget) }
         return null
     }
 
@@ -126,9 +125,5 @@ class ServerUploadViewModel(
 
     fun clearMessage() {
         _state.update { it.copy(message = null) }
-    }
-
-    fun toast(message: String) {
-        Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
     }
 }
