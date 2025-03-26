@@ -6,7 +6,7 @@ import net.discdd.bundlesecurity.BundleIDGenerator;
 import net.discdd.bundlesecurity.InvalidClientIDException;
 import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.bundlesecurity.ServerSecurity;
-import net.discdd.grpc.BundleSender;
+import net.discdd.grpc.BundleSenderType;
 import net.discdd.grpc.GetRecencyBlobResponse;
 import net.discdd.grpc.RecencyBlob;
 import net.discdd.grpc.RecencyBlobStatus;
@@ -33,28 +33,21 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
-import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
-import static net.discdd.bundlesecurity.SecurityUtils.decodePrivateKeyFromFile;
-import static net.discdd.bundlesecurity.SecurityUtils.decodePublicKeyfromFile;
 import static net.discdd.bundlesecurity.SecurityUtils.generateID;
 import static net.discdd.grpc.BundleSenderType.CLIENT;
 import static net.discdd.grpc.BundleSenderType.TRANSPORT;
@@ -83,20 +76,20 @@ public class BundleTransmission {
         this.serverSecurity = serverSecurity;
     }
 
-    public static String bundleSenderToString(BundleSender sender) {
-        return sender.getType() + " : " + sender.getId();
+    public static String bundleSenderToString(BundleSenderType senderType ,String senderId) {
+        return senderType + " : " + senderId;
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public void processReceivedBundle(BundleSender sender, Bundle bundle) throws Exception {
+    public void processReceivedBundle(BundleSenderType senderType, String senderId, Bundle bundle) throws Exception {
         logger.log(INFO, "Processing received bundle: " + bundle.getSource().getName() + " from " +
-                bundleSenderToString(sender));
+                bundleSenderToString(senderType, senderId));
         if (!bundle.getSource().exists() || bundle.getSource().length() == 0) {
             return;
         }
 
-        Path bundleRecvProcDir = TRANSPORT == sender.getType() ?
-                this.config.getBundleTransmission().getReceivedProcessingDirectory().resolve(sender.getId()) :
+        Path bundleRecvProcDir = TRANSPORT == senderType ?
+                this.config.getBundleTransmission().getReceivedProcessingDirectory().resolve(senderId) :
                 this.config.getBundleTransmission().getReceivedProcessingDirectory();
 
         Files.createDirectories(bundleRecvProcDir);
@@ -138,7 +131,7 @@ public class BundleTransmission {
         }
 
         try {
-            this.bundleRouting.processClientMetaData(uncompressedPayload.getSource().toPath(), sender.getId(),
+            this.bundleRouting.processClientMetaData(uncompressedPayload.getSource().toPath(), senderId,
                                                      clientId);
         } catch (ClientMetaDataFileException | SQLException e) {
             // TODO Auto-generated catch block
@@ -152,13 +145,13 @@ public class BundleTransmission {
         }
     }
 
-    public void processBundleFile(File bundleFile, BundleSender sender) {
+    public void processBundleFile(File bundleFile, BundleSenderType senderType, String senderId) {
         Bundle bundle = new Bundle(bundleFile);
         try {
-            this.processReceivedBundle(sender, bundle);
+            this.processReceivedBundle(senderType, senderId, bundle);
         } catch (Exception e) {
             logger.log(SEVERE,
-                       "[BundleTransmission] Failed to process received bundle from: " + bundleSenderToString(sender),
+                       "[BundleTransmission] Failed to process received bundle from: " + bundleSenderToString(senderType, senderId),
                        e);
         } finally {
             FileUtils.recursiveDelete(bundle.getSource().toPath());
@@ -211,9 +204,9 @@ public class BundleTransmission {
         return encryptedBundleId;
     }
 
-    public GetRecencyBlobResponse getRecencyBlob(BundleSender sender) throws InvalidKeyException {
+    public GetRecencyBlobResponse getRecencyBlob(String senderId) throws InvalidKeyException {
         var blob = RecencyBlob.newBuilder().setVersion(0).setNonce(secureRandom.nextInt())
-                .setBlobTimestamp(System.currentTimeMillis()).setSender(sender).build();
+                .setBlobTimestamp(System.currentTimeMillis()).setSenderId(senderId).build();
         byte[] signature = this.bundleSecurity.signRecencyBlob(blob);
         byte[] publicKeyBytes = this.bundleSecurity.getIdentityPublicKey();
         return GetRecencyBlobResponse.newBuilder().setStatus(RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS)
@@ -237,12 +230,12 @@ public class BundleTransmission {
         return config.getBundleTransmission().getBundleReceivedLocation();
     }
 
-    public BundlesToExchange inventoryBundlesForTransmission(BundleSender sender, Set<String> bundleIdsPresent) {
-        List<String> clientIds = CLIENT == sender.getType() ? Collections.singletonList(sender.getId()) :
-                this.bundleRouting.getClientsForTransportId(sender.getId());
+    public BundlesToExchange inventoryBundlesForTransmission(BundleSenderType senderType, String senderId, Set<String> bundleIdsPresent) {
+        List<String> clientIds = CLIENT == senderType ? Collections.singletonList(senderId) :
+                this.bundleRouting.getClientsForTransportId(senderId);
 
         logger.log(SEVERE, "[BundleTransmission] Found " + clientIds.size() + " reachable from the sender: " +
-                bundleSenderToString(sender));
+                bundleSenderToString(senderType, senderId));
         Set<String> deletionSet = new HashSet<>(bundleIdsPresent);
         List<String> bundlesToSend = new ArrayList<>();
 

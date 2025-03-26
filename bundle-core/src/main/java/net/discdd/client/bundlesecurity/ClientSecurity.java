@@ -34,6 +34,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
 import java.util.Base64;
 import java.util.logging.Logger;
 
@@ -261,6 +262,10 @@ public class ClientSecurity {
         var bundleIDPath = bundlePath.resolve(SecurityUtils.BUNDLEID_FILENAME);
         byte[] encryptedBundleID = Files.readAllBytes(bundleIDPath);
         return decryptBundleID(new String(encryptedBundleID, StandardCharsets.UTF_8));
+    }
+
+    public byte[] getSignedTLSPub(PublicKey pubKey) throws InvalidKeyException {
+        return SecurityUtils.signMessageRaw(pubKey.getEncoded(), ourIdentityKeyPair.getPrivateKey());
     }
 
     public String getClientID() {
