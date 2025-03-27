@@ -32,6 +32,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import net.discdd.bundletransport.viewmodels.ServerUploadViewModel
+import net.discdd.theme.ComposableTheme
 import net.discdd.viewmodels.ConnectivityViewModel
 
 class UploadFragment: Fragment() {
@@ -43,7 +44,7 @@ class UploadFragment: Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                MaterialTheme {
+                ComposableTheme {
                     ServerUploadScreen()
                 }
             }
