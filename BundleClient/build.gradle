@@ -26,6 +26,20 @@ allprojects {
     }
 }
 
+tasks.register("buildAndInstall") {
+    group = "custom"
+    description = "Builds the APK and installs it on a connected device"
+
+    dependsOn ':app:assembleDebug'
+    def apkPath = "${rootProject.projectDir}/app/build/outputs/apk/debug/app-debug.apk"
+
+    doLast {
+        exec {
+            commandLine 'adb', 'install', '-r', apkPath
+        }
+    }
+}
+
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
