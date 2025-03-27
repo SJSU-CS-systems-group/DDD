@@ -19,10 +19,6 @@ enum BundleSenderType {
   SERVER = 3;
 }
 
-message BundleSender {
-  string id = 1;
-  BundleSenderType type = 2;
-}
 
 message EncryptedBundleId {
   string encryptedId = 1;
@@ -44,7 +40,7 @@ message BundleUploadRequest {
   oneof request {
     EncryptedBundleId bundleId = 1;
     BundleChunk chunk = 2;
-    BundleSender sender = 99;
+    BundleSenderType senderType = 3;
   }
 }
 
@@ -60,8 +56,8 @@ message BundleDownloadResponse {
 
 message BundleDownloadRequest {
   EncryptedBundleId bundleId = 1;
-  // TODO: once authentication goes in, this should go away!
-  BundleSender sender = 99;
+  BundleSenderType senderType = 2;
+  optional PublicKeyMap publicKeyMap = 3;
 }
 
 // the prefixed names is stupid, but recommend https://protobuf.dev/programming-guides/style/#enums
@@ -76,11 +72,15 @@ message RecencyBlob {
   int32 nonce = 2;
   // milliseconds since epoch (1/1/1970 UTC) https://docs.oracle.com/javase/8/docs/api/java/lang/System.html#currentTimeMillis--
   int64 blobTimestamp = 3;
-  BundleSender sender = 4;
+  string senderId = 5;
+}
+
+message PublicKeyMap {
+  bytes clientPub = 1;
+  bytes signedTLSPub = 2;
 }
 
 message GetRecencyBlobRequest {
-  BundleSender sender = 4;
 }
 
 message GetRecencyBlobResponse {

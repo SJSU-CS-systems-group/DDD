@@ -26,6 +26,8 @@ import org.springframework.context.annotation.Configuration;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.InvalidMessageException;
+import org.whispersystems.libsignal.LegacyMessageException;
 import org.whispersystems.libsignal.SessionCipher;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.ecc.Curve;
@@ -38,6 +40,7 @@ import org.whispersystems.libsignal.state.impl.InMemorySignalProtocolStore;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -45,6 +48,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
@@ -170,6 +174,7 @@ public class End2EndTest {
     static File aduTempDir;
 
     protected static Path createBundleForAdus(List<Long> aduIds, String clientId, int bundleCount, Path targetDir) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, InvalidKeySpecException, BadPaddingException, java.security.InvalidKeyException {
+
         var baos = new ByteArrayOutputStream();
         var adus = aduIds.stream().map(aduId -> {
             var aduFile = new File(aduTempDir, Long.toString(aduId));
@@ -185,14 +190,22 @@ public class End2EndTest {
         String bundleId = BundleIDGenerator.generateBundleID(clientId, bundleCount, BundleIDGenerator.UPSTREAM);
         String encryptedBundleID = encryptBundleID(bundleId);
         Path bundleJarPath = targetDir.resolve(encryptedBundleID);
+        ByteArrayInputStream is = new ByteArrayInputStream(baos.toByteArray());
+
         try (var os = Files.newOutputStream(bundleJarPath, StandardOpenOption.CREATE,
-                                            StandardOpenOption.TRUNCATE_EXISTING)) {
-            BundleUtils.encryptPayloadAndCreateBundle(a -> clientSessionCipher.encrypt(a),
+                                            StandardOpenOption.TRUNCATE_EXISTING))
+
+        {
+            BundleUtils.encryptPayloadAndCreateBundle((inputStream, outputStream) -> clientSessionCipher.encrypt(inputStream, outputStream),
                                                       clientIdentity.getPublicKey().getPublicKey(),
                                                       baseKeyPair.getPublicKey(),
                                                       serverIdentity.getPublicKey().getPublicKey(), encryptedBundleID,
-                                                      baos.toByteArray(), os);
+                                                      is, os);
+
+        } catch (InvalidMessageException e) {
+            throw new IOException(e);
         }
+
         return bundleJarPath;
     }
 

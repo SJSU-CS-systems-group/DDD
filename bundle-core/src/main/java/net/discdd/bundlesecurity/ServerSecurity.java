@@ -15,8 +15,6 @@ import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
 import org.whispersystems.libsignal.ecc.ECPrivateKey;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
-import org.whispersystems.libsignal.protocol.CiphertextMessage;
-import org.whispersystems.libsignal.protocol.SignalMessage;
 import org.whispersystems.libsignal.ratchet.BobSignalProtocolParameters;
 import org.whispersystems.libsignal.ratchet.RatchetingSession;
 import org.whispersystems.libsignal.state.SessionRecord;
@@ -25,9 +23,12 @@ import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.util.guava.Optional;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
@@ -192,7 +193,14 @@ public class ServerSecurity {
 
     private void initializeClientKeysFromFiles(Path path, ClientSession clientSession) throws IOException,
             InvalidKeyException {
-        byte[] clientIdentityKey = SecurityUtils.decodePublicKeyfromFile(path.resolve(CLIENT_IDENTITY_KEY));
+        byte[] clientIdentityKey;
+        try {
+            String clientIdentityKeyBase64 =
+                    SecurityUtils.decodeEncryptedPublicKeyfromFile(ourIdentityKeyPair.getPrivateKey(), path.resolve(CLIENT_IDENTITY_KEY));
+            clientIdentityKey = Base64.getUrlDecoder().decode(clientIdentityKeyBase64);
+        } catch (NoSuchAlgorithmException e) {
+            throw new InvalidKeyException("No such algorithm", e);
+        }
         clientSession.IdentityKey = new IdentityKey(clientIdentityKey, 0);
 
         byte[] clientBaseKey = SecurityUtils.decodePublicKeyfromFile(path.resolve(CLIENT_BASE_KEY));
@@ -231,8 +239,8 @@ public class ServerSecurity {
                 throw new InvalidKeyException("Keys for " + clientID + " not found and none provided");
             }
             keyPath.toFile().mkdirs();
-            Files.copy(keyPathIfNeeded.resolve(CLIENT_IDENTITY_KEY), keyPath.resolve(CLIENT_IDENTITY_KEY));
-            Files.copy(keyPathIfNeeded.resolve(CLIENT_BASE_KEY), keyPath.resolve(CLIENT_BASE_KEY));
+            Files.copy(keyPathIfNeeded.resolve(CLIENT_IDENTITY_KEY), keyPath.resolve(CLIENT_IDENTITY_KEY), StandardCopyOption.REPLACE_EXISTING);
+            Files.copy(keyPathIfNeeded.resolve(CLIENT_BASE_KEY), keyPath.resolve(CLIENT_BASE_KEY), StandardCopyOption.REPLACE_EXISTING);
             clientSessionRecord = new SessionRecord();
             initializeClientKeysFromFiles(keyPath, clientSession);
             initializeRatchet(clientSessionRecord.getSessionState(), clientSession);
@@ -289,23 +297,25 @@ public class ServerSecurity {
         var clientId = SecurityUtils.getClientID(bundlePath);
         SecurityUtils.ClientSession client = getClientSession(clientId, bundlePath);
 
-        byte[] encryptedData = Files.readAllBytes(payloadPath.resolve(payloadName));
-        byte[] serverDecryptedMessage = client.cipherSession.decrypt(new SignalMessage(encryptedData));
+
+        var encryptedData = Files.newInputStream(payloadPath.resolve(payloadName));
+        var output = Files.newOutputStream(decryptedFile, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
+
+
+        client.cipherSession.decrypt(encryptedData, output);
+
         updateSessionRecord(client);
 
-        Files.write(decryptedFile, serverDecryptedMessage, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
-
-        logger.log(FINE, "[ServerSecurity]:Decrypted Size = %d", serverDecryptedMessage.length);
+        logger.log(FINE, "[ServerSecurity]:Decrypted Size = %d", Files.size(decryptedFile));
 
         return decryptedFile;
     }
 
-    public CiphertextMessage encrypt(String clientID, byte[] data) throws IOException, NoSuchAlgorithmException,
+    public void encrypt(String clientID, InputStream plaintext, OutputStream outputStream) throws IOException, NoSuchAlgorithmException,
             InvalidKeyException {
         ClientSession client = getClientSession(clientID, null);
-        CiphertextMessage cipherText = client.cipherSession.encrypt(data);
+        client.cipherSession.encrypt(plaintext, outputStream);
         updateSessionRecord(client);
-        return cipherText;
     }
 
     public Path[] createEncryptionHeader(Path encPath, String bundleID, ClientSession client) throws IOException {
@@ -377,7 +387,11 @@ public class ServerSecurity {
         byte[] encryptedBundleID = Files.readAllBytes(bundleIDPath);
         String receivedBundleID, latestBundleID;
 
-        byte[] clientIdentityKeyBytes = SecurityUtils.decodePublicKeyfromFile(bundlePath.resolve(CLIENT_IDENTITY_KEY));
+        ServerSecurity serverSecurityInstance = ServerSecurity.getInstance(bundlePath.getParent());
+        ECPrivateKey ServerPrivKey = serverSecurityInstance.getSigningKey();
+        var clientIdentityKeyBase64 =
+                SecurityUtils.decodeEncryptedPublicKeyfromFile(ServerPrivKey, bundlePath.resolve(CLIENT_IDENTITY_KEY));
+        byte[] clientIdentityKeyBytes = Base64.getUrlDecoder().decode(clientIdentityKeyBase64);
         IdentityKey clientIdentityKey = new IdentityKey(clientIdentityKeyBytes, 0);
 
         String sharedSecret = getsharedSecret(clientIdentityKey.getPublicKey());

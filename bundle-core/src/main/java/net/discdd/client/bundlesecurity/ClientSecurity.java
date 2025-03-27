@@ -15,8 +15,6 @@ import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
 import org.whispersystems.libsignal.ecc.ECPrivateKey;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
-import org.whispersystems.libsignal.protocol.CiphertextMessage;
-import org.whispersystems.libsignal.protocol.SignalMessage;
 import org.whispersystems.libsignal.ratchet.AliceSignalProtocolParameters;
 import org.whispersystems.libsignal.ratchet.RatchetingSession;
 import org.whispersystems.libsignal.state.SessionRecord;
@@ -24,14 +22,19 @@ import org.whispersystems.libsignal.state.SessionState;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.util.guava.Optional;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
 import java.util.Base64;
 import java.util.logging.Logger;
 
@@ -108,7 +111,6 @@ public class ClientSecurity {
                         ourIdentityKeyPair.getPrivateKey().serialize());
             Files.write(path.resolve(SecurityUtils.CLIENT_BASE_PRIVATE_KEY), ourBaseKey.getPrivateKey().serialize());
         }
-
         SecurityUtils.createEncodedPublicKeyFile(ourIdentityKeyPair.getPublicKey().getPublicKey(), identityKeyPaths[0]);
         SecurityUtils.createEncodedPublicKeyFile(ourBaseKey.getPublicKey(), identityKeyPaths[1]);
         SecurityUtils.createEncodedPublicKeyFile(theirIdentityKey.getPublicKey(), identityKeyPaths[2]);
@@ -117,8 +119,7 @@ public class ClientSecurity {
 
     private void loadKeysfromFiles(Path clientKeyPath) throws IOException, InvalidKeyException {
         byte[] identityKeyPvt = Files.readAllBytes(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_PRIVATE_KEY));
-        byte[] identityKeyPub =
-                SecurityUtils.decodePublicKeyfromFile(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
+        byte[] identityKeyPub = SecurityUtils.decodePublicKeyfromFile(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
 
         IdentityKey identityPublicKey = new IdentityKey(identityKeyPub, 0);
         ECPrivateKey identityPrivateKey = Curve.decodePrivatePoint(identityKeyPvt);
@@ -216,15 +217,14 @@ public class ClientSecurity {
     }
 
     /* Encrypts File */
-    public CiphertextMessage encrypt(byte[] bytes) {
+    public void encrypt(InputStream inputStream, OutputStream outputStream) throws IOException, InvalidMessageException{
         /* Encrypt File */
-        CiphertextMessage cipherText = cipherSession.encrypt(bytes);
+        cipherSession.encrypt(inputStream, outputStream);
         updateSessionRecord();
-        return cipherText;
     }
 
     public void decrypt(Path bundlePath, Path decryptedPath) throws IOException, InvalidMessageException,
-            LegacyMessageException, NoSessionException, DuplicateMessageException, InvalidKeyException {
+             NoSessionException, DuplicateMessageException, InvalidKeyException {
         var payloadPath = bundlePath.resolve(SecurityUtils.PAYLOAD_DIR);
 
         String bundleID = getBundleIDFromFile(bundlePath);
@@ -235,13 +235,14 @@ public class ClientSecurity {
 
         String payloadName = SecurityUtils.PAYLOAD_FILENAME;
 
-        byte[] encryptedData = Files.readAllBytes(payloadPath.resolve(payloadName));
-        byte[] serverDecryptedMessage = cipherSession.decrypt(new SignalMessage(encryptedData));
+        InputStream encryptedDataInputStream = Files.newInputStream(payloadPath.resolve(payloadName));
+        OutputStream encryptedDataOutputStream = Files.newOutputStream(decryptedFile);
+        cipherSession.decrypt(encryptedDataInputStream,encryptedDataOutputStream);
         updateSessionRecord();
 
-        Files.write(decryptedFile, serverDecryptedMessage, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
 
-        logger.log(FINER, "Decrypted Size = %d\n", serverDecryptedMessage.length);
+
+        logger.log(FINER, "Decrypted Size = %d\n", Files.size(decryptedPath));
     }
 
     public String decryptBundleID(String encryptedBundleID) throws GeneralSecurityException, InvalidKeyException {
@@ -261,6 +262,10 @@ public class ClientSecurity {
         var bundleIDPath = bundlePath.resolve(SecurityUtils.BUNDLEID_FILENAME);
         byte[] encryptedBundleID = Files.readAllBytes(bundleIDPath);
         return decryptBundleID(new String(encryptedBundleID, StandardCharsets.UTF_8));
+    }
+
+    public byte[] getSignedTLSPub(PublicKey pubKey) throws InvalidKeyException {
+        return SecurityUtils.signMessageRaw(pubKey.getEncoded(), ourIdentityKeyPair.getPrivateKey());
     }
 
     public String getClientID() {
