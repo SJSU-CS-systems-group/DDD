@@ -26,25 +26,35 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import net.discdd.bundletransport.TransportWifiDirectService
 import net.discdd.bundletransport.viewmodels.WifiDirectViewModel
+import java.util.concurrent.CompletableFuture
 
 @Composable
 fun WifiDirectScreen(
     wifiViewModel: WifiDirectViewModel = viewModel(),
+    serviceReadyFuture: CompletableFuture<TransportWifiDirectService>,
     preferences: SharedPreferences = LocalContext.current.getSharedPreferences(
         TransportWifiDirectService.WIFI_DIRECT_PREFERENCES,
         Context.MODE_PRIVATE
     )
 ) {
-    val state by wifiViewModel.
+    val state by wifiViewModel.state.collectAsState()
+    val lifecycleOwner = LocalLifecycleOwner
+
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme,background
+        color = MaterialTheme.colorScheme.background
     ) {
 
-        Column() {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             Text(text = "SSID: ${}")
             Text(text = "Password: ${}")
             Text(text = "Address: ${}")
@@ -61,5 +71,11 @@ fun WifiDirectScreen(
             }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun WifiDirectScreenPreview() {
+    WifiDirectScreen(serviceReadyFuture = CompletableFuture())
 }
 
