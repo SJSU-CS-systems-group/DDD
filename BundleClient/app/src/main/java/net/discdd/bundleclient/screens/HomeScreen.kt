@@ -1,6 +1,8 @@
 package net.discdd.bundleclient.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.UsbConnectionManager
@@ -41,7 +44,7 @@ data class TabItem(
 
 @Composable
 fun HomeScreen(
-    permissionsViewModel: PermissionsViewModel,
+    permissionsViewModel: PermissionsViewModel = viewModel(),
     activityResultLauncher: ActivityResultLauncher<Array<String>>
 ) {
     val context = LocalContext.current
@@ -49,6 +52,10 @@ fun HomeScreen(
     val showUsbScreen by UsbConnectionManager.usbConnected.collectAsState()
     val standardTabs = remember {
         listOf(
+//            TabItem(
+//                title = "MyComponent",
+//                screen = { MyComponent() }
+//            ),
             TabItem(
                 title = context.getString(R.string.home_tab),
                 screen = { WifiDirectScreen(serviceReadyFuture = WifiServiceManager.serviceReady) }
@@ -143,5 +150,8 @@ fun HomeScreen(
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
-//    HomeScreen()
+    val activityResultLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) {}
+    HomeScreen(activityResultLauncher = activityResultLauncher)
 }
