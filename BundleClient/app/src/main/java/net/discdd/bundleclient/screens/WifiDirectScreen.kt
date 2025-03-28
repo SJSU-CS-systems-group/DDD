@@ -1,5 +1,6 @@
 package net.discdd.bundleclient.screens
 
+import android.Manifest
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.foundation.layout.Arrangement
@@ -35,16 +36,21 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.PermissionState
+import com.google.accompanist.permissions.rememberPermissionState
 import net.discdd.bundleclient.BundleClientWifiDirectService
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.viewmodels.PeerDevice
 import net.discdd.bundleclient.viewmodels.WifiDirectViewModel
 import java.util.concurrent.CompletableFuture
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun WifiDirectScreen(
     viewModel: WifiDirectViewModel = viewModel(),
     serviceReadyFuture: CompletableFuture<BundleClientWifiDirectService>,
+    nearbyWifiState: PermissionState,
     preferences: SharedPreferences = LocalContext.current.getSharedPreferences(
         BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTINGS,
         Context.MODE_PRIVATE
@@ -189,8 +195,14 @@ fun PeerItem(
     }
 }
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Preview(showBackground = true)
 @Composable
 fun WifiDirectScreenPreview() {
-    WifiDirectScreen(serviceReadyFuture = CompletableFuture())
+    WifiDirectScreen(
+        serviceReadyFuture = CompletableFuture(),
+        nearbyWifiState = rememberPermissionState(
+            Manifest.permission.NEARBY_WIFI_DEVICES
+        )
+    )
 }

@@ -11,22 +11,19 @@ import androidx.compose.runtime.Composable;
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.MultiplePermissionsState
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
+import net.discdd.screens.PermissionBottomSheet
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun MyComponent() {
-    val multiplePermissionsState = rememberMultiplePermissionsState(
-        listOf(
-            Manifest.permission.NEARBY_WIFI_DEVICES,
-            Manifest.permission.POST_NOTIFICATIONS,
-        )
-    )
-
+fun MyComponent(
+    multiplePermissionsState: MultiplePermissionsState
+) {
     if (multiplePermissionsState.allPermissionsGranted) {
         Text(text = "All granted!")
     } else {
@@ -42,6 +39,7 @@ fun MyComponent() {
                 Text("Request permissions")
             }
         }
+//        PermissionBottomSheet(multiplePermissionsState)
     }
 }
 

@@ -5,14 +5,10 @@ import android.content.Intent
 import android.net.ConnectivityManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.lifecycle.viewmodel.compose.viewModel
 import net.discdd.bundleclient.screens.HomeScreen
 import net.discdd.screens.LogFragment
 import net.discdd.theme.ComposableTheme
-import net.discdd.viewmodels.PermissionsViewModel
 import java.util.logging.Level
 import java.util.logging.Level.WARNING
 import java.util.logging.Logger
@@ -46,15 +42,7 @@ class BundleClientActivity: ComponentActivity() {
 
         setContent {
             ComposableTheme {
-                val permissionsViewModel: PermissionsViewModel = viewModel()
-                val activityResultLauncher = rememberLauncherForActivityResult(
-                    ActivityResultContracts.RequestMultiplePermissions()
-                ) { results -> permissionsViewModel.handlePermissionResults(results) }
-
-                HomeScreen(
-                    permissionsViewModel = permissionsViewModel,
-                    activityResultLauncher = activityResultLauncher,
-                )
+                HomeScreen()
             }
         }
     }

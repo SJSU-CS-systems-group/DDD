@@ -42,11 +42,6 @@ import net.discdd.viewmodels.PermissionItemData
 import net.discdd.viewmodels.PermissionsViewModel
 
 class PermissionsFragment : Fragment() {
-    private val viewModel: PermissionsViewModel by viewModels()
-    private val activityResultLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { results -> viewModel.handlePermissionResults(results) }
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -56,7 +51,7 @@ class PermissionsFragment : Fragment() {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 ComposableTheme {
-                    PermissionScreen(viewModel, activityResultLauncher)
+                    PermissionScreen()
                 }
             }
         }
@@ -66,7 +61,6 @@ class PermissionsFragment : Fragment() {
 @Composable
 fun PermissionScreen(
     viewModel: PermissionsViewModel = viewModel(),
-    activityResultLauncher: ActivityResultLauncher<Array<String>>?
 ) {
     val permissionItems by viewModel.permissionItems.collectAsState()
     val context = LocalContext.current
@@ -89,7 +83,7 @@ fun PermissionScreen(
                         viewModel.checkPermission(itemData.permissionName, activity)
                         val remainingPermissions = viewModel.getPermissionsToRequest()
                         if (remainingPermissions.isNotEmpty()) {
-                            activityResultLauncher?.launch(remainingPermissions)
+//                            activityResultLauncher?.launch(remainingPermissions)
                         }
                     }
                 )
@@ -111,7 +105,6 @@ fun PermissionItem(
         context.packageName
     )
     val permissionText = if (resId == 0) permissionItem.permissionName else stringResource(id = resId)
-
     LaunchedEffect(permissionItem.permissionName) {
         onCheckPermission()
     }
@@ -132,9 +125,7 @@ fun PermissionItem(
 
         Text(
             text = permissionText,
-            style = MaterialTheme.typography.bodyLarge
-        )
-    }
+            style = MaterialTheme.typography.bodyLarge ) }
 }
 
 @Preview(showBackground = true)
@@ -146,5 +137,5 @@ fun PermissionItemPreview() {
 @Preview(showBackground = true)
 @Composable
 fun PermissionScreenPreview() {
-    PermissionScreen(activityResultLauncher = null)
+    PermissionScreen()
 }
