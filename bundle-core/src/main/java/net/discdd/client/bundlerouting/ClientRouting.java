@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
 
 public class ClientRouting {
 
@@ -74,7 +75,7 @@ public class ClientRouting {
      */
     public void updateMetaData(String senderId) throws ClientMetaDataFileException {
         if (senderId == null) {
-            throw new IllegalArgumentException("senderId cannot be null");
+            logger.log(WARNING, ("senderId cannot be null"));
         }
 
         long count = 1;
