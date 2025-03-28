@@ -8,7 +8,6 @@ import net.discdd.server.repository.entity.ServerRouting;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -18,6 +17,7 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 
 @Service
@@ -40,7 +40,7 @@ public class BundleRouting {
     }
 
     private void updateEntry(String transportID, String clientID, long score) {
-        logger.log(FINE, "Updating transport-client mapping entry in serverRoutingRepository");
+        logger.log(INFO, String.format("Updating %s : %s mapping in serverRoutingRepository", transportID, clientID));
         if (null == transportID) return;
         ServerRouting serverRouting =
                 serverRoutingRepository.findByServerRoutingIdClientIDAndServerRoutingIdTransportID(clientID,
@@ -58,7 +58,7 @@ public class BundleRouting {
      * payloadPath: path of received payload where routing metadata file exists
      */
     public void processClientMetaData(Path payloadPath, String transportID, String clientID) throws RoutingExceptions.ClientMetaDataFileException, SQLException {
-        logger.log(FINE, "processing client metadata, for transportId: " + transportID, ",clientID: " + clientID);
+        logger.log(INFO, "processing client metadata, for transportId: " + transportID, ",clientID: " + clientID);
         var clientMetaDataPath = payloadPath.resolve(METADATAFILE);
         HashMap<String, Long> clientMap = null;
         ObjectMapper mapper = new ObjectMapper();
@@ -69,10 +69,11 @@ public class BundleRouting {
             throw new RoutingExceptions.ClientMetaDataFileException("Error Reading client metadata: " + e);
         }
 
-        if (clientMap == null || clientMap.keySet().isEmpty()) {
-            logger.log(WARNING, "[BundleRouting]: Client Metadata is empty, initializing transport with score 0");
-            updateEntry(transportID, clientID, 0);
-        } else {
+        logger.log(WARNING, "[BundleRouting]: Client Metadata is empty, initializing transport with score 0");
+        updateEntry(transportID, clientID, 0);
+
+        if (clientMap != null && !clientMap.keySet().isEmpty())
+        {
             for (Map.Entry<String, Long> entry : clientMap.entrySet()) {
                 updateEntry(entry.getKey(), clientID, entry.getValue());
             }
