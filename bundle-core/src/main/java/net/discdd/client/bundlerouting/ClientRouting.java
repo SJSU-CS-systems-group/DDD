@@ -76,8 +76,8 @@ public class ClientRouting {
     public void updateMetaData(String senderId) throws ClientMetaDataFileException {
         if (senderId == null) {
             logger.log(WARNING, ("senderId cannot be null"));
+            return;
         }
-
         long count = 1;
 
         if (metadata.containsKey(senderId)) {
