@@ -73,6 +73,10 @@ public class ClientRouting {
      * None
      */
     public void updateMetaData(String senderId) throws ClientMetaDataFileException {
+        if (senderId == null) {
+            throw new IllegalArgumentException("senderId cannot be null");
+        }
+
         long count = 1;
 
         if (metadata.containsKey(senderId)) {
