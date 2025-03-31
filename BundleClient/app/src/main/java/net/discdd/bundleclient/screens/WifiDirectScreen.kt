@@ -42,6 +42,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
+import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import net.discdd.bundleclient.BundleClientWifiDirectService
 import net.discdd.bundleclient.R
@@ -109,10 +110,20 @@ fun WifiDirectScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // TODO: remove isVisible
+            val showBanner by remember { mutableStateOf(!nearbyWifiState.status.isGranted) }
+            if (!nearbyWifiState.status.isGranted) {
+                WifiPermissionBanner(
+                    isVisible = showBanner,
+                    onEnableClick = {
+                        nearbyWifiState.launchPermissionRequest()
+                    }
+                )
+            }
+
             Text(text = "ClientId: ${state.clientId}")
             Text(text = "Connected Device Addresses: ${state.connectedDeviceText}")
             Text(text = "Discovery Status: ${state.deliveryStatus}")
-
             var checked by remember {
                 mutableStateOf(
                     preferences.getBoolean(

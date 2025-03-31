@@ -1,9 +1,6 @@
 package net.discdd.bundleclient.screens
 
 import android.Manifest
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,9 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.launch
 import net.discdd.bundleclient.R
@@ -40,7 +35,6 @@ import net.discdd.bundleclient.WifiServiceManager
 import net.discdd.screens.LogScreen
 import net.discdd.screens.PermissionBottomSheet
 import net.discdd.screens.PermissionScreen
-import net.discdd.viewmodels.PermissionsViewModel
 
 data class TabItem(
     val title: String,
@@ -56,6 +50,7 @@ fun HomeScreen() {
     val nearbyWifiState = rememberPermissionState(
             Manifest.permission.NEARBY_WIFI_DEVICES
     )
+
     val standardTabs = remember {
         listOf(
             TabItem(
