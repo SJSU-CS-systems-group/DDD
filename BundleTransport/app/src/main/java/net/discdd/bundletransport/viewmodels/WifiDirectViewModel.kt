@@ -1,7 +1,6 @@
 package net.discdd.bundletransport.viewmodels
 
 import android.app.Application
-import android.content.Context.MODE_PRIVATE
 import android.content.IntentFilter
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.lifecycle.AndroidViewModel
@@ -25,6 +24,7 @@ import java.util.stream.Collectors
 
 data class WifiDirectState(
     val deviceNameView: String = "",
+    val changeDeviceNameView: String = "",
     val wifiInfoView: String = "",
     val clientLogView: String = "",
     val wifiStatusView: String = "",

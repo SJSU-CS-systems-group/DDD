@@ -15,10 +15,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -26,6 +29,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import net.discdd.bundletransport.TransportWifiDirectService
@@ -42,33 +47,66 @@ fun WifiDirectScreen(
     )
 ) {
     val state by wifiViewModel.state.collectAsState()
-    val lifecycleOwner = LocalLifecycleOwner
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    LaunchedEffect(Unit) {
+        wifiViewModel.initialize(serviceReadyFuture)
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> wifiViewModel.registerBroadcastReceiver()
+                Lifecycle.Event.ON_PAUSE -> wifiViewModel.unregisterBroadcastReceiver()
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(text = "SSID: ${}")
-            Text(text = "Password: ${}")
-            Text(text = "Address: ${}")
-            Text(text = "Connected devices: ${}")
-            Text(text = "${}")
-            Text(text = "Device Name: ${}")
+            //Should be rewritten with wifiInfoVie
+
+            var checked by remember {
+                mutableStateOf(
+                    preferences.getBoolean(
+                        TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
+                        true
+                    )
+                )
+            }
+
+            Text(text = state.wifiInfoView)
+            Text(text = state.wifiStatusView)
+            Text(text = state.clientLogView)
+            Text(text = state.deviceNameView)
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Checkbox(
                     checked = checked,
+                    onCheckedChange = {
+                        checked = it
+                        preferences.edit().putBoolean(
+                            TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
+                            it
+                        ).apply()
+                    }
                 )
+                Text(text = "Collect data even when app is closed")
             }
+            //BundleClient interactions
         }
     }
 }
