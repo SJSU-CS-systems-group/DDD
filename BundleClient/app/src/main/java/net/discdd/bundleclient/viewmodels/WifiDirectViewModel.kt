@@ -42,7 +42,6 @@ data class WifiDirectState(
 class WifiDirectViewModel(
     application: Application,
 ): AndroidViewModel(application) {
-    val NET_DISCDD_BUNDLECLIENT_NUM_DENIED: String = "net.discdd.bundleclient.NUM_DENIED"
     private val context get() = getApplication<Application>()
     private val bundleClientServiceBroadcastReceiver = BundleClientServiceBroadcastReceiver().apply {
         setViewModel(this@WifiDirectViewModel)
@@ -217,5 +216,9 @@ class WifiDirectViewModel(
         val newNumDenied = _numDenied.value + 1
         _numDenied.value = newNumDenied
         sharedPref.edit().putInt(NET_DISCDD_BUNDLECLIENT_NUM_DENIED, newNumDenied).apply()
+    }
+
+    companion object {
+        const val NET_DISCDD_BUNDLECLIENT_NUM_DENIED: String = "net.discdd.bundleclient.NUM_DENIED"
     }
 }

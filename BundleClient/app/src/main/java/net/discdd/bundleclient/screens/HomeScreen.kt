@@ -32,9 +32,10 @@ import kotlinx.coroutines.launch
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.UsbConnectionManager
 import net.discdd.bundleclient.WifiServiceManager
+import net.discdd.bundleclient.viewmodels.HomeViewModel
 import net.discdd.screens.LogScreen
-import net.discdd.screens.PermissionBottomSheet
 import net.discdd.screens.PermissionScreen
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 data class TabItem(
     val title: String,
@@ -43,10 +44,13 @@ data class TabItem(
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    viewModel: HomeViewModel = viewModel()
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val showUsbScreen by UsbConnectionManager.usbConnected.collectAsState()
+    val firstOpen by viewModel.firstOpen.collectAsState()
     val nearbyWifiState = rememberPermissionState(
             Manifest.permission.NEARBY_WIFI_DEVICES
     )
@@ -147,7 +151,9 @@ fun HomeScreen() {
             }
         }
 
-        PermissionBottomSheet()
+        if (firstOpen) {
+            NotificationBottomSheet(viewModel)
+        }
     }
 }
 

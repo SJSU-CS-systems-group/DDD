@@ -1,6 +1,7 @@
-package net.discdd.screens
+package net.discdd.bundleclient.screens
 
 import android.Manifest
+import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,20 +33,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.MultiplePermissionsState
-import com.google.accompanist.permissions.PermissionState
-import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.accompanist.permissions.rememberPermissionState
+import net.discdd.bundleclient.viewmodels.HomeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
-fun PermissionBottomSheet() {
+fun NotificationBottomSheet(
+    viewModel: HomeViewModel
+) {
     val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showBottomSheet by remember { mutableStateOf(true) }
     val notificationState = rememberPermissionState(
         Manifest.permission.POST_NOTIFICATIONS,
         onPermissionResult = {
             showBottomSheet = false
+            viewModel.onFirstOpen()
         }
     )
 
@@ -117,6 +119,6 @@ fun PermissionBottomSheet() {
 
 @Preview(showBackground = true)
 @Composable
-fun PermissionBottomSheetPreview() {
-    PermissionBottomSheet()
+fun NotificationBottomSheetPreview() {
+    NotificationBottomSheet(HomeViewModel(Application()))
 }
