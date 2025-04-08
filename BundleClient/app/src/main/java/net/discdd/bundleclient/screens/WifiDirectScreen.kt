@@ -110,14 +110,9 @@ fun WifiDirectScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // TODO: remove isVisible
-            val showBanner by remember { mutableStateOf(!nearbyWifiState.status.isGranted) }
             if (!nearbyWifiState.status.isGranted) {
                 WifiPermissionBanner(
-                    isVisible = showBanner,
-                    onEnableClick = {
-                        nearbyWifiState.launchPermissionRequest()
-                    }
+                    onEnableClick = { nearbyWifiState.launchPermissionRequest() }
                 )
             }
 
