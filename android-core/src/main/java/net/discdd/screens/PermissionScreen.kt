@@ -81,10 +81,6 @@ fun PermissionScreen(
                     },
                     onCheckPermission = {
                         viewModel.checkPermission(itemData.permissionName, activity)
-                        val remainingPermissions = viewModel.getPermissionsToRequest()
-                        if (remainingPermissions.isNotEmpty()) {
-//                            activityResultLauncher?.launch(remainingPermissions)
-                        }
                     }
                 )
             }
