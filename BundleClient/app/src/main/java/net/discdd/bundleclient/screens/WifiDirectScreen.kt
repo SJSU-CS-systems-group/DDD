@@ -2,7 +2,10 @@ package net.discdd.bundleclient.screens
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
+import android.net.Uri
+import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -36,6 +39,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat.startActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -62,7 +66,9 @@ fun WifiDirectScreen(
     )
 ) {
     val state by viewModel.state.collectAsState()
+    val numDenied by viewModel.numDenied.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
+    val context = LocalContext.current
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -111,9 +117,17 @@ fun WifiDirectScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             if (!nearbyWifiState.status.isGranted) {
-                WifiPermissionBanner(nearbyWifiState) {
-                    // todo: if denied twice, take them to settings
-                    nearbyWifiState.launchPermissionRequest()
+                WifiPermissionBanner(numDenied, nearbyWifiState) {
+                    // if user denies access twice, manual access in settings is required
+                    if (numDenied > 2) {
+                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = Uri.fromParts("package", context.packageName, null)
+                        }
+                        startActivity(context, intent, null)
+                    } else {
+                        viewModel.incrementNumDenied()
+                        nearbyWifiState.launchPermissionRequest()
+                    }
                 }
             }
 

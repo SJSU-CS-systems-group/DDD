@@ -26,10 +26,12 @@ import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.shouldShowRationale
+import net.discdd.bundleclient.viewmodels.WifiDirectViewModel
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun WifiPermissionBanner(
+    numDenied: Int,
     nearbyWifiState: PermissionState,
     modifier: Modifier = Modifier,
     backgroundColor: Color = MaterialTheme.colorScheme.primaryContainer,
@@ -38,8 +40,10 @@ fun WifiPermissionBanner(
 ) {
     val textToShow = if (nearbyWifiState.status.shouldShowRationale) {
         "Getting access to nearby devices is important for transport functionality. Please grant us access to continue. Thank you :D"
-    } else {
+    } else if (numDenied < 2){
         "This permission is needed to discover and connect to nearby devices for file transfers."
+    } else {
+        "Manual action is required to grant access to nearby devices. To proceed, click 'Enable' -> 'Permissions' -> 'Nearby devices' -> 'Allow'"
     }
 
     Surface(
