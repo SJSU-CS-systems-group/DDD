@@ -52,7 +52,6 @@ class PermissionsViewModel(
     }
 
     fun handlePermissionResults(results: Map<String, Boolean>) {
-        logger.log(Level.INFO, "activity launcher launched.")
         viewModelScope.launch {
             val remainingPermissions = mutableMapOf<String, PermissionItemData>()
             results.forEach { (p, r) ->
@@ -83,16 +82,10 @@ class PermissionsViewModel(
 
     fun checkPermission(permission: String, activity: Activity) {
         viewModelScope.launch {
-            logger.log(Level.INFO, "Checking permission $permission")
-            val permissionResult = ContextCompat.checkSelfPermission(context, permission)
-            if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
-                logger.log(Level.INFO, "perm $permission granted!")
+           if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
                 updatePermissionItem(permission, true)
                 trackGrantedPermission(permission)
             } else {
-                logger.log(Level.INFO, "denied: $permissionResult")
-                val shouldShowRationale = shouldShowRequestPermissionRationale(activity, permission)
-                logger.log(Level.INFO, "shouldShowRationale: $shouldShowRationale")
                 val permissionItem = _permissionItems.value.find { it.permissionName == permission }
                 permissionItem?.let {
                     updatePermissionItem(permission, false)

@@ -23,7 +23,6 @@ class BundleClientActivity: ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        logger.log(Level.INFO, "onCreate invoked in BundleClientActivity")
         super.onCreate(savedInstanceState)
 
         LogFragment.registerLoggerHandler()
