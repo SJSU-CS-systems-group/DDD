@@ -23,14 +23,25 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.PermissionState
+import com.google.accompanist.permissions.shouldShowRationale
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun WifiPermissionBanner(
+    nearbyWifiState: PermissionState,
     modifier: Modifier = Modifier,
     backgroundColor: Color = MaterialTheme.colorScheme.primaryContainer,
     contentColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
     onEnableClick: () -> Unit,
 ) {
+    val textToShow = if (nearbyWifiState.status.shouldShowRationale) {
+        "Getting access to nearby devices is important for transport functionality. Please grant us access to continue. Thank you :D"
+    } else {
+        "This permission is needed to discover and connect to nearby devices for file transfers."
+    }
+
     Surface(
         color = backgroundColor,
         modifier = modifier.fillMaxWidth()
@@ -53,7 +64,7 @@ fun WifiPermissionBanner(
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Text(
-                    text = "Nearby WiFi devices permission required",
+                    text = "Enable WiFi Device Connection",
                     color = contentColor,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Medium
@@ -63,7 +74,7 @@ fun WifiPermissionBanner(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "This permission is needed to discover and connect to nearby devices for file transfers.",
+                text = textToShow,
                 color = contentColor,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(start = 36.dp)

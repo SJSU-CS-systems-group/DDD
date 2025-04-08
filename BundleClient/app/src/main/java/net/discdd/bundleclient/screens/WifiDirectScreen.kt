@@ -111,7 +111,8 @@ fun WifiDirectScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             if (!nearbyWifiState.status.isGranted) {
-                WifiPermissionBanner() {
+                WifiPermissionBanner(nearbyWifiState) {
+                    // todo: if denied twice, take them to settings
                     nearbyWifiState.launchPermissionRequest()
                 }
             }
