@@ -111,9 +111,9 @@ fun WifiDirectScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             if (!nearbyWifiState.status.isGranted) {
-                WifiPermissionBanner(
-                    onEnableClick = { nearbyWifiState.launchPermissionRequest() }
-                )
+                WifiPermissionBanner() {
+                    nearbyWifiState.launchPermissionRequest()
+                }
             }
 
             Text(text = "ClientId: ${state.clientId}")

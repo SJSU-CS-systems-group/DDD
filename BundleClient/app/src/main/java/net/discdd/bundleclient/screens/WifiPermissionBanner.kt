@@ -1,8 +1,5 @@
 package net.discdd.bundleclient.screens
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,10 +26,10 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun WifiPermissionBanner(
-    onEnableClick: () -> Unit,
     modifier: Modifier = Modifier,
     backgroundColor: Color = MaterialTheme.colorScheme.primaryContainer,
-    contentColor: Color = MaterialTheme.colorScheme.onPrimaryContainer
+    contentColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
+    onEnableClick: () -> Unit,
 ) {
     Surface(
         color = backgroundColor,
