@@ -1,7 +1,11 @@
 package net.discdd.bundleclient.screens
 
+import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
+import android.net.Uri
+import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,9 +14,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -31,27 +39,37 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat.startActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.PermissionState
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 import net.discdd.bundleclient.BundleClientWifiDirectService
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.viewmodels.PeerDevice
 import net.discdd.bundleclient.viewmodels.WifiDirectViewModel
+import net.discdd.screens.WifiPermissionBanner
 import java.util.concurrent.CompletableFuture
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun WifiDirectScreen(
     viewModel: WifiDirectViewModel = viewModel(),
     serviceReadyFuture: CompletableFuture<BundleClientWifiDirectService>,
+    nearbyWifiState: PermissionState,
     preferences: SharedPreferences = LocalContext.current.getSharedPreferences(
         BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTINGS,
         Context.MODE_PRIVATE
     )
 ) {
     val state by viewModel.state.collectAsState()
+    val numDenied by viewModel.numDenied.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
+    val context = LocalContext.current
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -99,10 +117,24 @@ fun WifiDirectScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            if (!nearbyWifiState.status.isGranted) {
+                WifiPermissionBanner(numDenied, nearbyWifiState) {
+                    // if user denies access twice, manual access in settings is required
+                    if (numDenied > 2) {
+                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = Uri.fromParts("package", context.packageName, null)
+                        }
+                        startActivity(context, intent, null)
+                    } else {
+                        viewModel.incrementNumDenied()
+                        nearbyWifiState.launchPermissionRequest()
+                    }
+                }
+            }
+
             Text(text = "ClientId: ${state.clientId}")
             Text(text = "Connected Device Addresses: ${state.connectedDeviceText}")
             Text(text = "Discovery Status: ${state.deliveryStatus}")
-
             var checked by remember {
                 mutableStateOf(
                     preferences.getBoolean(
@@ -124,21 +156,25 @@ fun WifiDirectScreen(
                         ).apply()
                     }
                 )
+
                 Text(text = "Do transfers in the background")
+
+                IconButton(
+                    onClick = {
+                        viewModel.discoverPeers()
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = stringResource(id = R.string.refresh_peers)
+                    )
+                }
             }
             // peers list
             PeersList(
                 peers = state.peers,
                 viewModel = viewModel
             )
-
-            Button(
-                onClick = {
-                    viewModel.discoverPeers()
-                }
-            ) {
-                Text(text = stringResource(id = R.string.refresh_peers))
-            }
         }
     }
 }
@@ -189,8 +225,14 @@ fun PeerItem(
     }
 }
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Preview(showBackground = true)
 @Composable
 fun WifiDirectScreenPreview() {
-    WifiDirectScreen(serviceReadyFuture = CompletableFuture())
+    WifiDirectScreen(
+        serviceReadyFuture = CompletableFuture(),
+        nearbyWifiState = rememberPermissionState(
+            Manifest.permission.NEARBY_WIFI_DEVICES
+        )
+    )
 }
