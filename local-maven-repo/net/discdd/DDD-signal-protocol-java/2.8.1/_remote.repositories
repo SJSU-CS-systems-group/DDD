@@ -1,4 +1,4 @@
 #NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
-#Thu Apr 10 14:34:22 PDT 2025
-DDD-signal-protocol-java-0.0.1.jar>=
-DDD-signal-protocol-java-0.0.1.pom>=
+#Thu Apr 10 16:32:03 PDT 2025
+DDD-signal-protocol-java-2.8.1.jar>=
+DDD-signal-protocol-java-2.8.1.pom>=
