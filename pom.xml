@@ -8,7 +8,6 @@
     <packaging>pom</packaging>
 
     <modules>
-<!--        <module>DDD-libsignal-protocol-java</module>-->
         <module>bundle-core</module>
         <module>serviceadapter-core</module>
         <module>bundleserver</module>
