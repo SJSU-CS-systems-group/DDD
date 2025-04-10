@@ -122,6 +122,12 @@
             <version>2.14.2</version>
             <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>org.whispersystems</groupId>
+            <artifactId>curve25519-java</artifactId>
+            <version>0.2.4</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
     <build>
