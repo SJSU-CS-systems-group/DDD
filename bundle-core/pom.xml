@@ -38,6 +38,14 @@
         </profile>
     </profiles>
 
+    <repositories>
+        <repository>
+            <id>local-in-project</id>
+            <name>Local Maven Repo Inside Project</name>
+            <url>file://${project.basedir}/../local-maven-repo</url>
+        </repository>
+    </repositories>
+
     <dependencies>
         <dependency>
             <groupId>io.grpc</groupId>
@@ -77,7 +85,7 @@
         <dependency>
             <groupId>net.discdd</groupId>
             <artifactId>DDD-signal-protocol-java</artifactId>
-            <version>2.2.0</version>
+            <version>0.0.1</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
