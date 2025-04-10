@@ -1,5 +1,6 @@
-package net.discdd.bundleclient.screens
+package net.discdd.screens
 
+import android.Manifest
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,13 +21,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
+import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
-import net.discdd.bundleclient.viewmodels.WifiDirectViewModel
+import net.discdd.android_core.R
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -39,11 +42,11 @@ fun WifiPermissionBanner(
     onEnableClick: () -> Unit,
 ) {
     val textToShow = if (nearbyWifiState.status.shouldShowRationale) {
-        "Getting access to nearby devices is important for transport functionality. Please grant us access to continue. Thank you :D"
+        stringResource(R.string.urgent_ask_permission)
     } else if (numDenied < 2){
-        "This permission is needed to discover and connect to nearby devices for file transfers."
+        stringResource(R.string.generic_ask_permission)
     } else {
-        "Manual action is required to grant access to nearby devices. To proceed, click 'Enable' -> 'Permissions' -> 'Nearby devices' -> 'Allow'"
+        stringResource(R.string.manual_action_required)
     }
 
     Surface(
@@ -104,8 +107,10 @@ fun WifiPermissionBanner(
     }
 }
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Preview(showBackground = true)
 @Composable
 fun WifiPermissionBannerPreview() {
-    WifiDirectScreenPreview()
+    val fooState = rememberPermissionState(Manifest.permission.NEARBY_WIFI_DEVICES)
+    WifiPermissionBanner(-1, fooState) {}
 }

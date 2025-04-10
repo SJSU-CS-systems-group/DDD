@@ -9,7 +9,6 @@ import androidx.activity.compose.setContent
 import net.discdd.bundleclient.screens.HomeScreen
 import net.discdd.screens.LogFragment
 import net.discdd.theme.ComposableTheme
-import java.util.logging.Level
 import java.util.logging.Level.WARNING
 import java.util.logging.Logger
 

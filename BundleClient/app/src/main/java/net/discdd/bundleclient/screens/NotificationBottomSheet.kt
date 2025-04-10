@@ -29,11 +29,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberPermissionState
+import net.discdd.bundleclient.R
 import net.discdd.bundleclient.viewmodels.HomeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
@@ -73,19 +75,19 @@ fun NotificationBottomSheet(
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Close,
-                            contentDescription = "Close bottom sheet"
+                            contentDescription = stringResource(R.string.close_bottom_sheet)
                         )
                     }
                 }
                 Text(
-                    text = "Turn on notifications",
+                    text = stringResource(R.string.turn_on_notifications),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 8.dp)
                 )
 
                 Text(
-                    text = "Don't miss important messages like bundle upload progress and application activity",
+                    text = stringResource(R.string.ask_notification_permissions),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.Gray,
                     modifier = Modifier.padding(bottom = 8.dp)
