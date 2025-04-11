@@ -11,12 +11,12 @@ import net.discdd.grpc.AppDataUnit;
 import net.discdd.grpc.BundleChunk;
 import net.discdd.grpc.BundleDownloadRequest;
 import net.discdd.grpc.BundleExchangeServiceGrpc;
-import net.discdd.grpc.BundleSender;
 import net.discdd.grpc.BundleSenderType;
 import net.discdd.grpc.BundleUploadRequest;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.grpc.ExchangeADUsResponse;
 import net.discdd.grpc.GetRecencyBlobRequest;
+import net.discdd.grpc.PublicKeyMap;
 import net.discdd.grpc.Status;
 import net.discdd.model.Bundle;
 import net.discdd.model.BundleDTO;
@@ -165,7 +165,6 @@ public class BundleClientToBundleServerTest extends End2EndTest {
     // testing the exact code that the client is using
     private static void sendBundle() throws RoutingExceptions.ClientMetaDataFileException, IOException,
             InvalidKeyException, GeneralSecurityException {
-        var testSender = BundleSender.newBuilder().setId("testSenderId").setType(BundleSenderType.CLIENT).build();
 
         BundleDTO toSend = bundleTransmission.generateBundleForTransmission();
 
@@ -190,7 +189,7 @@ public class BundleClientToBundleServerTest extends End2EndTest {
                 uploadRequestStreamObserver.onNext(uploadRequest);
             }
         }
-        uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setSender(testSender).build());
+        uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setSenderType(BundleSenderType.CLIENT).build());
         uploadRequestStreamObserver.onCompleted();
         logger.log(INFO, "Completed file transfer");
         bundleUploadResponseObserver.waitForCompletion(Constants.GRPC_LONG_TIMEOUT_MS);
@@ -203,12 +202,20 @@ public class BundleClientToBundleServerTest extends End2EndTest {
         var bundleRequests = bundleTransmission.getBundleSecurity().getClientWindow()
                 .getWindow(bundleTransmission.getBundleSecurity().getClientSecurity());
         var clientId = bundleTransmission.getBundleSecurity().getClientSecurity().getClientID();
-
-        var sender = BundleSender.newBuilder().setId(clientId).setType(BundleSenderType.CLIENT).build();
+        var clientSecurity = bundleTransmission.getBundleSecurity().getClientSecurity();
+        var bundleSecurity = bundleTransmission.getBundleSecurity();
 
         for (String bundle : bundleRequests) {
-            var downloadRequest = BundleDownloadRequest.newBuilder().setSender(sender)
-                    .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId(bundle).build()).build();
+            PublicKeyMap publicKeyMap = PublicKeyMap.newBuilder()
+                    .setClientPub(ByteString.copyFrom(clientSecurity.getClientIdentityPublicKey().serialize()))
+                    .setSignedTLSPub(ByteString.copyFrom(clientSecurity.getSignedTLSPub(bundleSecurity.getClientGrpcSecurity().getGrpcKeyPair().getPublic())))
+                    .build();
+
+            var downloadRequest = BundleDownloadRequest.newBuilder()
+                    .setSenderType(BundleSenderType.CLIENT)
+                    .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId(bundle).build())
+                    .setPublicKeyMap(publicKeyMap)
+                    .build();
 
             logger.log(INFO, "Downloading file: " + bundle);
             var responses = blockingStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
@@ -225,7 +232,7 @@ public class BundleClientToBundleServerTest extends End2EndTest {
                     var response = responses.next();
                     fileOutputStream.write(response.getChunk().getChunk().toByteArray());
                 }
-                bundleTransmission.processReceivedBundle(sender, new Bundle(receivedBundleLocation.toFile()));
+                bundleTransmission.processReceivedBundle(clientId, new Bundle(receivedBundleLocation.toFile()));
             } catch (StatusRuntimeException e) {
                 logger.log(SEVERE, "Receive bundle failed " + channel, e);
             }

@@ -1,6 +1,6 @@
 package net.discdd.bundleclient.screens
 
-import androidx.activity.result.ActivityResultLauncher
+import android.Manifest
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,34 +26,47 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.launch
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.UsbConnectionManager
 import net.discdd.bundleclient.WifiAwareManager
 import net.discdd.bundleclient.WifiServiceManager
+import net.discdd.bundleclient.viewmodels.HomeViewModel
 import net.discdd.screens.LogScreen
 import net.discdd.screens.PermissionScreen
-import net.discdd.viewmodels.PermissionsViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 data class TabItem(
     val title: String,
     val screen: @Composable () -> Unit,
 )
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun HomeScreen(
-    permissionsViewModel: PermissionsViewModel,
-    activityResultLauncher: ActivityResultLauncher<Array<String>>
+    viewModel: HomeViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val showUsbScreen by UsbConnectionManager.usbConnected.collectAsState()
+    val firstOpen by viewModel.firstOpen.collectAsState()
+    val nearbyWifiState = rememberPermissionState(
+            Manifest.permission.NEARBY_WIFI_DEVICES
+    )
+
     val standardTabs = remember {
         listOf(
             TabItem(
                 title = context.getString(R.string.home_tab),
-                screen = { WifiDirectScreen(serviceReadyFuture = WifiServiceManager.serviceReady) }
-                ),
+                screen = {
+                    WifiDirectScreen(
+                        serviceReadyFuture = WifiServiceManager.serviceReady,
+                        nearbyWifiState = nearbyWifiState
+                    )
+                }
+            ),
             TabItem(
                 title = "Wifi Aware",
                 screen = { WifiAwareSubscriberScreen(serviceReadyFuture = WifiAwareManager.serviceReady) }
@@ -72,7 +85,7 @@ fun HomeScreen(
             ),
             TabItem(
                 title = context.getString(R.string.permissions_tab),
-                screen = { PermissionScreen(permissionsViewModel, activityResultLauncher) }
+                screen = { PermissionScreen() }
             )
         )
     }
@@ -142,11 +155,15 @@ fun HomeScreen(
                 tabItems[index].screen()
             }
         }
+
+        if (firstOpen) {
+            NotificationBottomSheet(viewModel)
+        }
     }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
-//    HomeScreen()
+    HomeScreen()
 }

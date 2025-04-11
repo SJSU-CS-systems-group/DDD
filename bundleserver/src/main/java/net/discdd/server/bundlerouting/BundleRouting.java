@@ -8,7 +8,6 @@ import net.discdd.server.repository.entity.ServerRouting;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -40,7 +39,7 @@ public class BundleRouting {
     }
 
     private void updateEntry(String transportID, String clientID, long score) {
-        logger.log(FINE, "Updating transport-client mapping entry in serverRoutingRepository");
+        logger.log(FINE, String.format("Updating %s : %s mapping in serverRoutingRepository", transportID, clientID));
         if (null == transportID) return;
         ServerRouting serverRouting =
                 serverRoutingRepository.findByServerRoutingIdClientIDAndServerRoutingIdTransportID(clientID,
@@ -69,10 +68,9 @@ public class BundleRouting {
             throw new RoutingExceptions.ClientMetaDataFileException("Error Reading client metadata: " + e);
         }
 
-        if (clientMap == null || clientMap.keySet().isEmpty()) {
-            logger.log(WARNING, "[BundleRouting]: Client Metadata is empty, initializing transport with score 0");
-            updateEntry(transportID, clientID, 0);
-        } else {
+        updateEntry(transportID, clientID, 0);
+
+        if (clientMap != null && !clientMap.keySet().isEmpty()) {
             for (Map.Entry<String, Long> entry : clientMap.entrySet()) {
                 updateEntry(entry.getKey(), clientID, entry.getValue());
             }

@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
 
 public class ClientRouting {
 
@@ -73,6 +74,10 @@ public class ClientRouting {
      * None
      */
     public void updateMetaData(String senderId) throws ClientMetaDataFileException {
+        if (senderId == null) {
+            logger.log(WARNING, ("senderId cannot be null"));
+            return;
+        }
         long count = 1;
 
         if (metadata.containsKey(senderId)) {

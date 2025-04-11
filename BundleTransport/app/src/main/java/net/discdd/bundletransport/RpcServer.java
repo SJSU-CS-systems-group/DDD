@@ -7,9 +7,10 @@ import static java.util.logging.Level.WARNING;
 
 import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
 import net.discdd.bundlesecurity.SecurityUtils;
-import net.discdd.grpc.BundleSender;
+import net.discdd.grpc.BundleSenderType;
 import net.discdd.grpc.GetRecencyBlobRequest;
 import net.discdd.grpc.GetRecencyBlobResponse;
+import net.discdd.grpc.PublicKeyMap;
 import net.discdd.pathutils.TransportPaths;
 
 import java.io.IOException;
@@ -71,15 +72,13 @@ public class RpcServer {
             protected void onBundleExchangeEvent(BundleExchangeEvent bundleExchangeEvent) {
                 listener.onBundleExchangeEvent(bundleExchangeEvent);
             }
-
             @Override
-            protected Path pathProducer(BundleExchangeName bundleExchangeName, BundleSender bundleSender) {
+            protected Path pathProducer(BundleExchangeName bundleExchangeName, BundleSenderType bundleSenderType, PublicKeyMap publicKeyMap) {
                 return bundleExchangeName.isDownload() ? toClientPath.resolve(bundleExchangeName.encryptedBundleId()) :
                         toServerPath.resolve(bundleExchangeName.encryptedBundleId());
             }
-
             @Override
-            protected void bundleCompletion(BundleExchangeName bundleExchangeName, BundleSender sender, Path path) {
+            protected void bundleCompletion(BundleExchangeName bundleExchangeName, BundleSenderType senderType, Path path) {
             }
 
             @Override
