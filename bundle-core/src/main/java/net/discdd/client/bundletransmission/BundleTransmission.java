@@ -186,6 +186,7 @@ public class BundleTransmission {
             future.get();
 
 
+
             ClientSecurity clientSecurity = bundleSecurity.getClientSecurity();
 
             OutputStream os = Files.newOutputStream(bundleFile, StandardOpenOption.CREATE,
@@ -195,10 +196,11 @@ public class BundleTransmission {
                                                       clientSecurity.getClientBaseKeyPairPublicKey(),
                                                       clientSecurity.getServerPublicKey(), bundleId, pipedInputStream,
                                                       os);
+            if(!future.isCancelled()){
+                future.cancel(true);
+            }
         } catch (InvalidMessageException | InterruptedException | ExecutionException e) {
             throw new IOException("Error processing message: " + e.getMessage(), e);
-        } finally {
-            executorService.shutdown();
         }
         return new BundleDTO(bundleId, new Bundle(bundleFile.toFile()));
     }
