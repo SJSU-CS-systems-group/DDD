@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.UsbConnectionManager
+import net.discdd.bundleclient.WifiAwareManager
 import net.discdd.bundleclient.WifiServiceManager
 import net.discdd.screens.LogScreen
 import net.discdd.screens.PermissionScreen
@@ -53,6 +54,10 @@ fun HomeScreen(
                 title = context.getString(R.string.home_tab),
                 screen = { WifiDirectScreen(serviceReadyFuture = WifiServiceManager.serviceReady) }
                 ),
+            TabItem(
+                title = "Wifi Aware",
+                screen = { WifiAwareSubscriberScreen(serviceReadyFuture = WifiAwareManager.serviceReady) }
+            ),
             TabItem(
                 title = context.getString(R.string.server_tab),
                 screen = { ServerScreen() }

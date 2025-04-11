@@ -1,11 +1,11 @@
 package net.discdd.wifiaware;
 
-import static android.Manifest.permission.ACCESS_FINE_LOCATION;
-import static android.Manifest.permission.ACCESS_WIFI_STATE;
-import static android.Manifest.permission.CHANGE_WIFI_STATE;
-import static android.Manifest.permission.NEARBY_WIFI_DEVICES;
+import static android.net.wifi.aware.WifiAwareManager.ACTION_WIFI_AWARE_STATE_CHANGED;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -13,118 +13,120 @@ import android.net.NetworkRequest;
 import android.net.wifi.aware.AttachCallback;
 import android.net.wifi.aware.DiscoverySession;
 import android.net.wifi.aware.PeerHandle;
-import android.net.wifi.aware.PublishConfig;
-import android.net.wifi.aware.ServiceDiscoveryInfo;
-import android.net.wifi.aware.SubscribeConfig;
 import android.net.wifi.aware.WifiAwareManager;
 import android.net.wifi.aware.WifiAwareNetworkInfo;
 import android.net.wifi.aware.WifiAwareNetworkSpecifier;
 import android.net.wifi.aware.WifiAwareSession;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresPermission;
-
-import net.discdd.bundleclient.BundleClientWifiAwareSubscriber;
-import net.discdd.bundletransport.TransportWifiAwarePublisher;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 
 public class WifiAwareHelper {
-    public final Context context;
+    private static final String TAG = "WifiAwareHelper";
+
+    private final Context context;
+    private final List<WifiAwareStateListener> listeners = new ArrayList<>();
+    private final IntentFilter intentFilter = new IntentFilter(ACTION_WIFI_AWARE_STATE_CHANGED);
     private final HashMap<PeerHandle, ConnectionInfo> connections = new HashMap<>();
+
     private WifiAwareSession wifiAwareSession;
+    private WifiAwareBroadcastReceiver receiver;
+    private WifiAwareManager wifiAwareManager;
 
     public WifiAwareHelper(Context context) {
         this.context = context;
+        this.wifiAwareManager = (WifiAwareManager) context.getSystemService(Context.WIFI_AWARE_SERVICE);
+    }
+
+    public WifiAwareHelper(Context context, WifiAwareStateListener listener) {
+        this(context);
+        listeners.add(listener);
     }
 
     public CompletableFuture<Boolean> initialize() {
-        WifiAwareManager wifiAwareManager = (WifiAwareManager) context.getSystemService(Context.WIFI_AWARE_SERVICE);
         var future = new CompletableFuture<Boolean>();
-        if (wifiAwareManager == null || !wifiAwareManager.isAvailable()) {
-            future.completeExceptionally(new WiFiAwareException("Wi-Fi Aware is not available"));
+
+        if (wifiAwareManager == null) {
+            future.completeExceptionally(new WiFiAwareException("WiFi Aware service is not available"));
             return future;
         }
 
-        wifiAwareManager.attach(new AttachCallback() {
-            @Override
-            public void onAttached(WifiAwareSession session) {
-                wifiAwareSession = session;
-                future.complete(true);
-            }
+        if (!wifiAwareManager.isAvailable()) {
+            future.complete(false);
+            notifyActionToListeners(WifiAwareEventType.WIFI_AWARE_MANAGER_FAILED, "WiFi Aware is not available");
+            return future;
+        }
 
-            @Override
-            public void onAttachFailed() {
-                future.complete(false);
-            }
+        Handler mainHandler = new Handler(Looper.getMainLooper());
 
-            @Override
-            public void onAwareSessionTerminated() {
-                future.complete(false);
+        try {
+            wifiAwareManager.attach(new AttachCallback() {
+                @Override
+                public void onAttached(WifiAwareSession session) {
+                    mainHandler.post(() -> {
+                        synchronized (WifiAwareHelper.this) {
+                            wifiAwareSession = session;
+                        }
+                        future.complete(true);
+                        notifyActionToListeners(WifiAwareEventType.WIFI_AWARE_MANAGER_INITIALIZED);
+                    });
+                }
+
+                @Override
+                public void onAttachFailed() {
+                    mainHandler.post(() -> {
+                        future.complete(false);
+                        notifyActionToListeners(WifiAwareEventType.WIFI_AWARE_MANAGER_FAILED, "Failed to attach to WiFi Aware");
+                    });
+                }
+
+                @Override
+                public void onAwareSessionTerminated() {
+                    mainHandler.post(() -> {
+                        synchronized (WifiAwareHelper.this) {
+                            wifiAwareSession = null;
+                        }
+                        notifyActionToListeners(WifiAwareEventType.WIFI_AWARE_MANAGER_TERMINATED);
+                    });
+                }
+            }, mainHandler);
+
+            if (receiver == null) {
+                receiver = new WifiAwareBroadcastReceiver();
             }
-        }, null);
+            registerWifiIntentReceiver();
+
+            mainHandler.postDelayed(() -> {
+                if (!future.isDone()) {
+                    future.completeExceptionally(new WiFiAwareException("Initialization timed out"));
+                }
+            }, 10000);
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error initializing WiFi Aware", e);
+            future.completeExceptionally(new WiFiAwareException("Initialization error: " + e.getMessage()));
+        }
+
         return future;
     }
 
-    @RequiresPermission(allOf = {
-            ACCESS_WIFI_STATE,
-            CHANGE_WIFI_STATE,
-            ACCESS_FINE_LOCATION,
-            NEARBY_WIFI_DEVICES}, conditional = true)
-    public TransportWifiAwarePublisher registerService(final String serviceName,
-                                                    final byte[] description,
-                                                    final int port,
-                                                    Consumer<PeerMessage> messageReceiver) throws WiFiAwareException {
-        if (wifiAwareSession == null) {
-            throw new WiFiAwareException("Wi-Fi Aware session is not initialized");
-        }
-        PublishConfig publishConfig = new PublishConfig.Builder().setServiceName(serviceName)
-                .setServiceSpecificInfo(description)
-                .build();
-        if (wifiAwareSession == null) {
-            throw new WiFiAwareException("Wi-Fi Aware session is not initialized");
-        }
-        var publisherHelper = new TransportWifiAwarePublisher(this,
-                                                              serviceName,
-                                                              description,
-                                                              port,
-                                                              messageReceiver);
-        wifiAwareSession.publish(publishConfig, publisherHelper, null);
-        return publisherHelper;
+    public boolean isWifiAwareAvailable() {
+        return wifiAwareManager != null && wifiAwareManager.isAvailable();
     }
 
-    @RequiresPermission(allOf = {
-            ACCESS_WIFI_STATE,
-            CHANGE_WIFI_STATE,
-            ACCESS_FINE_LOCATION,
-            NEARBY_WIFI_DEVICES}, conditional = true)
-    public BundleClientWifiAwareSubscriber startDiscovery(final String serviceName,
-                                                          final byte[] serviceSpecificInfo,
-                                                          List<byte[]> matchFilter,
-                                                          Consumer<PeerMessage> messageReceiver,
-                                                          Consumer<ServiceDiscoveryInfo> serviceDiscoveryReceiver,
-                                                          Consumer<PeerHandle> serviceLostReceiver) throws WiFiAwareException {
-        if (wifiAwareSession == null) {
-            throw new WiFiAwareException("Wi-Fi Aware session is not initialized");
-        }
-        var configBuilder = new SubscribeConfig.Builder();
-        if (serviceName != null) configBuilder.setServiceName(serviceName);
-        if (serviceSpecificInfo != null) configBuilder.setServiceSpecificInfo(serviceSpecificInfo);
-        if (matchFilter != null) configBuilder.setMatchFilter(matchFilter);
-        BundleClientWifiAwareSubscriber subscriberHelper = new BundleClientWifiAwareSubscriber(this,
-                                                                                   serviceName,
-                                                                                   serviceSpecificInfo,
-                                                                                   matchFilter,
-                                                                                   messageReceiver,
-                                                                                   serviceDiscoveryReceiver,
-                                                                                   serviceLostReceiver);
-        wifiAwareSession.subscribe(configBuilder.build(), subscriberHelper, null);
-        return subscriberHelper;
+    public void addListener(WifiAwareStateListener listener) {
+        listeners.add(listener);
+    }
 
+    public void removeListener(WifiAwareStateListener listener) {
+        listeners.remove(listener);
     }
 
     public CompletableFuture<WifiAwareNetworkInfo> getConnectivityManager(DiscoverySession discoverySession, PeerHandle peerHandle, int port) {
@@ -132,7 +134,6 @@ public class WifiAwareHelper {
         var conInfo = connections.get(peerHandle);
         if (conInfo == null) {
             var newConInfo = new ConnectionInfo();
-            // we need this to disconnect the network when we are done
             var networkCallback = new ConnectivityManager.NetworkCallback() {
                 @Override
                 public void onCapabilitiesChanged(@NonNull Network network,
@@ -150,7 +151,6 @@ public class WifiAwareHelper {
         WifiAwareNetworkSpecifier networkSpecifier = new WifiAwareNetworkSpecifier.Builder(
                 discoverySession,
                 peerHandle).setPskPassphrase("DiscDataDist")
-                // 0 indicates port not used in the Builder
                 .setPort(Math.max(port, 0)).build();
 
         NetworkRequest networkRequest = new NetworkRequest.Builder().addTransportType(
@@ -164,9 +164,34 @@ public class WifiAwareHelper {
         return future;
     }
 
+    public WifiAwareSession getWifiAwareSession() {
+        return wifiAwareSession;
+    }
+
     public static class WiFiAwareException extends Exception {
         public WiFiAwareException(String message) {
             super(message);
+        }
+    }
+
+    public Context getContext() {return this.context;}
+
+    public void unregisterWifiIntentReceiver() {
+        getContext().unregisterReceiver(receiver);
+    }
+
+    public void registerWifiIntentReceiver() {
+        getContext().registerReceiver(receiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
+    }
+
+    void notifyActionToListeners(WifiAwareHelper.WifiAwareEventType type) {
+        notifyActionToListeners(type, null);
+    }
+
+    void notifyActionToListeners(WifiAwareHelper.WifiAwareEventType action, String message) {
+        var event = new WifiAwareHelper.WifiAwareEvent(action, message);
+        for (WifiAwareStateListener listener : listeners) {
+            listener.onReceiveAction(event);
         }
     }
 
@@ -185,8 +210,6 @@ public class WifiAwareHelper {
                     preSetNetworkInfo = networkInfo;
                 }
             }
-            // we need to do the complete() outside of the synchronized block to avoid deadlock
-            // that is why we have to do the preSetNetwork dance
             if (preSetNetworkInfo != null) {
                 future.complete(preSetNetworkInfo);
             }
@@ -206,4 +229,42 @@ public class WifiAwareHelper {
 
     public record PeerMessage(PeerHandle peerHandle, byte[] message) {
     }
+
+    public enum WifiAwareEventType {
+        WIFI_AWARE_MANAGER_INITIALIZED,
+        WIFI_AWARE_MANAGER_AVAILABILITY_CHANGED,
+        WIFI_AWARE_MANAGER_FAILED,
+        WIFI_AWARE_MANAGER_TERMINATED,
+    }
+    public record WifiAwareEvent(WifiAwareHelper.WifiAwareEventType type, String message) {}
+
+    public class WifiAwareBroadcastReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (ACTION_WIFI_AWARE_STATE_CHANGED.equals(action)) {
+                WifiAwareManager manager = (WifiAwareManager) context.getSystemService(Context.WIFI_AWARE_SERVICE);
+                boolean isAvailable = manager != null && manager.isAvailable();
+
+                Log.d(TAG, "WiFi Aware availability changed: " + (isAvailable ? "available" : "unavailable"));
+
+                // If WiFi Aware became unavailable and we had a session, handle session termination
+                if (!isAvailable && wifiAwareSession != null) {
+                    wifiAwareSession = null;
+                    notifyActionToListeners(
+                            WifiAwareEventType.WIFI_AWARE_MANAGER_TERMINATED,
+                            "WiFi Aware session terminated due to availability change"
+                    );
+                }
+
+                // Notify listeners about availability change
+                notifyActionToListeners(
+                        WifiAwareEventType.WIFI_AWARE_MANAGER_AVAILABILITY_CHANGED,
+                        "WiFi Aware availability: " + (isAvailable ? "available" : "unavailable")
+                );
+            }
+        }
+    }
+
 }
+
