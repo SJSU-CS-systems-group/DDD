@@ -35,6 +35,7 @@ import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
 import net.discdd.bundletransport.screens.StorageFragment;
+import net.discdd.bundletransport.screens.UploadFragment;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.screens.LogFragment;
 import net.discdd.screens.PermissionsFragment;
@@ -130,11 +131,7 @@ public class BundleTransportActivity extends AppCompatActivity {
             logger.log(SEVERE, "Failed to initialize GrpcSecurity for transport", e);
         }
 
-        ServerUploadFragment serverFrag =
-                ServerUploadFragment.newInstance(Base64.getEncoder().encodeToString(transportGrpcSecurity.getGrpcKeyPair().getPublic()
-                                                                                            .getEncoded()), transportPaths,
-                                                 connectivityEventPublisher);
-        serverUploadFragment = new TitledFragment(getString(R.string.upload), serverFrag);
+        serverUploadFragment = new TitledFragment(getString(R.string.upload), new UploadFragment());
         TransportWifiDirectFragment transportFrag = TransportWifiDirectFragment.newInstance(transportPaths);
         transportWifiFragment = new TitledFragment(getString(R.string.local_wifi), transportFrag);
         storageFragment = new TitledFragment("Storage", new StorageFragment());

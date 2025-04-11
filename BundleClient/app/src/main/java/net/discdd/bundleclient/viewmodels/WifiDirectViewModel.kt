@@ -1,6 +1,7 @@
 package net.discdd.bundleclient.viewmodels
 
 import android.app.Application
+import android.content.Context.MODE_PRIVATE
 import android.content.IntentFilter
 import android.net.wifi.p2p.WifiP2pGroup
 import android.text.format.DateUtils
@@ -11,7 +12,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import net.discdd.bundleclient.BundleClientActivity
 import net.discdd.bundleclient.BundleClientServiceBroadcastReceiver
 import net.discdd.bundleclient.BundleClientWifiDirectService
 import net.discdd.bundleclient.R
@@ -49,27 +49,31 @@ class WifiDirectViewModel(
     private val wifiService by lazy { WifiServiceManager.getService() }
     private val peerDeviceAddresses = ArrayList<String>()
     private val intentFilter = IntentFilter()
+    private val sharedPref = context.getSharedPreferences(NET_DISCDD_BUNDLECLIENT_NUM_DENIED, MODE_PRIVATE)
+
+    private val _numDenied = MutableStateFlow(0)
+    val numDenied = _numDenied.asStateFlow()
+
     private val _state = MutableStateFlow(WifiDirectState())
     val state = _state.asStateFlow()
 
     init {
+        val numDeniedCached = sharedPref.getInt(NET_DISCDD_BUNDLECLIENT_NUM_DENIED, 0)
+        _numDenied.value = numDeniedCached
+
         intentFilter.addAction(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_WIFI_EVENT_ACTION)
         intentFilter.addAction(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_LOG_ACTION)
-
         registerBroadcastReceiver()
     }
 
-    fun initialize(serviceReadyFuture: CompletableFuture<BundleClientActivity>) {
+    fun initialize(serviceReadyFuture: CompletableFuture<BundleClientWifiDirectService>) {
         viewModelScope.launch {
-            serviceReadyFuture.thenAccept {
-                val service = wifiService
-                if (service != null) {
-                    _state.update {
-                        it.copy(
-                            clientId = service.clientId,
-                            deliveryStatus = if (service.isDiscoveryActive) "Active" else "Inactive"
-                        )
-                    }
+            serviceReadyFuture.thenAccept { service ->
+                _state.update {
+                    it.copy(
+                        clientId = service.clientId,
+                        deliveryStatus = if (service.isDiscoveryActive) "Active" else "Inactive"
+                    )
                 }
             }
         }
@@ -206,5 +210,15 @@ class WifiDirectViewModel(
 
     fun getWifiBgService(): BundleClientWifiDirectService? {
         return wifiService
+    }
+
+    fun incrementNumDenied() {
+        val newNumDenied = _numDenied.value + 1
+        _numDenied.value = newNumDenied
+        sharedPref.edit().putInt(NET_DISCDD_BUNDLECLIENT_NUM_DENIED, newNumDenied).apply()
+    }
+
+    companion object {
+        const val NET_DISCDD_BUNDLECLIENT_NUM_DENIED: String = "net.discdd.bundleclient.NUM_DENIED"
     }
 }

@@ -1,6 +1,7 @@
 
 package net.discdd.viewmodels;
 
+import android.app.Activity
 import android.app.AlertDialog
 import android.app.Application
 import android.content.Context
@@ -25,7 +26,7 @@ data class PermissionItemData(
 )
 
 class PermissionsViewModel(
-    application: Application
+    application: Application,
 ) : AndroidViewModel(application) {
     private val context get() = getApplication<Application>()
     private val logger = Logger.getLogger(PermissionsViewModel::class.java.name)
@@ -78,10 +79,9 @@ class PermissionsViewModel(
         }
     }
 
-    fun checkPermission(permission: String) {
+    fun checkPermission(permission: String, activity: Activity) {
         viewModelScope.launch {
-            logger.log(Level.FINE, "Checking permission $permission")
-            if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
+           if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
                 updatePermissionItem(permission, true)
                 trackGrantedPermission(permission)
             } else {
