@@ -26,16 +26,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.launch
+import net.discdd.UsbConnectionManager
 import net.discdd.bundleclient.R
-import net.discdd.bundleclient.UsbConnectionManager
 import net.discdd.bundleclient.WifiServiceManager
-import net.discdd.bundleclient.viewmodels.HomeViewModel
 import net.discdd.screens.LogScreen
+import net.discdd.screens.NotificationBottomSheet
 import net.discdd.screens.PermissionScreen
-import androidx.lifecycle.viewmodel.compose.viewModel
+import net.discdd.viewmodels.SettingsViewModel
 
 data class TabItem(
     val title: String,
@@ -45,7 +46,7 @@ data class TabItem(
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun HomeScreen(
-    viewModel: HomeViewModel = viewModel()
+    viewModel: SettingsViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
