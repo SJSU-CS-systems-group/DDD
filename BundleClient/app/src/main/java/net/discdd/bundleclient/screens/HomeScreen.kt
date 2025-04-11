@@ -31,6 +31,7 @@ import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.launch
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.UsbConnectionManager
+import net.discdd.bundleclient.WifiAwareManager
 import net.discdd.bundleclient.WifiServiceManager
 import net.discdd.bundleclient.viewmodels.HomeViewModel
 import net.discdd.screens.LogScreen
@@ -65,6 +66,10 @@ fun HomeScreen(
                         nearbyWifiState = nearbyWifiState
                     )
                 }
+            ),
+            TabItem(
+                title = "Wifi Aware",
+                screen = { WifiAwareSubscriberScreen(serviceReadyFuture = WifiAwareManager.serviceReady) }
             ),
             TabItem(
                 title = context.getString(R.string.server_tab),
