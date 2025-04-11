@@ -31,12 +31,15 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -194,8 +197,16 @@ public class BundleTransmission {
         applicationDataManager.registerNewBundleId(clientId, encryptedBundleId, bundleCounter, ackedRecievedBundle);
         bundleSecurity.getIdentityPublicKey();
         var adus = applicationDataManager.fetchADUsToSend(0, clientId);
-        var byteArrayOsForPayload = new ByteArrayOutputStream();
-        BundleUtils.createBundlePayloadForAdus(adus, null, counts.lastReceivedBundleId, byteArrayOsForPayload);
+        PipedInputStream pipedInputStream = new PipedInputStream();
+        PipedOutputStream pipedOutputStream = new PipedOutputStream(pipedInputStream);
+        Thread thread = new Thread(() -> {
+            try {
+                BundleUtils.createBundlePayloadForAdus(adus, null, counts.lastReceivedBundleId, pipedOutputStream);
+            }catch(IOException| NoSuchAlgorithmException e){
+                System.err.println(e.getMessage());
+            }
+        });
+        thread.start();
         try (var bundleOutputStream = Files.newOutputStream(getPathForBundleToSend(encryptedBundleId),
                                                             StandardOpenOption.CREATE,
                                                             StandardOpenOption.TRUNCATE_EXISTING)) {
@@ -203,7 +214,7 @@ public class BundleTransmission {
                                                       serverSecurity.getClientIdentityPublicKey(clientId),
                                                       serverSecurity.getClientBaseKey(clientId),
                                                       serverSecurity.getIdentityPublicKey().getPublicKey(),
-                                                      encryptedBundleId, new ByteArrayInputStream(byteArrayOsForPayload.toByteArray()),
+                                                      encryptedBundleId, pipedInputStream,
                                                       bundleOutputStream);
         } catch (InvalidMessageException e) {
             throw new GeneralSecurityException(e);
