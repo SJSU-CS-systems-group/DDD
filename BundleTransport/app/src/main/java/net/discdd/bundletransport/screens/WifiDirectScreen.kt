@@ -49,26 +49,27 @@ fun WifiDirectScreen(
     val state by wifiViewModel.state.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    LaunchedEffect(Unit) {
-        wifiViewModel.initialize(serviceReadyFuture)
-    }
-
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_RESUME -> wifiViewModel.registerBroadcastReceiver()
-                Lifecycle.Event.ON_PAUSE -> wifiViewModel.unregisterBroadcastReceiver()
-                else -> {}
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
+
+        LaunchedEffect(Unit) {
+            wifiViewModel.initialize(serviceReadyFuture)
+        }
+
+        DisposableEffect(lifecycleOwner) {
+            val observer = LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_RESUME -> wifiViewModel.registerBroadcastReceiver()
+                    Lifecycle.Event.ON_PAUSE -> wifiViewModel.unregisterBroadcastReceiver()
+                    else -> {}
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -89,7 +90,7 @@ fun WifiDirectScreen(
             Text(text = state.wifiInfoView)
             Text(text = state.wifiStatusView)
             Text(text = state.clientLogView)
-            Text(text = state.deviceNameView)
+            Text(text = "Device Name: ${state.deviceNameView}")
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -106,7 +107,8 @@ fun WifiDirectScreen(
                 )
                 Text(text = "Collect data even when app is closed")
             }
-            //BundleClient interactions
+
+            Text(text = "Interactions with BundleClients")
         }
     }
 }
