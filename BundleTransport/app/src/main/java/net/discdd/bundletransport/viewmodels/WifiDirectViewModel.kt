@@ -127,7 +127,7 @@ class WifiDirectViewModel(
                     }
                     info = String.format("SSID: %s\nPassword: %s\nAddress: %s\nConnected devices: %d",
                         gi.getNetworkName(), gi.getPassphrase(), addresses, gi.getClientList().size)
-                }
+                }   //TO-DO connected devices seems to not along with the group info devices
                 _state.update {
                     it.copy(wifiInfoView = info)
                 }

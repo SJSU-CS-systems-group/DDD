@@ -76,7 +76,7 @@ fun WifiDirectScreen(
 ) {
     val state by wifiViewModel.state.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
-    var showDialog = false;
+    var showDialog by remember { mutableStateOf(false) }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -117,8 +117,7 @@ fun WifiDirectScreen(
 
             Text(
                 text = state.wifiInfoView,
-                modifier = Modifier
-                    .clickable {showDialog = true}
+                modifier = Modifier.clickable {showDialog = true}
             )
             if (showDialog == true) {
                 var gi = if (wifiViewModel.getService() != null) wifiViewModel.getService()?.groupInfo else null
@@ -127,15 +126,9 @@ fun WifiDirectScreen(
                     gi.clientList.forEach {connectedPeers.add(it.deviceName)}
                 }
                 AlertDialog(
-                    title = {
-                        Text(text = "Connected Devices")
-                    },
-                    text = {
-                        Text(text = connectedPeers.toTypedArray().toString())
-                    },
-                    onDismissRequest = {
-                        showDialog = false
-                    },
+                    title = { Text(text = "Connected Devices") },
+                    text = { Text(text = connectedPeers.toTypedArray().toString()) },
+                    onDismissRequest = { showDialog = false },
                     confirmButton = {
                         TextButton(
                             onClick = {
