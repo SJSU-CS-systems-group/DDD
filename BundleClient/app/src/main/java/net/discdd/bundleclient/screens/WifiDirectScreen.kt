@@ -120,7 +120,7 @@ fun WifiDirectScreen(
             if (!nearbyWifiState.status.isGranted) {
                 WifiPermissionBanner(numDenied, nearbyWifiState) {
                     // if user denies access twice, manual access in settings is required
-                    if (numDenied > 2) {
+                    if (numDenied >= 2) {
                         val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                             data = Uri.fromParts("package", context.packageName, null)
                         }
