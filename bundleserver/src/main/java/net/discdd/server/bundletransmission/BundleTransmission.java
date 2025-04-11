@@ -208,6 +208,9 @@ public class BundleTransmission {
                 return null;
             });
             future.get();
+            if(!future.isCancelled()){
+                future.cancel(true);
+            }
             var bundleOutputStream = Files.newOutputStream(getPathForBundleToSend(encryptedBundleId),
                                                             StandardOpenOption.CREATE,
                                                             StandardOpenOption.TRUNCATE_EXISTING);
@@ -217,9 +220,7 @@ public class BundleTransmission {
                                                       serverSecurity.getIdentityPublicKey().getPublicKey(),
                                                       encryptedBundleId, pipedInputStream,
                                                       bundleOutputStream);
-            if(!future.isCancelled()){
-                future.cancel(true);
-            }
+
         } catch (InvalidMessageException | ExecutionException | InterruptedException e) {
                 throw new GeneralSecurityException(e);
         }
