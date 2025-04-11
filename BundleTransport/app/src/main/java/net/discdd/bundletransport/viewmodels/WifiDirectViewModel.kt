@@ -42,7 +42,7 @@ class WifiDirectViewModel(
     }
     private val _state = MutableStateFlow(WifiDirectState())
     private var btService: TransportWifiDirectService ?= null
-    private var transportPaths: TransportPaths ?= null
+    private var transportPaths: TransportPaths = TransportPaths(context.getExternalFilesDir(null)?.toPath())
     val state = _state.asStateFlow()
 
 
@@ -63,10 +63,6 @@ class WifiDirectViewModel(
 
     fun setTransportPaths(transportPaths: TransportPaths) {
         this.transportPaths = transportPaths
-    }
-
-    fun getActivity(): BundleTransportActivity {
-        return context as BundleTransportActivity
     }
 
     fun processDeviceInfoChange() {

@@ -1,6 +1,9 @@
 package net.discdd.bundletransport.screens
 
-import android.R.attr.background
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.foundation.layout.Arrangement
@@ -10,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -24,18 +26,40 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import net.discdd.bundletransport.BundleTransportActivity
 import net.discdd.bundletransport.TransportWifiDirectService
 import net.discdd.bundletransport.viewmodels.WifiDirectViewModel
+import net.discdd.theme.ComposableTheme
 import java.util.concurrent.CompletableFuture
+
+class WifiDirectFragment: Fragment() {
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        return ComposeView(requireContext()).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                ComposableTheme {
+                    WifiDirectScreen(serviceReadyFuture = (activity as BundleTransportActivity).serviceReady())
+                }
+            }
+        }
+    }
+
+}
 
 @Composable
 fun WifiDirectScreen(
