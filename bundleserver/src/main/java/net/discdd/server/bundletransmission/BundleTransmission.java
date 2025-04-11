@@ -46,6 +46,10 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
@@ -60,6 +64,7 @@ import static net.discdd.grpc.BundleSenderType.TRANSPORT;
 public class BundleTransmission {
 
     private static final Logger logger = Logger.getLogger(BundleTransmission.class.getName());
+    private static final ExecutorService executorService = Executors.newCachedThreadPool();
     public static final int WINDOW_LENGTH = 3;
     private final BundleServerConfig config;
     private final BundleSecurity bundleSecurity;
@@ -193,25 +198,27 @@ public class BundleTransmission {
         var adus = applicationDataManager.fetchADUsToSend(0, clientId);
         PipedInputStream pipedInputStream = new PipedInputStream();
         PipedOutputStream pipedOutputStream = new PipedOutputStream(pipedInputStream);
-        Thread thread = new Thread(() -> {
-            try {
-                BundleUtils.createBundlePayloadForAdus(adus, null, counts.lastReceivedBundleId, pipedOutputStream);
-            }catch(IOException| NoSuchAlgorithmException e){
-                System.err.println(e.getMessage());
-            }
-        });
-        thread.start();
-        try (var bundleOutputStream = Files.newOutputStream(getPathForBundleToSend(encryptedBundleId),
+        try{
+            Future<?> future = executorService.submit(() -> {
+                try {
+                    BundleUtils.createBundlePayloadForAdus(adus, null, counts.lastReceivedBundleId, pipedOutputStream);
+                }catch(IOException| NoSuchAlgorithmException e){
+                    throw new IOException("Error processing message: " + e.getMessage(), e);
+                }
+                return null;
+            });
+            future.get();
+            var bundleOutputStream = Files.newOutputStream(getPathForBundleToSend(encryptedBundleId),
                                                             StandardOpenOption.CREATE,
-                                                            StandardOpenOption.TRUNCATE_EXISTING)) {
+                                                            StandardOpenOption.TRUNCATE_EXISTING);
             BundleUtils.encryptPayloadAndCreateBundle((inputStream, outputStream) -> serverSecurity.encrypt(clientId, inputStream, outputStream),
                                                       serverSecurity.getClientIdentityPublicKey(clientId),
                                                       serverSecurity.getClientBaseKey(clientId),
                                                       serverSecurity.getIdentityPublicKey().getPublicKey(),
                                                       encryptedBundleId, pipedInputStream,
                                                       bundleOutputStream);
-        } catch (InvalidMessageException e) {
-            throw new GeneralSecurityException(e);
+        } catch (InvalidMessageException | ExecutionException | InterruptedException e) {
+                throw new GeneralSecurityException(e);
         }
         return encryptedBundleId;
     }
