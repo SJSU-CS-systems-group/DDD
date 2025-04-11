@@ -1,20 +1,24 @@
 package net.discdd.bundletransport.viewmodels
 
 import android.app.Application
+import android.content.Intent
 import android.content.IntentFilter
+import android.provider.Settings
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import net.discdd.bundletransport.BundleTransportActivity
+
 import net.discdd.bundletransport.BundleTransportWifiEvent
 import net.discdd.bundletransport.R
 import net.discdd.bundletransport.TransportWifiDirectService
 import net.discdd.pathutils.TransportPaths
 import net.discdd.wifidirect.WifiDirectManager.WifiDirectStatus
+
 import java.net.Inet4Address
 import java.net.NetworkInterface
 import java.net.SocketException
@@ -24,7 +28,6 @@ import java.util.stream.Collectors
 
 data class WifiDirectState(
     val deviceNameView: String = "",
-    val changeDeviceNameView: String = "",
     val wifiInfoView: String = "",
     val clientLogView: String = "",
     val wifiStatusView: String = "",
@@ -65,6 +68,10 @@ class WifiDirectViewModel(
         this.transportPaths = transportPaths
     }
 
+    fun getService(): TransportWifiDirectService? {
+        return btService
+    }
+
     fun processDeviceInfoChange() {
         // NOTE: we aren't using device info here, but be aware that it can be null!
         viewModelScope.launch {
@@ -73,11 +80,7 @@ class WifiDirectViewModel(
             _state.update {
                 it.copy(deviceNameView = if (deviceName != null) deviceName else "Unknown")
             }
-            // only show the changeDeviceNameView if we don't have a valid device name
-            // (transports must have device names starting with ddd_)
-            if (deviceName != null) {
-                //changeDeviceNameView?
-            }
+
             var status = btService!!.status
             _state.update {
                 it.copy(wifiStatusView = when (status) {
@@ -144,5 +147,9 @@ class WifiDirectViewModel(
                 it.copy(clientLogView = state.value.clientLogView + message + '\n')
             }
         }
+    }
+
+    fun changeName() {
+        context.startActivity(Intent(Settings.ACTION_DEVICE_INFO_SETTINGS))
     }
 }

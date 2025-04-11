@@ -1,11 +1,12 @@
 package net.discdd.bundletransport.screens
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.content.Context
-import android.content.SharedPreferences
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,8 +15,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -31,17 +34,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+
+import java.util.concurrent.CompletableFuture
+
 import net.discdd.bundletransport.BundleTransportActivity
 import net.discdd.bundletransport.TransportWifiDirectService
 import net.discdd.bundletransport.viewmodels.WifiDirectViewModel
 import net.discdd.theme.ComposableTheme
-import java.util.concurrent.CompletableFuture
 
 class WifiDirectFragment: Fragment() {
     override fun onCreateView(
@@ -72,6 +76,7 @@ fun WifiDirectScreen(
 ) {
     val state by wifiViewModel.state.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
+    var showDialog = false;
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -100,7 +105,6 @@ fun WifiDirectScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            //Should be rewritten with wifiInfoVie
 
             var checked by remember {
                 mutableStateOf(
@@ -111,10 +115,44 @@ fun WifiDirectScreen(
                 )
             }
 
-            Text(text = state.wifiInfoView)
-            Text(text = state.wifiStatusView)
-            Text(text = state.clientLogView)
-            Text(text = "Device Name: ${state.deviceNameView}")
+            Text(
+                text = state.wifiInfoView,
+                modifier = Modifier
+                    .clickable {showDialog = true}
+            )
+            if (showDialog == true) {
+                var gi = if (wifiViewModel.getService() != null) wifiViewModel.getService()?.groupInfo else null
+                var connectedPeers: ArrayList<String> = ArrayList<String>()
+                if (gi != null) {
+                    gi.clientList.forEach {connectedPeers.add(it.deviceName)}
+                }
+                AlertDialog(
+                    title = {
+                        Text(text = "Connected Devices")
+                    },
+                    text = {
+                        Text(text = connectedPeers.toTypedArray().toString())
+                    },
+                    onDismissRequest = {
+                        showDialog = false
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showDialog = false
+                            }
+                        ) {
+                            Text("Dismiss")
+                        }
+                    }
+                )
+            }
+
+            Text(text = "Wifi Status: ${state.wifiStatusView}")
+
+            // add "ddd_" prefix if we don't have a valid device name
+            // (transports must have device names starting with ddd_)
+            Text(text = if (state.deviceNameView.startsWith("ddd_")) "Device Name: ${state.deviceNameView}" else "Device Name: ddd_${state.deviceNameView}")
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -133,6 +171,7 @@ fun WifiDirectScreen(
             }
 
             Text(text = "Interactions with BundleClients")
+            Text(text = state.clientLogView)
         }
     }
 }
