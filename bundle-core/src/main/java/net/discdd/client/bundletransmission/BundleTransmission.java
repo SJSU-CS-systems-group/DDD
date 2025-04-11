@@ -180,7 +180,7 @@ public class BundleTransmission {
             }
         });
         thread.start();
-        ClientSecurity clientSecurity = bundleSecur diity.getClientSecurity();
+        ClientSecurity clientSecurity = bundleSecurity.getClientSecurity();
         Path bundleFile = clientPaths.tosendDir.resolve(bundleId);
         try (OutputStream os = Files.newOutputStream(bundleFile, StandardOpenOption.CREATE,
                                                      StandardOpenOption.TRUNCATE_EXISTING)){
