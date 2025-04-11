@@ -5,10 +5,12 @@ import android.content.IntentFilter
 import android.net.wifi.p2p.WifiP2pGroup
 import android.text.format.DateUtils
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import net.discdd.bundleclient.BundleClientActivity
 import net.discdd.bundleclient.BundleClientServiceBroadcastReceiver
 import net.discdd.bundleclient.BundleClientWifiDirectService
@@ -58,14 +60,16 @@ class WifiDirectViewModel(
     }
 
     fun initialize(serviceReadyFuture: CompletableFuture<BundleClientActivity>) {
-        serviceReadyFuture.thenAccept {
-            val service = wifiService
-            if (service != null) {
-                _state.update {
-                    it.copy(
-                        clientId = service.clientId,
-                        deliveryStatus = if (service.isDiscoveryActive) "Active" else "Inactive"
-                    )
+        viewModelScope.launch {
+            serviceReadyFuture.thenAccept {
+                val service = wifiService
+                if (service != null) {
+                    _state.update {
+                        it.copy(
+                            clientId = service.clientId,
+                            deliveryStatus = if (service.isDiscoveryActive) "Active" else "Inactive"
+                        )
+                    }
                 }
             }
         }
@@ -73,17 +77,15 @@ class WifiDirectViewModel(
 
     fun showPeerDialog(deviceAddress: String) {
         val peer = wifiService?.getPeer(deviceAddress)
-
         val currentPeer = _state.value.peers.find { it.deviceAddress == deviceAddress }
-        if (currentPeer != null) {
-            val updatedPeer = currentPeer.copy(
-                lastSeen = peer?.lastSeen ?: 0,
-                lastExchange = peer?.lastExchange ?: 0,
-                recencyTime = peer?.recencyTime ?: 0,
-            )
+        currentPeer ?: return
+        val updatedPeer = currentPeer.copy(
+            lastSeen = peer?.lastSeen ?: 0,
+            lastExchange = peer?.lastExchange ?: 0,
+            recencyTime = peer?.recencyTime ?: 0,
+        )
+        _state.update { it.copy(dialogPeer = updatedPeer) }
 
-            _state.update { it.copy(dialogPeer = updatedPeer) }
-        }
     }
 
     fun dismissDialog() {
@@ -91,10 +93,11 @@ class WifiDirectViewModel(
     }
 
     fun exchangeMessage(deviceAddress: String) {
-        updatePeerExchangeStatus(deviceAddress, true)
-
-        wifiService?.initiateExchange(deviceAddress)?.thenAccept {
-            updatePeerExchangeStatus(deviceAddress, false)
+        viewModelScope.launch {
+            updatePeerExchangeStatus(deviceAddress, true)
+            wifiService?.initiateExchange(deviceAddress)?.thenAccept {
+                updatePeerExchangeStatus(deviceAddress, false)
+            }
         }
     }
 
@@ -106,7 +109,6 @@ class WifiDirectViewModel(
                 peer
             }
         }
-
         _state.update { it.copy(peers = updatedPeers) }
     }
 
@@ -116,28 +118,33 @@ class WifiDirectViewModel(
     }
 
     fun registerBroadcastReceiver() {
-        LocalBroadcastManager.getInstance(context)
-            .registerReceiver(bundleClientServiceBroadcastReceiver, intentFilter)
+        viewModelScope.launch {
+            LocalBroadcastManager.getInstance(context)
+                .registerReceiver(bundleClientServiceBroadcastReceiver, intentFilter)
+        }
     }
 
     fun unregisterBroadcastReceiver() {
-        LocalBroadcastManager.getInstance(context)
-            .unregisterReceiver(bundleClientServiceBroadcastReceiver)
+        viewModelScope.launch {
+            LocalBroadcastManager.getInstance(context)
+                .unregisterReceiver(bundleClientServiceBroadcastReceiver)
+        }
     }
 
     fun appendResultText(text: String?) {
-        if (text == null) return
-
-        var resultText = _state.value.resultText
-        if (resultText.count { it == '\n' } > 20) {
-            val nl = resultText.indexOf('\n')
-            if (nl != -1) {
-                resultText = resultText.substring(nl + 1)
+        viewModelScope.launch {
+            text ?: return@launch
+            var resultText = _state.value.resultText
+            if (resultText.count { it == '\n' } > 20) {
+                val nl = resultText.indexOf('\n')
+                if (nl != -1) {
+                    resultText = resultText.substring(nl + 1)
+                }
             }
-        }
 
-        resultText += "$text\n"
-        _state.update { it.copy(resultText = resultText) }
+            resultText += "$text\n"
+            _state.update { it.copy(resultText = resultText) }
+        }
     }
 
     fun updateDeliveryStatus() {
@@ -148,48 +155,53 @@ class WifiDirectViewModel(
 
     // method to update connected peers list in client
     fun updateConnectedDevices() {
-        val recentTransports = wifiService?.recentTransports ?: return
-        val discoveredPeers = recentTransports.map { it.deviceAddress }
-        val currentPeers = HashSet(peerDeviceAddresses)
+        viewModelScope.launch {
+            val recentTransports = wifiService?.recentTransports ?: return@launch
+            val discoveredPeers = recentTransports.map { it.deviceAddress }
+            val currentPeers = HashSet(peerDeviceAddresses)
 
-        // new names (discoveredPeers - currentPeers)
-        val newNames = HashSet(discoveredPeers)
-        newNames.removeAll(currentPeers)
+            // new names (discoveredPeers - currentPeers)
+            val newNames = HashSet(discoveredPeers)
+            newNames.removeAll(currentPeers)
 
-        // removed names (currentPeers - discoveredPeers)
-        val removedNames = HashSet(currentPeers)
-        removedNames.removeAll(discoveredPeers.toSet())
-        peerDeviceAddresses.removeIf { removedNames.contains(it) }
-        peerDeviceAddresses.addAll(newNames)
+            // removed names (currentPeers - discoveredPeers)
+            val removedNames = HashSet(currentPeers)
+            removedNames.removeAll(discoveredPeers.toSet())
+            peerDeviceAddresses.removeIf { removedNames.contains(it) }
+            peerDeviceAddresses.addAll(newNames)
 
-        val updatedPeers = peerDeviceAddresses.mapNotNull { deviceAddress ->
-            val peer = wifiService?.getPeer(deviceAddress)
-            if (peer != null) {
-                PeerDevice(
-                    deviceAddress = deviceAddress,
-                    deviceName = peer.deviceName,
-                    lastSeen = peer.lastSeen,
-                    lastExchange = peer.lastExchange,
-                    recencyTime = peer.recencyTime
-                )
-            } else {
-                null
+            val updatedPeers = peerDeviceAddresses.mapNotNull { deviceAddress ->
+                val peer = wifiService?.getPeer(deviceAddress)
+                if (peer != null) {
+                    PeerDevice(
+                        deviceAddress = deviceAddress,
+                        deviceName = peer.deviceName,
+                        lastSeen = peer.lastSeen,
+                        lastExchange = peer.lastExchange,
+                        recencyTime = peer.recencyTime
+                    )
+                } else {
+                    null
+                }
             }
+            _state.update { it.copy(peers = updatedPeers) }
         }
-        _state.update { it.copy(peers = updatedPeers) }
     }
 
     fun updateOwnerAndGroupInfo(groupOwnerAddress: InetAddress?, groupInfo: WifiP2pGroup?) {
-        val ownerNameAndAddress = if (groupInfo == null || groupInfo.owner == null) {
-            context.getString(R.string.not_connected)
-        } else {
-            context.getString(R.string.connected_to_transport)
+        viewModelScope.launch {
+            val ownerNameAndAddress = context.getString(
+                if (groupInfo?.owner == null) R.string.not_connected
+                else R.string.connected_to_transport
+            )
+            _state.update { it.copy(connectedDeviceText = ownerNameAndAddress) }
         }
-        _state.update { it.copy(connectedDeviceText = ownerNameAndAddress) }
     }
 
     fun discoverPeers() {
-        wifiService?.discoverPeers()
+        viewModelScope.launch {
+            wifiService?.discoverPeers()
+        }
     }
 
     fun getWifiBgService(): BundleClientWifiDirectService? {
