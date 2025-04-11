@@ -7,6 +7,10 @@
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
+    <properties>
+    <lombok.version>1.18.32</lombok.version>
+    </properties>
+
     <modules>
         <module>DDD-libsignal-protocol-java</module>
         <module>bundle-core</module>
@@ -15,7 +19,6 @@
         <module>apps/cli</module>
         <module>apps/echo/server</module>
         <module>apps/k9/server</module>
-
     </modules>
 
 </project>
