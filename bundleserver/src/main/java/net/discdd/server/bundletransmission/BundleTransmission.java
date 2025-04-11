@@ -217,6 +217,9 @@ public class BundleTransmission {
                                                       serverSecurity.getIdentityPublicKey().getPublicKey(),
                                                       encryptedBundleId, pipedInputStream,
                                                       bundleOutputStream);
+            if(!future.isCancelled()){
+                future.cancel(true);
+            }
         } catch (InvalidMessageException | ExecutionException | InterruptedException e) {
                 throw new GeneralSecurityException(e);
         }
