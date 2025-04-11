@@ -95,12 +95,12 @@ public class TestInMemorySignalProtocolStore implements SignalProtocolStore {
     }
 
     @Override
-    public void saveIdentity(String name, IdentityKey identityKey) {
+    public void saveIdentity(SignalProtocolAddress signalProtocolAddress, IdentityKey identityKey) {
         //Not Needed, evrything should occur in memory
     }
 
     @Override
-    public boolean isTrustedIdentity(String name, IdentityKey identityKey) {
+    public boolean isTrustedIdentity(SignalProtocolAddress signalProtocolAddress, IdentityKey identityKey) {
         return true; // Assuming trust during testing
     }
 
