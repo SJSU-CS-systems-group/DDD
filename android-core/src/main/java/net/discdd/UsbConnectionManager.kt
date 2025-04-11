@@ -1,4 +1,4 @@
-package net.discdd.bundleclient
+package net.discdd
 
 import android.content.BroadcastReceiver
 import android.content.Context

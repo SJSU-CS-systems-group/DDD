@@ -6,6 +6,7 @@ import android.net.ConnectivityManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import net.discdd.UsbConnectionManager
 import net.discdd.bundleclient.screens.HomeScreen
 import net.discdd.screens.LogFragment
 import net.discdd.theme.ComposableTheme
