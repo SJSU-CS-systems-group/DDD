@@ -6,12 +6,9 @@ import android.net.ConnectivityManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.viewModels
 import net.discdd.bundleclient.screens.HomeScreen
 import net.discdd.screens.LogFragment
 import net.discdd.theme.ComposableTheme
-import net.discdd.viewmodels.PermissionsViewModel
 import java.util.logging.Level.WARNING
 import java.util.logging.Logger
 
@@ -41,17 +38,9 @@ class BundleClientActivity: ComponentActivity() {
         val intent = Intent(this, BundleClientWifiDirectService::class.java)
         bindService(intent, WifiServiceManager.getConnection(), Context.BIND_AUTO_CREATE)
 
-        val permissionsViewModel: PermissionsViewModel by viewModels()
-        val activityResultLauncher = registerForActivityResult(
-            ActivityResultContracts.RequestMultiplePermissions()
-        ) { results -> permissionsViewModel.handlePermissionResults(results) }
-
         setContent {
             ComposableTheme {
-                HomeScreen(
-                    permissionsViewModel = permissionsViewModel,
-                    activityResultLauncher = activityResultLauncher,
-                )
+                HomeScreen()
             }
         }
     }
