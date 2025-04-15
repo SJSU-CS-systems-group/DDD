@@ -120,14 +120,14 @@ fun WifiDirectScreen(
                 modifier = Modifier.clickable {showDialog = true}
             )
             if (showDialog == true) {
-                var gi = if (wifiViewModel.getService() != null) wifiViewModel.getService()?.groupInfo else null
+                var gi = wifiViewModel.getService()?.groupInfo
                 var connectedPeers: ArrayList<String> = ArrayList<String>()
                 if (gi != null) {
-                    gi.clientList.forEach {connectedPeers.add(it.deviceName)}
+                    gi.clientList.forEach {c -> connectedPeers.add(c.deviceName)}
                 }
                 AlertDialog(
                     title = { Text(text = "Connected Devices") },
-                    text = { Text(text = connectedPeers.toTypedArray().toString()) },
+                    text = { Text(text = connectedPeers.toTypedArray().joinToString(", ")) },
                     onDismissRequest = { showDialog = false },
                     confirmButton = {
                         TextButton(
