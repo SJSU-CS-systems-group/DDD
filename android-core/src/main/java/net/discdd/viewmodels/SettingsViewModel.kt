@@ -36,7 +36,7 @@ class SettingsViewModel(
 
     companion object {
         const val NET_DISCDD_VIEWMODELS_PREFS = "net.discdd.viewmodels.PREFS"
-        const val NET_DISCDD_VIEWMODELS_FIRST_OPEN: String = "net.discdd.viewmodels.FIRST_OPEN"
-        const val NET_DISCDD_VIEWMODELS_SHOW_EASTER_EGG: String = "net.discdd.viewmodels.SHOW_EASTER_EGG"
+        const val NET_DISCDD_VIEWMODELS_FIRST_OPEN = "net.discdd.viewmodels.FIRST_OPEN"
+        const val NET_DISCDD_VIEWMODELS_SHOW_EASTER_EGG = "net.discdd.viewmodels.SHOW_EASTER_EGG"
     }
 }
