@@ -178,13 +178,15 @@ public class BundleTransmission {
                 try {
                     BundleUtils.createBundlePayloadForAdus(adus, routingData, ackedEncryptedBundleId, pipedOutputStream);
                 } catch (IOException | NoSuchAlgorithmException e) {
-                    throw new IOException("Error processing message: " + e.getMessage(), e);
+                    return e;
+                }finally{
+                    pipedOutputStream.close();
                 }
                 return null;
             });
 
             future.get();
-            if(!future.isCancelled()){
+            if(!future.isDone()){
                 future.cancel(true);
             }
             ClientSecurity clientSecurity = bundleSecurity.getClientSecurity();

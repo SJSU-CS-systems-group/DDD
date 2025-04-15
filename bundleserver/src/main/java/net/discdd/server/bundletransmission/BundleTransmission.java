@@ -203,11 +203,15 @@ public class BundleTransmission {
                 try {
                     BundleUtils.createBundlePayloadForAdus(adus, null, counts.lastReceivedBundleId, pipedOutputStream);
                 }catch(IOException| NoSuchAlgorithmException e){
-                    throw new IOException("Error processing message: " + e.getMessage(), e);
+                    return e;
+                }finally{
+                    pipedOutputStream.close();
                 }
                 return null;
             });
-            future.get();
+            if(future.get() != null){
+                throw new IOException(String.valueOf(future.get()));
+            }
             if(!future.isCancelled()){
                 future.cancel(true);
             }
