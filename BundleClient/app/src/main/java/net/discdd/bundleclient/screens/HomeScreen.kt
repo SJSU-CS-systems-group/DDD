@@ -81,6 +81,10 @@ fun HomeScreen(
         ),
     )
 
+    /*
+    * adminTabs are features that should only be shown to developers
+    * these features can be toggled by interacting with the Easter Egg
+    */
     val adminTabs = listOf(
         TabItem(
             title = context.getString(R.string.logs_tab),

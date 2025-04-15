@@ -134,6 +134,10 @@ fun WifiDirectScreen(
                 }
             }
 
+            /*
+            * The "ClientID" section is the designated easter egg location for BundleClient
+            * Click this portion 7 times in <3sec in order to toggle the easter egg!
+            * */
             EasterEgg(
                 content = { Text(text = "ClientId: ${state.clientId}") },
                 onToggle = onToggle,

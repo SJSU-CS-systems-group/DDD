@@ -10,6 +10,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 
+/*
+This component acts as a wrapper around a composable.
+When the content within the wrapper is clicked 7 times in less than 3 seconds,
+the onToggle lambda function is invoked.
+ */
 @Composable
 fun EasterEgg(
     content: @Composable () -> Unit,
