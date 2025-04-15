@@ -52,6 +52,7 @@ import net.discdd.bundleclient.BundleClientWifiDirectService
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.viewmodels.PeerDevice
 import net.discdd.bundleclient.viewmodels.WifiDirectViewModel
+import net.discdd.screens.EasterEgg
 import net.discdd.screens.WifiPermissionBanner
 import java.util.concurrent.CompletableFuture
 
@@ -64,7 +65,8 @@ fun WifiDirectScreen(
     preferences: SharedPreferences = LocalContext.current.getSharedPreferences(
         BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTINGS,
         Context.MODE_PRIVATE
-    )
+    ),
+    onToggle: () -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
     val numDenied by viewModel.numDenied.collectAsState()
@@ -132,7 +134,10 @@ fun WifiDirectScreen(
                 }
             }
 
-            Text(text = "ClientId: ${state.clientId}")
+            EasterEgg(
+                content = { Text(text = "ClientId: ${state.clientId}") },
+                onToggle = onToggle,
+            )
             Text(text = "Connected Device Addresses: ${state.connectedDeviceText}")
             Text(text = "Discovery Status: ${state.deliveryStatus}")
             var checked by remember {
@@ -231,8 +236,6 @@ fun PeerItem(
 fun WifiDirectScreenPreview() {
     WifiDirectScreen(
         serviceReadyFuture = CompletableFuture(),
-        nearbyWifiState = rememberPermissionState(
-            Manifest.permission.NEARBY_WIFI_DEVICES
-        )
-    )
+        nearbyWifiState = rememberPermissionState(Manifest.permission.NEARBY_WIFI_DEVICES)
+    ) {}
 }

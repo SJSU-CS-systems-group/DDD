@@ -52,53 +52,58 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val showUsbScreen by UsbConnectionManager.usbConnected.collectAsState()
     val firstOpen by viewModel.firstOpen.collectAsState()
+    val showEasterEgg by viewModel.showEasterEgg.collectAsState()
     val nearbyWifiState = rememberPermissionState(
             Manifest.permission.NEARBY_WIFI_DEVICES
     )
 
-    val standardTabs = remember {
-        listOf(
-            TabItem(
-                title = context.getString(R.string.home_tab),
-                screen = {
-                    WifiDirectScreen(
-                        serviceReadyFuture = WifiServiceManager.serviceReady,
-                        nearbyWifiState = nearbyWifiState
-                    )
-                }
-            ),
-            TabItem(
-                title = context.getString(R.string.server_tab),
-                screen = { ServerScreen() }
-            ),
-            TabItem(
-                title = context.getString(R.string.logs_tab),
-                screen = { LogScreen() }
-            ),
-            TabItem(
-                title = context.getString(R.string.bm_tab),
-                screen = { ManagerScreen() }
-            ),
-            TabItem(
-                title = context.getString(R.string.permissions_tab),
-                screen = { PermissionScreen() }
-            )
+    val standardTabs = listOf(
+        TabItem(
+            title = context.getString(R.string.home_tab),
+            screen = {
+                WifiDirectScreen(
+                    serviceReadyFuture = WifiServiceManager.serviceReady,
+                    nearbyWifiState = nearbyWifiState
+                ) { viewModel.onToggleEasterEgg() }
+            }
+        ),
+        TabItem(
+            title = context.getString(R.string.server_tab),
+            screen = { ServerScreen() }
+        ),
+        TabItem(
+            title = context.getString(R.string.bm_tab),
+            screen = { ManagerScreen() }
+        ),
+    )
+
+    val adminTabs = listOf(
+        TabItem(
+            title = context.getString(R.string.logs_tab),
+            screen = { LogScreen() }
+        ),
+        TabItem(
+            title = context.getString(R.string.permissions_tab),
+            screen = { PermissionScreen() }
+        ),
+    )
+
+    val usbTab = listOf(
+        TabItem(
+            title = context.getString(R.string.usb_tab),
+            screen = { UsbScreen() }
         )
-    }
-    val usbTab = listOf(TabItem(
-        title = context.getString(R.string.usb_tab),
-        screen = { UsbScreen() }
-    ))
+    )
 
     var tabItems by remember {
         mutableStateOf(standardTabs)
     }
-    LaunchedEffect(showUsbScreen) {
-        tabItems = if (showUsbScreen) {
-             usbTab + standardTabs
-        } else {
-            standardTabs
-        }
+
+    LaunchedEffect(showUsbScreen, showEasterEgg) {
+        var newTabs = standardTabs.toMutableList()
+        if (showUsbScreen) newTabs += usbTab
+        if (showEasterEgg) newTabs += adminTabs
+        tabItems = newTabs
     }
 
     Surface(
