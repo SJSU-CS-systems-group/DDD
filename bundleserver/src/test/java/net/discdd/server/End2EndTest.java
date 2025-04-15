@@ -248,6 +248,18 @@ public class End2EndTest {
         }
     }
 
+    protected static void deleteReceivedFiles(String testClientId) {
+        File aduDir = tempRootDir.resolve(java.nio.file.Path.of("receive", testClientId, TEST_APPID)).toFile();
+        // delete aduDir and all its contents
+        for (File file : aduDir.listFiles()) {
+            if (!file.delete()) {
+                logger.warning("Failed to delete file " + file);
+            }
+        }
+        if (!aduDir.delete()) {
+            logger.warning("Failed to delete directory " + aduDir);
+        }
+    }
     private static List<String> listJustADUs(File aduDir) {
         var list = aduDir.list((d, n) -> !n.equals("metadata.json"));
         return list == null ? List.of() : Arrays.asList(list);
