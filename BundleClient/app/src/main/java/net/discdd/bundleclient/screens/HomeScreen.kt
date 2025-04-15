@@ -1,6 +1,7 @@
 package net.discdd.bundleclient.screens
 
 import android.Manifest
+import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -64,7 +65,10 @@ fun HomeScreen(
                 WifiDirectScreen(
                     serviceReadyFuture = WifiServiceManager.serviceReady,
                     nearbyWifiState = nearbyWifiState
-                ) { viewModel.onToggleEasterEgg() }
+                ) {
+                    viewModel.onToggleEasterEgg()
+                    Toast.makeText(context, "Easter Egg Toggled!", Toast.LENGTH_SHORT).show()
+                }
             }
         ),
         TabItem(
