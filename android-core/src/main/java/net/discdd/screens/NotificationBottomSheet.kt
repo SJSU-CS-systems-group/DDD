@@ -1,4 +1,4 @@
-package net.discdd.bundleclient.screens
+package net.discdd.screens
 
 import android.Manifest
 import android.app.Application
@@ -35,13 +35,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberPermissionState
-import net.discdd.bundleclient.R
-import net.discdd.bundleclient.viewmodels.HomeViewModel
+import net.discdd.android_core.R
+import net.discdd.viewmodels.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun NotificationBottomSheet(
-    viewModel: HomeViewModel
+    viewModel: SettingsViewModel
 ) {
     val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showBottomSheet by remember { mutableStateOf(true) }
@@ -87,7 +87,7 @@ fun NotificationBottomSheet(
                 )
 
                 Text(
-                    text = stringResource(R.string.ask_notification_permissions),
+                    text = stringResource(R.string.ask_notification_desc),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.Gray,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -122,5 +122,5 @@ fun NotificationBottomSheet(
 @Preview(showBackground = true)
 @Composable
 fun NotificationBottomSheetPreview() {
-    NotificationBottomSheet(HomeViewModel(Application()))
+    NotificationBottomSheet(SettingsViewModel(Application()))
 }
