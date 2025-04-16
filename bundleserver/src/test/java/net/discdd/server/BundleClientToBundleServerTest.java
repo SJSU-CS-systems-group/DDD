@@ -112,7 +112,7 @@ public class BundleClientToBundleServerTest extends End2EndTest {
     }
 
     Random random = new Random(13 /* seed for deterministic testing */);
-    public static final int ADU_UPLOAD_SIZE = 10;
+    public static final int ADU_UPLOAD_SIZE = 10000;
     public static final int ADU_UPLOAD_COUNT = 4;
     @Test
     void test3UploadBundleWithADUs() throws Exception {
