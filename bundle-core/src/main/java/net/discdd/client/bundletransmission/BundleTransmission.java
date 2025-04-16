@@ -172,23 +172,19 @@ public class BundleTransmission {
         PipedInputStream pipedInputStream = new PipedInputStream();
         PipedOutputStream pipedOutputStream = new PipedOutputStream(pipedInputStream);
         Path bundleFile = clientPaths.tosendDir.resolve(bundleId);
-        try{
-            Future<?> future = executorService.submit(() -> {
-                var ackedEncryptedBundleId = ackRecord == null ? null : ackRecord.getBundleId();
-                try {
-                    BundleUtils.createBundlePayloadForAdus(adus, routingData, ackedEncryptedBundleId, pipedOutputStream);
-                } catch (IOException | NoSuchAlgorithmException e) {
-                    return e;
-                }finally{
-                    pipedOutputStream.close();
-                }
-                return null;
-            });
-
-            future.get();
-            if(!future.isDone()){
-                future.cancel(true);
+        Future<?> future = executorService.submit(() -> {
+            var ackedEncryptedBundleId = ackRecord == null ? null : ackRecord.getBundleId();
+            try {
+                BundleUtils.createBundlePayloadForAdus(adus, routingData, ackedEncryptedBundleId, pipedOutputStream);
+            } catch (IOException | NoSuchAlgorithmException e) {
+                return e;
+            } finally {
+                pipedOutputStream.close();
             }
+            return null;
+        });
+
+        try {
             ClientSecurity clientSecurity = bundleSecurity.getClientSecurity();
 
             OutputStream os = Files.newOutputStream(bundleFile, StandardOpenOption.CREATE,
@@ -199,8 +195,12 @@ public class BundleTransmission {
                                                       clientSecurity.getServerPublicKey(), bundleId, pipedInputStream,
                                                       os);
 
-        } catch (InvalidMessageException | InterruptedException | ExecutionException e) {
+        } catch (InvalidMessageException e) {
             throw new IOException("Error processing message: " + e.getMessage(), e);
+        } finally {
+            if (future != null) {
+                future.cancel(true);
+            }
         }
         return new BundleDTO(bundleId, new Bundle(bundleFile.toFile()));
     }
