@@ -36,7 +36,7 @@ import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiAwareManager
 import net.discdd.bundleclient.WifiServiceManager
 import net.discdd.screens.LogScreen
-import net.discdd.screens.NotificationBottomSheet
+import net.discdd.components.NotificationBottomSheet
 import net.discdd.screens.PermissionScreen
 import net.discdd.viewmodels.SettingsViewModel
 
