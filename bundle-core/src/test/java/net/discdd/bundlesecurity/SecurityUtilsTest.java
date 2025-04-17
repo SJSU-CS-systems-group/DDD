@@ -76,8 +76,6 @@ public class SecurityUtilsTest {
 
         aliceCipher = new SessionCipher(aliceStore, new SignalProtocolAddress("+14159999999", 1));
         bobCipher = new SessionCipher(bobStore, new SignalProtocolAddress("+14158888888", 1));
-
-
     }
 
     /**
@@ -87,11 +85,8 @@ public class SecurityUtilsTest {
      */
     @Test
     public void test1ArrayEncryptArrayDecrypt() throws Exception {
-        String message = "Hello, World!";
-        Method encryptMethod = SessionCipher.class.getDeclaredMethod("encrypt", byte[].class);
-        encryptMethod.setAccessible(true); // Make it accessible
-        SignalMessage signalm = (SignalMessage) encryptMethod.invoke(aliceCipher, message.getBytes());
-        encryptMethod.setAccessible(false);
+        String message = "Hello, World!".repeat(9999);
+        SignalMessage signalm = (SignalMessage)aliceCipher.encrypt(message.getBytes());
         byte[] plaintext = bobCipher.decrypt(signalm);
         String decrypted = new String(plaintext, StandardCharsets.UTF_8);
         Assertions.assertEquals(message, decrypted);
@@ -105,7 +100,7 @@ public class SecurityUtilsTest {
      */
     @Test
     public void test2StreamingEncryptStreamingDecrypt() throws Exception {
-        String message = "Hello, World!";
+        String message = "Hello, World!".repeat(9017);
         ByteArrayOutputStream cipherText = new ByteArrayOutputStream();
         aliceCipher.encrypt(new ByteArrayInputStream(message.getBytes()), cipherText);
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -116,7 +111,7 @@ public class SecurityUtilsTest {
     }
     @Test
     public void test3StreamingEncryptStreamingDecrypt() throws Exception {
-        String message = "Hello, World!";
+        String message = "Hello, World!".repeat(10000);
         ByteArrayOutputStream cipherText = new ByteArrayOutputStream();
         aliceCipher.encrypt(new ByteArrayInputStream(message.getBytes()), cipherText);
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();

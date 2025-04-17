@@ -27,7 +27,6 @@ import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.InvalidMessageException;
-import org.whispersystems.libsignal.LegacyMessageException;
 import org.whispersystems.libsignal.SessionCipher;
 import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.ecc.Curve;
@@ -48,7 +47,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
@@ -58,6 +56,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -83,16 +82,21 @@ public class End2EndTest {
     @TempDir
     static Path tempRootDir;
     static Path serverIdentityKeyPath;
-    private static Path serverPrivateKeyPath;
     static Path serverSignedPreKeyPath;
-    private static Path serverPrivatePreKeyPath;
     static Path serverRatchetKeyPath;
+    static int jarCounter = 0;
+    @TempDir
+    static File aduTempDir;
+    private static Path serverPrivateKeyPath;
+    private static Path serverPrivatePreKeyPath;
     private static Path serverPrivateRatchetKeyPath;
     @Value("${ssl-grpc.server.port}")
     protected int BUNDLESERVER_GRPC_PORT;
 
     @BeforeAll
-    static void setup() throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchProviderException, CertificateException, OperatorCreationException {
+    static void setup() throws IOException, NoSuchAlgorithmException, InvalidKeyException,
+            InvalidAlgorithmParameterException, NoSuchProviderException, CertificateException,
+            OperatorCreationException {
         System.setProperty("bundle-server.bundle-store-root", tempRootDir.toString() + '/');
         System.setProperty("serviceadapter.datacheck.interval", "5s");
 
@@ -147,7 +151,7 @@ public class End2EndTest {
 
         var adapterKeyPair = DDDTLSUtil.generateKeyPair();
         var adapterCert = DDDTLSUtil.getSelfSignedCertificate(adapterKeyPair,
-                DDDTLSUtil.publicKeyToName(adapterKeyPair.getPublic()));
+                                                              DDDTLSUtil.publicKeyToName(adapterKeyPair.getPublic()));
         var server = DDDNettyTLS.createGrpcServer(adapterKeyPair, adapterCert, 0, testAppServiceAdapter);
 
         server.start();
@@ -167,11 +171,6 @@ public class End2EndTest {
         return SecurityUtils.encryptAesCbcPkcs5(secretKey, bundleID);
 
     }
-
-    static int jarCounter = 0;
-
-    @TempDir
-    static File aduTempDir;
 
     protected static Path createBundleForAdus(List<Long> aduIds, String clientId, int bundleCount, Path targetDir) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, InvalidKeySpecException, BadPaddingException, java.security.InvalidKeyException {
 
@@ -193,14 +192,11 @@ public class End2EndTest {
         ByteArrayInputStream is = new ByteArrayInputStream(baos.toByteArray());
 
         try (var os = Files.newOutputStream(bundleJarPath, StandardOpenOption.CREATE,
-                                            StandardOpenOption.TRUNCATE_EXISTING))
-
-        {
-            BundleUtils.encryptPayloadAndCreateBundle((inputStream, outputStream) -> clientSessionCipher.encrypt(inputStream, outputStream),
-                                                      clientIdentity.getPublicKey().getPublicKey(),
-                                                      baseKeyPair.getPublicKey(),
-                                                      serverIdentity.getPublicKey().getPublicKey(), encryptedBundleID,
-                                                      is, os);
+                                            StandardOpenOption.TRUNCATE_EXISTING)) {
+            BundleUtils.encryptPayloadAndCreateBundle(
+                    (inputStream, outputStream) -> clientSessionCipher.encrypt(inputStream, outputStream),
+                    clientIdentity.getPublicKey().getPublicKey(), baseKeyPair.getPublicKey(),
+                    serverIdentity.getPublicKey().getPublicKey(), encryptedBundleID, is, os);
 
         } catch (InvalidMessageException e) {
             throw new IOException(e);
@@ -227,8 +223,13 @@ public class End2EndTest {
         Assertions.assertEquals(expectedFileList, toSendFiles);
     }
 
+    protected static void checkReceivedFiles(String testClientId, Set<String> expectedFileList) throws IOException, InterruptedException {
+        checkReceivedFiles(testClientId, expectedFileList, null);
+    }
+
     @SuppressWarnings("BusyWait")
-    protected static void checkReceivedFiles(String testClientId, Set<String> expectedFileList) throws InterruptedException {
+    protected static void checkReceivedFiles(String testClientId, Set<String> expectedFileList,
+                                             Map<String, byte[]> sentBytes) throws InterruptedException, IOException {
         HashSet<String> receivedFiles;
         File aduDir = tempRootDir.resolve(java.nio.file.Path.of("receive", testClientId, TEST_APPID)).toFile();
         logger.info("Checking for received files in " + aduDir);
@@ -240,8 +241,25 @@ public class End2EndTest {
         }
         logger.info("Expecting " + expectedFileList + " and saw " + receivedFiles);
         Assertions.assertEquals(expectedFileList, receivedFiles);
+        if (sentBytes != null) for (String fileName : expectedFileList) {
+            var readBytes = Files.readAllBytes(aduDir.toPath().resolve(fileName));
+            Assertions.assertArrayEquals(sentBytes.get(fileName), readBytes,
+                                    "File " + fileName + " does not match sent bytes");
+        }
     }
 
+    protected static void deleteReceivedFiles(String testClientId) {
+        File aduDir = tempRootDir.resolve(java.nio.file.Path.of("receive", testClientId, TEST_APPID)).toFile();
+        // delete aduDir and all its contents
+        for (File file : aduDir.listFiles()) {
+            if (!file.delete()) {
+                logger.warning("Failed to delete file " + file);
+            }
+        }
+        if (!aduDir.delete()) {
+            logger.warning("Failed to delete directory " + aduDir);
+        }
+    }
     private static List<String> listJustADUs(File aduDir) {
         var list = aduDir.list((d, n) -> !n.equals("metadata.json"));
         return list == null ? List.of() : Arrays.asList(list);
