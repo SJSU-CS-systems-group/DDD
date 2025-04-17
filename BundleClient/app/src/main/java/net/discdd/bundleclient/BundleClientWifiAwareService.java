@@ -4,7 +4,6 @@ import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 import static android.Manifest.permission.ACCESS_WIFI_STATE;
 import static android.Manifest.permission.CHANGE_WIFI_STATE;
 import static android.Manifest.permission.NEARBY_WIFI_DEVICES;
-
 import static java.util.logging.Level.INFO;
 
 import android.app.Notification;
@@ -23,7 +22,6 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresPermission;
 
 import net.discdd.wifiaware.WifiAwareHelper;
-import net.discdd.wifiaware.WifiAwareHelper.WiFiAwareException;
 import net.discdd.wifiaware.WifiAwareStateListener;
 
 import java.net.InetSocketAddress;
@@ -120,14 +118,7 @@ public class BundleClientWifiAwareService extends Service implements WifiAwareSt
                                                        List<byte[]> matchFilter,
                                                               Consumer<WifiAwareHelper.PeerMessage> messageReceiver,
                                                               Consumer<ServiceDiscoveryInfo> serviceDiscoveryReceiver,
-                                                              Consumer<PeerHandle> serviceLostReceiver) throws WiFiAwareException {
-//        if (wifiAwareHelper == null) {
-//            throw new WiFiAwareException("WifiAwareHelper is null. Ensure it is initialized before calling startDiscovery.");
-//        }
-//        if (wifiAwareHelper.getWifiAwareSession() == null) {
-//            throw new WiFiAwareException("Wi-Fi Aware session is not initialized");
-//        }
-
+                                                              Consumer<PeerHandle> serviceLostReceiver) {
         var configBuilder = new SubscribeConfig.Builder();
         if (serviceName != null) configBuilder.setServiceName(serviceName);
         if (serviceSpecificInfo != null) configBuilder.setServiceSpecificInfo(serviceSpecificInfo);
