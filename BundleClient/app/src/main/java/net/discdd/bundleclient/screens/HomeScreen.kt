@@ -33,7 +33,6 @@ import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.launch
 import net.discdd.UsbConnectionManager
 import net.discdd.bundleclient.R
-import net.discdd.bundleclient.UsbConnectionManager
 import net.discdd.bundleclient.WifiAwareManager
 import net.discdd.bundleclient.WifiServiceManager
 import net.discdd.screens.LogScreen
