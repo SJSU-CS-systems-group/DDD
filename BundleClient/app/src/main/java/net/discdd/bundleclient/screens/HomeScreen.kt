@@ -33,6 +33,7 @@ import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.launch
 import net.discdd.UsbConnectionManager
 import net.discdd.bundleclient.R
+import net.discdd.bundleclient.WifiAwareManager
 import net.discdd.bundleclient.WifiServiceManager
 import net.discdd.screens.LogScreen
 import net.discdd.screens.NotificationBottomSheet
@@ -94,6 +95,10 @@ fun HomeScreen(
             title = context.getString(R.string.permissions_tab),
             screen = { PermissionScreen() }
         ),
+        TabItem(
+            title = context.getString(R.string.wifi_aware_tab),
+            screen = { WifiAwareSubscriberScreen() }
+        )
     )
 
     val usbTab = listOf(
@@ -128,7 +133,7 @@ fun HomeScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Text(
                     text = context.getString(R.string.app_name),
