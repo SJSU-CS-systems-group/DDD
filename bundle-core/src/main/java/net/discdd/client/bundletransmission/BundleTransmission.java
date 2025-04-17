@@ -173,7 +173,7 @@ public class BundleTransmission {
 
         Path bundleFile = clientPaths.tosendDir.resolve(bundleId);
         var ackedEncryptedBundleId = ackRecord == null ? null : ackRecord.getBundleId();
-        runFuture(executorService,ackedEncryptedBundleId, adus, routingData, pipedInputStream);
+        BundleUtils.runFuture(executorService,ackedEncryptedBundleId, adus, routingData, pipedInputStream);
 
         try {
             ClientSecurity clientSecurity = bundleSecurity.getClientSecurity();
