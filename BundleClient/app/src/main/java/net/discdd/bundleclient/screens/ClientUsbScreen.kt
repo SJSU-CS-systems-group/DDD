@@ -1,5 +1,6 @@
 package net.discdd.bundleclient.screens
 
+import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import net.discdd.UsbConnectionManager
@@ -117,4 +119,17 @@ fun ClientUsbUI(
             modifier = Modifier.fillMaxWidth()
         )
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ClientUsbScreenPreview() {
+    ClientUsbScreen()
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ClientUsbUIPreview() {
+    val viewModel = ClientUsbViewModel(Application())
+    ClientUsbUI(viewModel, UsbState()) {}
 }
