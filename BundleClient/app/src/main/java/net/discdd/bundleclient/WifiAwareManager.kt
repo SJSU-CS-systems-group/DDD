@@ -3,9 +3,9 @@ package net.discdd.bundleclient
 import android.content.ComponentName
 import android.content.ServiceConnection
 import android.os.IBinder
-import android.util.Log
 import net.discdd.wifiaware.WifiAwareHelper
 import java.util.concurrent.CompletableFuture
+import java.util.logging.Level.SEVERE
 import java.util.logging.Logger
 
 object WifiAwareManager {
@@ -18,14 +18,14 @@ object WifiAwareManager {
     fun initializeConnection(activity: BundleClientActivity) {
         // Check if already initializing to prevent multiple initialization attempts
         if (connection != null) {
-            Log.d("WifiAwareManager", "Connection already initialized")
+            logger.info("Connection already initialized")
             return
         }
 
-        Log.d("WifiAwareManager", "Initializing service connection")
+        logger.info("Initializing service connection")
         connection = object : ServiceConnection {
             override fun onServiceConnected(className: ComponentName, service: IBinder) {
-                Log.d("WifiAwareManager", "Service connected: $className")
+                logger.info("Service connected: $className")
                 try {
                     val binder = service as BundleClientWifiAwareService.BundleClientWifiAwareServiceBinder
                     setService(binder.service)
@@ -34,9 +34,9 @@ object WifiAwareManager {
                     if (!serviceReady.isDone) {
                         serviceReady.complete(binder.service)
                     }
-                    Log.d("WifiAwareManager", "ServiceReady future completed")
+                    logger.info( "ServiceReady future completed")
                 } catch (e: Exception) {
-                    Log.e("WifiAwareManager", "Error binding to service", e)
+                    logger.log(SEVERE, "Error binding to service", e)
                     if (!serviceReady.isDone) {
                         serviceReady.completeExceptionally(e)
                     }
@@ -44,9 +44,8 @@ object WifiAwareManager {
             }
 
             override fun onServiceDisconnected(arg0: ComponentName) {
-                Log.d("WifiAwareManager", "Service disconnected: $arg0")
+                logger.info("Service disconnected: $arg0")
                 clearService()
-                // Don't reset the CompletableFuture here as it can only complete once
             }
         }
 
@@ -55,7 +54,7 @@ object WifiAwareManager {
         val success = activity.bindService(intent, connection!!, android.content.Context.BIND_AUTO_CREATE)
 
         if (!success) {
-            Log.e("WifiAwareManager", "Failed to bind service")
+            logger.log(SEVERE, "Failed to bind service")
             serviceReady.completeExceptionally(Exception("Failed to bind to WifiAwareService"))
         }
     }

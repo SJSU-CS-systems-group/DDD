@@ -6,12 +6,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.withTimeoutOrNull
 import net.discdd.bundleclient.BundleClientWifiAwareService
+import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiAwareManager
 import net.discdd.bundleclient.viewmodels.WifiAwareViewModel
 import java.util.concurrent.CompletableFuture
@@ -24,7 +26,7 @@ fun WifiAwareSubscriberScreen(
 ) {
     var serviceReady by remember { mutableStateOf<BundleClientWifiAwareService?>(null) }
     var serviceInitializationError by remember { mutableStateOf<String?>(null) }
-    var serviceName by remember { mutableStateOf("SERVICE_NAME") }
+    var serviceName by remember { mutableStateOf("DDD") }
     val wifiState = viewModel.state.collectAsState()
 
     LaunchedEffect(serviceReadyFuture) {
@@ -54,7 +56,7 @@ fun WifiAwareSubscriberScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = serviceInitializationError ?: "Unknown error",
+                        text = serviceInitializationError ?: stringResource(R.string.unknown_error),
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.error
                     )
@@ -78,10 +80,9 @@ fun WifiAwareSubscriberScreen(
                     verticalArrangement = Arrangement.Top,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    TextField(
-                        value = serviceName,
-                        onValueChange = { serviceName = it },
-                        label = { Text("Service Name") },
+                    Text(
+                        text = stringResource(R.string.service_name),
+                        style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(16.dp))
@@ -93,7 +94,7 @@ fun WifiAwareSubscriberScreen(
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Subscribe")
+                        Text(stringResource(R.string.subscribe))
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
@@ -102,7 +103,7 @@ fun WifiAwareSubscriberScreen(
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Unsubscribe")
+                        Text(stringResource(R.string.unsubscribe))
                     }
                     Spacer(modifier = Modifier.height(16.dp))
 

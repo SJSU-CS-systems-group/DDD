@@ -2,6 +2,8 @@ package net.discdd.wifiaware;
 
 import static android.net.wifi.aware.WifiAwareManager.ACTION_WIFI_AWARE_STATE_CHANGED;
 
+import static java.util.logging.Level.SEVERE;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -19,7 +21,6 @@ import android.net.wifi.aware.WifiAwareNetworkSpecifier;
 import android.net.wifi.aware.WifiAwareSession;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 
 import androidx.annotation.NonNull;
 
@@ -27,10 +28,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Logger;
 
 public class WifiAwareHelper {
-    private static final String TAG = "WifiAwareHelper";
-
+    private static final Logger logger = Logger.getLogger(WifiAwareHelper.class.getName());
     private final Context context;
     private final List<WifiAwareStateListener> listeners = new ArrayList<>();
     private final IntentFilter intentFilter = new IntentFilter(ACTION_WIFI_AWARE_STATE_CHANGED);
@@ -38,16 +39,11 @@ public class WifiAwareHelper {
 
     private WifiAwareSession wifiAwareSession;
     private WifiAwareBroadcastReceiver receiver;
-    private WifiAwareManager wifiAwareManager;
+    private final WifiAwareManager wifiAwareManager;
 
     public WifiAwareHelper(Context context) {
         this.context = context;
         this.wifiAwareManager = (WifiAwareManager) context.getSystemService(Context.WIFI_AWARE_SERVICE);
-    }
-
-    public WifiAwareHelper(Context context, WifiAwareStateListener listener) {
-        this(context);
-        listeners.add(listener);
     }
 
     public CompletableFuture<Boolean> initialize() {
@@ -110,7 +106,7 @@ public class WifiAwareHelper {
             }, 10000);
 
         } catch (Exception e) {
-            Log.e(TAG, "Error initializing WiFi Aware", e);
+            logger.log(SEVERE, "Error initializing WiFi Aware", e);
             future.completeExceptionally(new WiFiAwareException("Initialization error: " + e.getMessage()));
         }
 
@@ -246,7 +242,7 @@ public class WifiAwareHelper {
                 WifiAwareManager manager = (WifiAwareManager) context.getSystemService(Context.WIFI_AWARE_SERVICE);
                 boolean isAvailable = manager != null && manager.isAvailable();
 
-                Log.d(TAG, "WiFi Aware availability changed: " + (isAvailable ? "available" : "unavailable"));
+                logger.info("WiFi Aware availability changed: " + (isAvailable ? "available" : "unavailable"));
 
                 // If WiFi Aware became unavailable and we had a session, handle session termination
                 if (!isAvailable && wifiAwareSession != null) {

@@ -91,8 +91,6 @@ class BundleClientActivity: ComponentActivity() {
             stopService(Intent(this, BundleClientWifiDirectService::class.java))
         }
 
-        stopService(Intent(this, BundleClientWifiAwareService::class.java))
-
         UsbConnectionManager.cleanup(applicationContext)
 
         WifiServiceManager.clearService()

@@ -3,13 +3,15 @@ package net.discdd.bundleclient;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.util.Log;
 
 import net.discdd.bundleclient.viewmodels.WifiAwareViewModel;
 import net.discdd.wifiaware.WifiAwareHelper;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 public class BundleClientWifiAwareBroadcastReceiver extends BroadcastReceiver {
-    private static final String TAG = "WifiAwareBroadcastReceiver";
+    private static final Logger logger = Logger.getLogger(BundleClientWifiAwareBroadcastReceiver.class.getName());
     private WifiAwareViewModel viewModel;
 
     public void setViewModel(WifiAwareViewModel viewModel) {
@@ -19,7 +21,7 @@ public class BundleClientWifiAwareBroadcastReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         if (viewModel == null) {
-            Log.w(TAG, "ViewModel is null, cannot process intent");
+            logger.warning("WifiAwareViewModel is null, cannot process intent");
             return;
         }
 
@@ -44,7 +46,7 @@ public class BundleClientWifiAwareBroadcastReceiver extends BroadcastReceiver {
                 }
             }
         } catch (Exception e) {
-            Log.e(TAG, "Error processing broadcast intent", e);
+            logger.log(Level.SEVERE, "Error processing broadcast intent", e);
         }
     }
 
@@ -63,7 +65,7 @@ public class BundleClientWifiAwareBroadcastReceiver extends BroadcastReceiver {
                 viewModel.onWifiAwareSessionTerminated();
                 break;
             default:
-                Log.d(TAG, "Unhandled WiFi Aware event: " + event);
+                logger.fine("Unhandled WiFi Aware event: " + event);
         }
     }
 }

@@ -35,36 +35,11 @@ import java.util.logging.Logger;
 public class BundleClientWifiAwareService extends Service implements WifiAwareStateListener {
     public static final String NET_DISCDD_BUNDLECLIENT_LOG_ACTION = "net.discdd.bundleclient.CLIENT_LOG";
     public static final String NET_DISCDD_BUNDLECLIENT_WIFI_EVENT_ACTION = "net.discdd.bundleclient.WIFI_EVENT";
-    public static final String WIFI_AWARE_EVENT_EXTRA = "wifiDirectEvent";
-    public final String serviceName;
-    public final byte[] serviceSpecificInfo;
-    public final List<byte[]> matchFilter;
+    public static final String WIFI_AWARE_EVENT_EXTRA = "wifiAwareEvent";
     private WifiAwareHelper wifiAwareHelper;
-    private final Consumer<WifiAwareHelper.PeerMessage> messageReceiver;
-    private final Consumer<ServiceDiscoveryInfo> serviceDiscoveryReceiver;
-    private final Consumer<PeerHandle> serviceLostReceiver;
     private DiscoverySession session;
     private static final Logger logger = Logger.getLogger(BundleClientWifiAwareService.class.getName());
     private final IBinder binder = new BundleClientWifiAwareServiceBinder();
-
-    public BundleClientWifiAwareService() {
-        this.wifiAwareHelper = null;
-        this.serviceName = null;
-        this.serviceSpecificInfo = null;
-        this.matchFilter = null;
-        this.messageReceiver = null;
-        this.serviceDiscoveryReceiver = null;
-        this.serviceLostReceiver = null;
-    }
-    public BundleClientWifiAwareService(WifiAwareHelper wifiAwareHelper, String serviceName, byte[] serviceSpecificInfo, List<byte[]> matchFilter, Consumer<WifiAwareHelper.PeerMessage> messageReceiver, Consumer<ServiceDiscoveryInfo> serviceDiscoveryReceiver, Consumer<PeerHandle> serviceLostReceiver) {
-        this.wifiAwareHelper = wifiAwareHelper;
-        this.serviceName = serviceName;
-        this.serviceSpecificInfo = serviceSpecificInfo;
-        this.matchFilter = matchFilter;
-        this.messageReceiver = messageReceiver;
-        this.serviceDiscoveryReceiver = serviceDiscoveryReceiver;
-        this.serviceLostReceiver = serviceLostReceiver;
-    }
 
     @Override
     public void onCreate() {
@@ -133,44 +108,35 @@ public class BundleClientWifiAwareService extends Service implements WifiAwareSt
         return future;
     }
 
+
+    // should return void
     @RequiresPermission(allOf = {
             ACCESS_WIFI_STATE,
             CHANGE_WIFI_STATE,
             ACCESS_FINE_LOCATION,
             NEARBY_WIFI_DEVICES}, conditional = true)
-    public static BundleClientWifiAwareService startDiscovery(WifiAwareHelper wifiAwareHelper,
-                                                              final String serviceName,
-                                                              final byte[] serviceSpecificInfo,
-                                                              List<byte[]> matchFilter,
+    public void startDiscovery(final String serviceName,
+                                                       final byte[] serviceSpecificInfo,
+                                                       List<byte[]> matchFilter,
                                                               Consumer<WifiAwareHelper.PeerMessage> messageReceiver,
                                                               Consumer<ServiceDiscoveryInfo> serviceDiscoveryReceiver,
                                                               Consumer<PeerHandle> serviceLostReceiver) throws WiFiAwareException {
-        if (wifiAwareHelper == null) {
-            throw new WiFiAwareException("WifiAwareHelper is null. Ensure it is initialized before calling startDiscovery.");
-        }
-        if (wifiAwareHelper.getWifiAwareSession() == null) {
-            throw new WiFiAwareException("Wi-Fi Aware session is not initialized");
-        }
+//        if (wifiAwareHelper == null) {
+//            throw new WiFiAwareException("WifiAwareHelper is null. Ensure it is initialized before calling startDiscovery.");
+//        }
+//        if (wifiAwareHelper.getWifiAwareSession() == null) {
+//            throw new WiFiAwareException("Wi-Fi Aware session is not initialized");
+//        }
 
         var configBuilder = new SubscribeConfig.Builder();
         if (serviceName != null) configBuilder.setServiceName(serviceName);
         if (serviceSpecificInfo != null) configBuilder.setServiceSpecificInfo(serviceSpecificInfo);
         if (matchFilter != null) configBuilder.setMatchFilter(matchFilter);
 
-        BundleClientWifiAwareService
-                subscriberHelper = new BundleClientWifiAwareService(wifiAwareHelper,
-                                                                    serviceName,
-                                                                    serviceSpecificInfo,
-                                                                    matchFilter,
-                                                                    messageReceiver,
-                                                                    serviceDiscoveryReceiver,
-                                                                    serviceLostReceiver);
-        var callbackHandler = new DiscoverySessionCallbackHandler(subscriberHelper,
-                                                                  serviceLostReceiver,
+        var callbackHandler = new DiscoverySessionCallbackHandler(serviceLostReceiver,
                                                                   serviceDiscoveryReceiver,
                                                                   messageReceiver);
         wifiAwareHelper.getWifiAwareSession().subscribe(configBuilder.build(), callbackHandler, null);
-        return subscriberHelper;
     }
 
     public void unsubscribe() {

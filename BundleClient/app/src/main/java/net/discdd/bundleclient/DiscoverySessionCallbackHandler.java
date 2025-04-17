@@ -12,17 +12,14 @@ import net.discdd.wifiaware.WifiAwareHelper;
 import java.util.function.Consumer;
 
 public class DiscoverySessionCallbackHandler extends DiscoverySessionCallback {
-    private final BundleClientWifiAwareService service;
     private final Consumer<PeerHandle> serviceLostReceiver;
     private final Consumer<ServiceDiscoveryInfo> serviceDiscoveryReceiver;
     private final Consumer<WifiAwareHelper.PeerMessage> messageReceiver;
     private SubscribeDiscoverySession session;
 
-    public DiscoverySessionCallbackHandler(BundleClientWifiAwareService service,
-                                           Consumer<PeerHandle> serviceLostReceiver,
+    public DiscoverySessionCallbackHandler(Consumer<PeerHandle> serviceLostReceiver,
                                            Consumer<ServiceDiscoveryInfo> serviceDiscoveryReceiver,
                                            Consumer<WifiAwareHelper.PeerMessage> messageReceiver) {
-        this.service = service;
         this.serviceLostReceiver = serviceLostReceiver;
         this.serviceDiscoveryReceiver = serviceDiscoveryReceiver;
         this.messageReceiver = messageReceiver;
@@ -45,10 +42,7 @@ public class DiscoverySessionCallbackHandler extends DiscoverySessionCallback {
 
     @Override
     public void onSubscribeStarted(@NonNull SubscribeDiscoverySession session) {
-        service.setSession(session);
+        this.session = session;
     }
 
-    public SubscribeDiscoverySession getSession() {
-        return session;
-    }
 }

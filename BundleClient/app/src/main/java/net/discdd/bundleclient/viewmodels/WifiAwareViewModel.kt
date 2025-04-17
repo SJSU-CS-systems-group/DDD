@@ -2,12 +2,10 @@ package net.discdd.bundleclient.viewmodels
 
 import android.annotation.SuppressLint
 import android.app.Application
-import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.IntentFilter
 import android.net.wifi.aware.PeerHandle
 import android.net.wifi.aware.ServiceDiscoveryInfo
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -25,6 +23,8 @@ import net.discdd.wifiaware.WifiAwareHelper
 import java.net.InetSocketAddress
 import java.util.concurrent.CompletableFuture
 import java.util.function.Consumer
+import java.util.logging.Level.SEVERE
+import java.util.logging.Logger
 
 data class WifiAwareState(
     val wifiAwareHelper: WifiAwareHelper? = null,
@@ -38,6 +38,7 @@ data class WifiAwareState(
 class WifiAwareViewModel(
     application: Application,
 ) : AndroidViewModel(application) {
+    private val logger = Logger.getLogger(WifiAwareViewModel::class.java.name)
     private val context get() = getApplication<Application>()
     private val bundleClientWifiAwareBroadcastReceiver =
         BundleClientWifiAwareBroadcastReceiver().apply {
@@ -68,15 +69,15 @@ class WifiAwareViewModel(
     private fun serviceReadyFuture() {
         viewModelScope.launch {
             try {
-                Log.d("WifiAwareViewModel", "Waiting for service to be ready")
+                logger.info("Waiting for service to be ready")
                 val service = withContext(Dispatchers.IO) {
                     wifiAwareManager.serviceReady.get() // Perform the blocking call in a background thread
                 }
                 initializeWifiAwareHelper(wifiAwareManager.serviceReady) // Call the method here
                 onWifiAwareInitialized()
-                Log.d("WifiAwareViewModel", "Service is ready: $service")
+                logger.info("Service is ready: $service")
             } catch (e: Exception) {
-                Log.e("WifiAwareViewModel", "Service initialization failed", e)
+                logger.log(SEVERE, "Service initialization failed", e)
                 onWifiAwareInitializationFailed()
             }
         }
@@ -123,7 +124,7 @@ class WifiAwareViewModel(
         }
     }
 
-    fun initializeWifiAwareHelper(serviceReadyFuture: CompletableFuture<BundleClientWifiAwareService>) {
+    private fun initializeWifiAwareHelper(serviceReadyFuture: CompletableFuture<BundleClientWifiAwareService>) {
         viewModelScope.launch {
             try {
                 // Wait for the service to be ready
@@ -140,11 +141,11 @@ class WifiAwareViewModel(
                         )
                     }
 
-                    Log.d("WifiAwareViewModel", "Wi-Fi Aware helper initialized successfully")
+                    logger.info("Wi-Fi Aware helper initialized successfully")
                 }
             } catch (e: Exception) {
                 // Handle initialization failure
-                Log.e("WifiAwareViewModel", "Error initializing Wi-Fi Aware: ${e.message}")
+                logger.log(SEVERE, "Error initializing Wi-Fi Aware: ${e.message}")
                 appendResultText("Error initializing Wi-Fi Aware: ${e.message}")
             }
         }
@@ -153,17 +154,15 @@ class WifiAwareViewModel(
 
     @SuppressLint("MissingPermission")
     fun startDiscovery(serviceType: String) {
-        val wifiAwareHelper = _state.value.wifiAwareHelper
-        if (wifiAwareHelper == null) {
-            appendResultText("Wi-Fi Aware is not initialized.")
+        val wifiAwareService = WifiAwareManager.getService()
+
+        if (wifiAwareService == null) {
+            appendResultText("Wi-Fi Aware is not bound yet.")
             return
         }
 
-        this.serviceType = serviceType
-
         try {
-            // Stop existing discovery if any
-            _state.value.subscriber?.unsubscribe()
+            this.serviceType = serviceType
 
             // Create message, service discovery, and service lost receivers
             val messageReceiver = Consumer<WifiAwareHelper.PeerMessage> { message ->
@@ -181,8 +180,7 @@ class WifiAwareViewModel(
             }
 
             // Start discovery
-            val newSubscriber = BundleClientWifiAwareService.startDiscovery(
-                wifiAwareHelper,
+            wifiAwareService.startDiscovery(
                 serviceType,
                 null, // serviceSpecificInfo
                 null, // matchFilter
@@ -191,16 +189,12 @@ class WifiAwareViewModel(
                 serviceLostReceiver
             )
 
-            // Update state with new subscriber
-            _state.update { oldState -> oldState.copy(subscriber = newSubscriber) }
-
-            // Log success
             appendResultText("Started discovery for service: $serviceType")
         } catch (e: WifiAwareHelper.WiFiAwareException) {
-            Log.e(TAG, "Failed to start discovery", e)
+            logger.log(SEVERE, "Failed to start discovery", e)
             appendResultText("Failed to start discovery: ${e.message}")
         } catch (e: Exception) {
-            Log.e(TAG, "Unexpected error during discovery", e)
+            logger.log(SEVERE, "Unexpected error during discovery", e)
             appendResultText("Unexpected error: ${e.message}")
         }
     }
@@ -241,19 +235,19 @@ class WifiAwareViewModel(
 
         // If wifiAwareHelper is not available, log an error and return
         if (wifiAwareHelper == null) {
-            Log.e(TAG, "Wi-Fi Aware helper is not initialized.")
+            logger.log(SEVERE, "Wi-Fi Aware helper is not initialized.")
             appendResultText("Wi-Fi Aware is not initialized.")
             return
         }
 
         // First, stop any existing discovery sessions
-        stopDiscovery()
+//        stopDiscovery()
 
         // Check current availability and update state
         val isAvailable = try {
             wifiAwareHelper.isWifiAwareAvailable
         } catch (e: Exception) {
-            Log.e(TAG, "Error checking WiFi Aware availability", e)
+            logger.log(SEVERE, "Error checking WiFi Aware availability", e)
             false
         }
 
@@ -265,7 +259,6 @@ class WifiAwareViewModel(
             )
         }
 
-        // Log availability change
         appendResultText("Wi-Fi Aware availability changed: ${if (isAvailable) "available" else "unavailable"}")
 
         // Optionally restart discovery if Wi-Fi Aware is available and no active session exists
@@ -315,7 +308,7 @@ class WifiAwareViewModel(
             val wifiAwareHelper = _state.value.wifiAwareHelper
             wifiAwareHelper?.unregisterWifiIntentReceiver()
         } catch (e: Exception) {
-            Log.e(TAG, "Error unregistering WiFi intent receiver", e)
+            logger.log(SEVERE, "Error unregistering WiFi intent receiver", e)
         }
         super.onCleared()
     }
