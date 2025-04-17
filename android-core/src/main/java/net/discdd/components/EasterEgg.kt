@@ -1,4 +1,4 @@
-package net.discdd.screens
+package net.discdd.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource

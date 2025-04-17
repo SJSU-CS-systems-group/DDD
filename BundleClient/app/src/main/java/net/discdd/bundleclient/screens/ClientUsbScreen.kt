@@ -107,7 +107,7 @@ fun UsbFeatureUI(
         )
     }
 
-    // show messgae
+    // show message
     usbState.showMessage?.let { msg ->
         Spacer(modifier = Modifier.height(24.dp))
         Text(
