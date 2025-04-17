@@ -69,4 +69,5 @@
     <string name="ask_notification_permissions" translatable="false">Don\'t miss important messages like bundle upload progress and application activity</string>
     <string name="turn_on_notifications" translatable="false">Turn on notifications</string>
     <string name="close_bottom_sheet" translatable="false">Close bottom sheet</string>
+    <string name="wifi_aware_tab">Wifi Aware</string>
 </resources>

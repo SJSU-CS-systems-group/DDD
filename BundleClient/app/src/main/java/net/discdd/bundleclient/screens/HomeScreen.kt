@@ -73,25 +73,13 @@ fun HomeScreen(
             }
         ),
         TabItem(
-            title = "Wifi Aware",
-            screen = { WifiAwareSubscriberScreen(serviceReadyFuture = WifiAwareManager.serviceReady) }
-        ),
-        TabItem(
             title = context.getString(R.string.server_tab),
             screen = { ServerScreen() }
-        ),
-        TabItem(
-            title = context.getString(R.string.logs_tab),
-            screen = { LogScreen() }
         ),
         TabItem(
             title = context.getString(R.string.bm_tab),
             screen = { ManagerScreen() }
         ),
-        TabItem(
-            title = context.getString(R.string.permissions_tab),
-            screen = { PermissionScreen() }
-        )
     )
 
     /*
@@ -107,6 +95,10 @@ fun HomeScreen(
             title = context.getString(R.string.permissions_tab),
             screen = { PermissionScreen() }
         ),
+        TabItem(
+            title = context.getString(R.string.wifi_aware_tab),
+            screen = { WifiAwareSubscriberScreen() }
+        )
     )
 
     val usbTab = listOf(
