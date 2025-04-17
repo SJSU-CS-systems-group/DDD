@@ -28,7 +28,7 @@ open class UsbViewModel(
 ): AndroidViewModel(application) {
     private val usbDirName = "/DDD_transport"
     protected val logger: Logger = Logger.getLogger(UsbViewModel::class.java.name)
-    private val storageManager by lazy {
+    protected val storageManager by lazy {
         application.getSystemService(Context.STORAGE_SERVICE) as StorageManager
     }
 
