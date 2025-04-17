@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Surface
@@ -42,6 +43,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 import java.util.concurrent.CompletableFuture
 
+import net.discdd.bundletransport.R
 import net.discdd.bundletransport.BundleTransportActivity
 import net.discdd.bundletransport.TransportWifiDirectService
 import net.discdd.bundletransport.viewmodels.WifiDirectViewModel
@@ -115,8 +117,12 @@ fun WifiDirectScreen(
                 )
             }
 
+            var nameValid by remember {
+                mutableStateOf(state.deviceName.startsWith("ddd_"))
+            }
+
             Text(
-                text = state.wifiInfoView,
+                text = state.wifiInfo,
                 modifier = Modifier.clickable {showDialog = true}
             )
             if (showDialog == true) {
@@ -141,11 +147,8 @@ fun WifiDirectScreen(
                 )
             }
 
-            Text(text = "Wifi Status: ${state.wifiStatusView}")
-
-            // add "ddd_" prefix if we don't have a valid device name
-            // (transports must have device names starting with ddd_)
-            Text(text = if (state.deviceNameView.startsWith("ddd_")) "Device Name: ${state.deviceNameView}" else "Device Name: ddd_${state.deviceNameView}")
+            Text(text = "Wifi Status: ${state.wifiStatus}")
+            Text(text = "Device Name: ${state.deviceName}")
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -163,8 +166,20 @@ fun WifiDirectScreen(
                 Text(text = "Collect data even when app is closed")
             }
 
+            // only show the name change button if we don't have a valid device name
+            // (transports must have device names starting with ddd_)
+            if (nameValid == false) {
+                Text(text = R.id.change_device_name.toString())
+
+                FilledTonalButton(
+                    onClick = {wifiViewModel.changeName()},
+                    modifier = Modifier.fillMaxWidth()) {
+                    Text("Change Phone Name")
+                }
+            }
+
             Text(text = "Interactions with BundleClients")
-            Text(text = state.clientLogView)
+            Text(text = state.clientLog)
         }
     }
 }

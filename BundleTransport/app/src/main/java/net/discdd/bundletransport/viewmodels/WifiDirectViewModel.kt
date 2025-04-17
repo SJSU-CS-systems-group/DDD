@@ -27,10 +27,10 @@ import java.util.logging.Logger
 import java.util.stream.Collectors
 
 data class WifiDirectState(
-    val deviceNameView: String = "",
-    val wifiInfoView: String = "",
-    val clientLogView: String = "",
-    val wifiStatusView: String = "",
+    val deviceName: String = R.id.device_name.toString(),
+    val wifiInfo: String = R.id.my_wifi_info.toString(),
+    val clientLog: String = R.id.client_log.toString(),
+    val wifiStatus: String = R.id.my_wifi_status.toString(),
     val collectDataOnClosed: Boolean = false,
 )
 
@@ -76,14 +76,14 @@ class WifiDirectViewModel(
         // NOTE: we aren't using device info here, but be aware that it can be null!
         viewModelScope.launch {
             if (btService == null) return@launch
-            var deviceName = btService!!.deviceName
+            var serviceName = btService!!.deviceName
             _state.update {
-                it.copy(deviceNameView = if (deviceName != null) deviceName else "Unknown")
+                it.copy(deviceName = if (serviceName != null) serviceName else "Unknown")
             }
 
             var status = btService!!.status
             _state.update {
-                it.copy(wifiStatusView = when (status) {
+                it.copy(wifiStatus = when (status) {
                     WifiDirectStatus.UNDEFINED -> context.getString(R.string.check_permissions_and_that_wifi_is_enabled);
                     WifiDirectStatus.CONNECTED -> context.getString(R.string.connected);
                     WifiDirectStatus.INVITED -> context.getString(R.string.invited);
@@ -129,7 +129,7 @@ class WifiDirectViewModel(
                         gi.getNetworkName(), gi.getPassphrase(), addresses, gi.getClientList().size)
                 }   //TO-DO connected devices seems to not along with the group info devices
                 _state.update {
-                    it.copy(wifiInfoView = info)
+                    it.copy(wifiInfo = info)
                 }
             }
         }
@@ -137,14 +137,14 @@ class WifiDirectViewModel(
 
     fun appendToClientLog(message: String) {
         viewModelScope.launch {
-            if (state.value.clientLogView.toString().lines().size > 20) {
-                val nl = state.value.clientLogView.indexOf('\n')
+            if (state.value.clientLog.toString().lines().size > 20) {
+                val nl = state.value.clientLog.indexOf('\n')
                 _state.update {
-                    it.copy(clientLogView = state.value.clientLogView.substring(0, nl))
+                    it.copy(clientLog = state.value.clientLog.substring(0, nl))
                 }
             }
             _state.update {
-                it.copy(clientLogView = state.value.clientLogView + message + '\n')
+                it.copy(clientLog = state.value.clientLog + message + '\n')
             }
         }
     }
