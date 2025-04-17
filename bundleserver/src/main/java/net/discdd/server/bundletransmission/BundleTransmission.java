@@ -10,6 +10,7 @@ import net.discdd.grpc.BundleSenderType;
 import net.discdd.grpc.GetRecencyBlobResponse;
 import net.discdd.grpc.RecencyBlob;
 import net.discdd.grpc.RecencyBlobStatus;
+import net.discdd.model.ADU;
 import net.discdd.model.Bundle;
 import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
@@ -59,12 +60,13 @@ import static java.util.logging.Level.WARNING;
 import static net.discdd.bundlesecurity.SecurityUtils.generateID;
 import static net.discdd.grpc.BundleSenderType.CLIENT;
 import static net.discdd.grpc.BundleSenderType.TRANSPORT;
+import static net.discdd.utils.BundleUtils.runFuture;
 
 @Service
 public class BundleTransmission {
 
     private static final Logger logger = Logger.getLogger(BundleTransmission.class.getName());
-    private static final ExecutorService executorService = Executors.newCachedThreadPool();
+    private final ExecutorService executorService = Executors.newCachedThreadPool();
     public static final int WINDOW_LENGTH = 3;
     private final BundleServerConfig config;
     private final BundleSecurity bundleSecurity;
@@ -194,27 +196,13 @@ public class BundleTransmission {
                 serverSecurity.createEncryptedBundleId(clientId, bundleCounter, BundleIDGenerator.DOWNSTREAM);
         long ackedRecievedBundle = counts.lastReceivedBundleCounter;
         applicationDataManager.registerNewBundleId(clientId, encryptedBundleId, bundleCounter, ackedRecievedBundle);
-        bundleSecurity.getIdentityPublicKey();
+
         var adus = applicationDataManager.fetchADUsToSend(0, clientId);
         PipedInputStream pipedInputStream = new PipedInputStream();
-        PipedOutputStream pipedOutputStream = new PipedOutputStream(pipedInputStream);
+
         try{
-            Future<?> future = executorService.submit(() -> {
-                try {
-                    BundleUtils.createBundlePayloadForAdus(adus, null, counts.lastReceivedBundleId, pipedOutputStream);
-                }catch(IOException| NoSuchAlgorithmException e){
-                    return e;
-                }finally{
-                    pipedOutputStream.close();
-                }
-                return null;
-            });
-            if(future.get() != null){
-                throw new IOException(String.valueOf(future.get()));
-            }
-            if(!future.isCancelled()){
-                future.cancel(true);
-            }
+            BundleUtils.runFuture(executorService,null,adus,null ,pipedInputStream);
+
             var bundleOutputStream = Files.newOutputStream(getPathForBundleToSend(encryptedBundleId),
                                                             StandardOpenOption.CREATE,
                                                             StandardOpenOption.TRUNCATE_EXISTING);
@@ -225,7 +213,7 @@ public class BundleTransmission {
                                                       encryptedBundleId, pipedInputStream,
                                                       bundleOutputStream);
 
-        } catch (InvalidMessageException | ExecutionException | InterruptedException e) {
+        } catch (InvalidMessageException e) {
                 throw new GeneralSecurityException(e);
         }
         return encryptedBundleId;

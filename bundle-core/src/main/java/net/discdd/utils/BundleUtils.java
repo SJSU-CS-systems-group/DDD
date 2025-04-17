@@ -24,6 +24,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -39,6 +41,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -352,7 +356,19 @@ public class BundleUtils {
         // bundle is ready
         outerJar.close();
     }
-
+    public static void runFuture(ExecutorService executorService, String ackedEncryptedBundleId, List<ADU> adus, byte[] routingData, PipedInputStream inputPipe){
+        Future<?> future = executorService.submit(() -> {
+            PipedOutputStream outputPipe = new PipedOutputStream(inputPipe);
+            try {
+                BundleUtils.createBundlePayloadForAdus(adus, routingData, ackedEncryptedBundleId, outputPipe);
+            } catch (IOException | NoSuchAlgorithmException e) {
+                return e;
+            } finally {
+                outputPipe.close();
+            }
+            return null;
+        });
+    }
     public interface Encrypter {
         void encrypt(InputStream payload, OutputStream outputStream) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidMessageException;
     }

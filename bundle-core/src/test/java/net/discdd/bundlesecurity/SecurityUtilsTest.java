@@ -109,7 +109,7 @@ public class SecurityUtilsTest {
         ByteArrayOutputStream cipherText = new ByteArrayOutputStream();
         aliceCipher.encrypt(new ByteArrayInputStream(message.getBytes()), cipherText);
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        SessionCipher.STREAM_READ_SIZE = 31;
+        SessionCipher.readSize = 31;
         bobCipher.decrypt(new ByteArrayInputStream(cipherText.toByteArray()), outputStream);
         String decrypted = new String(outputStream.toByteArray(), StandardCharsets.UTF_8);
         Assertions.assertEquals(message, decrypted);
