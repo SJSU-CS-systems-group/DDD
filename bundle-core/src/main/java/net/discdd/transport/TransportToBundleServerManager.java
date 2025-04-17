@@ -10,7 +10,6 @@ import net.discdd.grpc.BundleDownloadRequest;
 import net.discdd.grpc.BundleDownloadResponse;
 import net.discdd.grpc.BundleExchangeServiceGrpc;
 import net.discdd.grpc.BundleInventoryRequest;
-import net.discdd.grpc.BundleSender;
 import net.discdd.grpc.BundleSenderType;
 import net.discdd.grpc.BundleServerServiceGrpc;
 import net.discdd.grpc.BundleUploadRequest;
@@ -47,7 +46,6 @@ public class TransportToBundleServerManager implements Runnable {
 
     private static final Logger logger = Logger.getLogger(TransportToBundleServerManager.class.getName());
     public static final String RECENCY_BLOB_BIN = "recencyBlob.bin";
-    private final BundleSender transportSenderId;
     private final Path fromClientPath;
     private final Path fromServerPath;
     private final Function<Void, Void> connectComplete;
@@ -62,8 +60,6 @@ public class TransportToBundleServerManager implements Runnable {
         this.connectError = connectError;
         this.serverHost = host;
         this.serverPort = Integer.parseInt(port);
-        this.transportSenderId =
-                BundleSender.newBuilder().setId("bundle_transport").setType(BundleSenderType.TRANSPORT).build();
         this.fromClientPath = transportPaths.toServerPath;
         this.fromServerPath = transportPaths.toClientPath;
         try {
@@ -92,13 +88,14 @@ public class TransportToBundleServerManager implements Runnable {
                     .build();
 
             var bsStub = BundleServerServiceGrpc.newBlockingStub(channel);
+
             var exchangeStub = BundleExchangeServiceGrpc.newStub(channel);
             var blockingExchangeStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
             var bundlesFromClients = populateListFromPath(fromClientPath);
             var bundlesFromServer = populateListFromPath(fromServerPath);
 
             var inventoryResponse = bsStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                    .bundleInventory(BundleInventoryRequest.newBuilder().setSender(transportSenderId)
+                    .bundleInventory(BundleInventoryRequest.newBuilder()
                                              .addAllBundlesFromClientsOnTransport(bundlesFromClients)
                                              .addAllBundlesFromServerOnTransport(bundlesFromServer).build());
 
@@ -124,7 +121,7 @@ public class TransportToBundleServerManager implements Runnable {
     }
 
     private void processRecencyBlob(BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub blockingExchangeStub) {
-        var recencyBlobReq = GetRecencyBlobRequest.newBuilder().setSender(transportSenderId).build();
+        var recencyBlobReq = GetRecencyBlobRequest.newBuilder().build();
         var recencyBlob = blockingExchangeStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                 .getRecencyBlob(recencyBlobReq);
         Path blobPath = fromServerPath.resolve(RECENCY_BLOB_BIN);
@@ -145,7 +142,7 @@ public class TransportToBundleServerManager implements Runnable {
                                                          StandardOpenOption.TRUNCATE_EXISTING)) {
                 var completion = new CompletableFuture<Boolean>();
                 exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).downloadBundle(
-                        BundleDownloadRequest.newBuilder().setBundleId(toReceive).setSender(transportSenderId).build(),
+                        BundleDownloadRequest.newBuilder().setBundleId(toReceive).setSenderType(BundleSenderType.TRANSPORT).build(),
                         new StreamObserver<>() {
                             @Override
                             public void onNext(BundleDownloadResponse value) {
@@ -188,7 +185,7 @@ public class TransportToBundleServerManager implements Runnable {
                         exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                                 .uploadBundle(responseObserver);
                 uploadRequestStreamObserver.onNext(
-                        BundleUploadRequest.newBuilder().setSender(transportSenderId).build());
+                        BundleUploadRequest.newBuilder().setSenderType(BundleSenderType.TRANSPORT).build());
                 uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setBundleId(toSend).build());
                 byte[] data = new byte[1024 * 1024];
                 int rc;

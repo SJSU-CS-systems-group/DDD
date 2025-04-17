@@ -6,10 +6,10 @@ import net.discdd.grpc.BundleChunk;
 import net.discdd.grpc.BundleDownloadRequest;
 import net.discdd.grpc.BundleDownloadResponse;
 import net.discdd.grpc.BundleExchangeServiceGrpc;
-import net.discdd.grpc.BundleSender;
 import net.discdd.grpc.BundleSenderType;
 import net.discdd.grpc.BundleUploadRequest;
 import net.discdd.grpc.BundleUploadResponse;
+import net.discdd.grpc.PublicKeyMap;
 import net.discdd.grpc.Status;
 import net.discdd.utils.BundleUtils;
 
@@ -30,6 +30,7 @@ import static java.util.logging.Level.SEVERE;
 
 public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrpc.BundleExchangeServiceImplBase {
     private static final Logger logger = Logger.getLogger(BundleExchangeServiceImpl.class.getName());
+
     private static final int DOWNLOAD_BUFFER_SIZE = 4096;
 
     @Override
@@ -43,13 +44,13 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
     @Override
     public void downloadBundle(BundleDownloadRequest request, StreamObserver<BundleDownloadResponse> responseObserver) {
         onBundleExchangeEvent(BundleExchangeEvent.DOWNLOAD_STARTED);
-
         BundleUtils.checkIdClean(request.getBundleId().getEncryptedId());
 
         var bundleExchangeName = new BundleExchangeName(request.getBundleId().getEncryptedId(), true);
 
         try {
-            Path downloadPath = pathProducer(bundleExchangeName, request.getSender());
+            Path downloadPath = request.hasPublicKeyMap() ? pathProducer(bundleExchangeName, request.getSenderType(), request.getPublicKeyMap()) : pathProducer(bundleExchangeName, request.getSenderType(), null);
+
             if (downloadPath == null) {
                 responseObserver.onError(new IOException("Bundle not found"));
                 return;
@@ -84,9 +85,9 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
         }
     }
 
-    protected abstract Path pathProducer(BundleExchangeName bundleExchangeName, BundleSender sender);
+    protected abstract Path pathProducer(BundleExchangeName bundleExchangeName, BundleSenderType senderType, PublicKeyMap publicKeyMap);
 
-    protected abstract void bundleCompletion(BundleExchangeName bundleExchangeName, BundleSender sender, Path path);
+    protected abstract void bundleCompletion(BundleExchangeName bundleExchangeName, BundleSenderType senderType, Path path);
 
     public enum BundleExchangeEvent {
         UPLOAD_STARTED, DOWNLOAD_STARTED, UPLOAD_FINISHED, DOWNLOAD_FINISHED
@@ -105,7 +106,7 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
         Path path;
         Status status;
         BundleExchangeName bundleExchangeName;
-        BundleSender bundleSender;
+        BundleSenderType bundleSenderType;
 
         public BundleUploadRequestStreamObserver(StreamObserver<BundleUploadResponse> responseObserver) {
             this.responseObserver = responseObserver;
@@ -120,7 +121,8 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
                             bundleUploadRequest.getBundleId().getEncryptedId());
                     bundleExchangeName =
                             new BundleExchangeName(bundleUploadRequest.getBundleId().getEncryptedId(), false);
-                    path = pathProducer(bundleExchangeName, bundleSender);
+
+                    path = pathProducer(bundleExchangeName, bundleSenderType, null);
                     try {
                         if (path == null) throw new IOException(
                                 "Could not produce a path for " + bundleExchangeName.encryptedBundleId);
@@ -130,9 +132,10 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
                         logger.log(SEVERE, "Error creating file " + path, e);
                         this.onError(e);
                     }
-                } else if (bundleUploadRequest.hasSender()) {
-                    bundleSender = bundleUploadRequest.getSender();
-                } else {
+                } else if (bundleUploadRequest.hasSenderType()) {
+                    bundleSenderType = bundleUploadRequest.getSenderType();
+                }
+                else {
                     writeFile(writer, bundleUploadRequest.getChunk().getChunk());
                 }
             } catch (IOException e) {
@@ -146,8 +149,9 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
             status = Status.FAILED;
             // TODO we should probably convey that the upload failed. We'll figure it out later, but it
             //      would be nice to indicate early on.
-            if (bundleExchangeName != null && bundleSender != null) {
-                bundleCompletion(bundleExchangeName, bundleSender, path);
+
+            if (bundleExchangeName != null && bundleSenderType != null) {
+                bundleCompletion(bundleExchangeName, bundleSenderType,path);
             }
             status = Status.FAILED;
             this.onCompleted();
@@ -161,8 +165,9 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
             } catch (Exception e) {
                 logger.log(SEVERE, "Problem closing bundle", e);
             }
-            if (bundleExchangeName != null && bundleSender != null) {
-                bundleCompletion(bundleExchangeName, bundleSender, path);
+
+            if (bundleExchangeName != null && bundleSenderType != null) {
+                bundleCompletion(bundleExchangeName, bundleSenderType, path);
             }
             responseObserver.onNext(BundleUploadResponse.newBuilder().setStatus(status).build());
             responseObserver.onCompleted();

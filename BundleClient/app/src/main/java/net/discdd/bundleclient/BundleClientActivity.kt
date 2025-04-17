@@ -13,7 +13,6 @@ import kotlinx.coroutines.launch
 import net.discdd.bundleclient.screens.HomeScreen
 import net.discdd.screens.LogFragment
 import net.discdd.theme.ComposableTheme
-import net.discdd.viewmodels.PermissionsViewModel
 import java.util.logging.Level.WARNING
 import java.util.logging.Logger
 
@@ -67,17 +66,9 @@ class BundleClientActivity: ComponentActivity() {
             }
         }
 
-        val permissionsViewModel: PermissionsViewModel by viewModels()
-        val activityResultLauncher = registerForActivityResult(
-            ActivityResultContracts.RequestMultiplePermissions()
-        ) { results -> permissionsViewModel.handlePermissionResults(results) }
-
         setContent {
             ComposableTheme {
-                HomeScreen(
-                    permissionsViewModel = permissionsViewModel,
-                    activityResultLauncher = activityResultLauncher,
-                )
+                HomeScreen()
             }
         }
     }

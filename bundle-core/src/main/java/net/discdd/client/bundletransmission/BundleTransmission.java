@@ -18,12 +18,12 @@ import net.discdd.client.bundlesecurity.ClientSecurity;
 import net.discdd.grpc.BundleChunk;
 import net.discdd.grpc.BundleDownloadRequest;
 import net.discdd.grpc.BundleExchangeServiceGrpc;
-import net.discdd.grpc.BundleSender;
 import net.discdd.grpc.BundleSenderType;
 import net.discdd.grpc.BundleUploadRequest;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.grpc.GetRecencyBlobRequest;
 import net.discdd.grpc.GetRecencyBlobResponse;
+import net.discdd.grpc.PublicKeyMap;
 import net.discdd.grpc.RecencyBlobStatus;
 import net.discdd.grpc.Status;
 import net.discdd.model.ADU;
@@ -42,7 +42,6 @@ import net.discdd.utils.FileUtils;
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.InvalidMessageException;
-import org.whispersystems.libsignal.LegacyMessageException;
 import org.whispersystems.libsignal.NoSessionException;
 import org.whispersystems.libsignal.ecc.Curve;
 
@@ -50,14 +49,11 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.file.Files;
@@ -124,15 +120,15 @@ public class BundleTransmission {
         return bundleId.trim();
     }
 
-    public void processReceivedBundle(BundleSender sender, Bundle bundle) throws IOException,
+    public void processReceivedBundle(String senderId, Bundle bundle) throws IOException,
             RoutingExceptions.ClientMetaDataFileException, NoSessionException, InvalidMessageException,
             DuplicateMessageException, InvalidKeyException, GeneralSecurityException,
             WindowExceptions.BufferOverflow {
         String largestBundleIdReceived = this.getLargestBundleIdReceived();
         UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, clientPaths.uncompressedPayloadStore);
         Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
-        logger.log(INFO, "Updating client routing metadata for sender:  " + bundleSenderToString(sender));
-        clientRouting.updateMetaData(sender.getId());
+        logger.log(INFO, "Updating client routing metadata for sender:  " + bundleSenderToString(senderId));
+        clientRouting.updateMetaData(senderId);
 
         String bundleId = payload.getBundleId();
 
@@ -157,8 +153,8 @@ public class BundleTransmission {
         this.applicationDataManager.storeReceivedADUs(null, null, uncompressedPayload.getADUs());
     }
 
-    public static String bundleSenderToString(BundleSender sender) {
-        return sender.getType() + " : " + sender.getId();
+    public static String bundleSenderToString(String senderId) {
+        return senderId;
     }
 
     private BundleDTO generateNewBundle(String bundleId) throws RoutingExceptions.ClientMetaDataFileException,
@@ -379,30 +375,33 @@ public class BundleTransmission {
         Statuses uploadStatus = Statuses.FAILED;
         Statuses downloadStatus = Statuses.FAILED;
 
-        BundleSender transportSender = null;
+        String transportSenderId = null;
         try {
             if (isServerRunning(transportAddress, port)) {
-                var recencyBlobRequest = GetRecencyBlobRequest.newBuilder().setSender(
-                        BundleSender.newBuilder().setId(bundleSecurity.getClientSecurity().getClientID())
-                                .setType(BundleSenderType.CLIENT).build()).build();
+                var recencyBlobRequest = GetRecencyBlobRequest.newBuilder().build();
                 var blobRecencyReply = blockingStub.getRecencyBlob(recencyBlobRequest);
                 var recencyBlob = blobRecencyReply.getRecencyBlob();
                 if (!processRecencyBlob(deviceAddress, blobRecencyReply)) {
                     logger.log(SEVERE, "Did not process recency blob. In the future, we need to stop talking to this " +
                             "device");
                 } else {
-                    transportSender = recencyBlob.getSender();
+                    transportSenderId = recencyBlob.getSenderId();
+                    logger.log(INFO, "Recency blob processed for " + transportSenderId);
                 }
 
                 timestampExchangeWithTransport(deviceAddress);
                 var clientSecurity = bundleSecurity.getClientSecurity();
                 var bundleRequests = bundleSecurity.getClientWindow().getWindow(clientSecurity);
-                var clientId = clientSecurity.getClientID();
-                var sender = BundleSender.newBuilder().setId(clientId).setType(BundleSenderType.CLIENT).build();
-                var bundlesDownloaded = downloadBundles(bundleRequests, sender, blockingStub);
+                PublicKeyMap publicKeyMap = PublicKeyMap.newBuilder()
+                        .setClientPub(ByteString.copyFrom(clientSecurity.getClientIdentityPublicKey().serialize()))
+                        .setSignedTLSPub(ByteString.copyFrom(clientSecurity.getSignedTLSPub(bundleSecurity.getClientGrpcSecurity().getGrpcKeyPair().getPublic())))
+                        .build();
+                var bundlesDownloaded = deviceDeviceName.equals("BundleServer")
+                                        ? downloadBundles(bundleRequests, BundleSenderType.SERVER, blockingStub, publicKeyMap)
+                                        : downloadBundles(bundleRequests, BundleSenderType.CLIENT, blockingStub, null);
 
                 try {
-                    processReceivedBundle(transportSender, new Bundle(bundlesDownloaded.toFile()));
+                    processReceivedBundle(transportSenderId, new Bundle(bundlesDownloaded.toFile()));
                     downloadStatus = Statuses.COMPLETE;
                 } catch (Exception e) {
                     downloadStatus = Statuses.FAILED;
@@ -410,6 +409,7 @@ public class BundleTransmission {
                 }
 
                 var stub = BundleExchangeServiceGrpc.newStub(channel);
+                stub = NettyClientCertificateInterceptor.createServerCertificateOption(stub, certCompletion);
                 uploadStatus = uploadBundle(stub);
 
             }
@@ -428,8 +428,7 @@ public class BundleTransmission {
         BundleDTO toSend = generateBundleForTransmission();
 
         var bundleUploadResponseObserver = new BundleUploadResponseObserver();
-        BundleSender clientSender = BundleSender.newBuilder().setId(bundleSecurity.getClientSecurity().getClientID())
-                .setType(BundleSenderType.CLIENT).build();
+
         StreamObserver<BundleUploadRequest> uploadRequestStreamObserver =
                 stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                         .uploadBundle(bundleUploadResponseObserver);
@@ -450,7 +449,7 @@ public class BundleTransmission {
                 uploadRequestStreamObserver.onNext(uploadRequest);
             }
         }
-        uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setSender(clientSender).build());
+        uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setSenderType(BundleSenderType.CLIENT).build());
         uploadRequestStreamObserver.onCompleted();
         bundleUploadResponseObserver.waitForCompletion(GRPC_LONG_TIMEOUT_MS);
 
@@ -461,15 +460,20 @@ public class BundleTransmission {
         return bundleUploadResponseObserver.bundleUploadResponse.getStatus() == Status.SUCCESS ? Statuses.COMPLETE: Statuses.EMPTY;
     }
 
-    private Path downloadBundles(List<String> bundleRequests, BundleSender sender,
-                                 BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub stub) throws IOException {
+    private Path downloadBundles(List<String> bundleRequests, BundleSenderType senderType,
+                                 BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub stub, PublicKeyMap publicKeyMap) throws IOException {
+
         for (String bundle : bundleRequests) {
-            var downloadRequest = BundleDownloadRequest.newBuilder()
-                    .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId(bundle).build()).setSender(sender)
-                    .build();
+            var downloadRequestBuilder = BundleDownloadRequest.newBuilder()
+                    .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId(bundle).build()).setSenderType(senderType);
+
+            if (publicKeyMap != null) {
+                downloadRequestBuilder.setPublicKeyMap(publicKeyMap);
+            }
+
             logger.log(INFO, "Downloading file: " + bundle);
             var responses =
-                    stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).downloadBundle(downloadRequest);
+                    stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).downloadBundle(downloadRequestBuilder.build());
             OutputStream fileOutputStream = null;
 
             var bundlePath = clientPaths.receiveBundlePath.resolve(bundle);

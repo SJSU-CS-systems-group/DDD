@@ -1,5 +1,6 @@
 package net.discdd.server.service;
 
+import io.grpc.Context;
 import io.grpc.stub.StreamObserver;
 import net.discdd.grpc.BundleInventoryRequest;
 import net.discdd.grpc.BundleInventoryResponse;
@@ -7,10 +8,13 @@ import net.discdd.grpc.BundleServerServiceGrpc;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.grpc.GrpcService;
 import net.discdd.server.bundletransmission.BundleTransmission;
+import net.discdd.tls.DDDTLSUtil;
+import net.discdd.tls.NettyServerCertificateInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
 import javax.annotation.PostConstruct;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -54,9 +58,11 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
         ;
         var deletionList = new ArrayList<EncryptedBundleId>();
         var downloadList = new ArrayList<EncryptedBundleId>();
+
+        X509Certificate clientCert = NettyServerCertificateInterceptor.CLIENT_CERTIFICATE_KEY.get(Context.current());
         try {
             var bundlesToExchange =
-                    bundleTransmission.inventoryBundlesForTransmission(request.getSender(), serverBundlesOnTransport);
+                    bundleTransmission.inventoryBundlesForTransmission(request.getSenderType(), DDDTLSUtil.publicKeyToName(clientCert.getPublicKey()), serverBundlesOnTransport);
             bundlesToExchange.bundlesToDelete().stream()
                     .map(s -> EncryptedBundleId.newBuilder().setEncryptedId(s).build()).forEach(deletionList::add);
             bundlesToExchange.bundlesToDownload().stream()

@@ -8,6 +8,13 @@
     <artifactId>serviceadapter-core</artifactId>
     <version>1.0</version>
 
+    <parent>
+        <groupId>net.discdd</groupId>
+        <artifactId>DDD</artifactId>
+        <version>1.0-SNAPSHOT</version>
+
+    </parent>
+
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
@@ -52,8 +59,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.30</version>
-            <optional>true</optional>
+            <version>${lombok.version}</version>
         </dependency>
         <dependency>
             <!-- Java 9+ compatibility - Do NOT update to 2.0.0 -->
@@ -66,12 +72,6 @@
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>
             <version>6.1.8</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>1.18.32</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
