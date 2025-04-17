@@ -1,0 +1,76 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "net.discdd",
+    "module": "DDD-signal-protocol-java",
+    "version": "2.8.1-D1",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.7"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "DDD-signal-protocol-java-2.8.1-D1.jar",
+          "url": "DDD-signal-protocol-java-2.8.1-D1.jar",
+          "size": 265049,
+          "sha512": "0809ebad916b17757d4fabb18aa90afbc24ab899b75855622fcbcc7202f2faf1679c8e9b6ce670cdb8f7f97b0db089763765df2d9eaf0b7c1c95f868f75b48af",
+          "sha256": "3683f571c0ad62501b1045d31c2c4ce1fc5d19fb7c4a2f48cdae3ece12ebb99f",
+          "sha1": "6cbe5b8d743347942ceda9ff793b32c88d8d2c66",
+          "md5": "b32b0c8f379f9202d1e1eb85fd174e3d"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "org.whispersystems",
+          "module": "curve25519-java",
+          "version": {
+            "requires": "0.5.0"
+          }
+        },
+        {
+          "group": "com.google.protobuf",
+          "module": "protobuf-java",
+          "version": {
+            "requires": "3.23.4"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "DDD-signal-protocol-java-2.8.1-D1.jar",
+          "url": "DDD-signal-protocol-java-2.8.1-D1.jar",
+          "size": 265049,
+          "sha512": "0809ebad916b17757d4fabb18aa90afbc24ab899b75855622fcbcc7202f2faf1679c8e9b6ce670cdb8f7f97b0db089763765df2d9eaf0b7c1c95f868f75b48af",
+          "sha256": "3683f571c0ad62501b1045d31c2c4ce1fc5d19fb7c4a2f48cdae3ece12ebb99f",
+          "sha1": "6cbe5b8d743347942ceda9ff793b32c88d8d2c66",
+          "md5": "b32b0c8f379f9202d1e1eb85fd174e3d"
+        }
+      ]
+    }
+  ]
+}
