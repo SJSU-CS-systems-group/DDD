@@ -71,37 +71,28 @@ fun HomeScreen(
                     viewModel.onToggleEasterEgg()
                     Toast.makeText(context, "Easter Egg Toggled!", Toast.LENGTH_SHORT).show()
                 }
-            ),
-            TabItem(
-                title = "Wifi Aware",
-                screen = { WifiAwareSubscriberScreen(serviceReadyFuture = WifiAwareManager.serviceReady) }
-            ),
-            TabItem(
-                title = context.getString(R.string.server_tab),
-                screen = { ServerScreen() }
-            ),
-            TabItem(
-                title = context.getString(R.string.logs_tab),
-                screen = { LogScreen() }
-            ),
-            TabItem(
-                title = context.getString(R.string.bm_tab),
-                screen = { ManagerScreen() }
-            ),
-            TabItem(
-                title = context.getString(R.string.permissions_tab),
-                screen = { PermissionScreen() }
-            )
             }
+        ),
+        TabItem(
+            title = "Wifi Aware",
+            screen = { WifiAwareSubscriberScreen(serviceReadyFuture = WifiAwareManager.serviceReady) }
         ),
         TabItem(
             title = context.getString(R.string.server_tab),
             screen = { ServerScreen() }
         ),
         TabItem(
+            title = context.getString(R.string.logs_tab),
+            screen = { LogScreen() }
+        ),
+        TabItem(
             title = context.getString(R.string.bm_tab),
             screen = { ManagerScreen() }
         ),
+        TabItem(
+            title = context.getString(R.string.permissions_tab),
+            screen = { PermissionScreen() }
+        )
     )
 
     /*
