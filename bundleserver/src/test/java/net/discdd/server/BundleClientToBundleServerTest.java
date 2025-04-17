@@ -44,6 +44,9 @@ import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
@@ -108,15 +111,27 @@ public class BundleClientToBundleServerTest extends End2EndTest {
 
     }
 
+    Random random = new Random(13 /* seed for deterministic testing */);
+    public static final int ADU_UPLOAD_SIZE = 10000;
+    public static final int ADU_UPLOAD_COUNT = 4;
     @Test
     void test3UploadBundleWithADUs() throws Exception {
-        System.out.println("BRRRRRRRRRRRRR starting test 3");
-        sendStore.addADU(null, TEST_APPID, "ADU1".getBytes(), 1);
-        sendStore.addADU(null, TEST_APPID, "ADU2".getBytes(), 2);
-
-        sendBundle();
-
-        checkReceivedFiles(clientId, Set.of("1", "2"));
+        var sentSet = new HashSet<String>();
+        var sentData = new HashMap<String, byte[]>();
+        for (int i = 0; i < ADU_UPLOAD_COUNT; i++) {
+            int size = i * ADU_UPLOAD_SIZE + 17;
+            for (int j = 0; j < 2; j++) {
+                int aduId = i * 2 + 1 + j;
+                byte[] aduBytes = new byte[size];
+                random.nextBytes(aduBytes);
+                sentSet.add(Integer.toString(aduId));
+                sentData.put(Integer.toString(aduId), aduBytes);
+                sendStore.addADU(null, TEST_APPID, aduBytes, aduId);
+            }
+            sendBundle();
+            checkReceivedFiles(clientId, sentSet, sentData);
+        }
+        deleteReceivedFiles(clientId);
     }
 
     @Test

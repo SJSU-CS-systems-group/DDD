@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat.startActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import net.discdd.bundleclient.R
-import net.discdd.bundleclient.UsbConnectionManager
+import net.discdd.UsbConnectionManager
 import net.discdd.bundleclient.viewmodels.UsbState
 import net.discdd.bundleclient.viewmodels.UsbViewModel
 
