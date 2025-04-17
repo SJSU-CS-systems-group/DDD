@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
+import net.discdd.UsbConnectionManager
 import net.discdd.bundleclient.screens.HomeScreen
 import net.discdd.screens.LogFragment
 import net.discdd.theme.ComposableTheme
