@@ -1,4 +1,4 @@
-package net.discdd.bundletransport.screens
+package net.discdd.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,17 +11,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import net.discdd.bundletransport.viewmodels.TransportUsbState
-import net.discdd.bundletransport.viewmodels.TransportUsbViewModel
-import net.discdd.pathutils.TransportPaths
+import net.discdd.components.UsbFileRequestUI
+import net.discdd.viewmodels.UsbViewModel
 
 @Composable
-fun TransportUsbScreen(
-    usbViewModel: TransportUsbViewModel = viewModel(),
-    transportPaths: TransportPaths,
+fun <T : UsbViewModel> UsbScreen(
+    usbViewModel: T,
+    usbExchangeComponent: @Composable (T) -> Unit
 ) {
     val usbState by usbViewModel.state.collectAsState()
 
@@ -37,26 +34,10 @@ fun TransportUsbScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (usbState.filePermissionGranted) {
-                UsbFeatureUI(usbViewModel, usbState)
+                usbExchangeComponent(usbViewModel)
             } else {
-                PermissionRequestUI(usbViewModel)
+                UsbFileRequestUI(usbViewModel)
             }
         }
     }
 }
-
-@Composable
-fun UsbFeatureUI(
-   usbViewModel: TransportUsbViewModel,
-   usbState: TransportUsbState,
-) {
-    Surface() {}
-}
-
-@Composable
-fun PermissionRequestUI(
-    usbViewModel: TransportUsbViewModel,
-) {
-    Surface() {}
-}
-

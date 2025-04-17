@@ -35,9 +35,11 @@ import net.discdd.UsbConnectionManager
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiAwareManager
 import net.discdd.bundleclient.WifiServiceManager
+import net.discdd.bundleclient.viewmodels.ClientUsbViewModel
 import net.discdd.screens.LogScreen
 import net.discdd.components.NotificationBottomSheet
 import net.discdd.screens.PermissionScreen
+import net.discdd.screens.UsbScreen
 import net.discdd.viewmodels.SettingsViewModel
 
 data class TabItem(
@@ -104,7 +106,16 @@ fun HomeScreen(
     val usbTab = listOf(
         TabItem(
             title = context.getString(R.string.usb_tab),
-            screen = { ClientUsbScreen() }
+            screen = {
+                val usbViewModel: ClientUsbViewModel = viewModel()
+                UsbScreen(
+                    usbViewModel = usbViewModel
+                ) { viewModel ->
+                    ClientUsbComponent(viewModel) {
+                        viewModel.transferBundleToUsb()
+                    }
+                }
+            }
         )
     )
 
