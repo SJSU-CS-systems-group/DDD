@@ -104,7 +104,7 @@ fun HomeScreen(
     val usbTab = listOf(
         TabItem(
             title = context.getString(R.string.usb_tab),
-            screen = { UsbScreen() }
+            screen = { ClientUsbScreen() }
         )
     )
 

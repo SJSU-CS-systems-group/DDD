@@ -1,7 +1,5 @@
 package net.discdd.bundleclient.screens
 
-import android.content.Intent
-import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -19,20 +17,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat.startActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
-import net.discdd.bundleclient.R
 import net.discdd.UsbConnectionManager
-import net.discdd.bundleclient.viewmodels.UsbState
-import net.discdd.bundleclient.viewmodels.UsbViewModel
+import net.discdd.bundleclient.R
+import net.discdd.bundleclient.viewmodels.ClientUsbViewModel
+import net.discdd.components.UsbFileRequestUI
+import net.discdd.viewmodels.UsbState
+import net.discdd.viewmodels.UsbViewModel
 
 @Composable
-fun UsbScreen(
-    usbViewModel: UsbViewModel = viewModel()
+fun ClientUsbScreen(
+    usbViewModel: ClientUsbViewModel = viewModel()
 ) {
     val usbState by usbViewModel.state.collectAsState()
 
@@ -48,18 +46,21 @@ fun UsbScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (usbState.filePermissionGranted) {
-                UsbFeatureUI(usbViewModel, usbState)
+                ClientUsbUI(usbViewModel, usbState,) {
+                    usbViewModel.transferBundleToUsb()
+                }
             } else {
-                PermissionRequestUI(usbViewModel)
+               UsbFileRequestUI(usbViewModel)
             }
         }
     }
 }
 
 @Composable
-fun UsbFeatureUI(
+fun ClientUsbUI(
     usbViewModel: UsbViewModel,
-    usbState: UsbState
+    usbState: UsbState,
+    onTransferClick: () -> Unit,
 ) {
     val isUsbConnected by UsbConnectionManager.usbConnected.collectAsState()
 
@@ -85,7 +86,7 @@ fun UsbFeatureUI(
 
     // Exchange button
     Button(
-        onClick = { usbViewModel.transferBundleToUsb() },
+        onClick = onTransferClick,
         enabled = isUsbConnected && usbState.dddDirectoryExists,
         modifier = Modifier.fillMaxWidth(0.8f)
     ) {
@@ -97,9 +98,7 @@ fun UsbFeatureUI(
     Spacer(modifier = Modifier.height(16.dp))
 
     Button(
-        onClick = {
-            usbViewModel.checkDddDirExists()
-        },
+        onClick = { usbViewModel.checkDddDirExists() },
         modifier = Modifier.fillMaxWidth(0.8f)
     ) {
         Text(
@@ -116,43 +115,6 @@ fun UsbFeatureUI(
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
-        )
-    }
-}
-
-@Composable
-fun PermissionRequestUI(
-    usbViewModel: UsbViewModel
-) {
-    val context = LocalContext.current
-
-    Text(
-        text = stringResource(R.string.to_settings_text),
-        style = MaterialTheme.typography.bodyLarge,
-        textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)
-    )
-
-    Button(
-        onClick = {
-            val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-            startActivity(context, intent, null)
-        },
-        modifier = Modifier.fillMaxWidth(0.8f)
-    ) {
-        Text(
-            text = stringResource(R.string.to_settings_button)
-        )
-    }
-
-    Spacer(modifier = Modifier.height(16.dp))
-
-    Button(
-        onClick = { usbViewModel.refreshFilePermission() },
-        modifier = Modifier.fillMaxWidth(0.8f)
-    ) {
-        Text(
-            text = stringResource(R.string.reload)
         )
     }
 }
