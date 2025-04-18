@@ -52,11 +52,11 @@ import net.discdd.bundletransport.R
 import net.discdd.bundletransport.viewmodels.WifiDirectViewModel
 import net.discdd.theme.ComposableTheme
 
-class WifiDirectFragment : Fragment() {
+class WifiDirectFragment: Fragment() {
     override fun onCreateView(
-            inflater: LayoutInflater,
-            container: ViewGroup?,
-            savedInstanceState: Bundle?
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
     ): View {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
@@ -72,20 +72,20 @@ class WifiDirectFragment : Fragment() {
 
 @Composable
 fun WifiDirectScreen(
-        wifiViewModel: WifiDirectViewModel = viewModel(),
-        serviceReadyFuture: CompletableFuture<TransportWifiDirectService>,
-        preferences: SharedPreferences = LocalContext.current.getSharedPreferences(
-                TransportWifiDirectService.WIFI_DIRECT_PREFERENCES,
-                Context.MODE_PRIVATE
-        )
+    wifiViewModel: WifiDirectViewModel = viewModel(),
+    serviceReadyFuture: CompletableFuture<TransportWifiDirectService>,
+    preferences: SharedPreferences = LocalContext.current.getSharedPreferences(
+        TransportWifiDirectService.WIFI_DIRECT_PREFERENCES,
+        Context.MODE_PRIVATE
+    )
 ) {
     val state by wifiViewModel.state.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
     var showDialog by remember { mutableStateOf(false) }
 
     Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
     ) {
 
         LaunchedEffect(Unit) {
@@ -105,18 +105,18 @@ fun WifiDirectScreen(
         }
 
         Column(
-                modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
 
             var checked by remember {
                 mutableStateOf(
-                        preferences.getBoolean(
-                                TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
-                                true
-                        )
+                    preferences.getBoolean(
+                        TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
+                        true
+                    )
                 )
             }
 
@@ -125,28 +125,28 @@ fun WifiDirectScreen(
             }
 
             Text(
-                    text = state.wifiInfo,
-                    modifier = Modifier.clickable { showDialog = true }
+                text = state.wifiInfo,
+                modifier = Modifier.clickable {showDialog = true}
             )
             if (showDialog == true) {
                 var gi = wifiViewModel.getService()?.groupInfo
                 var connectedPeers: ArrayList<String> = ArrayList<String>()
                 if (gi != null) {
-                    gi.clientList.forEach { c -> connectedPeers.add(c.deviceName) }
+                    gi.clientList.forEach {c -> connectedPeers.add(c.deviceName)}
                 }
                 AlertDialog(
-                        title = { Text(text = stringResource(R.string.connected_devices)) },
-                        text = { Text(text = connectedPeers.toTypedArray().joinToString(", ")) },
-                        onDismissRequest = { showDialog = false },
-                        confirmButton = {
-                            TextButton(
-                                    onClick = {
-                                        showDialog = false
-                                    }
-                            ) {
-                                Text(stringResource(R.string.dismiss))
+                    title = { Text(text = stringResource(R.string.connected_devices)) },
+                    text = { Text(text = connectedPeers.toTypedArray().joinToString(", ")) },
+                    onDismissRequest = { showDialog = false },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showDialog = false
                             }
+                        ) {
+                            Text(stringResource(R.string.dismiss))
                         }
+                    }
                 )
             }
 
@@ -154,17 +154,17 @@ fun WifiDirectScreen(
             Text(text = "Device Name: ${state.deviceName}")
 
             Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Checkbox(
-                        checked = checked,
-                        onCheckedChange = {
-                            checked = it
-                            preferences.edit().putBoolean(
-                                    TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
-                                    it
-                            ).apply()
-                        }
+                    checked = checked,
+                    onCheckedChange = {
+                        checked = it
+                        preferences.edit().putBoolean(
+                            TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
+                            it
+                        ).apply()
+                    }
                 )
                 Text(text = stringResource(R.string.collect_data_even_when_app_is_closed))
             }
@@ -175,9 +175,8 @@ fun WifiDirectScreen(
                 Text(text = stringResource(R.string.phone_name_must_start_with_ddd))
 
                 FilledTonalButton(
-                        onClick = { wifiViewModel.openInfoSettings() },
-                        modifier = Modifier.fillMaxWidth()
-                ) {
+                    onClick = {wifiViewModel.openInfoSettings()},
+                    modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.change_phone_name))
                 }
             }
