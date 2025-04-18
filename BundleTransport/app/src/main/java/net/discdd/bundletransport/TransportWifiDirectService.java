@@ -22,6 +22,7 @@ import androidx.core.app.ServiceCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
+import net.discdd.bundletransport.viewmodels.WifiDirectViewModel;
 import net.discdd.client.bundletransmission.BundleTransmission;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.screens.LogFragment;
@@ -171,7 +172,7 @@ public class TransportWifiDirectService extends Service
     }
 
     private void appendToClientLog(String message) {
-        var intent = new Intent(getApplicationContext(), TransportWifiDirectFragment.class);
+        var intent = new Intent(getApplicationContext(), WifiDirectViewModel.class);
         intent.setAction(NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION);
         intent.putExtra("message", message);
         LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
