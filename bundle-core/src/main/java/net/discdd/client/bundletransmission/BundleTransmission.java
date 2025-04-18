@@ -173,8 +173,7 @@ public class BundleTransmission {
 
         Path bundleFile = clientPaths.tosendDir.resolve(bundleId);
         var ackedEncryptedBundleId = ackRecord == null ? null : ackRecord.getBundleId();
-        BundleUtils.runFuture(executorService,ackedEncryptedBundleId, adus, routingData, pipedInputStream);
-
+        Future<?> future = BundleUtils.runFuture(executorService,ackedEncryptedBundleId, adus, routingData, pipedInputStream);
         try {
             ClientSecurity clientSecurity = bundleSecurity.getClientSecurity();
 
@@ -188,6 +187,8 @@ public class BundleTransmission {
 
         } catch (InvalidMessageException e) {
             throw new IOException("Error processing message: " + e.getMessage(), e);
+        }finally{
+            future.cancel(true);
         }
         return new BundleDTO(bundleId, new Bundle(bundleFile.toFile()));
     }
