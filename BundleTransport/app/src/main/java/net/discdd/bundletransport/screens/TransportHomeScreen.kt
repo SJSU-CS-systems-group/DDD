@@ -52,6 +52,8 @@ fun TransportHomeScreen(
     val scope = rememberCoroutineScope()
     val firstOpen by viewModel.firstOpen.collectAsState()
     val showUsbScreen by UsbConnectionManager.usbConnected.collectAsState()
+    val showEasterEgg by viewModel.showEasterEgg.collectAsState()
+    val internetAvailable by ConnectivityManager.internetAvailable.collectAsState()
 
     val standardTabs = remember {
         listOf(
@@ -59,14 +61,6 @@ fun TransportHomeScreen(
                 title = context.getString(R.string.upload),
                 screen = {
                     ServerUploadScreen()
-                }
-            ),
-            TabItem(
-                title = context.getString(R.string.local_wifi),
-                screen = {
-                    WifiDirectScreen(
-                        serviceReadyFuture = TransportWifiServiceManager.serviceReady
-                    )
                 }
             ),
             TabItem(
@@ -90,32 +84,57 @@ fun TransportHomeScreen(
         )
     }
 
-    val usbTab = listOf(
+    /*
+    * adminTabs are features that should only be shown to developers
+    * these features can be toggled by interacting with the Easter Egg
+    */
+    val adminTabs = listOf(
         TabItem(
-            title = stringResource(R.string.usb),
-            screen = {
-                val usbViewModel: TransportUsbViewModel = viewModel()
-                UsbScreen(
-                    usbViewModel = usbViewModel
-                ) { viewModel ->
-                    TransportUsbComponent(viewModel) {
-                        viewModel.populate()
-                    }
+            title = context.getString(R.string.logs),
+            screen = { LogScreen() }
+        ),
+        TabItem(
+            title = context.getString(R.string.permissions),
+            screen = { PermissionScreen() }
+        ),
+    )
+
+    val wifiDirectTab = TabItem(
+        title = context.getString(R.string.local_wifi),
+        screen = {
+            WifiDirectScreen(
+                serviceReadyFuture = TransportWifiServiceManager.serviceReady
+            )
+        }
+    )
+
+    val usbTab = TabItem(
+        title = stringResource(R.string.usb),
+        screen = {
+            val usbViewModel: TransportUsbViewModel = viewModel()
+            UsbScreen(
+                usbViewModel = usbViewModel
+            ) { viewModel ->
+                TransportUsbComponent(viewModel) {
+                    viewModel.populate()
                 }
             }
-        )
+        }
     )
 
     var tabItems by remember {
         mutableStateOf(standardTabs)
     }
 
-    LaunchedEffect(showUsbScreen) {
-        tabItems = if (showUsbScreen) {
-            usbTab + standardTabs
-        } else {
-            standardTabs
-        }
+    LaunchedEffect(internetAvailable, showUsbScreen, showEasterEgg) {
+        val newTabs = mutableListOf<TabItem>()
+
+        newTabs.addAll(standardTabs)
+        if (internetAvailable) newTabs.add(1, wifiDirectTab)
+        if (showUsbScreen) newTabs.add(usbTab)
+        if (showEasterEgg) newTabs.addAll(adminTabs)
+
+        tabItems = newTabs
     }
 
     Surface(
