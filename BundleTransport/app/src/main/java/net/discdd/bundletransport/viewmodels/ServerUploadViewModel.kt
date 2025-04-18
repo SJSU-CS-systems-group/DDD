@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import net.discdd.AndroidAppConstants
 import net.discdd.pathutils.TransportPaths
 import net.discdd.bundletransport.R
 import net.discdd.transport.GrpcSecurityHolder
@@ -43,6 +44,7 @@ class ServerUploadViewModel(
         transportID = Base64.getEncoder().encodeToString(
             transportGrpcSecurity.grpcKeyPair.public.encoded
         )
+        AndroidAppConstants.checkDefaultDomainPortSettings(sharedPref)
         restoreDomainPort()
         reloadCount()
     }
