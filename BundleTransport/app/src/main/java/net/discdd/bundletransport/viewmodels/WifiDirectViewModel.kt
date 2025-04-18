@@ -32,7 +32,6 @@ data class WifiDirectState(
     val wifiInfo: String = "",
     val clientLog: String = "",
     val wifiStatus: String = "",
-    val collectDataOnClosed: Boolean = false,
 )
 
 class WifiDirectViewModel(

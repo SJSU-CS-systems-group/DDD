@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
@@ -47,6 +48,7 @@ import java.util.concurrent.CompletableFuture
 
 import net.discdd.bundletransport.BundleTransportActivity
 import net.discdd.bundletransport.TransportWifiDirectService
+import net.discdd.bundletransport.R
 import net.discdd.bundletransport.viewmodels.WifiDirectViewModel
 import net.discdd.theme.ComposableTheme
 
@@ -133,7 +135,7 @@ fun WifiDirectScreen(
                     gi.clientList.forEach {c -> connectedPeers.add(c.deviceName)}
                 }
                 AlertDialog(
-                    title = { Text(text = "Connected Devices") },
+                    title = { Text(text = stringResource(R.string.connected_devices)) },
                     text = { Text(text = connectedPeers.toTypedArray().joinToString(", ")) },
                     onDismissRequest = { showDialog = false },
                     confirmButton = {
@@ -142,7 +144,7 @@ fun WifiDirectScreen(
                                 showDialog = false
                             }
                         ) {
-                            Text("Dismiss")
+                            Text(stringResource(R.string.dismiss))
                         }
                     }
                 )
@@ -164,22 +166,22 @@ fun WifiDirectScreen(
                         ).apply()
                     }
                 )
-                Text(text = "Collect data even when app is closed")
+                Text(text = stringResource(R.string.collect_data_even_when_app_is_closed))
             }
 
             // only show the name change button if we don't have a valid device name
             // (transports must have device names starting with ddd_)
             if (!nameValid) {
-                Text(text = "Phone name must start with ddd_")
+                Text(text = stringResource(R.string.phone_name_must_start_with_ddd))
 
                 FilledTonalButton(
                     onClick = {wifiViewModel.openInfoSettings()},
                     modifier = Modifier.fillMaxWidth()) {
-                    Text("Change Phone Name")
+                    Text(stringResource(R.string.change_phone_name))
                 }
             }
 
-            Text(text = "Interactions with BundleClients: ")
+            Text(text = stringResource(R.string.interactions_with_bundleclients))
             Text(text = state.clientLog)
         }
     }
