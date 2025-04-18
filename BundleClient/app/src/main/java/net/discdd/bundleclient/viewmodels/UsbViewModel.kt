@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import net.discdd.bundleclient.UsbConnectionManager
+import net.discdd.UsbConnectionManager
 import net.discdd.bundleclient.WifiServiceManager
 import java.io.File
 import java.nio.file.Files

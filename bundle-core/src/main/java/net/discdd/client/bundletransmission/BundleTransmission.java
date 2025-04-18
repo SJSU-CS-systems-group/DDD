@@ -55,6 +55,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -67,6 +69,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
@@ -78,7 +84,7 @@ import static net.discdd.utils.Constants.GRPC_LONG_TIMEOUT_MS;
 
 public class BundleTransmission {
     private static final Logger logger = Logger.getLogger(BundleTransmission.class.getName());
-
+    private static final ExecutorService executorService = Executors.newCachedThreadPool();
     private final BundleSecurity bundleSecurity;
     private final ApplicationDataManager applicationDataManager;
 
@@ -163,27 +169,38 @@ public class BundleTransmission {
         List<ADU> adus = this.applicationDataManager.fetchADUsToSend(clientPaths.BUNDLE_SIZE_LIMIT, null);
         var routingData = clientRouting.bundleMetaData();
 
-        Path tmpPath = clientPaths.tosendDir.resolve("tmp");
-        try (var outputStream = Files.newOutputStream(tmpPath)) {
-            var ackedEncryptedBundleId = ackRecord == null
-                    ? null : ackRecord.getBundleId();
-            BundleUtils.createBundlePayloadForAdus(adus, routingData, ackedEncryptedBundleId, outputStream);
-        }
-
-        ClientSecurity clientSecurity = bundleSecurity.getClientSecurity();
+        PipedInputStream pipedInputStream = new PipedInputStream();
+        PipedOutputStream pipedOutputStream = new PipedOutputStream(pipedInputStream);
         Path bundleFile = clientPaths.tosendDir.resolve(bundleId);
-        try (OutputStream os = Files.newOutputStream(bundleFile, StandardOpenOption.CREATE,
+        Future<?> future = executorService.submit(() -> {
+            var ackedEncryptedBundleId = ackRecord == null ? null : ackRecord.getBundleId();
+            try {
+                BundleUtils.createBundlePayloadForAdus(adus, routingData, ackedEncryptedBundleId, pipedOutputStream);
+            } catch (IOException | NoSuchAlgorithmException e) {
+                return e;
+            } finally {
+                pipedOutputStream.close();
+            }
+            return null;
+        });
+
+        try {
+            ClientSecurity clientSecurity = bundleSecurity.getClientSecurity();
+
+            OutputStream os = Files.newOutputStream(bundleFile, StandardOpenOption.CREATE,
                                                      StandardOpenOption.TRUNCATE_EXISTING);
-        var inputStream = Files.newInputStream(tmpPath)) {
             BundleUtils.encryptPayloadAndCreateBundle(clientSecurity::encrypt,
                                                       clientSecurity.getClientIdentityPublicKey(),
                                                       clientSecurity.getClientBaseKeyPairPublicKey(),
-                                                      clientSecurity.getServerPublicKey(), bundleId, inputStream,
+                                                      clientSecurity.getServerPublicKey(), bundleId, pipedInputStream,
                                                       os);
+
         } catch (InvalidMessageException e) {
             throw new IOException("Error processing message: " + e.getMessage(), e);
         } finally {
-            Files.delete(tmpPath);
+            if (future != null) {
+                future.cancel(true);
+            }
         }
         return new BundleDTO(bundleId, new Bundle(bundleFile.toFile()));
     }
