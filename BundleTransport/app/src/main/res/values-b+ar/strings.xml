@@ -60,4 +60,6 @@
     <string name="apply_changes">انقر فوق "تعيين التخزين" لتطبيق التغييرات</string>
     <string name="storage_updated">تم تحديث مساحة التخزين</string>
     <string name="failed_to_update_storage">فشل في تحديث التخزين</string>
+    <string name="collect_data_even_when_app_is_closed">جمع البيانات حتى عندما يكون التطبيق مغلقًا</string>
+    <string name="dismiss">رفض</string>
 </resources>
