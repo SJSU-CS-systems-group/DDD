@@ -25,10 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.InvalidMessageException;
-import org.whispersystems.libsignal.LegacyMessageException;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PipedInputStream;
@@ -37,7 +34,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.sql.SQLException;
@@ -46,7 +42,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -198,8 +193,9 @@ public class BundleTransmission {
         var adus = applicationDataManager.fetchADUsToSend(0, clientId);
         PipedInputStream pipedInputStream = new PipedInputStream();
         PipedOutputStream pipedOutputStream = new PipedOutputStream(pipedInputStream);
+        Future<?> future = null;
         try{
-            Future<?> future = executorService.submit(() -> {
+            future = executorService.submit(() -> {
                 try {
                     BundleUtils.createBundlePayloadForAdus(adus, null, counts.lastReceivedBundleId, pipedOutputStream);
                 }catch(IOException| NoSuchAlgorithmException e){
@@ -209,12 +205,7 @@ public class BundleTransmission {
                 }
                 return null;
             });
-            if(future.get() != null){
-                throw new IOException(String.valueOf(future.get()));
-            }
-            if(!future.isCancelled()){
-                future.cancel(true);
-            }
+
             var bundleOutputStream = Files.newOutputStream(getPathForBundleToSend(encryptedBundleId),
                                                             StandardOpenOption.CREATE,
                                                             StandardOpenOption.TRUNCATE_EXISTING);
@@ -225,8 +216,12 @@ public class BundleTransmission {
                                                       encryptedBundleId, pipedInputStream,
                                                       bundleOutputStream);
 
-        } catch (InvalidMessageException | ExecutionException | InterruptedException e) {
+        } catch (InvalidMessageException e) {
                 throw new GeneralSecurityException(e);
+        } finally {
+            if (future != null) {
+                future.cancel(true);
+            }
         }
         return encryptedBundleId;
     }
@@ -285,5 +280,4 @@ public class BundleTransmission {
 
     public record BundlesToExchange(List<String> bundlesToDownload, List<String> bundlesToUpload,
                                     List<String> bundlesToDelete) {}
-
 }

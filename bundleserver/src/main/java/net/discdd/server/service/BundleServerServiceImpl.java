@@ -55,7 +55,7 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
         var serverBundlesOnTransport =
                 request.getBundlesFromServerOnTransportList().stream().map(EncryptedBundleId::getEncryptedId)
                         .collect(Collectors.toSet());
-        ;
+
         var deletionList = new ArrayList<EncryptedBundleId>();
         var downloadList = new ArrayList<EncryptedBundleId>();
 
