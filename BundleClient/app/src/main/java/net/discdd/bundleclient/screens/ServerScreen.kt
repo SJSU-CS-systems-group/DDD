@@ -24,13 +24,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import net.discdd.bundleclient.viewmodels.ServerViewModel
 import net.discdd.viewmodels.ConnectivityViewModel
+import net.discdd.viewmodels.SettingsViewModel
 
 @Composable
 fun ServerScreen(
     serverViewModel: ServerViewModel = viewModel(),
-    connectivityViewModel: ConnectivityViewModel = viewModel()
+    connectivityViewModel: ConnectivityViewModel = viewModel(),
+    settingsViewModel: SettingsViewModel = viewModel(),
 ) {
     val serverState by serverViewModel.state.collectAsState()
+    val showEasterEgg by settingsViewModel.showEasterEgg.collectAsState()
     val connectivityState by connectivityViewModel.state.collectAsState()
     var enableConnectBtn by remember { mutableStateOf(false) }
 
@@ -55,41 +58,56 @@ fun ServerScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            OutlinedTextField(
-                value = serverState.domain,
-                onValueChange = { serverViewModel.onDomainChanged(it) },
-                label = { Text("BundleServer Domain") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-            )
-            OutlinedTextField(
-                value = serverState.port,
-                onValueChange = { serverViewModel.onPortChanged(it) },
-                label = { Text("Port Input") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-            )
-            FilledTonalButton(onClick = {
-                serverViewModel.connectServer()
-            },
-                enabled = enableConnectBtn,
-                modifier = Modifier.fillMaxWidth()) {
-                Text("Connect to Bundle Server")
-            }
-            FilledTonalButton(onClick = {
-                serverViewModel.saveDomainPort()
-            },
-                modifier = Modifier.fillMaxWidth()) {
-                Text("Save Domain and Port")
-            }
-            serverState.message?.let { message ->
-                Text(
-                    text = message,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium
+            if (showEasterEgg) {
+                OutlinedTextField(
+                    value = serverState.domain,
+                    onValueChange = { serverViewModel.onDomainChanged(it) },
+                    label = { Text("BundleServer Domain") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
                 )
+                OutlinedTextField(
+                    value = serverState.port,
+                    onValueChange = { serverViewModel.onPortChanged(it) },
+                    label = { Text("Port Input") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                )
+                FilledTonalButton(
+                    onClick = {
+                        serverViewModel.connectServer()
+                    },
+                    enabled = enableConnectBtn,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Connect to Bundle Server")
+                }
+                FilledTonalButton(
+                    onClick = {
+                        serverViewModel.saveDomainPort()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Save Domain and Port")
+                }
+                serverState.message?.let { message ->
+                    Text(
+                        text = message,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            } else {
+                FilledTonalButton(
+                    onClick = {
+                        serverViewModel.connectServer()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Connect to Bundle Server")
+                }
             }
         }
     }
