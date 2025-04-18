@@ -59,4 +59,6 @@
     <string name="apply_changes">Натисніть «Налаштувати пам’ять», щоб застосувати зміни</string>
     <string name="storage_updated">Сховище оновлено</string>
     <string name="failed_to_update_storage">Не вдалося оновити сховище</string>
+    <string name="collect_data_even_when_app_is_closed">Збирайте дані, навіть якщо додаток закрито</string>
+    <string name="dismiss">Відхилити</string>
 </resources>
