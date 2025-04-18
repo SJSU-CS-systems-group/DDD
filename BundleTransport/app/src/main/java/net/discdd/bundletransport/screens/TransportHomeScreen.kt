@@ -23,15 +23,20 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import net.discdd.UsbConnectionManager
-import net.discdd.screens.NotificationBottomSheet
+import net.discdd.bundletransport.ConnectivityManager
+import net.discdd.components.NotificationBottomSheet
 import net.discdd.bundletransport.R
+import net.discdd.bundletransport.TransportWifiServiceManager
+import net.discdd.bundletransport.viewmodels.TransportUsbViewModel
 import net.discdd.screens.LogScreen
 import net.discdd.screens.PermissionScreen
+import net.discdd.screens.UsbScreen
 import net.discdd.viewmodels.SettingsViewModel
 
 data class TabItem(
@@ -57,7 +62,15 @@ fun TransportHomeScreen(
                 }
             ),
             TabItem(
-                title = "Storage",
+                title = context.getString(R.string.local_wifi),
+                screen = {
+                    WifiDirectScreen(
+                        serviceReadyFuture = TransportWifiServiceManager.serviceReady
+                    )
+                }
+            ),
+            TabItem(
+                title = context.getString(R.string.storage),
                 screen = {
                     StorageScreen()
                 }
@@ -76,10 +89,20 @@ fun TransportHomeScreen(
             )
         )
     }
+
     val usbTab = listOf(
         TabItem(
-            title = "usb",
-            screen = { FooScreen() }
+            title = stringResource(R.string.usb),
+            screen = {
+                val usbViewModel: TransportUsbViewModel = viewModel()
+                UsbScreen(
+                    usbViewModel = usbViewModel
+                ) { viewModel ->
+                    TransportUsbComponent(viewModel) {
+                        viewModel.populate()
+                    }
+                }
+            }
         )
     )
 

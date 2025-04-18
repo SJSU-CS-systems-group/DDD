@@ -10,10 +10,10 @@ object TransportWifiServiceManager {
     private val logger = Logger.getLogger(TransportWifiServiceManager::class.java.name)
     private var _btService: TransportWifiDirectService? = null
 
-    private val serviceReady = CompletableFuture<TransportWifiDirectService>()
+    val serviceReady = CompletableFuture<TransportWifiDirectService>()
     private lateinit var connection: ServiceConnection
 
-    fun initialize(activity: MainActivity) {
+    fun initialize(activity: BundleTransportActivity) {
         connection = object : ServiceConnection {
             override fun onServiceConnected(className: ComponentName, service: IBinder) {
                 // We've bound to LocalService, cast the IBinder and get LocalService instance.
