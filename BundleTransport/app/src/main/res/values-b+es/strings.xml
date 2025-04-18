@@ -59,4 +59,6 @@
     <string name="apply_changes">Haga clic en Establecer almacenamiento para aplicar los cambios.</string>
     <string name="storage_updated">Almacenamiento actualizado</string>
     <string name="failed_to_update_storage">No se pudo actualizar el almacenamiento</string>
+    <string name="collect_data_even_when_app_is_closed">Recopila datos incluso cuando la aplicación está cerrada</string>
+    <string name="dismiss">Despedir</string>
 </resources>

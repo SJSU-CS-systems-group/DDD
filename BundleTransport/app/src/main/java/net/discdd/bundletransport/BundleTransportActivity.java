@@ -36,6 +36,7 @@ import com.google.android.material.tabs.TabLayoutMediator;
 
 import net.discdd.bundletransport.screens.StorageFragment;
 import net.discdd.bundletransport.screens.UploadFragment;
+import net.discdd.bundletransport.screens.WifiDirectFragment;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.screens.LogFragment;
 import net.discdd.screens.PermissionsFragment;
@@ -132,7 +133,8 @@ public class BundleTransportActivity extends AppCompatActivity {
         }
 
         serverUploadFragment = new TitledFragment(getString(R.string.upload), new UploadFragment());
-        TransportWifiDirectFragment transportFrag = TransportWifiDirectFragment.newInstance(transportPaths);
+        WifiDirectFragment transportFrag = new WifiDirectFragment();
+        //TransportWifiDirectFragment transportFrag = TransportWifiDirectFragment.newInstance(transportPaths);
         transportWifiFragment = new TitledFragment(getString(R.string.local_wifi), transportFrag);
         storageFragment = new TitledFragment("Storage", new StorageFragment());
         usbFrag = new TitledFragment("USB", UsbFragment.newInstance(transportPaths));
@@ -376,5 +378,9 @@ public class BundleTransportActivity extends AppCompatActivity {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.NEARBY_WIFI_DEVICES) == PackageManager.PERMISSION_GRANTED) {
             permissionsViewModel.updatePermissions(true);
         }
+    }
+
+    public CompletableFuture<TransportWifiDirectService> serviceReady() {
+        return transportWifiServiceConnection;
     }
 }

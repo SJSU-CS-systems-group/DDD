@@ -59,4 +59,6 @@
     <string name="failed_to_update_storage">Failed to update storage</string>
     <string name="initiating_bundle_exchange">Initiating Bundle Exchange...</string>
     <string name="exchanging_with_client">Exchanging with Client</string>
+    <string name="collect_data_even_when_app_is_closed">Collect data even when app is closed</string>
+    <string name="dismiss">Dismiss</string>
 </resources>
