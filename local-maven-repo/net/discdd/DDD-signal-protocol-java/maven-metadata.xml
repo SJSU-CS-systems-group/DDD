@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <groupId>net.discdd</groupId>
+  <artifactId>DDD-signal-protocol-java</artifactId>
+  <versioning>
+    <latest>2.8.1-D1</latest>
+    <release>2.8.1-D1</release>
+    <versions>
+      <version>2.8.1-D1</version>
+    </versions>
+    <lastUpdated>20250417211927</lastUpdated>
+  </versioning>
+</metadata>

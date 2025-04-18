@@ -1,6 +1,7 @@
 package net.discdd.bundleclient.screens
 
-import androidx.activity.result.ActivityResultLauncher
+import android.Manifest
+import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,65 +27,96 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.launch
+import net.discdd.UsbConnectionManager
 import net.discdd.bundleclient.R
-import net.discdd.bundleclient.UsbConnectionManager
+import net.discdd.bundleclient.WifiAwareManager
 import net.discdd.bundleclient.WifiServiceManager
 import net.discdd.screens.LogScreen
+import net.discdd.screens.NotificationBottomSheet
 import net.discdd.screens.PermissionScreen
-import net.discdd.viewmodels.PermissionsViewModel
+import net.discdd.viewmodels.SettingsViewModel
 
 data class TabItem(
     val title: String,
     val screen: @Composable () -> Unit,
 )
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun HomeScreen(
-    permissionsViewModel: PermissionsViewModel,
-    activityResultLauncher: ActivityResultLauncher<Array<String>>
+    viewModel: SettingsViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val showUsbScreen by UsbConnectionManager.usbConnected.collectAsState()
-    val standardTabs = remember {
-        listOf(
-            TabItem(
-                title = context.getString(R.string.home_tab),
-                screen = { WifiDirectScreen(serviceReadyFuture = WifiServiceManager.serviceReady) }
-                ),
-            TabItem(
-                title = context.getString(R.string.server_tab),
-                screen = { ServerScreen() }
-            ),
-            TabItem(
-                title = context.getString(R.string.logs_tab),
-                screen = { LogScreen() }
-            ),
-            TabItem(
-                title = context.getString(R.string.bm_tab),
-                screen = { ManagerScreen() }
-            ),
-            TabItem(
-                title = context.getString(R.string.permissions_tab),
-                screen = { PermissionScreen(permissionsViewModel, activityResultLauncher) }
-            )
+    val firstOpen by viewModel.firstOpen.collectAsState()
+    val showEasterEgg by viewModel.showEasterEgg.collectAsState()
+    val nearbyWifiState = rememberPermissionState(
+            Manifest.permission.NEARBY_WIFI_DEVICES
+    )
+
+    val standardTabs = listOf(
+        TabItem(
+            title = context.getString(R.string.home_tab),
+            screen = {
+                WifiDirectScreen(
+                    serviceReadyFuture = WifiServiceManager.serviceReady,
+                    nearbyWifiState = nearbyWifiState
+                ) {
+                    viewModel.onToggleEasterEgg()
+                    Toast.makeText(context, "Easter Egg Toggled!", Toast.LENGTH_SHORT).show()
+                }
+            }
+        ),
+        TabItem(
+            title = context.getString(R.string.server_tab),
+            screen = { ServerScreen() }
+        ),
+        TabItem(
+            title = context.getString(R.string.bm_tab),
+            screen = { ManagerScreen() }
+        ),
+    )
+
+    /*
+    * adminTabs are features that should only be shown to developers
+    * these features can be toggled by interacting with the Easter Egg
+    */
+    val adminTabs = listOf(
+        TabItem(
+            title = context.getString(R.string.logs_tab),
+            screen = { LogScreen() }
+        ),
+        TabItem(
+            title = context.getString(R.string.permissions_tab),
+            screen = { PermissionScreen() }
+        ),
+        TabItem(
+            title = context.getString(R.string.wifi_aware_tab),
+            screen = { WifiAwareSubscriberScreen() }
         )
-    }
-    val usbTab = listOf(TabItem(
-        title = context.getString(R.string.usb_tab),
-        screen = { UsbScreen() }
-    ))
+    )
+
+    val usbTab = listOf(
+        TabItem(
+            title = context.getString(R.string.usb_tab),
+            screen = { UsbScreen() }
+        )
+    )
 
     var tabItems by remember {
         mutableStateOf(standardTabs)
     }
-    LaunchedEffect(showUsbScreen) {
-        tabItems = if (showUsbScreen) {
-             usbTab + standardTabs
-        } else {
-            standardTabs
-        }
+
+    LaunchedEffect(showUsbScreen, showEasterEgg) {
+        var newTabs = standardTabs.toMutableList()
+        if (showUsbScreen) newTabs += usbTab
+        if (showEasterEgg) newTabs += adminTabs
+        tabItems = newTabs
     }
 
     Surface(
@@ -101,7 +133,7 @@ fun HomeScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Text(
                     text = context.getString(R.string.app_name),
@@ -137,11 +169,15 @@ fun HomeScreen(
                 tabItems[index].screen()
             }
         }
+
+        if (firstOpen) {
+            NotificationBottomSheet(viewModel)
+        }
     }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
-//    HomeScreen()
+    HomeScreen()
 }
