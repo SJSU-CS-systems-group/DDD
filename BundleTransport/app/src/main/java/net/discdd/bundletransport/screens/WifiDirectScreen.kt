@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,7 +45,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 import java.util.concurrent.CompletableFuture
 
-import net.discdd.bundletransport.R
 import net.discdd.bundletransport.BundleTransportActivity
 import net.discdd.bundletransport.TransportWifiDirectService
 import net.discdd.bundletransport.viewmodels.WifiDirectViewModel
@@ -117,8 +118,8 @@ fun WifiDirectScreen(
                 )
             }
 
-            var nameValid by remember {
-                mutableStateOf(state.deviceName.startsWith("ddd_"))
+            val nameValid by remember {
+                derivedStateOf { state.deviceName.startsWith("ddd_") }
             }
 
             Text(
@@ -168,17 +169,17 @@ fun WifiDirectScreen(
 
             // only show the name change button if we don't have a valid device name
             // (transports must have device names starting with ddd_)
-            if (nameValid == false) {
-                Text(text = R.id.change_device_name.toString())
+            if (!nameValid) {
+                Text(text = "Phone name must start with ddd_")
 
                 FilledTonalButton(
-                    onClick = {wifiViewModel.changeName()},
+                    onClick = {wifiViewModel.openInfoSettings()},
                     modifier = Modifier.fillMaxWidth()) {
                     Text("Change Phone Name")
                 }
             }
 
-            Text(text = "Interactions with BundleClients")
+            Text(text = "Interactions with BundleClients: ")
             Text(text = state.clientLog)
         }
     }

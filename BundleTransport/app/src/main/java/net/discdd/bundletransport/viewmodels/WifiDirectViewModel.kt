@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Intent
 import android.content.IntentFilter
 import android.provider.Settings
+import androidx.core.content.ContextCompat.startActivity
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -27,10 +28,10 @@ import java.util.logging.Logger
 import java.util.stream.Collectors
 
 data class WifiDirectState(
-    val deviceName: String = R.id.device_name.toString(),
-    val wifiInfo: String = R.id.my_wifi_info.toString(),
-    val clientLog: String = R.id.client_log.toString(),
-    val wifiStatus: String = R.id.my_wifi_status.toString(),
+    val deviceName: String = "",
+    val wifiInfo: String = "",
+    val clientLog: String = "",
+    val wifiStatus: String = "",
     val collectDataOnClosed: Boolean = false,
 )
 
@@ -149,7 +150,10 @@ class WifiDirectViewModel(
         }
     }
 
-    fun changeName() {
-        context.startActivity(Intent(Settings.ACTION_DEVICE_INFO_SETTINGS))
+    fun openInfoSettings() {
+        val intent = Intent(Settings.ACTION_DEVICE_INFO_SETTINGS).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        startActivity(context, intent, null)
     }
 }
