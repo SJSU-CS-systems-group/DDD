@@ -180,8 +180,7 @@ public class SecurityUtils {
         if (encodedKeyList.size() != 4) {
             throw (new IOException(
                     "Wrong use of decode encrypted key... this key is probably not encrypted or is an old client... " +
-                            "here is the key header: " +
-                            encodedKeyList.get(0)));
+                            "here is the key header: " + encodedKeyList.get(0)));
         }
         if ((encodedKeyList.get(0).equals(EC_ENCRYPTED_PUBLIC_KEY_HEADER)) &&
                 (encodedKeyList.get(3).equals(EC_ENCRYPTED_PUBLIC_KEY_FOOTER))) {

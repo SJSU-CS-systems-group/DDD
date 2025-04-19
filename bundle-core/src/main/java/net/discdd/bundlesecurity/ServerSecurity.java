@@ -85,11 +85,9 @@ public class ServerSecurity {
             logger.log(SEVERE,
                        String.format(
                                "Error loading server keys. Ensure the following key files exist in your application" +
-                                       ".yml's " +
-                                       "{bundle-server.bundle-security.server-serverkeys-path} path: %s\n" +
+                                       ".yml's " + "{bundle-server.bundle-security.server-serverkeys-path} path: %s\n" +
                                        "server_identity.pub, serverIdentity.pvt, server_signed_pre.pub, " +
-                                       "serverSignedPreKey.pvt, " +
-                                       "server_ratchet.pub, serverRatchetKey.pvt\n",
+                                       "serverSignedPreKey.pvt, " + "server_ratchet.pub, serverRatchetKey.pvt\n",
                                serverKeyPath));
             throw new RuntimeException("Bad keys");
         }
