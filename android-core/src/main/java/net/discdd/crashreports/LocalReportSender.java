@@ -44,8 +44,11 @@ public class LocalReportSender implements ReportSender {
         try {
             String reportText = config.getReportFormat()
                     .toFormattedString(errorContent, config.getReportContent(), "\n", "\n\t", false);
-            optimizeReports(logFile);
+            if (logFile.exists()) {
+                optimizeReports(logFile);
+            }
             FileWriter writer = new FileWriter(logFile, true);
+            writer.append("\n");
             writer.append(reportText);
             writer.flush();
             writer.close();
