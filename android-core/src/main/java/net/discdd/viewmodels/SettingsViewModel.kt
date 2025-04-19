@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 class SettingsViewModel(
     application: Application
-): AndroidViewModel(application) {
+) : AndroidViewModel(application) {
     private val context get() = getApplication<Application>()
     private val sharedPref = context.getSharedPreferences(NET_DISCDD_VIEWMODELS_PREFS, MODE_PRIVATE)
 

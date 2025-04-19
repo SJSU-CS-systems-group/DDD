@@ -72,13 +72,20 @@ public class RpcServer {
             protected void onBundleExchangeEvent(BundleExchangeEvent bundleExchangeEvent) {
                 listener.onBundleExchangeEvent(bundleExchangeEvent);
             }
+
             @Override
-            protected Path pathProducer(BundleExchangeName bundleExchangeName, BundleSenderType bundleSenderType, PublicKeyMap publicKeyMap) {
-                return bundleExchangeName.isDownload() ? toClientPath.resolve(bundleExchangeName.encryptedBundleId()) :
-                        toServerPath.resolve(bundleExchangeName.encryptedBundleId());
+            protected Path pathProducer(BundleExchangeName bundleExchangeName,
+                                        BundleSenderType bundleSenderType,
+                                        PublicKeyMap publicKeyMap) {
+                return bundleExchangeName.isDownload() ?
+                       toClientPath.resolve(bundleExchangeName.encryptedBundleId()) :
+                       toServerPath.resolve(bundleExchangeName.encryptedBundleId());
             }
+
             @Override
-            protected void bundleCompletion(BundleExchangeName bundleExchangeName, BundleSenderType senderType, Path path) {
+            protected void bundleCompletion(BundleExchangeName bundleExchangeName,
+                                            BundleSenderType senderType,
+                                            Path path) {
             }
 
             @Override
@@ -99,19 +106,15 @@ public class RpcServer {
 
         try {
             var sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(
-                    DDDTLSUtil.getKeyManagerFactory(transportGrpcSecurity.getGrpcKeyPair(),
-                                                    transportGrpcSecurity.getGrpcCert()).getKeyManagers(),
-                    new TrustManager[] {DDDTLSUtil.trustManager},
-                    new SecureRandom()
-            );
+            sslContext.init(DDDTLSUtil.getKeyManagerFactory(transportGrpcSecurity.getGrpcKeyPair(),
+                                                            transportGrpcSecurity.getGrpcCert()).getKeyManagers(),
+                            new TrustManager[] { DDDTLSUtil.trustManager },
+                            new SecureRandom());
 
-            server = DDDNettyTLS.createGrpcServer(
-                    transportGrpcSecurity.getGrpcKeyPair(),
-                    transportGrpcSecurity.getGrpcCert(),
-                    7777,
-                    bundleExchangeService
-            );
+            server = DDDNettyTLS.createGrpcServer(transportGrpcSecurity.getGrpcKeyPair(),
+                                                  transportGrpcSecurity.getGrpcCert(),
+                                                  7777,
+                                                  bundleExchangeService);
         } catch (Exception e) {
             logger.log(SEVERE, "TLS communication exceptions ", e);
         }

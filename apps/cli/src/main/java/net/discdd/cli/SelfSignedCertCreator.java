@@ -21,7 +21,8 @@ public class SelfSignedCertCreator implements Callable<Void> {
     private Path certPath;
 
     @Override
-    public Void call() throws IOException, NoSuchAlgorithmException, java.security.InvalidKeyException, InvalidKeySpecException, NoSuchProviderException {
+    public Void call() throws IOException, NoSuchAlgorithmException, java.security.InvalidKeyException,
+            InvalidKeySpecException, NoSuchProviderException {
         // Create a self-signed certificate
         KeyPair keyPair = DDDTLSUtil.loadKeyPairfromFiles(publicKeyPath, privateKeyPath);
 

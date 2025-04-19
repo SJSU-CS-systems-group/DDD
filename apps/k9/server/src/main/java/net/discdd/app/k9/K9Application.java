@@ -21,7 +21,7 @@ import java.util.logging.Logger;
  * the GrpcService annotation.
  */
 @SpringBootApplication
-@Import({GrpcServerRunner.class, GrpcSecurityConfig.class, AdapterRegisterService.class})
+@Import({ GrpcServerRunner.class, GrpcSecurityConfig.class, AdapterRegisterService.class })
 public class K9Application {
     final static Logger logger = Logger.getLogger(K9Application.class.getName());
 

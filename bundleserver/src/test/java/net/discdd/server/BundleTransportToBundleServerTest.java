@@ -58,19 +58,25 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
             logger.severe("Failed to initialize GrpcSecurity: " + e.getMessage());
         }
 
-        manager = new TransportToBundleServerManager(transportPaths, "localhost",
-                                                     Integer.toString(BUNDLESERVER_GRPC_PORT), (Void) -> {
-            System.out.println("connectComplete");
-            return null;
-        }, (Exception e) -> {
-            System.out.println("connectError");
-            return null;
-        });
+        manager = new TransportToBundleServerManager(transportPaths,
+                                                     "localhost",
+                                                     Integer.toString(BUNDLESERVER_GRPC_PORT),
+                                                     (Void) -> {
+                                                         System.out.println("connectComplete");
+                                                         return null;
+                                                     },
+                                                     (Exception e) -> {
+                                                         System.out.println("connectError");
+                                                         return null;
+                                                     });
     }
 
     @BeforeEach
     void setUpEach() throws SSLException {
-        channel = DDDNettyTLS.createGrpcChannel(transportGrpcSecurity.getGrpcKeyPair(), transportGrpcSecurity.getGrpcCert(), "localhost", BUNDLESERVER_GRPC_PORT);
+        channel = DDDNettyTLS.createGrpcChannel(transportGrpcSecurity.getGrpcKeyPair(),
+                                                transportGrpcSecurity.getGrpcCert(),
+                                                "localhost",
+                                                BUNDLESERVER_GRPC_PORT);
         stub = BundleExchangeServiceGrpc.newStub(channel);
         blockingStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
 
@@ -175,9 +181,9 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
         assertEquals(3, bundlesToUpload.size(), "The number of bundles should be 3.");
 
         // Prepare to upload the bundles
-        Method processUploadBundles =
-                TransportToBundleServerManager.class.getDeclaredMethod("processUploadBundles", List.class,
-                                                                       BundleExchangeServiceGrpc.BundleExchangeServiceStub.class);
+        Method processUploadBundles = TransportToBundleServerManager.class.getDeclaredMethod("processUploadBundles",
+                                                                                             List.class,
+                                                                                             BundleExchangeServiceGrpc.BundleExchangeServiceStub.class);
         processUploadBundles.setAccessible(true);
 
         // Upload all bundles
@@ -212,9 +218,9 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
         assertEquals(3, bundlesToDownload.size(), "The number of bundles should be 3.");
 
         // Prepare to download the bundles
-        Method processDownloadBundles =
-                TransportToBundleServerManager.class.getDeclaredMethod("processDownloadBundles", List.class,
-                                                                       BundleExchangeServiceGrpc.BundleExchangeServiceStub.class);
+        Method processDownloadBundles = TransportToBundleServerManager.class.getDeclaredMethod("processDownloadBundles",
+                                                                                               List.class,
+                                                                                               BundleExchangeServiceGrpc.BundleExchangeServiceStub.class);
         processDownloadBundles.setAccessible(true);
 
         // Download all bundles from the server
@@ -242,9 +248,9 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
         List<EncryptedBundleId> bundlesToDownload =
                 (List<EncryptedBundleId>) populateListFromPath.invoke(manager, toSendDir);
 
-        Method processDownloadBundles =
-                TransportToBundleServerManager.class.getDeclaredMethod("processDownloadBundles", List.class,
-                                                                       BundleExchangeServiceGrpc.BundleExchangeServiceStub.class);
+        Method processDownloadBundles = TransportToBundleServerManager.class.getDeclaredMethod("processDownloadBundles",
+                                                                                               List.class,
+                                                                                               BundleExchangeServiceGrpc.BundleExchangeServiceStub.class);
         processDownloadBundles.setAccessible(true);
 
         processDownloadBundles.invoke(manager, bundlesToDownload, stub);
@@ -303,9 +309,9 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
         assertTrue(bundlesToUpload.isEmpty(), "The list of bundles should be empty.");
 
         // Attempt to upload bundles
-        Method processUploadBundles =
-                TransportToBundleServerManager.class.getDeclaredMethod("processUploadBundles", List.class,
-                                                                       BundleExchangeServiceGrpc.BundleExchangeServiceStub.class);
+        Method processUploadBundles = TransportToBundleServerManager.class.getDeclaredMethod("processUploadBundles",
+                                                                                             List.class,
+                                                                                             BundleExchangeServiceGrpc.BundleExchangeServiceStub.class);
         processUploadBundles.setAccessible(true);
         processUploadBundles.invoke(manager, bundlesToUpload, stub);
 
@@ -326,9 +332,9 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
         assertTrue(bundlesToDownload.isEmpty(), "The list of bundles should be empty.");
 
         // Attempt to download bundles
-        Method processDownloadBundles =
-                TransportToBundleServerManager.class.getDeclaredMethod("processDownloadBundles", List.class,
-                                                                       BundleExchangeServiceGrpc.BundleExchangeServiceStub.class);
+        Method processDownloadBundles = TransportToBundleServerManager.class.getDeclaredMethod("processDownloadBundles",
+                                                                                               List.class,
+                                                                                               BundleExchangeServiceGrpc.BundleExchangeServiceStub.class);
         processDownloadBundles.setAccessible(true);
         processDownloadBundles.invoke(manager, bundlesToDownload, stub);
 

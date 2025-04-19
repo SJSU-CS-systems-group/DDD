@@ -52,10 +52,9 @@ public class BundleSecurity {
         clientBundleGenerator = ClientBundleGenerator.initializeInstance(client, clientPaths);
         clientWindow = ClientWindow.initializeInstance(5, client.getClientID(), clientPaths);
         try {
-            this.clientGrpcSecurity = new GrpcSecurity(clientPaths.grpcSecurityPath,
-                    SecurityUtils.CLIENT);
-        } catch (IOException | NoSuchAlgorithmException | InvalidAlgorithmParameterException |
-                 CertificateException | NoSuchProviderException | OperatorCreationException e) {
+            this.clientGrpcSecurity = new GrpcSecurity(clientPaths.grpcSecurityPath, SecurityUtils.CLIENT);
+        } catch (IOException | NoSuchAlgorithmException | InvalidAlgorithmParameterException | CertificateException |
+                 NoSuchProviderException | OperatorCreationException e) {
             logger.log(SEVERE, "Failed to initialize GrpcSecurity for CLIENT", e);
         }
 
@@ -63,8 +62,10 @@ public class BundleSecurity {
 
     // TODO: this function makes me sad! it should not be static. We should probably inject BundleSecurity
     // into Bundle transport so that everything can be set up properly
-    public static void initializeKeyPaths(ClientPaths clientPaths, InputStream inServerIdentity,
-                                          InputStream inServerSignedPre, InputStream inServerRatchet) throws IOException {
+    public static void initializeKeyPaths(ClientPaths clientPaths,
+                                          InputStream inServerIdentity,
+                                          InputStream inServerSignedPre,
+                                          InputStream inServerRatchet) throws IOException {
         Files.copy(inServerIdentity, clientPaths.outServerIdentity, StandardCopyOption.REPLACE_EXISTING);
         inServerIdentity.close();
 
@@ -94,11 +95,11 @@ public class BundleSecurity {
     }
 
     public Payload decryptPayload(UncompressedBundle uncompressedBundle) throws NoSessionException,
-            InvalidMessageException, DuplicateMessageException, IOException,
-            InvalidKeyException {
-        File decryptedPayloadJar =
-                uncompressedBundle.getSource().toPath().resolve(Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar")
-                        .toFile();
+            InvalidMessageException, DuplicateMessageException, IOException, InvalidKeyException {
+        File decryptedPayloadJar = uncompressedBundle.getSource()
+                .toPath()
+                .resolve(Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar")
+                .toFile();
         String bundleId = "";
         if (this.isEncryptionEnabled) {
             ClientSecurity clientSecurity = ClientSecurity.getInstance();
@@ -119,6 +120,7 @@ public class BundleSecurity {
     public ClientSecurity getClientSecurity() {
         return this.client;
     }
+
     public GrpcSecurity getClientGrpcSecurity() {
         return this.clientGrpcSecurity;
     }

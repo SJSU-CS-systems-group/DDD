@@ -57,6 +57,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.SubmissionPublisher;
 import java.util.logging.Logger;
 import java.security.InvalidAlgorithmParameterException;
+
 import net.discdd.bundlesecurity.SecurityUtils;
 import org.bouncycastle.operator.OperatorCreationException;
 
@@ -88,9 +89,10 @@ public class BundleTransportActivity extends AppCompatActivity {
     record TitledFragment(String title, Fragment fragment) {}
 
     ArrayList<TitledFragment> fragments = new ArrayList<>();
-    private static final List<String> wifiDirectPermissions =
-            List.of("android.permission.ACCESS_WIFI_STATE", "android.permission.CHANGE_WIFI_STATE",
-                    "android.permission.INTERNET", "android.permission.NEARBY_WIFI_DEVICES");
+    private static final List<String> wifiDirectPermissions = List.of("android.permission.ACCESS_WIFI_STATE",
+                                                                      "android.permission.CHANGE_WIFI_STATE",
+                                                                      "android.permission.INTERNET",
+                                                                      "android.permission.NEARBY_WIFI_DEVICES");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -127,8 +129,8 @@ public class BundleTransportActivity extends AppCompatActivity {
         this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
         try {
             this.transportGrpcSecurity = GrpcSecurityHolder.setGrpcSecurityHolder(transportPaths.grpcSecurityPath);
-        } catch (IOException | NoSuchAlgorithmException | InvalidAlgorithmParameterException |
-                 CertificateException | NoSuchProviderException | OperatorCreationException e) {
+        } catch (IOException | NoSuchAlgorithmException | InvalidAlgorithmParameterException | CertificateException |
+                 NoSuchProviderException | OperatorCreationException e) {
             logger.log(SEVERE, "Failed to initialize GrpcSecurity for transport", e);
         }
 
@@ -171,10 +173,9 @@ public class BundleTransportActivity extends AppCompatActivity {
 
         //Check if USB is connected before app start
         UsbManager usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
-        if(usbManager != null) {
+        if (usbManager != null) {
             updateUsbExists(!usbManager.getDeviceList().isEmpty());
-        }
-        else {
+        } else {
             logger.log(WARNING, "Usbmanager was null, failed to connect");
         }
     }
@@ -220,7 +221,8 @@ public class BundleTransportActivity extends AppCompatActivity {
                 };
                 viewPager2.setAdapter(viewPager2Adapter);
 
-                mediator = new TabLayoutMediator(tabLayout, viewPager2,
+                mediator = new TabLayoutMediator(tabLayout,
+                                                 viewPager2,
                                                  (tab, position) -> tab.setText(fragments.get(position).title()));
                 mediator.attach();
             });
@@ -232,8 +234,7 @@ public class BundleTransportActivity extends AppCompatActivity {
         permissionsViewModel.registerPermissionsWatcher(obtainedPermissions -> {
             logger.info("Permissions obtained: " + obtainedPermissions);
             if (obtainedPermissions.containsAll(wifiDirectPermissions)) {
-                transportWifiServiceConnection.thenApply(
-                        transportWifiDirectService -> transportWifiDirectService.requestDeviceInfo());
+                transportWifiServiceConnection.thenApply(transportWifiDirectService -> transportWifiDirectService.requestDeviceInfo());
                 enableFragment(transportWifiFragment);
             } else {
                 disableFragment(transportWifiFragment);
@@ -268,7 +269,8 @@ public class BundleTransportActivity extends AppCompatActivity {
     }
 
     void setBgWifiEnabled(boolean enabled) {
-        sharedPreferences.edit().putBoolean(TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE, enabled)
+        sharedPreferences.edit()
+                .putBoolean(TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE, enabled)
                 .apply();
     }
 
@@ -375,7 +377,8 @@ public class BundleTransportActivity extends AppCompatActivity {
     }
 
     public void checkRuntimePermission() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.NEARBY_WIFI_DEVICES) == PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.NEARBY_WIFI_DEVICES) ==
+                PackageManager.PERMISSION_GRANTED) {
             permissionsViewModel.updatePermissions(true);
         }
     }

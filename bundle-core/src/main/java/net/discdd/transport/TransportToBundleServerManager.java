@@ -54,8 +54,11 @@ public class TransportToBundleServerManager implements Runnable {
     private final int serverPort;
     private GrpcSecurity transportGrpcSecurity;
 
-    public TransportToBundleServerManager(TransportPaths transportPaths, String host, String port, Function<Void,
-            Void> connectComplete, Function<Exception, Void> connectError) {
+    public TransportToBundleServerManager(TransportPaths transportPaths,
+                                          String host,
+                                          String port,
+                                          Function<Void, Void> connectComplete,
+                                          Function<Exception, Void> connectError) {
         this.connectComplete = connectComplete;
         this.connectError = connectError;
         this.serverHost = host;
@@ -74,12 +77,10 @@ public class TransportToBundleServerManager implements Runnable {
         ManagedChannel channel = null;
         try {
             var sslClientContext = SSLContext.getInstance("TLS");
-            sslClientContext.init(
-                    DDDTLSUtil.getKeyManagerFactory(transportGrpcSecurity.getGrpcKeyPair(),
-                            transportGrpcSecurity.getGrpcCert()).getKeyManagers(),
-                    new TrustManager[] {DDDTLSUtil.trustManager},
-                    new SecureRandom()
-            );
+            sslClientContext.init(DDDTLSUtil.getKeyManagerFactory(transportGrpcSecurity.getGrpcKeyPair(),
+                                                                  transportGrpcSecurity.getGrpcCert()).getKeyManagers(),
+                                  new TrustManager[] { DDDTLSUtil.trustManager },
+                                  new SecureRandom());
 
             channel = OkHttpChannelBuilder.forAddress(serverHost, serverPort)
                     .hostnameVerifier((host, session) -> true)
@@ -97,7 +98,8 @@ public class TransportToBundleServerManager implements Runnable {
             var inventoryResponse = bsStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     .bundleInventory(BundleInventoryRequest.newBuilder()
                                              .addAllBundlesFromClientsOnTransport(bundlesFromClients)
-                                             .addAllBundlesFromServerOnTransport(bundlesFromServer).build());
+                                             .addAllBundlesFromServerOnTransport(bundlesFromServer)
+                                             .build());
 
             processDeleteBundles(inventoryResponse.getBundlesToDeleteList());
             processUploadBundles(inventoryResponse.getBundlesToUploadList(), exchangeStub);
@@ -125,7 +127,8 @@ public class TransportToBundleServerManager implements Runnable {
         var recencyBlob = blockingExchangeStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                 .getRecencyBlob(recencyBlobReq);
         Path blobPath = fromServerPath.resolve(RECENCY_BLOB_BIN);
-        try (var os = Files.newOutputStream(blobPath, StandardOpenOption.CREATE,
+        try (var os = Files.newOutputStream(blobPath,
+                                            StandardOpenOption.CREATE,
                                             StandardOpenOption.TRUNCATE_EXISTING)) {
             logger.log(INFO, "Writing blob to " + blobPath);
             recencyBlob.writeTo(os);
@@ -138,12 +141,15 @@ public class TransportToBundleServerManager implements Runnable {
                                         BundleExchangeServiceGrpc.BundleExchangeServiceStub exchangeStub) {
         for (var toReceive : bundlesToDownloadList) {
             var path = fromServerPath.resolve(toReceive.getEncryptedId());
-            try (OutputStream os = Files.newOutputStream(path, StandardOpenOption.CREATE,
+            try (OutputStream os = Files.newOutputStream(path,
+                                                         StandardOpenOption.CREATE,
                                                          StandardOpenOption.TRUNCATE_EXISTING)) {
                 var completion = new CompletableFuture<Boolean>();
-                exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).downloadBundle(
-                        BundleDownloadRequest.newBuilder().setBundleId(toReceive).setSenderType(BundleSenderType.TRANSPORT).build(),
-                        new StreamObserver<>() {
+                exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                        .downloadBundle(BundleDownloadRequest.newBuilder()
+                                                .setBundleId(toReceive)
+                                                .setSenderType(BundleSenderType.TRANSPORT)
+                                                .build(), new StreamObserver<>() {
                             @Override
                             public void onNext(BundleDownloadResponse value) {
                                 try {
@@ -184,8 +190,9 @@ public class TransportToBundleServerManager implements Runnable {
                 var uploadRequestStreamObserver =
                         exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                                 .uploadBundle(responseObserver);
-                uploadRequestStreamObserver.onNext(
-                        BundleUploadRequest.newBuilder().setSenderType(BundleSenderType.TRANSPORT).build());
+                uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder()
+                                                           .setSenderType(BundleSenderType.TRANSPORT)
+                                                           .build());
                 uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setBundleId(toSend).build());
                 byte[] data = new byte[1024 * 1024];
                 int rc;
@@ -223,8 +230,10 @@ public class TransportToBundleServerManager implements Runnable {
     private List<EncryptedBundleId> populateListFromPath(Path path) {
         var listOfBundleIds = new ArrayList<EncryptedBundleId>();
         var bundles = path.toFile().listFiles();
-        if (bundles != null) for (File bundle : bundles) {
-            listOfBundleIds.add(EncryptedBundleId.newBuilder().setEncryptedId(bundle.getName()).build());
+        if (bundles != null) {
+            for (File bundle : bundles) {
+                listOfBundleIds.add(EncryptedBundleId.newBuilder().setEncryptedId(bundle.getName()).build());
+            }
         }
         return listOfBundleIds;
     }

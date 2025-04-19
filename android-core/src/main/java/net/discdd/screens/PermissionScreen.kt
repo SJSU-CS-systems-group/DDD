@@ -116,7 +116,9 @@ fun PermissionItem(
 
         Text(
             text = permissionText,
-            style = MaterialTheme.typography.bodyLarge ) }
+            style = MaterialTheme.typography.bodyLarge
+        )
+    }
 }
 
 @Preview(showBackground = true)

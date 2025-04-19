@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import net.discdd.AndroidAppConstants
 import net.discdd.bundleclient.BundleClientWifiDirectService
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiServiceManager
@@ -27,6 +28,7 @@ class ServerViewModel(
     val state = _state.asStateFlow()
 
     init {
+        AndroidAppConstants.checkDefaultDomainPortSettings(sharedPref)
         restoreDomainPort()
     }
 

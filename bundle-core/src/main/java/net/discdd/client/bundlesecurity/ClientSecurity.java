@@ -102,9 +102,9 @@ public class ClientSecurity {
     private Path[] writeKeysToFiles(Path path, boolean writePvt) throws IOException {
         /* Create Directory if it does not exist */
         path.toFile().mkdirs();
-        Path[] identityKeyPaths =
-                { path.resolve(SecurityUtils.CLIENT_IDENTITY_KEY), path.resolve(SecurityUtils.CLIENT_BASE_KEY),
-                        path.resolve(SecurityUtils.SERVER_IDENTITY_KEY) };
+        Path[] identityKeyPaths = { path.resolve(SecurityUtils.CLIENT_IDENTITY_KEY),
+                                    path.resolve(SecurityUtils.CLIENT_BASE_KEY),
+                                    path.resolve(SecurityUtils.SERVER_IDENTITY_KEY) };
 
         if (writePvt) {
             Files.write(path.resolve(SecurityUtils.CLIENT_IDENTITY_PRIVATE_KEY),
@@ -119,7 +119,8 @@ public class ClientSecurity {
 
     private void loadKeysfromFiles(Path clientKeyPath) throws IOException, InvalidKeyException {
         byte[] identityKeyPvt = Files.readAllBytes(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_PRIVATE_KEY));
-        byte[] identityKeyPub = SecurityUtils.decodePublicKeyfromFile(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
+        byte[] identityKeyPub =
+                SecurityUtils.decodePublicKeyfromFile(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
 
         IdentityKey identityPublicKey = new IdentityKey(identityKeyPub, 0);
         ECPrivateKey identityPrivateKey = Curve.decodePrivatePoint(identityKeyPvt);
@@ -149,10 +150,14 @@ public class ClientSecurity {
     }
 
     private void initializeRatchet(SessionState clientSessionState) throws InvalidKeyException {
-        AliceSignalProtocolParameters parameters = AliceSignalProtocolParameters.newBuilder().setOurBaseKey(ourBaseKey)
-                .setOurIdentityKey(ourIdentityKeyPair).setTheirOneTimePreKey(Optional.<ECPublicKey>absent())
-                .setTheirRatchetKey(theirRatchetKey).setTheirSignedPreKey(theirSignedPreKey)
-                .setTheirIdentityKey(theirIdentityKey).create();
+        AliceSignalProtocolParameters parameters = AliceSignalProtocolParameters.newBuilder()
+                .setOurBaseKey(ourBaseKey)
+                .setOurIdentityKey(ourIdentityKeyPair)
+                .setTheirOneTimePreKey(Optional.<ECPublicKey>absent())
+                .setTheirRatchetKey(theirRatchetKey)
+                .setTheirSignedPreKey(theirSignedPreKey)
+                .setTheirIdentityKey(theirIdentityKey)
+                .create();
         RatchetingSession.initializeSession(clientSessionState, parameters);
     }
 
@@ -172,8 +177,9 @@ public class ClientSecurity {
             byte[] sessionStoreBytes = Files.readAllBytes(clientPaths.sessionStorePath);
             clientSessionRecord = new SessionRecord(sessionStoreBytes);
         } catch (IOException e) {
-            logger.log(WARNING, "Error Reading Session record from " + clientPaths.sessionStorePath +
-                    "\nCreating New Session Record!");
+            logger.log(WARNING,
+                       "Error Reading Session record from " + clientPaths.sessionStorePath +
+                               "\nCreating New Session Record!");
             clientSessionRecord = new SessionRecord();
             initializeRatchet(clientSessionRecord.getSessionState());
         }
@@ -199,7 +205,8 @@ public class ClientSecurity {
     /* Add Headers (Identity, Base Key & Bundle ID) to Bundle Path */
 
     /* Initialize or get previous client Security Instance */
-    public static synchronized ClientSecurity initializeInstance(int deviceID, ClientPaths clientPaths) throws IOException, NoSuchAlgorithmException, InvalidKeyException {
+    public static synchronized ClientSecurity initializeInstance(int deviceID, ClientPaths clientPaths) throws
+            IOException, NoSuchAlgorithmException, InvalidKeyException {
         if (singleClientInstance == null) {
             singleClientInstance = new ClientSecurity(deviceID, clientPaths);
         } else {
@@ -217,14 +224,15 @@ public class ClientSecurity {
     }
 
     /* Encrypts File */
-    public void encrypt(InputStream inputStream, OutputStream outputStream) throws IOException, InvalidMessageException{
+    public void encrypt(InputStream inputStream, OutputStream outputStream) throws IOException,
+            InvalidMessageException {
         /* Encrypt File */
         cipherSession.encrypt(inputStream, outputStream);
         updateSessionRecord();
     }
 
     public void decrypt(Path bundlePath, Path decryptedPath) throws IOException, InvalidMessageException,
-             NoSessionException, DuplicateMessageException, InvalidKeyException {
+            NoSessionException, DuplicateMessageException, InvalidKeyException {
         var payloadPath = bundlePath.resolve(SecurityUtils.PAYLOAD_DIR);
 
         String bundleID = getBundleIDFromFile(bundlePath);
@@ -237,10 +245,8 @@ public class ClientSecurity {
 
         InputStream encryptedDataInputStream = Files.newInputStream(payloadPath.resolve(payloadName));
         OutputStream encryptedDataOutputStream = Files.newOutputStream(decryptedFile);
-        cipherSession.decrypt(encryptedDataInputStream,encryptedDataOutputStream);
+        cipherSession.decrypt(encryptedDataInputStream, encryptedDataOutputStream);
         updateSessionRecord();
-
-
 
         logger.log(FINER, "Decrypted Size = %d\n", Files.size(decryptedPath));
     }

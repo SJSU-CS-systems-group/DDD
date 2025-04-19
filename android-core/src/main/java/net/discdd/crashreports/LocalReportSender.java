@@ -1,6 +1,7 @@
 package net.discdd.crashreports;
 
 import static org.acra.ACRA.log;
+
 import android.content.Context;
 
 import com.google.auto.service.AutoService;
@@ -63,7 +64,7 @@ public class LocalReportSender implements ReportSender {
      * @param logFile the file of crash reports to be optimized
      * @return whether the
      */
-    public void optimizeReports (File logFile) throws IOException {
+    public void optimizeReports(File logFile) throws IOException {
         //looking for how many reports exist in singular reports file
         String reportsFooterTag, lastLineToRemove;
         reportsFooterTag = lastLineToRemove = "SHARED_PREFERENCES=default=empty";

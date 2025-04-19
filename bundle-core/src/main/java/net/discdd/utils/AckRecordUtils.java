@@ -31,7 +31,9 @@ public class AckRecordUtils {
             return;
         }
         try {
-            Files.write(ackFilePath, ackRecord.getBundleId().getBytes(), StandardOpenOption.CREATE,
+            Files.write(ackFilePath,
+                        ackRecord.getBundleId().getBytes(),
+                        StandardOpenOption.CREATE,
                         StandardOpenOption.TRUNCATE_EXISTING);
         } catch (IOException e) {
             logger.log(Level.WARNING, "Failed to write Acknowledgment record to " + ackFilePath, e);

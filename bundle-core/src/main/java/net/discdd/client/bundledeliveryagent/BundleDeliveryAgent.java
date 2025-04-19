@@ -24,7 +24,9 @@ public class BundleDeliveryAgent {
 
     private BundleTransmission bundleTransmission;
 
-    public BundleDeliveryAgent(ClientPaths clientPaths, Consumer<ADU> aduConsumer) throws WindowExceptions.BufferOverflow, RoutingExceptions.ClientMetaDataFileException, IOException, NoSuchAlgorithmException, InvalidKeyException {
+    public BundleDeliveryAgent(ClientPaths clientPaths, Consumer<ADU> aduConsumer) throws
+            WindowExceptions.BufferOverflow, RoutingExceptions.ClientMetaDataFileException, IOException,
+            NoSuchAlgorithmException, InvalidKeyException {
         this.clientPaths = clientPaths;
         bundleTransmission = new BundleTransmission(clientPaths, aduConsumer);
     }

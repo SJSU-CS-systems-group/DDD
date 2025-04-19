@@ -61,10 +61,14 @@ public class AdapterRegisterService {
                 logger.log(WARNING, "Could not connect to " + bundleServerURL + " " + channelState);
             } else {
                 var rsp = ServiceAdapterRegistryServiceGrpc.newBlockingStub(managedChannel)
-                        .checkAdapterRegistration(ConnectionData.newBuilder().setAppName(appName).setUrl(myGrpcUrl).build());
+                        .checkAdapterRegistration(ConnectionData.newBuilder()
+                                                          .setAppName(appName)
+                                                          .setUrl(myGrpcUrl)
+                                                          .build());
 
                 if (rsp.getCode() != 0) {
-                    logger.log(WARNING, "Could not register with BundleServer: rc = " + rsp.getCode() + " " + rsp.getMessage());
+                    logger.log(WARNING,
+                               "Could not register with BundleServer: rc = " + rsp.getCode() + " " + rsp.getMessage());
                 } else {
                     logger.log(INFO, "Registered with server at " + bundleServerURL);
                 }

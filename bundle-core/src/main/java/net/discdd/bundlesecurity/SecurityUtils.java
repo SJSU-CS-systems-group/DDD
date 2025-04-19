@@ -121,7 +121,9 @@ public class SecurityUtils {
     }
 
     public static void createEncodedPublicKeyFile(ECPublicKey publicKey, Path path) throws IOException {
-        Files.write(path, createEncodedPublicKeyBytes(publicKey), StandardOpenOption.CREATE,
+        Files.write(path,
+                    createEncodedPublicKeyBytes(publicKey),
+                    StandardOpenOption.CREATE,
                     StandardOpenOption.TRUNCATE_EXISTING);
 
     }
@@ -144,11 +146,14 @@ public class SecurityUtils {
      * @throws GeneralSecurityException
      * @throws InvalidKeyException
      */
-    public static byte[] createEncryptedEncodedPublicKeyBytes(ECPublicKey clientPublicKey, ECPublicKey serverIdentityPublicKey) throws GeneralSecurityException, InvalidKeyException {
+    public static byte[] createEncryptedEncodedPublicKeyBytes(ECPublicKey clientPublicKey,
+                                                              ECPublicKey serverIdentityPublicKey) throws
+            GeneralSecurityException, InvalidKeyException {
         ECKeyPair ephemeralKeyPair = Curve.generateKeyPair();
         byte[] agreement = Curve.calculateAgreement(serverIdentityPublicKey, ephemeralKeyPair.getPrivateKey());
         String sharedSecret = Base64.getEncoder().encodeToString(agreement);
-        String encryptedClientPubKey = encryptAesCbcPkcs5(sharedSecret, Base64.getEncoder().encodeToString(clientPublicKey.serialize()));
+        String encryptedClientPubKey =
+                encryptAesCbcPkcs5(sharedSecret, Base64.getEncoder().encodeToString(clientPublicKey.serialize()));
         return (EC_ENCRYPTED_PUBLIC_KEY_HEADER + "\n" +
                 Base64.getUrlEncoder().encodeToString(encryptedClientPubKey.getBytes()) + "\n" +
                 Base64.getUrlEncoder().encodeToString(ephemeralKeyPair.getPublicKey().serialize()) + "\n" +
@@ -169,11 +174,16 @@ public class SecurityUtils {
      * @throws InvalidKeyException
      * @throws NoSuchAlgorithmException
      */
-    public static String decodeEncryptedPublicKeyfromFile(ECPrivateKey ServerPrivKey, Path clientEncFile) throws IOException, InvalidKeyException, NoSuchAlgorithmException {
+    public static String decodeEncryptedPublicKeyfromFile(ECPrivateKey ServerPrivKey, Path clientEncFile) throws
+            IOException, InvalidKeyException, NoSuchAlgorithmException {
         List<String> encodedKeyList = Files.readAllLines(clientEncFile);
         if (encodedKeyList.size() != 4) {
-            throw (new IOException("Wrong use of decode encrypted key... this key is probably not encrypted or is an old client... here is the key header: " + encodedKeyList.get(0)));        }
-        if ((encodedKeyList.get(0).equals(EC_ENCRYPTED_PUBLIC_KEY_HEADER)) && (encodedKeyList.get(3).equals(EC_ENCRYPTED_PUBLIC_KEY_FOOTER))) {
+            throw (new IOException(
+                    "Wrong use of decode encrypted key... this key is probably not encrypted or is an old client... " +
+                            "here is the key header: " + encodedKeyList.get(0)));
+        }
+        if ((encodedKeyList.get(0).equals(EC_ENCRYPTED_PUBLIC_KEY_HEADER)) &&
+                (encodedKeyList.get(3).equals(EC_ENCRYPTED_PUBLIC_KEY_FOOTER))) {
             byte[] encryptedClientPublicKey = Base64.getUrlDecoder().decode(encodedKeyList.get(1));
             var ephemeralKeyBytes = Base64.getUrlDecoder().decode(encodedKeyList.get(2));
             ECPublicKey ephemeralPublicKey = Curve.decodePoint(ephemeralKeyBytes, 0);
@@ -185,28 +195,28 @@ public class SecurityUtils {
             } catch (GeneralSecurityException e) {
                 throw new RuntimeException("AES decryption failed: " + e.getMessage(), e);
             }
-            String keyInStandardBase64Characters = new String (decryptedClientPubKey);
+            String keyInStandardBase64Characters = new String(decryptedClientPubKey);
             keyInStandardBase64Characters = keyInStandardBase64Characters.replace('+', '-').replace('/', '_');
             return keyInStandardBase64Characters;
         } else {
-            throw new InvalidKeyException(String.format("Error: %s has invalid public key header or footer", clientEncFile.getFileName()));
+            throw new InvalidKeyException(String.format("Error: %s has invalid public key header or footer",
+                                                        clientEncFile.getFileName()));
         }
     }
-
 
     public static byte[] decodePublicKeyfromFile(Path path) throws IOException, InvalidKeyException {
         List<String> encodedKeyList = Files.readAllLines(path);
 
         if (encodedKeyList.size() != 3) {
-            throw new InvalidKeyException(
-                    String.format("Error: %s should have three lines: HEADER, KEY, FOOTER", path.getFileName()));
+            throw new InvalidKeyException(String.format("Error: %s should have three lines: HEADER, KEY, FOOTER",
+                                                        path.getFileName()));
         }
 
         if ((encodedKeyList.get(0).equals(PUB_KEY_HEADER)) && (encodedKeyList.get(2).equals(PUB_KEY_FOOTER))) {
             return Base64.getUrlDecoder().decode(encodedKeyList.get(1));
         } else {
-            throw new InvalidKeyException(
-                    String.format("Error: %s has invalid public key header or footer", path.getFileName()));
+            throw new InvalidKeyException(String.format("Error: %s has invalid public key header or footer",
+                                                        path.getFileName()));
         }
     }
 
@@ -214,15 +224,15 @@ public class SecurityUtils {
         List<String> encodedKeyList = Files.readAllLines(path);
 
         if (encodedKeyList.size() != 3) {
-            throw new InvalidKeyException(
-                    String.format("Error: %s should have three lines: HEADER, KEY, FOOTER", path.getFileName()));
+            throw new InvalidKeyException(String.format("Error: %s should have three lines: HEADER, KEY, FOOTER",
+                                                        path.getFileName()));
         }
 
         if (encodedKeyList.get(0).equals(PVT_KEY_HEADER) && encodedKeyList.get(2).equals(PVT_KEY_FOOTER)) {
             return Base64.getUrlDecoder().decode(encodedKeyList.get(1));
         } else {
-            throw new InvalidKeyException(
-                    String.format("Error: %s has invalid private key header or footer", path.getFileName()));
+            throw new InvalidKeyException(String.format("Error: %s has invalid private key header or footer",
+                                                        path.getFileName()));
         }
     }
 
@@ -235,7 +245,8 @@ public class SecurityUtils {
         return new InMemorySignalProtocolStore(tIdentityKeyPair, KeyHelper.generateRegistrationId(false));
     }
 
-    public static boolean verifySignatureRaw(byte[] message, ECPublicKey publicKey, byte[] signature) throws InvalidKeyException {
+    public static boolean verifySignatureRaw(byte[] message, ECPublicKey publicKey, byte[] signature) throws
+            InvalidKeyException {
         return Curve.verifySignature(publicKey, message, signature);
     }
 

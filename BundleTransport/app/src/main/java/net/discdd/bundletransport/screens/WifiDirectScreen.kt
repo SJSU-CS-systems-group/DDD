@@ -52,7 +52,7 @@ import net.discdd.bundletransport.R
 import net.discdd.bundletransport.viewmodels.WifiDirectViewModel
 import net.discdd.theme.ComposableTheme
 
-class WifiDirectFragment: Fragment() {
+class WifiDirectFragment : Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -126,13 +126,13 @@ fun WifiDirectScreen(
 
             Text(
                 text = state.wifiInfo,
-                modifier = Modifier.clickable {showDialog = true}
+                modifier = Modifier.clickable { showDialog = true }
             )
             if (showDialog == true) {
                 var gi = wifiViewModel.getService()?.groupInfo
                 var connectedPeers: ArrayList<String> = ArrayList<String>()
                 if (gi != null) {
-                    gi.clientList.forEach {c -> connectedPeers.add(c.deviceName)}
+                    gi.clientList.forEach { c -> connectedPeers.add(c.deviceName) }
                 }
                 AlertDialog(
                     title = { Text(text = stringResource(R.string.connected_devices)) },
@@ -175,8 +175,9 @@ fun WifiDirectScreen(
                 Text(text = stringResource(R.string.phone_name_must_start_with_ddd))
 
                 FilledTonalButton(
-                    onClick = {wifiViewModel.openInfoSettings()},
-                    modifier = Modifier.fillMaxWidth()) {
+                    onClick = { wifiViewModel.openInfoSettings() },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text(stringResource(R.string.change_phone_name))
                 }
             }

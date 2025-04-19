@@ -49,7 +49,9 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
         var bundleExchangeName = new BundleExchangeName(request.getBundleId().getEncryptedId(), true);
 
         try {
-            Path downloadPath = request.hasPublicKeyMap() ? pathProducer(bundleExchangeName, request.getSenderType(), request.getPublicKeyMap()) : pathProducer(bundleExchangeName, request.getSenderType(), null);
+            Path downloadPath = request.hasPublicKeyMap() ?
+                                pathProducer(bundleExchangeName, request.getSenderType(), request.getPublicKeyMap()) :
+                                pathProducer(bundleExchangeName, request.getSenderType(), null);
 
             if (downloadPath == null) {
                 responseObserver.onError(new IOException("Bundle not found"));
@@ -57,9 +59,12 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
             }
 
             try (InputStream is = Files.newInputStream(downloadPath, StandardOpenOption.READ)) {
-                transferToStream(is, bytes -> responseObserver.onNext(
-                        BundleDownloadResponse.newBuilder().setChunk(BundleChunk.newBuilder().setChunk(bytes).build())
-                                .build()));
+                transferToStream(is,
+                                 bytes -> responseObserver.onNext(BundleDownloadResponse.newBuilder()
+                                                                          .setChunk(BundleChunk.newBuilder()
+                                                                                            .setChunk(bytes)
+                                                                                            .build())
+                                                                          .build()));
             }
             responseObserver.onCompleted();
             Files.delete(downloadPath);
@@ -85,9 +90,13 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
         }
     }
 
-    protected abstract Path pathProducer(BundleExchangeName bundleExchangeName, BundleSenderType senderType, PublicKeyMap publicKeyMap);
+    protected abstract Path pathProducer(BundleExchangeName bundleExchangeName,
+                                         BundleSenderType senderType,
+                                         PublicKeyMap publicKeyMap);
 
-    protected abstract void bundleCompletion(BundleExchangeName bundleExchangeName, BundleSenderType senderType, Path path);
+    protected abstract void bundleCompletion(BundleExchangeName bundleExchangeName,
+                                             BundleSenderType senderType,
+                                             Path path);
 
     public enum BundleExchangeEvent {
         UPLOAD_STARTED, DOWNLOAD_STARTED, UPLOAD_FINISHED, DOWNLOAD_FINISHED
@@ -117,16 +126,20 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
         public void onNext(BundleUploadRequest bundleUploadRequest) {
             try {
                 if (bundleUploadRequest.hasBundleId()) {
-                    logger.log(INFO, "Received request to upload file to: " +
-                            bundleUploadRequest.getBundleId().getEncryptedId());
+                    logger.log(INFO,
+                               "Received request to upload file to: " +
+                                       bundleUploadRequest.getBundleId().getEncryptedId());
                     bundleExchangeName =
                             new BundleExchangeName(bundleUploadRequest.getBundleId().getEncryptedId(), false);
 
                     path = pathProducer(bundleExchangeName, bundleSenderType, null);
                     try {
-                        if (path == null) throw new IOException(
-                                "Could not produce a path for " + bundleExchangeName.encryptedBundleId);
-                        writer = Files.newOutputStream(path, StandardOpenOption.CREATE,
+                        if (path == null) {
+                            throw new IOException(
+                                    "Could not produce a path for " + bundleExchangeName.encryptedBundleId);
+                        }
+                        writer = Files.newOutputStream(path,
+                                                       StandardOpenOption.CREATE,
                                                        StandardOpenOption.TRUNCATE_EXISTING);
                     } catch (IOException e) {
                         logger.log(SEVERE, "Error creating file " + path, e);
@@ -134,8 +147,7 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
                     }
                 } else if (bundleUploadRequest.hasSenderType()) {
                     bundleSenderType = bundleUploadRequest.getSenderType();
-                }
-                else {
+                } else {
                     writeFile(writer, bundleUploadRequest.getChunk().getChunk());
                 }
             } catch (IOException e) {
@@ -151,7 +163,7 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
             //      would be nice to indicate early on.
 
             if (bundleExchangeName != null && bundleSenderType != null) {
-                bundleCompletion(bundleExchangeName, bundleSenderType,path);
+                bundleCompletion(bundleExchangeName, bundleSenderType, path);
             }
             status = Status.FAILED;
             this.onCompleted();
