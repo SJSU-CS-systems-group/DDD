@@ -44,26 +44,34 @@ public class DDDTLSUtil {
     private static final String CERT_HEADER = "-----BEGIN CERTIFICATE-----";
     private static final String CERT_FOOTER = "-----END CERTIFICATE-----";
     public static final X509ExtendedTrustManager trustManager = new DDDX509ExtendedTrustManager();
+
     public static String publicKeyToName(PublicKey key) {
         var edKey = (ECPublicKey) key;
         return new String(Base64.getUrlEncoder().encode(edKey.getEncoded())).replace("=", "");
     }
 
-    public static KeyPair generateKeyPair() throws NoSuchAlgorithmException, NoSuchProviderException, InvalidAlgorithmParameterException {
+    public static KeyPair generateKeyPair() throws NoSuchAlgorithmException, NoSuchProviderException,
+            InvalidAlgorithmParameterException {
         var keyGenerator = KeyPairGenerator.getInstance("EC");
         keyGenerator.initialize(new ECGenParameterSpec("secp256r1"));
         return keyGenerator.generateKeyPair();
     }
 
     public static void writeKeyPairToFile(KeyPair keyPair, Path publicKeyPath, Path privateKeyPath) throws IOException {
-        Files.write(privateKeyPath, DDDPEMEncoder.encode(keyPair.getPrivate().getEncoded(), DDDPEMEncoder.privateKeyType).getBytes(), StandardOpenOption.CREATE,
-                StandardOpenOption.TRUNCATE_EXISTING);
+        Files.write(privateKeyPath,
+                    DDDPEMEncoder.encode(keyPair.getPrivate().getEncoded(), DDDPEMEncoder.privateKeyType).getBytes(),
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING);
 
-        Files.write(publicKeyPath, DDDPEMEncoder.encode(keyPair.getPublic().getEncoded(), DDDPEMEncoder.publicKeyType).getBytes(), StandardOpenOption.CREATE,
-                StandardOpenOption.TRUNCATE_EXISTING);
+        Files.write(publicKeyPath,
+                    DDDPEMEncoder.encode(keyPair.getPublic().getEncoded(), DDDPEMEncoder.publicKeyType).getBytes(),
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING);
     }
 
-    public static KeyPair loadKeyPairfromFiles(Path publicKeyPath, Path privateKeyPath) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, java.security.InvalidKeyException, NoSuchProviderException {
+    public static KeyPair loadKeyPairfromFiles(Path publicKeyPath, Path privateKeyPath) throws IOException,
+            NoSuchAlgorithmException, InvalidKeySpecException, java.security.InvalidKeyException,
+            NoSuchProviderException {
         byte[] keyPub = DDDPEMEncoder.decodeFromFile(publicKeyPath, DDDPEMEncoder.publicKeyType);
         byte[] keyPvt = DDDPEMEncoder.decodeFromFile(privateKeyPath, DDDPEMEncoder.privateKeyType);
 
@@ -75,19 +83,25 @@ public class DDDTLSUtil {
         return new KeyPair(keyFactory.generatePublic(publicKeySpec), keyFactory.generatePrivate(privateKeySpec));
     }
 
-    public static X509Certificate getSelfSignedCertificate(KeyPair pair, String commonName) throws OperatorCreationException, CertificateException {
+    public static X509Certificate getSelfSignedCertificate(KeyPair pair, String commonName) throws
+            OperatorCreationException, CertificateException {
         var csrSigner = new JcaContentSignerBuilder("SHA256withECDSA").build(pair.getPrivate());
-        var csr = new JcaPKCS10CertificationRequestBuilder(new X500Principal("CN=" + commonName), pair.getPublic())
-                .build(csrSigner);
+        var csr =
+                new JcaPKCS10CertificationRequestBuilder(new X500Principal("CN=" + commonName), pair.getPublic()).build(
+                        csrSigner);
         var start = Date.from(Instant.now().minus(365, ChronoUnit.DAYS));
         var end = Date.from(Instant.now().plus(365, ChronoUnit.DAYS));
-        var cert = new X509v3CertificateBuilder(csr.getSubject(), BigInteger.ONE, start, end,
-                csr.getSubject(), csr.getSubjectPublicKeyInfo())
-                .build(csrSigner);
+        var cert = new X509v3CertificateBuilder(csr.getSubject(),
+                                                BigInteger.ONE,
+                                                start,
+                                                end,
+                                                csr.getSubject(),
+                                                csr.getSubjectPublicKeyInfo()).build(csrSigner);
         return new JcaX509CertificateConverter().getCertificate(cert);
     }
 
-    public static TrustManager[] getTrustManager(X509Certificate cert) throws NoSuchAlgorithmException, KeyStoreException, CertificateException, IOException {
+    public static TrustManager[] getTrustManager(X509Certificate cert) throws NoSuchAlgorithmException,
+            KeyStoreException, CertificateException, IOException {
         X500Principal principal = new X500Principal("CN=" + publicKeyToName(cert.getPublicKey()));
         var keyStore = KeyStore.getInstance("PKCS12");
         keyStore.load(null, new char[0]);
@@ -98,13 +112,13 @@ public class DDDTLSUtil {
 
         trustManagerFactory.init(keyStore);
 
-        return new TrustManager[] {trustManagerFactory.getTrustManagers()[0], trustManager};
+        return new TrustManager[] { trustManagerFactory.getTrustManagers()[0], trustManager };
     }
 
     public static KeyManagerFactory getKeyManagerFactory(KeyPair keyPair, X509Certificate cert) throws Exception {
         var keyStore = KeyStore.getInstance("PKCS12");
         keyStore.load(null, null);
-        keyStore.setKeyEntry("key", keyPair.getPrivate(), null, new X509Certificate[]{cert});
+        keyStore.setKeyEntry("key", keyPair.getPrivate(), null, new X509Certificate[] { cert });
 
         var keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         keyManagerFactory.init(keyStore, null);
@@ -112,7 +126,8 @@ public class DDDTLSUtil {
         return keyManagerFactory;
     }
 
-    public static void writeCertToFile(X509Certificate cert, Path path) throws IOException, CertificateEncodingException {
+    public static void writeCertToFile(X509Certificate cert, Path path) throws IOException,
+            CertificateEncodingException {
         byte[] encodedCert = DDDPEMEncoder.encode(cert.getEncoded(), DDDPEMEncoder.CERTIFICATE).getBytes();
 
         Files.write(path, encodedCert, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
@@ -123,7 +138,8 @@ public class DDDTLSUtil {
     public static X509Certificate loadCertFromFile(Path path) throws IOException, CertificateException {
         byte[] decodedCert = DDDPEMEncoder.decodeFromFile(path, DDDPEMEncoder.CERTIFICATE);
 
-        org.bouncycastle.jcajce.provider.asymmetric.x509.CertificateFactory cf = new org.bouncycastle.jcajce.provider.asymmetric.x509.CertificateFactory();
+        org.bouncycastle.jcajce.provider.asymmetric.x509.CertificateFactory cf =
+                new org.bouncycastle.jcajce.provider.asymmetric.x509.CertificateFactory();
 
         return (X509Certificate) cf.engineGenerateCertificate(new ByteArrayInputStream(decodedCert));
     }

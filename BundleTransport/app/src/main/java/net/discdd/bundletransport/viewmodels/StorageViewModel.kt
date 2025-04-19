@@ -41,12 +41,14 @@ class StorageViewModel(application: Application) : AndroidViewModel(application)
             try {
                 val totalBytes = getTotalBytes()
                 val usedBytes = getUsedBytes()
-                _state.update { it.copy(
-                    usedSpace = usedBytes,
-                    freeSpace = totalBytes - usedBytes,
-                    totalBytes = totalBytes,
-                    actualStorageValue = minStorage + it.sliderValue
-                )}
+                _state.update {
+                    it.copy(
+                        usedSpace = usedBytes,
+                        freeSpace = totalBytes - usedBytes,
+                        totalBytes = totalBytes,
+                        actualStorageValue = minStorage + it.sliderValue
+                    )
+                }
             } catch (e: Exception) {
                 _state.update { it.copy(showMessage = context.getString(R.string.error_updating_storage_info)) }
             }
@@ -54,11 +56,13 @@ class StorageViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun onSliderValueChange(value: Long) {
-        _state.update { it.copy(
-            sliderValue = value,
-            actualStorageValue = minStorage + value,
-            showMessage = context.getString(R.string.apply_changes)
-        )}
+        _state.update {
+            it.copy(
+                sliderValue = value,
+                actualStorageValue = minStorage + value,
+                showMessage = context.getString(R.string.apply_changes)
+            )
+        }
     }
 
     fun onSetStorageClick() {

@@ -16,8 +16,8 @@ public class BundleTransportWifiEvent extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        if (intent.getAction() != null && intent.getAction()
-                .equals(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION)) {
+        if (intent.getAction() != null &&
+                intent.getAction().equals(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION)) {
             String message = intent.getStringExtra("message");
             viewModel.appendToClientLog(message);
         } else {

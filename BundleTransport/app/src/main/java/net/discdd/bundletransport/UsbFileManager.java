@@ -149,8 +149,9 @@ public class UsbFileManager {
                 deletedClientFiles = true;
             }
         }
-        String res = (deletedClientFiles) ? "Successfully deleted excess client files from USB" :
-                "No excess client files to delete from USB";
+        String res = (deletedClientFiles) ?
+                     "Successfully deleted excess client files from USB" :
+                     "No excess client files to delete from USB";
         logger.log(INFO, res);
         List<Path> androidToServer;
         try (Stream<Path> walk = Files.walk(transportPaths.toServerPath)) {
@@ -165,8 +166,9 @@ public class UsbFileManager {
                 deletedServerFiles = true;
             }
         }
-        res = (deletedServerFiles) ? "Successfully deleted excess server files from USB" :
-                "No excess server files to delete from USB";
+        res = (deletedServerFiles) ?
+              "Successfully deleted excess server files from USB" :
+              "No excess server files to delete from USB";
         logger.log(INFO, res);
     }
 }

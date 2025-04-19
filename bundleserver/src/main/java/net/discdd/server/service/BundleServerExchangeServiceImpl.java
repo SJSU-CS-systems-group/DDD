@@ -42,7 +42,9 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
     public void bundleCompletion(BundleExchangeName bundleExchangeName, BundleSenderType senderType, Path path) {
         X509Certificate clientCert = NettyServerCertificateInterceptor.CLIENT_CERTIFICATE_KEY.get(Context.current());
         logger.log(INFO, "Downloaded " + bundleExchangeName.encryptedBundleId());
-        bundleTransmission.processBundleFile(path.toFile(), senderType, DDDTLSUtil.publicKeyToName(clientCert.getPublicKey()));
+        bundleTransmission.processBundleFile(path.toFile(),
+                                             senderType,
+                                             DDDTLSUtil.publicKeyToName(clientCert.getPublicKey()));
     }
 
     @Override
@@ -51,15 +53,20 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
     }
 
     @Override
-    public Path pathProducer(BundleExchangeName bundleExchangeName, BundleSenderType senderType, PublicKeyMap publicKeyMap) {
+    public Path pathProducer(BundleExchangeName bundleExchangeName,
+                             BundleSenderType senderType,
+                             PublicKeyMap publicKeyMap) {
         if (bundleExchangeName.isDownload()) {
-            X509Certificate clientCert = NettyServerCertificateInterceptor.CLIENT_CERTIFICATE_KEY.get(Context.current());
+            X509Certificate clientCert =
+                    NettyServerCertificateInterceptor.CLIENT_CERTIFICATE_KEY.get(Context.current());
             String senderId = "";
-            if (publicKeyMap != null){
+            if (publicKeyMap != null) {
                 var clientIdPubKeyBytes = publicKeyMap.getClientPub();
                 try {
                     var clientPubKey = Curve.decodePoint(clientIdPubKeyBytes.toByteArray(), 0);
-                    if (!SecurityUtils.verifySignatureRaw(clientCert.getPublicKey().getEncoded(), clientPubKey, publicKeyMap.getSignedTLSPub().toByteArray())) {
+                    if (!SecurityUtils.verifySignatureRaw(clientCert.getPublicKey().getEncoded(),
+                                                          clientPubKey,
+                                                          publicKeyMap.getSignedTLSPub().toByteArray())) {
                         logger.log(SEVERE, "Problem verifying signature");
                         return null;
                     }
@@ -88,8 +95,11 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
                 if (encryptedBundleId != null && encryptedBundleId.equals(bundleExchangeName.encryptedBundleId())) {
                     return bundleTransmission.getPathForBundleToSend(encryptedBundleId);
                 }
-                logger.log(INFO, String.format("%s requested %s but waiting to send %s", senderId,
-                                               bundleExchangeName.encryptedBundleId(), encryptedBundleId));
+                logger.log(INFO,
+                           String.format("%s requested %s but waiting to send %s",
+                                         senderId,
+                                         bundleExchangeName.encryptedBundleId(),
+                                         encryptedBundleId));
             } catch (Exception e) {
                 logger.log(SEVERE, "Problem generating bundle for client " + senderId, e);
             }
@@ -106,7 +116,7 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
     public void getRecencyBlob(GetRecencyBlobRequest request, StreamObserver<GetRecencyBlobResponse> responseObserver) {
         GetRecencyBlobResponse recencyBlob = null;
         X509Certificate clientCert = NettyServerCertificateInterceptor.CLIENT_CERTIFICATE_KEY.get(Context.current());
-        String senderId  = DDDTLSUtil.publicKeyToName(clientCert.getPublicKey());
+        String senderId = DDDTLSUtil.publicKeyToName(clientCert.getPublicKey());
 
         try {
             recencyBlob = bundleTransmission.getRecencyBlob(senderId);

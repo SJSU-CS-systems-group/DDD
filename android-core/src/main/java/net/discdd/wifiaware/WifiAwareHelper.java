@@ -79,7 +79,8 @@ public class WifiAwareHelper {
                 public void onAttachFailed() {
                     mainHandler.post(() -> {
                         future.complete(false);
-                        notifyActionToListeners(WifiAwareEventType.WIFI_AWARE_MANAGER_FAILED, "Failed to attach to WiFi Aware");
+                        notifyActionToListeners(WifiAwareEventType.WIFI_AWARE_MANAGER_FAILED,
+                                                "Failed to attach to WiFi Aware");
                     });
                 }
 
@@ -125,7 +126,9 @@ public class WifiAwareHelper {
         listeners.remove(listener);
     }
 
-    public CompletableFuture<WifiAwareNetworkInfo> getConnectivityManager(DiscoverySession discoverySession, PeerHandle peerHandle, int port) {
+    public CompletableFuture<WifiAwareNetworkInfo> getConnectivityManager(DiscoverySession discoverySession,
+                                                                          PeerHandle peerHandle,
+                                                                          int port) {
         var future = new CompletableFuture<WifiAwareNetworkInfo>();
         var conInfo = connections.get(peerHandle);
         if (conInfo == null) {
@@ -144,18 +147,18 @@ public class WifiAwareHelper {
         }
         conInfo.fillInNetwork(future);
 
-        WifiAwareNetworkSpecifier networkSpecifier = new WifiAwareNetworkSpecifier.Builder(
-                discoverySession,
-                peerHandle).setPskPassphrase("DiscDataDist")
-                .setPort(Math.max(port, 0)).build();
+        WifiAwareNetworkSpecifier networkSpecifier =
+                new WifiAwareNetworkSpecifier.Builder(discoverySession, peerHandle).setPskPassphrase("DiscDataDist")
+                        .setPort(Math.max(port, 0))
+                        .build();
 
-        NetworkRequest networkRequest = new NetworkRequest.Builder().addTransportType(
-                        NetworkCapabilities.TRANSPORT_WIFI_AWARE)
-                .setNetworkSpecifier(networkSpecifier)
-                .build();
+        NetworkRequest networkRequest =
+                new NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI_AWARE)
+                        .setNetworkSpecifier(networkSpecifier)
+                        .build();
 
-        ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(
-                Context.CONNECTIVITY_SERVICE);
+        ConnectivityManager connectivityManager =
+                (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         connectivityManager.requestNetwork(networkRequest, conInfo.callback);
         return future;
     }
@@ -223,8 +226,7 @@ public class WifiAwareHelper {
         }
     }
 
-    public record PeerMessage(PeerHandle peerHandle, byte[] message) {
-    }
+    public record PeerMessage(PeerHandle peerHandle, byte[] message) {}
 
     public enum WifiAwareEventType {
         WIFI_AWARE_MANAGER_INITIALIZED,
@@ -232,6 +234,7 @@ public class WifiAwareHelper {
         WIFI_AWARE_MANAGER_FAILED,
         WIFI_AWARE_MANAGER_TERMINATED,
     }
+
     public record WifiAwareEvent(WifiAwareHelper.WifiAwareEventType type, String message) {}
 
     public class WifiAwareBroadcastReceiver extends BroadcastReceiver {
@@ -247,17 +250,13 @@ public class WifiAwareHelper {
                 // If WiFi Aware became unavailable and we had a session, handle session termination
                 if (!isAvailable && wifiAwareSession != null) {
                     wifiAwareSession = null;
-                    notifyActionToListeners(
-                            WifiAwareEventType.WIFI_AWARE_MANAGER_TERMINATED,
-                            "WiFi Aware session terminated due to availability change"
-                    );
+                    notifyActionToListeners(WifiAwareEventType.WIFI_AWARE_MANAGER_TERMINATED,
+                                            "WiFi Aware session terminated due to availability change");
                 }
 
                 // Notify listeners about availability change
-                notifyActionToListeners(
-                        WifiAwareEventType.WIFI_AWARE_MANAGER_AVAILABILITY_CHANGED,
-                        "WiFi Aware availability: " + (isAvailable ? "available" : "unavailable")
-                );
+                notifyActionToListeners(WifiAwareEventType.WIFI_AWARE_MANAGER_AVAILABILITY_CHANGED,
+                                        "WiFi Aware availability: " + (isAvailable ? "available" : "unavailable"));
             }
         }
     }

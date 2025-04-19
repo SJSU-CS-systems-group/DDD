@@ -21,7 +21,7 @@ import java.util.logging.Logger;
  * the GrpcService annotation.
  */
 @SpringBootApplication
-@Import({GrpcServerRunner.class, GrpcSecurityConfig.class})
+@Import({ GrpcServerRunner.class, GrpcSecurityConfig.class })
 public class EchoApplication {
     final static Logger logger = Logger.getLogger(EchoApplication.class.getName());
 

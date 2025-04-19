@@ -44,7 +44,7 @@ class WifiDirectViewModel(
         setViewModel(this@WifiDirectViewModel)
     }
     private val _state = MutableStateFlow(WifiDirectState())
-    private var btService: TransportWifiDirectService ?= null
+    private var btService: TransportWifiDirectService? = null
     private var transportPaths: TransportPaths = TransportPaths(context.getExternalFilesDir(null)?.toPath())
     val state = _state.asStateFlow()
 
@@ -83,14 +83,16 @@ class WifiDirectViewModel(
 
             var status = btService!!.status
             _state.update {
-                it.copy(wifiStatus = when (status) {
-                    WifiDirectStatus.UNDEFINED -> context.getString(R.string.check_permissions_and_that_wifi_is_enabled);
-                    WifiDirectStatus.CONNECTED -> context.getString(R.string.connected);
-                    WifiDirectStatus.INVITED -> context.getString(R.string.invited);
-                    WifiDirectStatus.FAILED -> context.getString(R.string.failed);
-                    WifiDirectStatus.AVAILABLE -> context.getString(R.string.available);
-                    WifiDirectStatus.UNAVAILABLE -> context.getString(R.string.unavailable);
-                })
+                it.copy(
+                    wifiStatus = when (status) {
+                        WifiDirectStatus.UNDEFINED -> context.getString(R.string.check_permissions_and_that_wifi_is_enabled);
+                        WifiDirectStatus.CONNECTED -> context.getString(R.string.connected);
+                        WifiDirectStatus.INVITED -> context.getString(R.string.invited);
+                        WifiDirectStatus.FAILED -> context.getString(R.string.failed);
+                        WifiDirectStatus.AVAILABLE -> context.getString(R.string.available);
+                        WifiDirectStatus.UNAVAILABLE -> context.getString(R.string.unavailable);
+                    }
+                )
             }
 
         }
@@ -120,13 +122,15 @@ class WifiDirectViewModel(
                         val ni: NetworkInterface = NetworkInterface.getByName(gi.`interface`)
                         addresses = if (ni == null) "N/A" else ni.getInterfaceAddresses()
                             .stream()
-                            .filter( {ia -> ia.getAddress() is Inet4Address} )
-                            .map( {ia -> ia.getAddress().getHostAddress()} ).collect(Collectors.joining(", "))
+                            .filter({ ia -> ia.getAddress() is Inet4Address })
+                            .map({ ia -> ia.getAddress().getHostAddress() }).collect(Collectors.joining(", "))
                     } catch (e: SocketException) {
-                        addresses= "unknown"
+                        addresses = "unknown"
                     }
-                    info = String.format("SSID: %s\nPassword: %s\nAddress: %s\nConnected devices: %d",
-                        gi.getNetworkName(), gi.getPassphrase(), addresses, gi.getClientList().size)
+                    info = String.format(
+                        "SSID: %s\nPassword: %s\nAddress: %s\nConnected devices: %d",
+                        gi.getNetworkName(), gi.getPassphrase(), addresses, gi.getClientList().size
+                    )
                 }   //TO-DO connected devices seems to not along with the group info devices
                 _state.update {
                     it.copy(wifiInfo = info)

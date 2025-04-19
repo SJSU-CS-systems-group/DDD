@@ -116,7 +116,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private int deleteMsg() {
-        return resolver.delete(CONTENT_URL, "deleteAllADUsUpto",
+        return resolver.delete(CONTENT_URL,
+                               "deleteAllADUsUpto",
                                new String[] { String.valueOf(aduMetadata.get("lastAdded")) });
     }
 

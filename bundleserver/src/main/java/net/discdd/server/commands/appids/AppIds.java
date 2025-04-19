@@ -26,10 +26,9 @@ public class AppIds implements Callable<Integer> {
     }
 
     @CommandLine.Command(name = "update", description = "Add or update an appId to server address mapping")
-    int update(
-            @CommandLine.Parameters(index = "0", description = "The appId to add or update") String appId,
-            @CommandLine.Parameters(index = "1", description = "The server address to map to the appId")
-            String address) {
+    int update(@CommandLine.Parameters(index = "0", description = "The appId to add or update") String appId,
+               @CommandLine.Parameters(index = "1", description = "The server address to map to the appId")
+               String address) {
         registeredAppAdapterRepository.save(new RegisteredAppAdapter(appId, address));
         System.out.printf("%s registered to %s%n", appId, address);
         return 0;

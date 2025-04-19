@@ -73,7 +73,9 @@ public class StoreADUs {
 
     public Stream<ADU> getADUs(String clientId, String appId) throws IOException {
         getMetadata(clientId, appId);
-        return Files.list(getAppFolder(clientId, appId)).filter(p -> !p.endsWith(METADATA_PATH)).map(Path::toFile)
+        return Files.list(getAppFolder(clientId, appId))
+                .filter(p -> !p.endsWith(METADATA_PATH))
+                .map(Path::toFile)
                 .map(f -> new ADU(f, appId, Long.parseLong(f.getName()), f.length(), clientId))
                 .sorted(Comparator.comparingLong(ADU::getADUId));
     }
@@ -81,7 +83,9 @@ public class StoreADUs {
     public boolean hasNewADUs(String clientId, long lastBundleSentTimestamp) {
         var appAdus = clientId == null ? rootFolder : rootFolder.resolve(clientId);
         try {
-            return Files.walk(appAdus).filter(Files::isRegularFile).map(Path::toFile)
+            return Files.walk(appAdus)
+                    .filter(Files::isRegularFile)
+                    .map(Path::toFile)
                     .anyMatch(f -> f.lastModified() > lastBundleSentTimestamp);
         } catch (IOException e) {
             logger.log(SEVERE, "Failed to check for new ADUs answering false to newADUs", e);
@@ -97,7 +101,9 @@ public class StoreADUs {
             return topPaths.filter(p -> p.toFile().isDirectory()).flatMap(clientIdPath -> {
                 try {
                     var bottomPaths = Files.list(clientIdPath);
-                    return bottomPaths.map(Path::toFile).filter(File::isDirectory).map(File::getName)
+                    return bottomPaths.map(Path::toFile)
+                            .filter(File::isDirectory)
+                            .map(File::getName)
                             .map(appId -> new ClientApp(clientIdPath.toFile().getName(), appId));
                 } catch (IOException e) {
                     return Stream.empty();
@@ -108,8 +114,9 @@ public class StoreADUs {
             return Stream.empty();
         }
     }
-    
+
     public record AduIdData(String id, byte[] data) {}
+
     public List<AduIdData> getAllAppIdAndData(String appId) throws IOException {
         getMetadata(null, appId);
         var folder = rootFolder.resolve(appId);
@@ -140,8 +147,10 @@ public class StoreADUs {
     public List<Long> getAllADUIds(String appId) throws IOException {
         getMetadata(null, appId);
         var folder = rootFolder.resolve(appId);
-        return Files.list(folder).map(path -> path.getFileName().toString())
-                .filter(fileName -> !fileName.equals(METADATA_FILENAME)).map(Long::parseLong)
+        return Files.list(folder)
+                .map(path -> path.getFileName().toString())
+                .filter(fileName -> !fileName.equals(METADATA_FILENAME))
+                .map(Long::parseLong)
                 .collect(Collectors.toList());
     }
 

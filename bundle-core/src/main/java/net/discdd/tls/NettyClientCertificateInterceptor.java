@@ -18,14 +18,18 @@ import java.security.cert.X509Certificate;
 import java.util.concurrent.CompletableFuture;
 
 public class NettyClientCertificateInterceptor implements ClientInterceptor {
-    public static final CallOptions.Key<CompletableFuture<X509Certificate>> SERVER_CERTIFICATE_OPTION = CallOptions.Key.create("server-certificate");
+    public static final CallOptions.Key<CompletableFuture<X509Certificate>> SERVER_CERTIFICATE_OPTION =
+            CallOptions.Key.create("server-certificate");
 
-    public static <T extends AbstractStub<T>> T createServerCertificateOption(T stub, CompletableFuture<X509Certificate> certCompletion) {
+    public static <T extends AbstractStub<T>> T createServerCertificateOption(T stub,
+                                                                              CompletableFuture<X509Certificate> certCompletion) {
         return stub.withOption(NettyClientCertificateInterceptor.SERVER_CERTIFICATE_OPTION, certCompletion);
     }
 
     @Override
-    public <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(MethodDescriptor<ReqT, RespT> method, CallOptions callOptions, Channel next) {
+    public <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(MethodDescriptor<ReqT, RespT> method,
+                                                               CallOptions callOptions,
+                                                               Channel next) {
         return new ForwardingClientCall.SimpleForwardingClientCall<>(next.newCall(method, callOptions)) {
             @Override
             public void start(Listener<RespT> responseListener, Metadata headers) {
@@ -41,7 +45,7 @@ public class NettyClientCertificateInterceptor implements ClientInterceptor {
                                     callOptions.getOption(SERVER_CERTIFICATE_OPTION).complete(serverCert);
                                 }
                             } catch (SSLPeerUnverifiedException e) {
-                                e.printStackTrace();    
+                                e.printStackTrace();
                                 throw new RuntimeException("Server certificate not found " + e.getMessage());
                             }
                         }

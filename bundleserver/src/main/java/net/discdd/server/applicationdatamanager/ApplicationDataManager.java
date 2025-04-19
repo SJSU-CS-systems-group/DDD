@@ -41,7 +41,8 @@ public class ApplicationDataManager {
     private final StoreADUs receiveADUsStorage;
     private final StoreADUs sendADUsStorage;
 
-    public ApplicationDataManager(AduStores aduStores, AduDeliveredListener aduDeliveredListener,
+    public ApplicationDataManager(AduStores aduStores,
+                                  AduDeliveredListener aduDeliveredListener,
                                   SentAduDetailsRepository sentAduDetailsRepository,
                                   BundleMetadataRepository bundleMetadataRepository,
                                   RegisteredAppAdapterRepository registeredAppAdapterRepository,
@@ -72,17 +73,20 @@ public class ApplicationDataManager {
             String appId = sentAduDetails.appId;
             Long lastAduIdForAppId = sentAduDetails.aduIdRangeEnd;
             sendADUsStorage.deleteAllFilesUpTo(clientId, appId, lastAduIdForAppId);
-            logger.log(INFO, "[DataStoreAdaptor] Deleted ADUs for application " + appId + " with id upto " +
-                    lastAduIdForAppId);
+            logger.log(INFO,
+                       "[DataStoreAdaptor] Deleted ADUs for application " + appId + " with id upto " +
+                               lastAduIdForAppId);
         }
 
         sentAduDetailsRepository.deleteByBundleId(bundleId);
 
-        logger.log(INFO, "[StateManager] Processed acknowledgement for sent bundle id " + bundleId +
-                " corresponding to client " + clientId);
+        logger.log(INFO,
+                   "[StateManager] Processed acknowledgement for sent bundle id " + bundleId +
+                           " corresponding to client " + clientId);
     }
 
-    public void storeReceivedADUs(String clientId, String bundleId, long receivedBundleCounter, List<ADU> adus) throws IOException {
+    public void storeReceivedADUs(String clientId, String bundleId, long receivedBundleCounter, List<ADU> adus) throws
+            IOException {
         logger.log(INFO, "[ApplicationDataManager] Store ADUs");
 
         updateLastReceivedCounter(clientId, receivedBundleCounter, bundleId);
@@ -91,9 +95,10 @@ public class ApplicationDataManager {
 
         Map<String, List<ADU>> appIdToADUMap = new HashMap<>();
         for (var adu : adus) {
-            var addedFile =
-                    receiveADUsStorage.addADU(clientId, adu.getAppId(), Files.readAllBytes(adu.getSource().toPath()),
-                                              adu.getADUId());
+            var addedFile = receiveADUsStorage.addADU(clientId,
+                                                      adu.getAppId(),
+                                                      Files.readAllBytes(adu.getSource().toPath()),
+                                                      adu.getADUId());
             if (addedFile != null) affectedAppIds.add(adu.getAppId());
         }
         aduDeliveredListener.onAduDelivered(clientId, affectedAppIds);
@@ -141,7 +146,8 @@ public class ApplicationDataManager {
         final long dataSizeLimit = this.bundleServerConfig.getApplicationDataManager().getAppDataSizeLimit();
         var sizeLimiter = new SizeLimiter(dataSizeLimit - initialSize);
         for (String appId : this.getRegisteredAppIds()) {
-            sendADUsStorage.getADUs(clientId, appId).takeWhile(a -> sizeLimiter.test(a.getSize()))
+            sendADUsStorage.getADUs(clientId, appId)
+                    .takeWhile(a -> sizeLimiter.test(a.getSize()))
                     .forEach(adusToSend::add);
         }
         return adusToSend;

@@ -61,8 +61,9 @@ public class UsbFragment extends Fragment {
     }
 
     @Override
-    public View onCreateView(
-            @NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater,
+                             @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.usb_fragment, container, false);
 
         reloadButton = view.findViewById(R.id.reload_settings);
@@ -82,7 +83,7 @@ public class UsbFragment extends Fragment {
             usbExchangeButton.setOnClickListener(v -> {
                 logger.log(INFO, "Sync button was hit");
                 try {
-                    if(usbFileManager.populateUsb()) {
+                    if (usbFileManager.populateUsb()) {
                         updateUsbStatus(false, "Exchange was successful!", Color.GREEN);
                     }
                 } catch (IOException e) {
@@ -114,15 +115,15 @@ public class UsbFragment extends Fragment {
     public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         BundleTransportActivity activity = (BundleTransportActivity) getActivity();
-        if(activity.usbExists) {
-            if(usbDirExists()) {
-                updateUsbStatus(true,getString(R.string.usb_connection_detected),Color.GREEN);
+        if (activity.usbExists) {
+            if (usbDirExists()) {
+                updateUsbStatus(true, getString(R.string.usb_connection_detected), Color.GREEN);
+            } else {
+                updateUsbStatus(false,
+                                getString(R.string.usb_was_connected_but_ddd_transport_directory_was_not_detected),
+                                Color.RED);
             }
-            else {
-                updateUsbStatus(false,getString(R.string.usb_was_connected_but_ddd_transport_directory_was_not_detected),Color.RED);
-            }
-        }
-        else {
+        } else {
             updateUsbStatus(false, getString(R.string.no_usb_connection_detected), Color.RED);
         }
     }
@@ -160,6 +161,7 @@ public class UsbFragment extends Fragment {
             usbConnectionText.setTextColor(color);
         });
     }
+
     //Method to check if /DDD_transport directory exists
     private boolean usbDirExists() {
         List<StorageVolume> storageVolumeList = storageManager.getStorageVolumes();
@@ -172,7 +174,7 @@ public class UsbFragment extends Fragment {
                 }
             }
         }
-        logger.log(INFO,"DDD_transport directory does not exist.");
+        logger.log(INFO, "DDD_transport directory does not exist.");
         return false;
     }
 }

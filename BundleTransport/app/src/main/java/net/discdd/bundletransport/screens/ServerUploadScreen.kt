@@ -35,7 +35,7 @@ import net.discdd.bundletransport.viewmodels.ServerUploadViewModel
 import net.discdd.theme.ComposableTheme
 import net.discdd.viewmodels.ConnectivityViewModel
 
-class UploadFragment: Fragment() {
+class UploadFragment : Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -62,7 +62,8 @@ fun ServerUploadScreen(
     var connectServerBtn by remember { mutableStateOf(false) }
 
     LaunchedEffect(uploadState.domain, uploadState.port, connectivityState.networkConnected) {
-        val enable = uploadState.domain.isNotEmpty() && uploadState.port.isNotEmpty() && connectivityState.networkConnected
+        val enable =
+            uploadState.domain.isNotEmpty() && uploadState.port.isNotEmpty() && connectivityState.networkConnected
         connectServerBtn = enable
     }
     LaunchedEffect(uploadState.message) {
@@ -72,21 +73,22 @@ fun ServerUploadScreen(
         }
     }
 
-    Column (
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         FilledTonalButton(
-            onClick = {uploadViewModel.connectServer()},
+            onClick = { uploadViewModel.connectServer() },
             enabled = connectServerBtn,
-            modifier = Modifier.fillMaxWidth()) {
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Text("Connect to Bundle Server")
         }
         OutlinedTextField(
             value = uploadState.domain,
-            onValueChange = {uploadViewModel.onDomainChanged(it)},
+            onValueChange = { uploadViewModel.onDomainChanged(it) },
             label = { Text("Domain Input") },
             modifier = Modifier
                 .fillMaxWidth()
@@ -94,21 +96,25 @@ fun ServerUploadScreen(
         )
         OutlinedTextField(
             value = uploadState.port,
-            onValueChange = {uploadViewModel.onPortChanged(it)},
+            onValueChange = { uploadViewModel.onPortChanged(it) },
             label = { Text("Port Input") },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(8.dp),
         )
-        FilledTonalButton(onClick = {uploadViewModel.saveDomainPort()},
-            modifier = Modifier.fillMaxWidth()) {
+        FilledTonalButton(
+            onClick = { uploadViewModel.saveDomainPort() },
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Text("Save Domain and Port")
         }
-        FilledTonalButton(onClick = {uploadViewModel.restoreDomainPort()},
-            modifier = Modifier.fillMaxWidth()) {
+        FilledTonalButton(
+            onClick = { uploadViewModel.restoreDomainPort() },
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Text("Restore Domain and Port")
         }
-        Row (
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
@@ -118,7 +124,7 @@ fun ServerUploadScreen(
                 text = "toClient: ",
                 fontSize = 20.sp
             )
-            Text (
+            Text(
                 text = uploadState.clientCount,
                 fontSize = 20.sp
             )
@@ -126,19 +132,20 @@ fun ServerUploadScreen(
                 text = "    toServer: ",
                 fontSize = 20.sp
             )
-            Text (
+            Text(
                 text = uploadState.serverCount,
                 fontSize = 20.sp
             )
         }
-        FilledTonalButton(onClick = {
-            uploadViewModel.reloadCount()
-        },
+        FilledTonalButton(
+            onClick = {
+                uploadViewModel.reloadCount()
+            },
             modifier = Modifier
                 .size(100.dp, 70.dp)
                 .align(Alignment.End)
         ) {
-            Text(text = "Reload Counts",)
+            Text(text = "Reload Counts")
         }
         uploadState.message?.let { message ->
             Text(

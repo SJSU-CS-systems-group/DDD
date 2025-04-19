@@ -76,7 +76,8 @@ public class TransportWifiDirectService extends Service
 
     private void startForeground() {
         try {
-            NotificationChannel channel = new NotificationChannel("DDD-Transport", "DDD Bundle Transport",
+            NotificationChannel channel = new NotificationChannel("DDD-Transport",
+                                                                  "DDD Bundle Transport",
                                                                   NotificationManager.IMPORTANCE_HIGH);
             channel.setDescription("DDD Transport Service");
 
@@ -114,8 +115,12 @@ public class TransportWifiDirectService extends Service
         switch (action.type()) {
             case WIFI_DIRECT_MANAGER_GROUP_INFO_CHANGED:
                 var groupInfo = wifiDirectManager.getGroupInfo();
-                appendToClientLog("Group info: " + (groupInfo == null ? "N/A" :
-                        groupInfo.getClientList().stream().map(d -> d.deviceName).collect(Collectors.joining(", "))));
+                appendToClientLog("Group info: " + (groupInfo == null ?
+                                                    "N/A" :
+                                                    groupInfo.getClientList()
+                                                            .stream()
+                                                            .map(d -> d.deviceName)
+                                                            .collect(Collectors.joining(", "))));
                 if (groupInfo == null || groupInfo.getClientList().isEmpty()) {
                     if (notificationManager != null) {
                         notificationManager.cancel(1001);
@@ -128,12 +133,13 @@ public class TransportWifiDirectService extends Service
                                                     groupInfo.getClientList().size()));
                     startRpcServer();
 
-                    NotificationChannel channel =
-                            new NotificationChannel("DDD-Exchange", "DDD Bundle Transport", NotificationManager.IMPORTANCE_HIGH);
+                    NotificationChannel channel = new NotificationChannel("DDD-Exchange",
+                                                                          "DDD Bundle Transport",
+                                                                          NotificationManager.IMPORTANCE_HIGH);
                     channel.setDescription("Initiating Bundle Exchange...");
 
-                    NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "DDD-Transport")
-                            .setSmallIcon(R.drawable.bundletransport_icon)
+                    NotificationCompat.Builder builder = new NotificationCompat.Builder(this,
+                                                                                        "DDD-Transport").setSmallIcon(R.drawable.bundletransport_icon)
                             .setContentTitle(getString(R.string.exchanging_with_client))
                             .setContentText(getString(R.string.initiating_bundle_exchange))
                             .setPriority(NotificationCompat.PRIORITY_HIGH)

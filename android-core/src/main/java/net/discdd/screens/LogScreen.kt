@@ -37,6 +37,7 @@ class LogFragment : Fragment() {
             LogViewModel.registerLoggerHandler()
         }
     }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,

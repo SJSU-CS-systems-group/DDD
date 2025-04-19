@@ -439,51 +439,72 @@ public final class WebSocketProtos {
             id_ = 0L;
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage parseFrom(java.nio.ByteBuffer data) throws com.google.protobuf.InvalidProtocolBufferException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage parseFrom(
+                java.nio.ByteBuffer data) throws com.google.protobuf.InvalidProtocolBufferException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, data);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage parseFrom(java.nio.ByteBuffer data, com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws com.google.protobuf.InvalidProtocolBufferException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage parseFrom(
+                java.nio.ByteBuffer data,
+                com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws
+                com.google.protobuf.InvalidProtocolBufferException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, data, extensionRegistry);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage parseFrom(com.google.protobuf.ByteString data) throws com.google.protobuf.InvalidProtocolBufferException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage parseFrom(
+                com.google.protobuf.ByteString data) throws com.google.protobuf.InvalidProtocolBufferException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, data);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage parseFrom(com.google.protobuf.ByteString data, com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws com.google.protobuf.InvalidProtocolBufferException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage parseFrom(
+                com.google.protobuf.ByteString data,
+                com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws
+                com.google.protobuf.InvalidProtocolBufferException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, data, extensionRegistry);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage parseFrom(byte[] data) throws com.google.protobuf.InvalidProtocolBufferException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage parseFrom(
+                byte[] data) throws com.google.protobuf.InvalidProtocolBufferException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, data);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage parseFrom(byte[] data, com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws com.google.protobuf.InvalidProtocolBufferException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage parseFrom(
+                byte[] data,
+                com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws
+                com.google.protobuf.InvalidProtocolBufferException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, data, extensionRegistry);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage parseFrom(java.io.InputStream input) throws java.io.IOException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage parseFrom(
+                java.io.InputStream input) throws java.io.IOException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, input);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage parseFrom(java.io.InputStream input, com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws java.io.IOException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage parseFrom(
+                java.io.InputStream input,
+                com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws java.io.IOException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, input, extensionRegistry);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage parseDelimitedFrom(java.io.InputStream input) throws java.io.IOException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage parseDelimitedFrom(
+                java.io.InputStream input) throws java.io.IOException {
             return parseDelimitedFrom(DEFAULT_INSTANCE, input);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage parseDelimitedFrom(java.io.InputStream input, com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws java.io.IOException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage parseDelimitedFrom(
+                java.io.InputStream input,
+                com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws java.io.IOException {
             return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage parseFrom(com.google.protobuf.CodedInputStream input) throws java.io.IOException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage parseFrom(
+                com.google.protobuf.CodedInputStream input) throws java.io.IOException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, input);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage parseFrom(com.google.protobuf.CodedInputStream input, com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws java.io.IOException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage parseFrom(
+                com.google.protobuf.CodedInputStream input,
+                com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws java.io.IOException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, input, extensionRegistry);
         }
 
@@ -832,8 +853,9 @@ public final class WebSocketProtos {
 
         @java.lang.Override
         @java.lang.SuppressWarnings({ "unchecked", "fallthrough" })
-        protected final java.lang.Object dynamicMethod(com.google.protobuf.GeneratedMessageLite.MethodToInvoke method
-                , java.lang.Object arg0, java.lang.Object arg1) {
+        protected final java.lang.Object dynamicMethod(com.google.protobuf.GeneratedMessageLite.MethodToInvoke method,
+                                                       java.lang.Object arg0,
+                                                       java.lang.Object arg1) {
             switch (method) {
                 case NEW_MUTABLE_INSTANCE: {
                     return new org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage();
@@ -1304,51 +1326,72 @@ public final class WebSocketProtos {
             body_ = getDefaultInstance().getBody();
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage parseFrom(java.nio.ByteBuffer data) throws com.google.protobuf.InvalidProtocolBufferException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage parseFrom(
+                java.nio.ByteBuffer data) throws com.google.protobuf.InvalidProtocolBufferException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, data);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage parseFrom(java.nio.ByteBuffer data, com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws com.google.protobuf.InvalidProtocolBufferException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage parseFrom(
+                java.nio.ByteBuffer data,
+                com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws
+                com.google.protobuf.InvalidProtocolBufferException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, data, extensionRegistry);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage parseFrom(com.google.protobuf.ByteString data) throws com.google.protobuf.InvalidProtocolBufferException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage parseFrom(
+                com.google.protobuf.ByteString data) throws com.google.protobuf.InvalidProtocolBufferException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, data);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage parseFrom(com.google.protobuf.ByteString data, com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws com.google.protobuf.InvalidProtocolBufferException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage parseFrom(
+                com.google.protobuf.ByteString data,
+                com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws
+                com.google.protobuf.InvalidProtocolBufferException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, data, extensionRegistry);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage parseFrom(byte[] data) throws com.google.protobuf.InvalidProtocolBufferException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage parseFrom(
+                byte[] data) throws com.google.protobuf.InvalidProtocolBufferException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, data);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage parseFrom(byte[] data, com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws com.google.protobuf.InvalidProtocolBufferException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage parseFrom(
+                byte[] data,
+                com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws
+                com.google.protobuf.InvalidProtocolBufferException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, data, extensionRegistry);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage parseFrom(java.io.InputStream input) throws java.io.IOException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage parseFrom(
+                java.io.InputStream input) throws java.io.IOException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, input);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage parseFrom(java.io.InputStream input, com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws java.io.IOException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage parseFrom(
+                java.io.InputStream input,
+                com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws java.io.IOException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, input, extensionRegistry);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage parseDelimitedFrom(java.io.InputStream input) throws java.io.IOException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage parseDelimitedFrom(
+                java.io.InputStream input) throws java.io.IOException {
             return parseDelimitedFrom(DEFAULT_INSTANCE, input);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage parseDelimitedFrom(java.io.InputStream input, com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws java.io.IOException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage parseDelimitedFrom(
+                java.io.InputStream input,
+                com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws java.io.IOException {
             return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage parseFrom(com.google.protobuf.CodedInputStream input) throws java.io.IOException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage parseFrom(
+                com.google.protobuf.CodedInputStream input) throws java.io.IOException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, input);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage parseFrom(com.google.protobuf.CodedInputStream input, com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws java.io.IOException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage parseFrom(
+                com.google.protobuf.CodedInputStream input,
+                com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws java.io.IOException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, input, extensionRegistry);
         }
 
@@ -1675,8 +1718,9 @@ public final class WebSocketProtos {
 
         @java.lang.Override
         @java.lang.SuppressWarnings({ "unchecked", "fallthrough" })
-        protected final java.lang.Object dynamicMethod(com.google.protobuf.GeneratedMessageLite.MethodToInvoke method
-                , java.lang.Object arg0, java.lang.Object arg1) {
+        protected final java.lang.Object dynamicMethod(com.google.protobuf.GeneratedMessageLite.MethodToInvoke method,
+                                                       java.lang.Object arg0,
+                                                       java.lang.Object arg1) {
             switch (method) {
                 case NEW_MUTABLE_INSTANCE: {
                     return new org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage();
@@ -1923,8 +1967,8 @@ public final class WebSocketProtos {
                     org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage.Type.forNumber(
                             type_);
             return result == null ?
-                    org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage.Type.UNKNOWN :
-                    result;
+                   org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage.Type.UNKNOWN :
+                   result;
         }
 
         /**
@@ -1962,8 +2006,8 @@ public final class WebSocketProtos {
         @java.lang.Override
         public org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage getRequest() {
             return request_ == null ?
-                    org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage.getDefaultInstance() :
-                    request_;
+                   org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketRequestMessage.getDefaultInstance() :
+                   request_;
         }
 
         /**
@@ -2017,8 +2061,8 @@ public final class WebSocketProtos {
         @java.lang.Override
         public org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage getResponse() {
             return response_ == null ?
-                    org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage.getDefaultInstance() :
-                    response_;
+                   org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketResponseMessage.getDefaultInstance() :
+                   response_;
         }
 
         /**
@@ -2055,51 +2099,71 @@ public final class WebSocketProtos {
             bitField0_ = (bitField0_ & ~0x00000004);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage parseFrom(java.nio.ByteBuffer data) throws com.google.protobuf.InvalidProtocolBufferException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage parseFrom(
+                java.nio.ByteBuffer data) throws com.google.protobuf.InvalidProtocolBufferException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, data);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage parseFrom(java.nio.ByteBuffer data, com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws com.google.protobuf.InvalidProtocolBufferException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage parseFrom(
+                java.nio.ByteBuffer data,
+                com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws
+                com.google.protobuf.InvalidProtocolBufferException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, data, extensionRegistry);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage parseFrom(com.google.protobuf.ByteString data) throws com.google.protobuf.InvalidProtocolBufferException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage parseFrom(com.google.protobuf.ByteString data) throws
+                com.google.protobuf.InvalidProtocolBufferException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, data);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage parseFrom(com.google.protobuf.ByteString data, com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws com.google.protobuf.InvalidProtocolBufferException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage parseFrom(com.google.protobuf.ByteString data,
+                                                                                                                     com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws
+                com.google.protobuf.InvalidProtocolBufferException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, data, extensionRegistry);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage parseFrom(byte[] data) throws com.google.protobuf.InvalidProtocolBufferException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage parseFrom(
+                byte[] data) throws com.google.protobuf.InvalidProtocolBufferException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, data);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage parseFrom(byte[] data, com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws com.google.protobuf.InvalidProtocolBufferException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage parseFrom(
+                byte[] data,
+                com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws
+                com.google.protobuf.InvalidProtocolBufferException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, data, extensionRegistry);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage parseFrom(java.io.InputStream input) throws java.io.IOException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage parseFrom(
+                java.io.InputStream input) throws java.io.IOException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, input);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage parseFrom(java.io.InputStream input, com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws java.io.IOException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage parseFrom(
+                java.io.InputStream input,
+                com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws java.io.IOException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, input, extensionRegistry);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage parseDelimitedFrom(java.io.InputStream input) throws java.io.IOException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage parseDelimitedFrom(
+                java.io.InputStream input) throws java.io.IOException {
             return parseDelimitedFrom(DEFAULT_INSTANCE, input);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage parseDelimitedFrom(java.io.InputStream input, com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws java.io.IOException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage parseDelimitedFrom(
+                java.io.InputStream input,
+                com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws java.io.IOException {
             return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage parseFrom(com.google.protobuf.CodedInputStream input) throws java.io.IOException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage parseFrom(com.google.protobuf.CodedInputStream input) throws
+                java.io.IOException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, input);
         }
 
-        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage parseFrom(com.google.protobuf.CodedInputStream input, com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws java.io.IOException {
+        public static org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage parseFrom(com.google.protobuf.CodedInputStream input,
+                                                                                                                     com.google.protobuf.ExtensionRegistryLite extensionRegistry) throws
+                java.io.IOException {
             return com.google.protobuf.GeneratedMessageLite.parseFrom(DEFAULT_INSTANCE, input, extensionRegistry);
         }
 
@@ -2277,8 +2341,9 @@ public final class WebSocketProtos {
 
         @java.lang.Override
         @java.lang.SuppressWarnings({ "unchecked", "fallthrough" })
-        protected final java.lang.Object dynamicMethod(com.google.protobuf.GeneratedMessageLite.MethodToInvoke method
-                , java.lang.Object arg0, java.lang.Object arg1) {
+        protected final java.lang.Object dynamicMethod(com.google.protobuf.GeneratedMessageLite.MethodToInvoke method,
+                                                       java.lang.Object arg0,
+                                                       java.lang.Object arg1) {
             switch (method) {
                 case NEW_MUTABLE_INSTANCE: {
                     return new org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage();
@@ -2287,9 +2352,11 @@ public final class WebSocketProtos {
                     return new Builder();
                 }
                 case BUILD_MESSAGE_INFO: {
-                    java.lang.Object[] objects = new java.lang.Object[] { "bitField0_", "type_",
-                            org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage.Type.internalGetVerifier(),
-                            "request_", "response_", };
+                    java.lang.Object[] objects = new java.lang.Object[] { "bitField0_",
+                                                                          "type_",
+                                                                          org.whispersystems.signalservice.internal.websocket.WebSocketProtos.WebSocketMessage.Type.internalGetVerifier(),
+                                                                          "request_",
+                                                                          "response_", };
                     java.lang.String info =
                             "\u0001\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u100c\u0000\u0002" +
                                     "\u1009\u0001\u0003\u1009\u0002";

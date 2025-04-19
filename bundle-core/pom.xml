@@ -27,7 +27,9 @@
         <profile>
             <id>mac-m2</id>
             <activation>
-                <os><arch>aarch64</arch></os>
+                <os>
+                    <arch>aarch64</arch>
+                </os>
             </activation>
             <properties>
                 <custom.os.classifier>osx-x86_64</custom.os.classifier>
@@ -36,7 +38,9 @@
         <profile>
             <id>others</id>
             <activation>
-                <os><arch>!aarch64</arch></os>
+                <os>
+                    <arch>!aarch64</arch>
+                </os>
             </activation>
             <properties>
                 <custom.os.classifier>${os.detected.classifier}</custom.os.classifier>
@@ -150,9 +154,11 @@
                 <artifactId>protobuf-maven-plugin</artifactId>
                 <version>${protobuf-plugin.version}</version>
                 <configuration>
-                    <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
+                    <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}
+                    </protocArtifact>
                     <pluginId>grpc-java</pluginId>
-                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
+                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}
+                    </pluginArtifact>
                 </configuration>
                 <executions>
                     <execution>

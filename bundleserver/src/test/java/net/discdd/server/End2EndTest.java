@@ -137,12 +137,14 @@ public class End2EndTest {
         SignalProtocolAddress address = new SignalProtocolAddress(clientId, 1);
         InMemorySignalProtocolStore clientSessionStore = SecurityUtils.createInMemorySignalProtocolStore();
 
-        AliceSignalProtocolParameters aliceSignalProtocolParameters =
-                AliceSignalProtocolParameters.newBuilder().setOurBaseKey(baseKeyPair).setOurIdentityKey(clientIdentity)
-                        .setTheirOneTimePreKey(org.whispersystems.libsignal.util.guava.Optional.absent())
-                        .setTheirRatchetKey(serverRatchetKey.getPublicKey())
-                        .setTheirSignedPreKey(serverSignedPreKey.getPublicKey())
-                        .setTheirIdentityKey(serverIdentity.getPublicKey()).create();
+        AliceSignalProtocolParameters aliceSignalProtocolParameters = AliceSignalProtocolParameters.newBuilder()
+                .setOurBaseKey(baseKeyPair)
+                .setOurIdentityKey(clientIdentity)
+                .setTheirOneTimePreKey(org.whispersystems.libsignal.util.guava.Optional.absent())
+                .setTheirRatchetKey(serverRatchetKey.getPublicKey())
+                .setTheirSignedPreKey(serverSignedPreKey.getPublicKey())
+                .setTheirIdentityKey(serverIdentity.getPublicKey())
+                .create();
         RatchetingSession.initializeSession(sessionRecord.getSessionState(), aliceSignalProtocolParameters);
         clientSessionStore.storeSession(address, sessionRecord);
         clientSessionCipher = new SessionCipher(clientSessionStore, address);
@@ -172,13 +174,20 @@ public class End2EndTest {
 
     }
 
-    protected static Path createBundleForAdus(List<Long> aduIds, String clientId, int bundleCount, Path targetDir) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, InvalidKeySpecException, BadPaddingException, java.security.InvalidKeyException {
+    protected static Path createBundleForAdus(List<Long> aduIds,
+                                              String clientId,
+                                              int bundleCount,
+                                              Path targetDir) throws IOException, NoSuchAlgorithmException,
+            InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException,
+            InvalidKeySpecException, BadPaddingException, java.security.InvalidKeyException {
 
         var baos = new ByteArrayOutputStream();
         var adus = aduIds.stream().map(aduId -> {
             var aduFile = new File(aduTempDir, Long.toString(aduId));
             try {
-                Files.write(aduFile.toPath(), String.format("ADU%d", aduId).getBytes(), StandardOpenOption.CREATE,
+                Files.write(aduFile.toPath(),
+                            String.format("ADU%d", aduId).getBytes(),
+                            StandardOpenOption.CREATE,
                             StandardOpenOption.TRUNCATE_EXISTING);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -191,12 +200,18 @@ public class End2EndTest {
         Path bundleJarPath = targetDir.resolve(encryptedBundleID);
         ByteArrayInputStream is = new ByteArrayInputStream(baos.toByteArray());
 
-        try (var os = Files.newOutputStream(bundleJarPath, StandardOpenOption.CREATE,
+        try (var os = Files.newOutputStream(bundleJarPath,
+                                            StandardOpenOption.CREATE,
                                             StandardOpenOption.TRUNCATE_EXISTING)) {
-            BundleUtils.encryptPayloadAndCreateBundle(
-                    (inputStream, outputStream) -> clientSessionCipher.encrypt(inputStream, outputStream),
-                    clientIdentity.getPublicKey().getPublicKey(), baseKeyPair.getPublicKey(),
-                    serverIdentity.getPublicKey().getPublicKey(), encryptedBundleID, is, os);
+            BundleUtils.encryptPayloadAndCreateBundle((inputStream, outputStream) -> clientSessionCipher.encrypt(
+                                                              inputStream,
+                                                              outputStream),
+                                                      clientIdentity.getPublicKey().getPublicKey(),
+                                                      baseKeyPair.getPublicKey(),
+                                                      serverIdentity.getPublicKey().getPublicKey(),
+                                                      encryptedBundleID,
+                                                      is,
+                                                      os);
 
         } catch (InvalidMessageException e) {
             throw new IOException(e);
@@ -211,7 +226,8 @@ public class End2EndTest {
         logger.info("Checking for files to send in " + aduDir);
         // try for up to 10 seconds to see if the files have arrived
         for (int tries = 0;
-             !(toSendFiles = new HashSet<>(listJustADUs(aduDir))).equals(expectedFileList) && tries < 20; tries++) {
+             !(toSendFiles = new HashSet<>(listJustADUs(aduDir))).equals(expectedFileList) && tries < 20;
+             tries++) {
             try {
                 logger.info("Expecting " + expectedFileList + " but got " + toSendFiles);
                 Thread.sleep(500);
@@ -223,28 +239,34 @@ public class End2EndTest {
         Assertions.assertEquals(expectedFileList, toSendFiles);
     }
 
-    protected static void checkReceivedFiles(String testClientId, Set<String> expectedFileList) throws IOException, InterruptedException {
+    protected static void checkReceivedFiles(String testClientId, Set<String> expectedFileList) throws IOException,
+            InterruptedException {
         checkReceivedFiles(testClientId, expectedFileList, null);
     }
 
     @SuppressWarnings("BusyWait")
-    protected static void checkReceivedFiles(String testClientId, Set<String> expectedFileList,
+    protected static void checkReceivedFiles(String testClientId,
+                                             Set<String> expectedFileList,
                                              Map<String, byte[]> sentBytes) throws InterruptedException, IOException {
         HashSet<String> receivedFiles;
         File aduDir = tempRootDir.resolve(java.nio.file.Path.of("receive", testClientId, TEST_APPID)).toFile();
         logger.info("Checking for received files in " + aduDir);
         // try for up to 10 seconds to see if the files have arrived
         for (int tries = 0;
-             !(receivedFiles = new HashSet<>(listJustADUs(aduDir))).equals(expectedFileList) && tries < 20; tries++) {
+             !(receivedFiles = new HashSet<>(listJustADUs(aduDir))).equals(expectedFileList) && tries < 20;
+             tries++) {
             logger.info("Expecting " + expectedFileList + " but got " + receivedFiles);
             Thread.sleep(500);
         }
         logger.info("Expecting " + expectedFileList + " and saw " + receivedFiles);
         Assertions.assertEquals(expectedFileList, receivedFiles);
-        if (sentBytes != null) for (String fileName : expectedFileList) {
-            var readBytes = Files.readAllBytes(aduDir.toPath().resolve(fileName));
-            Assertions.assertArrayEquals(sentBytes.get(fileName), readBytes,
-                                    "File " + fileName + " does not match sent bytes");
+        if (sentBytes != null) {
+            for (String fileName : expectedFileList) {
+                var readBytes = Files.readAllBytes(aduDir.toPath().resolve(fileName));
+                Assertions.assertArrayEquals(sentBytes.get(fileName),
+                                             readBytes,
+                                             "File " + fileName + " does not match sent bytes");
+            }
         }
     }
 
@@ -260,6 +282,7 @@ public class End2EndTest {
             logger.warning("Failed to delete directory " + aduDir);
         }
     }
+
     private static List<String> listJustADUs(File aduDir) {
         var list = aduDir.list((d, n) -> !n.equals("metadata.json"));
         return list == null ? List.of() : Arrays.asList(list);
@@ -276,8 +299,8 @@ public class End2EndTest {
         @Override
         public void run(ApplicationArguments args) {
             logger.info("Registering the testAppId");
-            registeredAppAdapterRepository.save(
-                    new RegisteredAppAdapter(TEST_APPID, "localhost:" + TEST_ADAPTER_GRPC_PORT));
+            registeredAppAdapterRepository.save(new RegisteredAppAdapter(TEST_APPID,
+                                                                         "localhost:" + TEST_ADAPTER_GRPC_PORT));
         }
     }
 
@@ -285,7 +308,8 @@ public class End2EndTest {
         ConcurrentHashMap<String, String> clientsWithData = new ConcurrentHashMap<>();
         ArrayBlockingQueue<AdapterRequestResponse> incomingRequests = new ArrayBlockingQueue<>(1);
 
-        public void handleRequest(BiConsumer<ExchangeADUsRequest, StreamObserver<ExchangeADUsResponse>> handler) throws InterruptedException {
+        public void handleRequest(BiConsumer<ExchangeADUsRequest, StreamObserver<ExchangeADUsResponse>> handler) throws
+                InterruptedException {
             var handlerFuture = incomingRequests.poll(30, TimeUnit.SECONDS);
             if (handlerFuture == null) throw new IllegalStateException("No request received");
             handler.accept(handlerFuture.request, handlerFuture.response);

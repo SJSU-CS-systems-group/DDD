@@ -43,9 +43,9 @@ public class ReceiveIntentService extends IntentService {
             final String action = intent.getAction();
             if (ACTION_RECV.equals(action)) {
                 Handler mainHandler = new Handler(Looper.getMainLooper());
-                mainHandler.post(
-                        () -> Toast.makeText(getApplicationContext(), "receive adus from client ", Toast.LENGTH_SHORT)
-                                .show());
+                mainHandler.post(() -> Toast.makeText(getApplicationContext(),
+                                                      "receive adus from client ",
+                                                      Toast.LENGTH_SHORT).show());
             }
         }
     }

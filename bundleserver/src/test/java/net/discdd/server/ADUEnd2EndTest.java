@@ -42,7 +42,8 @@ public class ADUEnd2EndTest extends End2EndTest {
     static {
         try {
             clientKeyPair = DDDTLSUtil.generateKeyPair();
-            clientCert = DDDTLSUtil.getSelfSignedCertificate(clientKeyPair, DDDTLSUtil.publicKeyToName(clientKeyPair.getPublic()));
+            clientCert = DDDTLSUtil.getSelfSignedCertificate(clientKeyPair,
+                                                             DDDTLSUtil.publicKeyToName(clientKeyPair.getPublic()));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -70,8 +71,13 @@ public class ADUEnd2EndTest extends End2EndTest {
                 // we are checking the data of the ADUs
                 Assertions.assertEquals("ADU" + adus.get(i), req.getAdus(i).getData().toStringUtf8());
             }
-            rsp.onNext(ExchangeADUsResponse.newBuilder().setLastADUIdReceived(3).addAdus(
-                    AppDataUnit.newBuilder().setAduId(1).setData(ByteString.copyFromUtf8("SA1")).build()).build());
+            rsp.onNext(ExchangeADUsResponse.newBuilder()
+                               .setLastADUIdReceived(3)
+                               .addAdus(AppDataUnit.newBuilder()
+                                                .setAduId(1)
+                                                .setData(ByteString.copyFromUtf8("SA1"))
+                                                .build())
+                               .build());
             rsp.onCompleted();
         });
 
@@ -103,8 +109,13 @@ public class ADUEnd2EndTest extends End2EndTest {
                 Assertions.assertEquals("ADU" + i, req.getAdus(i - 4).getData().toStringUtf8());
                 Assertions.assertEquals(i, req.getAdus(i - 4).getAduId());
             }
-            rsp.onNext(ExchangeADUsResponse.newBuilder().setLastADUIdReceived(6).addAdus(
-                    AppDataUnit.newBuilder().setAduId(2).setData(ByteString.copyFromUtf8("SA2")).build()).build());
+            rsp.onNext(ExchangeADUsResponse.newBuilder()
+                               .setLastADUIdReceived(6)
+                               .addAdus(AppDataUnit.newBuilder()
+                                                .setAduId(2)
+                                                .setData(ByteString.copyFromUtf8("SA2"))
+                                                .build())
+                               .build());
             rsp.onCompleted();
         });
         checkToSendFiles(clientId, new HashSet<>(List.of("1", "2")));
@@ -117,8 +128,13 @@ public class ADUEnd2EndTest extends End2EndTest {
             Assertions.assertEquals(2, req.getLastADUIdReceived());
             Assertions.assertEquals(clientId, req.getClientId());
             Assertions.assertEquals(0, req.getAdusCount());
-            rsp.onNext(ExchangeADUsResponse.newBuilder().setLastADUIdReceived(6).addAdus(
-                    AppDataUnit.newBuilder().setAduId(3).setData(ByteString.copyFromUtf8("SA3")).build()).build());
+            rsp.onNext(ExchangeADUsResponse.newBuilder()
+                               .setLastADUIdReceived(6)
+                               .addAdus(AppDataUnit.newBuilder()
+                                                .setAduId(3)
+                                                .setData(ByteString.copyFromUtf8("SA3"))
+                                                .build())
+                               .build());
             rsp.onCompleted();
         });
         checkToSendFiles(clientId, new HashSet<>(List.of("1", "2", "3")));
@@ -139,13 +155,14 @@ public class ADUEnd2EndTest extends End2EndTest {
                 ByteString.copyFrom(allBytes, allBytes.length / 2, allBytes.length - allBytes.length / 2);
         request.onNext(BundleUploadRequest.newBuilder().setSenderType(BundleSenderType.CLIENT).build());
         request.onNext(BundleUploadRequest.newBuilder()
-                               .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId("8675309").build()).build());
-        request.onNext(
-                BundleUploadRequest.newBuilder().setChunk(BundleChunk.newBuilder().setChunk(firstByteString).build())
-                        .build());
-        request.onNext(
-                BundleUploadRequest.newBuilder().setChunk(BundleChunk.newBuilder().setChunk(secondByteString).build())
-                        .build());
+                               .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId("8675309").build())
+                               .build());
+        request.onNext(BundleUploadRequest.newBuilder()
+                               .setChunk(BundleChunk.newBuilder().setChunk(firstByteString).build())
+                               .build());
+        request.onNext(BundleUploadRequest.newBuilder()
+                               .setChunk(BundleChunk.newBuilder().setChunk(secondByteString).build())
+                               .build());
         request.onCompleted();
 
         // let's see if it worked...

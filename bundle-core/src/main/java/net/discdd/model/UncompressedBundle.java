@@ -10,7 +10,9 @@ public class UncompressedBundle {
     private final EncryptionHeader encryptionHeader;
     private final EncryptedPayload encryptedPayload;
 
-    public UncompressedBundle(String bundleId, File source, EncryptionHeader encryptionHeader,
+    public UncompressedBundle(String bundleId,
+                              File source,
+                              EncryptionHeader encryptionHeader,
                               EncryptedPayload encryptedPayload) {
         this.bundleId = bundleId;
         this.source = source;
