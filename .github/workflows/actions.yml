@@ -24,13 +24,10 @@ jobs:
           distribution: "temurin"
 
       - name: Maven install
-#        run: mvn -ntp install
-        run: true
+        run: mvn -ntp install
 
       - name: Gradle release build
-        if: matrix.runner == 'ubuntu-latest'
-        run: false
-        #run: ./gradlew assembleRelease --parallel
+        run: ./gradlew assembleRelease --parallel
 
   # Collects success/failure and exits cleanly if at least one passed
   compile:
