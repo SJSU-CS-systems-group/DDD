@@ -5,20 +5,32 @@ on:
     branches: main
 jobs:
   # Github Action to install Maven modules in the root directory 
-  compile:
-#    runs-on: ubuntu-latest
+  compile-self-hosted:
     runs-on: self-hosted
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-#      - name: Setup JDK 17
-#        uses: actions/setup-java@v3
-#        with:
-#          java-version: "17"
-#          distribution: "temurin"
       - name: Run maven install on bundle-core, serviceadapter-core, and bundleserver
         run: mvn -ntp install
-        
+
       - name: Run gradle build on BundleClient, BundleTransport
         run: ./gradlew build --parallel
+
+  compile-github:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Run maven install on bundle-core, serviceadapter-core, and bundleserver
+        run: mvn -ntp install
+
+      - name: Run gradle build on BundleClient, BundleTransport
+        run: ./gradlew build
