@@ -43,7 +43,7 @@ fun WifiPermissionBanner(
 ) {
     val textToShow = if (nearbyWifiState.status.shouldShowRationale) {
         stringResource(R.string.urgent_ask_permission)
-    } else if (numDenied < 2){
+    } else if (numDenied < 2) {
         stringResource(R.string.generic_ask_permission)
     } else {
         stringResource(R.string.manual_action_required)

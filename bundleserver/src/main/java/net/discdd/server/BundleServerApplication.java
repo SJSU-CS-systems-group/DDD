@@ -28,7 +28,7 @@ import static java.util.logging.Level.SEVERE;
 
 @Slf4j
 @SpringBootApplication
-@Import({GrpcServerRunner.class, GrpcSecurityConfig.class})
+@Import({ GrpcServerRunner.class, GrpcSecurityConfig.class })
 @EnableJpaRepositories("net.discdd.server")
 @EntityScan("net.discdd.server.repository.entity")
 public class BundleServerApplication {

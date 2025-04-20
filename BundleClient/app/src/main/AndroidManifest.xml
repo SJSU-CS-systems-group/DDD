@@ -3,10 +3,17 @@
 
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="Manifest.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <permission android:name="net.discdd.bundleclient.permission.MESSAGE_PROVIDER_WRITE" android:protectionLevel="normal" />
     <permission android:name="net.discdd.bundleclient.permission.MESSAGE_PROVIDER_READ" android:protectionLevel="normal" />
     <uses-feature android:name="android.hardware.usb.host" />
-
+    <uses-feature android:name="android.hardware.wifi.aware" android:required="false" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
         android:name="net.discdd.crashreports.AcraApp"
@@ -17,6 +24,12 @@
         android:supportsRtl="true">
         <service
                 android:name=".BundleClientWifiDirectService"
+                android:enabled="true"
+                android:foregroundServiceType="dataSync"
+                android:exported="false" >
+        </service>
+        <service
+                android:name=".BundleClientWifiAwareService"
                 android:enabled="true"
                 android:foregroundServiceType="dataSync"
                 android:exported="false" >

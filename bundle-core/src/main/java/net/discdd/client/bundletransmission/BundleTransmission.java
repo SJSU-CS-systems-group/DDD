@@ -91,7 +91,9 @@ public class BundleTransmission {
     private ClientRouting clientRouting;
     private ClientPaths clientPaths;
 
-    public BundleTransmission(ClientPaths clientPaths, Consumer<ADU> aduConsumer) throws WindowExceptions.BufferOverflow, IOException, InvalidKeyException, RoutingExceptions.ClientMetaDataFileException, NoSuchAlgorithmException {
+    public BundleTransmission(ClientPaths clientPaths, Consumer<ADU> aduConsumer) throws
+            WindowExceptions.BufferOverflow, IOException, InvalidKeyException,
+            RoutingExceptions.ClientMetaDataFileException, NoSuchAlgorithmException {
         this.clientPaths = clientPaths;
         this.bundleSecurity = new BundleSecurity(clientPaths);
         this.applicationDataManager = new ApplicationDataManager(clientPaths, aduConsumer);
@@ -104,8 +106,8 @@ public class BundleTransmission {
 
     public void registerBundleId(String bundleId) throws IOException, WindowExceptions.BufferOverflow,
             GeneralSecurityException, InvalidKeyException {
-        try (BufferedWriter bufferedWriter = new BufferedWriter(
-                new FileWriter(clientPaths.largestBundleIdReceived.toFile()))) {
+        try (BufferedWriter bufferedWriter =
+                     new BufferedWriter(new FileWriter(clientPaths.largestBundleIdReceived.toFile()))) {
             bufferedWriter.write(bundleId);
         }
 
@@ -115,8 +117,8 @@ public class BundleTransmission {
 
     private String getLargestBundleIdReceived() throws IOException {
         String bundleId = "";
-        try (BufferedReader bufferedReader = new BufferedReader(
-                new FileReader(clientPaths.largestBundleIdReceived.toFile()))) {
+        try (BufferedReader bufferedReader =
+                     new BufferedReader(new FileReader(clientPaths.largestBundleIdReceived.toFile()))) {
             String line;
             while ((line = bufferedReader.readLine()) != null) {
                 bundleId = line.trim();
@@ -128,8 +130,7 @@ public class BundleTransmission {
 
     public void processReceivedBundle(String senderId, Bundle bundle) throws IOException,
             RoutingExceptions.ClientMetaDataFileException, NoSessionException, InvalidMessageException,
-            DuplicateMessageException, InvalidKeyException, GeneralSecurityException,
-            WindowExceptions.BufferOverflow {
+            DuplicateMessageException, InvalidKeyException, GeneralSecurityException, WindowExceptions.BufferOverflow {
         String largestBundleIdReceived = this.getLargestBundleIdReceived();
         UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, clientPaths.uncompressedPayloadStore);
         Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
@@ -139,9 +140,10 @@ public class BundleTransmission {
         String bundleId = payload.getBundleId();
 
         ClientBundleGenerator clientBundleGenerator = this.bundleSecurity.getClientBundleGenerator();
-        boolean isLatestBundleId = (!largestBundleIdReceived.isEmpty() &&
-                clientBundleGenerator.compareBundleIDs(bundleId, largestBundleIdReceived,
-                                                       BundleIDGenerator.DOWNSTREAM) == 1);
+        boolean isLatestBundleId = (!largestBundleIdReceived.isEmpty() && clientBundleGenerator.compareBundleIDs(
+                bundleId,
+                largestBundleIdReceived,
+                BundleIDGenerator.DOWNSTREAM) == 1);
 
         if (!isLatestBundleId) {
             return;
@@ -177,12 +179,14 @@ public class BundleTransmission {
         try {
             ClientSecurity clientSecurity = bundleSecurity.getClientSecurity();
 
-            OutputStream os = Files.newOutputStream(bundleFile, StandardOpenOption.CREATE,
-                                                     StandardOpenOption.TRUNCATE_EXISTING);
+            OutputStream os =
+                    Files.newOutputStream(bundleFile, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
             BundleUtils.encryptPayloadAndCreateBundle(clientSecurity::encrypt,
                                                       clientSecurity.getClientIdentityPublicKey(),
                                                       clientSecurity.getClientBaseKeyPairPublicKey(),
-                                                      clientSecurity.getServerPublicKey(), bundleId, pipedInputStream,
+                                                      clientSecurity.getServerPublicKey(),
+                                                      bundleId,
+                                                      pipedInputStream,
                                                       os);
 
         } catch (InvalidMessageException e) {
@@ -193,8 +197,8 @@ public class BundleTransmission {
         return new BundleDTO(bundleId, new Bundle(bundleFile.toFile()));
     }
 
-    public BundleDTO generateBundleForTransmission() throws RoutingExceptions.ClientMetaDataFileException,
-            IOException, InvalidKeyException, GeneralSecurityException {
+    public BundleDTO generateBundleForTransmission() throws RoutingExceptions.ClientMetaDataFileException, IOException,
+            InvalidKeyException, GeneralSecurityException {
         // find the latest sent bundle
         var sentBundles = clientPaths.tosendDir.toFile().listFiles();
         if (sentBundles != null && sentBundles.length > 0) {
@@ -281,7 +285,8 @@ public class BundleTransmission {
     }
 
     // returns true if the blob is more recent than previously seen
-    public boolean processRecencyBlob(String deviceAddress, GetRecencyBlobResponse recencyBlobResponse) throws IOException, InvalidKeyException {
+    public boolean processRecencyBlob(String deviceAddress, GetRecencyBlobResponse recencyBlobResponse) throws
+            IOException, InvalidKeyException {
         // first make sure the data is valid
         if (recencyBlobResponse.getStatus() != RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS) {
             throw new IOException("Recency request failed");
@@ -295,7 +300,8 @@ public class BundleTransmission {
         if (!bundleSecurity.getClientSecurity().getServerPublicKey().equals(receivedServerPublicKey)) {
             throw new IOException("Recency blob signed by unknown server");
         }
-        if (!SecurityUtils.verifySignatureRaw(recencyBlob.toByteArray(), receivedServerPublicKey,
+        if (!SecurityUtils.verifySignatureRaw(recencyBlob.toByteArray(),
+                                              receivedServerPublicKey,
                                               recencyBlobResponse.getRecencyBlobSignature().toByteArray())) {
             throw new IOException("Recency blob signature verification failed");
         }
@@ -320,15 +326,16 @@ public class BundleTransmission {
     public ClientRouting getClientRouting() {
         return clientRouting;
     }
+
     public enum Statuses {
-        FAILED,
-        EMPTY,
-        COMPLETE;
+        FAILED, EMPTY, COMPLETE;
+
         @Override
         public String toString() {
             return name().toLowerCase();
         }
     }
+
     public record BundleExchangeCounts(Statuses uploadStatus, Statuses downloadStatus) {}
 
     private static final int INITIAL_CONNECT_RETRIES = 8;
@@ -355,15 +362,17 @@ public class BundleTransmission {
      * IT IS VERY VERY IMPORTANT THAT TRANSPORT IS THE HOSTNAME WHEN TALKING TO THE SERVER, AND AN ADDRESS
      * WHEN TALKING TO A DEVICE.
      */
-    public BundleExchangeCounts doExchangeWithTransport(String deviceAddress, String deviceDeviceName,
-                                                        String transportAddress, int port) throws Exception {
+    public BundleExchangeCounts doExchangeWithTransport(String deviceAddress,
+                                                        String deviceDeviceName,
+                                                        String transportAddress,
+                                                        int port) throws Exception {
 
         var sslClientContext = SSLContext.getInstance("TLS");
-        sslClientContext.init(
-                DDDTLSUtil.getKeyManagerFactory(bundleSecurity.getClientGrpcSecurity().getGrpcKeyPair(), bundleSecurity.getClientGrpcSecurity().getGrpcCert()).getKeyManagers(),
-                new TrustManager[] {DDDTLSUtil.trustManager},
-                new SecureRandom()
-        );
+        sslClientContext.init(DDDTLSUtil.getKeyManagerFactory(bundleSecurity.getClientGrpcSecurity().getGrpcKeyPair(),
+                                                              bundleSecurity.getClientGrpcSecurity().getGrpcCert())
+                                      .getKeyManagers(),
+                              new TrustManager[] { DDDTLSUtil.trustManager },
+                              new SecureRandom());
 
         var channel = OkHttpChannelBuilder.forAddress(transportAddress, port)
                 .hostnameVerifier((host, session) -> true)
@@ -387,8 +396,9 @@ public class BundleTransmission {
                 var blobRecencyReply = blockingStub.getRecencyBlob(recencyBlobRequest);
                 var recencyBlob = blobRecencyReply.getRecencyBlob();
                 if (!processRecencyBlob(deviceAddress, blobRecencyReply)) {
-                    logger.log(SEVERE, "Did not process recency blob. In the future, we need to stop talking to this " +
-                            "device");
+                    logger.log(SEVERE,
+                               "Did not process recency blob. In the future, we need to stop talking to this " +
+                                       "device");
                 } else {
                     transportSenderId = recencyBlob.getSenderId();
                     logger.log(INFO, "Recency blob processed for " + transportSenderId);
@@ -399,11 +409,16 @@ public class BundleTransmission {
                 var bundleRequests = bundleSecurity.getClientWindow().getWindow(clientSecurity);
                 PublicKeyMap publicKeyMap = PublicKeyMap.newBuilder()
                         .setClientPub(ByteString.copyFrom(clientSecurity.getClientIdentityPublicKey().serialize()))
-                        .setSignedTLSPub(ByteString.copyFrom(clientSecurity.getSignedTLSPub(bundleSecurity.getClientGrpcSecurity().getGrpcKeyPair().getPublic())))
+                        .setSignedTLSPub(ByteString.copyFrom(clientSecurity.getSignedTLSPub(bundleSecurity.getClientGrpcSecurity()
+                                                                                                    .getGrpcKeyPair()
+                                                                                                    .getPublic())))
                         .build();
-                var bundlesDownloaded = deviceDeviceName.equals("BundleServer")
-                                        ? downloadBundles(bundleRequests, BundleSenderType.SERVER, blockingStub, publicKeyMap)
-                                        : downloadBundles(bundleRequests, BundleSenderType.CLIENT, blockingStub, null);
+                var bundlesDownloaded = deviceDeviceName.equals("BundleServer") ?
+                                        downloadBundles(bundleRequests,
+                                                        BundleSenderType.SERVER,
+                                                        blockingStub,
+                                                        publicKeyMap) :
+                                        downloadBundles(bundleRequests, BundleSenderType.CLIENT, blockingStub, null);
 
                 try {
                     processReceivedBundle(transportSenderId, new Bundle(bundlesDownloaded.toFile()));
@@ -429,7 +444,8 @@ public class BundleTransmission {
         return new BundleExchangeCounts(uploadStatus, downloadStatus);
     }
 
-    private Statuses uploadBundle(BundleExchangeServiceGrpc.BundleExchangeServiceStub stub) throws RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException, GeneralSecurityException {
+    private Statuses uploadBundle(BundleExchangeServiceGrpc.BundleExchangeServiceStub stub) throws
+            RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException, GeneralSecurityException {
         BundleDTO toSend = generateBundleForTransmission();
 
         var bundleUploadResponseObserver = new BundleUploadResponseObserver();
@@ -438,8 +454,11 @@ public class BundleTransmission {
                 stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                         .uploadBundle(bundleUploadResponseObserver);
 
-        uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setBundleId(
-                EncryptedBundleId.newBuilder().setEncryptedId(toSend.getBundleId()).build()).build());
+        uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder()
+                                                   .setBundleId(EncryptedBundleId.newBuilder()
+                                                                        .setEncryptedId(toSend.getBundleId())
+                                                                        .build())
+                                                   .build());
 
         // upload file as chunk
         logger.log(INFO, "Started upload bundle: " + toSend.getBundleId());
@@ -454,37 +473,47 @@ public class BundleTransmission {
                 uploadRequestStreamObserver.onNext(uploadRequest);
             }
         }
-        uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setSenderType(BundleSenderType.CLIENT).build());
+        uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder()
+                                                   .setSenderType(BundleSenderType.CLIENT)
+                                                   .build());
         uploadRequestStreamObserver.onCompleted();
         bundleUploadResponseObserver.waitForCompletion(GRPC_LONG_TIMEOUT_MS);
 
-        if(bundleUploadResponseObserver.bundleUploadResponse == null){
-            logger.log(SEVERE, "Upload failed: No response received from server.", bundleUploadResponseObserver.throwable);
+        if (bundleUploadResponseObserver.bundleUploadResponse == null) {
+            logger.log(SEVERE,
+                       "Upload failed: No response received from server.",
+                       bundleUploadResponseObserver.throwable);
             return Statuses.FAILED;
         }
-        return bundleUploadResponseObserver.bundleUploadResponse.getStatus() == Status.SUCCESS ? Statuses.COMPLETE: Statuses.EMPTY;
+        return bundleUploadResponseObserver.bundleUploadResponse.getStatus() == Status.SUCCESS ?
+               Statuses.COMPLETE :
+               Statuses.EMPTY;
     }
 
-    private Path downloadBundles(List<String> bundleRequests, BundleSenderType senderType,
-                                 BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub stub, PublicKeyMap publicKeyMap) throws IOException {
+    private Path downloadBundles(List<String> bundleRequests,
+                                 BundleSenderType senderType,
+                                 BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub stub,
+                                 PublicKeyMap publicKeyMap) throws IOException {
 
         for (String bundle : bundleRequests) {
             var downloadRequestBuilder = BundleDownloadRequest.newBuilder()
-                    .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId(bundle).build()).setSenderType(senderType);
+                    .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId(bundle).build())
+                    .setSenderType(senderType);
 
             if (publicKeyMap != null) {
                 downloadRequestBuilder.setPublicKeyMap(publicKeyMap);
             }
 
             logger.log(INFO, "Downloading file: " + bundle);
-            var responses =
-                    stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).downloadBundle(downloadRequestBuilder.build());
+            var responses = stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                    .downloadBundle(downloadRequestBuilder.build());
             OutputStream fileOutputStream = null;
 
             var bundlePath = clientPaths.receiveBundlePath.resolve(bundle);
 
             try {
-                fileOutputStream = Files.newOutputStream(bundlePath, StandardOpenOption.CREATE,
+                fileOutputStream = Files.newOutputStream(bundlePath,
+                                                         StandardOpenOption.CREATE,
                                                          StandardOpenOption.TRUNCATE_EXISTING);
 
                 while (responses.hasNext()) {

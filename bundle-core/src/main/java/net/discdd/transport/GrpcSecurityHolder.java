@@ -14,11 +14,13 @@ import java.security.cert.CertificateException;
 public class GrpcSecurityHolder {
     private static GrpcSecurity grpcSecurity;
 
-    public static GrpcSecurity getGrpcSecurityHolder(){
+    public static GrpcSecurity getGrpcSecurityHolder() {
         return grpcSecurity;
     }
 
-    public static GrpcSecurity setGrpcSecurityHolder(Path path) throws InvalidAlgorithmParameterException, CertificateException, NoSuchAlgorithmException, IOException, NoSuchProviderException, OperatorCreationException {
+    public static GrpcSecurity setGrpcSecurityHolder(Path path) throws InvalidAlgorithmParameterException,
+            CertificateException, NoSuchAlgorithmException, IOException, NoSuchProviderException,
+            OperatorCreationException {
         grpcSecurity = new GrpcSecurity(path, SecurityUtils.TRANSPORT);
         return grpcSecurity;
     }

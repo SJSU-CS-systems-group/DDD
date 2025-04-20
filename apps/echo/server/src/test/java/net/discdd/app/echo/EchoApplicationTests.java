@@ -30,13 +30,15 @@ class EchoApplicationTests {
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("adapter-server.root-dir", () -> tempDir.toString());
     }
+
     private static KeyPair clientKeyPair;
     private static X509Certificate clientCert;
 
     static {
         try {
             clientKeyPair = DDDTLSUtil.generateKeyPair();
-            clientCert = DDDTLSUtil.getSelfSignedCertificate(clientKeyPair, DDDTLSUtil.publicKeyToName(clientKeyPair.getPublic()));
+            clientCert = DDDTLSUtil.getSelfSignedCertificate(clientKeyPair,
+                                                             DDDTLSUtil.publicKeyToName(clientKeyPair.getPublic()));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -46,14 +48,19 @@ class EchoApplicationTests {
     void contextLoads() {
     }
 
-
     @Test
     void echoDDDAdapter() throws SSLException {
         var channel = DDDNettyTLS.createGrpcChannel(clientKeyPair, clientCert, "localhost", port);
 
-        ServiceAdapterServiceGrpc.ServiceAdapterServiceBlockingStub stub = ServiceAdapterServiceGrpc.newBlockingStub(channel);
-        var saveRsp = stub.exchangeADUs(ExchangeADUsRequest.newBuilder().setClientId("ben").addAdus(
-                AppDataUnit.newBuilder().setAduId(1).setData(ByteString.copyFromUtf8("hello")).build()).build());
+        ServiceAdapterServiceGrpc.ServiceAdapterServiceBlockingStub stub =
+                ServiceAdapterServiceGrpc.newBlockingStub(channel);
+        var saveRsp = stub.exchangeADUs(ExchangeADUsRequest.newBuilder()
+                                                .setClientId("ben")
+                                                .addAdus(AppDataUnit.newBuilder()
+                                                                 .setAduId(1)
+                                                                 .setData(ByteString.copyFromUtf8("hello"))
+                                                                 .build())
+                                                .build());
         Assertions.assertEquals(1, saveRsp.getLastADUIdReceived());
         Assertions.assertEquals(1, saveRsp.getAdusCount());
         Assertions.assertEquals(1, saveRsp.getAdus(0).getAduId());

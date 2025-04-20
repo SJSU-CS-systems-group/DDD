@@ -57,11 +57,14 @@ public class ClientWindow {
 
     private void updateDBWindow() throws IOException {
         Files.write(clientPaths.dbFile,
-                    String.format(Locale.US, "%d,%d", windowOfUnencryptedBundleIds.getFirst().bundleCounter(),
+                    String.format(Locale.US,
+                                  "%d,%d",
+                                  windowOfUnencryptedBundleIds.getFirst().bundleCounter(),
                                   windowOfUnencryptedBundleIds.getLast().bundleCounter()).getBytes());
 
-        logger.log(FINE, "Update window: " + windowOfUnencryptedBundleIds.getFirst().bundleCounter() + " - " +
-                windowOfUnencryptedBundleIds.getLast().bundleCounter());
+        logger.log(FINE,
+                   "Update window: " + windowOfUnencryptedBundleIds.getFirst().bundleCounter() + " - " +
+                           windowOfUnencryptedBundleIds.getLast().bundleCounter());
     }
 
     private void initializeWindow() throws IOException {
@@ -107,7 +110,8 @@ public class ClientWindow {
         }
     }
 
-    public static ClientWindow initializeInstance(int windowLength, String clientID, ClientPaths clientPaths) throws BufferOverflow, IOException {
+    public static ClientWindow initializeInstance(int windowLength, String clientID, ClientPaths clientPaths) throws
+            BufferOverflow, IOException {
         if (singleClientWindowInstance == null) {
             singleClientWindowInstance = new ClientWindow(windowLength, clientID, clientPaths);
         } else {

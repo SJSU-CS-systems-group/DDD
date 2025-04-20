@@ -23,7 +23,7 @@ data class ConnectivityState(
 
 class ConnectivityViewModel(
     application: Application
-): AndroidViewModel(application) {
+) : AndroidViewModel(application) {
     private val logger = Logger.getLogger(ConnectivityViewModel::class.java.name)
     private val context get() = getApplication<Application>()
     private val connectivityManager by lazy {

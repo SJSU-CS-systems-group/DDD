@@ -23,7 +23,7 @@ public class RegisterAdu {
     }
 
     public String[] generateEmails() {
-        String[] emails = new String[prefixes.length*suffixes.length];
+        String[] emails = new String[prefixes.length * suffixes.length];
 
         int pos = 0;
         for (int i = 0; i < prefixes.length; i++) {

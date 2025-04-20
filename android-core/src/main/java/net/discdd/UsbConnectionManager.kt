@@ -33,6 +33,7 @@ object UsbConnectionManager {
                         logger.log(Level.INFO, "USB device attached")
                         _usbConnected.value = true
                     }
+
                     UsbManager.ACTION_USB_DEVICE_DETACHED -> {
                         logger.log(Level.INFO, "USB device detached")
                         _usbConnected.value = false

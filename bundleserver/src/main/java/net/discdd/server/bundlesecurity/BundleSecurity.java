@@ -72,9 +72,10 @@ public class BundleSecurity {
     public Payload decryptPayload(UncompressedBundle uncompressedBundle) {
         logger.log(INFO, "[BundleSecurity] Decrypting payload");
         String bundleId = "";
-        File decryptedPayloadJar =
-                uncompressedBundle.getSource().toPath().resolve(Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar")
-                        .toFile();
+        File decryptedPayloadJar = uncompressedBundle.getSource()
+                .toPath()
+                .resolve(Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar")
+                .toFile();
 
         try {
             this.serverSecurity.decrypt(uncompressedBundle.getSource().toPath(),
@@ -82,7 +83,8 @@ public class BundleSecurity {
             logger.log(FINE, "[BundleSecurity] decrypted payload");
         } catch (Exception e) {
             // TODO
-            logger.log(SEVERE, "[BundleSecurity] Failed to decrypt payload" + uncompressedBundle.getSource().toPath(),
+            logger.log(SEVERE,
+                       "[BundleSecurity] Failed to decrypt payload" + uncompressedBundle.getSource().toPath(),
                        e);
             // e.printStackTrace();
             return null;

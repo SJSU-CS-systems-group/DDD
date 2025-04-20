@@ -24,7 +24,7 @@ jobs:
 
       - name: Format code
         run: |
-          ./*/bin/format.sh -m *.java -r .
+          ./*/bin/format.sh -r  $(find . -name \*.java -o -name \*.kt -o -name pom.xml)
 
       - name: Commit changes
         run: |

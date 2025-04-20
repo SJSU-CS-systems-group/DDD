@@ -29,7 +29,7 @@ import kotlinx.coroutines.delay
 import net.discdd.bundletransport.viewmodels.StorageViewModel
 import net.discdd.theme.ComposableTheme
 
-class StorageFragment: Fragment() {
+class StorageFragment : Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,

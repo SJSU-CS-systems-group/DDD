@@ -30,8 +30,11 @@ public class ServiceAdapterRegistryService
             if (registeredApp.get().getAddress().equals(connectionData.getUrl())) {
                 responseObserver.onNext(ResponseStatus.newBuilder().setCode(0).setMessage("OK").build());
             } else {
-                responseObserver.onNext(ResponseStatus.newBuilder().setCode(2).setMessage(
-                        "A different address is registered for " + connectionData.getAppName()).build());
+                responseObserver.onNext(ResponseStatus.newBuilder()
+                                                .setCode(2)
+                                                .setMessage("A different address is registered for " +
+                                                                    connectionData.getAppName())
+                                                .build());
             }
         } else {
             responseObserver.onNext(ResponseStatus.newBuilder().setCode(1).setMessage("No Such App").build());

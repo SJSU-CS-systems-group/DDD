@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SecurityUtilsTest {
     private static final Logger logger = Logger.getLogger(SecurityUtilsTest.class.getName());
+
     static {
         // Set up logger to print to console
         ConsoleHandler consoleHandler = new ConsoleHandler();
@@ -34,8 +35,10 @@ public class SecurityUtilsTest {
         logger.setLevel(Level.ALL);
         logger.setUseParentHandlers(false);
     }
+
     @Test
-    void testSecurityUtilsTest(@TempDir Path tempDir) throws IOException, GeneralSecurityException, InvalidKeyException {
+    void testSecurityUtilsTest(@TempDir Path tempDir) throws IOException, GeneralSecurityException,
+            InvalidKeyException {
         //create a pair of client public and private identity keys
         ECKeyPair clientIdentityKeyPair = Curve.generateKeyPair();
         IdentityKeyPair clientKeyPair = new IdentityKeyPair(new IdentityKey(clientIdentityKeyPair.getPublicKey()),
@@ -43,9 +46,12 @@ public class SecurityUtilsTest {
         //store client public key in tempDir/Client_Keys
         Path clientTempDirPath = tempDir.resolve("Client_Keys");
         Files.createDirectories(clientTempDirPath);
-        byte[] clientPubBytes = (PUB_KEY_HEADER + "\n" + Base64.getUrlEncoder().encodeToString(clientKeyPair.getPublicKey().serialize()) + "\n" +
+        byte[] clientPubBytes = (PUB_KEY_HEADER + "\n" +
+                Base64.getUrlEncoder().encodeToString(clientKeyPair.getPublicKey().serialize()) + "\n" +
                 PUB_KEY_FOOTER).getBytes();
-        Files.write(clientTempDirPath.resolve("clientIdentity.pub"), clientPubBytes, StandardOpenOption.CREATE,
+        Files.write(clientTempDirPath.resolve("clientIdentity.pub"),
+                    clientPubBytes,
+                    StandardOpenOption.CREATE,
                     StandardOpenOption.TRUNCATE_EXISTING);
         //create a pair of server public and private identity keys
         ECKeyPair serverIdentityKeyPair = Curve.generateKeyPair();
@@ -54,10 +60,13 @@ public class SecurityUtilsTest {
         //encode and encrypt client ID with server identity public key
         byte[] encodedClient = createEncryptedEncodedPublicKeyBytes(clientIdentityKeyPair.getPublicKey(),
                                                                     serverIdentityKeyPair.getPublicKey());
-        Files.write(clientTempDirPath.resolve("clientIdentity.pub"), encodedClient, StandardOpenOption.CREATE,
+        Files.write(clientTempDirPath.resolve("clientIdentity.pub"),
+                    encodedClient,
+                    StandardOpenOption.CREATE,
                     StandardOpenOption.TRUNCATE_EXISTING);
         //decode and decrypt client ID with server identity private key
-        String decodedClient = decodeEncryptedPublicKeyfromFile(serverKeyPair.getPrivateKey(), clientTempDirPath.resolve("clientIdentity.pub"));
+        String decodedClient = decodeEncryptedPublicKeyfromFile(serverKeyPair.getPrivateKey(),
+                                                                clientTempDirPath.resolve("clientIdentity.pub"));
         //compare original client identity public key with decrypted decoded client ID
         assertEquals(Base64.getUrlEncoder().encodeToString(clientKeyPair.getPublicKey().serialize()), decodedClient);
     }

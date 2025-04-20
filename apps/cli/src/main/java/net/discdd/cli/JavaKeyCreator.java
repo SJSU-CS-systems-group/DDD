@@ -13,6 +13,7 @@ public class JavaKeyCreator implements Callable<Void> {
     private Path publicKeyPath;
     @CommandLine.Option(names = "--pvt-out", required = true, description = "Private key file path")
     private Path privateKeyPath;
+
     @Override
     public Void call() {
         // Create a java key pair

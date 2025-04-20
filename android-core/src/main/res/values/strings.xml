@@ -10,7 +10,7 @@
     <string name="any_emoji">*</string>
     <string name="generic_action_button">Action</string>
     <string name="needed_permissions">Needed Permissions</string>
-    <string name="dialog_message" translatable="false">Please enable permission in Settings. Navigate to Settings -> Apps -> All apps -> Bundle Client -> Permissions -> Nearby Devices</string>
+    <string name="dialog_message" translatable="false">Please enable permission in Settings. Navigate to Settings -> Apps -> All apps -> Bundle Transport -> Permissions -> Nearby Devices</string>
     <string name="dialog_btn_text" translatable="false">Continue</string>
     <string name="manual_action_required" translatable="false"><![CDATA[Manual action is required to grant access to nearby devices. To proceed, click \'Enable\' -> \'Permissions\' -> \'Nearby devices\' -> \'Allow\']]></string>
     <string name="generic_ask_permission" translatable="false">This permission is needed to discover and connect to nearby devices for file transfers.</string>

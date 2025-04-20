@@ -16,9 +16,8 @@ public class AcraApp extends Application {
         super.attachBaseContext(base);
         ACRA.DEV_LOGGING = true;
         log.e("ACRA Enabled dev logging", "ACRA OK");
-        ACRA.init(this, new CoreConfigurationBuilder()
-                .withBuildConfigClass(BuildConfig.class)
-                .withReportFormat(StringFormat.KEY_VALUE_LIST)
-        );
+        ACRA.init(this,
+                  new CoreConfigurationBuilder().withBuildConfigClass(BuildConfig.class)
+                          .withReportFormat(StringFormat.KEY_VALUE_LIST));
     }
 }

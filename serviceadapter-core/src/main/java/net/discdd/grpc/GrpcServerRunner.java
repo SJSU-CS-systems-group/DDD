@@ -24,12 +24,11 @@ public class GrpcServerRunner implements CommandLineRunner {
     private Server server;
     @Autowired
     ApplicationContext context;
-    
+
     private GrpcSecurity grpcSecurity;
 
     int BUNDLE_SERVER_PORT;
     private Thread awaitThread;
-
 
     public GrpcServerRunner(@Value("${ssl-grpc.server.port}") int port, GrpcSecurity grpcSecurity) {
         BUNDLE_SERVER_PORT = port;
@@ -38,14 +37,16 @@ public class GrpcServerRunner implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        services = context.getBeansWithAnnotation(GrpcService.class).values().stream().map(o -> (BindableService) o).collect(Collectors.toList());
+        services = context.getBeansWithAnnotation(GrpcService.class)
+                .values()
+                .stream()
+                .map(o -> (BindableService) o)
+                .collect(Collectors.toList());
 
-        server = DDDNettyTLS.createGrpcServer(
-                grpcSecurity.getGrpcKeyPair(),
-                grpcSecurity.getGrpcCert(),
-                BUNDLE_SERVER_PORT,
-                services.toArray(new BindableService[0])
-        );
+        server = DDDNettyTLS.createGrpcServer(grpcSecurity.getGrpcKeyPair(),
+                                              grpcSecurity.getGrpcCert(),
+                                              BUNDLE_SERVER_PORT,
+                                              services.toArray(new BindableService[0]));
 
         try {
             server.start();

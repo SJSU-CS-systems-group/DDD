@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import net.discdd.AndroidAppConstants
 import net.discdd.pathutils.TransportPaths
 import net.discdd.bundletransport.R
 import net.discdd.transport.GrpcSecurityHolder
@@ -35,7 +36,7 @@ class ServerUploadViewModel(
     private val _state = MutableStateFlow(ServerState())
     private val executor: ExecutorService = Executors.newFixedThreadPool(2);
     private var transportPaths: TransportPaths = TransportPaths(context.getExternalFilesDir(null)?.toPath())
-    private var transportID: String ?= ""
+    private var transportID: String? = ""
     private val transportGrpcSecurity = GrpcSecurityHolder.setGrpcSecurityHolder(transportPaths.grpcSecurityPath);
     val state = _state.asStateFlow()
 
@@ -43,6 +44,7 @@ class ServerUploadViewModel(
         transportID = Base64.getEncoder().encodeToString(
             transportGrpcSecurity.grpcKeyPair.public.encoded
         )
+        AndroidAppConstants.checkDefaultDomainPortSettings(sharedPref)
         restoreDomainPort()
         reloadCount()
     }
@@ -58,12 +60,12 @@ class ServerUploadViewModel(
                         it.copy(message = "Initiating server exchange to " + state.value.domain + ":" + state.value.port + "...\n")
                     }
 
-                    var transportToBundleServerManager : TransportToBundleServerManager
-                        = TransportToBundleServerManager(transportPaths, state.value.domain, state.value.port,
-                        {x: Void -> serverConnectComplete()},
-                        {e: Exception -> serverConnectionError(e, state.value.domain + ":" + state.value.port)})
+                    var transportToBundleServerManager: TransportToBundleServerManager =
+                        TransportToBundleServerManager(transportPaths, state.value.domain, state.value.port,
+                            { x: Void -> serverConnectComplete() },
+                            { e: Exception -> serverConnectionError(e, state.value.domain + ":" + state.value.port) })
                     executor.execute(transportToBundleServerManager)
-                } catch (e : Exception) {
+                } catch (e: Exception) {
                     _state.update { it.copy(message = context.getString(R.string.bundles_upload_failed)) }
                 }
             }
@@ -76,9 +78,13 @@ class ServerUploadViewModel(
     }
 
     fun serverConnectionError(e: Exception, transportTarget: String): Void? {
-        _state.update { it.copy(message = "Server exchange incomplete with error.\n" +
-                "Error: " + e.message + "\n" +
-                "Invalid hostname: " + transportTarget) }
+        _state.update {
+            it.copy(
+                message = "Server exchange incomplete with error.\n" +
+                        "Error: " + e.message + "\n" +
+                        "Invalid hostname: " + transportTarget
+            )
+        }
         return null
     }
 
@@ -109,10 +115,12 @@ class ServerUploadViewModel(
     }
 
     fun restoreDomainPort() {
-        _state.update { it.copy(
-            domain = sharedPref.getString("domain", "") ?: "",
-            port = sharedPref.getInt("port", 0).toString()
-        ) }
+        _state.update {
+            it.copy(
+                domain = sharedPref.getString("domain", "") ?: "",
+                port = sharedPref.getInt("port", 0).toString()
+            )
+        }
     }
 
     fun onDomainChanged(domain: String) {

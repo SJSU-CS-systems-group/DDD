@@ -114,6 +114,7 @@ public class BundleClientToBundleServerTest extends End2EndTest {
     Random random = new Random(13 /* seed for deterministic testing */);
     public static final int ADU_UPLOAD_SIZE = 10000;
     public static final int ADU_UPLOAD_COUNT = 4;
+
     @Test
     void test3UploadBundleWithADUs() throws Exception {
         var sentSet = new HashSet<String>();
@@ -145,8 +146,13 @@ public class BundleClientToBundleServerTest extends End2EndTest {
                 return;
             }
 
-            rsp.onNext(ExchangeADUsResponse.newBuilder().setLastADUIdReceived(1).addAdus(
-                    AppDataUnit.newBuilder().setAduId(1).setData(ByteString.copyFromUtf8("SA1")).build()).build());
+            rsp.onNext(ExchangeADUsResponse.newBuilder()
+                               .setLastADUIdReceived(1)
+                               .addAdus(AppDataUnit.newBuilder()
+                                                .setAduId(1)
+                                                .setData(ByteString.copyFromUtf8("SA1"))
+                                                .build())
+                               .build());
             rsp.onCompleted();
         });
         checkReceivedFiles(clientId, Set.of());
@@ -188,8 +194,11 @@ public class BundleClientToBundleServerTest extends End2EndTest {
                 stub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                         .uploadBundle(bundleUploadResponseObserver);
 
-        uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setBundleId(
-                EncryptedBundleId.newBuilder().setEncryptedId(toSend.getBundleId()).build()).build());
+        uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder()
+                                                   .setBundleId(EncryptedBundleId.newBuilder()
+                                                                        .setEncryptedId(toSend.getBundleId())
+                                                                        .build())
+                                                   .build());
 
         // upload file as chunk
         logger.log(INFO, "Started file transfer");
@@ -204,7 +213,9 @@ public class BundleClientToBundleServerTest extends End2EndTest {
                 uploadRequestStreamObserver.onNext(uploadRequest);
             }
         }
-        uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setSenderType(BundleSenderType.CLIENT).build());
+        uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder()
+                                                   .setSenderType(BundleSenderType.CLIENT)
+                                                   .build());
         uploadRequestStreamObserver.onCompleted();
         logger.log(INFO, "Completed file transfer");
         bundleUploadResponseObserver.waitForCompletion(Constants.GRPC_LONG_TIMEOUT_MS);
@@ -214,7 +225,8 @@ public class BundleClientToBundleServerTest extends End2EndTest {
     }
 
     private static void receiveBundle() throws Exception {
-        var bundleRequests = bundleTransmission.getBundleSecurity().getClientWindow()
+        var bundleRequests = bundleTransmission.getBundleSecurity()
+                .getClientWindow()
                 .getWindow(bundleTransmission.getBundleSecurity().getClientSecurity());
         var clientId = bundleTransmission.getBundleSecurity().getClientSecurity().getClientID();
         var clientSecurity = bundleTransmission.getBundleSecurity().getClientSecurity();
@@ -223,7 +235,9 @@ public class BundleClientToBundleServerTest extends End2EndTest {
         for (String bundle : bundleRequests) {
             PublicKeyMap publicKeyMap = PublicKeyMap.newBuilder()
                     .setClientPub(ByteString.copyFrom(clientSecurity.getClientIdentityPublicKey().serialize()))
-                    .setSignedTLSPub(ByteString.copyFrom(clientSecurity.getSignedTLSPub(bundleSecurity.getClientGrpcSecurity().getGrpcKeyPair().getPublic())))
+                    .setSignedTLSPub(ByteString.copyFrom(clientSecurity.getSignedTLSPub(bundleSecurity.getClientGrpcSecurity()
+                                                                                                .getGrpcKeyPair()
+                                                                                                .getPublic())))
                     .build();
 
             var downloadRequest = BundleDownloadRequest.newBuilder()
@@ -239,9 +253,9 @@ public class BundleClientToBundleServerTest extends End2EndTest {
             try {
                 Path receivedBundleLocation =
                         clientTestRoot.resolve("BundleTransmission/bundle-generation/to-send").resolve(bundle);
-                final OutputStream fileOutputStream =
-                        Files.newOutputStream(receivedBundleLocation, StandardOpenOption.CREATE,
-                                              StandardOpenOption.TRUNCATE_EXISTING);
+                final OutputStream fileOutputStream = Files.newOutputStream(receivedBundleLocation,
+                                                                            StandardOpenOption.CREATE,
+                                                                            StandardOpenOption.TRUNCATE_EXISTING);
 
                 while (responses.hasNext()) {
                     var response = responses.next();

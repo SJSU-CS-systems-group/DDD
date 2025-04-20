@@ -27,10 +27,12 @@ public class GrpcSecurity {
     @Getter
     private KeyPair grpcKeyPair;
 
-    public GrpcSecurity(Path grpcSecurityPath, String type) throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException, CertificateException, OperatorCreationException, IOException {
-        var grpcPublicKeyPath = grpcSecurityPath.resolve(String.format(SecurityUtils.GRPC_PUBLIC_KEY,type));
-        var grpcPrivateKeyPath = grpcSecurityPath.resolve(String.format(SecurityUtils.GRPC_PRIVATE_KEY,type));
-        var grpcCertPath = grpcSecurityPath.resolve(String.format(SecurityUtils.GRPC_CERT,type));
+    public GrpcSecurity(Path grpcSecurityPath, String type) throws InvalidAlgorithmParameterException,
+            NoSuchAlgorithmException, NoSuchProviderException, CertificateException, OperatorCreationException,
+            IOException {
+        var grpcPublicKeyPath = grpcSecurityPath.resolve(String.format(SecurityUtils.GRPC_PUBLIC_KEY, type));
+        var grpcPrivateKeyPath = grpcSecurityPath.resolve(String.format(SecurityUtils.GRPC_PRIVATE_KEY, type));
+        var grpcCertPath = grpcSecurityPath.resolve(String.format(SecurityUtils.GRPC_CERT, type));
 
         try {
             grpcCert = DDDTLSUtil.loadCertFromFile(grpcCertPath);
@@ -38,13 +40,13 @@ public class GrpcSecurity {
 
             logger.log(INFO, "Loaded existing certificate and keypair");
         } catch (IOException | CertificateException | NoSuchAlgorithmException | InvalidKeySpecException |
-                 InvalidKeyException |
-                 NoSuchProviderException e) {
+                 InvalidKeyException | NoSuchProviderException e) {
             grpcSecurityPath.toFile().mkdirs();
 
             grpcKeyPair = DDDTLSUtil.generateKeyPair();
             DDDTLSUtil.writeKeyPairToFile(grpcKeyPair, grpcPublicKeyPath, grpcPrivateKeyPath);
-            grpcCert = DDDTLSUtil.getSelfSignedCertificate(grpcKeyPair, DDDTLSUtil.publicKeyToName(grpcKeyPair.getPublic()));
+            grpcCert = DDDTLSUtil.getSelfSignedCertificate(grpcKeyPair,
+                                                           DDDTLSUtil.publicKeyToName(grpcKeyPair.getPublic()));
             DDDTLSUtil.writeCertToFile(grpcCert, grpcCertPath);
             logger.log(SEVERE, "No existing certificate and keypair: " + e.getMessage());
             logger.log(INFO, "Generated new certificate and keypair");

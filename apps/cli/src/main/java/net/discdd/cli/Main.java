@@ -5,7 +5,10 @@ import picocli.CommandLine.Command;
 
 import java.util.concurrent.Callable;
 
-@Command(name = "cli", subcommands = { DecryptBundle.class, EncryptBundle.class, SelfSignedCertCreator.class, JavaKeyCreator.class })
+@Command(name = "cli", subcommands = { DecryptBundle.class,
+                                       EncryptBundle.class,
+                                       SelfSignedCertCreator.class,
+                                       JavaKeyCreator.class })
 public class Main implements Callable<Integer> {
 
     @Override

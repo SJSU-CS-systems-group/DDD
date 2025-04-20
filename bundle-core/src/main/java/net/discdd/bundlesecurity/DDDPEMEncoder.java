@@ -26,22 +26,26 @@ public class DDDPEMEncoder {
 
 //    public static String encode(byte[] bytes, String type) {
 //        String base64EncodedPrivateKey = Base64.getUrlEncoder().encodeToString(bytes);
-//        return String.format(KEY_HEADER, type) + "\n" + base64EncodedPrivateKey + "\n" + String.format(KEY_FOOTER, type);
+//        return String.format(KEY_HEADER, type) + "\n" + base64EncodedPrivateKey + "\n" + String.format(KEY_FOOTER,
+//        type);
 //    }
 
     public static String encode(byte[] bytes, String type) {
         if (type.equals(CERTIFICATE)) {
-            return String.format(KEY_HEADER, type) + "\n" + Base64.getEncoder().encodeToString(bytes) + "\n" + String.format(KEY_FOOTER, type);
+            return String.format(KEY_HEADER, type) + "\n" + Base64.getEncoder().encodeToString(bytes) + "\n" +
+                    String.format(KEY_FOOTER, type);
         }
 
-        return String.format(KEY_HEADER, type) + "\n" + Base64.getUrlEncoder().encodeToString(bytes) + "\n" + String.format(KEY_FOOTER, type);
+        return String.format(KEY_HEADER, type) + "\n" + Base64.getUrlEncoder().encodeToString(bytes) + "\n" +
+                String.format(KEY_FOOTER, type);
     }
 
     public static byte[] decodeFromFile(Path path, String type) throws IOException {
         List<String> encodedKeyList = Files.readAllLines(path);
 
         if (encodedKeyList.size() != 3) {
-            logger.log(SEVERE, String.format("Error: %s should have three lines: HEADER, KEY, FOOTER", path.getFileName()));
+            logger.log(SEVERE,
+                       String.format("Error: %s should have three lines: HEADER, KEY, FOOTER", path.getFileName()));
             return null;
         }
 

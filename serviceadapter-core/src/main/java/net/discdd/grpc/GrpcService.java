@@ -36,10 +36,9 @@ import java.lang.annotation.Target;
  *
  * @author Michael (yidongnan@gmail.com)
  */
-@Target({ElementType.TYPE, ElementType.METHOD})
+@Target({ ElementType.TYPE, ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Service
 @Bean
-public @interface GrpcService {
-}
+public @interface GrpcService {}

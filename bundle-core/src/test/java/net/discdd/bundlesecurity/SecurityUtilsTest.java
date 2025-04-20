@@ -28,7 +28,9 @@ import java.nio.charset.StandardCharsets;
 public class SecurityUtilsTest {
     private SessionCipher aliceCipher;
     private SessionCipher bobCipher;
-    private void initializeSessionsV3(SessionState aliceSessionState, SessionState bobSessionState) throws InvalidKeyException {
+
+    private void initializeSessionsV3(SessionState aliceSessionState, SessionState bobSessionState) throws
+            InvalidKeyException {
         ECKeyPair aliceIdentityKeyPair = Curve.generateKeyPair();
         IdentityKeyPair aliceIdentityKey = new IdentityKeyPair(new IdentityKey(aliceIdentityKeyPair.getPublicKey()),
                                                                aliceIdentityKeyPair.getPrivateKey());
@@ -45,22 +47,28 @@ public class SecurityUtilsTest {
 
         ECKeyPair bobPreKey = Curve.generateKeyPair();
 
-        AliceSignalProtocolParameters aliceParameters =
-                AliceSignalProtocolParameters.newBuilder().setOurBaseKey(aliceBaseKey)
-                        .setOurIdentityKey(aliceIdentityKey).setTheirOneTimePreKey(Optional.<ECPublicKey>absent())
-                        .setTheirRatchetKey(bobEphemeralKey.getPublicKey())
-                        .setTheirSignedPreKey(bobBaseKey.getPublicKey())
-                        .setTheirIdentityKey(bobIdentityKey.getPublicKey()).create();
+        AliceSignalProtocolParameters aliceParameters = AliceSignalProtocolParameters.newBuilder()
+                .setOurBaseKey(aliceBaseKey)
+                .setOurIdentityKey(aliceIdentityKey)
+                .setTheirOneTimePreKey(Optional.<ECPublicKey>absent())
+                .setTheirRatchetKey(bobEphemeralKey.getPublicKey())
+                .setTheirSignedPreKey(bobBaseKey.getPublicKey())
+                .setTheirIdentityKey(bobIdentityKey.getPublicKey())
+                .create();
 
-        BobSignalProtocolParameters bobParameters =
-                BobSignalProtocolParameters.newBuilder().setOurRatchetKey(bobEphemeralKey)
-                        .setOurSignedPreKey(bobBaseKey).setOurOneTimePreKey(Optional.<ECKeyPair>absent())
-                        .setOurIdentityKey(bobIdentityKey).setTheirIdentityKey(aliceIdentityKey.getPublicKey())
-                        .setTheirBaseKey(aliceBaseKey.getPublicKey()).create();
+        BobSignalProtocolParameters bobParameters = BobSignalProtocolParameters.newBuilder()
+                .setOurRatchetKey(bobEphemeralKey)
+                .setOurSignedPreKey(bobBaseKey)
+                .setOurOneTimePreKey(Optional.<ECKeyPair>absent())
+                .setOurIdentityKey(bobIdentityKey)
+                .setTheirIdentityKey(aliceIdentityKey.getPublicKey())
+                .setTheirBaseKey(aliceBaseKey.getPublicKey())
+                .create();
 
         RatchetingSession.initializeSession(aliceSessionState, aliceParameters);
         RatchetingSession.initializeSession(bobSessionState, bobParameters);
     }
+
     @BeforeEach
     public void setUp() throws InvalidKeyException {
         SessionRecord aliceSessionRecord = new SessionRecord();
@@ -79,22 +87,19 @@ public class SecurityUtilsTest {
     }
 
     /**
-     *
      * Encrypts with StreamedProcess
      * Decrypts with Array
      */
     @Test
     public void test1ArrayEncryptArrayDecrypt() throws Exception {
         String message = "Hello, World!".repeat(9999);
-        SignalMessage signalm = (SignalMessage)aliceCipher.encrypt(message.getBytes());
+        SignalMessage signalm = (SignalMessage) aliceCipher.encrypt(message.getBytes());
         byte[] plaintext = bobCipher.decrypt(signalm);
         String decrypted = new String(plaintext, StandardCharsets.UTF_8);
         Assertions.assertEquals(message, decrypted);
     }
 
-
     /**
-     *
      * Encrypts with StreamedProcess
      * Decrypts with Array
      */
@@ -109,6 +114,7 @@ public class SecurityUtilsTest {
         String decrypted = new String(outputStream.toByteArray(), StandardCharsets.UTF_8);
         Assertions.assertEquals(message, decrypted);
     }
+
     @Test
     public void test3StreamingEncryptStreamingDecrypt() throws Exception {
         String message = "Hello, World!".repeat(10000);

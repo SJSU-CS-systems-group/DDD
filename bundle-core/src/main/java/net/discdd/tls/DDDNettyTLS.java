@@ -18,13 +18,16 @@ import java.util.function.Function;
 
 public class DDDNettyTLS {
 
-    public static Server createGrpcServer(KeyPair serverKeyPair, X509Certificate serverCert, int port, BindableService... services) throws SSLException {
-        var sslServerContext = GrpcSslContexts.configure(SslContextBuilder.forServer(serverKeyPair.getPrivate(), serverCert))
-                .clientAuth(ClientAuth.REQUIRE)
-                .trustManager(DDDTLSUtil.trustManager)
-                .build();
-        var serviceBuilder = NettyServerBuilder.forPort(port)
-                .sslContext(sslServerContext);
+    public static Server createGrpcServer(KeyPair serverKeyPair,
+                                          X509Certificate serverCert,
+                                          int port,
+                                          BindableService... services) throws SSLException {
+        var sslServerContext =
+                GrpcSslContexts.configure(SslContextBuilder.forServer(serverKeyPair.getPrivate(), serverCert))
+                        .clientAuth(ClientAuth.REQUIRE)
+                        .trustManager(DDDTLSUtil.trustManager)
+                        .build();
+        var serviceBuilder = NettyServerBuilder.forPort(port).sslContext(sslServerContext);
         for (var service : services) {
             serviceBuilder.addService(service);
         }
@@ -32,9 +35,15 @@ public class DDDNettyTLS {
         serviceBuilder.intercept(new NettyServerCertificateInterceptor());
         return serviceBuilder.build();
     }
+
     record NettyStubWithCertificate<T>(T stub, CompletableFuture<X509Certificate> certificate) {}
 
-    public static <T extends AbstractBlockingStub<T>> NettyStubWithCertificate<T> createGrpcStubWithCertificate(Function<ManagedChannel,T> maker, KeyPair clientKeyPair, String host, int port, X509Certificate clientCert) throws SSLException {
+    public static <T extends AbstractBlockingStub<T>> NettyStubWithCertificate<T> createGrpcStubWithCertificate(Function<ManagedChannel, T> maker,
+                                                                                                                KeyPair clientKeyPair,
+                                                                                                                String host,
+                                                                                                                int port,
+                                                                                                                X509Certificate clientCert) throws
+            SSLException {
         var sslClientContext = GrpcSslContexts.forClient()
                 .keyManager(clientKeyPair.getPrivate(), clientCert)
                 .trustManager(DDDTLSUtil.trustManager)
@@ -51,15 +60,15 @@ public class DDDNettyTLS {
         return new NettyStubWithCertificate<>(stub, certCompletion);
     }
 
-    public static ManagedChannel createGrpcChannel(KeyPair clientKeyPair, X509Certificate clientCert, String host, int port) throws SSLException {
+    public static ManagedChannel createGrpcChannel(KeyPair clientKeyPair,
+                                                   X509Certificate clientCert,
+                                                   String host,
+                                                   int port) throws SSLException {
         var sslClientContext = GrpcSslContexts.forClient()
                 .keyManager(clientKeyPair.getPrivate(), clientCert)
                 .trustManager(DDDTLSUtil.trustManager)
                 .build();
 
-        return NettyChannelBuilder.forAddress(host, port)
-                .useTransportSecurity()
-                .sslContext(sslClientContext)
-                .build();
+        return NettyChannelBuilder.forAddress(host, port).useTransportSecurity().sslContext(sslClientContext).build();
     }
 }

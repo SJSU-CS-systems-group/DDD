@@ -116,7 +116,8 @@ public class BundleUtils {
         return new Payload(bundleId, compressedPath);
     }
 
-    public static void writeUncompressedPayload(UncompressedPayload uncompressedPayload, File targetDirectory,
+    public static void writeUncompressedPayload(UncompressedPayload uncompressedPayload,
+                                                File targetDirectory,
                                                 String bundleFileName) throws IOException {
         String bundleId = uncompressedPayload.getBundleId();
         Path bundleFilePath = targetDirectory.toPath().resolve(bundleId);
@@ -307,7 +308,9 @@ public class BundleUtils {
         }
     }
 
-    public static void createBundlePayloadForAdus(List<ADU> adus, byte[] routingData, String ackedEncryptedBundleId,
+    public static void createBundlePayloadForAdus(List<ADU> adus,
+                                                  byte[] routingData,
+                                                  String ackedEncryptedBundleId,
                                                   OutputStream outputStream) throws IOException,
             NoSuchAlgorithmException {
         DDDJarFileCreator innerJar = new DDDJarFileCreator(outputStream);
@@ -318,21 +321,24 @@ public class BundleUtils {
         innerJar.createEntry("routing.metadata", routingData == null ? "{}".getBytes() : routingData);
 
         for (var adu : adus) {
-            try (var os = innerJar.createEntry(Paths.get(Constants.BUNDLE_ADU_DIRECTORY_NAME, adu.getAppId(),
-                                                         Long.toString(
-                                                                 adu.getADUId()))); var aos = Files.newInputStream(
-                    adu.getSource().toPath(), StandardOpenOption.READ)) {
+            try (var os = innerJar.createEntry(Paths.get(Constants.BUNDLE_ADU_DIRECTORY_NAME,
+                                                         adu.getAppId(),
+                                                         Long.toString(adu.getADUId())));
+                 var aos = Files.newInputStream(adu.getSource().toPath(), StandardOpenOption.READ)) {
                 aos.transferTo(os);
             }
         }
         innerJar.close();
     }
 
-    public static void encryptPayloadAndCreateBundle(Encrypter payloadEncryptor, ECPublicKey clientIdentityPublicKey,
+    public static void encryptPayloadAndCreateBundle(Encrypter payloadEncryptor,
+                                                     ECPublicKey clientIdentityPublicKey,
                                                      ECPublicKey clientBaseKeyPairPublicKey,
-                                                     ECPublicKey serverIdentityPublicKey, String encryptedBundleId,
-                                                     InputStream payloadStream, OutputStream outputStream) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidMessageException {
-
+                                                     ECPublicKey serverIdentityPublicKey,
+                                                     String encryptedBundleId,
+                                                     InputStream payloadStream,
+                                                     OutputStream outputStream) throws IOException,
+            NoSuchAlgorithmException, InvalidKeyException, InvalidMessageException {
 
         DDDJarFileCreator outerJar = new DDDJarFileCreator(outputStream);
 
@@ -340,13 +346,14 @@ public class BundleUtils {
         // encrypt the payload
         payloadEncryptor.encrypt(payloadStream, os);
 
-
         // store the bundleId
         outerJar.createEntry(SecurityUtils.BUNDLEID_FILENAME, encryptedBundleId.getBytes());
 
         // store the keys
         try {
-            outerJar.createEntry(SecurityUtils.CLIENT_IDENTITY_KEY, createEncryptedEncodedPublicKeyBytes(clientIdentityPublicKey, serverIdentityPublicKey));
+            outerJar.createEntry(SecurityUtils.CLIENT_IDENTITY_KEY,
+                                 createEncryptedEncodedPublicKeyBytes(clientIdentityPublicKey,
+                                                                      serverIdentityPublicKey));
         } catch (GeneralSecurityException e) {
             throw new IOException("General Security Exception", e);
         }
@@ -371,7 +378,8 @@ public class BundleUtils {
         return future;
     }
     public interface Encrypter {
-        void encrypt(InputStream payload, OutputStream outputStream) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidMessageException;
+        void encrypt(InputStream payload, OutputStream outputStream) throws IOException, NoSuchAlgorithmException,
+                InvalidKeyException, InvalidMessageException;
     }
 
     public static void checkIdClean(String s) {
