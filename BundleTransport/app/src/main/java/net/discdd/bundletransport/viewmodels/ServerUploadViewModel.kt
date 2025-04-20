@@ -20,15 +20,15 @@ import java.util.logging.Logger
 import java.util.Base64;
 
 data class ServerState(
-    val domain: String = "",
-    val port: String = "",
-    val message: String? = "",
-    val clientCount: String = "0",
-    val serverCount: String = "0"
+        val domain: String = "",
+        val port: String = "",
+        val message: String? = "",
+        val clientCount: String = "0",
+        val serverCount: String = "0"
 )
 
 class ServerUploadViewModel(
-    application: Application
+        application: Application
 ) : AndroidViewModel(application) {
     private val context get() = getApplication<Application>()
     private val sharedPref = context.getSharedPreferences("server_endpoint", MODE_PRIVATE)
@@ -42,7 +42,7 @@ class ServerUploadViewModel(
 
     init {
         transportID = Base64.getEncoder().encodeToString(
-            transportGrpcSecurity.grpcKeyPair.public.encoded
+                transportGrpcSecurity.grpcKeyPair.public.encoded
         )
         AndroidAppConstants.checkDefaultDomainPortSettings(sharedPref)
         restoreDomainPort()
@@ -61,9 +61,9 @@ class ServerUploadViewModel(
                     }
 
                     var transportToBundleServerManager: TransportToBundleServerManager =
-                        TransportToBundleServerManager(transportPaths, state.value.domain, state.value.port,
-                            { x: Void -> serverConnectComplete() },
-                            { e: Exception -> serverConnectionError(e, state.value.domain + ":" + state.value.port) })
+                            TransportToBundleServerManager(transportPaths, state.value.domain, state.value.port,
+                                    { x: Void -> serverConnectComplete() },
+                                    { e: Exception -> serverConnectionError(e, state.value.domain + ":" + state.value.port) })
                     executor.execute(transportToBundleServerManager)
                 } catch (e: Exception) {
                     _state.update { it.copy(message = context.getString(R.string.bundles_upload_failed)) }
@@ -80,9 +80,9 @@ class ServerUploadViewModel(
     fun serverConnectionError(e: Exception, transportTarget: String): Void? {
         _state.update {
             it.copy(
-                message = "Server exchange incomplete with error.\n" +
-                        "Error: " + e.message + "\n" +
-                        "Invalid hostname: " + transportTarget
+                    message = "Server exchange incomplete with error.\n" +
+                            "Error: " + e.message + "\n" +
+                            "Invalid hostname: " + transportTarget
             )
         }
         return null
@@ -106,10 +106,10 @@ class ServerUploadViewModel(
     fun saveDomainPort() {
         viewModelScope.launch {
             sharedPref
-                .edit()
-                .putString("domain", state.value.domain)
-                .putInt("port", state.value.port.toInt())
-                .apply()
+                    .edit()
+                    .putString("domain", state.value.domain)
+                    .putInt("port", state.value.port.toInt())
+                    .apply()
             _state.update { it.copy(message = context.getString(R.string.saved)) }
         }
     }
@@ -117,8 +117,8 @@ class ServerUploadViewModel(
     fun restoreDomainPort() {
         _state.update {
             it.copy(
-                domain = sharedPref.getString("domain", "") ?: "",
-                port = sharedPref.getInt("port", 0).toString()
+                    domain = sharedPref.getString("domain", "") ?: "",
+                    port = sharedPref.getInt("port", 0).toString()
             )
         }
     }

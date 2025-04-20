@@ -6,7 +6,7 @@ on:
 
 jobs:
   code-format:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Print previous commit author
         run: echo "Previous ${{ needs.changes.outputs.commit-author }}"
@@ -17,14 +17,14 @@ jobs:
            ref: ${{ github.event.pull_request.head.ref }}
            token: ${{ secrets.DDDTOKEN }}
 
-      - name: Install IntelliJ IDEA
-        run: |
-          wget -q -O idea.tar.gz https://download.jetbrains.com/idea/ideaIC-2024.1.1.tar.gz
-          tar -xzf idea.tar.gz
+      # - name: Install IntelliJ IDEA
+      #   run: |
+      #     wget -q -O idea.tar.gz https://download.jetbrains.com/idea/ideaIC-2024.1.1.tar.gz
+      #     tar -xzf idea.tar.gz
 
       - name: Format code
         run: |
-          ./*/bin/format.sh -r  $(find . -name \*.java -o -name \*.kt -o -name pom.xml)
+          format.sh -r  $(find . -name \*.java -o -name \*.kt -o -name pom.xml)
 
       - name: Commit changes
         run: |

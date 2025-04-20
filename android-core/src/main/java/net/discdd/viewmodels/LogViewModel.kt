@@ -13,7 +13,7 @@ import java.util.logging.LogRecord
 import java.util.logging.Logger
 
 data class LogState(
-    val logMessages: List<String> = emptyList()
+        val logMessages: List<String> = emptyList()
 )
 
 class LogViewModel : ViewModel() {
