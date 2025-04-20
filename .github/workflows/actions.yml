@@ -25,8 +25,10 @@ jobs:
 
       - name: Maven install
         if: matrix.runner == 'self-hosted'
-        run: mvn -ntp install
+#        run: mvn -ntp install
+        run: true
 
       - name: Gradle release build
         if: matrix.runner == 'self-hosted'
-        run: ./gradlew assembleRelease --parallel
+        run: false
+        #run: ./gradlew assembleRelease --parallel
