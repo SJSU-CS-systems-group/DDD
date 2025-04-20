@@ -13,9 +13,9 @@ import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun ComposableTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
-    content: @Composable () -> Unit
+        darkTheme: Boolean = isSystemInDarkTheme(),
+        dynamicColor: Boolean = true,
+        content: @Composable () -> Unit
 ) {
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
@@ -27,8 +27,8 @@ fun ComposableTheme(
         else -> LightColorScheme
     }
     MaterialTheme(
-        colorScheme = colorScheme,
-        content = content
+            colorScheme = colorScheme,
+            content = content
     )
 }
 
@@ -41,23 +41,23 @@ val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
 val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+        primary = Purple80,
+        secondary = PurpleGrey80,
+        tertiary = Pink80
 )
 
 val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+        primary = Purple40,
+        secondary = PurpleGrey40,
+        tertiary = Pink40
 
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+        /* Other default colors to override
+        background = Color(0xFFFFFBFE),
+        surface = Color(0xFFFFFBFE),
+        onPrimary = Color.White,
+        onSecondary = Color.White,
+        onTertiary = Color.White,
+        onBackground = Color(0xFF1C1B1F),
+        onSurface = Color(0xFF1C1B1F),
+        */
 )

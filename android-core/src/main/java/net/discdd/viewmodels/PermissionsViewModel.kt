@@ -20,12 +20,12 @@ import java.util.logging.Level
 import java.util.logging.Logger
 
 data class PermissionItemData(
-    var isBoxChecked: Boolean,
-    var permissionName: String
+        var isBoxChecked: Boolean,
+        var permissionName: String
 )
 
 class PermissionsViewModel(
-    application: Application,
+        application: Application,
 ) : AndroidViewModel(application) {
     private val context get() = getApplication<Application>()
     private val logger = Logger.getLogger(PermissionsViewModel::class.java.name)
@@ -43,8 +43,8 @@ class PermissionsViewModel(
         requiredPermissions.addAll(context.resources.getStringArray(R.array.permissions_array).toList())
         _permissionItems.value = requiredPermissions.map { permission ->
             PermissionItemData(
-                isBoxChecked = false,
-                permissionName = permission
+                    isBoxChecked = false,
+                    permissionName = permission
             )
         }
     }
@@ -121,7 +121,7 @@ class PermissionsViewModel(
 
     private fun allSatisfied() {
         val satisfied =
-            requiredPermissions.isNotEmpty() && grantedPermissions.containsAll(requiredPermissions)
+                requiredPermissions.isNotEmpty() && grantedPermissions.containsAll(requiredPermissions)
         logger.log(Level.INFO, "ALL PERMS SATISFIED: $satisfied")
         updatePermissions(satisfied)
     }
@@ -129,10 +129,10 @@ class PermissionsViewModel(
     fun triggerPermissionDialog(context: Context) {
         viewModelScope.launch {
             AlertDialog.Builder(context)
-                .setMessage(R.string.dialog_message)
-                .setNeutralButton(R.string.dialog_btn_text, null)
-                .create()
-                .show()
+                    .setMessage(R.string.dialog_message)
+                    .setNeutralButton(R.string.dialog_btn_text, null)
+                    .create()
+                    .show()
         }
     }
 }

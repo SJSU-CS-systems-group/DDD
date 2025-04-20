@@ -28,14 +28,14 @@ import java.util.logging.Logger
 import java.util.stream.Collectors
 
 data class WifiDirectState(
-    val deviceName: String = "",
-    val wifiInfo: String = "",
-    val clientLog: String = "",
-    val wifiStatus: String = "",
+        val deviceName: String = "",
+        val wifiInfo: String = "",
+        val clientLog: String = "",
+        val wifiStatus: String = "",
 )
 
 class WifiDirectViewModel(
-    application: Application
+        application: Application
 ) : AndroidViewModel(application) {
     private val context get() = getApplication<Application>()
     private val logger = Logger.getLogger(WifiDirectViewModel::class.java.name)
@@ -84,14 +84,14 @@ class WifiDirectViewModel(
             var status = btService!!.status
             _state.update {
                 it.copy(
-                    wifiStatus = when (status) {
-                        WifiDirectStatus.UNDEFINED -> context.getString(R.string.check_permissions_and_that_wifi_is_enabled);
-                        WifiDirectStatus.CONNECTED -> context.getString(R.string.connected);
-                        WifiDirectStatus.INVITED -> context.getString(R.string.invited);
-                        WifiDirectStatus.FAILED -> context.getString(R.string.failed);
-                        WifiDirectStatus.AVAILABLE -> context.getString(R.string.available);
-                        WifiDirectStatus.UNAVAILABLE -> context.getString(R.string.unavailable);
-                    }
+                        wifiStatus = when (status) {
+                            WifiDirectStatus.UNDEFINED -> context.getString(R.string.check_permissions_and_that_wifi_is_enabled);
+                            WifiDirectStatus.CONNECTED -> context.getString(R.string.connected);
+                            WifiDirectStatus.INVITED -> context.getString(R.string.invited);
+                            WifiDirectStatus.FAILED -> context.getString(R.string.failed);
+                            WifiDirectStatus.AVAILABLE -> context.getString(R.string.available);
+                            WifiDirectStatus.UNAVAILABLE -> context.getString(R.string.unavailable);
+                        }
                 )
             }
 
@@ -121,15 +121,15 @@ class WifiDirectViewModel(
                     try {
                         val ni: NetworkInterface = NetworkInterface.getByName(gi.`interface`)
                         addresses = if (ni == null) "N/A" else ni.getInterfaceAddresses()
-                            .stream()
-                            .filter({ ia -> ia.getAddress() is Inet4Address })
-                            .map({ ia -> ia.getAddress().getHostAddress() }).collect(Collectors.joining(", "))
+                                .stream()
+                                .filter({ ia -> ia.getAddress() is Inet4Address })
+                                .map({ ia -> ia.getAddress().getHostAddress() }).collect(Collectors.joining(", "))
                     } catch (e: SocketException) {
                         addresses = "unknown"
                     }
                     info = String.format(
-                        "SSID: %s\nPassword: %s\nAddress: %s\nConnected devices: %d",
-                        gi.getNetworkName(), gi.getPassphrase(), addresses, gi.getClientList().size
+                            "SSID: %s\nPassword: %s\nAddress: %s\nConnected devices: %d",
+                            gi.getNetworkName(), gi.getPassphrase(), addresses, gi.getClientList().size
                     )
                 }   //TO-DO connected devices seems to not along with the group info devices
                 _state.update {

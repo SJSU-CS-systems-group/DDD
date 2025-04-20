@@ -37,9 +37,9 @@ import net.discdd.viewmodels.ConnectivityViewModel
 
 class UploadFragment : Fragment() {
     override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
+            inflater: LayoutInflater,
+            container: ViewGroup?,
+            savedInstanceState: Bundle?
     ): View {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
@@ -54,8 +54,8 @@ class UploadFragment : Fragment() {
 
 @Composable
 fun ServerUploadScreen(
-    uploadViewModel: ServerUploadViewModel = viewModel(),
-    connectivityViewModel: ConnectivityViewModel = viewModel()
+        uploadViewModel: ServerUploadViewModel = viewModel(),
+        connectivityViewModel: ConnectivityViewModel = viewModel()
 ) {
     val uploadState by uploadViewModel.state.collectAsState()
     val connectivityState by connectivityViewModel.state.collectAsState()
@@ -63,7 +63,7 @@ fun ServerUploadScreen(
 
     LaunchedEffect(uploadState.domain, uploadState.port, connectivityState.networkConnected) {
         val enable =
-            uploadState.domain.isNotEmpty() && uploadState.port.isNotEmpty() && connectivityState.networkConnected
+                uploadState.domain.isNotEmpty() && uploadState.port.isNotEmpty() && connectivityState.networkConnected
         connectServerBtn = enable
     }
     LaunchedEffect(uploadState.message) {
@@ -74,84 +74,84 @@ fun ServerUploadScreen(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         FilledTonalButton(
-            onClick = { uploadViewModel.connectServer() },
-            enabled = connectServerBtn,
-            modifier = Modifier.fillMaxWidth()
+                onClick = { uploadViewModel.connectServer() },
+                enabled = connectServerBtn,
+                modifier = Modifier.fillMaxWidth()
         ) {
             Text("Connect to Bundle Server")
         }
         OutlinedTextField(
-            value = uploadState.domain,
-            onValueChange = { uploadViewModel.onDomainChanged(it) },
-            label = { Text("Domain Input") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
+                value = uploadState.domain,
+                onValueChange = { uploadViewModel.onDomainChanged(it) },
+                label = { Text("Domain Input") },
+                modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
         )
         OutlinedTextField(
-            value = uploadState.port,
-            onValueChange = { uploadViewModel.onPortChanged(it) },
-            label = { Text("Port Input") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
+                value = uploadState.port,
+                onValueChange = { uploadViewModel.onPortChanged(it) },
+                label = { Text("Port Input") },
+                modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
         )
         FilledTonalButton(
-            onClick = { uploadViewModel.saveDomainPort() },
-            modifier = Modifier.fillMaxWidth()
+                onClick = { uploadViewModel.saveDomainPort() },
+                modifier = Modifier.fillMaxWidth()
         ) {
             Text("Save Domain and Port")
         }
         FilledTonalButton(
-            onClick = { uploadViewModel.restoreDomainPort() },
-            modifier = Modifier.fillMaxWidth()
+                onClick = { uploadViewModel.restoreDomainPort() },
+                modifier = Modifier.fillMaxWidth()
         ) {
             Text("Restore Domain and Port")
         }
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "toClient: ",
-                fontSize = 20.sp
+                    text = "toClient: ",
+                    fontSize = 20.sp
             )
             Text(
-                text = uploadState.clientCount,
-                fontSize = 20.sp
+                    text = uploadState.clientCount,
+                    fontSize = 20.sp
             )
             Text(
-                text = "    toServer: ",
-                fontSize = 20.sp
+                    text = "    toServer: ",
+                    fontSize = 20.sp
             )
             Text(
-                text = uploadState.serverCount,
-                fontSize = 20.sp
+                    text = uploadState.serverCount,
+                    fontSize = 20.sp
             )
         }
         FilledTonalButton(
-            onClick = {
-                uploadViewModel.reloadCount()
-            },
-            modifier = Modifier
-                .size(100.dp, 70.dp)
-                .align(Alignment.End)
+                onClick = {
+                    uploadViewModel.reloadCount()
+                },
+                modifier = Modifier
+                        .size(100.dp, 70.dp)
+                        .align(Alignment.End)
         ) {
             Text(text = "Reload Counts")
         }
         uploadState.message?.let { message ->
             Text(
-                text = message,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyMedium
+                    text = message,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
             )
         }
     }

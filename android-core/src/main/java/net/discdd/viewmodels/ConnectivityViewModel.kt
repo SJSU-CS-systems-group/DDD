@@ -17,12 +17,12 @@ import java.util.logging.Level.INFO
 import java.util.logging.Logger
 
 data class ConnectivityState(
-    val networkConnected: Boolean = false,
-    val isConnectBtnEnabled: Boolean = false
+        val networkConnected: Boolean = false,
+        val isConnectBtnEnabled: Boolean = false
 )
 
 class ConnectivityViewModel(
-    application: Application
+        application: Application
 ) : AndroidViewModel(application) {
     private val logger = Logger.getLogger(ConnectivityViewModel::class.java.name)
     private val context get() = getApplication<Application>()
@@ -40,10 +40,10 @@ class ConnectivityViewModel(
         viewModelScope.launch {
             logger.log(INFO, "Registering connectivity manager")
             val networkRequest: NetworkRequest = NetworkRequest.Builder()
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-                .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
-                .build()
+                    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                    .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+                    .build()
 
             val serverConnectNetworkCallback = object : ConnectivityManager.NetworkCallback() {
                 override fun onAvailable(network: Network) {
