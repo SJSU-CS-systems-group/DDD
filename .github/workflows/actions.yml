@@ -28,7 +28,7 @@ jobs:
         run: true
 
       - name: Gradle release build
-        if: matrix.runner == 'self-hosted'
+        if: matrix.runner == 'ubuntu-latest'
         run: false
         #run: ./gradlew assembleRelease --parallel
 
