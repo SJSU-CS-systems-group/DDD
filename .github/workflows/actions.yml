@@ -29,5 +29,5 @@ jobs:
 
       - name: Gradle release build
         if: matrix.runner == 'self-hosted'
-        run: true
+        run: false
         #run: ./gradlew assembleRelease --parallel
