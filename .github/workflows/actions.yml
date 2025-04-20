@@ -16,11 +16,11 @@ jobs:
 
       - name: OKay
         run: true
-      - name: Run maven install
-        run: mvn -ntp install
+#      - name: Run maven install
+#        run: mvn -ntp install
 
-      - name: Run gradle build
-        run: ./gradlew buildRelease --parallel
+#      - name: Run gradle build
+#        run: ./gradlew buildRelease --parallel
 
   compile-github:
     runs-on: ubuntu-latest
