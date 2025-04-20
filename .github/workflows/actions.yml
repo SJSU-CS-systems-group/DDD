@@ -21,4 +21,4 @@ jobs:
         run: mvn -ntp install
         
       - name: Run gradle build on BundleClient, BundleTransport
-        run: ./gradlew build
+        run: ./gradlew build --parallel
