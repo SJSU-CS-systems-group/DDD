@@ -25,7 +25,7 @@ jobs:
 
       - name: Maven install
 #        run: mvn -ntp install
-        run: false
+        run: true
 
       - name: Gradle release build
         if: matrix.runner == 'self-hosted'
