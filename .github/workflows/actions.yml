@@ -14,6 +14,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: OKay
+        run: true
       - name: Run maven install
         run: mvn -ntp install
 
@@ -44,7 +46,7 @@ jobs:
       - name: Run gradle build
         run: ./gradlew buildRelease
 
-  result:
+  compile:
     runs-on: ubuntu-latest
     needs: [compile-self-hosted, compile-github]
     if: |
