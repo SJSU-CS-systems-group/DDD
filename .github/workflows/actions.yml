@@ -24,11 +24,10 @@ jobs:
           distribution: "temurin"
 
       - name: Maven install
-        if: matrix.runner == 'self-hosted'
 #        run: mvn -ntp install
-        run: true
+        run: false
 
       - name: Gradle release build
         if: matrix.runner == 'self-hosted'
-        run: false
+        run: true
         #run: ./gradlew assembleRelease --parallel
