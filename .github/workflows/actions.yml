@@ -2,35 +2,39 @@ name: Build Modules
 
 on:
   pull_request:
-    branches: main
+    branches: [main]
+
 jobs:
-  # Github Action to install Maven modules in the root directory 
-  compile-self-hosted:
-    runs-on: self-hosted
+  compile:
+    strategy:
+      matrix:
+        runner: [self-hosted, ubuntu-latest]
+        # stop at the first failure is false so both run
+      fail-fast: false
+    runs-on: ${{ matrix.runner }}
+    continue-on-error: true
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run maven install on bundle-core, serviceadapter-core, and bundleserver
-        run: mvn -ntp install
-
-      - name: Run gradle build on BundleClient, BundleTransport
-        run: ./gradlew build --parallel
-
-  compile-github:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup JDK 17
+      - name: Setup JDK (only on GitHub-hosted)
+        if: matrix.runner == 'ubuntu-latest'
         uses: actions/setup-java@v3
         with:
           java-version: "17"
           distribution: "temurin"
 
-      - name: Run maven install on bundle-core, serviceadapter-core, and bundleserver
+      - name: Run Maven install
         run: mvn -ntp install
 
-      - name: Run gradle build on BundleClient, BundleTransport
-        run: ./gradlew build
+      - name: Run Gradle build
+        run: ./gradlew build --parallel
+
+  finalize:
+    needs: compile
+    if: ${{ success() || always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Say if any passed
+        run: echo "✅ At least one matrix build succeeded!"
+
