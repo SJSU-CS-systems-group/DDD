@@ -37,9 +37,6 @@ jobs:
           java-version: "17"
           distribution: "temurin"
 
-      - name: Ooops
-        run: false
-
       - name: Run maven install
         run: mvn -ntp install
 
