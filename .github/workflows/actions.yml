@@ -5,19 +5,25 @@ on:
     branches: [main]
 
 jobs:
-  build:
-    strategy:
-      matrix:
-        runner: [self-hosted, ubuntu-latest]
-      fail-fast: false
-    runs-on: ${{ matrix.runner }}
-    continue-on-error: true
+  compile:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Maven install
+        run: mvn -ntp install
+
+      - name: Gradle release build
+        run: ./gradlew assembleRelease --parallel
+
+  compile-github:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup JDK (only on GitHub-hosted)
-        if: matrix.runner == 'ubuntu-latest'
         uses: actions/setup-java@v3
         with:
           java-version: "17"
@@ -28,19 +34,3 @@ jobs:
 
       - name: Gradle release build
         run: ./gradlew assembleRelease --parallel
-
-  # Collects success/failure and exits cleanly if at least one passed
-  compile:
-    runs-on: ubuntu-latest
-    needs: build
-    if: always()
-    steps:
-      - name: Check matrix results
-        run: |
-          echo "compile results: ${{ needs.build.result }}"
-          if [[ "${{ needs.build.result }}" == "success" ]]; then
-            echo "✅ At least one build passed."
-          else
-            echo "❌ All matrix builds failed."
-            exit 1
-          fi
