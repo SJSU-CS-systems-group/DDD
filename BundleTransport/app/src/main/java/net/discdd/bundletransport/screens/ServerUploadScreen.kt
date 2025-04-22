@@ -1,9 +1,5 @@
 package net.discdd.bundletransport.screens
 
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,39 +19,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import net.discdd.bundletransport.viewmodels.ServerUploadViewModel
-import net.discdd.theme.ComposableTheme
+import net.discdd.components.EasterEgg
 import net.discdd.viewmodels.ConnectivityViewModel
-
-class UploadFragment : Fragment() {
-    override fun onCreateView(
-            inflater: LayoutInflater,
-            container: ViewGroup?,
-            savedInstanceState: Bundle?
-    ): View {
-        return ComposeView(requireContext()).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-            setContent {
-                ComposableTheme {
-                    ServerUploadScreen()
-                }
-            }
-        }
-    }
-}
 
 @Composable
 fun ServerUploadScreen(
         uploadViewModel: ServerUploadViewModel = viewModel(),
-        connectivityViewModel: ConnectivityViewModel = viewModel()
+        connectivityViewModel: ConnectivityViewModel = viewModel(),
+        onToggle: () -> Unit,
 ) {
     val uploadState by uploadViewModel.state.collectAsState()
     val connectivityState by connectivityViewModel.state.collectAsState()
@@ -120,9 +97,13 @@ fun ServerUploadScreen(
                         .padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                    text = "toClient: ",
-                    fontSize = 20.sp
+            /*
+            * The "toClient" section is the designated easter egg location for BundleTransport
+            * Click this portion 7 times in <3sec in order to toggle the easter egg!
+            * */
+            EasterEgg(
+                content = { Text(text="toClient: ", fontSize = 20.sp) },
+                onToggle = onToggle,
             )
             Text(
                     text = uploadState.clientCount,
@@ -160,5 +141,5 @@ fun ServerUploadScreen(
 @Preview(showBackground = true)
 @Composable
 fun ServerUploadPreview() {
-    ServerUploadScreen()
+    ServerUploadScreen() {}
 }

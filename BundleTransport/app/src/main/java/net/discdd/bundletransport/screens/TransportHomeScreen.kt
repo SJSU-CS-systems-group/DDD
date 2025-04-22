@@ -1,5 +1,6 @@
 package net.discdd.bundletransport.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -60,7 +61,10 @@ fun TransportHomeScreen(
             TabItem(
                 title = context.getString(R.string.upload),
                 screen = {
-                    ServerUploadScreen()
+                    ServerUploadScreen() {
+                        viewModel.onToggleEasterEgg()
+                        Toast.makeText(context, "Easter Egg Toggled!", Toast.LENGTH_SHORT).show()
+                    }
                 }
             ),
             TabItem(
@@ -69,18 +73,6 @@ fun TransportHomeScreen(
                     StorageScreen()
                 }
             ),
-            TabItem(
-                title = context.getString(R.string.logs),
-                screen = {
-                    LogScreen()
-                }
-            ),
-            TabItem(
-                title = context.getString(R.string.permissions),
-                screen = {
-                    PermissionScreen()
-                }
-            )
         )
     }
 
@@ -127,13 +119,10 @@ fun TransportHomeScreen(
     }
 
     LaunchedEffect(internetAvailable, showUsbScreen, showEasterEgg) {
-        val newTabs = mutableListOf<TabItem>()
-        newTabs.addAll(standardTabs)
-
+        var newTabs = standardTabs.toMutableList()
         if (internetAvailable) newTabs.add(1, wifiDirectTab)
-        if (showUsbScreen) newTabs.add(usbTab)
-        if (showEasterEgg) newTabs.addAll(adminTabs)
-
+        if (showUsbScreen) newTabs += usbTab
+        if (showEasterEgg) newTabs += adminTabs
         tabItems = newTabs
     }
 
