@@ -3,11 +3,15 @@ package net.discdd.bundletransport.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -29,15 +33,18 @@ import kotlinx.coroutines.delay
 import net.discdd.bundletransport.viewmodels.ServerUploadViewModel
 import net.discdd.components.EasterEgg
 import net.discdd.viewmodels.ConnectivityViewModel
+import net.discdd.viewmodels.SettingsViewModel
 
 @Composable
 fun ServerUploadScreen(
-        uploadViewModel: ServerUploadViewModel = viewModel(),
-        connectivityViewModel: ConnectivityViewModel = viewModel(),
-        onToggle: () -> Unit,
+    uploadViewModel: ServerUploadViewModel = viewModel(),
+    connectivityViewModel: ConnectivityViewModel = viewModel(),
+    settingsViewModel: SettingsViewModel = viewModel(),
+    onToggle: () -> Unit,
 ) {
     val uploadState by uploadViewModel.state.collectAsState()
     val connectivityState by connectivityViewModel.state.collectAsState()
+    val showEasterEgg by settingsViewModel.showEasterEgg.collectAsState()
     var connectServerBtn by remember { mutableStateOf(false) }
 
     LaunchedEffect(uploadState.domain, uploadState.port, connectivityState.networkConnected) {
@@ -69,71 +76,73 @@ fun ServerUploadScreen(
             ) {
                 Text("Connect to Bundle Server")
             }
-            OutlinedTextField(
+
+            if (showEasterEgg) {
+                OutlinedTextField(
                     value = uploadState.domain,
                     onValueChange = { uploadViewModel.onDomainChanged(it) },
                     label = { Text("Domain Input") },
                     modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp),
-            )
-            OutlinedTextField(
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                )
+                OutlinedTextField(
                     value = uploadState.port,
                     onValueChange = { uploadViewModel.onPortChanged(it) },
                     label = { Text("Port Input") },
                     modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp),
-            )
-            FilledTonalButton(
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                )
+                FilledTonalButton(
                     onClick = { uploadViewModel.saveDomainPort() },
                     modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Save Domain and Port")
-            }
-            FilledTonalButton(
+                ) {
+                    Text("Save Domain and Port")
+                }
+                FilledTonalButton(
                     onClick = { uploadViewModel.restoreDomainPort() },
                     modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Restore Domain and Port")
+                ) {
+                    Text("Restore Domain and Port")
+                }
             }
+
             Row(
-                    modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 /*
                 * The "toClient" section is the designated easter egg location for BundleTransport
                 * Click this portion 7 times in <3sec in order to toggle the easter egg!
                 * */
                 EasterEgg(
-                        content = { Text(text = "toClient: ", fontSize = 20.sp) },
-                        onToggle = onToggle,
+                    content = { Text(text = "toClient: ", fontSize = 20.sp) },
+                    onToggle = onToggle,
                 )
                 Text(
-                        text = uploadState.clientCount,
-                        fontSize = 20.sp
+                    text = uploadState.clientCount,
+                    fontSize = 20.sp
                 )
                 Text(
-                        text = "    toServer: ",
-                        fontSize = 20.sp
+                    text = "    toServer: ",
+                    fontSize = 20.sp
                 )
                 Text(
-                        text = uploadState.serverCount,
-                        fontSize = 20.sp
+                    text = uploadState.serverCount,
+                    fontSize = 20.sp
                 )
+                Spacer(modifier = Modifier.weight(1f))
+                FilledTonalButton(
+                    onClick = { uploadViewModel.reloadCount() },
+                    modifier = Modifier.size(70.dp, 50.dp)
+                ) {
+                    Icon(imageVector = Icons.Default.Refresh, contentDescription = "Reload Counts",)
+                }
             }
-            FilledTonalButton(
-                    onClick = {
-                        uploadViewModel.reloadCount()
-                    },
-                    modifier = Modifier
-                            .size(100.dp, 70.dp)
-                            .align(Alignment.End)
-            ) {
-                Text(text = "Reload Counts")
-            }
+
             uploadState.message?.let { message ->
                 Text(
                         text = message,

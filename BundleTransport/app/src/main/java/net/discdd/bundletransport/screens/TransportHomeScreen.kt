@@ -61,7 +61,7 @@ fun TransportHomeScreen(
                 TabItem(
                         title = context.getString(R.string.upload),
                         screen = {
-                            ServerUploadScreen() {
+                            ServerUploadScreen(settingsViewModel = viewModel) {
                                 viewModel.onToggleEasterEgg()
                                 Toast.makeText(context, "Easter Egg Toggled!", Toast.LENGTH_SHORT).show()
                             }
