@@ -363,9 +363,9 @@ public class BundleUtils {
         // bundle is ready
         outerJar.close();
     }
-    public static Future<?> runFuture(ExecutorService executorService, String ackedEncryptedBundleId, List<ADU> adus, byte[] routingData, PipedInputStream inputPipe){
+    public static Future<?> runFuture(ExecutorService executorService, String ackedEncryptedBundleId, List<ADU> adus, byte[] routingData, PipedInputStream inputPipe) throws IOException {
+        PipedOutputStream outputPipe = new PipedOutputStream(inputPipe);
         Future<?> future = executorService.submit(() -> {
-            PipedOutputStream outputPipe = new PipedOutputStream(inputPipe);
             try {
                 BundleUtils.createBundlePayloadForAdus(adus, routingData, ackedEncryptedBundleId, outputPipe);
             } catch (IOException | NoSuchAlgorithmException e) {
