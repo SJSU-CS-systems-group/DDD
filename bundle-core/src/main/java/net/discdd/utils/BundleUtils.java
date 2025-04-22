@@ -363,7 +363,12 @@ public class BundleUtils {
         // bundle is ready
         outerJar.close();
     }
-    public static Future<?> runFuture(ExecutorService executorService, String ackedEncryptedBundleId, List<ADU> adus, byte[] routingData, PipedInputStream inputPipe) throws IOException {
+
+    public static Future<?> runFuture(ExecutorService executorService,
+                                      String ackedEncryptedBundleId,
+                                      List<ADU> adus,
+                                      byte[] routingData,
+                                      PipedInputStream inputPipe) throws IOException {
         PipedOutputStream outputPipe = new PipedOutputStream(inputPipe);
         Future<?> future = executorService.submit(() -> {
             try {
@@ -377,6 +382,7 @@ public class BundleUtils {
         });
         return future;
     }
+
     public interface Encrypter {
         void encrypt(InputStream payload, OutputStream outputStream) throws IOException, NoSuchAlgorithmException,
                 InvalidKeyException, InvalidMessageException;

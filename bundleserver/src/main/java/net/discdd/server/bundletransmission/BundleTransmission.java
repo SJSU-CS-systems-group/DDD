@@ -206,8 +206,8 @@ public class BundleTransmission {
 
         var adus = applicationDataManager.fetchADUsToSend(0, clientId);
         PipedInputStream pipedInputStream = new PipedInputStream();
-        Future<?> future = BundleUtils.runFuture(executorService,null,adus,null ,pipedInputStream);
-        try{
+        Future<?> future = BundleUtils.runFuture(executorService, null, adus, null, pipedInputStream);
+        try {
             var bundleOutputStream = Files.newOutputStream(getPathForBundleToSend(encryptedBundleId),
                                                            StandardOpenOption.CREATE,
                                                            StandardOpenOption.TRUNCATE_EXISTING);
@@ -222,8 +222,8 @@ public class BundleTransmission {
                                                       bundleOutputStream);
 
         } catch (InvalidMessageException e) {
-                throw new GeneralSecurityException(e);
-        }finally{
+            throw new GeneralSecurityException(e);
+        } finally {
             future.cancel(true);
         }
         return encryptedBundleId;
