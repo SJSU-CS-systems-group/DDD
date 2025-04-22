@@ -104,9 +104,7 @@ fun TransportHomeScreen(
         title = stringResource(R.string.usb),
         screen = {
             val usbViewModel: TransportUsbViewModel = viewModel()
-            UsbScreen(
-                usbViewModel = usbViewModel
-            ) { viewModel ->
+            UsbScreen(usbViewModel) { viewModel ->
                 TransportUsbComponent(viewModel) {
                     viewModel.populate()
                 }
