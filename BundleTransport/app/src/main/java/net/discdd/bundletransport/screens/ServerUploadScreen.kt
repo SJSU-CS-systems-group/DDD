@@ -37,10 +37,10 @@ import net.discdd.viewmodels.SettingsViewModel
 
 @Composable
 fun ServerUploadScreen(
-    uploadViewModel: ServerUploadViewModel = viewModel(),
-    connectivityViewModel: ConnectivityViewModel = viewModel(),
-    settingsViewModel: SettingsViewModel = viewModel(),
-    onToggle: () -> Unit,
+        uploadViewModel: ServerUploadViewModel = viewModel(),
+        connectivityViewModel: ConnectivityViewModel = viewModel(),
+        settingsViewModel: SettingsViewModel = viewModel(),
+        onToggle: () -> Unit,
 ) {
     val uploadState by uploadViewModel.state.collectAsState()
     val connectivityState by connectivityViewModel.state.collectAsState()
@@ -79,67 +79,67 @@ fun ServerUploadScreen(
 
             if (showEasterEgg) {
                 OutlinedTextField(
-                    value = uploadState.domain,
-                    onValueChange = { uploadViewModel.onDomainChanged(it) },
-                    label = { Text("Domain Input") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp),
+                        value = uploadState.domain,
+                        onValueChange = { uploadViewModel.onDomainChanged(it) },
+                        label = { Text("Domain Input") },
+                        modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp),
                 )
                 OutlinedTextField(
-                    value = uploadState.port,
-                    onValueChange = { uploadViewModel.onPortChanged(it) },
-                    label = { Text("Port Input") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp),
+                        value = uploadState.port,
+                        onValueChange = { uploadViewModel.onPortChanged(it) },
+                        label = { Text("Port Input") },
+                        modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp),
                 )
                 FilledTonalButton(
-                    onClick = { uploadViewModel.saveDomainPort() },
-                    modifier = Modifier.fillMaxWidth()
+                        onClick = { uploadViewModel.saveDomainPort() },
+                        modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Save Domain and Port")
                 }
                 FilledTonalButton(
-                    onClick = { uploadViewModel.restoreDomainPort() },
-                    modifier = Modifier.fillMaxWidth()
+                        onClick = { uploadViewModel.restoreDomainPort() },
+                        modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Restore Domain and Port")
                 }
             }
 
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 /*
                 * The "toClient" section is the designated easter egg location for BundleTransport
                 * Click this portion 7 times in <3sec in order to toggle the easter egg!
                 * */
                 EasterEgg(
-                    content = { Text(text = "toClient: ", fontSize = 20.sp) },
-                    onToggle = onToggle,
+                        content = { Text(text = "toClient: ", fontSize = 20.sp) },
+                        onToggle = onToggle,
                 )
                 Text(
-                    text = uploadState.clientCount,
-                    fontSize = 20.sp
+                        text = uploadState.clientCount,
+                        fontSize = 20.sp
                 )
                 Text(
-                    text = "    toServer: ",
-                    fontSize = 20.sp
+                        text = "    toServer: ",
+                        fontSize = 20.sp
                 )
                 Text(
-                    text = uploadState.serverCount,
-                    fontSize = 20.sp
+                        text = uploadState.serverCount,
+                        fontSize = 20.sp
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 FilledTonalButton(
-                    onClick = { uploadViewModel.reloadCount() },
-                    modifier = Modifier.size(70.dp, 50.dp)
+                        onClick = { uploadViewModel.reloadCount() },
+                        modifier = Modifier.size(70.dp, 50.dp)
                 ) {
-                    Icon(imageVector = Icons.Default.Refresh, contentDescription = "Reload Counts",)
+                    Icon(imageVector = Icons.Default.Refresh, contentDescription = "Reload Counts")
                 }
             }
 
