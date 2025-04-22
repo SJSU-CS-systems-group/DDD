@@ -1,4 +1,4 @@
-package net.discdd.screens
+package net.discdd.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -24,23 +24,23 @@ fun EasterEgg(
     val interactionSource = remember { MutableInteractionSource() }
 
     Box(
-            modifier = Modifier
-                    .clickable(
-                            interactionSource = interactionSource,
-                            indication = null // conceals ripple effect
-                    ) {
-                        val now = System.currentTimeMillis()
-                        clickTimes = (clickTimes + now)
-                                .filter { now - it <= 3000 }
-                                .takeLast(7)
-                        if (clickTimes.size == 7) {
-                            val timeDiff = clickTimes.last() - clickTimes.first()
-                            if (timeDiff <= 3000) {
-                                onToggle()
-                                clickTimes = emptyList()
-                            }
+        modifier = Modifier
+                .clickable(
+                        interactionSource = interactionSource,
+                        indication = null // conceals ripple effect
+                ) {
+                    val now = System.currentTimeMillis()
+                    clickTimes = (clickTimes + now)
+                            .filter { now - it <= 3000 }
+                            .takeLast(7)
+                    if (clickTimes.size == 7) {
+                        val timeDiff = clickTimes.last() - clickTimes.first()
+                        if (timeDiff <= 3000) {
+                            onToggle()
+                            clickTimes = emptyList()
                         }
                     }
+                }
     ) {
         content()
     }

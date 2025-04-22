@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import net.discdd.bundletransport.BundleTransportWifiEvent
 import net.discdd.bundletransport.R
 import net.discdd.bundletransport.TransportWifiDirectService
+import net.discdd.bundletransport.TransportWifiServiceManager
 import net.discdd.pathutils.TransportPaths
 import net.discdd.wifidirect.WifiDirectManager.WifiDirectStatus
 
@@ -44,7 +45,7 @@ class WifiDirectViewModel(
         setViewModel(this@WifiDirectViewModel)
     }
     private val _state = MutableStateFlow(WifiDirectState())
-    private var btService: TransportWifiDirectService? = null
+    private val btService by lazy { TransportWifiServiceManager.getService() }
     private var transportPaths: TransportPaths = TransportPaths(context.getExternalFilesDir(null)?.toPath())
     val state = _state.asStateFlow()
 
@@ -56,8 +57,7 @@ class WifiDirectViewModel(
 
     fun initialize(serviceReadyFuture: CompletableFuture<TransportWifiDirectService>) {
         viewModelScope.launch {
-            serviceReadyFuture.thenAccept { service ->
-                btService = service
+            serviceReadyFuture.thenAccept {
                 processDeviceInfoChange()
                 updateGroupInfo()
             }
@@ -76,6 +76,7 @@ class WifiDirectViewModel(
         // NOTE: we aren't using device info here, but be aware that it can be null!
         viewModelScope.launch {
             if (btService == null) return@launch
+
             var serviceName = btService!!.deviceName
             _state.update {
                 it.copy(deviceName = if (serviceName != null) serviceName else "Unknown")

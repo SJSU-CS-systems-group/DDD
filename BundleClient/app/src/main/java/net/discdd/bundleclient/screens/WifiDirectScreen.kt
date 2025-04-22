@@ -52,8 +52,8 @@ import net.discdd.bundleclient.BundleClientWifiDirectService
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.viewmodels.PeerDevice
 import net.discdd.bundleclient.viewmodels.WifiDirectViewModel
-import net.discdd.screens.EasterEgg
-import net.discdd.screens.WifiPermissionBanner
+import net.discdd.components.EasterEgg
+import net.discdd.components.WifiPermissionBanner
 import java.util.concurrent.CompletableFuture
 
 @OptIn(ExperimentalPermissionsApi::class)

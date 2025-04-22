@@ -1,4 +1,4 @@
-package net.discdd.screens
+package net.discdd.components
 
 import android.Manifest
 import android.app.Application
