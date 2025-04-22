@@ -85,7 +85,7 @@ fun ClientUsbComponent(
 
 @Preview(showBackground = true)
 @Composable
-fun ClientUsbUIPreview() {
+fun ClientUsbComponentPreview() {
     val viewModel = ClientUsbViewModel(Application())
     ClientUsbComponent(viewModel) {}
 }

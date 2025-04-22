@@ -128,8 +128,8 @@ fun TransportHomeScreen(
 
     LaunchedEffect(internetAvailable, showUsbScreen, showEasterEgg) {
         val newTabs = mutableListOf<TabItem>()
-
         newTabs.addAll(standardTabs)
+
         if (internetAvailable) newTabs.add(1, wifiDirectTab)
         if (showUsbScreen) newTabs.add(usbTab)
         if (showEasterEgg) newTabs.addAll(adminTabs)
@@ -154,7 +154,7 @@ fun TransportHomeScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             ) {
                 Text(
-                    text = "foo app",
+                    text = context.getString(R.string.app_name),
                     style = MaterialTheme.typography.titleLarge
                 )
             }

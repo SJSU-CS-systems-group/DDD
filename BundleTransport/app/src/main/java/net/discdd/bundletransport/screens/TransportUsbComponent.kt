@@ -88,7 +88,7 @@ fun TransportUsbComponent(
 
 @Preview(showBackground = true)
 @Composable
-fun TransportUsbUIPreview() {
+fun TransportUsbComponentPreview() {
     val viewModel = TransportUsbViewModel(Application())
     TransportUsbComponent(viewModel) {}
 }

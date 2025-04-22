@@ -49,7 +49,7 @@ object ConnectivityManager {
         logger.log(Level.INFO, "Connectivity Manager initialized. Internet available: ${_internetAvailable.value}")
     }
 
-    private fun registerNetworkCallback() {
+    fun registerNetworkCallback() {
         networkCallback?.let { callback ->
             val networkRequest = NetworkRequest.Builder()
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)

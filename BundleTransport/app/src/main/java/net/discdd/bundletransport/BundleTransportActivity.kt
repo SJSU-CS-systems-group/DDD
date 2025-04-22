@@ -50,6 +50,11 @@ class BundleTransportActivity: ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        ConnectivityManager.registerNetworkCallback()
+    }
+
     override fun onPause() {
         super.onPause()
         ConnectivityManager.unregisterNetworkCallback()
