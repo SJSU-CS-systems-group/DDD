@@ -21,6 +21,7 @@ object TransportWifiServiceManager {
                 setService(binder.service)
                 serviceReady.complete(binder.service)
             }
+
             override fun onServiceDisconnected(arg0: ComponentName) {
                 clearService()
             }

@@ -23,39 +23,39 @@ import net.discdd.viewmodels.UsbViewModel
 
 @Composable
 fun UsbFileRequestUI(
-    usbViewModel: UsbViewModel
+        usbViewModel: UsbViewModel
 ) {
     val context = LocalContext.current
 
     Text(
-        text = stringResource(R.string.to_settings_text),
-        style = MaterialTheme.typography.bodyLarge,
-        textAlign = TextAlign.Center,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 24.dp)
+            text = stringResource(R.string.to_settings_text),
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 24.dp)
     )
 
     Button(
-        onClick = {
-            val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-            startActivity(context, intent, null)
-        },
-        modifier = Modifier.fillMaxWidth(0.8f)
+            onClick = {
+                val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                startActivity(context, intent, null)
+            },
+            modifier = Modifier.fillMaxWidth(0.8f)
     ) {
         Text(
-            text = stringResource(R.string.to_settings),
+                text = stringResource(R.string.to_settings),
         )
     }
 
     Spacer(modifier = Modifier.height(16.dp))
 
     Button(
-        onClick = { usbViewModel.refreshFilePermission() },
-        modifier = Modifier.fillMaxWidth(0.8f)
+            onClick = { usbViewModel.refreshFilePermission() },
+            modifier = Modifier.fillMaxWidth(0.8f)
     ) {
         Text(
-            text = stringResource(R.string.reload)
+                text = stringResource(R.string.reload)
         )
     }
 }

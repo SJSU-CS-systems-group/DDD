@@ -7,8 +7,8 @@ import net.discdd.pathutils.TransportPaths
 import net.discdd.viewmodels.UsbViewModel
 
 class TransportUsbViewModel(
-    application: Application,
-): UsbViewModel(application) {
+        application: Application,
+) : UsbViewModel(application) {
     private val transportPaths by lazy {
         TransportPaths(application.filesDir.toPath())
     }

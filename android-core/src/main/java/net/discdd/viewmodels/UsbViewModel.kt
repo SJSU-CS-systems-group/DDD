@@ -17,15 +17,15 @@ import java.util.logging.Level.INFO
 import java.util.logging.Logger
 
 data class UsbState(
-    val filePermissionGranted: Boolean = false,
-    val dddDirectoryExists: Boolean = false,
-    val showMessage: String? = null, // null means no message
-    val messageColor: Int = Color.BLACK,
+        val filePermissionGranted: Boolean = false,
+        val dddDirectoryExists: Boolean = false,
+        val showMessage: String? = null, // null means no message
+        val messageColor: Int = Color.BLACK,
 )
 
 open class UsbViewModel(
-    application: Application
-): AndroidViewModel(application) {
+        application: Application
+) : AndroidViewModel(application) {
     private val usbDirName = "/DDD_transport"
     protected val logger: Logger = Logger.getLogger(UsbViewModel::class.java.name)
     protected val storageManager by lazy {
@@ -67,7 +67,7 @@ open class UsbViewModel(
         val isGranted = isFileAccessGranted()
         _state.update {
             it.copy(
-                filePermissionGranted = isGranted
+                    filePermissionGranted = isGranted
             )
         }
 

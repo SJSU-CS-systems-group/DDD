@@ -52,8 +52,8 @@ object ConnectivityManager {
     fun registerNetworkCallback() {
         networkCallback?.let { callback ->
             val networkRequest = NetworkRequest.Builder()
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                .build()
+                    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    .build()
 
             systemConnectivityManager?.registerNetworkCallback(networkRequest, callback)
         }
@@ -68,7 +68,7 @@ object ConnectivityManager {
     private fun updateConnectionState() {
         systemConnectivityManager?.let { manager ->
             _internetAvailable.value = manager.getNetworkCapabilities(manager.activeNetwork)
-                ?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+                    ?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
         }
     }
 

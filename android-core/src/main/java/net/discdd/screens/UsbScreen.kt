@@ -17,21 +17,21 @@ import net.discdd.viewmodels.UsbViewModel
 
 @Composable
 fun <T : UsbViewModel> UsbScreen(
-    usbViewModel: T,
-    usbExchangeComponent: @Composable (T) -> Unit
+        usbViewModel: T,
+        usbExchangeComponent: @Composable (T) -> Unit
 ) {
     val usbState by usbViewModel.state.collectAsState()
 
     Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background,
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (usbState.filePermissionGranted) {
                 usbExchangeComponent(usbViewModel)

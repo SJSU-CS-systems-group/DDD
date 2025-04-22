@@ -12,7 +12,7 @@ import net.discdd.theme.ComposableTheme
 import net.discdd.transport.GrpcSecurityHolder
 import java.util.logging.Logger
 
-class BundleTransportActivity: ComponentActivity() {
+class BundleTransportActivity : ComponentActivity() {
     private val logger = Logger.getLogger(BundleTransportActivity::class.java.name)
     private val sharedPreferences by lazy {
         getSharedPreferences(TransportWifiDirectService.WIFI_DIRECT_PREFERENCES, MODE_PRIVATE)

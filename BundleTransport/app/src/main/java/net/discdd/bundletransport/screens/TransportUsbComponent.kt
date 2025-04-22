@@ -22,8 +22,8 @@ import net.discdd.bundletransport.viewmodels.TransportUsbViewModel
 
 @Composable
 fun TransportUsbComponent(
-    usbViewModel: TransportUsbViewModel,
-    onTransferClick: () -> Unit,
+        usbViewModel: TransportUsbViewModel,
+        onTransferClick: () -> Unit,
 ) {
     val usbState by usbViewModel.state.collectAsState()
     val isUsbConnected by UsbConnectionManager.usbConnected.collectAsState()
@@ -31,8 +31,10 @@ fun TransportUsbComponent(
     val textToShow = when {
         isUsbConnected && usbState.dddDirectoryExists ->
             stringResource(R.string.usb_connection_detected)
+
         isUsbConnected && !usbState.dddDirectoryExists ->
             stringResource(R.string.usb_was_connected_but_ddd_transport_directory_was_not_detected)
+
         else ->
             stringResource(R.string.no_usb_connection_detected)
     }
@@ -43,33 +45,33 @@ fun TransportUsbComponent(
     }
 
     Text(
-        text = textToShow,
-        color = textColor,
-        style = MaterialTheme.typography.bodyLarge,
-        textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth(),
+            text = textToShow,
+            color = textColor,
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
     )
 
     Spacer(modifier = Modifier.height(24.dp))
 
     Button(
-        onClick = onTransferClick,
-        enabled = isUsbConnected && usbState.dddDirectoryExists,
-        modifier = Modifier.fillMaxWidth(0.8f)
+            onClick = onTransferClick,
+            enabled = isUsbConnected && usbState.dddDirectoryExists,
+            modifier = Modifier.fillMaxWidth(0.8f)
     ) {
         Text(
-            text = stringResource(R.string.exchange_usb_data)
+                text = stringResource(R.string.exchange_usb_data)
         )
     }
 
     Spacer(modifier = Modifier.height(16.dp))
 
     Button(
-        onClick = { usbViewModel.checkDddDirExists() },
-        modifier = Modifier.fillMaxWidth(0.8f)
+            onClick = { usbViewModel.checkDddDirExists() },
+            modifier = Modifier.fillMaxWidth(0.8f)
     ) {
         Text(
-            text = stringResource(R.string.reload)
+                text = stringResource(R.string.reload)
         )
     }
 
@@ -77,11 +79,11 @@ fun TransportUsbComponent(
     usbState.showMessage?.let { msg ->
         Spacer(modifier = Modifier.height(24.dp))
         Text(
-            text = msg,
-            color = Color(usbState.messageColor),
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
+                text = msg,
+                color = Color(usbState.messageColor),
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
         )
     }
 }
