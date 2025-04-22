@@ -84,7 +84,7 @@ import static net.discdd.utils.Constants.GRPC_LONG_TIMEOUT_MS;
 
 public class BundleTransmission {
     private static final Logger logger = Logger.getLogger(BundleTransmission.class.getName());
-    private static final ExecutorService executorService = Executors.newCachedThreadPool();
+    private final ExecutorService executorService = Executors.newCachedThreadPool();
     private final BundleSecurity bundleSecurity;
     private final ApplicationDataManager applicationDataManager;
 
@@ -172,20 +172,10 @@ public class BundleTransmission {
         var routingData = clientRouting.bundleMetaData();
 
         PipedInputStream pipedInputStream = new PipedInputStream();
-        PipedOutputStream pipedOutputStream = new PipedOutputStream(pipedInputStream);
-        Path bundleFile = clientPaths.tosendDir.resolve(bundleId);
-        Future<?> future = executorService.submit(() -> {
-            var ackedEncryptedBundleId = ackRecord == null ? null : ackRecord.getBundleId();
-            try {
-                BundleUtils.createBundlePayloadForAdus(adus, routingData, ackedEncryptedBundleId, pipedOutputStream);
-            } catch (IOException | NoSuchAlgorithmException e) {
-                return e;
-            } finally {
-                pipedOutputStream.close();
-            }
-            return null;
-        });
 
+        Path bundleFile = clientPaths.tosendDir.resolve(bundleId);
+        var ackedEncryptedBundleId = ackRecord == null ? null : ackRecord.getBundleId();
+        Future<?> future = BundleUtils.runFuture(executorService,ackedEncryptedBundleId, adus, routingData, pipedInputStream);
         try {
             ClientSecurity clientSecurity = bundleSecurity.getClientSecurity();
 
@@ -201,10 +191,8 @@ public class BundleTransmission {
 
         } catch (InvalidMessageException e) {
             throw new IOException("Error processing message: " + e.getMessage(), e);
-        } finally {
-            if (future != null) {
-                future.cancel(true);
-            }
+        }finally{
+            future.cancel(true);
         }
         return new BundleDTO(bundleId, new Bundle(bundleFile.toFile()));
     }
