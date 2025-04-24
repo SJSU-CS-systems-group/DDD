@@ -166,7 +166,11 @@ public class StoreADUs {
         var metadata = getMetadata(clientId, appId);
         StreamExt.takeWhile(getADUs(clientId, appId), adu -> adu.getADUId() <= aduId).forEach(adu -> {
             // we don't want to delete negative aduIds since they are in process
-            if (adu.getADUId() >= 0 && !adu.getSource().delete()) logger.log(SEVERE, "Failed to delete file " + adu);
+            if (adu.getADUId() < 0) {
+                logger.log(INFO, "Skipping deletion of negative ADU ID " + adu.getADUId());
+            } else if (!adu.getSource().delete()) {
+                logger.log(SEVERE, "Failed to delete file " + adu);
+            }
         });
         if (metadata.lastAduDeleted < aduId) {
             metadata.lastAduDeleted = aduId;
