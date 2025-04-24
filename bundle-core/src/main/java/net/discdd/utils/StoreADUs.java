@@ -223,4 +223,14 @@ public class StoreADUs {
         Files.write(aduPath, data);
         return aduPath.toFile();
     }
+
+    public boolean deleteADU(String clientId, String appId, long aduId) throws IOException {
+        Path aduPath = getAppFolder(clientId, appId).resolve(Long.toString(aduId));
+        File aduFile = aduPath.toFile();
+        var appFolder = getAppFolder(cliendId, appId);
+
+
+
+
+    }
 }

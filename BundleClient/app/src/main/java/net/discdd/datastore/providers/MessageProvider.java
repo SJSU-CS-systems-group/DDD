@@ -137,6 +137,7 @@ public class MessageProvider extends ContentProvider {
                 getContext().getContentResolver().notifyChange(uri, null);
                 return 1;
             }
+//            TODO:  Implement another if condition for "deleteAuthADU"
             return 0;
         } catch (Exception e) {
             logger.log(SEVERE, "Error while deleting processed ADUs for app: " + appName, e);
