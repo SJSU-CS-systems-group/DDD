@@ -180,7 +180,7 @@ public class StoreADUs {
 
     public byte[] getADU(String clientId, String appId, long aduId, long offset, int readLimit) throws IOException {
         var appFolder = getAppFolder(clientId, appId);
-        try (var fis = new FileInputStream(appFolder.resolve(appId).toFile())) {
+        try (var fis = new FileInputStream(appFolder.resolve(Long.toString(aduId)).toFile())) {
             if (fis.skip(offset) != offset) {
                 logger.log(SEVERE, "Failed to skip to offset " + offset + " in file " + appFolder.resolve(appId));
                 return new byte[0];
@@ -266,7 +266,7 @@ public class StoreADUs {
                 Files.move(oldAduPath, aduPath, StandardCopyOption.REPLACE_EXISTING);
             }
             // if finished, we need to set the last adu added
-            if (aduId < lastAduAdded) {
+            if (aduId > lastAduAdded) {
                 logger.log(INFO, "updating lastAdu from " + lastAduAdded + " to " + aduId);
                 metadata.lastAduAdded = aduId;
                 setMetadata(clientId, appId, metadata);
