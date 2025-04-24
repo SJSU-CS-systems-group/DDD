@@ -158,8 +158,8 @@ public class StoreADUs {
                 .collect(Collectors.toList());
     }
 
-    public byte[] getADU(String appId, Long aduId) throws IOException {
-        return getADU(null, appId, aduId);
+    public byte[] getADU(String clientId, String appId, Long aduId) throws IOException {
+        return getADU(clientId, appId, aduId, 0, Integer.MAX_VALUE);
     }
 
     public void deleteAllFilesUpTo(String clientId, String appId, long aduId) throws IOException {
@@ -188,18 +188,10 @@ public class StoreADUs {
             byte[] data = new byte[readLimit];
             int bytesRead = fis.read(data);
             if (bytesRead < 0) {
-                return null;
-            }
-            if (bytesRead < readLimit) {
-                byte[] newData = new byte[bytesRead];
-                System.arraycopy(data, 0, newData, 0, bytesRead);
-                return newData;
+                return new byte[0];
             }
             return data;
-        } catch (IOException e) {
-            logger.log(SEVERE, "Failed to read file " + appFolder.resolve(appId), e);
         }
-        return Files.(appFolder.resolve(Long.toString(aduId)));
     }
 
     private Path getAppFolder(String clientId, String appId) {

@@ -82,8 +82,6 @@ public class MessageProvider extends ContentProvider {
                         assert selectionArgs != null;
                         long aduId = Long.parseLong(selectionArgs[0]);
                         long offset = selectionArgs.length > 1 ? Long.parseLong(selectionArgs[1]) : 0;
-                        boolean finished =
-                                selectionArgs.length <= 2 || Boolean.parseBoolean(selectionArgs[2]);
                         cursor.newRow().add("data", receiveADUsStorage.getADU(appId, Long.parseLong(selectionArgs[0])));
                         return cursor;
                     }
