@@ -29,6 +29,8 @@ import net.discdd.client.bundlesecurity.BundleSecurity;
 import net.discdd.client.bundletransmission.BundleTransmission;
 import net.discdd.client.bundletransmission.BundleTransmission.Statuses;
 import net.discdd.client.bundletransmission.BundleTransmission.BundleExchangeCounts;
+import net.discdd.grpc.BundleExchangeServiceGrpc;
+import net.discdd.grpc.GetRecencyBlobRequest;
 import net.discdd.model.ADU;
 import net.discdd.pathutils.ClientPaths;
 import net.discdd.wifidirect.WifiDirectManager;
@@ -177,6 +179,8 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
                 logger.info("WifiDirectManager peers changed");
                 wifiDirectManager.getPeerList().stream().filter(peer -> peer.deviceName.startsWith("ddd_"))
                         .forEach(peer -> bundleTransmission.processDiscoveredPeer(peer.deviceAddress, peer.deviceName));
+                wifiDirectManager.getPeerList().stream().filter(peer -> bundleTransmission.processRecencyBlob(peer.deviceAddress,
+                                                                                                              BundleExchangeServiceGrpc.newBlockingStub(channel).getRecencyBlob(GetRecencyBlobRequest.newBuilder().build())))
                 // expire peers that haven't been seen for a minute
                 long expirationTime = System.currentTimeMillis() - 60 * 1000;
                 bundleTransmission.expireNotSeenPeers(expirationTime);
