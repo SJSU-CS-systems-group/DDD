@@ -19,6 +19,7 @@ import net.discdd.bundletransport.R
 import net.discdd.bundletransport.TransportWifiDirectService
 import net.discdd.bundletransport.TransportWifiServiceManager
 import net.discdd.pathutils.TransportPaths
+import net.discdd.viewmodels.RuntimeViewModel
 import net.discdd.wifidirect.WifiDirectManager.WifiDirectStatus
 
 import java.net.Inet4Address
@@ -37,8 +38,7 @@ data class WifiDirectState(
 
 class WifiDirectViewModel(
         application: Application
-) : AndroidViewModel(application) {
-    private val context get() = getApplication<Application>()
+) : RuntimeViewModel(application) {
     private val logger = Logger.getLogger(WifiDirectViewModel::class.java.name)
     private val intentFilter = IntentFilter()
     private val bundleTransportWifiEvent = BundleTransportWifiEvent().apply {

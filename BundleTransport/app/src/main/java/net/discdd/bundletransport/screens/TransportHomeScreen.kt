@@ -1,5 +1,6 @@
 package net.discdd.bundletransport.screens
 
+import android.Manifest
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,6 +29,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.launch
 import net.discdd.UsbConnectionManager
 import net.discdd.bundletransport.ConnectivityManager
@@ -45,6 +48,7 @@ data class TabItem(
         val screen: @Composable () -> Unit,
 )
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun TransportHomeScreen(
         viewModel: SettingsViewModel = viewModel()
@@ -55,6 +59,9 @@ fun TransportHomeScreen(
     val showUsbScreen by UsbConnectionManager.usbConnected.collectAsState()
     val showEasterEgg by viewModel.showEasterEgg.collectAsState()
     val internetAvailable by ConnectivityManager.internetAvailable.collectAsState()
+    val nearbyWifiState = rememberPermissionState(
+        Manifest.permission.NEARBY_WIFI_DEVICES
+    )
 
     val standardTabs = remember {
         listOf(
@@ -95,7 +102,8 @@ fun TransportHomeScreen(
             title = context.getString(R.string.local_wifi),
             screen = {
                 WifiDirectScreen(
-                        serviceReadyFuture = TransportWifiServiceManager.serviceReady
+                    serviceReadyFuture = TransportWifiServiceManager.serviceReady,
+                    nearbyWifiState = nearbyWifiState
                 )
             }
     )
