@@ -1,32 +1,28 @@
 package net.discdd.datastore.providers;
 
 import static android.net.Uri.fromFile;
+import static java.lang.String.format;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 import android.content.ContentProvider;
 import android.content.ContentValues;
-import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
 import android.os.Binder;
-
-import java.nio.file.Paths;
-import java.util.logging.Logger;
-
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import net.discdd.client.bundlesecurity.ClientSecurity;
 import net.discdd.utils.StoreADUs;
-import net.discdd.utils.StoreADUs.AduIdData;
 
 import java.io.IOException;
-import java.util.HashMap;
+import java.nio.file.Paths;
 import java.util.List;
+import java.util.logging.Logger;
 
 public class MessageProvider extends ContentProvider {
 
@@ -67,7 +63,7 @@ public class MessageProvider extends ContentProvider {
 
         try {
             String appId = getCallerAppId();
-            cursor = new MatrixCursor(new String[] { "data", "id" });
+            cursor = new MatrixCursor(new String[] { "data", "id", "offset", "size" });
             if (selection != null) {
                 String clientId = ClientSecurity.getInstance().getClientID();
                 switch (selection) {
@@ -84,15 +80,20 @@ public class MessageProvider extends ContentProvider {
                     }
                     case "aduData" -> {
                         assert selectionArgs != null;
+                        long aduId = Long.parseLong(selectionArgs[0]);
+                        long offset = selectionArgs.length > 1 ? Long.parseLong(selectionArgs[1]) : 0;
+                        boolean finished =
+                                selectionArgs.length <= 2 || Boolean.parseBoolean(selectionArgs[2]);
                         cursor.newRow().add("data", receiveADUsStorage.getADU(appId, Long.parseLong(selectionArgs[0])));
                         return cursor;
                     }
+                    default -> {
+                        logger.log(SEVERE, format("%s made a request with unknown selection: %s", appId, selection));
+                        return null;
+                    }
                 }
             } else {
-                List<AduIdData> datalist = receiveADUsStorage.getAllAppIdAndData(appId);
-                for (AduIdData adu: datalist) {
-                    cursor.newRow().add("data", new String(adu.data())).add("id", adu.id());
-                }
+                logger.log(SEVERE, format("%s made a request with no selection", appId));
             }
         } catch (Exception ex) {
             logger.log(WARNING, "Error getting app data", ex);
@@ -113,8 +114,13 @@ public class MessageProvider extends ContentProvider {
         try {
             String appName = getCallerAppId();
             byte[] data = contentValues.getAsByteArray("data");
-            logger.log(INFO, "inserting: " + new String(data));
-            return fromFile(sendADUsStorage.addADU(null, appName, data, -1));
+            Long offset = contentValues.getAsLong("offset");
+            Boolean finished = contentValues.getAsBoolean("finished");
+            Long aduId = contentValues.getAsLong("aduId");
+
+            logger.log(INFO, format("%s inserting: %s bytes, at %s, %s is finished", appName, data.length, offset, finished));
+            return fromFile(sendADUsStorage.addADU(null, appName, data,
+                                                   aduId == null ? -1 : aduId, offset, finished));
         } catch (IOException e) {
             logger.log(WARNING, "Unable to add file", e);
             return null;
