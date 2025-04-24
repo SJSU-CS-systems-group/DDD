@@ -12,8 +12,8 @@ Ensure that the screens include the WifiPermissionBanner which prompts the user 
 This class keeps track of number of time users deny the permission in order to manipulate the UI/UX to grant the permission.
 */
 open class RuntimeViewModel(
-    application: Application
-): AndroidViewModel(application) {
+        application: Application
+) : AndroidViewModel(application) {
     protected val context get() = getApplication<Application>()
     private val sharedPref = context.getSharedPreferences(NET_DISCDD_BUNDLECLIENT_NUM_DENIED, MODE_PRIVATE)
     private val _numDenied = MutableStateFlow(0)

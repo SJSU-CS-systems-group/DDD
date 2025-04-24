@@ -53,13 +53,13 @@ import java.util.concurrent.CompletableFuture
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun WifiDirectScreen(
-    wifiViewModel: WifiDirectViewModel = viewModel(),
-    serviceReadyFuture: CompletableFuture<TransportWifiDirectService>,
-    nearbyWifiState: PermissionState,
-    preferences: SharedPreferences = LocalContext.current.getSharedPreferences(
-        TransportWifiDirectService.WIFI_DIRECT_PREFERENCES,
-        Context.MODE_PRIVATE
-    )
+        wifiViewModel: WifiDirectViewModel = viewModel(),
+        serviceReadyFuture: CompletableFuture<TransportWifiDirectService>,
+        nearbyWifiState: PermissionState,
+        preferences: SharedPreferences = LocalContext.current.getSharedPreferences(
+                TransportWifiDirectService.WIFI_DIRECT_PREFERENCES,
+                Context.MODE_PRIVATE
+        )
 ) {
     val state by wifiViewModel.state.collectAsState()
     val numDenied by wifiViewModel.numDenied.collectAsState()
@@ -68,8 +68,8 @@ fun WifiDirectScreen(
     val context = LocalContext.current
 
     Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
     ) {
         LaunchedEffect(Unit) {
             wifiViewModel.initialize(serviceReadyFuture)
@@ -88,17 +88,17 @@ fun WifiDirectScreen(
         }
 
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             var checked by remember {
                 mutableStateOf(
-                    preferences.getBoolean(
-                        TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
-                        true
-                    )
+                        preferences.getBoolean(
+                                TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
+                                true
+                        )
                 )
             }
             val nameValid by remember {
@@ -121,8 +121,8 @@ fun WifiDirectScreen(
             }
 
             Text(
-                text = state.wifiInfo,
-                modifier = Modifier.clickable { showDialog = true }
+                    text = state.wifiInfo,
+                    modifier = Modifier.clickable { showDialog = true }
             )
 
             if (showDialog == true) {
@@ -132,18 +132,18 @@ fun WifiDirectScreen(
                 }
 
                 AlertDialog(
-                    title = { Text(text = stringResource(R.string.connected_devices)) },
-                    text = { Text(text = connectedPeers.toTypedArray().joinToString(", ")) },
-                    onDismissRequest = { showDialog = false },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                showDialog = false
+                        title = { Text(text = stringResource(R.string.connected_devices)) },
+                        text = { Text(text = connectedPeers.toTypedArray().joinToString(", ")) },
+                        onDismissRequest = { showDialog = false },
+                        confirmButton = {
+                            TextButton(
+                                    onClick = {
+                                        showDialog = false
+                                    }
+                            ) {
+                                Text(stringResource(R.string.dismiss))
                             }
-                        ) {
-                            Text(stringResource(R.string.dismiss))
                         }
-                    }
                 )
             }
 
@@ -151,17 +151,17 @@ fun WifiDirectScreen(
             Text(text = "Device Name: ${state.deviceName}")
 
             Row(
-                verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically,
             ) {
                 Checkbox(
-                    checked = checked,
-                    onCheckedChange = {
-                        checked = it
-                        preferences.edit().putBoolean(
-                            TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
-                            it
-                        ).apply()
-                    }
+                        checked = checked,
+                        onCheckedChange = {
+                            checked = it
+                            preferences.edit().putBoolean(
+                                    TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
+                                    it
+                            ).apply()
+                        }
                 )
                 Text(text = stringResource(R.string.collect_data_even_when_app_is_closed))
             }
@@ -172,8 +172,8 @@ fun WifiDirectScreen(
                 Text(text = stringResource(R.string.phone_name_must_start_with_ddd))
 
                 FilledTonalButton(
-                    onClick = { wifiViewModel.openInfoSettings() },
-                    modifier = Modifier.fillMaxWidth()
+                        onClick = { wifiViewModel.openInfoSettings() },
+                        modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(stringResource(R.string.change_phone_name))
                 }
@@ -191,8 +191,8 @@ fun WifiDirectScreen(
 fun WifiDirectScreenPreview() {
     val nearbyWifiState = rememberPermissionState(Manifest.permission.NEARBY_WIFI_DEVICES)
     WifiDirectScreen(
-        serviceReadyFuture = CompletableFuture(),
-        nearbyWifiState = nearbyWifiState
+            serviceReadyFuture = CompletableFuture(),
+            nearbyWifiState = nearbyWifiState
     )
 }
 

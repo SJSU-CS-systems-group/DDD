@@ -60,7 +60,7 @@ fun TransportHomeScreen(
     val showEasterEgg by viewModel.showEasterEgg.collectAsState()
     val internetAvailable by ConnectivityManager.internetAvailable.collectAsState()
     val nearbyWifiState = rememberPermissionState(
-        Manifest.permission.NEARBY_WIFI_DEVICES
+            Manifest.permission.NEARBY_WIFI_DEVICES
     )
 
     val standardTabs = remember {
@@ -102,8 +102,8 @@ fun TransportHomeScreen(
             title = context.getString(R.string.local_wifi),
             screen = {
                 WifiDirectScreen(
-                    serviceReadyFuture = TransportWifiServiceManager.serviceReady,
-                    nearbyWifiState = nearbyWifiState
+                        serviceReadyFuture = TransportWifiServiceManager.serviceReady,
+                        nearbyWifiState = nearbyWifiState
                 )
             }
     )
