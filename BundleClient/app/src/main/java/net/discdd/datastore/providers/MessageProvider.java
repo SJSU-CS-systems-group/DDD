@@ -29,6 +29,7 @@ public class MessageProvider extends ContentProvider {
     private static final Logger logger = Logger.getLogger(MessageProvider.class.getName());
     public static final String PROVIDER_NAME = "net.discdd.provider.datastoreprovider";
     public static final String URL = "content://" + PROVIDER_NAME + "/messages";
+    public static final int MAX_ADU_SIZE = 512*1024;
 
     private StoreADUs sendADUsStorage;
     private StoreADUs receiveADUsStorage;
@@ -41,8 +42,7 @@ public class MessageProvider extends ContentProvider {
 
     private String getCallerAppId() throws IOException {
         int receiverId = Binder.getCallingUid();
-        String appId = getContext().getPackageManager().getNameForUid(receiverId);
-        return appId;
+        return getContext().getPackageManager().getNameForUid(receiverId);
     }
 
     @Override
@@ -82,7 +82,7 @@ public class MessageProvider extends ContentProvider {
                         assert selectionArgs != null;
                         long aduId = Long.parseLong(selectionArgs[0]);
                         long offset = selectionArgs.length > 1 ? Long.parseLong(selectionArgs[1]) : 0;
-                        cursor.newRow().add("data", receiveADUsStorage.getADU(appId, Long.parseLong(selectionArgs[0])));
+                        cursor.newRow().add("data", receiveADUsStorage.getADU(null, appId, aduId, offset, MAX_ADU_SIZE));
                         return cursor;
                     }
                     default -> {
@@ -127,7 +127,7 @@ public class MessageProvider extends ContentProvider {
 
     @Override
     public int delete(@NonNull Uri uri, @Nullable String selection, @Nullable String[] selectionArgs) {
-        String appName = null;
+        String appName;
         try {
             appName = getCallerAppId();
         } catch (IOException e) {
