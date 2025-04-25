@@ -153,6 +153,7 @@ public class MessageProviderTest {
                 System.arraycopy(data, dataOffset, b, off, lenToCopy);
                 off += lenToCopy;
                 len -= lenToCopy;
+                dataOffset += lenToCopy;
                 rc += lenToCopy;
                 if (len > 0) checkData();
             }
