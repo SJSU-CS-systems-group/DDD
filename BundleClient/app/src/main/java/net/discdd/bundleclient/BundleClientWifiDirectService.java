@@ -179,8 +179,11 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
                 logger.info("WifiDirectManager peers changed");
                 wifiDirectManager.getPeerList().stream().filter(peer -> peer.deviceName.startsWith("ddd_"))
                         .forEach(peer -> bundleTransmission.processDiscoveredPeer(peer.deviceAddress, peer.deviceName));
-                wifiDirectManager.getPeerList().stream().filter(peer -> bundleTransmission.processRecencyBlob(peer.deviceAddress,
-                                                                                                              BundleExchangeServiceGrpc.newBlockingStub(channel).getRecencyBlob(GetRecencyBlobRequest.newBuilder().build())))
+                // filter any devices that are not transport
+                for (WifiP2pDevice peer : wifiDirectManager.getPeerList()) {
+                    if (!isDeviceTransport(peer)) { wifiDirectManager.getPeerList().remove(peer); }
+                }
+
                 // expire peers that haven't been seen for a minute
                 long expirationTime = System.currentTimeMillis() - 60 * 1000;
                 bundleTransmission.expireNotSeenPeers(expirationTime);
@@ -261,6 +264,18 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
 
         }
         return FAILED_EXCHANGE_COUNTS;
+    }
+
+    private boolean isDeviceTransport(WifiP2pDevice device) {
+        var oldGroupInfo = wifiDirectManager.getGroupInfo();
+        if (oldGroupInfo != null) {
+            try {
+                wifiDirectManager.disconnect().get(2, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                logger.log(WARNING, "Failed to disconnect from group: " + oldGroupInfo.getNetworkName(), e);
+            }
+        }
+        return bundleTransmission.isAddressTransport(device.deviceName, 7777);
     }
 
     private CompletableFuture<WifiP2pGroup> connectTo(WifiP2pDevice transport) {
