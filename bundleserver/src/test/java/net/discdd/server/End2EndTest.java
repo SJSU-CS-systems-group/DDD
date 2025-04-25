@@ -247,7 +247,8 @@ public class End2EndTest {
     @SuppressWarnings("BusyWait")
     protected static void checkReceivedFiles(String testClientId,
                                              Set<String> expectedFileList,
-                                             Map<String, byte[]> sentBytesMap) throws InterruptedException, IOException {
+                                             Map<String, byte[]> sentBytesMap) throws InterruptedException,
+            IOException {
         HashSet<String> receivedFiles;
         File aduDir = tempRootDir.resolve(java.nio.file.Path.of("receive", testClientId, TEST_APPID)).toFile();
         logger.info("Checking for received files in " + aduDir);
@@ -264,9 +265,7 @@ public class End2EndTest {
             for (String fileName : expectedFileList) {
                 var readBytes = Files.readAllBytes(aduDir.toPath().resolve(fileName));
                 byte[] sendBytes = sentBytesMap.get(fileName);
-                Assertions.assertArrayEquals(sendBytes,
-                                             readBytes,
-                                             "File " + fileName + " does not match sent bytes");
+                Assertions.assertArrayEquals(sendBytes, readBytes, "File " + fileName + " does not match sent bytes");
             }
         }
     }
