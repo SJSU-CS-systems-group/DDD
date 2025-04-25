@@ -5,11 +5,13 @@ import net.discdd.model.ADU;
 import net.discdd.model.Metadata;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.Comparator;
 import java.util.List;
 import java.util.logging.Logger;
@@ -18,7 +20,9 @@ import java.util.stream.Stream;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.FINEST;
+import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 public class StoreADUs {
     public static final String METADATA_FILENAME = "metadata.json";
@@ -154,14 +158,19 @@ public class StoreADUs {
                 .collect(Collectors.toList());
     }
 
-    public byte[] getADU(String appId, Long aduId) throws IOException {
-        return getADU(null, appId, aduId);
+    public byte[] getADU(String clientId, String appId, Long aduId) throws IOException {
+        return getADU(clientId, appId, aduId, 0, Integer.MAX_VALUE);
     }
 
     public void deleteAllFilesUpTo(String clientId, String appId, long aduId) throws IOException {
         var metadata = getMetadata(clientId, appId);
         StreamExt.takeWhile(getADUs(clientId, appId), adu -> adu.getADUId() <= aduId).forEach(adu -> {
-            if (!adu.getSource().delete()) logger.log(SEVERE, "Failed to delete file " + adu);
+            // we don't want to delete negative aduIds since they are in process
+            if (adu.getADUId() < 0) {
+                logger.log(INFO, "Skipping deletion of negative ADU ID " + adu.getADUId());
+            } else if (!adu.getSource().delete()) {
+                logger.log(SEVERE, "Failed to delete file " + adu);
+            }
         });
         if (metadata.lastAduDeleted < aduId) {
             metadata.lastAduDeleted = aduId;
@@ -169,9 +178,24 @@ public class StoreADUs {
         }
     }
 
-    public byte[] getADU(String clientId, String appId, Long aduId) throws IOException {
+    public byte[] getADU(String clientId, String appId, long aduId, long offset, int readLimit) throws IOException {
         var appFolder = getAppFolder(clientId, appId);
-        return Files.readAllBytes(appFolder.resolve(Long.toString(aduId)));
+        try (var fis = new FileInputStream(appFolder.resolve(Long.toString(aduId)).toFile())) {
+            if (fis.skip(offset) != offset) {
+                logger.log(SEVERE, "Failed to skip to offset " + offset + " in file " + appFolder.resolve(appId));
+                return new byte[0];
+            }
+            long fileSize = fis.getChannel().size();
+            if (readLimit > fileSize - offset) {
+                readLimit = (int) (fileSize - offset);
+            }
+            byte[] data = new byte[readLimit];
+            int bytesRead = fis.read(data);
+            if (bytesRead < 0) {
+                return new byte[0];
+            }
+            return data;
+        }
     }
 
     private Path getAppFolder(String clientId, String appId) {
@@ -193,6 +217,10 @@ public class StoreADUs {
         return metadata.lastAduDeleted;
     }
 
+    public File addADU(String clientId, String appId, byte[] data, long aduId) throws IOException {
+        return addADU(clientId, appId, data, aduId, 0, null);
+    }
+
     /**
      * @param clientId
      * @param appId
@@ -201,26 +229,49 @@ public class StoreADUs {
      * @return
      * @throws IOException
      */
-    public File addADU(String clientId, String appId, byte[] data, long aduId) throws IOException {
+    public File addADU(String clientId, String appId, byte[] data, long aduId, long offset, Boolean finished) throws IOException {
         var appFolder = getAppFolder(clientId, appId);
-
         Metadata metadata = getMetadata(clientId, appId);
         var lastAduDeleted = metadata.lastAduDeleted;
         var lastAduAdded = metadata.lastAduAdded;
-        if (aduId == -1L) {
-            aduId = lastAduAdded + 1;
-        } else if (aduId <= lastAduDeleted) {
+
+        if (aduId >= 0 && aduId <= lastAduDeleted) {
+            logger.log(INFO, "ADU ID " + aduId + " is less than last deleted ADU ID " + lastAduDeleted + " skipping");
             return null;
         }
 
-        if (metadata.lastAduAdded < aduId) {
-            metadata.lastAduAdded = aduId;
-            setMetadata(clientId, appId, metadata);
+        // write out the data to the path for the aduId (this might be a negative number, so we will fix later)
+        Path aduPath = appFolder.resolve(java.lang.Long.toString(aduId));
+        logger.log(FINE, "Writing partial " + appId + ":" + aduId + " to " + aduPath + " with offset " + offset);
+        // write data to aduPath at the specified file offset
+        try (FileOutputStream fos = new FileOutputStream(aduPath.toFile(), true)) {
+            var channel = fos.getChannel();
+            if (channel.size() > offset) {
+                logger.log(WARNING,
+                           "Offset " + offset + " is greater than file size " + channel.size() + " truncating");
+                channel.truncate(offset);
+            }
+            channel.position(offset);
+            fos.write(data);
         }
 
-        Path aduPath = appFolder.resolve(Long.toString(aduId));
-        logger.log(FINEST, "Writing " + appId + ":" + aduId + " to " + aduPath);
-        Files.write(aduPath, data);
+        if (finished == null || finished) {
+            if (aduId < 0) {
+                // if aduId is negative, we need to set it to the last adu added
+                // and move the temporary file to the new location
+                aduId = lastAduAdded + 1;
+                var oldAduPath = aduPath;
+                aduPath = appFolder.resolve(java.lang.Long.toString(aduId));
+                Files.move(oldAduPath, aduPath, StandardCopyOption.REPLACE_EXISTING);
+            }
+            // if finished, we need to set the last adu added
+            if (aduId > lastAduAdded) {
+                logger.log(INFO, "updating lastAdu from " + lastAduAdded + " to " + aduId);
+                metadata.lastAduAdded = aduId;
+                setMetadata(clientId, appId, metadata);
+            }
+        }
+
         return aduPath.toFile();
     }
 }
