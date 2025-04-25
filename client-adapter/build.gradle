@@ -40,14 +40,19 @@ publishing {
         release(MavenPublication) {
             groupId = 'net.discdd'
             artifactId = 'client-adapter'
-            version = '0.0.1'
+            version = '0.0.1-SNAPSHOT'
         }
 
     }
 
     repositories {
         maven {
-            url = uri("file://${buildDir}/repo") // Local repository for testing
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/SJSU-CS-systems-group/DDD")
+            credentials {
+                username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
+                password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
+            }
         }
     }
 }

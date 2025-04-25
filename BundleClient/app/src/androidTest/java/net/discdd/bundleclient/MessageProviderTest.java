@@ -1,8 +1,5 @@
 package net.discdd.bundleclient;
 
-import android.content.ContentResolver;
-import android.net.Uri;
-
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
@@ -17,29 +14,24 @@ import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 @RunWith(AndroidJUnit4.class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class MessageProviderTest {
 
-    private MessageProvider messageProvider;
-    private Uri testUri;
     private Path sendADUStorePath;
     private Path receiveADUStorePath;
-    private String smallData = "Small Data";
-    private String  bigData = "Big Data".repeat(1024 * 1024);
-    private ContentResolver contentResolver;
+    private final String smallData = "Small Data";
+    private final String  bigData = "Big Data".repeat(1024 * 1024);
     DDDClientAdapter adapter;
 
     @Before
     public void setUp() throws IOException {
-        messageProvider = new MessageProvider();
+        MessageProvider messageProvider = new MessageProvider();
         messageProvider.attachInfo(ApplicationProvider.getApplicationContext(), null);
-        testUri = Uri.parse(MessageProvider.URL);
-        contentResolver = ApplicationProvider.getApplicationContext().getContentResolver();
         adapter = new DDDClientAdapter(ApplicationProvider.getApplicationContext());
         // access the private sendADUsStorage and receiveADUsStorage fields in messageProvider
         String appId = ApplicationProvider.getApplicationContext().getPackageName();
@@ -91,65 +83,10 @@ public class MessageProviderTest {
         }
     }
 
-    public static class MessageProviderInputStream extends InputStream {
-        private byte[] data;
-        private long nextReadOffset = 0;
-        private int dataOffset = 0;
-        final private MessageProvider messageProvider;
-        final private long aduId;
-        private boolean finished;
-
-        public MessageProviderInputStream(MessageProvider messageProvider, long aduId) {
-            this.messageProvider = messageProvider;
-            this.aduId = aduId;
-        }
-
-        private int bytesRemaining() {
-            return finished || data == null ? 0 : data.length - dataOffset;
-        }
-
-        private void checkData() {
-            if (!finished && bytesRemaining() == 0) {
-                try (var rsp = messageProvider.query(Uri.parse(MessageProvider.URL), new String[] {"data"}, "aduData", new String[] { String.valueOf(aduId), String.valueOf(nextReadOffset) }, null)) {
-                    if (rsp == null || !rsp.moveToFirst()) {
-                        // all done
-                        data = new byte[0];
-                        dataOffset = 0;
-                        finished = true;
-                        return;
-                    }
-                    data = rsp.getBlob(0);
-                    nextReadOffset += data.length;
-                    dataOffset = 0;
-                    finished = data.length == 0;
-                }
-            }
-        }
-
-        @Override
-        public int read() throws IOException {
-            checkData();
-            if (finished) {
-                return -1;
-            }
-            return data[dataOffset++];
-        }
-
-        @Override
-        public int read(byte[] b, int off, int len) throws IOException {
-            checkData();
-            if (finished) return -1;
-            int rc = 0;
-            while (!finished && len > 0) {
-                int lenToCopy = Math.min(len, bytesRemaining());
-                System.arraycopy(data, dataOffset, b, off, lenToCopy);
-                off += lenToCopy;
-                len -= lenToCopy;
-                dataOffset += lenToCopy;
-                rc += lenToCopy;
-                if (len > 0) checkData();
-            }
-            return rc;
-        }
+    @Test
+    public void test5DeleteIncomingADUIds() {
+        Assert.assertEquals(adapter.getIncomingAduIds(), List.of(1L, 2L));
+        adapter.deleteReceivedAdusUpTo(1);
+        Assert.assertEquals(adapter.getIncomingAduIds(), List.of(2L));
     }
 }

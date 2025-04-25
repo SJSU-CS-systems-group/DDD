@@ -53,11 +53,11 @@ public class DDDClientAdapter {
 
     public List<Long> getIncomingAduIds() {
         try (var rsp = resolver.query(PROVIDER_URI, new String[] {"data"}, "aduIds", null, null)) {
-            if (rsp == null || !rsp.moveToFirst()) {
+            if (rsp == null) {
                 return null;
             }
             var aduIds = new ArrayList<Long>();
-            for(rsp.moveToFirst();rsp.isAfterLast();rsp.moveToNext()) {
+            for(rsp.moveToFirst();!rsp.isAfterLast();rsp.moveToNext()) {
                 aduIds.add(rsp.getLong(0));
             }
             return aduIds;
