@@ -1,11 +1,12 @@
 package net.discdd.bundleclient;
 
-import android.content.ContentValues;
-import android.database.Cursor;
+import android.content.ContentResolver;
 import android.net.Uri;
+
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
+import net.discdd.adapter.DDDClientAdapter;
 import net.discdd.datastore.providers.MessageProvider;
 
 import org.junit.Assert;
@@ -15,13 +16,10 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
 
-import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.util.Arrays;
 
 @RunWith(AndroidJUnit4.class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -33,12 +31,16 @@ public class MessageProviderTest {
     private Path receiveADUStorePath;
     private String smallData = "Small Data";
     private String  bigData = "Big Data".repeat(1024 * 1024);
+    private ContentResolver contentResolver;
+    DDDClientAdapter adapter;
 
     @Before
     public void setUp() throws IOException {
         messageProvider = new MessageProvider();
         messageProvider.attachInfo(ApplicationProvider.getApplicationContext(), null);
         testUri = Uri.parse(MessageProvider.URL);
+        contentResolver = ApplicationProvider.getApplicationContext().getContentResolver();
+        adapter = new DDDClientAdapter(ApplicationProvider.getApplicationContext());
         // access the private sendADUsStorage and receiveADUsStorage fields in messageProvider
         String appId = ApplicationProvider.getApplicationContext().getPackageName();
         sendADUStorePath = ApplicationProvider.getApplicationContext().getDataDir().toPath().resolve("send").resolve(appId);
@@ -48,10 +50,9 @@ public class MessageProviderTest {
 
     @Test
     public void test1InsertSmallData() throws IOException {
-        ContentValues values = new ContentValues();
-        values.put("data", smallData.getBytes());
-        var rspUri = messageProvider.insert(testUri, values);
-        Assert.assertNotNull(rspUri);
+        try (var os = adapter.createAduToSend()) {
+            os.write(smallData.getBytes());
+        }
         var sendADUPath = sendADUStorePath.resolve("1");
         var aduSendString = new String(Files.readAllBytes(sendADUPath));
         Assert.assertEquals(smallData, aduSendString);
@@ -60,17 +61,8 @@ public class MessageProviderTest {
     @Test
     public void test2InsertBigData() throws IOException {
         // Make sure it takes multiple sends
-        var bigDataBytes = bigData.getBytes();
-        int chunkSize = MessageProvider.MAX_ADU_SIZE;
-        for (int offset = 0; offset < bigDataBytes.length; offset += chunkSize) {
-            int length = Math.min(chunkSize, bigDataBytes.length - offset);
-            ContentValues values = new ContentValues();
-            var bytes = Arrays.copyOfRange(bigDataBytes, offset, offset + length);
-            values.put("data", bytes);
-            values.put("offset", (long) offset);
-            values.put("finished", offset + length >= bigDataBytes.length);
-            var rspUri = messageProvider.insert(testUri, values);
-            Assert.assertNotNull(rspUri);
+        try (var os = adapter.createAduToSend()) {
+            os.write(bigData.getBytes());
         }
         var sendADUPath = sendADUStorePath.resolve("2");
         var aduSendString = new String(Files.readAllBytes(sendADUPath));
@@ -82,7 +74,7 @@ public class MessageProviderTest {
     public void test3QuerySmallData() throws IOException {
         Path receiveSmallDataPath = receiveADUStorePath.resolve("1");
         Files.write(receiveSmallDataPath, smallData.getBytes());
-        try (var is = new MessageProviderInputStream(messageProvider, 1)) {
+        try (var is = adapter.receiveAdu(1)) {
             byte[] allBytes = is.readAllBytes();
             var readString = new String(allBytes);
             Assert.assertEquals(smallData, readString);
@@ -93,7 +85,7 @@ public class MessageProviderTest {
     public void test4QueryBigData() throws IOException {
         Path receiveBigDataPath = receiveADUStorePath.resolve("2");
         Files.write(receiveBigDataPath, bigData.getBytes());
-        try (var is = new MessageProviderInputStream(messageProvider, 2)) {
+        try (var is = adapter.receiveAdu(2)) {
             var readString = new String(is.readAllBytes());
             Assert.assertEquals(bigData, readString);
         }
