@@ -91,7 +91,10 @@ public class MessageProvider extends ContentProvider {
                     }
                 }
             } else {
-                logger.log(SEVERE, format("%s made a request with no selection", appId));
+                List<StoreADUs.AduIdData> datalist = receiveADUsStorage.getAllAppIdAndData(appId);
+                for (StoreADUs.AduIdData adu: datalist) {
+                    cursor.newRow().add("data", new String(adu.data())).add("id", adu.id());
+                }
             }
         } catch (Exception ex) {
             logger.log(WARNING, "Error getting app data", ex);
