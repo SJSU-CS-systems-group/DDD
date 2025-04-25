@@ -275,7 +275,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
                 logger.log(WARNING, "Failed to disconnect from group: " + oldGroupInfo.getNetworkName(), e);
             }
         }
-        return bundleTransmission.isAddressTransport(device.deviceName, 7777);
+        return bundleTransmission.isAddressTransport(device.deviceAddress, 7777);
     }
 
     private CompletableFuture<WifiP2pGroup> connectTo(WifiP2pDevice transport) {
