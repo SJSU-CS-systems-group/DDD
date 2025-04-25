@@ -177,11 +177,18 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
             }
             case WIFI_DIRECT_MANAGER_PEERS_CHANGED -> {
                 logger.info("WifiDirectManager peers changed");
-                wifiDirectManager.getPeerList().stream().filter(peer -> peer.deviceName.startsWith("ddd_"))
+                var peerlist = wifiDirectManager.getPeerList();
+                peerlist.stream().filter(peer -> peer.deviceName.startsWith("ddd_"))
                         .forEach(peer -> bundleTransmission.processDiscoveredPeer(peer.deviceAddress, peer.deviceName));
                 // filter any devices that are not transport
-                for (WifiP2pDevice peer : wifiDirectManager.getPeerList()) {
-                    if (!isDeviceTransport(peer)) { wifiDirectManager.getPeerList().remove(peer); }
+                var iterator = peerlist.iterator();
+                while (iterator.hasNext()) {
+                    var peer = iterator.next();
+                    try {
+                        if (!isDeviceTransport(peer)) { iterator.remove(); }
+                    } catch (Exception e) {
+                        iterator.remove();
+                    }
                 }
 
                 // expire peers that haven't been seen for a minute
@@ -266,7 +273,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
         return FAILED_EXCHANGE_COUNTS;
     }
 
-    private boolean isDeviceTransport(WifiP2pDevice device) {
+    private boolean isDeviceTransport(WifiP2pDevice device) throws Exception {
         var oldGroupInfo = wifiDirectManager.getGroupInfo();
         if (oldGroupInfo != null) {
             try {
