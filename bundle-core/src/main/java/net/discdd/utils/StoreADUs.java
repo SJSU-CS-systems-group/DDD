@@ -218,7 +218,7 @@ public class StoreADUs {
     }
 
     public File addADU(String clientId, String appId, byte[] data, long aduId) throws IOException {
-        return addADU(clientId, appId, data, aduId, null, null);
+        return addADU(clientId, appId, data, aduId, 0, null);
     }
 
     /**
@@ -229,7 +229,7 @@ public class StoreADUs {
      * @return
      * @throws IOException
      */
-    public File addADU(String clientId, String appId, byte[] data, long aduId, Long offset, Boolean finished) throws IOException {
+    public File addADU(String clientId, String appId, byte[] data, long aduId, long offset, Boolean finished) throws IOException {
         var appFolder = getAppFolder(clientId, appId);
         Metadata metadata = getMetadata(clientId, appId);
         var lastAduDeleted = metadata.lastAduDeleted;
@@ -245,14 +245,13 @@ public class StoreADUs {
         logger.log(FINEST, "Writing partial " + appId + ":" + aduId + " to " + aduPath + " with offset " + offset);
         // write data to aduPath at the specified file offset
         try (FileOutputStream fos = new FileOutputStream(aduPath.toFile(), true)) {
-            if (offset != null) {
-                var channel = fos.getChannel();
-                if (channel.size() > offset) {
-                    logger.log(WARNING, "Offset " + offset + " is greater than file size " + channel.size() + " truncating");
-                    channel.truncate(offset);
-                }
-                channel.position(offset);
+            var channel = fos.getChannel();
+            if (channel.size() > offset) {
+                logger.log(WARNING,
+                           "Offset " + offset + " is greater than file size " + channel.size() + " truncating");
+                channel.truncate(offset);
             }
+            channel.position(offset);
             fos.write(data);
         }
 
