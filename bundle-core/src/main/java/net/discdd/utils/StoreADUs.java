@@ -242,7 +242,7 @@ public class StoreADUs {
 
         // write out the data to the path for the aduId (this might be a negative number, so we will fix later)
         Path aduPath = appFolder.resolve(java.lang.Long.toString(aduId));
-        logger.log(FINEST, "Writing partial " + appId + ":" + aduId + " to " + aduPath + " with offset " + offset);
+        logger.log(FINE, "Writing partial " + appId + ":" + aduId + " to " + aduPath + " with offset " + offset);
         // write data to aduPath at the specified file offset
         try (FileOutputStream fos = new FileOutputStream(aduPath.toFile(), true)) {
             var channel = fos.getChannel();

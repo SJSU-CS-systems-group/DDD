@@ -65,9 +65,9 @@ public class MessageProvider extends ContentProvider {
             String appId = getCallerAppId();
             cursor = new MatrixCursor(new String[] { "data", "id", "offset", "size" });
             if (selection != null) {
-                String clientId = ClientSecurity.getInstance().getClientID();
                 switch (selection) {
                     case "clientId" -> {
+                        String clientId = ClientSecurity.getInstance().getClientID();
                         cursor.newRow().add("data", clientId);
                         return cursor;
                     }
@@ -118,7 +118,7 @@ public class MessageProvider extends ContentProvider {
 
             logger.log(INFO, format("%s inserting: %s bytes, at %s, %s is finished", appName, data.length, offset, finished));
             return fromFile(sendADUsStorage.addADU(null, appName, data,
-                                                   aduId == null ? -1 : aduId, offset, finished));
+                                                   aduId == null ? -1 : aduId, offset == null ? 0 : offset, finished));
         } catch (IOException e) {
             logger.log(WARNING, "Unable to add file", e);
             return null;
