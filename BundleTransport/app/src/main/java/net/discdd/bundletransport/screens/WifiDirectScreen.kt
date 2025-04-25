@@ -1,7 +1,11 @@
 package net.discdd.bundletransport.screens
 
+import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
+import android.net.Uri
+import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -31,33 +35,42 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat.startActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.PermissionState
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 import net.discdd.bundletransport.R
 import net.discdd.bundletransport.TransportWifiDirectService
 import net.discdd.bundletransport.viewmodels.WifiDirectViewModel
+import net.discdd.components.WifiPermissionBanner
 import java.util.concurrent.CompletableFuture
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun WifiDirectScreen(
         wifiViewModel: WifiDirectViewModel = viewModel(),
         serviceReadyFuture: CompletableFuture<TransportWifiDirectService>,
+        nearbyWifiState: PermissionState,
         preferences: SharedPreferences = LocalContext.current.getSharedPreferences(
                 TransportWifiDirectService.WIFI_DIRECT_PREFERENCES,
                 Context.MODE_PRIVATE
         )
 ) {
     val state by wifiViewModel.state.collectAsState()
+    val numDenied by wifiViewModel.numDenied.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
     var showDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
     ) {
-
         LaunchedEffect(Unit) {
             wifiViewModel.initialize(serviceReadyFuture)
         }
@@ -80,7 +93,6 @@ fun WifiDirectScreen(
                         .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-
             var checked by remember {
                 mutableStateOf(
                         preferences.getBoolean(
@@ -89,21 +101,36 @@ fun WifiDirectScreen(
                         )
                 )
             }
-
             val nameValid by remember {
                 derivedStateOf { state.deviceName.startsWith("ddd_") }
+            }
+
+            if (!nearbyWifiState.status.isGranted) {
+                WifiPermissionBanner(numDenied, nearbyWifiState) {
+                    // if user denies access twice, manual access in settings is required
+                    if (numDenied >= 2) {
+                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = Uri.fromParts("package", context.packageName, null)
+                        }
+                        startActivity(context, intent, null)
+                    } else {
+                        wifiViewModel.incrementNumDenied()
+                        nearbyWifiState.launchPermissionRequest()
+                    }
+                }
             }
 
             Text(
                     text = state.wifiInfo,
                     modifier = Modifier.clickable { showDialog = true }
             )
+
             if (showDialog == true) {
-                var gi = wifiViewModel.getService()?.groupInfo
-                var connectedPeers: ArrayList<String> = ArrayList<String>()
-                if (gi != null) {
+                val connectedPeers: ArrayList<String> = ArrayList()
+                wifiViewModel.getService()?.groupInfo?.let { gi ->
                     gi.clientList.forEach { c -> connectedPeers.add(c.deviceName) }
                 }
+
                 AlertDialog(
                         title = { Text(text = stringResource(R.string.connected_devices)) },
                         text = { Text(text = connectedPeers.toTypedArray().joinToString(", ")) },
@@ -146,7 +173,8 @@ fun WifiDirectScreen(
 
                 FilledTonalButton(
                         onClick = { wifiViewModel.openInfoSettings() },
-                        modifier = Modifier.fillMaxWidth()) {
+                        modifier = Modifier.fillMaxWidth()
+                ) {
                     Text(stringResource(R.string.change_phone_name))
                 }
             }
@@ -158,8 +186,13 @@ fun WifiDirectScreen(
 }
 
 @Preview(showBackground = true)
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun WifiDirectScreenPreview() {
-    WifiDirectScreen(serviceReadyFuture = CompletableFuture())
+    val nearbyWifiState = rememberPermissionState(Manifest.permission.NEARBY_WIFI_DEVICES)
+    WifiDirectScreen(
+            serviceReadyFuture = CompletableFuture(),
+            nearbyWifiState = nearbyWifiState
+    )
 }
 

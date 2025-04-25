@@ -2,6 +2,7 @@ package net.discdd.bundletransport.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -112,7 +113,8 @@ fun ServerUploadScreen(
                     modifier = Modifier
                             .fillMaxWidth()
                             .padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
             ) {
                 /*
                 * The "toClient" section is the designated easter egg location for BundleTransport
@@ -137,9 +139,13 @@ fun ServerUploadScreen(
                 Spacer(modifier = Modifier.weight(1f))
                 FilledTonalButton(
                         onClick = { uploadViewModel.reloadCount() },
-                        modifier = Modifier.size(70.dp, 50.dp)
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                 ) {
-                    Icon(imageVector = Icons.Default.Refresh, contentDescription = "Reload Counts")
+                    Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Reload Counts",
+                            modifier = Modifier.size(24.dp)
+                    )
                 }
             }
 
