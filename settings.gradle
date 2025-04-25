@@ -1,3 +1,4 @@
 include ':android-core'
 include ':BundleClient:app'
 include ':BundleTransport:app'
+include ':DDDClient'
