@@ -229,7 +229,8 @@ public class StoreADUs {
      * @return
      * @throws IOException
      */
-    public File addADU(String clientId, String appId, byte[] data, long aduId, long offset, Boolean finished) throws IOException {
+    public File addADU(String clientId, String appId, byte[] data, long aduId, long offset, Boolean finished) throws
+            IOException {
         var appFolder = getAppFolder(clientId, appId);
         Metadata metadata = getMetadata(clientId, appId);
         var lastAduDeleted = metadata.lastAduDeleted;
