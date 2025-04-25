@@ -10,8 +10,10 @@ import net.discdd.datastore.providers.MessageProvider;
 
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.junit.runners.MethodSorters;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -22,6 +24,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 
 @RunWith(AndroidJUnit4.class)
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class MessageProviderTest {
 
     private MessageProvider messageProvider;
@@ -77,10 +80,11 @@ public class MessageProviderTest {
 
     @Test
     public void test3QuerySmallData() throws IOException {
-        Path receiveSmallDataPath = receiveADUStorePath.resolve("2");
+        Path receiveSmallDataPath = receiveADUStorePath.resolve("1");
         Files.write(receiveSmallDataPath, smallData.getBytes());
         try (var is = new MessageProviderInputStream(messageProvider, 1)) {
-            var readString = new String(is.readAllBytes());
+            byte[] allBytes = is.readAllBytes();
+            var readString = new String(allBytes);
             Assert.assertEquals(smallData, readString);
         }
     }
@@ -149,6 +153,7 @@ public class MessageProviderTest {
                 System.arraycopy(data, dataOffset, b, off, lenToCopy);
                 off += lenToCopy;
                 len -= lenToCopy;
+                rc += lenToCopy;
                 if (len > 0) checkData();
             }
             return rc;
