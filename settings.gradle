@@ -1,3 +1,4 @@
+include ':client-adapter'
 include ':android-core'
 include ':BundleClient:app'
 include ':BundleTransport:app'
