@@ -1,5 +1,8 @@
 package net.discdd.bundleclient;
 
+import androidx.annotation.NonNull;
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.LifecycleObserver;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
@@ -22,6 +25,17 @@ import java.util.List;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class MessageProviderTest {
 
+    public static final Lifecycle NULL_LIFECYCLE = new Lifecycle() {
+        @Override
+        public void addObserver(@NonNull LifecycleObserver lifecycleObserver) {}
+
+        @Override
+        public void removeObserver(@NonNull LifecycleObserver lifecycleObserver) {}
+
+        @NonNull
+        @Override
+        public State getCurrentState() {return null;}
+    };
     private Path sendADUStorePath;
     private Path receiveADUStorePath;
     private final String smallData = "Small Data";
@@ -32,7 +46,8 @@ public class MessageProviderTest {
     public void setUp() throws IOException {
         MessageProvider messageProvider = new MessageProvider();
         messageProvider.attachInfo(ApplicationProvider.getApplicationContext(), null);
-        adapter = new DDDClientAdapter(ApplicationProvider.getApplicationContext());
+        adapter = new DDDClientAdapter(ApplicationProvider.getApplicationContext(),
+                                       NULL_LIFECYCLE, null);
         // access the private sendADUsStorage and receiveADUsStorage fields in messageProvider
         String appId = ApplicationProvider.getApplicationContext().getPackageName();
         sendADUStorePath = ApplicationProvider.getApplicationContext().getDataDir().toPath().resolve("send").resolve(appId);
@@ -88,5 +103,15 @@ public class MessageProviderTest {
         Assert.assertEquals(adapter.getIncomingAduIds(), List.of(1L, 2L));
         adapter.deleteReceivedAdusUpTo(1);
         Assert.assertEquals(adapter.getIncomingAduIds(), List.of(2L));
+    }
+
+    @Test
+    public void test6NoFile() {
+        try (var is = adapter.receiveAdu(1)) {
+            var _ignore = is.read();
+            Assert.fail("Expected IOException read " + _ignore);
+        } catch (IOException e) {
+            // Good! this is what we wanted
+        }
     }
 }

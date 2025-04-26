@@ -1,9 +1,18 @@
 package net.discdd.adapter;
 
+import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.Uri;
+
+import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
+import androidx.lifecycle.DefaultLifecycleObserver;
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.LifecycleOwner;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -12,36 +21,84 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class DDDClientAdapter {
+public class DDDClientAdapter extends BroadcastReceiver {
+    public static final String BROADCAST_ACTION = "android.intent.dtn.DATA_RECEIVED";
     public static final String PROVIDER_NAME = "net.discdd.provider.datastoreprovider";
     public static final Uri PROVIDER_URI;
     static {
         PROVIDER_URI = Uri.parse("content://" + PROVIDER_NAME + "/messages");
     }
-    public static final int MAX_ADU_SIZE = 128*1024;
+    public static final int MAX_ADU_SIZE = 512*1024;
 
     final Context context;
     private final ContentResolver resolver;
     public long aduId = -1;
+    private final Runnable onAdusReceived;
 
-    public DDDClientAdapter(Context context) {
+    /**
+     * Create a DDDClientAdapter to send and receive ADUs to BundleClient.
+     * This adapter will also register a broadcast receiver to listen for
+     * ADUs received events and trigger the onAdusReceived callback when that
+     * happens. Events will not be listened for if either lifecycle or
+     * onAdusReceived is null.
+     *
+     * @param context the application context that is used to access the BundleClient MessageProvider.
+     * @param lifecycle the lifecycle of the application that is used to register the broadcast receiver. Broadcasts will not be received if this is null.
+     * @param onAdusReceived the Runnable to be invoked if the BundleClient has received ADUs for the application. This can be nulled.
+     */
+    public DDDClientAdapter(Context context, Lifecycle lifecycle, Runnable onAdusReceived) {
         this.context = context;
         this.resolver = context.getContentResolver();
+        this.onAdusReceived = onAdusReceived;
+        ContextCompat.registerReceiver(context,
+                                       this,
+                                       new IntentFilter(BROADCAST_ACTION),
+                                       ContextCompat.RECEIVER_EXPORTED);
+        if (lifecycle != null) {
+            lifecycle.addObserver(new DefaultLifecycleObserver() {
+                @Override
+                public void onDestroy(@NonNull LifecycleOwner owner) {
+                    context.unregisterReceiver(DDDClientAdapter.this);
+                    DefaultLifecycleObserver.super.onDestroy(owner);
+                }
+            });
+        }
     }
 
+    /**
+     * Create an OutputStream to send an ADU to BundleClient. The OutputStream must be closed before the ADU is processed by the BundleClient.
+     * THIS IS NOT THREADSAFE! THE APPLICATION MUST ENSURE THAT IT ONLY CREATES ONE ADU AT A TIME.
+     *
+     * @return an OutputStream to send an ADU to BundleClient. The OutputStream must be closed before the ADU is processed by the BundleClient. After closing the aduId in the MessageProviderOutputStream will be set.
+     */
     public MessageProviderOutputStream createAduToSend() {
         return new MessageProviderOutputStream();
     }
 
-    public MessageProviderInputStream receiveAdu(long aduId) {
+    /**
+     * Receive an ADU from BundleClient Through using an InputStream
+     *
+     * @param aduId the ADU to read..
+     * @return an InputStream that can be used to read the ADU data.
+     */
+    public MessageProviderInputStream receiveAdu(long aduId) throws IOException {
         return new MessageProviderInputStream(aduId);
     }
 
+    /**
+     * Delete all ADUs received by BundleClient up to the given aduId.
+     * @param aduId the ADU ID to delete and all ADUs before it.
+     * @return true if the ADUs were deleted, false otherwise.
+     */
     public boolean deleteReceivedAdusUpTo(long aduId) {
         var rc = resolver.delete(PROVIDER_URI, "deleteAllADUsUpto", new String[] { String.valueOf(aduId) });
         return rc == 1;
     }
 
+    /**
+     * Get the client ID of the application.
+     * @return the client ID of the application.
+     */
     public String getClientId() {
         try (var rsp = resolver.query(PROVIDER_URI, new String[] {"clientId"}, null, null)) {
             if (rsp == null || !rsp.moveToFirst()) {
@@ -51,6 +108,11 @@ public class DDDClientAdapter {
         }
     }
 
+    /**
+     * Get the list of ADU IDs that have been received by BundleClient for the Application.
+     * This is the list of ADUs that have been received but not yet deleted by the application.
+     * @return list of ADU ids.
+     */
     public List<Long> getIncomingAduIds() {
         try (var rsp = resolver.query(PROVIDER_URI, new String[] {"data"}, "aduIds", null, null)) {
             if (rsp == null) {
@@ -61,6 +123,13 @@ public class DDDClientAdapter {
                 aduIds.add(rsp.getLong(0));
             }
             return aduIds;
+        }
+    }
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        if (onAdusReceived != null) {
+            onAdusReceived.run();
         }
     }
 
@@ -82,16 +151,15 @@ public class DDDClientAdapter {
         @Override
         public void flush() throws IOException {
             if (bufferOffset == 0) return;
-            int length = bufferOffset;
-            sendProviderInsert(bufferOffset == buffer.length ? buffer : Arrays.copyOfRange(buffer, 0, bufferOffset), bufferOffset, nextWriteOffset, false);
+            sendProviderInsert(bufferOffset == buffer.length ? buffer : Arrays.copyOfRange(buffer, 0, bufferOffset), nextWriteOffset, false);
             nextWriteOffset += bufferOffset;
             bufferOffset = 0;
         }
 
-        private void sendProviderInsert(byte[] bytes, int len, long writeOffset, boolean finished) throws IOException {
+        private void sendProviderInsert(byte[] bytes, long writeOffset, boolean finished) throws IOException {
             ContentValues values = new ContentValues();
             values.put("data", bytes);
-            values.put("offset", (long) writeOffset);
+            values.put("offset", writeOffset);
             values.put("finished", finished);
             values.put("aduId", aduId);
             var rspUri = resolver.insert(PROVIDER_URI, values);
@@ -129,7 +197,7 @@ public class DDDClientAdapter {
             finished = true;
             flush();
             // we just want to close everything out
-            sendProviderInsert(new byte[0], 0, nextWriteOffset, true);
+            sendProviderInsert(new byte[0], nextWriteOffset, true);
         }
     }
 
@@ -140,17 +208,18 @@ public class DDDClientAdapter {
         final private long aduId;
         private boolean finished;
 
-        public MessageProviderInputStream(long aduId) {
+        public MessageProviderInputStream(long aduId) throws IOException {
             this.aduId = aduId;
+            checkData();
         }
 
         private int bytesRemaining() {
             return finished || data == null ? 0 : data.length - dataOffset;
         }
 
-        private void checkData() {
+        private void checkData() throws IOException {
             if (!finished && bytesRemaining() == 0) {
-                try (var rsp = resolver.query(PROVIDER_URI, new String[] { "data"}, "aduData", new String[] { String.valueOf(aduId), String.valueOf(nextReadOffset) }, null)) {
+                try (var rsp = resolver.query(PROVIDER_URI, new String[] { "data", "exception" }, "aduData", new String[] { String.valueOf(aduId), String.valueOf(nextReadOffset) }, null)) {
                     if (rsp == null || !rsp.moveToFirst()) {
                         // all done
                         data = new byte[0];
@@ -158,7 +227,16 @@ public class DDDClientAdapter {
                         finished = true;
                         return;
                     }
-                    data = rsp.getBlob(0);
+                    var exceptionIndex = 99;
+                    var dataIndex = 99;
+                    for (int i = 0; i < rsp.getColumnCount(); i++) {
+                        if ("exception".equals(rsp.getColumnName(i))) exceptionIndex = i;
+                        else if ("data".equals(rsp.getColumnName(i))) dataIndex = i;
+                    }
+                    if (rsp.getString(exceptionIndex) != null) {
+                        throw new IOException(rsp.getString(1));
+                    }
+                    data = rsp.getBlob(dataIndex);
                     nextReadOffset += data.length;
                     dataOffset = 0;
                     finished = data.length == 0;
@@ -167,7 +245,7 @@ public class DDDClientAdapter {
         }
 
         @Override
-        public int read() {
+        public int read() throws IOException {
             checkData();
             if (finished) {
                 return -1;
@@ -176,7 +254,7 @@ public class DDDClientAdapter {
         }
 
         @Override
-        public int read(byte[] b, int off, int len) {
+        public int read(byte[] b, int off, int len) throws IOException {
             checkData();
             if (finished) return -1;
             int rc = 0;
