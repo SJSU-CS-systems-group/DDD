@@ -25,10 +25,12 @@ public class DDDClientAdapter extends BroadcastReceiver {
     public static final String BROADCAST_ACTION = "android.intent.dtn.DATA_RECEIVED";
     public static final String PROVIDER_NAME = "net.discdd.provider.datastoreprovider";
     public static final Uri PROVIDER_URI;
+
     static {
         PROVIDER_URI = Uri.parse("content://" + PROVIDER_NAME + "/messages");
     }
-    public static final int MAX_ADU_SIZE = 512*1024;
+
+    public static final int MAX_ADU_SIZE = 512 * 1024;
 
     final Context context;
     private final ContentResolver resolver;
@@ -42,9 +44,11 @@ public class DDDClientAdapter extends BroadcastReceiver {
      * happens. Events will not be listened for if either lifecycle or
      * onAdusReceived is null.
      *
-     * @param context the application context that is used to access the BundleClient MessageProvider.
-     * @param lifecycle the lifecycle of the application that is used to register the broadcast receiver. Broadcasts will not be received if this is null.
-     * @param onAdusReceived the Runnable to be invoked if the BundleClient has received ADUs for the application. This can be nulled.
+     * @param context        the application context that is used to access the BundleClient MessageProvider.
+     * @param lifecycle      the lifecycle of the application that is used to register the broadcast receiver.
+     *                       Broadcasts will not be received if this is null.
+     * @param onAdusReceived the Runnable to be invoked if the BundleClient has received ADUs for the application.
+     *                       This can be nulled.
      */
     public DDDClientAdapter(Context context, Lifecycle lifecycle, Runnable onAdusReceived) {
         this.context = context;
@@ -66,10 +70,12 @@ public class DDDClientAdapter extends BroadcastReceiver {
     }
 
     /**
-     * Create an OutputStream to send an ADU to BundleClient. The OutputStream must be closed before the ADU is processed by the BundleClient.
+     * Create an OutputStream to send an ADU to BundleClient. The OutputStream must be closed before the ADU is
+     * processed by the BundleClient.
      * THIS IS NOT THREADSAFE! THE APPLICATION MUST ENSURE THAT IT ONLY CREATES ONE ADU AT A TIME.
      *
-     * @return an OutputStream to send an ADU to BundleClient. The OutputStream must be closed before the ADU is processed by the BundleClient. After closing the aduId in the MessageProviderOutputStream will be set.
+     * @return an OutputStream to send an ADU to BundleClient. The OutputStream must be closed before the ADU is
+     * processed by the BundleClient. After closing the aduId in the MessageProviderOutputStream will be set.
      */
     public MessageProviderOutputStream createAduToSend() {
         return new MessageProviderOutputStream();
@@ -87,6 +93,7 @@ public class DDDClientAdapter extends BroadcastReceiver {
 
     /**
      * Delete all ADUs received by BundleClient up to the given aduId.
+     *
      * @param aduId the ADU ID to delete and all ADUs before it.
      * @return true if the ADUs were deleted, false otherwise.
      */
@@ -97,10 +104,11 @@ public class DDDClientAdapter extends BroadcastReceiver {
 
     /**
      * Get the client ID of the application.
+     *
      * @return the client ID of the application.
      */
     public String getClientId() {
-        try (var rsp = resolver.query(PROVIDER_URI, new String[] {"clientId"}, null, null)) {
+        try (var rsp = resolver.query(PROVIDER_URI, new String[] { "clientId" }, null, null)) {
             if (rsp == null || !rsp.moveToFirst()) {
                 return null;
             }
@@ -111,15 +119,16 @@ public class DDDClientAdapter extends BroadcastReceiver {
     /**
      * Get the list of ADU IDs that have been received by BundleClient for the Application.
      * This is the list of ADUs that have been received but not yet deleted by the application.
+     *
      * @return list of ADU ids.
      */
     public List<Long> getIncomingAduIds() {
-        try (var rsp = resolver.query(PROVIDER_URI, new String[] {"data"}, "aduIds", null, null)) {
+        try (var rsp = resolver.query(PROVIDER_URI, new String[] { "data" }, "aduIds", null, null)) {
             if (rsp == null) {
                 return null;
             }
             var aduIds = new ArrayList<Long>();
-            for(rsp.moveToFirst();!rsp.isAfterLast();rsp.moveToNext()) {
+            for (rsp.moveToFirst(); !rsp.isAfterLast(); rsp.moveToNext()) {
                 aduIds.add(rsp.getLong(0));
             }
             return aduIds;
@@ -151,7 +160,9 @@ public class DDDClientAdapter extends BroadcastReceiver {
         @Override
         public void flush() throws IOException {
             if (bufferOffset == 0) return;
-            sendProviderInsert(bufferOffset == buffer.length ? buffer : Arrays.copyOfRange(buffer, 0, bufferOffset), nextWriteOffset, false);
+            sendProviderInsert(bufferOffset == buffer.length ? buffer : Arrays.copyOfRange(buffer, 0, bufferOffset),
+                               nextWriteOffset,
+                               false);
             nextWriteOffset += bufferOffset;
             bufferOffset = 0;
         }
@@ -219,7 +230,11 @@ public class DDDClientAdapter extends BroadcastReceiver {
 
         private void checkData() throws IOException {
             if (!finished && bytesRemaining() == 0) {
-                try (var rsp = resolver.query(PROVIDER_URI, new String[] { "data", "exception" }, "aduData", new String[] { String.valueOf(aduId), String.valueOf(nextReadOffset) }, null)) {
+                try (var rsp = resolver.query(PROVIDER_URI,
+                                              new String[] { "data", "exception" },
+                                              "aduData",
+                                              new String[] { String.valueOf(aduId), String.valueOf(nextReadOffset) },
+                                              null)) {
                     if (rsp == null || !rsp.moveToFirst()) {
                         // all done
                         data = new byte[0];
@@ -230,8 +245,9 @@ public class DDDClientAdapter extends BroadcastReceiver {
                     var exceptionIndex = 99;
                     var dataIndex = 99;
                     for (int i = 0; i < rsp.getColumnCount(); i++) {
-                        if ("exception".equals(rsp.getColumnName(i))) exceptionIndex = i;
-                        else if ("data".equals(rsp.getColumnName(i))) dataIndex = i;
+                        if ("exception".equals(rsp.getColumnName(i))) {
+                            exceptionIndex = i;
+                        } else if ("data".equals(rsp.getColumnName(i))) dataIndex = i;
                     }
                     if (rsp.getString(exceptionIndex) != null) {
                         throw new IOException(rsp.getString(1));
