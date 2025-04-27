@@ -11,6 +11,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Configure Maven to use GitHub Packages
+        run: |
+          mkdir -p ~/.m2
+          echo "<settings>
+            <servers>
+              <server>
+                <id>github</id>
+                <username>${{ github.actor }}</username>
+                <password>${{ secrets.GITHUB_TOKEN }}</password>
+              </server>
+            </servers>
+          </settings>" > ~/.m2/settings.xml
+
       - name: Maven install
         run: mvn -ntp install
 
@@ -28,6 +41,19 @@ jobs:
         with:
           java-version: "17"
           distribution: "temurin"
+
+      - name: Configure Maven to use GitHub Packages
+        run: |
+          mkdir -p ~/.m2
+          echo "<settings>
+            <servers>
+              <server>
+                <id>github</id>
+                <username>${{ github.actor }}</username>
+                <password>${{ secrets.GITHUB_TOKEN }}</password>
+              </server>
+            </servers>
+          </settings>" > ~/.m2/settings.xml
 
       - name: Maven install
         run: mvn -ntp install
