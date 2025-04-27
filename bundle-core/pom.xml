@@ -50,9 +50,20 @@
 
     <repositories>
         <repository>
-            <id>local-in-project</id>
-            <name>Local Maven Repo Inside Project</name>
-            <url>file://${project.basedir}/../local-maven-repo</url>
+            <id>central</id>
+            <name>Maven Central</name>
+            <url>https://repo.maven.apache.org/maven2</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>github</id>
+            <name>GitHub Packages</name>
+            <url>https://maven.pkg.github.com/SJSU-CS-systems-group/DDD</url>
         </repository>
     </repositories>
 
