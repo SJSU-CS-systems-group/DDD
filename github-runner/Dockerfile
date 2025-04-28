@@ -48,7 +48,6 @@ ENV INTELLIJ_VERSION=2023.3.5
 ENV INTELLIJ_HOME=${HOME}/intellij
 ENV PATH="${INTELLIJ_HOME}/bin:$PATH"
 
-USER root
 RUN wget -q https://download.jetbrains.com/idea/ideaIC-${INTELLIJ_VERSION}.tar.gz && \
     mkdir -p ${INTELLIJ_HOME} && \
     tar -xzf ideaIC-${INTELLIJ_VERSION}.tar.gz -C ${INTELLIJ_HOME} --strip-components=1 && \
