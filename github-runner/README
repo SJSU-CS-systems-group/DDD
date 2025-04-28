@@ -28,7 +28,6 @@ use the token from the ./config.sh line in the example script you see as TOKEN_F
 in the bash shell of the docker container, do the following:
 
 ```
-su - github-runner
 cd actions-runner
 ./config.sh --url https://github.com/SJSU-CS-systems-group/DDD --name RUNNER_NAME --token TOKEN_FROM_GITHUB_NEW_RUNNER --labels android
 exit
