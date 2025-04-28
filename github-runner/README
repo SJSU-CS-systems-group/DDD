@@ -28,6 +28,7 @@ use the token from the ./config.sh line in the example script you see as TOKEN_F
 in the bash shell of the docker container, do the following:
 
 ```
+su - github-runner
 cd actions-runner
 ./config.sh --url https://github.com/SJSU-CS-systems-group/DDD --name RUNNER_NAME --token TOKEN_FROM_GITHUB_NEW_RUNNER --labels android
 exit
@@ -39,7 +40,7 @@ we now need to delete and rerun the container to use the default entry point:
 ```
 sudo docker stop gha-android-runner
 sudo docker rm gha-android-runner
-sudo docker run \
+sudo docker run -d \
   --privileged -e RUNNER_ALLOW_RUNASROOT=1 --name gha-android-runner \
   -v gha-runner-data:/home/github-runner/actions-runner \
   gha-android-runner
