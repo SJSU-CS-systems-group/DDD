@@ -39,7 +39,7 @@ we now need to delete and rerun the container to use the default entry point:
 ```
 sudo docker stop gha-android-runner
 sudo docker rm gha-android-runner
-sudo docker run -d \
+sudo docker run -d --restart always \
   --privileged -e RUNNER_ALLOW_RUNASROOT=1 --name gha-android-runner \
   -v gha-runner-data:/home/github-runner/actions-runner \
   gha-android-runner
