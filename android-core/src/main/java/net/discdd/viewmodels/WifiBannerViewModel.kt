@@ -11,8 +11,8 @@ Viewmodels for screens that require functionality to NEARBY_WIFI_DEVICES will ex
 Ensure that the screens include the WifiPermissionBanner which prompts the user to grant access.
 This class keeps track of number of time users deny the permission in order to manipulate the UI/UX to grant the permission.
 */
-open class RuntimeViewModel(
-        application: Application
+open class WifiBannerViewModel(
+    application: Application
 ) : AndroidViewModel(application) {
     protected val context get() = getApplication<Application>()
     private val sharedPref = context.getSharedPreferences(NET_DISCDD_BUNDLECLIENT_NUM_DENIED, MODE_PRIVATE)

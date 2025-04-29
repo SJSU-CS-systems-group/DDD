@@ -15,6 +15,9 @@ class SettingsViewModel(
     private val _firstOpen = MutableStateFlow(true)
     val firstOpen = _firstOpen.asStateFlow()
 
+    private val _showBottomSheet = MutableStateFlow(true)
+    val showBottomSheet = _showBottomSheet.asStateFlow()
+
     private val _showEasterEgg = MutableStateFlow(false)
     val showEasterEgg = _showEasterEgg.asStateFlow()
 
@@ -26,6 +29,10 @@ class SettingsViewModel(
     fun onFirstOpen() {
         _firstOpen.value = false
         sharedPref.edit().putBoolean(NET_DISCDD_VIEWMODELS_FIRST_OPEN, false).apply()
+    }
+
+    fun hideBottomSheet() {
+        _showBottomSheet.value = false
     }
 
     fun onToggleEasterEgg() {

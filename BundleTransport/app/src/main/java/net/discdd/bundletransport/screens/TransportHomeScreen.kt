@@ -62,24 +62,31 @@ fun TransportHomeScreen(
     val nearbyWifiState = rememberPermissionState(
             Manifest.permission.NEARBY_WIFI_DEVICES
     )
+    val notificationState = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS,
+        onPermissionResult = {
+            viewModel.hideBottomSheet()
+            viewModel.onFirstOpen()
+        }
+    )
+    val runtimePermissions = listOf(nearbyWifiState, notificationState)
 
     val standardTabs = remember {
         listOf(
-                TabItem(
-                        title = context.getString(R.string.upload),
-                        screen = {
-                            ServerUploadScreen(settingsViewModel = viewModel) {
-                                viewModel.onToggleEasterEgg()
-                                Toast.makeText(context, "Easter Egg Toggled!", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                ),
-                TabItem(
-                        title = context.getString(R.string.storage),
-                        screen = {
-                            StorageScreen()
-                        }
-                ),
+            TabItem(
+                title = context.getString(R.string.upload),
+                screen = {
+                    ServerUploadScreen(settingsViewModel = viewModel) {
+                        viewModel.onToggleEasterEgg()
+                        Toast.makeText(context, "Easter Egg Toggled!", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            ),
+            TabItem(
+                title = context.getString(R.string.storage),
+                screen = {
+                    StorageScreen()
+                }
+            ),
         )
     }
 
@@ -89,35 +96,35 @@ fun TransportHomeScreen(
     */
     val adminTabs = listOf(
             TabItem(
-                    title = context.getString(R.string.logs),
-                    screen = { LogScreen() }
+                title = context.getString(R.string.logs),
+                screen = { LogScreen() }
             ),
             TabItem(
-                    title = context.getString(R.string.permissions),
-                    screen = { PermissionScreen() }
+                title = context.getString(R.string.permissions),
+                screen = { PermissionScreen(runtimePermissions = runtimePermissions) }
             ),
     )
 
     val wifiDirectTab = TabItem(
-            title = context.getString(R.string.local_wifi),
-            screen = {
-                WifiDirectScreen(
-                        serviceReadyFuture = TransportWifiServiceManager.serviceReady,
-                        nearbyWifiState = nearbyWifiState
-                )
-            }
+        title = context.getString(R.string.local_wifi),
+        screen = {
+            WifiDirectScreen(
+                serviceReadyFuture = TransportWifiServiceManager.serviceReady,
+                nearbyWifiState = nearbyWifiState
+            )
+        }
     )
 
     val usbTab = TabItem(
-            title = stringResource(R.string.usb),
-            screen = {
-                val usbViewModel: TransportUsbViewModel = viewModel()
-                UsbScreen(usbViewModel) { viewModel ->
-                    TransportUsbComponent(viewModel) {
-                        viewModel.populate()
-                    }
+        title = stringResource(R.string.usb),
+        screen = {
+            val usbViewModel: TransportUsbViewModel = viewModel()
+            UsbScreen(usbViewModel) { viewModel ->
+                TransportUsbComponent(viewModel) {
+                    viewModel.populate()
                 }
             }
+        }
     )
 
     var tabItems by remember {
@@ -133,58 +140,58 @@ fun TransportHomeScreen(
     }
 
     Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
     ) {
         val pagerState = rememberPagerState() { tabItems.size }
         val selectedTabIndex by remember {
             derivedStateOf { pagerState.currentPage }
         }
         Column(
-                modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize()
         ) {
             Row(
-                    modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
             ) {
                 Text(
-                        text = context.getString(R.string.app_name),
-                        style = MaterialTheme.typography.titleLarge
+                    text = context.getString(R.string.app_name),
+                    style = MaterialTheme.typography.titleLarge
                 )
             }
 
             ScrollableTabRow(
-                    selectedTabIndex = selectedTabIndex,
-                    edgePadding = 0.dp
+                selectedTabIndex = selectedTabIndex,
+                edgePadding = 0.dp
             ) {
                 tabItems.forEachIndexed { index, item ->
                     Tab(
-                            selected = index == selectedTabIndex,
-                            onClick = {
-                                scope.launch {
-                                    pagerState.animateScrollToPage(index)
-                                }
-                            },
-                            text = {
-                                Text(text = item.title)
+                        selected = index == selectedTabIndex,
+                        onClick = {
+                            scope.launch {
+                                pagerState.animateScrollToPage(index)
                             }
+                        },
+                        text = {
+                            Text(text = item.title)
+                        }
                     )
                 }
             }
 
             HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
+                state = pagerState,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
             ) { index ->
                 tabItems[index].screen()
             }
         }
 
         if (firstOpen) {
-            NotificationBottomSheet(viewModel)
+            NotificationBottomSheet(viewModel, notificationState)
         }
     }
 }

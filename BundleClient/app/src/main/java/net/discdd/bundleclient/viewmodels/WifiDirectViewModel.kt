@@ -1,11 +1,9 @@
 package net.discdd.bundleclient.viewmodels
 
 import android.app.Application
-import android.content.Context.MODE_PRIVATE
 import android.content.IntentFilter
 import android.net.wifi.p2p.WifiP2pGroup
 import android.text.format.DateUtils
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,7 +14,7 @@ import net.discdd.bundleclient.BundleClientServiceBroadcastReceiver
 import net.discdd.bundleclient.BundleClientWifiDirectService
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiServiceManager
-import net.discdd.viewmodels.RuntimeViewModel
+import net.discdd.viewmodels.WifiBannerViewModel
 import java.net.InetAddress
 import java.util.concurrent.CompletableFuture
 
@@ -42,7 +40,7 @@ data class WifiDirectState(
 
 class WifiDirectViewModel(
     application: Application,
-): RuntimeViewModel(application) {
+): WifiBannerViewModel(application) {
     private val bundleClientServiceBroadcastReceiver = BundleClientServiceBroadcastReceiver().apply {
         setViewModel(this@WifiDirectViewModel)
     }
