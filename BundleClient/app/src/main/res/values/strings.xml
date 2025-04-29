@@ -16,8 +16,8 @@
     <string name="permissions_tab">Permissions</string>
     <string name="usb_tab">Usb</string>
     <string name="logs_tab">Logs</string>
-    <string name="bm_tab">Bundle_Manager</string>
-    <string name="server_tab">Server></string>
+    <string name="bm_tab">Bundle Manager</string>
+    <string name="server_tab">Server</string>
     <string name="starting_file_receive">Starting File Receive...\n</string>
     <string name="incomplete_bundle_request">Incomplete %1$ %2$</string>
     <string name="failed">Failed</string>
