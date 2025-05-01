@@ -39,6 +39,7 @@ jobs:
         runner:
           - [self-hosted, cs-reed-02]
           - [self-hosted, cs-reed-03]
+          - [self-hosted, cs-reed-04]
           - [self-hosted, SJSU-office]
           - [ubuntu-latest]
     outputs:
@@ -126,7 +127,7 @@ jobs:
             cancelled=$(jq '[.jobs[] | select((.name | contains("self-hosted")) and (.conclusion == "cancelled"))] | length' results)
             success=$(jq '[.jobs[] | select((.name | contains("self-hosted")) and (.conclusion == "success"))] | length' results)
             failed=$(jq '[.jobs[] | select((.name | contains("self-hosted")) and (.conclusion == "failure"))] | length' results)
-            if [[ "$success" > 0 && "$cancelled" == 0 && "failed" == 0 ]]
+            if [[ "$success" > 0 && "$cancelled" == 0 && "$failed" == 0 ]]
             then
                 echo 'SUCCESS'
                 exit 0
