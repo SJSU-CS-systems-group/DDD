@@ -4,9 +4,12 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  packages: read
+
 jobs:
   compile:
-    runs-on: self-hosted
+    runs-on: ddd
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -54,7 +57,6 @@ jobs:
               </server>
             </servers>
           </settings>" > ~/.m2/settings.xml
-
       - name: Maven install
         run: mvn -ntp install
 

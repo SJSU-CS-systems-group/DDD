@@ -21,6 +21,6 @@ public class ExampleInstrumentedTest {
     public void useAppContext() {
         // Context of the app under test.
         Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        assertEquals("net.discdd.ddd_wifi.test", appContext.getPackageName());
+        assertEquals("net.discdd.android_core.test", appContext.getPackageName());
     }
 }
