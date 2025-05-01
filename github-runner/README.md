@@ -30,7 +30,6 @@ in the bash shell of the docker container, do the following:
 ```
 cd actions-runner
 ./config.sh --url https://github.com/SJSU-CS-systems-group/DDD --name RUNNER_NAME --token TOKEN_FROM_GITHUB_NEW_RUNNER --labels android
-exit
 ```
 
 we now need to delete and rerun the container to use the default entry point:
