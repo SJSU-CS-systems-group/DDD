@@ -185,9 +185,11 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
                 while (iterator.hasNext()) {
                     var peer = iterator.next();
                     try {
-                        if (!isDeviceTransport(peer)) { iterator.remove(); }
-                    } catch (Exception e) {
-                        iterator.remove();
+                        if (!isDeviceTransport(peer)) {
+                            iterator.remove(); //never reached
+                        }
+                    } catch (Exception e) { //always land here because of an URLSyntaxException
+                        //iterator.remove();
                     }
                 }
 
@@ -282,7 +284,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
                 logger.log(WARNING, "Failed to disconnect from group: " + oldGroupInfo.getNetworkName(), e);
             }
         }
-        return bundleTransmission.isAddressTransport(device.deviceAddress, 7777);
+        return bundleTransmission.isAddressTransport(device.deviceAddress, 7778);
     }
 
     private CompletableFuture<WifiP2pGroup> connectTo(WifiP2pDevice transport) {
