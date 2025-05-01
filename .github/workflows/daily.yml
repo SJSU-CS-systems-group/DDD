@@ -15,7 +15,7 @@ on:
 permissions:
   actions: read  # allow reading workflow job status
   contents: read # allow read access to repo contents (often needed)
-  package: read
+  packages: read
 
 # we are doing a subtle trick to avoid hanging forever if a machine is down:
 #     the job running on ubuntu-latest will monitor queued jobs for 15 minutes.
