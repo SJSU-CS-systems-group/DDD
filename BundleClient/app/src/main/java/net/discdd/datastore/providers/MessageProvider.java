@@ -140,6 +140,10 @@ public class MessageProvider extends ContentProvider {
                 receiveADUsStorage.deleteAllFilesUpTo(null, appName, lastProcessedADUId);
                 getContext().getContentResolver().notifyChange(uri, null);
                 return 1;
+            } else if ("deleteAuthADU".equals(selection)) {
+                sendADUsStorage.deleteAuthADU(null, appName);
+                getContext().getContentResolver().notifyChange(uri, null);
+                return 1;
             }
             return 0;
         } catch (Exception e) {

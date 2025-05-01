@@ -178,6 +178,21 @@ public class StoreADUs {
         }
     }
 
+    public void deleteAuthADU(String clientId, String appId) throws IOException {
+        var metadata = getMetadata(clientId, appId);
+        var aduId = getLastADUIdAdded(clientId, appId);
+        var aduFile = getADUFile(clientId, appId, aduId);
+        logger.log(INFO, "Deleting ADU file " + aduFile + " with ID " + aduId + " for client " + clientId + " app " + appId);
+        if (aduFile.delete()) {
+            logger.log(INFO, "Deleted ADU file " + aduFile);
+        } else {
+            logger.log(SEVERE, "Failed to delete ADU file " + aduFile);
+        }
+        metadata.lastAduAdded = aduId - 1;
+        metadata.lastAduDeleted = aduId;
+        setMetadata(clientId, appId, metadata);
+    }
+
     public byte[] getADU(String clientId, String appId, long aduId, long offset, int readLimit) throws IOException {
         var appFolder = getAppFolder(clientId, appId);
         try (var fis = new FileInputStream(appFolder.resolve(Long.toString(aduId)).toFile())) {
