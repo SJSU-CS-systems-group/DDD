@@ -27,7 +27,9 @@ public class DDDNettyTLS {
                         .clientAuth(ClientAuth.REQUIRE)
                         .trustManager(DDDTLSUtil.trustManager)
                         .build();
-        var serviceBuilder = NettyServerBuilder.forPort(port).sslContext(sslServerContext);
+        var serviceBuilder = NettyServerBuilder.forPort(port)
+                .sslContext(sslServerContext)
+                .maxInboundMessageSize(53 * 1024 * 1024); // 53 MB
         for (var service : services) {
             serviceBuilder.addService(service);
         }
