@@ -59,11 +59,11 @@ public class MessageProvider extends ContentProvider {
             @NonNull Uri uri,
             @Nullable String[] projection,
             @Nullable String selection, @Nullable String[] selectionArgs, @Nullable String sortOrder) {
-        MatrixCursor cursor;
+        MatrixCursor cursor = new MatrixCursor(new String[] { "data", "id", "offset", "exception" });
+
 
         try {
             String appId = getCallerAppId();
-            cursor = new MatrixCursor(new String[] { "data", "id", "offset", "size" });
             if (selection != null) {
                 switch (selection) {
                     case "clientId" -> {
@@ -82,7 +82,12 @@ public class MessageProvider extends ContentProvider {
                         assert selectionArgs != null;
                         long aduId = Long.parseLong(selectionArgs[0]);
                         long offset = selectionArgs.length > 1 ? Long.parseLong(selectionArgs[1]) : 0;
-                        cursor.newRow().add("data", receiveADUsStorage.getADU(null, appId, aduId, offset, MAX_ADU_SIZE));
+                        // make sure we get the data before we call new row, so that we don't get a partial row if an exception happens
+                        byte[] aduData =
+                                receiveADUsStorage.getADU(null, appId, aduId, offset, MAX_ADU_SIZE);
+                        cursor.newRow().add("data", aduData)
+                                .add("id", aduId)
+                                .add("offset", offset);
                         return cursor;
                     }
                     default -> {
@@ -91,11 +96,14 @@ public class MessageProvider extends ContentProvider {
                     }
                 }
             } else {
-                logger.log(SEVERE, format("%s made a request with no selection", appId));
+                List<StoreADUs.AduIdData> datalist = receiveADUsStorage.getAllAppIdAndData(appId);
+                for (StoreADUs.AduIdData adu: datalist) {
+                    cursor.newRow().add("data", new String(adu.data())).add("id", adu.id());
+                }
             }
         } catch (Exception ex) {
             logger.log(WARNING, "Error getting app data", ex);
-            cursor = null;
+            cursor.newRow().add("exception", ex.getMessage());
         }
         return cursor;
     }
