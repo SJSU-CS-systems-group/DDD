@@ -34,6 +34,9 @@ jobs:
           - [self-hosted, cs-reed-02]
           - [self-hosted, cs-reed-03]
           - [self-hosted, cs-reed-04]
+          - [self-hosted, cs-reed-05]
+          - [self-hosted, cs-reed-06]
+          - [self-hosted, cs-reed-07]
           - [self-hosted, SJSU-office]
           - [ubuntu-latest]
     outputs:
@@ -72,6 +75,16 @@ jobs:
       - name: Maven install
         if: contains(matrix.runner, 'ubuntu-latest') == false
         run: |
+            mkdir -p ~/.m2
+            echo "<settings>
+              <servers>
+                <server>
+                  <id>github</id>
+                  <username>github-actions[bot]</username>
+                  <password>${{ secrets.GITHUB_TOKEN }}</password>
+                </server>
+              </servers>
+            </settings>" > ~/.m2/settings.xml
             mvn -ntp install
 
       - name: Gradle connected tests
