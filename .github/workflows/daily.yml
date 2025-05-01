@@ -26,7 +26,6 @@ jobs:
         runner:
           - [self-hosted, cs-reed-02]
           - [self-hosted, cs-reed-03]
-          - [self-hosted, cs-reed-05]
           - [self-hosted, SJSU-office]
           - [ubuntu-latest]
     outputs:
