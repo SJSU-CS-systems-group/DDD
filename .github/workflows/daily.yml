@@ -34,6 +34,9 @@ jobs:
           - [self-hosted, cs-reed-02]
           - [self-hosted, cs-reed-03]
           - [self-hosted, cs-reed-04]
+          - [self-hosted, cs-reed-05]
+          - [self-hosted, cs-reed-06]
+          - [self-hosted, cs-reed-07]
           - [self-hosted, SJSU-office]
           - [ubuntu-latest]
     outputs:
