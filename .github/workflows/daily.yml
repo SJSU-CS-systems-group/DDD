@@ -17,17 +17,10 @@ permissions:
   contents: read # allow read access to repo contents (often needed)
 
 # we are doing a subtle trick to avoid hanging forever if a machine is down:
-#     the job running on ubuntu-latest will fail after 15 minutes. that will
-#     cause the whole daily job to fail and cancel the hung jobs going to
-#     runners that are down. that is why we skip most of the steps where
-#     ubuntu-latest is in the runner list and on the last step we sleep for
-#     15 minutes and then fail.
-#
-# this trick means that the jobs will always take at least 15 minutes, since
-# that is how long the timeout job is going to take, and all runs of daily
-# will end in failure. for the report job, we will get the status of each
-# of the runners (skipping the ubuntu-latest runner that times out) and
-# figure out the actual success of the run.
+#     the job running on ubuntu-latest will monitor queued jobs for 15 minutes.
+#     once everything is in progress or completed, it will exit. if a jobs
+#     remains forever queued, it will fail with an error after 15 minutes,
+#     which will cancel the stuck jobs.
 
 jobs:
   daily:
@@ -109,29 +102,19 @@ jobs:
         if: contains(matrix.runner, 'ubuntu-latest')
         id: timeout
         run: |
+             # check every 10 seconds 90 times for queued hosts
+             for i in {0..90}
+             do
+                 curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github+json" \
+                  "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs?per_page=100" > results
+                queued=$(jq '[.jobs[] | select(.status == "queued")] | length' results)
+                if [[ "$queued" == 0 ]]
+                then
+                    exit 0
+                fi
+                sleep 10
              sleep 900
              echo "timeout=TIMEOUT" >> $GITHUB_OUTPUT
              exit 1
 
-  report:
-    needs: daily
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check results
-        # collect the result of the runs using the web API
-        run: |
-            curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github+json" \
-             "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs?per_page=100" > results
-            cancelled=$(jq '[.jobs[] | select((.name | contains("self-hosted")) and (.conclusion == "cancelled"))] | length' results)
-            success=$(jq '[.jobs[] | select((.name | contains("self-hosted")) and (.conclusion == "success"))] | length' results)
-            failed=$(jq '[.jobs[] | select((.name | contains("self-hosted")) and (.conclusion == "failure"))] | length' results)
-            if [[ "$success" > 0 && "$cancelled" == 0 && "$failed" == 0 ]]
-            then
-                echo 'SUCCESS'
-                exit 0
-            else
-                echo "$cancelled Cancelled, $failed Failed, $success Success"
-                exit 1
-            fi
