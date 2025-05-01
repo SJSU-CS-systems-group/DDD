@@ -32,8 +32,8 @@ public class LocalReportSender implements ReportSender {
 
     @Override
     public void send(Context context, CrashReportData errorContent) throws ReportSenderException {
-        Path rootDir = context.getApplicationContext().getExternalFilesDir(null).toPath();
-        Path destDir = rootDir.resolve("BundleTransmission/server");
+        Path rootDir = context.getApplicationContext().getDataDir().toPath();
+        Path destDir = rootDir.resolve("to-be-bundled");
         if (destDir.toFile().exists()) {
             log.i("ACRA local reports sender ", "We are writing crash report to transport device storage");
             rootDir = destDir;
