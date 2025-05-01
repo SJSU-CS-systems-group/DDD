@@ -1,0 +1,121 @@
+# Add to the top of your workflow YAML for VSCode / YAML validation
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow
+
+name: Runner Health Check and Full Test
+
+
+on:
+  schedule:
+    - cron: '0 11 * * *'
+  pull_request:
+    branches: [main]
+    paths: [.github/workflows/daily.yml]
+  workflow_dispatch:
+
+permissions:
+  actions: read  # allow reading workflow job status
+  contents: read # allow read access to repo contents (often needed)
+  packages: read
+
+# we are doing a subtle trick to avoid hanging forever if a machine is down:
+#     the job running on ubuntu-latest will monitor queued jobs for 15 minutes.
+#     once everything is in progress or completed, it will exit. if a jobs
+#     remains forever queued, it will fail with an error after 15 minutes,
+#     which will cancel the stuck jobs.
+
+jobs:
+  daily:
+    timeout-minutes: 20
+    strategy:
+      max-parallel: 3  # don't use up all the runners
+      matrix:
+        # tragically, there isn't a nice way to dynamically build this list...
+        runner:
+          - [self-hosted, cs-reed-02]
+          - [self-hosted, cs-reed-03]
+          - [self-hosted, cs-reed-04]
+          - [self-hosted, SJSU-office]
+          - [ubuntu-latest]
+    outputs:
+      # i was hoping that we could make use of these outputs, but they don't
+      # get aggregated properly to be useful :'( it was hard to figure out
+      # how it all works. i'm leaving here just in case aggregation starts
+      # working in the future
+      timeout: ${{ steps.timeout.outputs.timeout }}
+      started: ${{ steps.started.outputs.started }}
+      finished: ${{ steps.finished.outputs.finished }}
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Print runner info
+        run: 'echo "Running test "'
+
+      - name: Ensure Android Emulator is Running
+        if: contains(matrix.runner, 'ubuntu-latest') == false
+        id: started
+        run: |
+            echo "started='${{ matrix.runner[1] }}'" >> $GITHUB_OUTPUT
+            if adb devices | grep "emulator"
+            then
+                echo "Emulator already running."
+            else
+                echo "Starting emulator..."
+                set +e
+                sudo chmod o+r,o+w /dev/kvm
+                set -e
+                nohup emulator -avd test_avd-33 -no-window -no-audio -gpu swiftshader_indirect -no-snapshot -wipe-data > /tmp/emulator.log 2>&1 &
+            fi
+
+      - name: Checkout
+        if: contains(matrix.runner, 'ubuntu-latest') == false
+        uses: actions/checkout@v4
+
+      - name: Maven install
+        if: contains(matrix.runner, 'ubuntu-latest') == false
+        run: |
+            mvn -ntp install
+
+      - name: Gradle connected tests
+        if: contains(matrix.runner, 'ubuntu-latest') == false
+        id: finished
+        run: |
+            if adb devices | grep "emulator"
+            then
+                echo "Emulator already running."
+                set +e
+                # we don't want to immediately fail on an error since we want to
+                # collect the logs and print those before we exit with the actual
+                # exit code
+                ./gradlew connectedDebugAndroidTest --parallel
+                TEST_RESULT=$?
+                set -e
+                adb logcat -s TestRunner -d
+                echo "finished=$TEST_RESULT" >> $GITHUB_OUTPUT
+                exit $TEST_RESULT
+            else
+                echo "Emulator not running"
+                exit 1
+            fi
+
+      - name: Fail after 15 minutes
+        # this runner just waits for 15 minutes to fail. it is the only thing
+        # that ubuntu-latest does for this job. as a side effect it will kill
+        # any stuck runners
+        if: contains(matrix.runner, 'ubuntu-latest')
+        id: timeout
+        run: |
+             # check every 10 seconds 90 times for queued hosts
+             for i in {0..90}
+             do
+                 curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github+json" \
+                  "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs?per_page=100" > results
+                queued=$(jq '[.jobs[] | select(.status == "queued")] | length' results)
+                if [[ "$queued" == 0 ]]
+                then
+                    exit 0
+                fi
+                sleep 10
+             done
+             echo "timeout=TIMEOUT" >> $GITHUB_OUTPUT
+             exit 1
+
