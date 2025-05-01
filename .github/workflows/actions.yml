@@ -32,3 +32,33 @@ jobs:
 
       - name: Gradle release build
         run: ./gradlew assembleRelease --parallel
+
+  compile-github:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK (only on GitHub-hosted)
+        uses: actions/setup-java@v3
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Configure Maven to use GitHub Packages
+        run: |
+          mkdir -p ~/.m2
+          echo "<settings>
+            <servers>
+              <server>
+                <id>github</id>
+                <username>github-actions[bot]</username>
+                <password>${{ secrets.GITHUB_TOKEN }}</password>
+              </server>
+            </servers>
+          </settings>" > ~/.m2/settings.xml
+      - name: Maven install
+        run: mvn -ntp install
+
+      - name: Gradle release build
+        run: ./gradlew assembleRelease --parallel
