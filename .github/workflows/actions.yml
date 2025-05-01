@@ -4,9 +4,12 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  packages: read
+
 jobs:
   compile:
-    runs-on: self-hosted
+    runs-on: ddd
     steps:
       - name: Checkout
         uses: actions/checkout@v4
