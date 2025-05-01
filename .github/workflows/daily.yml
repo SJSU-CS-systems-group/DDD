@@ -16,9 +16,22 @@ permissions:
   actions: read  # allow reading workflow job status
   contents: read # allow read access to repo contents (often needed)
 
+# we are doing a subtle trick to avoid hanging forever if a machine is down:
+#     the job running on ubuntu-latest will fail after 15 minutes. that will
+#     cause the whole daily job to fail and cancel the hung jobs going to
+#     runners that are down. that is why we skip most of the steps where
+#     ubuntu-latest is in the runner list and on the last step we sleep for
+#     15 minutes and then fail.
+#
+# this trick means that the jobs will always take at least 15 minutes, since
+# that is how long the timeout job is going to take, and all runs of daily
+# will end in failure. for the report job, we will get the status of each
+# of the runners (skipping the ubuntu-latest runner that times out) and
+# figure out the actual success of the run.
+
 jobs:
   daily:
-    timeout-minutes: 15
+    timeout-minutes: 20
     strategy:
       max-parallel: 3  # don't use up all the runners
       matrix:
@@ -29,6 +42,10 @@ jobs:
           - [self-hosted, SJSU-office]
           - [ubuntu-latest]
     outputs:
+      # i was hoping that we could make use of these outputs, but they don't
+      # get aggregated properly to be useful :'( it was hard to figure out
+      # how it all works. i'm leaving here just in case aggregation starts
+      # working in the future
       timeout: ${{ steps.timeout.outputs.timeout }}
       started: ${{ steps.started.outputs.started }}
       finished: ${{ steps.finished.outputs.finished }}
@@ -70,6 +87,9 @@ jobs:
             then
                 echo "Emulator already running."
                 set +e
+                # we don't want to immediately fail on an error since we want to
+                # collect the logs and print those before we exit with the actual
+                # exit code
                 ./gradlew connectedDebugAndroidTest --parallel
                 TEST_RESULT=$?
                 set -e
@@ -82,6 +102,9 @@ jobs:
             fi
 
       - name: Fail after 15 minutes
+        # this runner just waits for 15 minutes to fail. it is the only thing
+        # that ubuntu-latest does for this job. as a side effect it will kill
+        # any stuck runners
         if: contains(matrix.runner, 'ubuntu-latest')
         id: timeout
         run: |
@@ -95,6 +118,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check results
+        # collect the result of the runs using the web API
         run: |
             curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github+json" \
