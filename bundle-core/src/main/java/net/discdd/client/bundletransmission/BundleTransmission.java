@@ -242,6 +242,8 @@ public class BundleTransmission {
         private long lastSeen;
         /* @param recencyTime time from the last recencyBlob received */
         private long recencyTime;
+        /* @param lastRecencyCheck time from the last comparison of recencyBlobTimeStamp and lastExchange */
+        private long lastRecencyCheck;
 
         public RecentTransport(String deviceAddress) {
             this.deviceAddress = deviceAddress;
@@ -276,6 +278,19 @@ public class BundleTransmission {
             var now = System.currentTimeMillis();
             recentTransport.lastExchange = now;
             recentTransport.lastSeen = now;
+        }
+    }
+
+    public void timestampRecencyCheck(String deviceAddress) {
+        synchronized (recentTransports) {
+            RecentTransport recentTransport = recentTransports.computeIfAbsent(deviceAddress, RecentTransport::new);
+            recentTransport.lastRecencyCheck = System.currentTimeMillis();
+        }
+    }
+
+    public void removePastTransport(String deviceAddress) {
+        synchronized (recentTransports) {
+            recentTransports.remove(deviceAddress);
         }
     }
 

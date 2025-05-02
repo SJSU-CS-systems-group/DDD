@@ -42,6 +42,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -181,19 +182,34 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
                 logger.info("WifiDirectManager peers changed");
                 var peerlist = wifiDirectManager.getPeerList();
                 peerlist.stream().filter(peer -> peer.deviceName.startsWith("ddd_"))
-                        .forEach(peer -> bundleTransmission.processDiscoveredPeer(peer.deviceAddress, peer.deviceName));
-                // filter any devices that are not transport
-                var iterator = peerlist.iterator();
-                while (iterator.hasNext()) {
-                    var peer = iterator.next();
-                    try {
-                        if (wifiDirectManager.getGroupOwnerAddress() != null && !isDeviceTransport(peer)) {
-                            //iterator.remove();
-                        }
-                    } catch (Exception e) { //always land here because of an URLSyntaxException or NullPointerException
-                        //iterator.remove();
-                    }
-                }
+                        .forEach(peer -> {
+                            var recentTransport = bundleTransmission.getRecentTransport(peer.deviceAddress);
+                            if (recentTransport != null) { //peer is in recentTransport
+                                if (recentTransport.getLastRecencyCheck() + 120000 < System.currentTimeMillis()) {
+                                    initiateExchange(peer.deviceAddress);
+                                    try {
+                                        if (isDeviceTransport(peer)) {
+                                            bundleTransmission.processDiscoveredPeer(peer.deviceAddress, peer.deviceName);
+                                            bundleTransmission.timestampRecencyCheck(peer.deviceAddress);
+                                        } else {
+                                            bundleTransmission.removePastTransport(peer.deviceAddress);
+                                        }
+                                    } catch (Exception e) {
+                                        //not sure how to handle
+                                    }
+                                }
+                            } else { //peer is not in recentTransport
+                                initiateExchange(peer.deviceAddress);
+                                try {
+                                    if (isDeviceTransport(peer)) {
+                                        bundleTransmission.processDiscoveredPeer(peer.deviceAddress, peer.deviceName);
+                                        bundleTransmission.timestampRecencyCheck(peer.deviceAddress);
+                                    }
+                                } catch (Exception e) {
+                                    //not sure how to handle
+                                }
+                            }
+                        });
 
                 // expire peers that haven't been seen for a minute
                 long expirationTime = System.currentTimeMillis() - 60 * 1000;
@@ -286,6 +302,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
                 logger.log(WARNING, "Failed to disconnect from group: " + oldGroupInfo.getNetworkName(), e);
             }
         }
+        if (wifiDirectManager.getGroupOwnerAddress() == null) return false;
         return bundleTransmission.isAddressTransport(device.deviceAddress, wifiDirectManager.getGroupOwnerAddress().getHostAddress(), 7777); //"192.168.49.1"
     }
 
