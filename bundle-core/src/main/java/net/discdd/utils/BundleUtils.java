@@ -320,7 +320,10 @@ public class BundleUtils {
         // add the records to the inner jar
         innerJar.createEntry("acknowledgement.txt", ackedEncryptedBundleId.getBytes());
         innerJar.createEntry("routing.metadata", routingData == null ? "{}".getBytes() : routingData);
-        innerJar.createEntry("crash_report.txt", crashReport.getBytes()); //goal: create zip file entry for reports file
+        if (crashReport != null) {
+            innerJar.createEntry("crash_report.txt", crashReport.getBytes()); //goal: create zip file entry for reports file
+            //i forgot
+        }
 
         for (var adu : adus) {
             try (var os = innerJar.createEntry(Paths.get(Constants.BUNDLE_ADU_DIRECTORY_NAME,

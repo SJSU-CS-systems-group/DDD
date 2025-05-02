@@ -95,6 +95,7 @@ public class TransportToBundleServerManager implements Runnable {
             var bundlesFromClients = populateListFromPath(fromClientPath);
             var bundlesFromServer = populateListFromPath(fromServerPath);
 
+            //if crash report exists, upload it
             var inventoryResponse = bsStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     .bundleInventory(BundleInventoryRequest.newBuilder()
                                              .addAllBundlesFromClientsOnTransport(bundlesFromClients)
@@ -236,5 +237,9 @@ public class TransportToBundleServerManager implements Runnable {
             }
         }
         return listOfBundleIds;
+    }
+
+    private List<Files> extractCrashFromPath(Path path) {
+
     }
 }

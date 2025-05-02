@@ -19,15 +19,16 @@ message BundleInventoryResponse {
   repeated EncryptedBundleId bundlesToDelete = 3;
 }
 
-message BundleCrashReportRequest {
-  bytes crashReport = 1;
+
+message CrashReportRequest {
+  bytes crashReportData = 1;
 }
 
-message BundleCrashReportResponse {
-  int32 status = 1;
+message CrashReportResponse {
+  Status result = 1;
 }
 
 service BundleServerService {
   rpc bundleInventory(BundleInventoryRequest) returns (BundleInventoryResponse) {}
-  rpc uploadCrashReport(BundleCrashReportRequest) returns (BundleCrashReportResponse) {}
+  rpc CrashReports(CrashReportRequest) returns (CrashReportResponse) {}
 }
