@@ -27,7 +27,7 @@ jobs:
   daily:
     timeout-minutes: 20
     strategy:
-      max-parallel: 3  # don't use up all the runners
+      max-parallel: 4  # don't use up all the runners
       matrix:
         # tragically, there isn't a nice way to dynamically build this list...
         runner:
@@ -85,7 +85,7 @@ jobs:
                 </server>
               </servers>
             </settings>" > ~/.m2/settings.xml
-            mvn -ntp install
+            mvn -T 1.5C -ntp install
 
       - name: Gradle connected tests
         if: contains(matrix.runner, 'ubuntu-latest') == false
@@ -98,7 +98,7 @@ jobs:
                 # we don't want to immediately fail on an error since we want to
                 # collect the logs and print those before we exit with the actual
                 # exit code
-                ./gradlew connectedDebugAndroidTest --parallel
+                DEFAULT_JVM_OPTS='"-Xmx16g" "-Xms16g"' ./gradlew connectedDebugAndroidTest --parallel
                 TEST_RESULT=$?
                 set -e
                 adb logcat -s TestRunner -d
