@@ -41,8 +41,8 @@ publishing {
             groupId = 'net.discdd'
             artifactId = 'client-adapter'
             version = '0.0.1-SNAPSHOT'
+            artifact("$buildDir/outputs/aar/${project.name}-release.aar")
         }
-
     }
 
     repositories {
