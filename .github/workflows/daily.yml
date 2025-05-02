@@ -85,7 +85,7 @@ jobs:
                 # we don't want to immediately fail on an error since we want to
                 # collect the logs and print those before we exit with the actual
                 # exit code
-                ./gradlew connectedDebugAndroidTest --parallel
+                DEFAULT_JVM_OPTS='"-Xmx16g" "-Xms16g"' ./gradlew connectedDebugAndroidTest --parallel
                 TEST_RESULT=$?
                 set -e
                 adb logcat -s TestRunner -d
