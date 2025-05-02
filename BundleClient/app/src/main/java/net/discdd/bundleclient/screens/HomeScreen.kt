@@ -49,7 +49,7 @@ data class TabItem(
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun HomeScreen(
-    viewModel: SettingsViewModel = viewModel(),
+    viewModel: SettingsViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -63,7 +63,6 @@ fun HomeScreen(
             viewModel.onFirstOpen()
         }
     )
-    val runtimePermissions = listOf(nearbyWifiState, notificationState)
 
     val standardTabs = listOf(
         TabItem(
@@ -99,7 +98,7 @@ fun HomeScreen(
         ),
         TabItem(
             title = context.getString(R.string.permissions_tab),
-            screen = { PermissionScreen(runtimePermissions = runtimePermissions) }
+            screen = { PermissionScreen(runtimePermissions = listOf(nearbyWifiState, notificationState)) }
         ),
         TabItem(
             title = context.getString(R.string.wifi_aware_tab),

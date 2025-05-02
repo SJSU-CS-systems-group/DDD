@@ -24,6 +24,9 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -40,15 +43,14 @@ import net.discdd.viewmodels.SettingsViewModel
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun NotificationBottomSheet(
-    viewModel: SettingsViewModel,
-    notificationState: PermissionState,
+    notificationState: PermissionState
 ) {
     val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val showBottomSheet by viewModel.showBottomSheet.collectAsState()
+    var showBottomSheet by remember { mutableStateOf(true) }
 
     if (showBottomSheet) {
         ModalBottomSheet(
-            onDismissRequest = { viewModel.hideBottomSheet() },
+            onDismissRequest = { showBottomSheet = false },
             sheetState = bottomSheetState,
             shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
         ) {
@@ -64,7 +66,7 @@ fun NotificationBottomSheet(
                     horizontalArrangement = Arrangement.End
                 ) {
                     IconButton(
-                        onClick = { viewModel.hideBottomSheet() }
+                        onClick = { showBottomSheet = false }
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Close,
@@ -116,7 +118,6 @@ fun NotificationBottomSheet(
 @Preview(showBackground = true)
 @Composable
 fun NotificationBottomSheetPreview() {
-    val viewModel = SettingsViewModel(Application())
     val notificationState = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS)
-    NotificationBottomSheet(viewModel, notificationState)
+    NotificationBottomSheet(notificationState)
 }

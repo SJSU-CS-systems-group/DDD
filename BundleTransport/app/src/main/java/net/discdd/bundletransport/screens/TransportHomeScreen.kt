@@ -68,7 +68,6 @@ fun TransportHomeScreen(
             viewModel.onFirstOpen()
         }
     )
-    val runtimePermissions = listOf(nearbyWifiState, notificationState)
 
     val standardTabs = remember {
         listOf(
@@ -101,7 +100,7 @@ fun TransportHomeScreen(
             ),
             TabItem(
                 title = context.getString(R.string.permissions),
-                screen = { PermissionScreen(runtimePermissions = runtimePermissions) }
+                screen = { PermissionScreen(runtimePermissions = listOf(nearbyWifiState, notificationState)) }
             ),
     )
 
@@ -191,7 +190,7 @@ fun TransportHomeScreen(
         }
 
         if (firstOpen) {
-            NotificationBottomSheet(viewModel, notificationState)
+            NotificationBottomSheet(notificationState)
         }
     }
 }
