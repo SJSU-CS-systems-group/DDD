@@ -57,7 +57,7 @@ jobs:
             <servers>
               <server>
                 <id>github</id>
-                <username>github-actions[bot]</username>
+                <username>${{ github.actor }}</username>
                 <password>${{ secrets.GITHUB_TOKEN }}</password>
               </server>
             </servers>
