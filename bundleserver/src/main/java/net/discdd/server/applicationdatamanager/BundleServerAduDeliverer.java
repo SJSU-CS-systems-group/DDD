@@ -75,6 +75,7 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
                             .build();
                     var channel = NettyChannelBuilder.forTarget(appAdapter.getAddress())
                             .useTransportSecurity()
+                            .maxInboundMessageSize(53 * 1024 * 1024)
                             .sslContext(sslClientContext)
                             .build();
 
