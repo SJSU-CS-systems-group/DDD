@@ -37,6 +37,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
         image: ghcr.io/sjsu-cs-systems-group/ddd-job-image:latest
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            GITHUB_ACTOR: ${{ github.actor }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
