@@ -44,14 +44,14 @@ import net.discdd.screens.UsbScreen
 import net.discdd.viewmodels.SettingsViewModel
 
 data class TabItem(
-    val title: String,
-    val screen: @Composable () -> Unit,
+        val title: String,
+        val screen: @Composable () -> Unit,
 )
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun TransportHomeScreen(
-    viewModel: SettingsViewModel = viewModel()
+        viewModel: SettingsViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -60,31 +60,31 @@ fun TransportHomeScreen(
     val showEasterEgg by viewModel.showEasterEgg.collectAsState()
     val internetAvailable by ConnectivityManager.internetAvailable.collectAsState()
     val nearbyWifiState = rememberPermissionState(
-        Manifest.permission.NEARBY_WIFI_DEVICES
+            Manifest.permission.NEARBY_WIFI_DEVICES
     )
     val notificationState = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS,
-        onPermissionResult = {
-            viewModel.onFirstOpen()
-        }
+            onPermissionResult = {
+                viewModel.onFirstOpen()
+            }
     )
 
     val standardTabs = remember {
         listOf(
-            TabItem(
-                title = context.getString(R.string.upload),
-                screen = {
-                    ServerUploadScreen(settingsViewModel = viewModel) {
-                        viewModel.onToggleEasterEgg()
-                        Toast.makeText(context, "Easter Egg Toggled!", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            ),
-            TabItem(
-                title = context.getString(R.string.storage),
-                screen = {
-                    StorageScreen()
-                }
-            ),
+                TabItem(
+                        title = context.getString(R.string.upload),
+                        screen = {
+                            ServerUploadScreen(settingsViewModel = viewModel) {
+                                viewModel.onToggleEasterEgg()
+                                Toast.makeText(context, "Easter Egg Toggled!", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                ),
+                TabItem(
+                        title = context.getString(R.string.storage),
+                        screen = {
+                            StorageScreen()
+                        }
+                ),
         )
     }
 
@@ -93,36 +93,36 @@ fun TransportHomeScreen(
     * these features can be toggled by interacting with the Easter Egg
     */
     val adminTabs = listOf(
-        TabItem(
-            title = context.getString(R.string.logs),
-            screen = { LogScreen() }
-        ),
-        TabItem(
-            title = context.getString(R.string.permissions),
-            screen = { PermissionScreen(runtimePermissions = listOf(nearbyWifiState, notificationState)) }
-        ),
+            TabItem(
+                    title = context.getString(R.string.logs),
+                    screen = { LogScreen() }
+            ),
+            TabItem(
+                    title = context.getString(R.string.permissions),
+                    screen = { PermissionScreen(runtimePermissions = listOf(nearbyWifiState, notificationState)) }
+            ),
     )
 
     val wifiDirectTab = TabItem(
-        title = context.getString(R.string.local_wifi),
-        screen = {
-            WifiDirectScreen(
-                serviceReadyFuture = TransportWifiServiceManager.serviceReady,
-                nearbyWifiState = nearbyWifiState
-            )
-        }
+            title = context.getString(R.string.local_wifi),
+            screen = {
+                WifiDirectScreen(
+                        serviceReadyFuture = TransportWifiServiceManager.serviceReady,
+                        nearbyWifiState = nearbyWifiState
+                )
+            }
     )
 
     val usbTab = TabItem(
-        title = stringResource(R.string.usb),
-        screen = {
-            val usbViewModel: TransportUsbViewModel = viewModel()
-            UsbScreen(usbViewModel) { viewModel ->
-                TransportUsbComponent(viewModel) {
-                    viewModel.populate()
+            title = stringResource(R.string.usb),
+            screen = {
+                val usbViewModel: TransportUsbViewModel = viewModel()
+                UsbScreen(usbViewModel) { viewModel ->
+                    TransportUsbComponent(viewModel) {
+                        viewModel.populate()
+                    }
                 }
             }
-        }
     )
 
     var tabItems by remember {
@@ -138,51 +138,51 @@ fun TransportHomeScreen(
     }
 
     Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
     ) {
         val pagerState = rememberPagerState() { tabItems.size }
         val selectedTabIndex by remember {
             derivedStateOf { pagerState.currentPage }
         }
         Column(
-            modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize()
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
             ) {
                 Text(
-                    text = context.getString(R.string.app_name),
-                    style = MaterialTheme.typography.titleLarge
+                        text = context.getString(R.string.app_name),
+                        style = MaterialTheme.typography.titleLarge
                 )
             }
 
             ScrollableTabRow(
-                selectedTabIndex = selectedTabIndex,
-                edgePadding = 0.dp
+                    selectedTabIndex = selectedTabIndex,
+                    edgePadding = 0.dp
             ) {
                 tabItems.forEachIndexed { index, item ->
                     Tab(
-                        selected = index == selectedTabIndex,
-                        onClick = {
-                            scope.launch {
-                                pagerState.animateScrollToPage(index)
+                            selected = index == selectedTabIndex,
+                            onClick = {
+                                scope.launch {
+                                    pagerState.animateScrollToPage(index)
+                                }
+                            },
+                            text = {
+                                Text(text = item.title)
                             }
-                        },
-                        text = {
-                            Text(text = item.title)
-                        }
                     )
                 }
             }
 
             HorizontalPager(
-                state = pagerState,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
+                    state = pagerState,
+                    modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
             ) { index ->
                 tabItems[index].screen()
             }

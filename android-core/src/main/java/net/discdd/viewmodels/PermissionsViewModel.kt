@@ -23,12 +23,12 @@ import java.util.logging.Level
 import java.util.logging.Logger
 
 data class PermissionItemData(
-    var isBoxChecked: Boolean,
-    var permissionName: String
+        var isBoxChecked: Boolean,
+        var permissionName: String
 )
 
 class PermissionsViewModel(
-    application: Application,
+        application: Application,
 ) : AndroidViewModel(application) {
     private val context get() = getApplication<Application>()
     private val _permissionItems = MutableStateFlow<List<PermissionItemData>>(emptyList())
@@ -40,8 +40,8 @@ class PermissionsViewModel(
     init {
         _permissionItems.value = requiredPermissions.map { permission ->
             PermissionItemData(
-                isBoxChecked = false,
-                permissionName = permission
+                    isBoxChecked = false,
+                    permissionName = permission
             )
         }
     }
@@ -52,13 +52,13 @@ class PermissionsViewModel(
             val currentPermissions = currentItems.map { it.permissionName }
 
             val newItems = runtimePermissions
-                .filter { permState -> permState.permission !in currentPermissions }
-                .map { permState ->
-                    PermissionItemData(
-                        isBoxChecked = permState.status.isGranted,
-                        permissionName = permState.permission
-                    )
-                }
+                    .filter { permState -> permState.permission !in currentPermissions }
+                    .map { permState ->
+                        PermissionItemData(
+                                isBoxChecked = permState.status.isGranted,
+                                permissionName = permState.permission
+                        )
+                    }
 
             currentItems + newItems
         }
