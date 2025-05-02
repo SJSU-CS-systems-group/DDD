@@ -59,7 +59,6 @@ fun HomeScreen(
     val nearbyWifiState = rememberPermissionState(Manifest.permission.NEARBY_WIFI_DEVICES)
     val notificationState = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS,
         onPermissionResult = {
-            viewModel.hideBottomSheet()
             viewModel.onFirstOpen()
         }
     )
@@ -183,7 +182,7 @@ fun HomeScreen(
         }
 
         if (firstOpen) {
-            NotificationBottomSheet(viewModel, notificationState)
+            NotificationBottomSheet(notificationState)
         }
     }
 }

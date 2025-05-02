@@ -44,14 +44,14 @@ import net.discdd.screens.UsbScreen
 import net.discdd.viewmodels.SettingsViewModel
 
 data class TabItem(
-        val title: String,
-        val screen: @Composable () -> Unit,
+    val title: String,
+    val screen: @Composable () -> Unit,
 )
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun TransportHomeScreen(
-        viewModel: SettingsViewModel = viewModel()
+    viewModel: SettingsViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -60,11 +60,10 @@ fun TransportHomeScreen(
     val showEasterEgg by viewModel.showEasterEgg.collectAsState()
     val internetAvailable by ConnectivityManager.internetAvailable.collectAsState()
     val nearbyWifiState = rememberPermissionState(
-            Manifest.permission.NEARBY_WIFI_DEVICES
+        Manifest.permission.NEARBY_WIFI_DEVICES
     )
     val notificationState = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS,
         onPermissionResult = {
-            viewModel.hideBottomSheet()
             viewModel.onFirstOpen()
         }
     )
@@ -94,14 +93,14 @@ fun TransportHomeScreen(
     * these features can be toggled by interacting with the Easter Egg
     */
     val adminTabs = listOf(
-            TabItem(
-                title = context.getString(R.string.logs),
-                screen = { LogScreen() }
-            ),
-            TabItem(
-                title = context.getString(R.string.permissions),
-                screen = { PermissionScreen(runtimePermissions = listOf(nearbyWifiState, notificationState)) }
-            ),
+        TabItem(
+            title = context.getString(R.string.logs),
+            screen = { LogScreen() }
+        ),
+        TabItem(
+            title = context.getString(R.string.permissions),
+            screen = { PermissionScreen(runtimePermissions = listOf(nearbyWifiState, notificationState)) }
+        ),
     )
 
     val wifiDirectTab = TabItem(
