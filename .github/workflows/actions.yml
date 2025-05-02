@@ -35,6 +35,8 @@ jobs:
 
   compile-github:
     runs-on: ubuntu-latest
+    container:
+        image: ghcr.io/sjsu-cs-systems-group/ddd-job-image:latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
