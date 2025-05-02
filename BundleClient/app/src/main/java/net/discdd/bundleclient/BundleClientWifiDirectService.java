@@ -14,6 +14,8 @@ import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
+import android.net.wifi.p2p.WifiP2pInfo;
+import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
@@ -185,10 +187,10 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
                 while (iterator.hasNext()) {
                     var peer = iterator.next();
                     try {
-                        if (!isDeviceTransport(peer)) {
-                            iterator.remove(); //never reached
+                        if (wifiDirectManager.getGroupOwnerAddress() != null && !isDeviceTransport(peer)) {
+                            //iterator.remove();
                         }
-                    } catch (Exception e) { //always land here because of an URLSyntaxException
+                    } catch (Exception e) { //always land here because of an URLSyntaxException or NullPointerException
                         //iterator.remove();
                     }
                 }
@@ -284,7 +286,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
                 logger.log(WARNING, "Failed to disconnect from group: " + oldGroupInfo.getNetworkName(), e);
             }
         }
-        return bundleTransmission.isAddressTransport(device.deviceAddress, 7777);
+        return bundleTransmission.isAddressTransport(device.deviceAddress, wifiDirectManager.getGroupOwnerAddress().getHostAddress(), 7777); //"192.168.49.1"
     }
 
     private CompletableFuture<WifiP2pGroup> connectTo(WifiP2pDevice transport) {

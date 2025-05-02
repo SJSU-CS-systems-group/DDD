@@ -359,14 +359,14 @@ public class BundleTransmission {
         return false;
     }
 
-    public boolean isAddressTransport(String address, int port) throws Exception {
+    public boolean isAddressTransport(String deviceAddress, String transportAddress, int port) throws Exception {
         var sslClientContext = SSLContext.getInstance("TLS");
         sslClientContext.init(DDDTLSUtil.getKeyManagerFactory(bundleSecurity.getClientGrpcSecurity().getGrpcKeyPair(),
                                                               bundleSecurity.getClientGrpcSecurity().getGrpcCert())
                                       .getKeyManagers(),
                               new TrustManager[] { DDDTLSUtil.trustManager },
                               new SecureRandom());
-        var channel = OkHttpChannelBuilder.forAddress(address, port)
+        var channel = OkHttpChannelBuilder.forAddress(transportAddress, port)
                 .hostnameVerifier((host, session) -> true)
                 .useTransportSecurity()
                 .sslSocketFactory(sslClientContext.getSocketFactory())
@@ -375,7 +375,7 @@ public class BundleTransmission {
         var blockingStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
         var recencyBlobRequest = GetRecencyBlobRequest.newBuilder().build();
         var blobRecencyReply = blockingStub.getRecencyBlob(recencyBlobRequest);
-        return processRecencyBlob(address, blobRecencyReply);
+        return processRecencyBlob(deviceAddress, blobRecencyReply);
     }
 
     /**
