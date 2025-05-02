@@ -35,6 +35,11 @@ jobs:
 
   compile-github:
     runs-on: ubuntu-latest
+    container:
+        image: ghcr.io/sjsu-cs-systems-group/ddd-job-image:latest
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            GITHUB_ACTOR: ${{ github.actor }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -52,7 +57,7 @@ jobs:
             <servers>
               <server>
                 <id>github</id>
-                <username>github-actions[bot]</username>
+                <username>${{ github.actor }}</username>
                 <password>${{ secrets.GITHUB_TOKEN }}</password>
               </server>
             </servers>
