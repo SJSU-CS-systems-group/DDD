@@ -22,6 +22,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.rememberPermissionState
 import net.discdd.android_core.R
 import net.discdd.viewmodels.SettingsViewModel
@@ -41,17 +43,10 @@ import net.discdd.viewmodels.SettingsViewModel
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun NotificationBottomSheet(
-        viewModel: SettingsViewModel
+        notificationState: PermissionState
 ) {
     val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showBottomSheet by remember { mutableStateOf(true) }
-    val notificationState = rememberPermissionState(
-            Manifest.permission.POST_NOTIFICATIONS,
-            onPermissionResult = {
-                showBottomSheet = false
-                viewModel.onFirstOpen()
-            }
-    )
 
     if (showBottomSheet) {
         ModalBottomSheet(
@@ -119,8 +114,10 @@ fun NotificationBottomSheet(
     }
 }
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Preview(showBackground = true)
 @Composable
 fun NotificationBottomSheetPreview() {
-    NotificationBottomSheet(SettingsViewModel(Application()))
+    val notificationState = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS)
+    NotificationBottomSheet(notificationState)
 }

@@ -33,7 +33,6 @@ import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.launch
 import net.discdd.UsbConnectionManager
 import net.discdd.bundleclient.R
-import net.discdd.bundleclient.WifiAwareManager
 import net.discdd.bundleclient.WifiServiceManager
 import net.discdd.bundleclient.viewmodels.ClientUsbViewModel
 import net.discdd.screens.LogScreen
@@ -57,8 +56,11 @@ fun HomeScreen(
     val showUsbScreen by UsbConnectionManager.usbConnected.collectAsState()
     val firstOpen by viewModel.firstOpen.collectAsState()
     val showEasterEgg by viewModel.showEasterEgg.collectAsState()
-    val nearbyWifiState = rememberPermissionState(
-            Manifest.permission.NEARBY_WIFI_DEVICES
+    val nearbyWifiState = rememberPermissionState(Manifest.permission.NEARBY_WIFI_DEVICES)
+    val notificationState = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS,
+        onPermissionResult = {
+            viewModel.onFirstOpen()
+        }
     )
 
     val standardTabs = listOf(
@@ -95,7 +97,7 @@ fun HomeScreen(
         ),
         TabItem(
             title = context.getString(R.string.permissions_tab),
-            screen = { PermissionScreen() }
+            screen = { PermissionScreen(runtimePermissions = listOf(nearbyWifiState, notificationState)) }
         ),
         TabItem(
             title = context.getString(R.string.wifi_aware_tab),
@@ -180,7 +182,7 @@ fun HomeScreen(
         }
 
         if (firstOpen) {
-            NotificationBottomSheet(viewModel)
+            NotificationBottomSheet(notificationState)
         }
     }
 }

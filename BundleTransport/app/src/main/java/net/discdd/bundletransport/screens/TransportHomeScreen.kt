@@ -62,6 +62,11 @@ fun TransportHomeScreen(
     val nearbyWifiState = rememberPermissionState(
             Manifest.permission.NEARBY_WIFI_DEVICES
     )
+    val notificationState = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS,
+            onPermissionResult = {
+                viewModel.onFirstOpen()
+            }
+    )
 
     val standardTabs = remember {
         listOf(
@@ -94,7 +99,7 @@ fun TransportHomeScreen(
             ),
             TabItem(
                     title = context.getString(R.string.permissions),
-                    screen = { PermissionScreen() }
+                    screen = { PermissionScreen(runtimePermissions = listOf(nearbyWifiState, notificationState)) }
             ),
     )
 
@@ -184,7 +189,7 @@ fun TransportHomeScreen(
         }
 
         if (firstOpen) {
-            NotificationBottomSheet(viewModel)
+            NotificationBottomSheet(notificationState)
         }
     }
 }
