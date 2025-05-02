@@ -6,7 +6,6 @@ import android.content.IntentFilter
 import android.provider.Settings
 import androidx.core.content.ContextCompat.startActivity
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +18,7 @@ import net.discdd.bundletransport.R
 import net.discdd.bundletransport.TransportWifiDirectService
 import net.discdd.bundletransport.TransportWifiServiceManager
 import net.discdd.pathutils.TransportPaths
-import net.discdd.viewmodels.RuntimeViewModel
+import net.discdd.viewmodels.WifiBannerViewModel
 import net.discdd.wifidirect.WifiDirectManager.WifiDirectStatus
 
 import java.net.Inet4Address
@@ -38,7 +37,7 @@ data class WifiDirectState(
 
 class WifiDirectViewModel(
         application: Application
-) : RuntimeViewModel(application) {
+) : WifiBannerViewModel(application) {
     private val logger = Logger.getLogger(WifiDirectViewModel::class.java.name)
     private val intentFilter = IntentFilter()
     private val bundleTransportWifiEvent = BundleTransportWifiEvent().apply {

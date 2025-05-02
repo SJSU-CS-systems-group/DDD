@@ -1,10 +1,7 @@
 package net.discdd.screens
 
+import android.Manifest
 import android.app.Activity
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,59 +21,45 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.viewmodel.compose.viewModel
-import net.discdd.theme.ComposableTheme
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.PermissionState
+import com.google.accompanist.permissions.rememberPermissionState
 import net.discdd.viewmodels.PermissionItemData
 import net.discdd.viewmodels.PermissionsViewModel
 
-class PermissionsFragment : Fragment() {
-    override fun onCreateView(
-            inflater: LayoutInflater,
-            container: ViewGroup?,
-            savedInstanceState: Bundle?
-    ): View {
-        return ComposeView(requireContext()).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-            setContent {
-                ComposableTheme {
-                    PermissionScreen()
-                }
-            }
-        }
-    }
-}
-
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun PermissionScreen(
-        viewModel: PermissionsViewModel = viewModel(),
+    viewModel: PermissionsViewModel = viewModel(),
+    runtimePermissions: List<PermissionState>,
 ) {
     val permissionItems by viewModel.permissionItems.collectAsState()
     val context = LocalContext.current
     val activity = context as Activity
 
+    LaunchedEffect(Unit) {
+        viewModel.addRuntimePerms(runtimePermissions)
+    }
+
     Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
     ) {
         LazyColumn(
-                modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize()
         ) {
             items(permissionItems) { itemData ->
                 PermissionItem(
-                        permissionItem = itemData,
-                        onClick = {
-                            if (!itemData.isBoxChecked) viewModel.triggerPermissionDialog(context)
-                        },
-                        onCheckPermission = {
-                            viewModel.checkPermission(itemData.permissionName, activity)
-                        }
+                    permissionItem = itemData,
+                    onClick = {},
+                    onCheckPermission = {
+                        viewModel.checkPermission(itemData.permissionName, activity)
+                    }
                 )
             }
         }
@@ -85,38 +68,39 @@ fun PermissionScreen(
 
 @Composable
 fun PermissionItem(
-        permissionItem: PermissionItemData,
-        onClick: () -> Unit,
-        onCheckPermission: () -> Unit
+    permissionItem: PermissionItemData,
+    onClick: () -> Unit,
+    onCheckPermission: () -> Unit
 ) {
     val context = LocalContext.current
     val resId = context.resources.getIdentifier(
-            permissionItem.permissionName,
-            "string",
-            context.packageName
+        permissionItem.permissionName,
+        "string",
+        context.packageName
     )
     val permissionText = if (resId == 0) permissionItem.permissionName else stringResource(id = resId)
+
     LaunchedEffect(permissionItem.permissionName) {
         onCheckPermission()
     }
 
     Row(
-            modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onClick() }
-                    .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Checkbox(
-                checked = permissionItem.isBoxChecked,
-                onCheckedChange = null
+            checked = permissionItem.isBoxChecked,
+            onCheckedChange = null
         )
 
         Spacer(modifier = Modifier.width(16.dp))
 
         Text(
-                text = permissionText,
-                style = MaterialTheme.typography.bodyLarge
+            text = permissionText,
+            style = MaterialTheme.typography.bodyLarge
         )
     }
 }
@@ -127,8 +111,13 @@ fun PermissionItemPreview() {
     PermissionItem(PermissionItemData(true, "previewTest"), {}, {})
 }
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Preview(showBackground = true)
 @Composable
 fun PermissionScreenPreview() {
-    PermissionScreen()
+    val wifiPerm = rememberPermissionState(Manifest.permission.NEARBY_WIFI_DEVICES)
+    val notiPerm = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS)
+    val runtimePermissions = listOf(wifiPerm, notiPerm)
+
+    PermissionScreen(runtimePermissions = runtimePermissions)
 }
