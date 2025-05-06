@@ -99,9 +99,9 @@ class StorageViewModel(application: Application) : AndroidViewModel(application)
                 .apply()
     }
 
-    private fun retrievePreference(): Int {
+    private fun retrievePreference(): Long {
         return context.getSharedPreferences("SeekBarPrefs", Context.MODE_PRIVATE)
-                .getInt("seekBarPosition", 0)
+                .getLong("seekBarPosition", 0)
     }
 
     private fun getTotalBytes(): Long {
