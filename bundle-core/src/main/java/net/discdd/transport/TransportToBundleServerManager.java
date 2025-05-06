@@ -14,6 +14,7 @@ import net.discdd.grpc.BundleSenderType;
 import net.discdd.grpc.BundleServerServiceGrpc;
 import net.discdd.grpc.BundleUploadRequest;
 import net.discdd.grpc.BundleUploadResponse;
+import net.discdd.grpc.CrashReportRequest;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.grpc.GetRecencyBlobRequest;
 import net.discdd.pathutils.TransportPaths;
@@ -28,6 +29,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -37,7 +39,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
+import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
@@ -46,8 +50,11 @@ public class TransportToBundleServerManager implements Runnable {
 
     private static final Logger logger = Logger.getLogger(TransportToBundleServerManager.class.getName());
     public static final String RECENCY_BLOB_BIN = "recencyBlob.bin";
+    public static final String CRASH_FILE_NAME = "/crash_report.txt";
+
     private final Path fromClientPath;
     private final Path fromServerPath;
+    private final Path crashReportsPath;
     private final Function<Void, Void> connectComplete;
     private final Function<Exception, Void> connectError;
     private final String serverHost;
@@ -65,6 +72,7 @@ public class TransportToBundleServerManager implements Runnable {
         this.serverPort = Integer.parseInt(port);
         this.fromClientPath = transportPaths.toServerPath;
         this.fromServerPath = transportPaths.toClientPath;
+        this.crashReportsPath = transportPaths.crashReportPath;
         try {
             this.transportGrpcSecurity = GrpcSecurityHolder.getGrpcSecurityHolder();
         } catch (Exception e) {
@@ -89,18 +97,35 @@ public class TransportToBundleServerManager implements Runnable {
                     .build();
 
             var bsStub = BundleServerServiceGrpc.newBlockingStub(channel);
+            //var bsCrashCollectionStub = BundleServerServiceGrpc.newBlockingStub(channel);
 
             var exchangeStub = BundleExchangeServiceGrpc.newStub(channel);
             var blockingExchangeStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
             var bundlesFromClients = populateListFromPath(fromClientPath);
             var bundlesFromServer = populateListFromPath(fromServerPath);
+            //var crashesFromClient = extractCrashFromPath(fromClientPath);
 
             //if crash report exists, upload it
+            //if (!crashesFromClient.isEmpty()) {
+            try {
+                Files.walk(crashReportsPath.getParent()).forEach(path -> {
+                    if (Files.isRegularFile(path)) {
+                        logger.log(Level.INFO, "File found: " + path.toAbsolutePath());
+                    }
+                });
+            } catch (IOException e) {
+                logger.log(Level.SEVERE, "Error walking the file tree:", e);
+            }
+            if (crashReportsPath.toFile().exists()) {
+                var collectedCrashes = bsStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).crashReports(
+                        CrashReportRequest.newBuilder().setCrashReportData(ByteString.copyFrom(Files.readAllBytes(crashReportsPath))).build());
+            }
             var inventoryResponse = bsStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     .bundleInventory(BundleInventoryRequest.newBuilder()
                                              .addAllBundlesFromClientsOnTransport(bundlesFromClients)
                                              .addAllBundlesFromServerOnTransport(bundlesFromServer)
                                              .build());
+
 
             processDeleteBundles(inventoryResponse.getBundlesToDeleteList());
             processUploadBundles(inventoryResponse.getBundlesToUploadList(), exchangeStub);
@@ -239,7 +264,24 @@ public class TransportToBundleServerManager implements Runnable {
         return listOfBundleIds;
     }
 
-    private List<Files> extractCrashFromPath(Path path) {
+//    private List<Byte[]> extractCrashFromPath(Path path) {
+//        var listOfBundleReports = new ArrayList<Byte[]>();
+//        var bundles = path.toFile().listFiles();
+//        if (bundles != null) {
+//            for (File bundle : bundles) {
+//                // get corresponding crash report
+//                    // navigate to payload.jar
+//                    // create file input stream pointing to payload.jar
+//                    // get initial next entry / first entry of payload.jar
+//                    //while next entry is not null
+//                        // create byte array output stream
+//                        // while ((len = fis.read(buffer) > 0) ie while
+//                // listOfBundleReports.add(corresponding crash report);
+//            }
+//        }
+//    }
+
+    private void extractCrashFromPath(Path path) {
 
     }
 }

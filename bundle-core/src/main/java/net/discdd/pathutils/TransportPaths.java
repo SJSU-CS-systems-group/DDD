@@ -19,14 +19,16 @@ import static java.util.logging.Level.SEVERE;
 
 public class TransportPaths {
     private static final Logger logger = Logger.getLogger(TransportPaths.class.getName());
-
+    public final Path toRootDir;
     public final Path toClientPath;
     public final Path toServerPath;
     public final Path grpcSecurityPath;
-
+    public final Path crashReportPath;
     public TransportPaths(Path rootDir) {
+        this.toRootDir = rootDir;
         this.toClientPath = rootDir.resolve("BundleTransmission/client");
         this.toServerPath = rootDir.resolve("BundleTransmission/server");
+        this.crashReportPath = rootDir.resolve("crash_report.txt");
 
         try {
             if (!Files.exists(toClientPath) || !Files.exists(toServerPath)) {

@@ -15,7 +15,6 @@ import org.jetbrains.annotations.NotNull;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -33,12 +32,14 @@ public class LocalReportSender implements ReportSender {
     @Override
     public void send(Context context, CrashReportData errorContent) throws ReportSenderException {
         Path rootDir = context.getApplicationContext().getDataDir().toPath();
-        Path destDir = rootDir.resolve("to-be-bundled");
-        if (destDir.toFile().exists()) {
-            log.i("ACRA local reports sender ", "We are writing crash report to transport device storage");
-            rootDir = destDir;
+        log.i("root directory for acra class ", String.valueOf(rootDir));
+        Path clientDestDir = rootDir.resolve("to-be-bundled");
+        if (clientDestDir.toFile().exists()) {
+            log.i("ACRA local reports sender ", "We are writing crash report to client device internal storage");
+            rootDir = clientDestDir;
         } else {
-            log.i("ACRA local reports sender ", "We are writing crash report to client device storage");
+            rootDir = context.getApplicationContext().getExternalFilesDir(null).toPath();
+            log.i("ACRA local reports sender ", "We are writing crash report to transport device external storage");
         }
         File logFile = new File(String.valueOf(rootDir), "crash_report.txt");
         try {
