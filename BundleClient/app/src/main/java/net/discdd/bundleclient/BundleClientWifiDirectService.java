@@ -186,7 +186,6 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
                             var recentTransport = bundleTransmission.getRecentTransport(peer.deviceAddress);
                             if (recentTransport != null) { //peer is in recentTransport
                                 if (recentTransport.getLastRecencyCheck() + 120000 < System.currentTimeMillis()) {
-                                    initiateExchange(peer.deviceAddress);
                                     try {
                                         if (isDeviceTransport(peer)) {
                                             bundleTransmission.processDiscoveredPeer(peer.deviceAddress, peer.deviceName);
@@ -199,7 +198,6 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
                                     }
                                 }
                             } else { //peer is not in recentTransport
-                                initiateExchange(peer.deviceAddress);
                                 try {
                                     if (isDeviceTransport(peer)) {
                                         bundleTransmission.processDiscoveredPeer(peer.deviceAddress, peer.deviceName);
@@ -302,8 +300,21 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
                 logger.log(WARNING, "Failed to disconnect from group: " + oldGroupInfo.getNetworkName(), e);
             }
         }
-        if (wifiDirectManager.getGroupOwnerAddress() == null) return false;
-        return bundleTransmission.isAddressTransport(device.deviceAddress, wifiDirectManager.getGroupOwnerAddress().getHostAddress(), 7777); //"192.168.49.1"
+        var isTransport = false;
+        try {
+            var newGroup = connectTo(device).get(60, TimeUnit.SECONDS);
+            isTransport = bundleTransmission.isAddressTransport(device.deviceAddress, wifiDirectManager.getGroupOwnerAddress().getHostAddress(), 7777);
+
+        } catch (Throwable e) {
+            logger.log(WARNING, "Failed to connect to " + device.deviceName, e);
+
+        } finally {
+            wifiDirectManager.disconnect();
+            broadcastBundleClientWifiEvent(BundleClientWifiDirectEventType.WIFI_DIRECT_CLIENT_EXCHANGE_FINISHED,
+                                           device.deviceAddress);
+
+        }
+        return isTransport;
     }
 
     private CompletableFuture<WifiP2pGroup> connectTo(WifiP2pDevice transport) {
