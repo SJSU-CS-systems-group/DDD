@@ -15,14 +15,8 @@ RUN apt-get update && apt-get install -y \
     jq \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a github-runner user
-RUN useradd -m github-runner && echo "github-runner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-USER github-runner
-WORKDIR /home/github-runner
-ENV HOME=/home/github-runner
-
 # Setup Android SDK
-ENV ANDROID_HOME=${HOME}/android-sdk
+ENV ANDROID_HOME=/opt/android-sdk
 ENV PATH=${PATH}:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/emulator
 
 RUN mkdir -p $ANDROID_HOME/cmdline-tools
@@ -45,20 +39,11 @@ RUN echo "no" | avdmanager create avd -n test_avd-33 -k "system-images;android-3
 
 # -------- IntelliJ IDEA Community Edition --------
 ENV INTELLIJ_VERSION=2023.3.5
-ENV INTELLIJ_HOME=${HOME}/intellij
+ENV INTELLIJ_HOME=/opt/intellij
 ENV PATH="${INTELLIJ_HOME}/bin:$PATH"
 
 RUN wget -q https://download.jetbrains.com/idea/ideaIC-${INTELLIJ_VERSION}.tar.gz && \
     mkdir -p ${INTELLIJ_HOME} && \
     tar -xzf ideaIC-${INTELLIJ_VERSION}.tar.gz -C ${INTELLIJ_HOME} --strip-components=1 && \
     rm ideaIC-${INTELLIJ_VERSION}.tar.gz
-
-# Install GitHub Actions Runner
-RUN mkdir actions-runner && cd actions-runner && \
-    curl -O -L https://github.com/actions/runner/releases/download/v2.317.0/actions-runner-linux-x64-2.317.0.tar.gz && \
-    tar xzf actions-runner-linux-x64-2.317.0.tar.gz && \
-    rm actions-runner-linux-x64-2.317.0.tar.gz
-
-# Set entrypoint to keep runner alive
-ENTRYPOINT ["/home/github-runner/actions-runner/run.sh"]
 
