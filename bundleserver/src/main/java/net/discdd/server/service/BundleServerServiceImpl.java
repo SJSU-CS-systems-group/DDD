@@ -100,12 +100,13 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
         var data = request.getCrashReportData();
         X509Certificate clientCert = NettyServerCertificateInterceptor.CLIENT_CERTIFICATE_KEY.get(Context.current());
         var name = DDDTLSUtil.publicKeyToName(clientCert.getPublicKey());
-        File crashDirFile = new File(crashDir, name);
+        new File(crashDir).mkdirs();
+        File crashFile = new File(crashDir, name);
         try {
-            Files.write(crashDirFile.toPath(), data.toByteArray(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            Files.write(crashFile.toPath(), data.toByteArray(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
             response.onNext(CrashReportResponse.newBuilder().setResult(Status.SUCCESS).build());
         } catch (IOException e) {
-            logger.log(WARNING, "Couldn't write crash file to " + crashDirFile, e);
+            logger.log(WARNING, "Couldn't write crash file to " + crashFile, e);
             response.onNext(CrashReportResponse.newBuilder().setResult(Status.FAILED).build());
         }
         response.onCompleted();
