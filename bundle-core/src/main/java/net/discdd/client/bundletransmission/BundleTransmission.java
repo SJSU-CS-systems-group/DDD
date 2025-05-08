@@ -434,9 +434,12 @@ public class BundleTransmission {
                     logger.log(SEVERE,
                                "Did not process recency blob. In the future, we need to stop talking to this " +
                                        "device");
+                    removePastTransport(deviceAddress);
                 } else {
                     transportSenderId = recencyBlob.getSenderId();
                     logger.log(INFO, "Recency blob processed for " + transportSenderId);
+                    processDiscoveredPeer(deviceAddress, deviceDeviceName);
+                    timestampRecencyCheck(deviceAddress);
                 }
 
                 timestampExchangeWithTransport(deviceAddress);
