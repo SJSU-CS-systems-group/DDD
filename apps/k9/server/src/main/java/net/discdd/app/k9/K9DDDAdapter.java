@@ -94,9 +94,9 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
 
         // create error ack
         LoginAduAck ack = new LoginAduAck(null,
-                                          null,
-                                          false,
-                                          "Either not parsable, email doesn't exist, or password is incorrect.");
+                null,
+                false,
+                "Either not parsable, email doesn't exist, or password is incorrect.");
         sendADUsStorage.addADU(clientId, APP_ID, ack.toByteArray(), -1);
     }
 
@@ -139,63 +139,83 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
     }
 
     @Override
-    public void exchangeADUs(ExchangeADUsRequest request, StreamObserver<ExchangeADUsResponse> responseObserver) {
-        String clientId = request.getClientId();
-        logger.log(INFO, "Received ADUs for clientId: " + clientId);
-        Long lastADUIdRecvd = request.getLastADUIdReceived();
-        var aduListRecvd = request.getAdusList();
-        Long lastProcessedADUId = 0L;
-        for (AppDataUnit adu : aduListRecvd) {
-            try {
-                processADUsToSend(adu, clientId);
-                if (lastProcessedADUId < adu.getAduId()) {
-                    lastProcessedADUId = adu.getAduId();
+    public StreamObserver<ExchangeADUsRequest> exchangeADUs(StreamObserver<ExchangeADUsResponse> responseObserver) {
+        return new StreamObserver<ExchangeADUsRequest>() {
+            String clientId = null;
+            Long lastADUIdRecvd = null;
+            Long lastProcessedADUId = 0L;
+
+
+            @Override
+            public void onNext(ExchangeADUsRequest exchangeADUsRequest) {
+                if (exchangeADUsRequest.hasClientId()) {
+                    clientId = exchangeADUsRequest.getClientId();
                 }
-            } catch (IOException e) {
-                logger.log(SEVERE, "Error while processing aduId:" + adu.getAduId(), e);
+
+                if (exchangeADUsRequest.hasLastADUIdReceived()) {
+                    lastADUIdRecvd = exchangeADUsRequest.getLastADUIdReceived();
+                }
+
+                if (exchangeADUsRequest.hasAdus()) {
+                    var adu = exchangeADUsRequest.getAdus();
+                    try {
+                        processADUsToSend(adu, clientId);
+                        if (lastProcessedADUId < adu.getAduId()) {
+                            lastProcessedADUId = adu.getAduId();
+                        }
+                    } catch (IOException e) {
+                        logger.log(SEVERE, "Error while processing aduId:" + adu.getAduId(), e);
+                    }
+                    logger.log(INFO, "Received ADUs for clientId: " + clientId);
+                }
             }
-        }
 
-        try {
-            sendADUsStorage.deleteAllFilesUpTo(clientId, APP_ID, lastADUIdRecvd);
-            logger.log(INFO, "Deleted all ADUs till Id:" + lastADUIdRecvd);
-        } catch (IOException e) {
-            logger.log(SEVERE,
-                       String.format("Error while deleting ADUs for client: {} app: {} till AduId: {}",
-                                     clientId,
-                                     APP_ID,
-                                     lastADUIdRecvd),
-                       e);
-        }
-
-        List<AppDataUnit> dataListToReturn = new ArrayList<>();
-        List<ADU> aduListToReturn = new ArrayList<>();
-
-        try {
-            aduListToReturn = sendADUsStorage.getAppData(clientId, APP_ID);
-        } catch (IOException e) {
-            logger.log(SEVERE, "Error fetching ADUs to return for clientId: " + clientId, e);
-        }
-
-        try {
-            for (var adu : aduListToReturn) {
-                long aduId = adu.getADUId();
-                var data = sendADUsStorage.getADU(clientId, APP_ID, aduId);
-                dataListToReturn.add(AppDataUnit.newBuilder()
-                                             .setData(ByteString.copyFrom(data))
-                                             .setAduId(aduId)
-                                             .build());
+            @Override
+            public void onError(Throwable throwable) {
+                logger.log(SEVERE, "Error while processing ADUs for clientId: " + clientId, throwable);
             }
-        } catch (Exception e) {
-            logger.log(SEVERE, "Error while building response data for clientId: " + clientId, e);
-        }
 
-        responseObserver.onNext(ExchangeADUsResponse.newBuilder()
-                                        .addAllAdus(dataListToReturn)
-                                        .setLastADUIdReceived(lastProcessedADUId)
-                                        .build());
+            @Override
+            public void onCompleted() {
+                try {
+                    sendADUsStorage.deleteAllFilesUpTo(clientId, APP_ID, lastADUIdRecvd);
+                    logger.log(INFO, "Deleted all ADUs till Id:" + lastADUIdRecvd);
+                } catch (IOException e) {
+                    logger.log(SEVERE,
+                            String.format("Error while deleting ADUs for client: {} app: {} till AduId: {}",
+                                    clientId,
+                                    APP_ID,
+                                    lastADUIdRecvd),
+                            e);
+                }
 
-        responseObserver.onCompleted();
+                List<ADU> aduListToReturn = new ArrayList<>();
+
+                try {
+                    aduListToReturn = sendADUsStorage.getAppData(clientId, APP_ID);
+                } catch (IOException e) {
+                    logger.log(SEVERE, "Error fetching ADUs to return for clientId: " + clientId, e);
+                }
+
+                try {
+
+                    for (var adu : aduListToReturn) {
+                        long aduId = adu.getADUId();
+                        var data = sendADUsStorage.getADU(clientId, APP_ID, aduId);
+                        responseObserver.onNext(ExchangeADUsResponse.newBuilder()
+                                .setAdus(AppDataUnit.newBuilder()
+                                        .setData(ByteString.copyFrom(data))
+                                        .setAduId(aduId)
+                                        .build())
+                                .setLastADUIdReceived(lastProcessedADUId)
+                                .build());
+                    }
+                } catch (Exception e) {
+                    logger.log(SEVERE, "Error while building response data for clientId: " + clientId, e);
+                }
+                responseObserver.onCompleted();
+            }
+        };
     }
 
     @Override

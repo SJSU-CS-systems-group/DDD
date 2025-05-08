@@ -10,6 +10,10 @@ import net.discdd.grpc.ServiceAdapterServiceGrpc;
 
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 
 /*
  * This is just for testing and takes some shortcuts. We track the clientLastADUId in an in-memory hashmap,
@@ -18,26 +22,60 @@ import java.util.LinkedList;
  */
 @GrpcService
 public class EchoDDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServiceImplBase {
+    private static final Logger logger = Logger.getLogger(EchoDDDAdapter.class.getName());
     // this is a quick and dirty implementation of the echo service, so we use an in-memory hashmap
     private final HashMap<String, Long> clientLastADUId = new HashMap<>();
 
     @Override
-    public void exchangeADUs(ExchangeADUsRequest request, StreamObserver<ExchangeADUsResponse> responseObserver) {
-        LinkedList<AppDataUnit> dataList = new LinkedList<>();
-        request.getAdusList()
-                .forEach(data -> dataList.add(AppDataUnit.newBuilder()
-                                                      .setAduId(data.getAduId())
-                                                      .setData(data.getData()
-                                                                       .concat(ByteString.copyFromUtf8(" was received")))
-                                                      .build()));
-        if (!dataList.isEmpty()) {
-            var lastADUId = dataList.getLast().getAduId();
-            clientLastADUId.compute(request.getClientId(), (k, v) -> v == null || v < lastADUId ? lastADUId : v);
-        }
-        responseObserver.onNext(ExchangeADUsResponse.newBuilder()
-                                        .addAllAdus(dataList)
-                                        .setLastADUIdReceived(clientLastADUId.getOrDefault(request.getClientId(), 0L))
-                                        .build());
-        responseObserver.onCompleted();
+    public StreamObserver<ExchangeADUsRequest> exchangeADUs(StreamObserver<ExchangeADUsResponse> responseObserver) {
+        return new StreamObserver<ExchangeADUsRequest>() {
+            String clientId;
+            long lastADUIdReceived;
+            LinkedList<AppDataUnit> dataList = new LinkedList<>();
+
+            @Override
+            public void onNext(ExchangeADUsRequest request) {
+                if (request.hasClientId()) {
+                    clientId = request.getClientId();
+                }
+
+                if (request.hasAdus()) {
+                    var adu = request.getAdus();
+                    dataList.add(AppDataUnit.newBuilder()
+                            .setAduId(adu.getAduId())
+                            .setData(adu.getData()
+                                    .concat(ByteString.copyFromUtf8(" was received")))
+                            .build());
+                    logger.log(INFO,"Received ADU: " + adu.getAduId() + " from client: " + clientId);
+                } else {
+                    logger.log(INFO,"Received empty ADU from client: " + clientId);
+                }
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                logger.log(SEVERE, "Error in exchangeADUs for clientId: " + clientId + throwable.getMessage());
+            }
+
+            @Override
+            public void onCompleted() {
+                if (clientId == null) {
+                    logger.log(SEVERE, "Client ID is null. Cannot send response.");
+                    return;
+                }
+
+                if (dataList.isEmpty()) {
+                    logger.log(INFO, "No ADUs received from client: " + clientId);
+                }
+
+                for (var adu : dataList) {
+                    responseObserver.onNext(ExchangeADUsResponse.newBuilder()
+                            .setAdus(adu)
+                            .setLastADUIdReceived(clientLastADUId.getOrDefault(clientId, 0L))
+                            .build());
+                }
+                responseObserver.onCompleted();
+            }
+        };
     }
 }
