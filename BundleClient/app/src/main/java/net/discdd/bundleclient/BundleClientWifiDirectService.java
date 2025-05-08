@@ -186,26 +186,10 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
                             var recentTransport = bundleTransmission.getRecentTransport(peer.deviceAddress);
                             if (recentTransport != null) { //peer is in recentTransport
                                 if (recentTransport.getLastRecencyCheck() + 120000 < System.currentTimeMillis()) {
-                                    try {
-                                        if (isDeviceTransport(peer)) {
-                                            bundleTransmission.processDiscoveredPeer(peer.deviceAddress, peer.deviceName);
-                                            bundleTransmission.timestampRecencyCheck(peer.deviceAddress);
-                                        } else {
-                                            bundleTransmission.removePastTransport(peer.deviceAddress);
-                                        }
-                                    } catch (Exception e) {
-                                        //not sure how to handle
-                                    }
+                                    initiateExchange(peer.deviceAddress);
                                 }
                             } else { //peer is not in recentTransport
-                                try {
-                                    if (isDeviceTransport(peer)) {
-                                        bundleTransmission.processDiscoveredPeer(peer.deviceAddress, peer.deviceName);
-                                        bundleTransmission.timestampRecencyCheck(peer.deviceAddress);
-                                    }
-                                } catch (Exception e) {
-                                    //not sure how to handle
-                                }
+                                initiateExchange(peer.deviceAddress);
                             }
                         });
 
@@ -291,7 +275,9 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
         return FAILED_EXCHANGE_COUNTS;
     }
 
-    private boolean isDeviceTransport(WifiP2pDevice device) throws Exception {
+    private boolean isDeviceTransport(WifiP2pDevice device)  {
+        broadcastBundleClientWifiEvent(BundleClientWifiDirectEventType.WIFI_DIRECT_CLIENT_EXCHANGE_STARTED,
+                                       device.deviceAddress);
         var oldGroupInfo = wifiDirectManager.getGroupInfo();
         if (oldGroupInfo != null) {
             try {
@@ -302,7 +288,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
         }
         var isTransport = false;
         try {
-            var newGroup = connectTo(device).get(60, TimeUnit.SECONDS);
+            var newGroup = connectTo(device).get(10, TimeUnit.SECONDS);
             isTransport = bundleTransmission.isAddressTransport(device.deviceAddress, wifiDirectManager.getGroupOwnerAddress().getHostAddress(), 7777);
 
         } catch (Throwable e) {
