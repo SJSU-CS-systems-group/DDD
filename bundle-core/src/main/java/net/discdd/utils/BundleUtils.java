@@ -321,8 +321,7 @@ public class BundleUtils {
         innerJar.createEntry("acknowledgement.txt", ackedEncryptedBundleId.getBytes());
         innerJar.createEntry("routing.metadata", routingData == null ? "{}".getBytes() : routingData);
         if (crashReport != null) {
-            innerJar.createEntry("crash_report.txt", crashReport.getBytes()); //goal: create zip file entry for reports file
-            //i forgot
+            innerJar.createEntry("crash_report.txt", crashReport.getBytes());
         }
 
         for (var adu : adus) {
