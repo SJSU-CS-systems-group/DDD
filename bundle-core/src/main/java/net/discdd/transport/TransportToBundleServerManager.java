@@ -252,25 +252,4 @@ public class TransportToBundleServerManager implements Runnable {
         }
         return listOfBundleIds;
     }
-
-//    private List<Byte[]> extractCrashFromPath(Path path) {
-//        var listOfBundleReports = new ArrayList<Byte[]>();
-//        var bundles = path.toFile().listFiles();
-//        if (bundles != null) {
-//            for (File bundle : bundles) {
-//                // get corresponding crash report
-//                    // navigate to payload.jar
-//                    // create file input stream pointing to payload.jar
-//                    // get initial next entry / first entry of payload.jar
-//                    //while next entry is not null
-//                        // create byte array output stream
-//                        // while ((len = fis.read(buffer) > 0) ie while
-//                // listOfBundleReports.add(corresponding crash report);
-//            }
-//        }
-//    }
-
-    private void extractCrashFromPath(Path path) {
-
-    }
 }
