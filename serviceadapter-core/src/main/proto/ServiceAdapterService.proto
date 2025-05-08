@@ -10,7 +10,7 @@ service ServiceAdapterService {
   // exchangeADUs sends ADUs received by the BundleServer to the ServiceAdapter and
   // the same time receives ADUs to send back to clients as the
   // return value.
-  rpc exchangeADUs(ExchangeADUsRequest) returns (ExchangeADUsResponse) {}
+  rpc exchangeADUs(stream ExchangeADUsRequest) returns (stream ExchangeADUsResponse) {}
   // check if the ServiceAdapter has any pending data to send to the BundleServer
   // Note: The ServiceAdapter should may say that it has data for a client, but the BundleServer
   //       may decide not to request anything. The reason for not requesting will probably be that
@@ -28,19 +28,23 @@ message PendingDataCheckResponse {
 }
 
 message ExchangeADUsRequest {
-  // The clientId of the client that sent the ADUs
-  string clientId = 1;
-  // ADUs being sent
-  repeated AppDataUnit adus = 2;
-  // This is the id of the ADU that was received by the BundleServer from the service adapter
-  int64 lastADUIdReceived = 3;
+  oneof request {
+    // The clientId of the client that sent the ADUs
+    string clientId = 1;
+    // ADUs being sent
+    AppDataUnit adus = 2;
+    // This is the id of the ADU that was received by the BundleServer from the service adapter
+    int64 lastADUIdReceived = 3;
+  }
 }
 
 message ExchangeADUsResponse {
-  // ADUs returned from the ServiceAdapter for the clientId in the request
-  repeated AppDataUnit adus = 1;
-  //    This is the id of the ADU that was received by the adapter from the BundleServer
-  int64 lastADUIdReceived = 2;
+  oneof request {
+    // ADUs returned from the ServiceAdapter for the clientId in the request
+    AppDataUnit adus = 1;
+    //    This is the id of the ADU that was received by the adapter from the BundleServer
+    int64 lastADUIdReceived = 2;
+  }
 }
 
 message AppDataUnit{

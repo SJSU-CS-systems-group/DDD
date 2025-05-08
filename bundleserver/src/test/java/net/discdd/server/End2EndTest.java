@@ -326,15 +326,16 @@ public class End2EndTest {
         }
 
         @Override
-        public void exchangeADUs(ExchangeADUsRequest request, StreamObserver<ExchangeADUsResponse> responseObserver) {
+        public StreamObserver<ExchangeADUsRequest> exchangeADUs(StreamObserver<ExchangeADUsResponse> responseObserver) {
             try {
                 incomingRequests.put(new AdapterRequestResponse(request, responseObserver));
             } catch (InterruptedException e) {
                 logger.severe("Interrupted while waiting for request to be handled");
             }
+            return null;
         }
 
-        record AdapterRequestResponse(ExchangeADUsRequest request, StreamObserver<ExchangeADUsResponse> response) {}
+        record AdapterRequestResponse(StreamObserver<ExchangeADUsResponse> response) {}
     }
 
 }
