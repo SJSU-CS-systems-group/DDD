@@ -30,5 +30,5 @@ message CrashReportResponse {
 
 service BundleServerService {
   rpc bundleInventory(BundleInventoryRequest) returns (BundleInventoryResponse) {}
-  rpc CrashReports(CrashReportRequest) returns (CrashReportResponse) {}
+  rpc crashReports(CrashReportRequest) returns (CrashReportResponse) {}
 }
