@@ -25,6 +25,7 @@ public class TransportPaths {
     public final Path grpcSecurityPath;
     public final Path crashReportPath;
     public TransportPaths(Path rootDir) {
+
         this.toRootDir = rootDir;
         this.toClientPath = rootDir.resolve("BundleTransmission/client");
         this.toServerPath = rootDir.resolve("BundleTransmission/server");
