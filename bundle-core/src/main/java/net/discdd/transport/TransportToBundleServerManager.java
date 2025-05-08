@@ -97,28 +97,17 @@ public class TransportToBundleServerManager implements Runnable {
                     .build();
 
             var bsStub = BundleServerServiceGrpc.newBlockingStub(channel);
-            //var bsCrashCollectionStub = BundleServerServiceGrpc.newBlockingStub(channel);
 
             var exchangeStub = BundleExchangeServiceGrpc.newStub(channel);
             var blockingExchangeStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
             var bundlesFromClients = populateListFromPath(fromClientPath);
             var bundlesFromServer = populateListFromPath(fromServerPath);
-            //var crashesFromClient = extractCrashFromPath(fromClientPath);
 
-            //if crash report exists, upload it
-            //if (!crashesFromClient.isEmpty()) {
-            try {
-                Files.walk(crashReportsPath.getParent()).forEach(path -> {
-                    if (Files.isRegularFile(path)) {
-                        logger.log(Level.INFO, "File found: " + path.toAbsolutePath());
-                    }
-                });
-            } catch (IOException e) {
-                logger.log(Level.SEVERE, "Error walking the file tree:", e);
-            }
             if (crashReportsPath.toFile().exists()) {
-                var collectedCrashes = bsStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS).crashReports(
-                        CrashReportRequest.newBuilder().setCrashReportData(ByteString.copyFrom(Files.readAllBytes(crashReportsPath))).build());
+                var collectedCrashes = bsStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                        .crashReports(CrashReportRequest.newBuilder()
+                                              .setCrashReportData(ByteString.copyFrom(Files.readAllBytes(crashReportsPath)))
+                                              .build());
             }
             var inventoryResponse = bsStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     .bundleInventory(BundleInventoryRequest.newBuilder()
