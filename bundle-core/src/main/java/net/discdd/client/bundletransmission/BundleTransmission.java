@@ -374,25 +374,6 @@ public class BundleTransmission {
         return false;
     }
 
-    public boolean isAddressTransport(String deviceAddress, String transportAddress, int port) throws Exception {
-        var sslClientContext = SSLContext.getInstance("TLS");
-        sslClientContext.init(DDDTLSUtil.getKeyManagerFactory(bundleSecurity.getClientGrpcSecurity().getGrpcKeyPair(),
-                                                              bundleSecurity.getClientGrpcSecurity().getGrpcCert())
-                                      .getKeyManagers(),
-                              new TrustManager[] { DDDTLSUtil.trustManager },
-                              new SecureRandom());
-        var channel = OkHttpChannelBuilder.forAddress(transportAddress, port)
-                .hostnameVerifier((host, session) -> true)
-                .useTransportSecurity()
-                .sslSocketFactory(sslClientContext.getSocketFactory())
-                .intercept(new NettyClientCertificateInterceptor())
-                .build();
-        var blockingStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
-        var recencyBlobRequest = GetRecencyBlobRequest.newBuilder().build();
-        var blobRecencyReply = blockingStub.getRecencyBlob(recencyBlobRequest);
-        return processRecencyBlob(deviceAddress, blobRecencyReply);
-    }
-
     /**
      * IT IS VERY VERY IMPORTANT THAT TRANSPORT IS THE HOSTNAME WHEN TALKING TO THE SERVER, AND AN ADDRESS
      * WHEN TALKING TO A DEVICE.
@@ -439,7 +420,7 @@ public class BundleTransmission {
                     transportSenderId = recencyBlob.getSenderId();
                     logger.log(INFO, "Recency blob processed for " + transportSenderId);
                     processDiscoveredPeer(deviceAddress, deviceDeviceName);
-                    timestampRecencyCheck(deviceAddress);
+                    logger.info("RecentTransport: " + Arrays.toString(getRecentTransports()));
                 }
 
                 timestampExchangeWithTransport(deviceAddress);
