@@ -275,6 +275,34 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
         return FAILED_EXCHANGE_COUNTS;
     }
 
+    private boolean isDeviceTransport(WifiP2pDevice device)  {
+        broadcastBundleClientWifiEvent(BundleClientWifiDirectEventType.WIFI_DIRECT_CLIENT_EXCHANGE_STARTED,
+                                       device.deviceAddress);
+        var oldGroupInfo = wifiDirectManager.getGroupInfo();
+        if (oldGroupInfo != null) {
+            try {
+                wifiDirectManager.disconnect().get(2, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                logger.log(WARNING, "Failed to disconnect from group: " + oldGroupInfo.getNetworkName(), e);
+            }
+        }
+        var isTransport = false;
+        try {
+            var newGroup = connectTo(device).get(10, TimeUnit.SECONDS);
+            isTransport = bundleTransmission.isAddressTransport(device.deviceAddress, wifiDirectManager.getGroupOwnerAddress().getHostAddress(), 7777);
+
+        } catch (Throwable e) {
+            logger.log(WARNING, "Failed to connect to " + device.deviceName, e);
+
+        } finally {
+            wifiDirectManager.disconnect();
+            broadcastBundleClientWifiEvent(BundleClientWifiDirectEventType.WIFI_DIRECT_CLIENT_EXCHANGE_FINISHED,
+                                           device.deviceAddress);
+
+        }
+        return isTransport;
+    }
+
     private CompletableFuture<WifiP2pGroup> connectTo(WifiP2pDevice transport) {
         var connectedFuture = new CompletableFuture<WifiP2pGroup>();
         addConnectionWaiter(connectedFuture);
