@@ -39,9 +39,10 @@ jobs:
 
       - name: Build release APK and AAB
         run: |
-          echo "${{ secrets.DDD_KEYFILE }}" | base64 -d > signing-key.jks
+          KEYFILE=${PWD}/signing-key.jks
+          echo "${{ secrets.DDD_KEYFILE }}" | base64 -d > $KEYFILE
           ./gradlew clean bundleRelease assembleRelease \
-            -Pandroid.injected.signing.store.file=signing-key.jks \
+            -Pandroid.injected.signing.store.file=$KEYFILE \
             -Pandroid.injected.signing.store.password=${{ secrets.DDD_KEYFILE_PASSWORD }} \
             -Pandroid.injected.signing.key.alias=ddd \
             -Pandroid.injected.signing.key.password=${{ secrets.DDD_KEYFILE_PASSWORD }}
