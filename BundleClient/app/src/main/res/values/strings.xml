@@ -70,4 +70,6 @@
     <string name="turn_on_notifications" translatable="false">Turn on notifications</string>
     <string name="close_bottom_sheet" translatable="false">Close bottom sheet</string>
     <string name="wifi_aware_tab" translatable="false">Wifi Aware</string>
+    <string name="sent">"sent: "</string>
+    <string name="received">received</string>
 </resources>

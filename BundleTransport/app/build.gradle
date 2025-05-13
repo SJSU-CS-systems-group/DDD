@@ -34,8 +34,8 @@ android {
         applicationId "net.discdd.bundletransport"
         minSdk 33 // Required at least 34 for JDK 17 -> enable BufferedInputStream transferTo in BundleCore
         targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        versionCode rootProject.ext.appVersionCode as Integer
+        versionName rootProject.ext.appVersionName as String
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     packagingOptions {
