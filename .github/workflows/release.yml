@@ -12,7 +12,7 @@ on:
 
 jobs:
   build-and-release:
-    runs-on: ddd
+    runs-on: SJSU-office
     steps:
       - name: Checkout
         uses: actions/checkout@v4
