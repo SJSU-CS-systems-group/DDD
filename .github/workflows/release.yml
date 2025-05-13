@@ -47,6 +47,11 @@ jobs:
             -Pandroid.injected.signing.store.password=$DDD_KEYFILE_PASSWORD \
             -Pandroid.injected.signing.key.alias=ddd \
             -Pandroid.injected.signing.key.password=$DDD_KEYFILE_PASSWORD
+          # rename the files so that the names are reasonable
+          mv BundleClient/app/build/outputs/bundle/release/app-release.aab DDDClient.aab
+          mv BundleClient/app/build/outputs/apk/release/app-release.apk DDDClient.apk
+          mv BundleTransport/app/build/outputs/bundle/release/app-release.aab DDDTransport.aab
+          mv BundleTransport/app/build/outputs/apk/release/app-release.apk DDDTransport.apk
         env:
           DDD_KEYFILE_PASSWORD: ${{ secrets.DDD_KEYFILE_PASSWORD }}
 
@@ -68,10 +73,10 @@ jobs:
           draft: false
           prerelease: false
           files: |
-                BundleClient/app/build/outputs/bundle/release/app-release.aab
-                BundleClient/app/build/outputs/apk/release/app-release.apk
-                BundleTransport/app/build/outputs/bundle/release/app-release.aab
-                BundleTransport/app/build/outputs/apk/release/app-release.apk
+                BundleClient.aab
+                BundleClient.apk
+                BundleTransport.aab
+                BundleTransport.apk
         env:
               GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
