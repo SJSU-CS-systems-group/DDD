@@ -54,7 +54,7 @@ jobs:
       - name: Get version name
         id: version
         run: |
-              VERSION_NAME=$(grep appVersionName bundle.gradle | sed 's/.*"\(.*\)".*/\1/')
+              VERSION_NAME=$(grep appVersionName build.gradle | sed 's/.*"\(.*\)".*/\1/')
               echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
@@ -65,10 +65,10 @@ jobs:
           draft: false
           prerelease: false
           files: |
-                app/BundleClient/build/outputs/bundle/release/app-release.aab
-                app/BundleClient/build/outputs/apk/release/app-release.apk
-                app/BundleTransport/build/outputs/bundle/release/app-release.aab
-                app/BundleTransport/build/outputs/apk/release/app-release.apk
+                BundleClient/app/build/outputs/bundle/release/app-release.aab
+                BundleClient/app/build/outputs/apk/release/app-release.apk
+                BundleTransport/app/build/outputs/bundle/release/app-release.aab
+                BundleTransport/app/build/outputs/apk/release/app-release.apk
         env:
               GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
