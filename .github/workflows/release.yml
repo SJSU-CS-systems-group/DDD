@@ -54,8 +54,11 @@ jobs:
       - name: Get version name
         id: version
         run: |
-              VERSION_NAME=$(grep appVersionName build.gradle | sed 's/.*"\(.*\)".*/\1/')
-              echo "VERSION_NAME=$VERSION_NAME-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+              VERSION_NAME=$(grep appVersionName build.gradle | sed "s/.*'\(.*\)'.*/\1/")
+              VERSION_NAME=${VERSION_NAME%%_*}
+              VERSION_NAME="${VERSION_NAME}_$(git rev-parse --short HEAD)"
+              sed -i "s/appVersionName \?= \?['\"].*['\"]/appVersionName = '${VERSION_NAME}'/" build.gradle
+              echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
