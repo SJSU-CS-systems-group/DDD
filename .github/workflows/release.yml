@@ -1,12 +1,9 @@
 name: Android Release
 
 on:
-  pull_request:
-    branches: [main]
   push:
     paths:
-      - 'BundleClient/app/build.gradle.kts'
-      - 'BundleTransport/app/build.gradle.kts'
+      - build.gradle
     branches:
       - main  # or 'release' if that's your release branch
 
