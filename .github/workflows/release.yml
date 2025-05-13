@@ -1,0 +1,79 @@
+name: Android Release
+
+on:
+  push:
+    paths:
+      - build.gradle
+    branches:
+      - main  # or 'release' if that's your release branch
+
+jobs:
+  build-and-release:
+    runs-on: SJSU-office
+    environment: Android Release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Maven to use GitHub Packages
+        run: |
+          mkdir -p ~/.m2
+          echo "<settings>
+            <servers>
+              <server>
+                <id>github</id>
+                <username>github-actions[bot]</username>
+                <password>${{ secrets.GITHUB_TOKEN }}</password>
+              </server>
+            </servers>
+          </settings>" > ~/.m2/settings.xml
+
+      - name: Maven install
+        run: mvn -ntp install
+
+      - name: Decode signing key
+        run: |
+
+      - name: Build release APK and AAB
+        run: |
+          KEYFILE=${PWD}/signing-key.jks
+          echo "${{ secrets.DDD_KEYFILE }}" | base64 -d > $KEYFILE
+          echo "populated $KEYFILE"
+          ./gradlew clean bundleRelease assembleRelease \
+            -Pandroid.injected.signing.store.file=$KEYFILE \
+            -Pandroid.injected.signing.store.password=$DDD_KEYFILE_PASSWORD \
+            -Pandroid.injected.signing.key.alias=ddd \
+            -Pandroid.injected.signing.key.password=$DDD_KEYFILE_PASSWORD
+          # rename the files so that the names are reasonable
+          mv BundleClient/app/build/outputs/bundle/release/app-release.aab DDDClient.aab
+          mv BundleClient/app/build/outputs/apk/release/app-release.apk DDDClient.apk
+          mv BundleTransport/app/build/outputs/bundle/release/app-release.aab DDDTransport.aab
+          mv BundleTransport/app/build/outputs/apk/release/app-release.apk DDDTransport.apk
+        env:
+          DDD_KEYFILE_PASSWORD: ${{ secrets.DDD_KEYFILE_PASSWORD }}
+
+
+      - name: Get version name
+        id: version
+        run: |
+              VERSION_NAME=$(grep appVersionName build.gradle | sed "s/.*'\(.*\)'.*/\1/")
+              VERSION_NAME=${VERSION_NAME%%_*}
+              VERSION_NAME="${VERSION_NAME}_$(git rev-parse --short HEAD)"
+              sed -i "s/appVersionName \?= \?['\"].*['\"]/appVersionName = '${VERSION_NAME}'/" build.gradle
+              echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.VERSION_NAME }}
+          name: Release v${{ steps.version.outputs.VERSION_NAME }}
+          draft: false
+          prerelease: false
+          files: |
+                DDDClient.aab
+                DDDClient.apk
+                DDDTransport.aab
+                DDDTransport.apk
+        env:
+              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

@@ -14,11 +14,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import net.discdd.bundleclient.R
 import net.discdd.bundleclient.viewmodels.BundleManagerViewModel
 
 @Composable
@@ -37,7 +39,7 @@ fun ManagerScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "\n  k9:",
+                text = "k9:",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -47,7 +49,7 @@ fun ManagerScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "bundleUp: ",
+                    text = stringResource(R.string.sent),
                     fontSize = 20.sp
                 )
                 Text(
@@ -55,7 +57,7 @@ fun ManagerScreen(
                     fontSize = 20.sp
                 )
                 Text(
-                    text = "        bundleDown: ",
+                    text = " " + stringResource(R.string.received) + ":",
                     fontSize = 20.sp
                 )
                 Text(
