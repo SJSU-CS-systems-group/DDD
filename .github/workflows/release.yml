@@ -73,10 +73,10 @@ jobs:
           draft: false
           prerelease: false
           files: |
-                BundleClient.aab
-                BundleClient.apk
-                BundleTransport.aab
-                BundleTransport.apk
+                DDDClient.aab
+                DDDClient.apk
+                DDDTransport.aab
+                DDDTransport.apk
         env:
               GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
