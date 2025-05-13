@@ -48,7 +48,7 @@ jobs:
             -Pandroid.injected.signing.key.alias=ddd \
             -Pandroid.injected.signing.key.password=$DDD_KEYFILE_PASSWORD
         env:
-          DDD_KEY_FILE_PASSWORD: ${{ secrets.DDD_KEYFILE_PASSWORD }}
+          DDD_KEYFILE_PASSWORD: ${{ secrets.DDD_KEYFILE_PASSWORD }}
 
 
       - name: Get version name
