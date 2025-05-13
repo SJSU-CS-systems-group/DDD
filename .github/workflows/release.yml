@@ -1,0 +1,68 @@
+name: Android Release
+
+on:
+  pull-request:
+    branches: [main]
+  push:
+    paths:
+      - 'BundleClient/app/build.gradle.kts'
+      - 'BundleTransport/app/build.gradle.kts'
+    branches:
+      - main  # or 'release' if that's your release branch
+
+jobs:
+  build-and-release:
+    runs-on: ddd
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Maven to use GitHub Packages
+        run: |
+          mkdir -p ~/.m2
+          echo "<settings>
+            <servers>
+              <server>
+                <id>github</id>
+                <username>github-actions[bot]</username>
+                <password>${{ secrets.GITHUB_TOKEN }}</password>
+              </server>
+            </servers>
+          </settings>" > ~/.m2/settings.xml
+
+      - name: Maven install
+        run: mvn -ntp install
+
+      - name: Decode signing key
+      if: env.SIGNING_KEY_BASE64 != ''
+      run: |
+        echo "${{ secrets.DDD_KEYFILE }}" | base64 -d > signing-key.jks
+
+      - name: Build release APK and AAB
+        run: ./gradlew clean bundleRelease assembleRelease \
+          -Pandroid.injected.signing.store.file=signing-key.jks \
+          -Pandroid.injected.signing.store.password=${{ secrets.DDD_KEYFILE_PASSWORD }} \
+          -Pandroid.injected.signing.key.alias=ddd \
+          -Pandroid.injected.signing.key.password=${{ secrets.DDD_KEYFILE_PASSWORD }}
+
+      - name: Get version name
+          id: version
+          run: |
+              VERSION_NAME=$(grep appVersionName bundle.gradle | sed 's/.*"\(.*\)".*/\1/')
+              echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+          uses: softprops/action-gh-release@v2
+          with:
+              tag_name: v${{ steps.version.outputs.VERSION_NAME }}
+              name: Release v${{ steps.version.outputs.VERSION_NAME }}
+              draft: false
+              prerelease: false
+              files: |
+                app/BundleClient/build/outputs/bundle/release/app-release.aab
+                app/BundleClient/build/outputs/apk/release/app-release.apk
+                app/BundleTransport/build/outputs/bundle/release/app-release.aab
+                app/BundleTransport/build/outputs/apk/release/app-release.apk
+          env:
+              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
