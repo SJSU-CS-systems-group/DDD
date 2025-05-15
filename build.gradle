@@ -4,7 +4,7 @@ buildscript {
         agp_version = '8.5.0'
         kotlin_version = '1.9.25'
         appVersionCode = 3
-        appVersionName = '0.1-alpha3'
+        appVersionName = '0.1-alpha3R1'
     }
     repositories {
         google()
