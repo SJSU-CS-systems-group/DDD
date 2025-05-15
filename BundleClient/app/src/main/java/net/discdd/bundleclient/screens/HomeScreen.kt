@@ -110,9 +110,10 @@ fun HomeScreen(
             title = context.getString(R.string.usb_tab),
             screen = {
                 val usbViewModel: ClientUsbViewModel = viewModel()
+                val currentContext = LocalContext.current
                 UsbScreen(usbViewModel) { viewModel ->
                     ClientUsbComponent(viewModel) {
-                        viewModel.transferBundleToUsb()
+                        viewModel.transferBundleToUsb(currentContext)
                     }
                 }
             }

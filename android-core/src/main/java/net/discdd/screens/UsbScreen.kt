@@ -33,11 +33,7 @@ fun <T : UsbViewModel> UsbScreen(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (usbState.filePermissionGranted) {
-                usbExchangeComponent(usbViewModel)
-            } else {
-                UsbFileRequestUI(usbViewModel)
-            }
+            usbExchangeComponent(usbViewModel)
         }
     }
 }
