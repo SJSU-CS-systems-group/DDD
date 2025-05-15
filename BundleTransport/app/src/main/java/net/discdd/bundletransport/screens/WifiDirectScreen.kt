@@ -89,8 +89,8 @@ fun WifiDirectScreen(
 
         Column(
                 modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    .fillMaxWidth()
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             var checked by remember {
@@ -169,7 +169,10 @@ fun WifiDirectScreen(
             // only show the name change button if we don't have a valid device name
             // (transports must have device names starting with ddd_)
             if (!nameValid) {
-                Text(text = stringResource(R.string.phone_name_must_start_with_ddd))
+                Text(text = stringResource(
+                    R.string.phone_name_must_start_with_ddd_found,
+                    state.deviceName
+                ))
 
                 FilledTonalButton(
                         onClick = { wifiViewModel.openInfoSettings() },
