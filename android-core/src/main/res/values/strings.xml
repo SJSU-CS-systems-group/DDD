@@ -1,24 +1,11 @@
 <resources>
-    <string name="android.permission.ACCESS_FINE_LOCATION">Fine location access</string>
-    <string name="android.permission.ACCESS_WIFI_STATE">Check Wifi Status</string>
-    <string name="android.permission.CHANGE_WIFI_STATE">Change Wifi</string>
-    <string name="android.permission.INTERNET">Use the Network</string>
-    <string name="android.permission.NEARBY_WIFI_DEVICES">Find nearby Wifi devices</string>
-    <string name="wifidirectinitialized">WifiDirectInitialized</string>
-    <string name="peers">Peers</string>
-    <string name="waiting_for_permissions">Waiting For Permissions</string>
-    <string name="any_emoji">*</string>
-    <string name="generic_action_button">Action</string>
-    <string name="needed_permissions">Needed Permissions</string>
-    <string name="dialog_message" translatable="false">Please enable permission in Settings. Navigate to Settings -> Apps -> All apps -> Bundle Transport -> Permissions -> Nearby Devices</string>
-    <string name="dialog_btn_text" translatable="false">Continue</string>
-    <string name="manual_action_required" translatable="false"><![CDATA[Manual action is required to grant access to nearby devices. To proceed, click \'Enable\' -> \'Permissions\' -> \'Nearby devices\' -> \'Allow\']]></string>
-    <string name="generic_ask_permission" translatable="false">This permission is needed to discover and connect to nearby devices for file transfers.</string>
-    <string name="urgent_ask_permission" translatable="false">Getting access to nearby devices is important for transport functionality. Please grant us access to continue. Thank you :D</string>
-    <string name="close_bottom_sheet" translatable="false">Close bottom sheet</string>
-    <string name="turn_on_notifications" translatable="false">Turn on notifications</string>
-    <string name="ask_notification_desc" translatable="false">Don\'t miss important messages like bundle upload progress and application activity</string>
-    <string name="to_settings" translatable="false">To Settings</string>
-    <string name="to_settings_text" translatable="false">To enable our app to manage app-related files on this device and your USB storage, please toggle \\\"Yes\\\" for BundleClient in your settings. We assure you that only files created by our app will be accessed. Protecting user privacy and maintaining ethical practices are our top priorities.</string>
-    <string name="reload" translatable="false">Reload ahah</string>
+    <string name="manual_action_required"><![CDATA[Manual action is required to grant access to nearby devices. To proceed, click \'Enable\' -> \'Permissions\' -> \'Nearby devices\' -> \'Allow\']]></string>
+    <string name="generic_ask_permission">This permission is needed to discover and connect to nearby devices for file transfers.</string>
+    <string name="urgent_ask_permission">Getting access to nearby devices is important for transport functionality. Please grant us access to continue. Thank you :D</string>
+    <string name="close_bottom_sheet">Close bottom sheet</string>
+    <string name="turn_on_notifications">Turn on notifications</string>
+    <string name="ask_notification_desc">Don\'t miss important messages like bundle upload progress and application activity</string>
+    <string name="to_settings">To Settings</string>
+    <string name="to_settings_text">To enable our app to manage app-related files on this device and your USB storage, please toggle \\\"Yes\\\" for BundleClient in your settings. We assure you that only files created by our app will be accessed. Protecting user privacy and maintaining ethical practices are our top priorities.</string>
+    <string name="reload">Reload</string>
 </resources>

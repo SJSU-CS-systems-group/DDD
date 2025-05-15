@@ -1,7 +1,7 @@
 <resources>
-    <string name="title_activity_bundle_transport" translatable="false">bundle transport</string>
+    <string name="title_activity_bundle_transport" translatable="false">DDD Transport</string>
     <string name="app_name">DDD Transport</string>
-    <string name="bundle_server_host">name.homeofcode.com</string>
+    <string name="bundle_server_host">ravlykmail.com</string>
     <string name="select">Select Item</string>
     <string name="wifi_request_groupinfo">"I request groupInfo: "</string>
     <string name="grpc_running">GRPC Server State: RUNNING</string>
@@ -10,26 +10,11 @@
     <string name="connecting_to_server">Initiating server exchange to %1$s :%2$s...\n</string>
     <string name="enter_the_domain_and_port">Enter the domain and port</string>
     <string name="bundles_upload_failed">Bundles upload failed.\n</string>
-    <string name="bundles_upload_successful">Bundles uploaded successfully.\n</string>
-    <string name="bundles_download_failed">Bundles download failed.\n</string>
-    <string name="bundles_download_successful">Bundles downloaded successfully.\n</string>
     <string name="saved">Saved</string>
-    <string name="start_grpc_server">Start gRPC Server</string>
-    <string name="stop_grpc_server">Stop gRPC Server</string>
-    <string name="connect_to_bundle_server">connect to bundle server</string>
-    <string name="save_domain_and_port">Save Domain and Port</string>
-    <string name="restore_domain_and_port">Restore Domain and Port</string>
-    <string name="nearby_devices">Nearby Devices:</string>
     <string name="connected_devices">Connected Devices:</string>
-    <string name="domain">Domain</string>
-    <string name="port">Port</string>
     <string name="change_phone_name">Change Phone Name</string>
     <string name="interactions_with_bundleclients">Interactions with BundleClients</string>
-    <string name="device_name">Device Name:</string>
-    <string name="phone_name_must_start_with_ddd">Phone name must start with ddd_</string>
-    <string name="my_wifi_info">My Wifi Info</string>
     <string name="wifi_transport_not_active">Wifi Transport not active</string>
-    <string name="unknown">Unknown</string>
     <string name="connected">Connected</string>
     <string name="invited">Invited</string>
     <string name="failed">Failed</string>
@@ -42,16 +27,9 @@
     <string name="reload">Reload</string>
     <string name="check_permissions_and_that_wifi_is_enabled">Check Permissions and that Wifi is enabled</string>
     <string name="no_usb_connection_detected">No USB connection detected</string>
-    <string name="usb_device_attached_checking_for_storage_volumes">USB device attached, checking for storage volumes</string>
     <string name="usb_connection_detected">USB connection detected</string>
     <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">USB was connected but DDD transport directory was not detected</string>
-    <string name="usb_device_attached">USB device attached</string>
-    <string name="usb_device_detached">USB device detached</string>
     <string name="exchange_usb_data">Exchange USB Data</string>
-    <string name="usb_connection_status">Status of USB connection</string>
-    <string name="usb_action_status">USB Action Status</string>
-    <string name="reload_settings">Reload</string>
-    <string name="to_settings_button">To Settings</string>
     <string name="to_settings_text">To enable our app to manage app-related files on this device and your USB storage, please toggle \"Yes\" for BundleTransport in your settings. We assure you that only files created by our app will be accessed. Protecting user privacy and maintaining ethical practices are our top priorities.</string>
     <string name="error_updating_storage_info">Error updating storage info</string>
     <string name="apply_changes">Click Set Storage to apply changes</string>
@@ -63,4 +41,5 @@
     <string name="dismiss">Dismiss</string>
     <string name="storage" translatable="false">Storage</string>
     <string name="usb" translatable="false">Usb</string>
+    <string name="phone_name_must_start_with_ddd_found">Phone name must start with ddd_ found %1$s</string>
 </resources>
