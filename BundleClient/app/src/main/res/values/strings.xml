@@ -37,4 +37,5 @@
     <string name="wifi_aware_tab">Wifi Aware</string>
     <string name="sent">"sent: "</string>
     <string name="received">received</string>
+    <string name="cannot_transfer_bundle_usb_not_ready_or_directory_not_found">Cannot transfer bundle: USB not ready or directory not found</string>
 </resources>

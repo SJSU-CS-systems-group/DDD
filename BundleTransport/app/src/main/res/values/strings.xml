@@ -1,5 +1,13 @@
 <resources>
-    <string name="app_name">BundleTransport</string>
+    <string name="title_activity_bundle_transport" translatable="false">DDD Transport</string>
+    <string name="app_name">DDD Transport</string>
+    <string name="bundle_server_host">ravlykmail.com</string>
+    <string name="select">Select Item</string>
+    <string name="wifi_request_groupinfo">"I request groupInfo: "</string>
+    <string name="grpc_running">GRPC Server State: RUNNING</string>
+    <string name="grpc_pending">GRPC Server State: PENDING</string>
+    <string name="grpc_shutdown">GRPC Server State: SHUTDOWN</string>
+    <string name="connecting_to_server">Initiating server exchange to %1$s :%2$s...\n</string>
     <string name="enter_the_domain_and_port">Enter the domain and port</string>
     <string name="bundles_upload_failed">Bundles upload failed.\n</string>
     <string name="saved">Saved</string>
