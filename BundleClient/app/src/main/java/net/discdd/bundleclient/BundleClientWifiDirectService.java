@@ -171,12 +171,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
         switch (action.type()) {
             case WIFI_DIRECT_MANAGER_INITIALIZED -> {
                 logger.info("WifiDirectManager initialized");
-                wifiDirectManager.discoverPeers().thenAccept(oi -> {
-                    logger.info("WifiDirectManager discoverPeers completed with " + oi);
-                }).exceptionally(e -> {
-                    logger.log(WARNING, "Failed to start server", e);
-                    return null;
-                });
+                wifiDirectManager.discoverPeers();
             }
             case WIFI_DIRECT_MANAGER_PEERS_CHANGED -> {
                 logger.info("WifiDirectManager peers changed");
@@ -294,12 +289,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
     }
 
     public void discoverPeers() {
-        wifiDirectManager.discoverPeers().thenAccept(oi -> {
-            logger.info("WifiDirectManager discoverPeers completed with " + oi);
-        }).exceptionally(e -> {
-            logger.log(WARNING, "Failed to start server", e);
-            return null;
-        });
+        wifiDirectManager.discoverPeers();
     }
 
     public CompletableFuture<BundleExchangeCounts> initiateExchange(String deviceAddress) {
