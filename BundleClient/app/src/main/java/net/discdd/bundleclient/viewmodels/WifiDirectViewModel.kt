@@ -92,7 +92,7 @@ class WifiDirectViewModel(
     fun exchangeMessage(deviceAddress: String) {
         viewModelScope.launch {
             updatePeerExchangeStatus(deviceAddress, true)
-            wifiService?.initiateExchange(deviceAddress)?.thenAccept {
+            wifiService?.initiateExchange(deviceAddress, true)?.thenAccept {
                 updatePeerExchangeStatus(deviceAddress, false)
             }
         }

@@ -264,11 +264,15 @@ public class BundleTransmission {
         }
     }
 
-    public void processDiscoveredPeer(String deviceAddress, String deviceName) {
+    public boolean processDiscoveredPeer(String deviceAddress, String deviceName) {
         synchronized (recentTransports) {
             RecentTransport recentTransport = recentTransports.computeIfAbsent(deviceAddress, RecentTransport::new);
             recentTransport.deviceName = deviceName;
             recentTransport.lastSeen = System.currentTimeMillis();
+            if (recentTransport.getLastRecencyCheck() + 120000 < System.currentTimeMillis()) {
+                return true;
+            }
+            return false;
         }
     }
 
