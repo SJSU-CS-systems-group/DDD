@@ -89,8 +89,8 @@ fun WifiDirectScreen(
 
         Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
+                        .fillMaxWidth()
+                        .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             var checked by remember {
@@ -170,8 +170,8 @@ fun WifiDirectScreen(
             // (transports must have device names starting with ddd_)
             if (!nameValid) {
                 Text(text = stringResource(
-                    R.string.phone_name_must_start_with_ddd_found,
-                    state.deviceName
+                        R.string.phone_name_must_start_with_ddd_found,
+                        state.deviceName
                 ))
 
                 FilledTonalButton(
