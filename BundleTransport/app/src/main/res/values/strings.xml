@@ -1,6 +1,6 @@
 <resources>
     <string name="title_activity_bundle_transport" translatable="false">bundle transport</string>
-    <string name="app_name">BundleTransport</string>
+    <string name="app_name">DDD Transport</string>
     <string name="bundle_server_host">name.homeofcode.com</string>
     <string name="select">Select Item</string>
     <string name="wifi_request_groupinfo">"I request groupInfo: "</string>

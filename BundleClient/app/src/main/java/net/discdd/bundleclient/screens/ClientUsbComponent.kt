@@ -62,7 +62,7 @@ fun ClientUsbComponent(
     Spacer(modifier = Modifier.height(16.dp))
 
     Button(
-        onClick = { usbViewModel.checkDddDirExists() },
+        onClick = { usbViewModel.promptForDirectoryAccess() },
         modifier = Modifier.fillMaxWidth(0.8f)
     ) {
         Text(
