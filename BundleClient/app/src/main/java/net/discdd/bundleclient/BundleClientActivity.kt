@@ -114,8 +114,10 @@ class BundleClientActivity: ComponentActivity() {
 
         WifiServiceManager.clearService()
         unbindService(WifiServiceManager.getConnection())
-
+/*
         WifiAwareManager.clearService()
         unbindService(WifiAwareManager.getConnection())
+
+ */
     }
 }
