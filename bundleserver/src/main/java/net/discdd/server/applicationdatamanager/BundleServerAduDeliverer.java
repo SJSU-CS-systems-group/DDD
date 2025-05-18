@@ -3,10 +3,13 @@ package net.discdd.server.applicationdatamanager;
 import com.google.protobuf.ByteString;
 import io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.NettyChannelBuilder;
+import io.grpc.stub.StreamObserver;
 import net.discdd.grpc.AppDataUnit;
 import net.discdd.grpc.ExchangeADUsRequest;
+import net.discdd.grpc.ExchangeADUsResponse;
 import net.discdd.grpc.PendingDataCheckRequest;
 import net.discdd.grpc.ServiceAdapterServiceGrpc;
+import net.discdd.model.ADU;
 import net.discdd.server.repository.RegisteredAppAdapterRepository;
 import net.discdd.tls.DDDTLSUtil;
 import net.discdd.tls.GrpcSecurity;
@@ -19,6 +22,7 @@ import javax.annotation.PostConstruct;
 import javax.net.ssl.SSLException;
 import java.time.Duration;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
@@ -30,47 +34,37 @@ import java.util.logging.Logger;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
-/**
- * Remember that this class has a different concept of "send" and "receive" folders than the original code.
- * Data in the "send" folder are going back to BundleClients.
- * Data in the "receive" folder are coming from BundleClients and going to the adapters.
- */
 @Component
 public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliveredListener {
     private static final Logger logger = Logger.getLogger(BundleServerAduDeliverer.class.getName());
     private final RegisteredAppAdapterRepository registeredAppAdapterRepository;
     private final StoreADUs sendFolder;
     private final StoreADUs receiveFolder;
-    // appId to executor and stub
-    // TODO: This should adapt to changes in the registered app adapters repository. currently it's only checked at
-    //  startup
     private final ConcurrentHashMap<String, AppState> apps = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
     private final Duration dataCheckInterval;
-    private long grpcTimeout = 20_000 /* milliseconds */;
+    private long grpcTimeout = 20_000; // milliseconds
     @Autowired
     private GrpcSecurity serverGrpcSecurity;
 
-    BundleServerAduDeliverer(AduStores aduStores,
-                             RegisteredAppAdapterRepository registeredAppAdapterRepository,
-                             @Value("${serviceadapter.datacheck.interval}") Duration dataCheckInterval) {
+    public BundleServerAduDeliverer(AduStores aduStores,
+                                    RegisteredAppAdapterRepository registeredAppAdapterRepository,
+                                    @Value("${serviceadapter.datacheck.interval}") Duration dataCheckInterval) {
         this.sendFolder = aduStores.getSendADUsStorage();
         this.receiveFolder = aduStores.getReceiveADUsStorage();
         this.registeredAppAdapterRepository = registeredAppAdapterRepository;
         this.dataCheckInterval = dataCheckInterval;
     }
 
-    // Synchronized because we want this to be an atomic operation
     synchronized private void revalidateApps() {
         var foundApps = new HashSet<String>();
         registeredAppAdapterRepository.findAll().forEach(appAdapter -> {
             foundApps.add(appAdapter.getAppId());
-            // TODO: we should also check if the location matches
             if (!apps.containsKey(appAdapter.getAppId())) {
                 try {
                     var sslClientContext = GrpcSslContexts.forClient()
                             .keyManager(serverGrpcSecurity.getGrpcKeyPair().getPrivate(),
-                                        serverGrpcSecurity.getGrpcCert())
+                                    serverGrpcSecurity.getGrpcCert())
                             .trustManager(DDDTLSUtil.trustManager)
                             .build();
                     var channel = NettyChannelBuilder.forTarget(appAdapter.getAddress())
@@ -79,24 +73,23 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
                             .sslContext(sslClientContext)
                             .build();
 
-                    var stub = ServiceAdapterServiceGrpc.newBlockingStub(channel);
+                    var stub = ServiceAdapterServiceGrpc.newStub(channel); // Use async stub
+                    var blockingStub = ServiceAdapterServiceGrpc.newBlockingStub(channel); // Use async stub
+
                     apps.put(appAdapter.getAppId(),
-                             new AppState(appAdapter.getAppId(),
-                                          Executors.newSingleThreadExecutor(),
-                                          new HashSet<>(),
-                                          stub));
+                            new AppState(appAdapter.getAppId(),
+                                    Executors.newSingleThreadExecutor(),
+                                    new HashSet<>(),
+                                    stub,
+                                    blockingStub));
                 } catch (SSLException e) {
                     throw new RuntimeException(e);
                 }
             }
         });
-        // remove any apps that went away
         apps.keySet().removeIf(appId -> !foundApps.contains(appId));
         logger.log(INFO, "Revalidated apps " + apps.keySet());
     }
-
-    // If the data transfer is currently queued for a client, remove it from pending because we are going
-    // to send now
 
     @PostConstruct
     public void init() {
@@ -104,31 +97,29 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
         sendFolder.getAllClientApps().forEach(app -> addAppWithPendingData(app.appId(), app.clientId()));
         logger.log(INFO, "Checking for pending data from service adapters every " + dataCheckInterval);
         scheduler.scheduleWithFixedDelay(this::checkServiceAdapters,
-                                         dataCheckInterval.toMillis(),
-                                         dataCheckInterval.toMillis(),
-                                         java.util.concurrent.TimeUnit.MILLISECONDS);
-
+                dataCheckInterval.toMillis(),
+                dataCheckInterval.toMillis(),
+                TimeUnit.MILLISECONDS);
     }
 
-    // Periodic checkin to see if the service adapters have data to send
     private void checkServiceAdapters() {
         apps.forEach((appId, appState) -> {
             try {
                 logger.info("Checking for pending data for " + appId + " at " + appState.stub.getChannel().authority());
-                var checkResponse = appState.stub.pendingDataCheck(PendingDataCheckRequest.getDefaultInstance());
+                var checkResponse = appState.blockingStub.withDeadlineAfter(grpcTimeout, TimeUnit.MILLISECONDS)
+                        .pendingDataCheck(PendingDataCheckRequest.getDefaultInstance());
                 checkResponse.getClientIdList().forEach(clientId -> addAppWithPendingData(appId, clientId));
                 logger.log(INFO, "Pending clients for " + appId + " " + checkResponse.getClientIdList());
             } catch (Throwable e) {
                 logger.log(SEVERE,
-                           "Failed to check for pending data for " + appId + " at " +
-                                   appState.stub.getChannel().authority(),
-                           e);
+                        "Failed to check for pending data for " + appId + " at " +
+                                appState.stub.getChannel().authority(),
+                        e);
             }
         });
     }
 
     private void addAppWithPendingData(String appId, String clientId) {
-        // if the app isn't registered, check to see if something changed
         if (!apps.containsKey(appId)) revalidateApps();
         final var appState = apps.get(appId);
         if (appState == null) {
@@ -155,41 +146,75 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
             synchronized (appState.pendingClients) {
                 appState.pendingClients.remove(clientId);
             }
-            var appData = ExchangeADUsRequest.newBuilder()
-                    .setClientId(clientId)
-                    .setLastADUIdReceived(sendFolder.getLastADUIdAdded(clientId, appId));
+
+            StreamObserver<ExchangeADUsResponse> responseObserver = new StreamObserver<ExchangeADUsResponse>() {
+                @Override
+                public void onNext(ExchangeADUsResponse response) {
+                    try {
+                        if (response.hasAdus()) {
+                            AppDataUnit adu = response.getAdus();
+                            sendFolder.addADU(clientId, appId, adu.getData().toByteArray(), adu.getAduId());
+                            logger.log(INFO, "Received ADU ID: " + adu.getAduId() + " for clientId: " + clientId +
+                                    " from " + appId);
+                        }
+                        if (response.hasLastADUIdReceived()) {
+                            logger.log(INFO, "Server processed up to ADU ID: " + response.getLastADUIdReceived() +
+                                    " for clientId: " + clientId);
+                        }
+                    } catch (Exception e) {
+                        logger.log(SEVERE, "Error processing response for clientId: " + clientId, e);
+                    }
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    logger.log(SEVERE, "Stream error for clientId: " + clientId + " appId: " + appId, t);
+                    scheduler.schedule(() -> addAppWithPendingData(appState, clientId),
+                            dataCheckInterval.toMillis(),
+                            TimeUnit.MILLISECONDS);
+                }
+
+                @Override
+                public void onCompleted() {
+                    logger.log(INFO, "Stream completed for clientId: " + clientId + " appId: " + appId);
+                }
+            };
+
+            StreamObserver<ExchangeADUsRequest> requestObserver =
+                    appState.stub.withDeadlineAfter(grpcTimeout, TimeUnit.MILLISECONDS).exchangeADUs(responseObserver);
+
+            requestObserver.onNext(ExchangeADUsRequest.newBuilder().setClientId(clientId).build());
+
+            long lastADUIdReceived = sendFolder.getLastADUIdAdded(clientId, appId);
+            requestObserver.onNext(ExchangeADUsRequest.newBuilder().setLastADUIdReceived(lastADUIdReceived).build());
+
             long lastAduIdSent = 0;
-            for (var adu : receiveFolder.getAppData(clientId, appId)) {
+            List<ADU> adus = receiveFolder.getAppData(clientId, appId);
+            for (var adu : adus) {
                 long aduId = adu.getADUId();
                 if (aduId > lastAduIdSent) {
                     lastAduIdSent = aduId;
                 }
-                var data = receiveFolder.getADU(clientId, appId, aduId);
-                appData.addAdus(AppDataUnit.newBuilder().setData(ByteString.copyFrom(data)).setAduId(aduId).build());
+                byte[] data = receiveFolder.getADU(clientId, appId, aduId);
+                AppDataUnit appDataUnit = AppDataUnit.newBuilder()
+                        .setAduId(aduId)
+                        .setData(ByteString.copyFrom(data))
+                        .build();
+                requestObserver.onNext(ExchangeADUsRequest.newBuilder().setAdus(appDataUnit).build());
+                logger.log(INFO, "Sent ADU ID: " + aduId + " for clientId: " + clientId + " to " + appId);
             }
 
-            logger.log(INFO,
-                       "Sending " + appData.getAdusCount() + " ADUs" +
-                               (appData.getAdusCount() > 0 ? " from ADU id " + appData.getAdus(0).getAduId() : "") +
-                               " to " + appId + " for " + clientId + " on " + appState.stub.getChannel().authority());
+            requestObserver.onCompleted();
 
-            var recvData =
-                    appState.stub.withDeadlineAfter(grpcTimeout, TimeUnit.MILLISECONDS).exchangeADUs(appData.build());
-            receiveFolder.deleteAllFilesUpTo(clientId, appId, lastAduIdSent);
-            logger.log(INFO,
-                       "Receiving " + recvData.getAdusList().size() + " ADUs" + (recvData.getAdusList().size() > 0 ?
-                                                                                 " from ADU id " + recvData.getAdus(0)
-                                                                                         .getAduId() :
-                                                                                 "") + " to " + appId + " for " +
-                               clientId + " on " + appState.stub.getChannel().authority());
-            for (var dataUnit : recvData.getAdusList()) {
-                sendFolder.addADU(clientId, appId, dataUnit.getData().toByteArray(), dataUnit.getAduId());
+            if (lastAduIdSent > 0) {
+                receiveFolder.deleteAllFilesUpTo(clientId, appId, lastAduIdSent);
+                logger.log(INFO, "Deleted ADUs up to ID: " + lastAduIdSent + " for clientId: " + clientId);
             }
         } catch (Exception e) {
             logger.log(SEVERE, "Failed to contact " + appId + " for " + clientId, e);
             scheduler.schedule(() -> addAppWithPendingData(appState, clientId),
-                               dataCheckInterval.toMillis(),
-                               java.util.concurrent.TimeUnit.MILLISECONDS);
+                    dataCheckInterval.toMillis(),
+                    TimeUnit.MILLISECONDS);
         }
     }
 
@@ -201,5 +226,7 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
     record AppState(String appId,
                     Executor executor,
                     HashSet<String> pendingClients,
-                    ServiceAdapterServiceGrpc.ServiceAdapterServiceBlockingStub stub) {}
+                    ServiceAdapterServiceGrpc.ServiceAdapterServiceStub stub,
+                    ServiceAdapterServiceGrpc.ServiceAdapterServiceBlockingStub blockingStub
+    ) {}
 }
