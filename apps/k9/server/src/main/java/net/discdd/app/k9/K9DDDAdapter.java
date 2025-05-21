@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
@@ -38,11 +39,11 @@ import static java.util.logging.Level.WARNING;
 @GrpcService
 public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServiceImplBase {
     static final Logger logger = Logger.getLogger(K9DDDAdapter.class.getName());
-    private StoreADUs sendADUsStorage;
-
     private final String APP_ID = "net.discdd.k9";
-    private final String RAVLY_DOMAIN = "ravlykmail.com";
-    private PasswordEncoder passwordEncoder;
+    private final String RAVLYK_DOMAIN = "ravlykmail.com";
+    private final Random rand = new Random();
+    private final StoreADUs sendADUsStorage;
+    private final PasswordEncoder passwordEncoder;
     @Autowired
     private K9ClientIdToEmailMappingRepository clientToEmailRepository;
 
@@ -51,11 +52,11 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         passwordEncoder = new BCryptPasswordEncoder();
     }
 
-    private void processEmailAdus(AppDataUnit adu) throws IOException {
+    private void processEmailAdus(AppDataUnit adu, String clientId) throws IOException {
         var addressList = MailUtils.getToCCBccAddresses(adu.getData().toByteArray());
         for (var address : addressList) {
             String domain = MailUtils.getDomain(address);
-            if (RAVLY_DOMAIN.equals(domain)) {
+            if (RAVLYK_DOMAIN.equals(domain)) {
                 Optional<K9ClientIdToEmailMapping> entity = clientToEmailRepository.findById(address);
                 if (entity.isPresent()) {
                     String destClientId = entity.get().getClientId();
@@ -63,6 +64,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
                     logger.log(INFO, "Completed processing ADU Id: " + adu.getAduId());
                 } else {
                     // TODO: what if email doesn't exist
+                    // add a bounced email to sendADUsStorage for clientId
                 }
             } else {
                 // TO_DO : Process messages for other domains
@@ -100,15 +102,23 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         sendADUsStorage.addADU(clientId, APP_ID, ack.toByteArray(), -1);
     }
 
+    private char getRandNum() {
+        return (char) ('0' + rand.nextInt(10));
+    }
+
+    private char getRandChar() {
+        return (char) ('a' + rand.nextInt(26));
+    }
+
     private void processRegisterAdus(AppDataUnit adu, String clientId) throws IOException {
         RegisterAdu parsedAdu = RegisterAdu.parseAdu(adu);
 
         if (parsedAdu != null) {
-            // generate emails
-            String[] emails = parsedAdu.generateEmails();
-            for (String email : emails) {
+            while (true) {
+                var email = parsedAdu.prefixes[0] + getRandNum() + getRandChar() + getRandChar() + getRandNum() +
+                        parsedAdu.suffixes[0] + '@' + RAVLYK_DOMAIN;
                 if (!clientToEmailRepository.existsById(email)) {
-                    String hashedPassword = passwordEncoder.encode(parsedAdu.getPassword());
+                    String hashedPassword = passwordEncoder.encode(parsedAdu.password);
                     K9ClientIdToEmailMapping entity = new K9ClientIdToEmailMapping(email, clientId, hashedPassword);
                     clientToEmailRepository.save(entity);
                     RegisterAduAck ack = new RegisterAduAck(email, hashedPassword, true, null);
@@ -117,10 +127,6 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
                 }
             }
         }
-
-        RegisterAduAck ack =
-                new RegisterAduAck(null, null, false, "Either not parsable or all email combinations exist");
-        sendADUsStorage.addADU(clientId, APP_ID, ack.toByteArray(), -1);
     }
 
     // This method will parse the ToAddress from the mail ADUs and prepares ADUs for the respective
@@ -134,7 +140,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         } else if (dataStr.startsWith("register")) {
             processRegisterAdus(adu, clientId);
         } else {
-            processEmailAdus(adu);
+            processEmailAdus(adu, clientId);
         }
     }
 
