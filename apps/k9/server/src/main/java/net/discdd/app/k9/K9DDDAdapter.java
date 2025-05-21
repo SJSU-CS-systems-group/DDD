@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
@@ -38,11 +39,11 @@ import static java.util.logging.Level.WARNING;
 @GrpcService
 public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServiceImplBase {
     static final Logger logger = Logger.getLogger(K9DDDAdapter.class.getName());
-    private StoreADUs sendADUsStorage;
-
     private final String APP_ID = "net.discdd.k9";
-    private final String RAVLY_DOMAIN = "ravlykmail.com";
-    private PasswordEncoder passwordEncoder;
+    private final String RAVLYK_DOMAIN = "ravlykmail.com";
+    private final Random rand = new Random();
+    private final StoreADUs sendADUsStorage;
+    private final PasswordEncoder passwordEncoder;
     @Autowired
     private K9ClientIdToEmailMappingRepository clientToEmailRepository;
 
@@ -51,11 +52,11 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         passwordEncoder = new BCryptPasswordEncoder();
     }
 
-    private void processEmailAdus(AppDataUnit adu) throws IOException {
+    private void processEmailAdus(AppDataUnit adu, String clientId) throws IOException {
         var addressList = MailUtils.getToCCBccAddresses(adu.getData().toByteArray());
         for (var address : addressList) {
             String domain = MailUtils.getDomain(address);
-            if (RAVLY_DOMAIN.equals(domain)) {
+            if (RAVLYK_DOMAIN.equals(domain)) {
                 Optional<K9ClientIdToEmailMapping> entity = clientToEmailRepository.findById(address);
                 if (entity.isPresent()) {
                     String destClientId = entity.get().getClientId();
@@ -63,6 +64,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
                     logger.log(INFO, "Completed processing ADU Id: " + adu.getAduId());
                 } else {
                     // TODO: what if email doesn't exist
+                    // add a bounced email to sendADUsStorage for clientId
                 }
             } else {
                 // TO_DO : Process messages for other domains
@@ -100,15 +102,34 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         sendADUsStorage.addADU(clientId, APP_ID, ack.toByteArray(), -1);
     }
 
+    private char getRandNum() {
+        return (char) ('0' + rand.nextInt(10));
+    }
+
+    private char getRandChar() {
+        return (char) ('a' + rand.nextInt(26));
+    }
+
     private void processRegisterAdus(AppDataUnit adu, String clientId) throws IOException {
         RegisterAdu parsedAdu = RegisterAdu.parseAdu(adu);
+        final String message;
 
-        if (parsedAdu != null) {
-            // generate emails
-            String[] emails = parsedAdu.generateEmails();
-            for (String email : emails) {
+        if (parsedAdu == null) {
+            message = "Registration is not parsable";
+        } else if (parsedAdu.password.length() < 8) {
+            message = "Password is less than 8 characters";
+        } else if (parsedAdu.prefixes.length < 1 || parsedAdu.suffixes.length < 1) {
+            message = "No prefixes or suffixes found";
+        } else if (parsedAdu.prefixes[0].length() < 3 || parsedAdu.suffixes[0].length() < 3) {
+            message = "Prefix or suffix is less than 3 characters";
+        } else if (!isLowerCaseASCII(parsedAdu.prefixes[0]) || !isLowerCaseASCII(parsedAdu.suffixes[0])) {
+            message = "Prefix and suffix should only contain a-z characters";
+        } else {
+            while (true) {
+                var email = parsedAdu.prefixes[0] + getRandNum() + getRandChar() + getRandChar() + getRandNum() +
+                        parsedAdu.suffixes[0] + '@' + RAVLYK_DOMAIN;
                 if (!clientToEmailRepository.existsById(email)) {
-                    String hashedPassword = passwordEncoder.encode(parsedAdu.getPassword());
+                    String hashedPassword = passwordEncoder.encode(parsedAdu.password);
                     K9ClientIdToEmailMapping entity = new K9ClientIdToEmailMapping(email, clientId, hashedPassword);
                     clientToEmailRepository.save(entity);
                     RegisterAduAck ack = new RegisterAduAck(email, hashedPassword, true, null);
@@ -117,10 +138,12 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
                 }
             }
         }
-
-        RegisterAduAck ack =
-                new RegisterAduAck(null, null, false, "Either not parsable or all email combinations exist");
+        RegisterAduAck ack = new RegisterAduAck(null, null, false, message);
         sendADUsStorage.addADU(clientId, APP_ID, ack.toByteArray(), -1);
+    }
+
+    private boolean isLowerCaseASCII(String fix) {
+        return fix.chars().allMatch(c -> 'a' <= c && c <= 'z');
     }
 
     // This method will parse the ToAddress from the mail ADUs and prepares ADUs for the respective
@@ -134,7 +157,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         } else if (dataStr.startsWith("register")) {
             processRegisterAdus(adu, clientId);
         } else {
-            processEmailAdus(adu);
+            processEmailAdus(adu, clientId);
         }
     }
 
@@ -142,9 +165,9 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
     public void exchangeADUs(ExchangeADUsRequest request, StreamObserver<ExchangeADUsResponse> responseObserver) {
         String clientId = request.getClientId();
         logger.log(INFO, "Received ADUs for clientId: " + clientId);
-        Long lastADUIdRecvd = request.getLastADUIdReceived();
+        var lastADUIdRecvd = request.getLastADUIdReceived();
         var aduListRecvd = request.getAdusList();
-        Long lastProcessedADUId = 0L;
+        var lastProcessedADUId = 0L;
         for (AppDataUnit adu : aduListRecvd) {
             try {
                 processADUsToSend(adu, clientId);
@@ -161,7 +184,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
             logger.log(INFO, "Deleted all ADUs till Id:" + lastADUIdRecvd);
         } catch (IOException e) {
             logger.log(SEVERE,
-                       String.format("Error while deleting ADUs for client: {} app: {} till AduId: {}",
+                       String.format("Error while deleting ADUs for client: %s app: %s till AduId: %s",
                                      clientId,
                                      APP_ID,
                                      lastADUIdRecvd),
@@ -203,10 +226,11 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
                                  StreamObserver<PendingDataCheckResponse> responseObserver) {
         List<String> pendingClients = new ArrayList<>();
 
-        sendADUsStorage.getAllClientApps().filter(s -> {
-            return sendADUsStorage.getLastADUIdAdded(s.clientId(), s.appId()) >
-                    sendADUsStorage.getLastADUIdDeleted(s.clientId(), s.appId());
-        }).map(StoreADUs.ClientApp::clientId).forEach(pendingClients::add);
+        sendADUsStorage.getAllClientApps()
+                .filter(s -> sendADUsStorage.getLastADUIdAdded(s.clientId(), s.appId()) >
+                        sendADUsStorage.getLastADUIdDeleted(s.clientId(), s.appId()))
+                .map(StoreADUs.ClientApp::clientId)
+                .forEach(pendingClients::add);
 
         responseObserver.onNext(PendingDataCheckResponse.newBuilder().addAllClientId(pendingClients).build());
         responseObserver.onCompleted();
