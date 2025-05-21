@@ -112,8 +112,19 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
 
     private void processRegisterAdus(AppDataUnit adu, String clientId) throws IOException {
         RegisterAdu parsedAdu = RegisterAdu.parseAdu(adu);
+        final String message;
 
-        if (parsedAdu != null) {
+        if (parsedAdu == null) {
+            message = "Registeration is not parsable";
+        } else if (parsedAdu.password.length() < 8) {
+            message = "Password is less than 8 characters";
+        } else if (parsedAdu.prefixes.length < 1 || parsedAdu.suffixes.length < 1) {
+            message = "No prefixes or suffixes found";
+        } else if (parsedAdu.prefixes[0].length() < 3 || parsedAdu.suffixes[0].length() < 3) {
+            message = "Prefix or suffix is less than 3 characters";
+        } else if (!isLowerCaseASCII(parsedAdu.prefixes[0]) || !isLowerCaseASCII(parsedAdu.suffixes[0])) {
+            message = "Prefix and suffix should only contain a-z characters";
+        } else {
             while (true) {
                 var email = parsedAdu.prefixes[0] + getRandNum() + getRandChar() + getRandChar() + getRandNum() +
                         parsedAdu.suffixes[0] + '@' + RAVLYK_DOMAIN;
@@ -127,6 +138,12 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
                 }
             }
         }
+        RegisterAduAck ack = new RegisterAduAck(null, null, false, message);
+        sendADUsStorage.addADU(clientId, APP_ID, ack.toByteArray(), -1);
+    }
+
+    private boolean isLowerCaseASCII(String fix) {
+        return fix.chars().allMatch(c -> 'a' <= c && c <= 'z');
     }
 
     // This method will parse the ToAddress from the mail ADUs and prepares ADUs for the respective
@@ -148,9 +165,9 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
     public void exchangeADUs(ExchangeADUsRequest request, StreamObserver<ExchangeADUsResponse> responseObserver) {
         String clientId = request.getClientId();
         logger.log(INFO, "Received ADUs for clientId: " + clientId);
-        Long lastADUIdRecvd = request.getLastADUIdReceived();
+        var lastADUIdRecvd = request.getLastADUIdReceived();
         var aduListRecvd = request.getAdusList();
-        Long lastProcessedADUId = 0L;
+        var lastProcessedADUId = 0L;
         for (AppDataUnit adu : aduListRecvd) {
             try {
                 processADUsToSend(adu, clientId);
@@ -167,7 +184,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
             logger.log(INFO, "Deleted all ADUs till Id:" + lastADUIdRecvd);
         } catch (IOException e) {
             logger.log(SEVERE,
-                       String.format("Error while deleting ADUs for client: {} app: {} till AduId: {}",
+                       String.format("Error while deleting ADUs for client: %s app: %s till AduId: %s",
                                      clientId,
                                      APP_ID,
                                      lastADUIdRecvd),
@@ -209,10 +226,11 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
                                  StreamObserver<PendingDataCheckResponse> responseObserver) {
         List<String> pendingClients = new ArrayList<>();
 
-        sendADUsStorage.getAllClientApps().filter(s -> {
-            return sendADUsStorage.getLastADUIdAdded(s.clientId(), s.appId()) >
-                    sendADUsStorage.getLastADUIdDeleted(s.clientId(), s.appId());
-        }).map(StoreADUs.ClientApp::clientId).forEach(pendingClients::add);
+        sendADUsStorage.getAllClientApps()
+                .filter(s -> sendADUsStorage.getLastADUIdAdded(s.clientId(), s.appId()) >
+                        sendADUsStorage.getLastADUIdDeleted(s.clientId(), s.appId()))
+                .map(StoreADUs.ClientApp::clientId)
+                .forEach(pendingClients::add);
 
         responseObserver.onNext(PendingDataCheckResponse.newBuilder().addAllClientId(pendingClients).build());
         responseObserver.onCompleted();
