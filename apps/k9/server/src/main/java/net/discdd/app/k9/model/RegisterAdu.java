@@ -9,32 +9,13 @@ import static java.util.logging.Level.SEVERE;
 public class RegisterAdu {
     static final Logger logger = Logger.getLogger(RegisterAdu.class.getName());
 
-    private String[] prefixes, suffixes;
-    private String password;
+    final public String[] prefixes, suffixes;
+    final public String password;
 
     public RegisterAdu(String[] prefixes, String[] suffixes, String password) {
         this.prefixes = prefixes;
         this.suffixes = suffixes;
         this.password = password;
-    }
-
-    public String getPassword() {
-        return this.password;
-    }
-
-    public String[] generateEmails() {
-        String[] emails = new String[prefixes.length * suffixes.length];
-
-        int pos = 0;
-        for (int i = 0; i < prefixes.length; i++) {
-            for (int j = 0; j < suffixes.length; j++) {
-                String email = prefixes[i] + suffixes[j] + "@ravlykmail.com";
-                emails[pos] = email;
-                pos += 1;
-            }
-        }
-
-        return emails;
     }
 
     /*
