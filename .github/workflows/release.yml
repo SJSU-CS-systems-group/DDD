@@ -31,8 +31,14 @@ jobs:
       - name: Maven install
         run: mvn -ntp install
 
-      - name: Decode signing key
+      - name: Get version name
+        id: version
         run: |
+              VERSION_NAME=$(grep appVersionName build.gradle | sed "s/.*'\(.*\)'.*/\1/")
+              VERSION_NAME=${VERSION_NAME%%_*}
+              VERSION_NAME="${VERSION_NAME}_$(git rev-parse --short HEAD)"
+              sed -i "s/appVersionName \?= \?['\"].*['\"]/appVersionName = '${VERSION_NAME}'/" build.gradle
+              echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_OUTPUT
 
       - name: Build release APK and AAB
         run: |
@@ -52,15 +58,6 @@ jobs:
         env:
           DDD_KEYFILE_PASSWORD: ${{ secrets.DDD_KEYFILE_PASSWORD }}
 
-
-      - name: Get version name
-        id: version
-        run: |
-              VERSION_NAME=$(grep appVersionName build.gradle | sed "s/.*'\(.*\)'.*/\1/")
-              VERSION_NAME=${VERSION_NAME%%_*}
-              VERSION_NAME="${VERSION_NAME}_$(git rev-parse --short HEAD)"
-              sed -i "s/appVersionName \?= \?['\"].*['\"]/appVersionName = '${VERSION_NAME}'/" build.gradle
-              echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
