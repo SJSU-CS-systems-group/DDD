@@ -40,7 +40,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
     static final Logger logger = Logger.getLogger(K9DDDAdapter.class.getName());
     private StoreADUs sendADUsStorage;
 
-    private final String APP_ID = "com.fsck.k9.debug";
+    private final String APP_ID = "net.discdd.k9";
     private final String RAVLY_DOMAIN = "ravlykmail.com";
     private PasswordEncoder passwordEncoder;
     @Autowired
