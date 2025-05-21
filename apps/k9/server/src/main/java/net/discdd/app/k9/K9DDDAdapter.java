@@ -115,7 +115,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         final String message;
 
         if (parsedAdu == null) {
-            message = "Registeration is not parsable";
+            message = "Registration is not parsable";
         } else if (parsedAdu.password.length() < 8) {
             message = "Password is less than 8 characters";
         } else if (parsedAdu.prefixes.length < 1 || parsedAdu.suffixes.length < 1) {
