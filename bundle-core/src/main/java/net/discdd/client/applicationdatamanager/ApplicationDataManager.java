@@ -39,7 +39,7 @@ public class ApplicationDataManager {
     private Consumer<ADU> aduConsumer;
     /* Database tables */
 
-    private static List<String> REGISTER_APP_IDS = List.of("com.example.mysignal", "com.fsck.k9.debug", "testAppId");
+    private static List<String> REGISTER_APP_IDS = List.of("com.example.mysignal", "net.discdd.k9", "testAppId");
 
     private ClientPaths clientPaths;
 

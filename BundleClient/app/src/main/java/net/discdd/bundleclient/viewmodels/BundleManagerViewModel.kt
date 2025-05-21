@@ -39,7 +39,7 @@ class BundleManagerViewModel(
         try {
             val stream = Files.newDirectoryStream(ADUPath)
             for (path in stream) {
-                if (path.fileName.toString().equals("com.fsck.k9.debug")) {
+                if (path.fileName.toString().equals("net.discdd.k9")) {
                     // check for "metadata.json" and exclude it
                     if (path.toFile().isDirectory()) {
                         // Get the list of files and exclude "metadata.json"
