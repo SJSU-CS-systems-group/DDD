@@ -44,27 +44,32 @@ class ServerViewModel(
         _state.update { it.copy(message = null) }
     }
 
+    fun appendMessage(message: String) {
+        _state.update { current ->
+            val currentLines = current.message?.split("\n")?.takeLast(10) ?: emptyList()
+            val newLines = (currentLines + message)
+            current.copy(message = newLines.joinToString("\n"))
+        }
+    }
+
     fun connectServer() {
         viewModelScope.launch {
             try {
-                _state.update {
-                    it.copy(message = context.getString(R.string.connecting_to_server))
-                }
+                appendMessage(context.getString(R.string.connecting_to_server))
                 val wifiBgService = WifiServiceManager.getService()
                 wifiBgService?.let { service ->
                     service.initiateServerExchange()
                         .thenAccept { bec ->
-                            _state.update { it.copy(message = context.getString(
+                            appendMessage(context.getString(
                                 R.string.upload_status,
                                 bec.uploadStatus(),
                                 bec.downloadStatus()
                             )) }
-                        }
-                } ?: run {
-                    _state.update { it.copy(message = context.getString(R.string.service_not_available)) }
+                        } ?: run {
+                    appendMessage(context.getString(R.string.service_not_available))
                 }
             } catch (e : Exception) {
-                _state.update { it.copy(message = context.getString(R.string.service_not_available)) }
+                appendMessage(context.getString(R.string.service_not_available))
             }
         }
     }
@@ -84,7 +89,7 @@ class ServerViewModel(
                 .putString("domain", state.value.domain)
                 .putInt("port", state.value.port.toInt())
                 .apply()
-            _state.update { it.copy(message = context.getString(R.string.settings_saved)) }
+            appendMessage(context.getString(R.string.settings_saved))
         }
     }
 }

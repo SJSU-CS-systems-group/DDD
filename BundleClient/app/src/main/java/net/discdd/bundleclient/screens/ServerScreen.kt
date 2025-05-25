@@ -47,12 +47,6 @@ fun ServerScreen(
         val enable = serverState.domain.isNotEmpty() && serverState.port.isNotEmpty() && connectivityState.networkConnected
         enableConnectBtn = enable
     }
-    LaunchedEffect(serverState.message) {
-        if (serverState.message != null) {
-            delay(2000)
-            serverViewModel.clearMessage()
-        }
-    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -121,6 +115,13 @@ fun ServerScreen(
                 ) {
                     Text("Connect to Bundle Server")
                 }
+            }
+            serverState.message?.let { message ->
+                Text(
+                    text = message,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
         }
     }
