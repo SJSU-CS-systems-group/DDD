@@ -54,7 +54,7 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
                                 pathProducer(bundleExchangeName, request.getSenderType(), null);
 
             if (downloadPath == null) {
-                responseObserver.onError(new IOException("Bundle not found"));
+                responseObserver.onError(io.grpc.Status.NOT_FOUND.withDescription("Bundle not found").asException());
                 return;
             }
 
@@ -66,12 +66,13 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
                                                                                             .build())
                                                                           .build()));
             }
-            responseObserver.onCompleted();
             Files.delete(downloadPath);
             logger.log(INFO, "Complete " + request.getBundleId().getEncryptedId());
         } catch (Exception e) {
             logger.log(SEVERE, "Error downloading bundle: " + request.getBundleId().getEncryptedId(), e);
-            responseObserver.onError(e);
+            var status = (e instanceof SecurityException) ? io.grpc.Status.UNAUTHENTICATED : io.grpc.Status.INTERNAL;
+            responseObserver.onError(status.withDescription(e.getMessage()).asException());
+        } finally {
             responseObserver.onCompleted();
         }
 
@@ -143,7 +144,7 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
                                                        StandardOpenOption.TRUNCATE_EXISTING);
                     } catch (IOException e) {
                         logger.log(SEVERE, "Error creating file " + path, e);
-                        this.onError(e);
+                        this.onError(io.grpc.Status.INTERNAL.withDescription(e.getMessage()).asException());
                     }
                 } else if (bundleUploadRequest.hasSenderType()) {
                     bundleSenderType = bundleUploadRequest.getSenderType();
@@ -151,7 +152,7 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
                     writeFile(writer, bundleUploadRequest.getChunk().getChunk());
                 }
             } catch (Exception e) {
-                this.onError(e);
+                this.onError(io.grpc.Status.INTERNAL.withDescription(e.getMessage()).asException());
             }
         }
 
