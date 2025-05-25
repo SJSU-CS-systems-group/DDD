@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">BundleClient</string>
+    <string name="app_name">DDD Client</string>
     <string name="Upload_Success">Upload was a Success</string>
     <string name="Upload_Empty">Nothing to Upload</string>
     <string name="Upload_Failed">Upload Has Failed</string>
