@@ -150,7 +150,7 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
                 } else {
                     writeFile(writer, bundleUploadRequest.getChunk().getChunk());
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
                 this.onError(e);
             }
         }

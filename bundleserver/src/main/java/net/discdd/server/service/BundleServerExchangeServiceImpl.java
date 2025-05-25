@@ -68,11 +68,12 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
                                                           clientPubKey,
                                                           publicKeyMap.getSignedTLSPub().toByteArray())) {
                         logger.log(SEVERE, "Problem verifying signature");
-                        return null;
+                        throw new SecurityException("Signature verification failed");
                     }
                     senderId = SecurityUtils.generateID(clientPubKey.serialize());
                 } catch (InvalidKeyException | NoSuchAlgorithmException e) {
                     logger.log(SEVERE, "Problem verifying signature", e);
+                    throw new SecurityException("Signature verification failed: " + e.getMessage());
                 }
             } else {
                 senderId = DDDTLSUtil.publicKeyToName(clientCert.getPublicKey());
@@ -90,7 +91,6 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
             }
             // let's see if there is something new to send
             try {
-
                 var encryptedBundleId = bundleTransmission.generateBundleForClient(senderId);
                 if (encryptedBundleId != null && encryptedBundleId.equals(bundleExchangeName.encryptedBundleId())) {
                     return bundleTransmission.getPathForBundleToSend(encryptedBundleId);
@@ -100,10 +100,11 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
                                          senderId,
                                          bundleExchangeName.encryptedBundleId(),
                                          encryptedBundleId));
+                return null;
             } catch (Exception e) {
                 logger.log(SEVERE, "Problem generating bundle for client " + senderId, e);
+                throw new RuntimeException("Problem generating bundle: " + e.getMessage());
             }
-            return null;
         } else {
             byte[] randomBytes = new byte[16];
             random.nextBytes(randomBytes);
