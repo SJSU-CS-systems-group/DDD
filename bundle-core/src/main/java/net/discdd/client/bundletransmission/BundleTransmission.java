@@ -56,7 +56,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -69,7 +68,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -367,7 +365,6 @@ public class BundleTransmission {
                                                         String deviceDeviceName,
                                                         String transportAddress,
                                                         int port) throws Exception {
-
         var sslClientContext = SSLContext.getInstance("TLS");
         sslClientContext.init(DDDTLSUtil.getKeyManagerFactory(bundleSecurity.getClientGrpcSecurity().getGrpcKeyPair(),
                                                               bundleSecurity.getClientGrpcSecurity().getGrpcCert())
@@ -422,8 +419,13 @@ public class BundleTransmission {
                                         downloadBundles(bundleRequests, BundleSenderType.CLIENT, blockingStub, null);
 
                 try {
-                    processReceivedBundle(transportSenderId, new Bundle(bundlesDownloaded.toFile()));
-                    downloadStatus = Statuses.COMPLETE;
+                    if (bundlesDownloaded == null) {
+                        logger.log(INFO, "No bundles downloaded");
+                        downloadStatus = Statuses.EMPTY;
+                    } else {
+                        processReceivedBundle(transportSenderId, new Bundle(bundlesDownloaded.toFile()));
+                        downloadStatus = Statuses.COMPLETE;
+                    }
                 } catch (Exception e) {
                     downloadStatus = Statuses.FAILED;
                     logger.log(WARNING, "Processing received bundle failed", e);
@@ -526,7 +528,12 @@ public class BundleTransmission {
                     return bundlePath;
                 }
             } catch (StatusRuntimeException e) {
-                logger.log(SEVERE, "Receive bundle failed " + stub.getChannel(), e);
+                // we are probing for bundles, so not finding one is not unexpected
+                if (e.getStatus().getCode() == io.grpc.Status.Code.NOT_FOUND) {
+                    logger.log(INFO, "Bundle not found: " + bundle);
+                } else {
+                    logger.log(SEVERE, "Receive bundle failed " + stub.getChannel(), e);
+                }
             } finally {
                 if (fileOutputStream != null) {
                     try {
