@@ -35,7 +35,7 @@ public class RegisterAdu {
 
         String[] prefixes = lines[1].split(",");
         String[] suffixes = lines[2].split(",");
-        if (prefixes.length != 3 || suffixes.length != 3) {
+        if (prefixes.length < 1 || suffixes.length < 1) {
             logger.log(SEVERE, "No prefixes or suffixes found in the register ADU");
             return null;
         }
