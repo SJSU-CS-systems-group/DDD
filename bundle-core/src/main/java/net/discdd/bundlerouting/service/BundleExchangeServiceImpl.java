@@ -75,7 +75,8 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
             responseObserver.onError(status.withDescription(e.getMessage()).asException());
         } finally {
             onBundleExchangeEvent(BundleExchangeEvent.DOWNLOAD_FINISHED);
-        };
+        }
+        ;
     }
 
     public void transferToStream(InputStream in, Consumer<ByteString> callback) throws IOException {
