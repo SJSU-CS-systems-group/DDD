@@ -124,7 +124,9 @@ public class StoreADUs {
     public List<AduIdData> getAllAppIdAndData(String appId) throws IOException {
         getMetadata(null, appId);
         var folder = rootFolder.resolve(appId);
-        return Files.list(folder).map(path -> {
+        return Files.list(folder)
+                .filter(p -> p.getFileName().toString().chars().allMatch(Character::isDigit))
+                .map(path -> {
             try {
                 String id = path.getFileName().toString();
                 return new AduIdData(id, Files.readAllBytes(path));
