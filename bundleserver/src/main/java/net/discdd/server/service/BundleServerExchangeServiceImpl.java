@@ -79,7 +79,8 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
                 senderId = DDDTLSUtil.publicKeyToName(clientCert.getPublicKey());
             }
 
-            logger.log(INFO, senderType.name() +":" + senderId + " requested " + bundleExchangeName.encryptedBundleId());
+            logger.log(INFO,
+                       senderType.name() + ":" + senderId + " requested " + bundleExchangeName.encryptedBundleId());
 
             bundleTransmission.getPathForBundleToSend(bundleExchangeName.encryptedBundleId());
             var bundlePath = bundleTransmission.getPathForBundleToSend(bundleExchangeName.encryptedBundleId());
