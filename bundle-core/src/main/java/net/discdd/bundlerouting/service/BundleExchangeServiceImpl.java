@@ -68,15 +68,15 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
             }
             Files.delete(downloadPath);
             logger.log(INFO, "Complete " + request.getBundleId().getEncryptedId());
+            responseObserver.onCompleted();
         } catch (Exception e) {
             logger.log(SEVERE, "Error downloading bundle: " + request.getBundleId().getEncryptedId(), e);
             var status = (e instanceof SecurityException) ? io.grpc.Status.UNAUTHENTICATED : io.grpc.Status.INTERNAL;
             responseObserver.onError(status.withDescription(e.getMessage()).asException());
         } finally {
-            responseObserver.onCompleted();
+            onBundleExchangeEvent(BundleExchangeEvent.DOWNLOAD_FINISHED);
         }
-
-        onBundleExchangeEvent(BundleExchangeEvent.DOWNLOAD_FINISHED);
+        ;
     }
 
     public void transferToStream(InputStream in, Consumer<ByteString> callback) throws IOException {
