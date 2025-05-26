@@ -416,7 +416,7 @@ public class BundleTransmission {
                         .build();
                 var bundlesDownloaded = deviceDeviceName.equals("BundleServer") ?
                                         downloadBundles(bundleRequests,
-                                                        BundleSenderType.SERVER,
+                                                        BundleSenderType.CLIENT,
                                                         blockingStub,
                                                         publicKeyMap) :
                                         downloadBundles(bundleRequests, BundleSenderType.CLIENT, blockingStub, null);
