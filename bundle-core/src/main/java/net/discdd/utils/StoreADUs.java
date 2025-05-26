@@ -127,14 +127,15 @@ public class StoreADUs {
         return Files.list(folder)
                 .filter(p -> p.getFileName().toString().chars().allMatch(Character::isDigit))
                 .map(path -> {
-            try {
-                String id = path.getFileName().toString();
-                return new AduIdData(id, Files.readAllBytes(path));
-            } catch (IOException e) {
-                logger.log(SEVERE, "Failed to read file " + path, e);
-                return null;
-            }
-        }).collect(Collectors.toList());
+                    try {
+                        String id = path.getFileName().toString();
+                        return new AduIdData(id, Files.readAllBytes(path));
+                    } catch (IOException e) {
+                        logger.log(SEVERE, "Failed to read file " + path, e);
+                        return null;
+                    }
+                })
+                .collect(Collectors.toList());
     }
 
     public List<byte[]> getAllAppData(String appId) throws IOException {
