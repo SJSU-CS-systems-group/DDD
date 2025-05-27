@@ -79,9 +79,6 @@ public class FileUtils {
 
     public static boolean crashReportExists(String reportFilePath) {
         File potentialReport = new File(reportFilePath);
-        if (potentialReport.exists()) {
-            return true;
-        }
-        return false;
+        return potentialReport.exists();
     }
 }
