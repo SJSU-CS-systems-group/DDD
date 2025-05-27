@@ -38,7 +38,6 @@ import net.discdd.tls.DDDTLSUtil;
 import net.discdd.tls.NettyClientCertificateInterceptor;
 import net.discdd.utils.AckRecordUtils;
 import net.discdd.utils.BundleUtils;
-import net.discdd.utils.CrashReportUtils;
 import net.discdd.utils.FileUtils;
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -80,7 +79,8 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 import static net.discdd.utils.Constants.GRPC_LONG_TIMEOUT_MS;
-import static net.discdd.utils.CrashReportUtils.crashReportExists;
+import static net.discdd.utils.FileUtils.crashReportExists;
+import static net.discdd.utils.FileUtils.readCrashReportFromFile;
 
 public class BundleTransmission {
     private static final Logger logger = Logger.getLogger(BundleTransmission.class.getName());
@@ -168,7 +168,7 @@ public class BundleTransmission {
     private BundleDTO generateNewBundle(String bundleId) throws RoutingExceptions.ClientMetaDataFileException,
             IOException, NoSuchAlgorithmException, InvalidKeyException {
         Acknowledgement ackRecord = AckRecordUtils.readAckRecordFromFile(clientPaths.ackRecordPath);
-        String crashReport = crashReportExists(String.valueOf(clientPaths.crashReportPath)) ? CrashReportUtils.readCrashReportFromFile(clientPaths.crashReportPath) : null;
+        String crashReport = crashReportExists(String.valueOf(clientPaths.crashReportPath)) ? readCrashReportFromFile(clientPaths.crashReportPath) : null;
         List<ADU> adus = this.applicationDataManager.fetchADUsToSend(clientPaths.BUNDLE_SIZE_LIMIT, null);
         var routingData = clientRouting.bundleMetaData();
 
