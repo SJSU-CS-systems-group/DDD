@@ -1,7 +1,5 @@
 package net.discdd.crashreports;
 
-import static org.acra.ACRA.log;
-
 import android.content.Context;
 
 import com.google.auto.service.AutoService;
@@ -19,8 +17,12 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.INFO;
 
 public class LocalReportSender implements ReportSender {
+    private static final Logger logger = Logger.getLogger(LocalReportSender.class.getName());
     static final int MAX_AMOUNT_REPORTS = 5;
 
     CoreConfiguration config;
@@ -32,14 +34,14 @@ public class LocalReportSender implements ReportSender {
     @Override
     public void send(Context context, CrashReportData errorContent) throws ReportSenderException {
         Path rootDir = context.getApplicationContext().getDataDir().toPath();
-        log.i("root directory for acra class ", String.valueOf(rootDir));
+        logger.log(INFO,"root directory for acra class "+ rootDir);
         Path clientDestDir = rootDir.resolve("to-be-bundled");
         if (clientDestDir.toFile().exists()) {
-            log.i("ACRA local reports sender ", "We are writing crash report to client device internal storage");
+            logger.log(INFO,"We are writing crash report to client device internal storage");
             rootDir = clientDestDir;
         } else {
             rootDir = context.getApplicationContext().getExternalFilesDir(null).toPath();
-            log.i("ACRA local reports sender ", "We are writing crash report to transport device external storage");
+            logger.log(INFO, "We are writing crash report to transport device external storage");
         }
         File logFile = new File(String.valueOf(rootDir), "crash_report.txt");
         try {
