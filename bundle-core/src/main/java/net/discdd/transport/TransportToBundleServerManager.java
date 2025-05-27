@@ -50,8 +50,6 @@ public class TransportToBundleServerManager implements Runnable {
 
     private static final Logger logger = Logger.getLogger(TransportToBundleServerManager.class.getName());
     public static final String RECENCY_BLOB_BIN = "recencyBlob.bin";
-    public static final String CRASH_FILE_NAME = "/crash_report.txt";
-
     private final Path fromClientPath;
     private final Path fromServerPath;
     private final Path crashReportsPath;
