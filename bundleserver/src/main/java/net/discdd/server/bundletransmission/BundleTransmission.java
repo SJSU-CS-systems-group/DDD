@@ -206,7 +206,7 @@ public class BundleTransmission {
 
         var adus = applicationDataManager.fetchADUsToSend(0, clientId);
         PipedInputStream pipedInputStream = new PipedInputStream();
-        Future<?> future = BundleUtils.runFuture(executorService, null, adus, null, pipedInputStream);
+        Future<?> future = BundleUtils.runFuture(executorService, null, null, adus, null, pipedInputStream);
         try {
             var bundleOutputStream = Files.newOutputStream(getPathForBundleToSend(encryptedBundleId),
                                                            StandardOpenOption.CREATE,

@@ -14,6 +14,7 @@ import net.discdd.grpc.BundleSenderType;
 import net.discdd.grpc.BundleServerServiceGrpc;
 import net.discdd.grpc.BundleUploadRequest;
 import net.discdd.grpc.BundleUploadResponse;
+import net.discdd.grpc.CrashReportRequest;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.grpc.GetRecencyBlobRequest;
 import net.discdd.pathutils.TransportPaths;
@@ -28,6 +29,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -37,7 +39,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
+import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
@@ -48,6 +52,7 @@ public class TransportToBundleServerManager implements Runnable {
     public static final String RECENCY_BLOB_BIN = "recencyBlob.bin";
     private final Path fromClientPath;
     private final Path fromServerPath;
+    private final Path crashReportsPath;
     private final Function<Void, Void> connectComplete;
     private final Function<Exception, Void> connectError;
     private final String serverHost;
@@ -65,6 +70,7 @@ public class TransportToBundleServerManager implements Runnable {
         this.serverPort = Integer.parseInt(port);
         this.fromClientPath = transportPaths.toServerPath;
         this.fromServerPath = transportPaths.toClientPath;
+        this.crashReportsPath = transportPaths.crashReportPath;
         try {
             this.transportGrpcSecurity = GrpcSecurityHolder.getGrpcSecurityHolder();
         } catch (Exception e) {
@@ -95,11 +101,18 @@ public class TransportToBundleServerManager implements Runnable {
             var bundlesFromClients = populateListFromPath(fromClientPath);
             var bundlesFromServer = populateListFromPath(fromServerPath);
 
+            if (crashReportsPath.toFile().exists()) {
+                var collectedCrashes = bsStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                        .crashReports(CrashReportRequest.newBuilder()
+                                              .setCrashReportData(ByteString.copyFrom(Files.readAllBytes(crashReportsPath)))
+                                              .build());
+            }
             var inventoryResponse = bsStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     .bundleInventory(BundleInventoryRequest.newBuilder()
                                              .addAllBundlesFromClientsOnTransport(bundlesFromClients)
                                              .addAllBundlesFromServerOnTransport(bundlesFromServer)
                                              .build());
+
 
             processDeleteBundles(inventoryResponse.getBundlesToDeleteList());
             processUploadBundles(inventoryResponse.getBundlesToUploadList(), exchangeStub);
