@@ -143,7 +143,14 @@ fun WifiDirectScreen(
                 onToggle = onToggle,
             )
             Text(text = "Connected Device Addresses: ${state.connectedDeviceText}")
-            Text(text = "Discovery Status: ${state.deliveryStatus}")
+            Text(
+                text = "Discovery Status: ${
+                    if (state.discoveryActive) {
+                        "Active"
+                    } else "Inactive"
+                }"
+            )
+
             var checked by remember {
                 mutableStateOf(
                     preferences.getBoolean(
@@ -165,7 +172,6 @@ fun WifiDirectScreen(
                         ).apply()
                     }
                 )
-
                 Text(text = "Do transfers in the background")
 
                 IconButton(

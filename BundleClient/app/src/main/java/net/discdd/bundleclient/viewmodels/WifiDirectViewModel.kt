@@ -30,7 +30,7 @@ data class PeerDevice(
 data class WifiDirectState(
     val resultText: String = "",
     val connectedDeviceText: String = "",
-    val deliveryStatus: String = "",
+    val discoveryActive: Boolean = false,
     val clientId: String = "Service not running",
     val backgroundExchange: Boolean = false,
     val peers: List<PeerDevice> = emptyList(),
@@ -62,7 +62,7 @@ class WifiDirectViewModel(
                 _state.update {
                     it.copy(
                         clientId = service.clientId,
-                        deliveryStatus = if (service.isDiscoveryActive) "Active" else "Inactive"
+                        discoveryActive = service?.isDiscoveryActive ?: false
                     )
                 }
             }
@@ -143,7 +143,7 @@ class WifiDirectViewModel(
 
     fun updateDeliveryStatus() {
         _state.update {
-            it.copy(deliveryStatus = if (wifiService?.isDiscoveryActive == true) "Active" else "Inactive")
+            it.copy(discoveryActive = wifiService?.isDiscoveryActive ?: false)
         }
     }
 
