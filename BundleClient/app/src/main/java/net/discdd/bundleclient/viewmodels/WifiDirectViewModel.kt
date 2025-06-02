@@ -167,13 +167,25 @@ class WifiDirectViewModel(
             val updatedPeers = peerDeviceAddresses.mapNotNull { deviceAddress ->
                 val peer = wifiService?.getPeer(deviceAddress)
                 if (peer != null) {
-                    PeerDevice(
-                        deviceAddress = deviceAddress,
-                        deviceName = peer.deviceName,
-                        lastSeen = peer.lastSeen,
-                        lastExchange = peer.lastExchange,
-                        recencyTime = peer.recencyTime
-                    )
+                    val currentPeer = _state.value.peers.find { it.deviceAddress == deviceAddress }
+                    if (currentPeer != null) {
+                        // Update existing peer
+                        currentPeer.copy(
+                            deviceName = peer.deviceName,
+                            lastSeen = peer.lastSeen,
+                            lastExchange = peer.lastExchange,
+                            recencyTime = peer.recencyTime
+                        )
+                    } else {
+                        // Create new peer
+                        PeerDevice(
+                            deviceAddress = deviceAddress,
+                            deviceName = peer.deviceName,
+                            lastSeen = peer.lastSeen,
+                            lastExchange = peer.lastExchange,
+                            recencyTime = peer.recencyTime
+                        )
+                    }
                 } else {
                     null
                 }
