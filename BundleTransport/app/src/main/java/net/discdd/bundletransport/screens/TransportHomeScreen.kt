@@ -135,7 +135,7 @@ fun TransportHomeScreen(
 
     LaunchedEffect(internetAvailable, showUsbScreen, showEasterEgg) {
         var newTabs = standardTabs.toMutableList()
-        if (internetAvailable) newTabs.add(1, wifiDirectTab)
+        newTabs.add(1, wifiDirectTab)
         if (showUsbScreen) newTabs += usbTab
         if (showEasterEgg) newTabs += adminTabs
         tabItems = newTabs
