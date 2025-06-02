@@ -77,9 +77,12 @@ public class RpcServer {
             protected Path pathProducer(BundleExchangeName bundleExchangeName,
                                         BundleSenderType bundleSenderType,
                                         PublicKeyMap publicKeyMap) {
-                return bundleExchangeName.isDownload() ?
-                       toClientPath.resolve(bundleExchangeName.encryptedBundleId()) :
-                       toServerPath.resolve(bundleExchangeName.encryptedBundleId());
+                if (bundleExchangeName.isDownload()) {
+                    var path = toClientPath.resolve(bundleExchangeName.encryptedBundleId());
+                    return Files.exists(path) ? path : null;
+                } else {
+                    return toServerPath.resolve(bundleExchangeName.encryptedBundleId());
+                }
             }
 
             @Override
