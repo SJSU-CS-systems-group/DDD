@@ -211,6 +211,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
         // make sure we are disconnected
         var oldGroupInfo = wifiDirectManager.getGroupInfo();
         if (oldGroupInfo != null) {
+            broadcastBundleClientLogEvent("disconnecting from " + oldGroupInfo.getOwner().deviceAddress);
             try {
                 wifiDirectManager.disconnect().get(2, TimeUnit.SECONDS);
             } catch (Exception e) {
@@ -218,11 +219,16 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
             }
         }
         try {
+            broadcastBundleClientLogEvent("Connecting to " + device.deviceAddress);
             var newGroup = connectTo(device).get(10, TimeUnit.SECONDS);
 
+            broadcastBundleClientLogEvent("Connected to " + device.deviceAddress);
             BundleExchangeCounts currentBundle = bundleTransmission.doExchangeWithTransport(device.deviceAddress, device.deviceName,
                                                               wifiDirectManager.getGroupOwnerAddress().getHostAddress(),
                                                               7777);
+            broadcastBundleClientLogEvent(
+                    device.deviceName + " upload: " + statusesToString(currentBundle.uploadStatus()) +
+                    " download: " + statusesToString(currentBundle.downloadStatus()));
             String text1;
             String text2;
             if(currentBundle.uploadStatus() == Statuses.FAILED){
@@ -248,6 +254,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
             return currentBundle;
 
         } catch (Throwable e) {
+            broadcastBundleClientLogEvent("Failed to connect to " + device.deviceName + ": " + e.getMessage());
             logger.log(WARNING, "Failed to connect to " + device.deviceName, e);
 
         } finally {
@@ -259,6 +266,15 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
         return FAILED_EXCHANGE_COUNTS;
     }
 
+    private String statusesToString(Statuses statuses) {
+        return switch (statuses) {
+            case COMPLETE -> "Complete";
+            case FAILED -> "Failed";
+            case EMPTY -> "Skipped";
+            default -> "Unknown";
+        };
+    }
+
     private CompletableFuture<WifiP2pGroup> connectTo(WifiP2pDevice transport) {
         var connectedFuture = new CompletableFuture<WifiP2pGroup>();
         addConnectionWaiter(connectedFuture);
@@ -266,6 +282,12 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
         //       at the data link layer.
         wifiDirectManager.connect(transport);
         return connectedFuture;
+    }
+
+    private void broadcastBundleClientLogEvent(String message) {
+        var intent = new Intent(NET_DISCDD_BUNDLECLIENT_LOG_ACTION);
+        intent.putExtra("message", message);
+        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
     }
 
     private void broadcastWifiEvent(WifiDirectManager.WifiDirectEvent event) {
@@ -297,6 +319,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
         var device = wifiDirectManager.getPeerList().stream().filter(peer -> peer.deviceAddress.equals(deviceAddress))
                 .findFirst().orElse(null);
         if (device == null) {
+            broadcastBundleClientLogEvent("Couldn't find " + deviceAddress);
             completableFuture.complete(FAILED_EXCHANGE_COUNTS);
             return completableFuture;
         }
