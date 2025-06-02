@@ -12,11 +12,13 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.wifi.WifiManager;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
@@ -24,6 +26,8 @@ import android.net.wifi.p2p.WifiP2pDeviceList;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
+
+import androidx.annotation.RequiresPermission;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -66,6 +70,8 @@ public class WifiDirectManager {
         intentFilter.addAction(WIFI_P2P_DISCOVERY_CHANGED_ACTION);
     }
 
+    @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION,
+                                  Manifest.permission.NEARBY_WIFI_DEVICES })
     public void initialize() {
         this.manager = (WifiP2pManager) this.context.getSystemService(Context.WIFI_P2P_SERVICE);
         if (manager == null) {
@@ -87,6 +93,8 @@ public class WifiDirectManager {
     }
 
     // package protected so that the broadcast receiver can call it
+    @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION,
+                                  Manifest.permission.NEARBY_WIFI_DEVICES })
     void processDeviceInfo(WifiP2pDevice wifiP2pDevice) {
         if (wifiP2pDevice != null) {
             var infoChanged = false;
@@ -143,6 +151,8 @@ public class WifiDirectManager {
         return completableActionListener;
     }
 
+    @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION,
+                                  Manifest.permission.NEARBY_WIFI_DEVICES })
     public CompletableFuture<WifiP2pGroup> createGroup() {
         var completableFuture = new CompletableFuture<WifiP2pGroup>();
         this.manager.createGroup(this.channel, new WifiP2pManager.ActionListener() {
@@ -155,6 +165,12 @@ public class WifiDirectManager {
             @Override
             public void onFailure(int reasonCode) {
                 logger.log(SEVERE, "Wifi direct group creation failed with reason code: " + reasonCode);
+                WifiManager wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+                if (wifiManager.isWifiEnabled()) {
+                    logger.log(INFO, "Wi-Fi is enabled");
+                } else {
+                    logger.log(INFO, "Wi-Fi is NOT enabled");
+                }
                 requestGroupInfo().thenAccept(completableFuture::complete);
             }
         });
@@ -194,6 +210,8 @@ public class WifiDirectManager {
         return cFuture;
     }
 
+    @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION,
+                                  Manifest.permission.NEARBY_WIFI_DEVICES })
     public CompletableFuture<WifiP2pGroup> connect(WifiP2pDevice device) {
         CompletableFuture<WifiP2pGroup> completableFuture = new CompletableFuture<>();
         var config = new WifiP2pConfig();
@@ -258,6 +276,8 @@ public class WifiDirectManager {
         getContext().registerReceiver(receiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
     }
 
+    @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION,
+                                  Manifest.permission.NEARBY_WIFI_DEVICES })
     public CompletableFuture<WifiP2pDevice> requestDeviceInfo() {
         var completableFuture = new CompletableFuture<WifiP2pDevice>();
         manager.requestDeviceInfo(channel, di -> {
@@ -335,6 +355,8 @@ public class WifiDirectManager {
          * @noinspection deprecation, deprecation
          */
 
+        @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION,
+                                      Manifest.permission.NEARBY_WIFI_DEVICES })
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
