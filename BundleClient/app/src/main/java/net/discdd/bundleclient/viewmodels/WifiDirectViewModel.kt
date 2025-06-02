@@ -103,7 +103,6 @@ class WifiDirectViewModel(
             if (peer.deviceAddress == deviceAddress) {
                 peer.copy(isExchangeInProgress = inProgress)
             } else {
-                appendResultText("${peer.deviceAddress} is not $deviceAddress")
                 peer
             }
         }
