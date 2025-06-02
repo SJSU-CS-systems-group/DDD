@@ -7,6 +7,7 @@ import android.content.SharedPreferences
 import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,11 +15,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -56,7 +62,7 @@ import net.discdd.components.EasterEgg
 import net.discdd.components.WifiPermissionBanner
 import java.util.concurrent.CompletableFuture
 
-@OptIn(ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun WifiDirectScreen(
     viewModel: WifiDirectViewModel = viewModel(),
@@ -116,8 +122,10 @@ fun WifiDirectScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp)
+
         ) {
             if (!nearbyWifiState.status.isGranted) {
                 WifiPermissionBanner(numDenied, nearbyWifiState) {
@@ -160,24 +168,25 @@ fun WifiDirectScreen(
                 )
             }
             Row(
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()
             ) {
                 Checkbox(
-                    checked = checked,
-                    onCheckedChange = {
+                    checked = checked, onCheckedChange = {
                         checked = it
                         preferences.edit().putBoolean(
-                            BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE,
-                            it
+                            BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, it
                         ).apply()
-                    }
+                    }, modifier = Modifier.weight(1f)
                 )
-                Text(text = "Do transfers in the background")
+
+                Text(
+                    text = "Do transfers in the background", modifier = Modifier.weight(3f)
+                )
 
                 IconButton(
                     onClick = {
                         viewModel.discoverPeers()
-                    }
+                    }, modifier = Modifier.weight(1f)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
@@ -187,33 +196,40 @@ fun WifiDirectScreen(
             }
             // peers list
             PeersList(
-                peers = state.peers,
                 viewModel = viewModel
             )
+            Box {
+                Text(text = state.resultText)
+                if (state.resultText.isNotBlank()) {
+                    FloatingActionButton(
+                        onClick = { viewModel.clearResultLogs() },
+                        modifier = Modifier.align(Alignment.BottomEnd)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = stringResource(id = R.string.delete_logs)
+                        )
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
 fun PeersList(
-    peers: List<PeerDevice>,
     viewModel: WifiDirectViewModel
 ) {
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp)
+    val peers = viewModel.state.collectAsState().value.peers
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(8.dp)
     ) {
-        items(peers) { peer ->
-            PeerItem(
-                peer = peer,
-                onExchangeClick = {
-                    viewModel.exchangeMessage(peer.deviceAddress)
-                },
-                onItemClick = {
-                    viewModel.showPeerDialog(peer.deviceAddress)
-                }
-            )
+        for (peer in peers) {
+            PeerItem(peer = peer, onExchangeClick = {
+                viewModel.exchangeMessage(peer.deviceAddress)
+            }, onItemClick = {
+                viewModel.showPeerDialog(peer.deviceAddress)
+            })
         }
     }
 }
@@ -234,6 +250,7 @@ fun PeerItem(
         }
         Button(
             onClick = onExchangeClick,
+            enabled = !peer.isExchangeInProgress,
         ) {
             Text(if (peer.isExchangeInProgress) "Exchanging..." else "Exchange")
         }

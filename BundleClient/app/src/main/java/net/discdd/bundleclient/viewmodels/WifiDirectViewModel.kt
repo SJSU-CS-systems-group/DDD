@@ -17,6 +17,9 @@ import net.discdd.bundleclient.WifiServiceManager
 import net.discdd.viewmodels.WifiBannerViewModel
 import java.net.InetAddress
 import java.util.concurrent.CompletableFuture
+import java.util.logging.Logger
+
+private val logger = Logger.getLogger(WifiDirectViewModel::class.java.name)
 
 data class PeerDevice(
     val deviceAddress: String,
@@ -212,5 +215,11 @@ class WifiDirectViewModel(
 
     fun getWifiBgService(): BundleClientWifiDirectService? {
         return wifiService
+    }
+
+    fun clearResultLogs() {
+        viewModelScope.launch {
+            _state.update { it.copy(resultText = "") }
+        }
     }
 }
