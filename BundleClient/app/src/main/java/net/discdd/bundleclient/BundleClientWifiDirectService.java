@@ -61,7 +61,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
     private static SharedPreferences preferences;
     final AtomicReference<CompletableFuture<WifiP2pGroup>> connectionWaiter = new AtomicReference<>();
     private final IBinder binder = new BundleClientWifiDirectServiceBinder();
-    private final ScheduledExecutorService periodicExecutor = Executors.newScheduledThreadPool(1);
+    private final ScheduledExecutorService periodicExecutor = Executors.newSingleThreadScheduledExecutor();
     PeriodicRunnable periodicRunnable = new PeriodicRunnable();
     private WifiDirectManager wifiDirectManager;
     private BundleTransmission bundleTransmission;
