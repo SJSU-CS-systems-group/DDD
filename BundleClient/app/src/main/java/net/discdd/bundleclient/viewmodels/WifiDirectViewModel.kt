@@ -17,6 +17,9 @@ import net.discdd.bundleclient.WifiServiceManager
 import net.discdd.viewmodels.WifiBannerViewModel
 import java.net.InetAddress
 import java.util.concurrent.CompletableFuture
+import java.util.logging.Logger
+
+private val logger = Logger.getLogger(WifiDirectViewModel::class.java.name)
 
 data class PeerDevice(
     val deviceAddress: String,
@@ -30,7 +33,7 @@ data class PeerDevice(
 data class WifiDirectState(
     val resultText: String = "",
     val connectedDeviceText: String = "",
-    val deliveryStatus: String = "",
+    val discoveryActive: Boolean = false,
     val clientId: String = "Service not running",
     val backgroundExchange: Boolean = false,
     val peers: List<PeerDevice> = emptyList(),
@@ -54,7 +57,6 @@ class WifiDirectViewModel(
     init {
         intentFilter.addAction(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_WIFI_EVENT_ACTION)
         intentFilter.addAction(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_LOG_ACTION)
-        registerBroadcastReceiver()
     }
 
     fun initialize(serviceReadyFuture: CompletableFuture<BundleClientWifiDirectService>) {
@@ -63,7 +65,7 @@ class WifiDirectViewModel(
                 _state.update {
                     it.copy(
                         clientId = service.clientId,
-                        deliveryStatus = if (service.isDiscoveryActive) "Active" else "Inactive"
+                        discoveryActive = service?.isDiscoveryActive ?: false
                     )
                 }
             }
@@ -144,7 +146,7 @@ class WifiDirectViewModel(
 
     fun updateDeliveryStatus() {
         _state.update {
-            it.copy(deliveryStatus = if (wifiService?.isDiscoveryActive == true) "Active" else "Inactive")
+            it.copy(discoveryActive = wifiService?.isDiscoveryActive ?: false)
         }
     }
 
@@ -168,13 +170,25 @@ class WifiDirectViewModel(
             val updatedPeers = peerDeviceAddresses.mapNotNull { deviceAddress ->
                 val peer = wifiService?.getPeer(deviceAddress)
                 if (peer != null) {
-                    PeerDevice(
-                        deviceAddress = deviceAddress,
-                        deviceName = peer.deviceName,
-                        lastSeen = peer.lastSeen,
-                        lastExchange = peer.lastExchange,
-                        recencyTime = peer.recencyTime
-                    )
+                    val currentPeer = _state.value.peers.find { it.deviceAddress == deviceAddress }
+                    if (currentPeer != null) {
+                        // Update existing peer
+                        currentPeer.copy(
+                            deviceName = peer.deviceName,
+                            lastSeen = peer.lastSeen,
+                            lastExchange = peer.lastExchange,
+                            recencyTime = peer.recencyTime
+                        )
+                    } else {
+                        // Create new peer
+                        PeerDevice(
+                            deviceAddress = deviceAddress,
+                            deviceName = peer.deviceName,
+                            lastSeen = peer.lastSeen,
+                            lastExchange = peer.lastExchange,
+                            recencyTime = peer.recencyTime
+                        )
+                    }
                 } else {
                     null
                 }
@@ -201,5 +215,11 @@ class WifiDirectViewModel(
 
     fun getWifiBgService(): BundleClientWifiDirectService? {
         return wifiService
+    }
+
+    fun clearResultLogs() {
+        viewModelScope.launch {
+            _state.update { it.copy(resultText = "") }
+        }
     }
 }
