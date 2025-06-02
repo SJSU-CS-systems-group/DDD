@@ -54,7 +54,6 @@ class WifiDirectViewModel(
     init {
         intentFilter.addAction(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_WIFI_EVENT_ACTION)
         intentFilter.addAction(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_LOG_ACTION)
-        registerBroadcastReceiver()
     }
 
     fun initialize(serviceReadyFuture: CompletableFuture<BundleClientWifiDirectService>) {
