@@ -7,6 +7,7 @@ public class Constants {
     public static final String BUNDLE_IDENTIFIER_FILE_NAME = "bundle_identifier.txt";
 
     public static final String BUNDLE_ACKNOWLEDGEMENT_FILE_NAME = "acknowledgement.txt";
+    public static final String BUNDLE_CRASH_REPORT_FILE_NAME = "crash_report.txt";
 
     public static final String BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME = "payload";
 

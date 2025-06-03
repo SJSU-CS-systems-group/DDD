@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.Objects;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
@@ -65,5 +66,19 @@ public class FileUtils {
         } catch (IOException e) {
             logger.log(SEVERE, "Error deleting directory: " + path, e);
         }
+    }
+
+    public static String readCrashReportFromFile(Path reportFilePath) {
+        try {
+            return new String(Files.readAllBytes(reportFilePath));
+        } catch (IOException e) {
+            logger.log(Level.WARNING, "Failed to read the crash report from " + reportFilePath, e);
+        }
+        return null;
+    }
+
+    public static boolean crashReportExists(String reportFilePath) {
+        File potentialReport = new File(reportFilePath);
+        return potentialReport.exists();
     }
 }
