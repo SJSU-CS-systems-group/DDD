@@ -24,6 +24,7 @@ public class TransportPaths {
     public final Path toServerPath;
     public final Path grpcSecurityPath;
     public final Path crashReportPath;
+
     public TransportPaths(Path rootDir) {
 
         this.toRootDir = rootDir;

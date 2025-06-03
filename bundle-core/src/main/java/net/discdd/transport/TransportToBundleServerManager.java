@@ -104,7 +104,8 @@ public class TransportToBundleServerManager implements Runnable {
             if (crashReportsPath.toFile().exists()) {
                 var collectedCrashes = bsStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                         .crashReports(CrashReportRequest.newBuilder()
-                                              .setCrashReportData(ByteString.copyFrom(Files.readAllBytes(crashReportsPath)))
+                                              .setCrashReportData(ByteString.copyFrom(Files.readAllBytes(
+                                                      crashReportsPath)))
                                               .build());
             }
             var inventoryResponse = bsStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
@@ -112,7 +113,6 @@ public class TransportToBundleServerManager implements Runnable {
                                              .addAllBundlesFromClientsOnTransport(bundlesFromClients)
                                              .addAllBundlesFromServerOnTransport(bundlesFromServer)
                                              .build());
-
 
             processDeleteBundles(inventoryResponse.getBundlesToDeleteList());
             processUploadBundles(inventoryResponse.getBundlesToUploadList(), exchangeStub);

@@ -103,7 +103,10 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
         new File(crashDir).mkdirs();
         File crashFile = new File(crashDir, name);
         try {
-            Files.write(crashFile.toPath(), data.toByteArray(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            Files.write(crashFile.toPath(),
+                        data.toByteArray(),
+                        StandardOpenOption.CREATE,
+                        StandardOpenOption.TRUNCATE_EXISTING);
             response.onNext(CrashReportResponse.newBuilder().setResult(Status.SUCCESS).build());
         } catch (IOException e) {
             logger.log(WARNING, "Couldn't write crash file to " + crashFile, e);

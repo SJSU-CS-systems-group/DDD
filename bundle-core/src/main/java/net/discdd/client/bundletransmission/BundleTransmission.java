@@ -168,7 +168,9 @@ public class BundleTransmission {
     private BundleDTO generateNewBundle(String bundleId) throws RoutingExceptions.ClientMetaDataFileException,
             IOException, NoSuchAlgorithmException, InvalidKeyException {
         Acknowledgement ackRecord = AckRecordUtils.readAckRecordFromFile(clientPaths.ackRecordPath);
-        String crashReport = crashReportExists(String.valueOf(clientPaths.crashReportPath)) ? readCrashReportFromFile(clientPaths.crashReportPath) : null;
+        String crashReport = crashReportExists(String.valueOf(clientPaths.crashReportPath)) ?
+                             readCrashReportFromFile(clientPaths.crashReportPath) :
+                             null;
         List<ADU> adus = this.applicationDataManager.fetchADUsToSend(clientPaths.BUNDLE_SIZE_LIMIT, null);
         var routingData = clientRouting.bundleMetaData();
 
@@ -176,8 +178,12 @@ public class BundleTransmission {
 
         Path bundleFile = clientPaths.tosendDir.resolve(bundleId);
         var ackedEncryptedBundleId = ackRecord == null ? null : ackRecord.getBundleId();
-        Future<?> future =
-                BundleUtils.runFuture(executorService, ackedEncryptedBundleId, crashReport, adus, routingData, pipedInputStream);
+        Future<?> future = BundleUtils.runFuture(executorService,
+                                                 ackedEncryptedBundleId,
+                                                 crashReport,
+                                                 adus,
+                                                 routingData,
+                                                 pipedInputStream);
         try {
             ClientSecurity clientSecurity = bundleSecurity.getClientSecurity();
 

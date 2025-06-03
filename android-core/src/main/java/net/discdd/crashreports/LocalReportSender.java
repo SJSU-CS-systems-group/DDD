@@ -34,10 +34,10 @@ public class LocalReportSender implements ReportSender {
     @Override
     public void send(Context context, CrashReportData errorContent) throws ReportSenderException {
         Path rootDir = context.getApplicationContext().getDataDir().toPath();
-        logger.log(INFO,"root directory for acra class "+ rootDir);
+        logger.log(INFO, "root directory for acra class " + rootDir);
         Path clientDestDir = rootDir.resolve("to-be-bundled");
         if (clientDestDir.toFile().exists()) {
-            logger.log(INFO,"We are writing crash report to client device internal storage");
+            logger.log(INFO, "We are writing crash report to client device internal storage");
             rootDir = clientDestDir;
         } else {
             rootDir = context.getApplicationContext().getExternalFilesDir(null).toPath();

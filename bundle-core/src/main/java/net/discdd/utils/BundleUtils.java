@@ -377,7 +377,11 @@ public class BundleUtils {
         PipedOutputStream outputPipe = new PipedOutputStream(inputPipe);
         Future<?> future = executorService.submit(() -> {
             try {
-                BundleUtils.createBundlePayloadForAdus(adus, routingData, ackedEncryptedBundleId, crashReport, outputPipe);
+                BundleUtils.createBundlePayloadForAdus(adus,
+                                                       routingData,
+                                                       ackedEncryptedBundleId,
+                                                       crashReport,
+                                                       outputPipe);
             } catch (IOException | NoSuchAlgorithmException e) {
                 return e;
             } finally {
