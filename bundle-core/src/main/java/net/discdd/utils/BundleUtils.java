@@ -311,6 +311,7 @@ public class BundleUtils {
     public static void createBundlePayloadForAdus(List<ADU> adus,
                                                   byte[] routingData,
                                                   String ackedEncryptedBundleId,
+                                                  String crashReport,
                                                   OutputStream outputStream) throws IOException,
             NoSuchAlgorithmException {
         DDDJarFileCreator innerJar = new DDDJarFileCreator(outputStream);
@@ -319,6 +320,9 @@ public class BundleUtils {
         // add the records to the inner jar
         innerJar.createEntry("acknowledgement.txt", ackedEncryptedBundleId.getBytes());
         innerJar.createEntry("routing.metadata", routingData == null ? "{}".getBytes() : routingData);
+        if (crashReport != null) {
+            innerJar.createEntry("crash_report.txt", crashReport.getBytes());
+        }
 
         for (var adu : adus) {
             try (var os = innerJar.createEntry(Paths.get(Constants.BUNDLE_ADU_DIRECTORY_NAME,
@@ -366,13 +370,14 @@ public class BundleUtils {
 
     public static Future<?> runFuture(ExecutorService executorService,
                                       String ackedEncryptedBundleId,
+                                      String crashReport,
                                       List<ADU> adus,
                                       byte[] routingData,
                                       PipedInputStream inputPipe) throws IOException {
         PipedOutputStream outputPipe = new PipedOutputStream(inputPipe);
         Future<?> future = executorService.submit(() -> {
             try {
-                BundleUtils.createBundlePayloadForAdus(adus, routingData, ackedEncryptedBundleId, outputPipe);
+                BundleUtils.createBundlePayloadForAdus(adus, routingData, ackedEncryptedBundleId, crashReport, outputPipe);
             } catch (IOException | NoSuchAlgorithmException e) {
                 return e;
             } finally {
