@@ -37,7 +37,6 @@ fun AppShareScreen() {
     val clientApkUrl = "https://github.com/SJSU-CS-systems-group/DDD/releases/latest/download/DDDClient.apk"
     val mailApkFile = File(context.getExternalFilesDir(null), "ddd-mail.apk")
     val clientApkFile = File(context.getExternalFilesDir(null), "DDDClient.apk")
-    var filesDownloaded by remember { mutableStateOf(mailApkFile.exists() && clientApkFile.exists()) }
     var mailApkVersion by remember { mutableStateOf(getApkVersionInfo(context, mailApkFile))}
     var clientApkVersion by remember { mutableStateOf(getApkVersionInfo(context, clientApkFile))}
 
@@ -46,8 +45,8 @@ fun AppShareScreen() {
     var isDownloadingClient by remember { mutableStateOf(false) }
     var downloadMailProgress by remember { mutableStateOf(0f) }
     var downloadClientProgress by remember { mutableStateOf(0f) }
-    var downloadMailStatus by remember { mutableStateOf(getApkStatus(context, mailApkFile)) }
-    var downloadClientStatus by remember { mutableStateOf(getApkStatus(context, clientApkFile)) }
+    var downloadMailStatus by remember { mutableStateOf(getApkStatus(mailApkFile, mailApkVersion)) }
+    var downloadClientStatus by remember { mutableStateOf(getApkStatus(clientApkFile, clientApkVersion)) }
 
     // Generate QR code bitmap
     val qrBitmap = remember {
@@ -61,7 +60,7 @@ fun AppShareScreen() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Show either download message or QR code
-            if (!filesDownloaded) {
+            if (mailApkVersion == null || clientApkVersion == null) {
                 Text(
                     text = "Download APK files first to enable app sharing",
                     style = MaterialTheme.typography.titleMedium,
@@ -91,13 +90,14 @@ fun AppShareScreen() {
                     isDownloadingClient = true
                     scope.launch {
                         try {
-                            val result = downloadFile(
+                            downloadFile(
                                 context,
                                 mailApkUrl,
                             ) { progress ->
                                 downloadMailProgress = progress
                             }
-                            val versionInfo = getApkVersionInfo(context, result)
+                            mailApkVersion = getApkVersionInfo(context, mailApkFile)
+                            downloadMailStatus = getApkStatus(mailApkFile, mailApkVersion)
                         } catch (e: Exception) {
                             downloadMailStatus = "Error: ${e.message}"
                         } finally {
@@ -106,13 +106,14 @@ fun AppShareScreen() {
                     }
                     scope.launch {
                         try {
-                            val result = downloadFile(
+                            downloadFile(
                                 context,
                                 clientApkUrl,
                             ) { progress ->
                                 downloadClientProgress = progress
                             }
-                            val versionInfo = getApkVersionInfo(context, result)
+                            clientApkVersion = getApkVersionInfo(context, clientApkFile)
+                            downloadClientStatus = getApkStatus(clientApkFile, clientApkVersion)
                         } catch (e: Exception) {
                             downloadClientStatus = "Error: ${e.message}"
                         } finally {
@@ -224,27 +225,29 @@ suspend fun downloadFile(
     }
 }
 
-fun getApkVersionInfo(context: Context, apkFile: File): Pair<String, Int>? {
+fun getApkVersionInfo(context: Context, apkFile: File): String? {
+    if (!apkFile.exists()) {
+        return null
+    }
     val packageManager = context.packageManager
     val packageInfo = packageManager.getPackageArchiveInfo(
         apkFile.absolutePath, PackageManager.GET_ACTIVITIES
     )
 
     return if (packageInfo != null) {
-        Pair(packageInfo.versionName ?: "Unknown", packageInfo.versionCode)
+        packageInfo.versionName ?: "Unknown"
     } else {
         null
     }
 }
 
-fun getApkStatus(context: Context, apkFile: File): String {
+fun getApkStatus(apkFile: File, versionInfo: String?): String {
     if (!apkFile.exists()) {
         return "${apkFile.name} is missing"
     }
-    val versionInfo = getApkVersionInfo(context, apkFile)
     return if (versionInfo == null) {
         "${apkFile.name} is corrupt. Please download again."
     } else {
-        "${apkFile.name} version ${versionInfo?.first ?: "Unknown"}"
+        "${apkFile.name} version ${versionInfo}"
     }
 }
