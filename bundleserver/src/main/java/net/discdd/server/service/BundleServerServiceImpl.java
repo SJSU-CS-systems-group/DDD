@@ -5,8 +5,11 @@ import io.grpc.stub.StreamObserver;
 import net.discdd.grpc.BundleInventoryRequest;
 import net.discdd.grpc.BundleInventoryResponse;
 import net.discdd.grpc.BundleServerServiceGrpc;
+import net.discdd.grpc.CrashReportRequest;
+import net.discdd.grpc.CrashReportResponse;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.grpc.GrpcService;
+import net.discdd.grpc.Status;
 import net.discdd.server.bundletransmission.BundleTransmission;
 import net.discdd.tls.DDDTLSUtil;
 import net.discdd.tls.NettyServerCertificateInterceptor;
@@ -14,17 +17,23 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
 import javax.annotation.PostConstruct;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 @GrpcService
 public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServerServiceImplBase {
     private String ReceiveDir;
     private String SendDir;
+    private String crashDir;
     private static final Logger logger = Logger.getLogger(BundleServerServiceImpl.class.getName());
 
     @Autowired
@@ -47,6 +56,7 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
     public void setDir(String bundleDir) {
         ReceiveDir = bundleDir + java.io.File.separator + "receive";
         SendDir = bundleDir + java.io.File.separator + "send";
+        crashDir = bundleDir + java.io.File.separator + "crashReports";
     }
 
     @Override
@@ -83,5 +93,25 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
                                         .addAllBundlesToUpload(request.getBundlesFromClientsOnTransportList())
                                         .build());
         responseObserver.onCompleted();
+    }
+
+    @Override
+    public void crashReports(CrashReportRequest request, StreamObserver<CrashReportResponse> response) {
+        var data = request.getCrashReportData();
+        X509Certificate clientCert = NettyServerCertificateInterceptor.CLIENT_CERTIFICATE_KEY.get(Context.current());
+        var name = DDDTLSUtil.publicKeyToName(clientCert.getPublicKey());
+        new File(crashDir).mkdirs();
+        File crashFile = new File(crashDir, name);
+        try {
+            Files.write(crashFile.toPath(),
+                        data.toByteArray(),
+                        StandardOpenOption.CREATE,
+                        StandardOpenOption.TRUNCATE_EXISTING);
+            response.onNext(CrashReportResponse.newBuilder().setResult(Status.SUCCESS).build());
+        } catch (IOException e) {
+            logger.log(WARNING, "Couldn't write crash file to " + crashFile, e);
+            response.onNext(CrashReportResponse.newBuilder().setResult(Status.FAILED).build());
+        }
+        response.onCompleted();
     }
 }

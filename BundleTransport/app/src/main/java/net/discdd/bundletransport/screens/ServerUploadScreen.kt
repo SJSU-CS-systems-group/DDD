@@ -81,6 +81,9 @@ fun ServerUploadScreen(
                         },
                 verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            Text(
+                    text = "TransportId: ${uploadViewModel.transportID.slice(4..20)}",
+            )
             FilledTonalButton(
                     onClick = { uploadViewModel.connectServer() },
                     enabled = connectServerBtn,
