@@ -30,19 +30,20 @@ data class ServerState(
 class ServerUploadViewModel(
         application: Application
 ) : AndroidViewModel(application) {
+    public val transportID: String
     private val context get() = getApplication<Application>()
     private val sharedPref = context.getSharedPreferences("server_endpoint", MODE_PRIVATE)
     private val logger = Logger.getLogger(ServerUploadViewModel::class.java.name)
     private val _state = MutableStateFlow(ServerState())
     private val executor: ExecutorService = Executors.newFixedThreadPool(2);
     private var transportPaths: TransportPaths = TransportPaths(context.getExternalFilesDir(null)?.toPath())
-    private var transportID: String? = ""
     private val transportGrpcSecurity = GrpcSecurityHolder.setGrpcSecurityHolder(transportPaths.grpcSecurityPath);
     val state = _state.asStateFlow()
 
     init {
+        val publicKey = transportGrpcSecurity.grpcKeyPair.public.encoded
         transportID = Base64.getEncoder().encodeToString(
-                transportGrpcSecurity.grpcKeyPair.public.encoded
+            publicKey
         )
         AndroidAppConstants.checkDefaultDomainPortSettings(sharedPref)
         restoreDomainPort()
