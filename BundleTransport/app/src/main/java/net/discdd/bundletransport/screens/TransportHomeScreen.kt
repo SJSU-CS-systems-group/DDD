@@ -85,6 +85,10 @@ fun TransportHomeScreen(
                             StorageScreen()
                         }
                 ),
+                TabItem(
+                        title = "App Share",
+                        screen = { AppShareScreen() }
+                ),
         )
     }
 

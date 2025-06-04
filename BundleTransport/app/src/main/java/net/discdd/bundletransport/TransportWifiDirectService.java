@@ -29,6 +29,8 @@ import net.discdd.screens.LogFragment;
 import net.discdd.wifidirect.WifiDirectManager;
 import net.discdd.wifidirect.WifiDirectStateListener;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -55,6 +57,8 @@ public class TransportWifiDirectService extends Service
     private SharedPreferences sharedPreferences;
     Context getApplicationContext;
     private NotificationManager notificationManager;
+    private FileHttpServer httpServer;
+    private boolean httpServerRunning = false;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -95,6 +99,7 @@ public class TransportWifiDirectService extends Service
 
         wifiDirectManager = new WifiDirectManager(this, this, true);
         wifiDirectManager.initialize();
+        startHttpServer();
     }
 
     @Override
@@ -102,6 +107,7 @@ public class TransportWifiDirectService extends Service
         if (wifiDirectManager != null) {
             wifiDirectManager.shutdown();
         }
+        stopHttpServer();
         super.onDestroy();
     }
 
@@ -150,6 +156,29 @@ public class TransportWifiDirectService extends Service
                 }
         }
         broadcastWifiEvent(action);
+    }
+
+    private void startHttpServer() {
+        if (!httpServerRunning) {
+            try {
+                File filesDir = getApplicationContext().getExternalFilesDir(null);
+                httpServer = new FileHttpServer(8080, filesDir);
+                httpServer.start();
+                httpServerRunning = true;
+                appendToClientLog("HTTP file server started on port 8080");
+            } catch (IOException e) {
+                logger.log(SEVERE, "Failed to start HTTP server", e);
+                appendToClientLog("Failed to start HTTP server: " + e.getMessage());
+            }
+        }
+    }
+
+    private void stopHttpServer() {
+        if (httpServerRunning && httpServer != null) {
+            httpServer.stop();
+            httpServerRunning = false;
+            appendToClientLog("HTTP file server stopped");
+        }
     }
 
     private void startRpcServer() {
