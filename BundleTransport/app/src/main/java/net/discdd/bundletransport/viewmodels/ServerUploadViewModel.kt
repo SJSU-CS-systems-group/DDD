@@ -43,7 +43,7 @@ class ServerUploadViewModel(
     init {
         val publicKey = transportGrpcSecurity.grpcKeyPair.public.encoded
         transportID = Base64.getEncoder().encodeToString(
-            publicKey
+                publicKey
         )
         AndroidAppConstants.checkDefaultDomainPortSettings(sharedPref)
         restoreDomainPort()
