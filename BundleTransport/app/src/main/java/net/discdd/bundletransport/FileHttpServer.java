@@ -1,15 +1,10 @@
 package net.discdd.bundletransport;
 
-import android.content.Context;
-import android.util.Log;
-
 import fi.iki.elonen.NanoHTTPD;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.Map;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
@@ -35,24 +30,41 @@ public class FileHttpServer extends NanoHTTPD {
             if (file.exists()) {
                 try {
                     FileInputStream fis = new FileInputStream(file);
-                    return newChunkedResponse(Response.Status.OK,
-                                              getMimeTypeForFile(uri), fis);
+                    return newChunkedResponse(Response.Status.OK, getMimeTypeForFile(uri), fis);
                 } catch (FileNotFoundException e) {
                     logger.log(SEVERE, "File not found: " + file.getAbsolutePath(), e);
-                    return newFixedLengthResponse(Response.Status.NOT_FOUND,
-                                                  MIME_PLAINTEXT, "File not found");
+                    return newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "File not found");
                 }
             } else {
-                return newFixedLengthResponse(Response.Status.NOT_FOUND,
-                                              MIME_PLAINTEXT, "File not found");
+                return newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "File not found");
             }
         } else {
             // Serve a simple HTML index page
             StringBuilder html = new StringBuilder();
-            html.append("<html><body>");
-            html.append("<h1>DDD File Server</h1>");
-            html.append("<p>Available files:</p>");
-            html.append("<ul>");
+            html.append("""
+                                <html><head>
+                                <meta charset="UTF-8">
+                                <meta name="viewport" content="width=device-width, initial-scale=1">
+                                <title>DDD App Share</title>
+                                 <style>
+                                    body {
+                                      font-family: sans-serif;
+                                      font-size: 1.7rem;
+                                      line-height: 1.5;
+                                    }
+                                    h1 {
+                                      font-size: 2rem;
+                                      margin-bottom: 0.5rem;
+                                    }
+                                    ul {
+                                      padding-left: 1.2rem;
+                                      line-height: 1.7;
+                                    }
+                                  </style>
+                                <body>
+                                <h1>DDD App Share</h1>
+                                <p>Available apps:</p>
+                                <ul>""");
             File mailApk = new File(filesDir, "ddd-mail.apk");
             File clientApk = new File(filesDir, "DDDClient.apk");
 
@@ -65,7 +77,6 @@ public class FileHttpServer extends NanoHTTPD {
             }
 
             html.append("</ul></body></html>");
-
             return newFixedLengthResponse(html.toString());
         }
     }
