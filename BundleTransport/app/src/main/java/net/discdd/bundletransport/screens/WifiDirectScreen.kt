@@ -93,97 +93,110 @@ fun WifiDirectScreen(
                         .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            var checked by remember {
-                mutableStateOf(
+            if (wifiViewModel.isWifiEnabled()) {
+                var checked by remember {
+                    mutableStateOf(
                         preferences.getBoolean(
-                                TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
-                                true
+                            TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
+                            true
                         )
-                )
-            }
-            val nameValid by remember {
-                derivedStateOf { state.deviceName.startsWith("ddd_") }
-            }
+                    )
+                }
+                val nameValid by remember {
+                    derivedStateOf { state.deviceName.startsWith("ddd_") }
+                }
 
-            if (!nearbyWifiState.status.isGranted) {
-                WifiPermissionBanner(numDenied, nearbyWifiState) {
-                    // if user denies access twice, manual access in settings is required
-                    if (numDenied >= 2) {
-                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                            data = Uri.fromParts("package", context.packageName, null)
+                if (!nearbyWifiState.status.isGranted) {
+                    WifiPermissionBanner(numDenied, nearbyWifiState) {
+                        // if user denies access twice, manual access in settings is required
+                        if (numDenied >= 2) {
+                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.fromParts("package", context.packageName, null)
+                            }
+                            startActivity(context, intent, null)
+                        } else {
+                            wifiViewModel.incrementNumDenied()
+                            nearbyWifiState.launchPermissionRequest()
                         }
-                        startActivity(context, intent, null)
-                    } else {
-                        wifiViewModel.incrementNumDenied()
-                        nearbyWifiState.launchPermissionRequest()
                     }
                 }
-            }
 
-            Text(
+                Text(
                     text = state.wifiInfo,
                     modifier = Modifier.clickable { showDialog = true }
-            )
+                )
 
-            if (showDialog == true) {
-                val connectedPeers: ArrayList<String> = ArrayList()
-                wifiViewModel.getService()?.groupInfo?.let { gi ->
-                    gi.clientList.forEach { c -> connectedPeers.add(c.deviceName) }
-                }
+                if (showDialog == true) {
+                    val connectedPeers: ArrayList<String> = ArrayList()
+                    wifiViewModel.getService()?.groupInfo?.let { gi ->
+                        gi.clientList.forEach { c -> connectedPeers.add(c.deviceName) }
+                    }
 
-                AlertDialog(
+                    AlertDialog(
                         title = { Text(text = stringResource(R.string.connected_devices)) },
                         text = { Text(text = connectedPeers.toTypedArray().joinToString(", ")) },
                         onDismissRequest = { showDialog = false },
                         confirmButton = {
                             TextButton(
-                                    onClick = {
-                                        showDialog = false
-                                    }
+                                onClick = {
+                                    showDialog = false
+                                }
                             ) {
                                 Text(stringResource(R.string.dismiss))
                             }
                         }
-                )
-            }
+                    )
+                }
 
-            Text(text = "Wifi Status: ${state.wifiStatus}")
-            Text(text = "Device Name: ${state.deviceName}")
+                Text(text = "Wifi Status: ${state.wifiStatus}")
+                Text(text = "Device Name: ${state.deviceName}")
 
-            Row(
+                // only show the name change button if we don't have a valid device name
+                // (transports must have device names starting with ddd_)
+                if (!nameValid) {
+                        Text(text = stringResource(
+                            R.string.phone_name_must_start_with_ddd_found,
+                            state.deviceName
+                        ))
+
+                        FilledTonalButton(
+                            onClick = { wifiViewModel.openInfoSettings() },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(stringResource(R.string.change_phone_name))
+                        }
+                }
+
+                Row(
                     verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Checkbox(
+                ) {
+                    Checkbox(
                         checked = checked,
                         onCheckedChange = {
                             checked = it
                             preferences.edit().putBoolean(
-                                    TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
-                                    it
+                                TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
+                                it
                             ).apply()
                         }
-                )
-                Text(text = stringResource(R.string.collect_data_even_when_app_is_closed))
-            }
+                    )
+                    Text(text = stringResource(R.string.collect_data_even_when_app_is_closed))
+                }
 
-            // only show the name change button if we don't have a valid device name
-            // (transports must have device names starting with ddd_)
-            if (!nameValid) {
+                Text(text = stringResource(R.string.interactions_with_bundleclients))
+                Text(text = state.clientLog)
+            } else {
                 Text(text = stringResource(
-                        R.string.phone_name_must_start_with_ddd_found,
-                        state.deviceName
+                    R.string.Wifi_disabled
                 ))
 
                 FilledTonalButton(
-                        onClick = { wifiViewModel.openInfoSettings() },
-                        modifier = Modifier.fillMaxWidth()
+                    onClick = { wifiViewModel.openWifiSettings() },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(stringResource(R.string.change_phone_name))
+                    Text("Open Wifi Settings")
                 }
             }
-
-            Text(text = stringResource(R.string.interactions_with_bundleclients))
-            Text(text = state.clientLog)
         }
     }
 }
