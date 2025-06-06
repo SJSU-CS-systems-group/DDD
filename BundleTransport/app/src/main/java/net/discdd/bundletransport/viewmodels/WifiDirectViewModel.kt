@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Intent
 import android.content.IntentFilter
 import android.provider.Settings
+import android.net.wifi.WifiManager
 import androidx.core.content.ContextCompat.startActivity
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.lifecycle.viewModelScope
@@ -30,9 +31,9 @@ import java.util.stream.Collectors
 
 data class WifiDirectState(
         val deviceName: String = "",
-        val wifiInfo: String = "",
+        val wifiInfo: String = "Wifi info: UNKNOWN- please make sure internet is turned on",
         val clientLog: String = "",
-        val wifiStatus: String = "",
+        val wifiStatus: String = "Wifi Status is UNKNOWN- please make sure internet is turned on",
 )
 
 class WifiDirectViewModel(
@@ -52,6 +53,7 @@ class WifiDirectViewModel(
     init {
         intentFilter.addAction(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_WIFI_EVENT_ACTION);
         intentFilter.addAction(TransportWifiDirectService.NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION);
+        intentFilter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
     }
 
     fun initialize(serviceReadyFuture: CompletableFuture<TransportWifiDirectService>) {
@@ -78,7 +80,7 @@ class WifiDirectViewModel(
 
             var serviceName = btService!!.deviceName
             _state.update {
-                it.copy(deviceName = if (serviceName != null) serviceName else "Unknown")
+                it.copy(deviceName = if (serviceName != null) serviceName else "")
             }
 
             var status = btService!!.status
@@ -116,6 +118,7 @@ class WifiDirectViewModel(
                 var info: String = ""
                 if (gi == null) {
                     info = context.getString(R.string.wifi_transport_not_active)
+                        //find candidate for nested if statement to use R.string.wifi_transport_not_active_group_info_null
                 } else {
                     var addresses: String = ""
                     try {
@@ -158,5 +161,17 @@ class WifiDirectViewModel(
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         startActivity(context, intent, null)
+    }
+
+    fun openWifiSettings() {
+        val intent = Intent(Settings.ACTION_WIFI_SETTINGS).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        startActivity(context, intent, null)
+    }
+
+    fun isWifiEnabled(): Boolean {
+        val wifiManager = context.applicationContext.getSystemService(Application.WIFI_SERVICE) as WifiManager
+        return wifiManager.isWifiEnabled
     }
 }
