@@ -31,9 +31,9 @@ import java.util.stream.Collectors
 
 data class WifiDirectState(
         val deviceName: String = "",
-        val wifiInfo: String = "Wifi info: UNKNOWN- please make sure internet is turned on",
+        val wifiInfo: String = "",
         val clientLog: String = "",
-        val wifiStatus: String = "Wifi Status is UNKNOWN- please make sure internet is turned on",
+        val wifiStatus: String = "",
 )
 
 class WifiDirectViewModel(
@@ -80,7 +80,7 @@ class WifiDirectViewModel(
 
             var serviceName = btService!!.deviceName
             _state.update {
-                it.copy(deviceName = if (serviceName != null) serviceName else "")
+                it.copy(deviceName = if (serviceName != null) serviceName else "Unknown")
             }
 
             var status = btService!!.status
