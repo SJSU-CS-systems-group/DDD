@@ -96,10 +96,10 @@ fun WifiDirectScreen(
             if (wifiViewModel.isWifiEnabled()) {
                 var checked by remember {
                     mutableStateOf(
-                        preferences.getBoolean(
-                            TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
-                            true
-                        )
+                            preferences.getBoolean(
+                                    TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
+                                    true
+                            )
                     )
                 }
                 val nameValid by remember {
@@ -122,8 +122,8 @@ fun WifiDirectScreen(
                 }
 
                 Text(
-                    text = state.wifiInfo,
-                    modifier = Modifier.clickable { showDialog = true }
+                        text = state.wifiInfo,
+                        modifier = Modifier.clickable { showDialog = true }
                 )
 
                 if (showDialog == true) {
@@ -133,18 +133,18 @@ fun WifiDirectScreen(
                     }
 
                     AlertDialog(
-                        title = { Text(text = stringResource(R.string.connected_devices)) },
-                        text = { Text(text = connectedPeers.toTypedArray().joinToString(", ")) },
-                        onDismissRequest = { showDialog = false },
-                        confirmButton = {
-                            TextButton(
-                                onClick = {
-                                    showDialog = false
+                            title = { Text(text = stringResource(R.string.connected_devices)) },
+                            text = { Text(text = connectedPeers.toTypedArray().joinToString(", ")) },
+                            onDismissRequest = { showDialog = false },
+                            confirmButton = {
+                                TextButton(
+                                        onClick = {
+                                            showDialog = false
+                                        }
+                                ) {
+                                    Text(stringResource(R.string.dismiss))
                                 }
-                            ) {
-                                Text(stringResource(R.string.dismiss))
                             }
-                        }
                     )
                 }
 
@@ -154,31 +154,31 @@ fun WifiDirectScreen(
                 // only show the name change button if we don't have a valid device name
                 // (transports must have device names starting with ddd_)
                 if (!nameValid) {
-                        Text(text = stringResource(
+                    Text(text = stringResource(
                             R.string.phone_name_must_start_with_ddd_found,
                             state.deviceName
-                        ))
+                    ))
 
-                        FilledTonalButton(
+                    FilledTonalButton(
                             onClick = { wifiViewModel.openInfoSettings() },
                             modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(stringResource(R.string.change_phone_name))
-                        }
+                    ) {
+                        Text(stringResource(R.string.change_phone_name))
+                    }
                 }
 
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Checkbox(
-                        checked = checked,
-                        onCheckedChange = {
-                            checked = it
-                            preferences.edit().putBoolean(
-                                TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
-                                it
-                            ).apply()
-                        }
+                            checked = checked,
+                            onCheckedChange = {
+                                checked = it
+                                preferences.edit().putBoolean(
+                                        TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
+                                        it
+                                ).apply()
+                            }
                     )
                     Text(text = stringResource(R.string.collect_data_even_when_app_is_closed))
                 }
@@ -187,12 +187,12 @@ fun WifiDirectScreen(
                 Text(text = state.clientLog)
             } else {
                 Text(text = stringResource(
-                    R.string.Wifi_disabled
+                        R.string.Wifi_disabled
                 ))
 
                 FilledTonalButton(
-                    onClick = { wifiViewModel.openWifiSettings() },
-                    modifier = Modifier.fillMaxWidth()
+                        onClick = { wifiViewModel.openWifiSettings() },
+                        modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Open Wifi Settings")
                 }

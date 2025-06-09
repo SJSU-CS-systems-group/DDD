@@ -118,7 +118,7 @@ class WifiDirectViewModel(
                 var info: String = ""
                 if (gi == null) {
                     info = context.getString(R.string.wifi_transport_not_active)
-                        //find candidate for nested if statement to use R.string.wifi_transport_not_active_group_info_null
+                    //find candidate for nested if statement to use R.string.wifi_transport_not_active_group_info_null
                 } else {
                     var addresses: String = ""
                     try {
