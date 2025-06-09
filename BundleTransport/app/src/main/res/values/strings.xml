@@ -15,6 +15,7 @@
     <string name="change_phone_name">Change Phone Name</string>
     <string name="interactions_with_bundleclients">Interactions with BundleClients</string>
     <string name="wifi_transport_not_active">Wifi Transport not active</string>
+    <string name="wifi_transport_not_active_group_info_null">Wifi Transport not active: Group info is null, check that Wifi is enabled</string>
     <string name="connected">Connected</string>
     <string name="invited">Invited</string>
     <string name="failed">Failed</string>
@@ -41,5 +42,7 @@
     <string name="dismiss">Dismiss</string>
     <string name="storage" translatable="false">Storage</string>
     <string name="usb" translatable="false">Usb</string>
-    <string name="phone_name_must_start_with_ddd_found">Phone name must start with ddd_ found %1$s</string>
+    <string name="phone_name_must_start_with_ddd_found">Phone name must start with ddd_ found: %1$s</string>
+    <string name="phone_name_unreachable">Device name is UNKNOWN</string>
+    <string name="Wifi_disabled">Please turn on WiFi to use BundleTransport features</string>
 </resources>
