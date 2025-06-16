@@ -37,6 +37,7 @@ import net.discdd.bundleclient.WifiServiceManager
 import net.discdd.bundleclient.viewmodels.ClientUsbViewModel
 import net.discdd.screens.LogScreen
 import net.discdd.components.NotificationBottomSheet
+import net.discdd.screens.BugReportScreen
 import net.discdd.screens.PermissionScreen
 import net.discdd.screens.UsbScreen
 import net.discdd.viewmodels.SettingsViewModel
@@ -83,6 +84,10 @@ fun HomeScreen(
         TabItem(
             title = context.getString(R.string.bm_tab),
             screen = { ManagerScreen() }
+        ),
+        TabItem(
+            title = "Bug reports",
+            screen = { BugReportScreen() }
         ),
     )
 
