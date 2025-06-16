@@ -63,11 +63,11 @@ class BugReportViewModel : ViewModel() {
 
             val clientDestDir: Path = rootDir.resolve("to-be-bundled")
             val finalRootDir = if (clientDestDir.toFile().exists()) {
-                logger.log(INFO,"Writing bug report to client device internal storage")
+                logger.log(INFO, "Writing bug report to client device internal storage")
                 clientDestDir
             } else {
                 val externalDir = context.applicationContext.getExternalFilesDir(null)?.toPath()
-                    ?: throw IllegalStateException("External files directory is null")
+                        ?: throw IllegalStateException("External files directory is null")
                 logger.log(INFO, "Writing bug report to transport device external storage")
                 externalDir
             }
@@ -87,7 +87,7 @@ class BugReportViewModel : ViewModel() {
                 writer.write(reportContent)
             }
 
-            logger.log(INFO,"Bug report saved to: ${logFile.absolutePath}")
+            logger.log(INFO, "Bug report saved to: ${logFile.absolutePath}")
             true
         } catch (e: Exception) {
             logger.log(INFO, "Failed to save bug report")

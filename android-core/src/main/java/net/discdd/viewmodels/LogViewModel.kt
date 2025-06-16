@@ -60,7 +60,7 @@ class LogViewModel : ViewModel() {
         }
 
         @JvmStatic
-        fun getCurrLogs() : List<String> {
+        fun getCurrLogs(): List<String> {
             return LinkedList(logRecords).toList()
         }
     }
