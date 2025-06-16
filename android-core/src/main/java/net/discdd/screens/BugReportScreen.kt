@@ -19,7 +19,7 @@ import net.discdd.viewmodels.BugReportViewModel
 
 @Composable
 fun BugReportScreen(
-    viewModel: BugReportViewModel = viewModel()
+        viewModel: BugReportViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val bugReportText by viewModel.bugReportText.collectAsState()
@@ -34,32 +34,32 @@ fun BugReportScreen(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "Please describe the bug you encountered. \nYou can describe what happened, what you expected, and/or steps to reproduce.",
-            style = MaterialTheme.typography.bodyMedium,
+                text = "Please describe the bug you encountered. \nYou can describe what happened, what you expected, and/or steps to reproduce.",
+                style = MaterialTheme.typography.bodyMedium,
         )
         OutlinedTextField(
-            value = bugReportText,
-            onValueChange = viewModel::updateBugReportText,
-            label = { Text("Bug Description") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            enabled = !isSubmitting
+                value = bugReportText,
+                onValueChange = viewModel::updateBugReportText,
+                label = { Text("Bug Description") },
+                modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                enabled = !isSubmitting
         )
         Button(
-            onClick = { viewModel.submitBugReport(context) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            enabled = !isSubmitting && bugReportText.isNotBlank()
+                onClick = { viewModel.submitBugReport(context) },
+                modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                enabled = !isSubmitting && bugReportText.isNotBlank()
         ) {
             if (isSubmitting) {
                 Text("Submitting...")
@@ -69,12 +69,12 @@ fun BugReportScreen(
         }
         submitResult?.let { result ->
             Card(
-                modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = result,
-                    modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.bodyMedium
+                        text = result,
+                        modifier = Modifier.padding(16.dp),
+                        style = MaterialTheme.typography.bodyMedium
                 )
             }
         }

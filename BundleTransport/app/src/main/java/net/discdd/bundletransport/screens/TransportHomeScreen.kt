@@ -91,8 +91,8 @@ fun TransportHomeScreen(
                         screen = { AppShareScreen() }
                 ),
                 TabItem(
-                    title = "Bug reports",
-                    screen = { BugReportScreen() }
+                        title = "Bug reports",
+                        screen = { BugReportScreen() }
                 ),
         )
     }
