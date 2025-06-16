@@ -41,6 +41,7 @@ import net.discdd.bundletransport.viewmodels.TransportUsbViewModel
 import net.discdd.screens.LogScreen
 import net.discdd.screens.PermissionScreen
 import net.discdd.screens.UsbScreen
+import net.discdd.screens.BugReportScreen
 import net.discdd.viewmodels.SettingsViewModel
 
 data class TabItem(
@@ -88,6 +89,10 @@ fun TransportHomeScreen(
                 TabItem(
                         title = "App Share",
                         screen = { AppShareScreen() }
+                ),
+                TabItem(
+                    title = "Bug reports",
+                    screen = { BugReportScreen() }
                 ),
         )
     }
