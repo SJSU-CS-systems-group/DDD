@@ -70,9 +70,7 @@ public class WifiDirectManager {
         intentFilter.addAction(WIFI_P2P_DISCOVERY_CHANGED_ACTION);
     }
 
-
-    @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION,
-                                  Manifest.permission.NEARBY_WIFI_DEVICES })
+    @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES })
     public void initialize() {
         this.manager = (WifiP2pManager) this.context.getSystemService(Context.WIFI_P2P_SERVICE);
         if (manager == null) {
@@ -94,8 +92,7 @@ public class WifiDirectManager {
     }
 
     // package protected so that the broadcast receiver can call it
-    @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION,
-                                  Manifest.permission.NEARBY_WIFI_DEVICES })
+    @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES })
     void processDeviceInfo(WifiP2pDevice wifiP2pDevice) {
         if (wifiP2pDevice != null) {
             var infoChanged = false;
@@ -152,9 +149,7 @@ public class WifiDirectManager {
         return completableActionListener;
     }
 
-
-    @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION,
-                                  Manifest.permission.NEARBY_WIFI_DEVICES })
+    @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES })
     public CompletableFuture<WifiP2pGroup> createGroup() {
         var completableFuture = new CompletableFuture<WifiP2pGroup>();
         this.manager.createGroup(this.channel, new WifiP2pManager.ActionListener() {
@@ -212,8 +207,7 @@ public class WifiDirectManager {
         return cFuture;
     }
 
-    @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION,
-                                  Manifest.permission.NEARBY_WIFI_DEVICES })
+    @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES })
     public CompletableFuture<WifiP2pGroup> connect(WifiP2pDevice device) {
         CompletableFuture<WifiP2pGroup> completableFuture = new CompletableFuture<>();
         var config = new WifiP2pConfig();
@@ -278,8 +272,7 @@ public class WifiDirectManager {
         getContext().registerReceiver(receiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
     }
 
-    @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION,
-                                  Manifest.permission.NEARBY_WIFI_DEVICES })
+    @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES })
     public CompletableFuture<WifiP2pDevice> requestDeviceInfo() {
         var completableFuture = new CompletableFuture<WifiP2pDevice>();
         manager.requestDeviceInfo(channel, di -> {
