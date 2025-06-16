@@ -80,7 +80,7 @@ class WifiDirectViewModel(
 
             var serviceName = btService!!.deviceName
             _state.update {
-                it.copy(deviceName = if (serviceName != null) serviceName else "Unknown")
+                it.copy(deviceName = if (!serviceName.isNullOrBlank()) serviceName else "Unknown")
             }
 
             var status = btService!!.status
