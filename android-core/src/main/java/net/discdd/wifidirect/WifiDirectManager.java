@@ -70,7 +70,6 @@ public class WifiDirectManager {
         intentFilter.addAction(WIFI_P2P_DISCOVERY_CHANGED_ACTION);
     }
 
-
     @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES })
     public void initialize() {
         this.manager = (WifiP2pManager) this.context.getSystemService(Context.WIFI_P2P_SERVICE);
@@ -149,7 +148,6 @@ public class WifiDirectManager {
         this.manager.discoverPeers(this.channel, completableActionListener);
         return completableActionListener;
     }
-
 
     @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES })
     public CompletableFuture<WifiP2pGroup> createGroup() {
@@ -352,7 +350,8 @@ public class WifiDirectManager {
          * @noinspection deprecation, deprecation
          */
 
-        @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES })
+        @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION,
+                                      Manifest.permission.NEARBY_WIFI_DEVICES })
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
