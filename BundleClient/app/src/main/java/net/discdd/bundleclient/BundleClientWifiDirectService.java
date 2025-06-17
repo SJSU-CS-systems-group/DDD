@@ -4,6 +4,7 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
+import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -12,6 +13,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
+import android.net.ConnectivityManager;
+import android.net.NetworkCapabilities;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.os.Binder;
@@ -65,6 +68,8 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
     PeriodicRunnable periodicRunnable = new PeriodicRunnable();
     private WifiDirectManager wifiDirectManager;
     private BundleTransmission bundleTransmission;
+    ConnectivityManager connectivityManager;
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
@@ -75,6 +80,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
             }
         });
         startForeground();
+        connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
         return START_STICKY;
     }
 
@@ -137,8 +143,19 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
         getApplicationContext().sendBroadcast(intent);
     }
 
+    public static BundleClientWifiDirectService instance;
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        // hacky, but chatGPT seems to like it.
+        // this allows MessageProvider to access the service
+        instance = this;
+    }
+
     @Override
     public void onDestroy() {
+        instance = null;
         if (wifiDirectManager != null) wifiDirectManager.shutdown();
         super.onDestroy();
     }
@@ -314,6 +331,7 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
         wifiDirectManager.discoverPeers();
     }
 
+    @SuppressLint("NotificationPermission")
     public CompletableFuture<BundleExchangeCounts> initiateExchange(String deviceAddress) {
         var completableFuture = new CompletableFuture<BundleExchangeCounts>();
         var device = wifiDirectManager.getPeerList().stream().filter(peer -> peer.deviceAddress.equals(deviceAddress))
@@ -401,6 +419,19 @@ public class BundleClientWifiDirectService extends Service implements WifiDirect
         return Arrays.stream(bundleTransmission.getRecentTransports())
                 .filter(rt -> deviceAddress.equals(rt.getDeviceAddress())).findFirst()
                 .orElse(new BundleTransmission.RecentTransport(deviceAddress));
+    }
+
+    public void notifyNewAdu() {
+        if (preferences != null && preferences.getBoolean(NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, false)) {
+            var connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+            var activeNetwork = connectivityManager.getActiveNetwork();
+            if (activeNetwork != null) {
+                var caps = connectivityManager.getNetworkCapabilities(activeNetwork);
+                if (caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
+                    initiateServerExchange();
+                }
+            }
+        }
     }
 
     public enum BundleClientWifiDirectEventType {
