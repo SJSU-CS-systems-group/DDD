@@ -1,11 +1,16 @@
 package net.discdd.bundletransport
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.storage.StorageManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.ViewModelProvider
 import net.discdd.UsbConnectionManager
 import net.discdd.bundletransport.screens.TransportHomeScreen
+import net.discdd.bundletransport.viewmodels.TransportUsbViewModel
 import net.discdd.pathutils.TransportPaths
 import net.discdd.screens.LogFragment
 import net.discdd.theme.ComposableTheme
@@ -21,10 +26,32 @@ class BundleTransportActivity : ComponentActivity() {
         TransportPaths(applicationContext.filesDir.toPath())
     }
 
+    private lateinit var usbViewModel: TransportUsbViewModel
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         LogFragment.registerLoggerHandler()
+
+        usbViewModel = ViewModelProvider(this).get(TransportUsbViewModel::class.java)
+        val openDocumentTreeLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                usbViewModel.openedURI(applicationContext, result.data?.data)
+                logger.info("Selected URI: ${result.data?.data}")
+            } else {
+                logger.warning("Directory selection canceled")
+            }
+        }
+
+        usbViewModel.requestDirectoryAccess.observe(this) {
+            val storageManager = getSystemService(Context.STORAGE_SERVICE) as StorageManager
+            val volumes = storageManager.storageVolumes
+            val usbVolume = volumes.find { it.isRemovable && it.state == "mounted"}
+            usbVolume?.createOpenDocumentTreeIntent()?.apply {
+                openDocumentTreeLauncher.launch(this)
+            }
+        }
+
         UsbConnectionManager.initialize(applicationContext)
         ConnectivityManager.initialize(applicationContext)
         TransportWifiServiceManager.initialize(this)
