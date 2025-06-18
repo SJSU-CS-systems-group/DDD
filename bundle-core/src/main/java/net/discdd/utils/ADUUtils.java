@@ -60,7 +60,7 @@ public class ADUUtils {
                 }
             }
         }
-        ret.sort(Comparator.comparingLong(ADU::getADUId));
+        ret.sort(Comparator.comparing(ADU::getAppId).thenComparing(ADU::getADUId));
         return ret;
     }
 

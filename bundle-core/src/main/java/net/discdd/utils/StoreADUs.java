@@ -126,6 +126,7 @@ public class StoreADUs {
         var folder = rootFolder.resolve(appId);
         return Files.list(folder)
                 .filter(p -> p.getFileName().toString().chars().allMatch(Character::isDigit))
+                .sorted(Comparator.comparingLong(p -> Long.parseLong(p.getFileName().toString())))
                 .map(path -> {
                     try {
                         String id = path.getFileName().toString();
@@ -138,19 +139,6 @@ public class StoreADUs {
                 .collect(Collectors.toList());
     }
 
-    public List<byte[]> getAllAppData(String appId) throws IOException {
-        getMetadata(null, appId);
-        var folder = rootFolder.resolve(appId);
-        return Files.list(folder).map(path -> {
-            try {
-                return Files.readAllBytes(path);
-            } catch (IOException e) {
-                logger.log(SEVERE, "Failed to read file " + path, e);
-                return new byte[0];
-            }
-        }).collect(Collectors.toList());
-    }
-
     public List<Long> getAllADUIds(String appId) throws IOException {
         getMetadata(null, appId);
         var folder = rootFolder.resolve(appId);
@@ -158,6 +146,7 @@ public class StoreADUs {
                 .map(path -> path.getFileName().toString())
                 .filter(fileName -> !fileName.equals(METADATA_FILENAME))
                 .map(Long::parseLong)
+                .sorted()
                 .collect(Collectors.toList());
     }
 
