@@ -26,6 +26,8 @@ class BundleTransportActivity : ComponentActivity() {
         TransportPaths(applicationContext.filesDir.toPath())
     }
 
+    private lateinit var usbViewModel: TransportUsbViewModel
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -46,7 +48,7 @@ class BundleTransportActivity : ComponentActivity() {
         usbViewModel.requestDirectoryAccess.observe(this) {
             val storageManager = getSystemService(Context.STORAGE_SERVICE) as StorageManager
             val volumes = storageManager.storageVolumes
-            val usbVolume = volumes.find { it.isRemovable && it.state == "mounted" }
+            val usbVolume = volumes.find { it.isRemovable && it.state == "mounted"}
             usbVolume?.createOpenDocumentTreeIntent()?.apply {
                 openDocumentTreeLauncher.launch(this)
             }
