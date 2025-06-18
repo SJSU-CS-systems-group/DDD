@@ -16,6 +16,7 @@ import android.os.Binder;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import net.discdd.bundleclient.BundleClientWifiDirectService;
 import net.discdd.client.bundlesecurity.ClientSecurity;
 import net.discdd.utils.StoreADUs;
 
@@ -45,6 +46,14 @@ public class MessageProvider extends ContentProvider {
         return getContext().getPackageManager().getNameForUid(receiverId);
     }
 
+    private void checkCallerAppId() throws SecurityException {
+        try {
+            if (getCallerAppId().startsWith("net.discdd.")) return;
+        } catch (IOException e) {
+            logger.log(WARNING, "Unable to get caller app ID", e);
+        }
+        throw new SecurityException("not on the list!");
+    }
     @Override
     public boolean onCreate() {
         var appRootDataDir = Paths.get(getContext().getApplicationInfo().dataDir);
@@ -59,8 +68,9 @@ public class MessageProvider extends ContentProvider {
             @NonNull Uri uri,
             @Nullable String[] projection,
             @Nullable String selection, @Nullable String[] selectionArgs, @Nullable String sortOrder) {
-        MatrixCursor cursor = new MatrixCursor(new String[] { "data", "id", "offset", "exception" });
+        checkCallerAppId();
 
+        MatrixCursor cursor = new MatrixCursor(new String[] { "data", "id", "offset", "exception" });
 
         try {
             String appId = getCallerAppId();
@@ -117,6 +127,7 @@ public class MessageProvider extends ContentProvider {
     @Nullable
     @Override
     public Uri insert(@NonNull Uri uri, @Nullable ContentValues contentValues) {
+        checkCallerAppId();
         try {
             String appName = getCallerAppId();
             byte[] data = contentValues.getAsByteArray("data");
@@ -125,8 +136,13 @@ public class MessageProvider extends ContentProvider {
             Long aduId = contentValues.getAsLong("aduId");
 
             logger.log(INFO, format("%s inserting: %s bytes, at %s, %s is finished", appName, data.length, offset, finished));
-            return fromFile(sendADUsStorage.addADU(null, appName, data,
+            var rspUri = fromFile(sendADUsStorage.addADU(null, appName, data,
                                                    aduId == null ? -1 : aduId, offset == null ? 0 : offset, finished));
+            var service = BundleClientWifiDirectService.instance;
+            if (service != null) {
+                service.notifyNewAdu();
+            }
+            return rspUri;
         } catch (IOException e) {
             logger.log(WARNING, "Unable to add file", e);
             return null;
@@ -136,6 +152,8 @@ public class MessageProvider extends ContentProvider {
     @Override
     public int delete(@NonNull Uri uri, @Nullable String selection, @Nullable String[] selectionArgs) {
         String appName;
+        checkCallerAppId();
+
         try {
             appName = getCallerAppId();
         } catch (IOException e) {
@@ -161,7 +179,7 @@ public class MessageProvider extends ContentProvider {
             @NonNull Uri uri,
             @Nullable ContentValues contentValues, @Nullable String selection, @Nullable String[] selectionArgs) {
         int rowsUpdated = 0;
-
+        checkCallerAppId();
         // TODO: implement update if necessary
 
         // getContentResolver provides access to the content model

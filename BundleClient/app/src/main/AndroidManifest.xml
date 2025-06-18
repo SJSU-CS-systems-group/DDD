@@ -34,11 +34,7 @@
         <provider
             android:name="net.discdd.datastore.providers.MessageProvider"
             android:authorities="net.discdd.provider.datastoreprovider"
-            android:exported="true"
-            android:multiprocess="true"
-            android:grantUriPermissions="true"
-            android:writePermission="net.discdd.bundleclient.permission.MESSAGE_PROVIDER_WRITE"
-            android:readPermission="net.discdd.bundleclient.permission.MESSAGE_PROVIDER_READ">
+            android:exported="true">
         </provider>
     </application>
 
