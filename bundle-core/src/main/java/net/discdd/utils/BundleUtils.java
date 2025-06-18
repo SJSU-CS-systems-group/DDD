@@ -291,6 +291,7 @@ public class BundleUtils {
                             aduList.add(new ADU(null, appId, counter, 0));
                         }
                     }
+                    aduList.sort(Comparator.comparing(ADU::getAppId).thenComparingLong(ADU::getADUId));
                     builder.setADUs(aduList);
                     builder.setSource(null);
                 }
