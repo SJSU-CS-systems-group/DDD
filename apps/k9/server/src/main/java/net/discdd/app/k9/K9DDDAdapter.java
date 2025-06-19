@@ -116,8 +116,9 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         }
     }
 
-    private MimeMessage createBounceMessage(Session session, StringBuilder bouncedMessage, byte[] originalMessage) throws
-            MessagingException {
+    private MimeMessage createBounceMessage(Session session,
+                                            StringBuilder bouncedMessage,
+                                            byte[] originalMessage) throws MessagingException {
         MimeMessage bounceMessage = new MimeMessage(session);
 
         // Set bounce message headers
@@ -127,11 +128,12 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         // Create the bounce message content
         String bounceText = String.format("""
                                                   Your message could not be delivered.
-                                                  
+                                                                                                    
                                                   Reason: %s
-                                                  
-                                                  Original message: %s""", bouncedMessage,
-                new String(originalMessage, 0, Math.min(1024, originalMessage.length)));
+                                                                                                    
+                                                  Original message: %s""",
+                                          bouncedMessage,
+                                          new String(originalMessage, 0, Math.min(1024, originalMessage.length)));
         bounceMessage.setText(bounceText);
         return bounceMessage;
     }
@@ -248,9 +250,9 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         } catch (IOException e) {
             logger.log(SEVERE,
                        format("Error while deleting ADUs for client: %s app: %s till AduId: %s",
-                                     clientId,
-                                     APP_ID,
-                                     lastADUIdRecvd),
+                              clientId,
+                              APP_ID,
+                              lastADUIdRecvd),
                        e);
         }
 

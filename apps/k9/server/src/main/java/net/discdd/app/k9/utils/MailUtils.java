@@ -30,10 +30,11 @@ public class MailUtils {
             dest.addAll(Arrays.asList(list));
         }
     }
+
     public static List<Address> getToCCBccAddresses(MimeMessage message) {
         List<Address> addressList = new ArrayList<>();
         try {
-            collectAddrs(addressList,message.getRecipients(MimeMessage.RecipientType.TO));
+            collectAddrs(addressList, message.getRecipients(MimeMessage.RecipientType.TO));
             collectAddrs(addressList, message.getRecipients(MimeMessage.RecipientType.CC));
             collectAddrs(addressList, message.getRecipients(MimeMessage.RecipientType.BCC));
         } catch (Exception e) {
