@@ -7,6 +7,7 @@ import android.os.storage.StorageManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.ViewModelProvider
 import net.discdd.UsbConnectionManager
 import net.discdd.bundletransport.screens.TransportHomeScreen
 import net.discdd.bundletransport.viewmodels.TransportUsbViewModel
