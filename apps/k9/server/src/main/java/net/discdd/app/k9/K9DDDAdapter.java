@@ -131,7 +131,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
                                                   Reason: %s
                                                   
                                                   Original message: %s""", bouncedMessage,
-                new String(originalMessage, 0, 1024));
+                new String(originalMessage, 0, Math.min(1024, originalMessage.length)));
         bounceMessage.setText(bounceText);
         return bounceMessage;
     }
