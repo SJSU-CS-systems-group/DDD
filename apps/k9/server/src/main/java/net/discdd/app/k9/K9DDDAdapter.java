@@ -23,15 +23,23 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import javax.mail.MessagingException;
+import javax.mail.Session;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.Random;
 import java.util.logging.Logger;
 
+import static java.lang.String.format;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
@@ -39,6 +47,7 @@ import static java.util.logging.Level.WARNING;
 @GrpcService
 public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServiceImplBase {
     static final Logger logger = Logger.getLogger(K9DDDAdapter.class.getName());
+    public static final int MAX_RECIPIENTS = 5;
     private final String APP_ID = "net.discdd.k9";
     private final String RAVLYK_DOMAIN = "ravlykmail.com";
     private final Random rand = new Random();
@@ -52,25 +61,79 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         passwordEncoder = new BCryptPasswordEncoder();
     }
 
-    private void processEmailAdus(AppDataUnit adu, String clientId) throws IOException {
-        var addressList = MailUtils.getToCCBccAddresses(adu.getData().toByteArray());
-        for (var address : addressList) {
-            String domain = MailUtils.getDomain(address);
-            if (RAVLYK_DOMAIN.equals(domain)) {
-                Optional<K9ClientIdToEmailMapping> entity = clientToEmailRepository.findById(address);
-                if (entity.isPresent()) {
-                    String destClientId = entity.get().getClientId();
-                    sendADUsStorage.addADU(destClientId, APP_ID, adu.toByteArray(), -1);
-                    logger.log(INFO, "Completed processing ADU Id: " + adu.getAduId());
-                } else {
-                    // TODO: what if email doesn't exist
-                    // add a bounced email to sendADUsStorage for clientId
-                }
+    private void processEmailAdus(AppDataUnit adu, String clientId) {
+        var bouncedMessage = new StringBuilder();
+        var originalMessage = adu.getData().toByteArray();
+        try {
+            var mimeMessage = MailUtils.getMimeMessage(new ByteArrayInputStream(originalMessage));
+            var addressList = MailUtils.getToCCBccAddresses(mimeMessage);
+            if (addressList.size() > MAX_RECIPIENTS) {
+                bouncedMessage.append(format("Emails cannot have more than %s recipients\n", MAX_RECIPIENTS));
             } else {
-                // TO_DO : Process messages for other domains
-                logger.log(WARNING, "Unable to process ADU Id: " + adu.getAduId() + " with domain: " + domain);
+                for (var addr : addressList) {
+                    if (!(addr instanceof InternetAddress address)) {
+                        bouncedMessage.append(format("%s is not a valid internet address\n", addr));
+                        continue;
+                    }
+                    var stringAddress = address.getAddress();
+                    if (stringAddress == null) {
+                        bouncedMessage.append(format("%s does not have an address\n", address));
+                        continue;
+                    }
+                    String domain = MailUtils.getDomain(address);
+                    if (RAVLYK_DOMAIN.equals(domain)) {
+                        Optional<K9ClientIdToEmailMapping> entity = clientToEmailRepository.findById(stringAddress);
+                        if (entity.isPresent()) {
+                            String destClientId = entity.get().clientId;
+                            sendADUsStorage.addADU(destClientId, APP_ID, adu.toByteArray(), -1);
+                            logger.log(INFO, "Completed processing ADU Id: " + adu.getAduId());
+                        } else {
+                            bouncedMessage.append(format("%s does not exist.\n", address));
+                        }
+                    } else {
+                        // TO_DO : Process messages for other domains
+                        logger.log(WARNING, "Unable to process ADU Id: " + adu.getAduId() + " with domain: " + domain);
+                        bouncedMessage.append(format("cannot send email to %s\n", domain));
+                    }
+                }
             }
+        } catch (Exception e) {
+            bouncedMessage.append("Could not parse message.");
         }
+        if (!bouncedMessage.isEmpty()) {
+
+            Properties props = new Properties();
+            Session session = Session.getDefaultInstance(props, null);
+            try {
+                MimeMessage bounceMessage = createBounceMessage(session, bouncedMessage, originalMessage);
+                var baos = new ByteArrayOutputStream();
+                bounceMessage.writeTo(baos);
+                sendADUsStorage.addADU(clientId, APP_ID, baos.toByteArray(), -1);
+            } catch (Exception e) {
+                logger.log(SEVERE, format("Error bouncing email from %s: %s", clientId, e.getMessage()));
+            }
+
+        }
+    }
+
+    private MimeMessage createBounceMessage(Session session, StringBuilder bouncedMessage, byte[] originalMessage) throws
+            MessagingException {
+        MimeMessage bounceMessage = new MimeMessage(session);
+
+        // Set bounce message headers
+        bounceMessage.setFrom(new InternetAddress("mailer-daemon@" + RAVLYK_DOMAIN));
+        bounceMessage.setSubject("Mail delivery failed");
+
+        // Create the bounce message content
+        String bounceText = String.format("""
+                                                  Your message could not be delivered.
+                                                  
+                                                  Reason: %s
+                                                  
+                                                  Original message: %s""", bouncedMessage,
+                new String(originalMessage, 0, Math.min(1024, originalMessage.length)));
+        bounceMessage.setText(bounceText);
+        return bounceMessage;
     }
 
     private void processLoginAdus(AppDataUnit adu, String clientId) throws IOException {
@@ -81,7 +144,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
             if (emailExists) {
                 Optional<K9ClientIdToEmailMapping> entity = clientToEmailRepository.findById(parsedAdu.getEmail());
                 if (entity.isPresent()) {
-                    String hashedPassword = entity.get().getPassword();
+                    String hashedPassword = entity.get().password;
                     if (passwordEncoder.matches(parsedAdu.getPassword(), hashedPassword)) {
                         // update email clientId entry
                         clientToEmailRepository.updateClientId(clientId, parsedAdu.getEmail());
@@ -184,7 +247,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
             logger.log(INFO, "Deleted all ADUs till Id:" + lastADUIdRecvd);
         } catch (IOException e) {
             logger.log(SEVERE,
-                       String.format("Error while deleting ADUs for client: %s app: %s till AduId: %s",
+                       format("Error while deleting ADUs for client: %s app: %s till AduId: %s",
                                      clientId,
                                      APP_ID,
                                      lastADUIdRecvd),
