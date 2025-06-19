@@ -149,11 +149,12 @@ fun WifiDirectScreen(
                 }
 
                 Text(text = "Wifi Status: ${state.wifiStatus}")
-                Text(text = "Device Name: ${state.deviceName}")
 
                 // only show the name change button if we don't have a valid device name
                 // (transports must have device names starting with ddd_)
-                if (!nameValid) {
+                if (nameValid) {
+                    Text(text = "Device Name: ${state.deviceName}")
+                } else {
                     Text(text = stringResource(
                             R.string.phone_name_must_start_with_ddd_found,
                             state.deviceName
