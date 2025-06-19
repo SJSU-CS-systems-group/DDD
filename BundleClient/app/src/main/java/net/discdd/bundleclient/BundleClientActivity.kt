@@ -28,13 +28,12 @@ class BundleClientActivity: ComponentActivity() {
         getSharedPreferences(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE)
     }
 
-    private lateinit var usbViewModel: ClientUsbViewModel
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         LogFragment.registerLoggerHandler()
 
+        var usbViewModel: ClientUsbViewModel
         usbViewModel = ViewModelProvider(this).get(ClientUsbViewModel::class.java)
         val openDocumentTreeLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK) {
