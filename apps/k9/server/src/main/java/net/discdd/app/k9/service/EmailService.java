@@ -1,6 +1,5 @@
 package net.discdd.app.k9.service;
 
-import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import org.simplejavamail.api.mailer.config.TransportStrategy;
 import org.simplejavamail.email.EmailBuilder;
@@ -10,23 +9,15 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Service;
 
-import javax.naming.NamingEnumeration;
-import javax.naming.NamingException;
-import javax.naming.directory.Attributes;
-import javax.naming.directory.DirContext;
-import javax.naming.directory.InitialDirContext;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Hashtable;
-import java.util.List;
-
 @Service
 public class EmailService implements ApplicationRunner {
     public final String relayHost;
     public final int relayPort;
     public final String localDomain;
 
-    EmailService(@Value("${smtp.relay.host}") String relayHost, @Value("${smtp.relay.port}") int relayPort, @Value("${smtp.localDomain}")String localDomain) {
+    EmailService(@Value("${smtp.relay.host}") String relayHost,
+                 @Value("${smtp.relay.port}") int relayPort,
+                 @Value("${smtp.localDomain}") String localDomain) {
         this.relayHost = relayHost;
         System.out.println("Replay port " + relayPort);
         this.relayPort = relayPort;
