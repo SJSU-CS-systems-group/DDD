@@ -9,8 +9,13 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Service;
 
+import java.util.logging.Logger;
+
+import static java.lang.String.format;
+
 @Service
 public class EmailService implements ApplicationRunner {
+    public static final Logger logger = Logger.getLogger(EmailService.class.getName());
     public final String relayHost;
     public final int relayPort;
     public final String localDomain;
@@ -19,9 +24,9 @@ public class EmailService implements ApplicationRunner {
                  @Value("${smtp.relay.port}") int relayPort,
                  @Value("${smtp.localDomain}") String localDomain) {
         this.relayHost = relayHost;
-        System.out.println("Replay port " + relayPort);
         this.relayPort = relayPort;
         this.localDomain = localDomain;
+        logger.info(format("EmailService %s initialized relayHost: %s:%s", localDomain, relayHost, relayPort));
     }
 
     public void sendExternalEmail(MimeMessage mimeMessage) throws Exception {
