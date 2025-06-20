@@ -32,6 +32,7 @@ public class MailUtils {
             }
         }
     }
+
     public static List<InternetAddress> getToCCBccAddresses(MimeMessage message) {
         List<InternetAddress> addressList = new ArrayList<>();
         try {
