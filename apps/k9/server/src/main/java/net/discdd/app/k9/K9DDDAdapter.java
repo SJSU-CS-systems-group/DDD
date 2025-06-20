@@ -8,6 +8,7 @@ import net.discdd.app.k9.model.RegisterAdu;
 import net.discdd.app.k9.model.RegisterAduAck;
 import net.discdd.app.k9.repository.K9ClientIdToEmailMappingRepository;
 import net.discdd.app.k9.repository.entity.K9ClientIdToEmailMapping;
+import net.discdd.app.k9.service.EmailService;
 import net.discdd.app.k9.utils.MailUtils;
 import net.discdd.grpc.AppDataUnit;
 import net.discdd.grpc.ExchangeADUsRequest;
@@ -23,10 +24,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import javax.mail.MessagingException;
-import javax.mail.Session;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeMessage;
+import jakarta.mail.MessagingException;
+import jakarta.mail.Session;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeMessage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -42,23 +43,23 @@ import java.util.logging.Logger;
 import static java.lang.String.format;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
 
 @GrpcService
 public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServiceImplBase {
     static final Logger logger = Logger.getLogger(K9DDDAdapter.class.getName());
     public static final int MAX_RECIPIENTS = 5;
     private final String APP_ID = "net.discdd.k9";
-    private final String RAVLYK_DOMAIN = "ravlykmail.com";
     private final Random rand = new Random();
     private final StoreADUs sendADUsStorage;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
     @Autowired
     private K9ClientIdToEmailMappingRepository clientToEmailRepository;
 
-    public K9DDDAdapter(@Value("${adapter-server.root-dir}") Path rootDir) {
+    public K9DDDAdapter(@Value("${adapter-server.root-dir}") Path rootDir, EmailService emailService) {
         sendADUsStorage = new StoreADUs(rootDir.resolve("send"), true);
         passwordEncoder = new BCryptPasswordEncoder();
+        this.emailService = emailService;
     }
 
     private void processEmailAdus(AppDataUnit adu, String clientId) {
@@ -70,18 +71,15 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
             if (addressList.size() > MAX_RECIPIENTS) {
                 bouncedMessage.append(format("Emails cannot have more than %s recipients\n", MAX_RECIPIENTS));
             } else {
-                for (var addr : addressList) {
-                    if (!(addr instanceof InternetAddress address)) {
-                        bouncedMessage.append(format("%s is not a valid internet address\n", addr));
-                        continue;
-                    }
+                var externalDomains = false;
+                for (var address : addressList) {
                     var stringAddress = address.getAddress();
                     if (stringAddress == null) {
                         bouncedMessage.append(format("%s does not have an address\n", address));
                         continue;
                     }
                     String domain = MailUtils.getDomain(address);
-                    if (RAVLYK_DOMAIN.equals(domain)) {
+                    if (emailService.localDomain.equals(domain)) {
                         Optional<K9ClientIdToEmailMapping> entity = clientToEmailRepository.findById(stringAddress);
                         if (entity.isPresent()) {
                             String destClientId = entity.get().clientId;
@@ -91,14 +89,16 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
                             bouncedMessage.append(format("%s does not exist.\n", address));
                         }
                     } else {
-                        // TO_DO : Process messages for other domains
-                        logger.log(WARNING, "Unable to process ADU Id: " + adu.getAduId() + " with domain: " + domain);
-                        bouncedMessage.append(format("cannot send email to %s\n", domain));
+                        externalDomains = true;
                     }
+                }
+                if (externalDomains) {
+                    emailService.sendExternalEmail(mimeMessage);
                 }
             }
         } catch (Exception e) {
-            bouncedMessage.append("Could not parse message.");
+            e.printStackTrace();
+            bouncedMessage.append(format("Could not parse message. %s\n", e.getMessage()));
         }
         if (!bouncedMessage.isEmpty()) {
 
@@ -122,7 +122,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         MimeMessage bounceMessage = new MimeMessage(session);
 
         // Set bounce message headers
-        bounceMessage.setFrom(new InternetAddress("mailer-daemon@" + RAVLYK_DOMAIN));
+        bounceMessage.setFrom(new InternetAddress("mailer-daemon@" + emailService.localDomain));
         bounceMessage.setSubject("Mail delivery failed");
 
         // Create the bounce message content
@@ -192,7 +192,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         } else {
             while (true) {
                 var email = parsedAdu.prefixes[0] + getRandNum() + getRandChar() + getRandChar() + getRandNum() +
-                        parsedAdu.suffixes[0] + '@' + RAVLYK_DOMAIN;
+                        parsedAdu.suffixes[0] + '@' + emailService.localDomain;
                 if (!clientToEmailRepository.existsById(email)) {
                     String hashedPassword = passwordEncoder.encode(parsedAdu.password);
                     K9ClientIdToEmailMapping entity = new K9ClientIdToEmailMapping(email, clientId, hashedPassword);
