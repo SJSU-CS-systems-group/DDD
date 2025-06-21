@@ -61,9 +61,24 @@
             <version>8.12.6</version>
         </dependency>
         <dependency>
+            <groupId>org.simplejavamail</groupId>
+            <artifactId>dkim-module</artifactId>
+            <version>8.12.6</version>
+        </dependency>
+        <dependency>
             <groupId>net.mailific</groupId>
             <artifactId>mailific-serverlib</artifactId>
-            <version>1.0.4</version>
+            <version>1.0.6</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.james.jspf</groupId>
+            <artifactId>apache-jspf-resolver</artifactId>
+            <version>1.0.5</version>
+        </dependency>
+        <dependency>
+            <groupId>dnsjava</groupId>
+            <artifactId>dnsjava</artifactId>
+            <version>3.6.3</version>
         </dependency>
         <dependency>
             <groupId>info.picocli</groupId>
