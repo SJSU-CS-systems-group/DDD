@@ -1,16 +1,13 @@
 package net.discdd.app.k9.service;
 
-import com.fasterxml.jackson.databind.ser.Serializers;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import net.discdd.app.k9.K9DDDAdapter;
 import net.discdd.app.k9.repository.K9ClientIdToEmailMappingRepository;
 import net.discdd.utils.StoreADUs;
 import net.mailific.main.Main;
-import net.mailific.server.Line;
 import net.mailific.server.ServerConfig;
 import net.mailific.server.commands.BaseHandler;
-import net.mailific.server.commands.CommandHandler;
 import net.mailific.server.commands.ParsedCommandLine;
 import net.mailific.server.netty.NettySmtpServer;
 import net.mailific.server.reference.BaseMailObject;
@@ -19,10 +16,6 @@ import net.mailific.server.session.SessionState;
 import net.mailific.server.session.SmtpSession;
 import net.mailific.server.session.StandardStates;
 import net.mailific.server.session.Transition;
-import org.apache.james.jdkim.DKIMVerifier;
-import org.apache.james.jdkim.exceptions.FailException;
-import org.apache.james.jdkim.impl.DNSPublicKeyRecordRetriever;
-import org.apache.james.jspf.core.SPFChecker;
 import org.apache.james.jspf.impl.DefaultSPF;
 import org.simplejavamail.api.email.config.DkimConfig;
 import org.simplejavamail.api.mailer.config.TransportStrategy;
@@ -80,7 +73,7 @@ public class EmailService implements ApplicationRunner {
         this.context = context;
         this.relayHost = relayHost;
         this.relayPort = relayPort;
-        this.localDomain = localDomain;
+        this.localDomain = localDomain.toLowerCase();
         this.localPort = localPort;
         this.tlsCert = tlsCert;
         this.tlsPrivate = tlsPrivate;
@@ -89,16 +82,10 @@ public class EmailService implements ApplicationRunner {
         this.storeADUs = storeADUs;
         if (keyFile != null) {
             var privateKey = Base64.getDecoder().decode(unPEM(Files.readString(Path.of(keyFile))));
-            var dkimBuilder = DkimConfig.builder();
-            if (keyFile != null) {
-                    dkimBuilder = dkimBuilder
-                            .excludedHeadersFromDkimDefaultSigningList("From", "Subject") // default is none
-                            .dkimPrivateKeyData(privateKey)
-                            .dkimSigningDomain(localDomain)
-                            .dkimSelector("mail");
-            }
-            dkim = dkimBuilder
-                    .useLengthParam(true) // default is false
+            var dkimBuilder =
+                    DkimConfig.builder().excludedHeadersFromDkimDefaultSigningList("From", "Subject") // default is none
+                            .dkimPrivateKeyData(privateKey).dkimSigningDomain(localDomain).dkimSelector("mail");
+            dkim = dkimBuilder.useLengthParam(true) // default is false
                     .headerCanonicalization(DkimConfig.Canonicalization.SIMPLE) // default is RELAXED
                     .bodyCanonicalization(DkimConfig.Canonicalization.SIMPLE) // default is RELAXED
                     .build();
@@ -155,7 +142,7 @@ public class EmailService implements ApplicationRunner {
             commandHandlers.put("PROXY", new ProxyCommand());
             builder.withCommandHandlers(commandHandlers.values());
             logger.info("⚠️ PROXY command installed.!");
-        } else  {
+        } else {
             var tlsCertFile = new File(tlsCert);
             var tlsPrivateFile = new File(tlsPrivate);
             if (!tlsCertFile.canRead() || !tlsPrivateFile.canRead()) {
@@ -181,6 +168,30 @@ public class EmailService implements ApplicationRunner {
         } else {
             logger.warning(format("⚠️ Mailific server WITHOUT TLS started on port %s", localPort));
             logger.warning("⚠️ Assuming an SMTP proxy that is doing the SPF check, so skipping check here!");
+        }
+    }
+
+    static public class ProxyCommand extends BaseHandler {
+        public static final String SESSION_CLIENTIP_PROPERTY = "proxied-client.ip";
+
+        @Override
+        protected Transition handleValidCommand(SmtpSession session, String commandLine) {
+            var parts = commandLine.split(" ");
+            // line is of the form:
+            // PROXY TCP4 src_ip dst_ip src_port dst_port
+            var clientIp = parts[2];
+            session.setProperty(SESSION_CLIENTIP_PROPERTY, clientIp);
+            return new Transition(Reply.DO_NOT_REPLY, SessionState.NO_STATE_CHANGE);
+        }
+
+        @Override
+        protected boolean validForState(SessionState state) {
+            return state == StandardStates.CONNECTED;
+        }
+
+        @Override
+        public String verb() {
+            return "PROXY";
         }
     }
 
@@ -211,7 +222,7 @@ public class EmailService implements ApplicationRunner {
 
                 // No TLS private key, so we assume an SMTP proxy is going to send us a proxy command
                 var ipAddress = tlsPrivate == null ?
-                                (String)session.getProperty(ProxyCommand.SESSION_CLIENTIP_PROPERTY) :
+                                (String) session.getProperty(ProxyCommand.SESSION_CLIENTIP_PROPERTY) :
                                 session.getRemoteAddress().getAddress().getHostAddress();
 
                 var result = spfValidator.checkSPF(ipAddress, from, ehloHost);
@@ -284,29 +295,6 @@ public class EmailService implements ApplicationRunner {
         public void prepareForData(SmtpSession session) {
             baos = new ByteArrayOutputStream();
             super.prepareForData(session);
-        }
-    }
-
-    static public class ProxyCommand extends BaseHandler {
-        public static final String SESSION_CLIENTIP_PROPERTY = "proxied-client.ip";
-        @Override
-        protected Transition handleValidCommand(SmtpSession session, String commandLine) {
-            var parts = commandLine.split(" ");
-            // line is of the form:
-            // PROXY TCP4 src_ip dst_ip src_port dst_port
-            var clientIp = parts[2];
-            session.setProperty(SESSION_CLIENTIP_PROPERTY, clientIp);
-            return new Transition(Reply.DO_NOT_REPLY, SessionState.NO_STATE_CHANGE);
-        }
-
-        @Override
-        protected boolean validForState(SessionState state) {
-            return state == StandardStates.CONNECTED;
-        }
-
-        @Override
-        public String verb() {
-            return "PROXY";
         }
     }
 

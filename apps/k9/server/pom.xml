@@ -71,6 +71,11 @@
             <version>1.0.6</version>
         </dependency>
         <dependency>
+            <groupId>org.apache.james.jspf</groupId>
+            <artifactId>apache-jspf-resolver</artifactId>
+            <version>1.0.5</version>
+        </dependency>
+        <dependency>
             <groupId>dnsjava</groupId>
             <artifactId>dnsjava</artifactId>
             <version>3.6.3</version>
