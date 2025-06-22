@@ -46,8 +46,7 @@ public class MessageProviderTest {
     public void setUp() throws IOException {
         MessageProvider messageProvider = new MessageProvider();
         messageProvider.attachInfo(ApplicationProvider.getApplicationContext(), null);
-        adapter = new DDDClientAdapter(ApplicationProvider.getApplicationContext(),
-                                       NULL_LIFECYCLE, null);
+        adapter = new DDDClientAdapter(ApplicationProvider.getApplicationContext(), null);
         // access the private sendADUsStorage and receiveADUsStorage fields in messageProvider
         String appId = ApplicationProvider.getApplicationContext().getPackageName();
         sendADUStorePath = ApplicationProvider.getApplicationContext().getDataDir().toPath().resolve("send").resolve(appId);

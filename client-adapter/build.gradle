@@ -35,17 +35,24 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
 }
 
+task sourcesJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
+    archiveClassifier.set('sources')
+}
+
 publishing {
     publications {
         release(MavenPublication) {
             groupId = 'net.discdd'
             artifactId = 'client-adapter'
-            version = '0.0.1-SNAPSHOT'
+            version = '0.2.0-SNAPSHOT'
             artifact("$buildDir/outputs/aar/${project.name}-release.aar")
+            artifact(sourcesJar)
         }
     }
 
     repositories {
+        mavenLocal()
         maven {
             name = "GitHubPackages"
             url = uri("https://maven.pkg.github.com/SJSU-CS-systems-group/DDD")

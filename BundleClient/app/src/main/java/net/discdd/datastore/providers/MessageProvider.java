@@ -29,7 +29,7 @@ public class MessageProvider extends ContentProvider {
 
     private static final Logger logger = Logger.getLogger(MessageProvider.class.getName());
     public static final String PROVIDER_NAME = "net.discdd.provider.datastoreprovider";
-    public static final String URL = "content://" + PROVIDER_NAME + "/messages";
+    public static final Uri URL = Uri.parse("content://" +  PROVIDER_NAME + "/messages");
     public static final int MAX_ADU_SIZE = 512*1024;
 
     private StoreADUs sendADUsStorage;
@@ -164,7 +164,6 @@ public class MessageProvider extends ContentProvider {
             if ("deleteAllADUsUpto".equals(selection) && selectionArgs != null && selectionArgs.length == 1) {
                 long lastProcessedADUId = Long.parseLong(selectionArgs[0]);
                 receiveADUsStorage.deleteAllFilesUpTo(null, appName, lastProcessedADUId);
-                getContext().getContentResolver().notifyChange(uri, null);
                 return 1;
             }
             return 0;
@@ -181,10 +180,6 @@ public class MessageProvider extends ContentProvider {
         int rowsUpdated = 0;
         checkCallerAppId();
         // TODO: implement update if necessary
-
-        // getContentResolver provides access to the content model
-        // notifyChange notifies all observers that a row was updated
-        getContext().getContentResolver().notifyChange(uri, null);
         return rowsUpdated;
     }
 
