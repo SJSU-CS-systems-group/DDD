@@ -12,7 +12,6 @@ import android.net.Uri;
 import android.util.Log;
 import androidx.annotation.NonNull;
 
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -25,9 +24,11 @@ import static java.lang.String.format;
 public class DDDClientAdapter extends BroadcastReceiver {
     public static final String PROVIDER_NAME = "net.discdd.provider.datastoreprovider";
     public static final Uri PROVIDER_URI;
+
     static {
         PROVIDER_URI = Uri.parse(format("content://%s/messages", PROVIDER_NAME));
     }
+
     public static final int MAX_ADU_SIZE = 512 * 1024;
 
     final Context context;
@@ -58,12 +59,13 @@ public class DDDClientAdapter extends BroadcastReceiver {
             contentObserver = new ContentObserver(null) {
                 @Override
                 public void onChange(boolean selfChange) {
-                    Log.i("DDDClientAdapter","ContentObserver onChange called without URI (should not happen)");
+                    Log.i("DDDClientAdapter", "ContentObserver onChange called without URI (should not happen)");
                     onAdusReceived.run();
                 }
+
                 @Override
                 public void onChange(boolean selfChange, @NonNull Uri uri) {
-                    Log.i("DDDClientAdapter","ContentObserver onChange called for URI: " + uri);
+                    Log.i("DDDClientAdapter", "ContentObserver onChange called for URI: " + uri);
                     onAdusReceived.run();
                 }
             };
