@@ -16,6 +16,7 @@ public class K9ClientIdToEmailMapping {
     public String clientId;
     @Column(columnDefinition = "text", nullable = false)
     public String password;
+
     public String toString() {
         return String.format("%s -> %s", email, clientId);
     }

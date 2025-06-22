@@ -52,7 +52,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
     // yahoo and gmail are 25M and MS is 20M
     public static final int MAX_DATA_SIZE = 1024 * 1024 * 20;
     // we will allow extermin incoming mails that are 25% more than MAX_DATA_SIZE
-    public static final int MAX_RECV_DATA_SIZE = (int)(MAX_DATA_SIZE * 1.25);
+    public static final int MAX_RECV_DATA_SIZE = (int) (MAX_DATA_SIZE * 1.25);
     public static final String APP_ID = "net.discdd.k9";
     private final Random rand = new Random();
     private final StoreADUs sendADUsStorage;
