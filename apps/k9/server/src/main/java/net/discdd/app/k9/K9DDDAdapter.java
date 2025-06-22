@@ -49,7 +49,11 @@ import static java.util.logging.Level.SEVERE;
 public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServiceImplBase {
     static final Logger logger = Logger.getLogger(K9DDDAdapter.class.getName());
     public static final int MAX_RECIPIENTS = 5;
-    private final String APP_ID = "net.discdd.k9";
+    // yahoo and gmail are 25M and MS is 20M
+    public static final int MAX_DATA_SIZE = 1024 * 1024 * 20;
+    // we will allow extermin incoming mails that are 25% more than MAX_DATA_SIZE
+    public static final int MAX_RECV_DATA_SIZE = (int)(MAX_DATA_SIZE * 1.25);
+    public static final String APP_ID = "net.discdd.k9";
     private final Random rand = new Random();
     private final StoreADUs sendADUsStorage;
     private final PasswordEncoder passwordEncoder;
@@ -57,8 +61,8 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
     @Autowired
     private K9ClientIdToEmailMappingRepository clientToEmailRepository;
 
-    public K9DDDAdapter(@Value("${adapter-server.root-dir}") Path rootDir, EmailService emailService) {
-        sendADUsStorage = new StoreADUs(rootDir.resolve("send"), true);
+    public K9DDDAdapter(StoreADUs sendADUsStorage, EmailService emailService) {
+        this.sendADUsStorage = sendADUsStorage;
         passwordEncoder = new BCryptPasswordEncoder();
         this.emailService = emailService;
     }
@@ -99,7 +103,11 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
             }
         } catch (Exception e) {
             e.printStackTrace();
-            bouncedMessage.append(format("Could not parse message. %s\n", e.getMessage()));
+            bouncedMessage.append(format("Could not send message. %s\n", e.getMessage()));
+            if (e.getCause() != null) {
+                bouncedMessage.append(format("  %s\n", e.getCause().getMessage()));
+
+            }
         }
         if (!bouncedMessage.isEmpty()) {
 
