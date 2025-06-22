@@ -6,13 +6,12 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.database.ContentObserver;
 import android.net.Uri;
 
+import android.util.Log;
 import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
-import androidx.lifecycle.DefaultLifecycleObserver;
-import androidx.lifecycle.Lifecycle;
-import androidx.lifecycle.LifecycleOwner;
+
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,21 +20,22 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static java.lang.String.format;
+
 public class DDDClientAdapter extends BroadcastReceiver {
-    public static final String BROADCAST_ACTION = "android.intent.dtn.DATA_RECEIVED";
     public static final String PROVIDER_NAME = "net.discdd.provider.datastoreprovider";
     public static final Uri PROVIDER_URI;
-
     static {
-        PROVIDER_URI = Uri.parse("content://" + PROVIDER_NAME + "/messages");
+        PROVIDER_URI = Uri.parse(format("content://%s/messages", PROVIDER_NAME));
     }
-
     public static final int MAX_ADU_SIZE = 512 * 1024;
 
     final Context context;
     private final ContentResolver resolver;
+    private ContentObserver contentObserver = null;
     public long aduId = -1;
     private final Runnable onAdusReceived;
+    private boolean registered = false;
 
     /**
      * Create a DDDClientAdapter to send and receive ADUs to BundleClient.
@@ -45,27 +45,53 @@ public class DDDClientAdapter extends BroadcastReceiver {
      * onAdusReceived is null.
      *
      * @param context        the application context that is used to access the BundleClient MessageProvider.
-     * @param lifecycle      the lifecycle of the application that is used to register the broadcast receiver.
-     *                       Broadcasts will not be received if this is null.
      * @param onAdusReceived the Runnable to be invoked if the BundleClient has received ADUs for the application.
-     *                       This can be nulled.
+     *                       this can be null. For this callback to be invoked, registerForAduAdditions() must be
+     *                       called in onCreate() for services or onResume() for activities and
+     *                       unregisterForAduAdditions() in onDestroy() for services and onPause() for activities.
      */
-    public DDDClientAdapter(Context context, Lifecycle lifecycle, Runnable onAdusReceived) {
+    public DDDClientAdapter(Context context, Runnable onAdusReceived) {
         this.context = context;
         this.resolver = context.getContentResolver();
         this.onAdusReceived = onAdusReceived;
-        ContextCompat.registerReceiver(context,
-                                       this,
-                                       new IntentFilter(BROADCAST_ACTION),
-                                       ContextCompat.RECEIVER_EXPORTED);
-        if (lifecycle != null) {
-            lifecycle.addObserver(new DefaultLifecycleObserver() {
+        if (onAdusReceived != null) {
+            contentObserver = new ContentObserver(null) {
                 @Override
-                public void onDestroy(@NonNull LifecycleOwner owner) {
-                    context.unregisterReceiver(DDDClientAdapter.this);
-                    DefaultLifecycleObserver.super.onDestroy(owner);
+                public void onChange(boolean selfChange) {
+                    Log.i("DDDClientAdapter","ContentObserver onChange called without URI (should not happen)");
+                    onAdusReceived.run();
                 }
-            });
+                @Override
+                public void onChange(boolean selfChange, @NonNull Uri uri) {
+                    Log.i("DDDClientAdapter","ContentObserver onChange called for URI: " + uri);
+                    onAdusReceived.run();
+                }
+            };
+        }
+    }
+
+    /**
+     * Register for ADU addition notifications from BundleClient.
+     * The onAdusReceived callback will be invoked when ADUs are received by BundleClient for the application.
+     * (Can be called multiple times, but will only register once.)
+     */
+    public void registerForAduAdditions() {
+        if (!registered) {
+            var uri = Uri.withAppendedPath(PROVIDER_URI, context.getPackageName());
+            resolver.registerContentObserver(uri, true, contentObserver);
+            registered = true;
+        }
+    }
+
+    /**
+     * Unregister for ADU addition notifications from BundleClient.
+     * The onAdusReceived callback will not be invoked when ADUs are received by BundleClient for the application.
+     * (Can be called multiple times, but will only unregister once.)
+     */
+    public void unregisterForAduAdditions() {
+        if (registered) {
+            resolver.unregisterContentObserver(contentObserver);
+            registered = false;
         }
     }
 

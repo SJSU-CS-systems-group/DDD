@@ -243,10 +243,13 @@ public class ClientSecurity {
 
         String payloadName = SecurityUtils.PAYLOAD_FILENAME;
 
-        InputStream encryptedDataInputStream = Files.newInputStream(payloadPath.resolve(payloadName));
-        OutputStream encryptedDataOutputStream = Files.newOutputStream(decryptedFile);
-        cipherSession.decrypt(encryptedDataInputStream, encryptedDataOutputStream);
-        updateSessionRecord();
+        try (
+                InputStream encryptedDataInputStream = Files.newInputStream(payloadPath.resolve(payloadName));
+                OutputStream encryptedDataOutputStream = Files.newOutputStream(decryptedFile)
+        ){
+            cipherSession.decrypt(encryptedDataInputStream, encryptedDataOutputStream);
+            updateSessionRecord();
+        }
 
         logger.log(FINER, "Decrypted Size = %d\n", Files.size(decryptedPath));
     }

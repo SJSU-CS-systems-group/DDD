@@ -14,7 +14,7 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 
-public class DDDJarFileCreator {
+public class DDDJarFileCreator implements AutoCloseable {
     private static final String SHA256_ATTRIBUTE_NAME = "SHA-256-Digest";
     final private JarOutputStream jarOutputStream;
     final private Manifest manifest = new Manifest();
