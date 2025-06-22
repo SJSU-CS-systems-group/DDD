@@ -315,25 +315,25 @@ public class BundleUtils {
                                                   String crashReport,
                                                   OutputStream outputStream) throws IOException,
             NoSuchAlgorithmException {
-        DDDJarFileCreator innerJar = new DDDJarFileCreator(outputStream);
-        if (ackedEncryptedBundleId == null) ackedEncryptedBundleId = "HB";
-        logger.log(INFO, "[BU/createBundlePayload] " + adus.size());
-        // add the records to the inner jar
-        innerJar.createEntry("acknowledgement.txt", ackedEncryptedBundleId.getBytes());
-        innerJar.createEntry("routing.metadata", routingData == null ? "{}".getBytes() : routingData);
-        if (crashReport != null) {
-            innerJar.createEntry("crash_report.txt", crashReport.getBytes());
-        }
+        try (DDDJarFileCreator innerJar = new DDDJarFileCreator(outputStream)) {
+            if (ackedEncryptedBundleId == null) ackedEncryptedBundleId = "HB";
+            logger.log(INFO, "[BU/createBundlePayload] " + adus.size());
+            // add the records to the inner jar
+            innerJar.createEntry("acknowledgement.txt", ackedEncryptedBundleId.getBytes());
+            innerJar.createEntry("routing.metadata", routingData == null ? "{}".getBytes() : routingData);
+            if (crashReport != null) {
+                innerJar.createEntry("crash_report.txt", crashReport.getBytes());
+            }
 
-        for (var adu : adus) {
-            try (var os = innerJar.createEntry(Paths.get(Constants.BUNDLE_ADU_DIRECTORY_NAME,
-                                                         adu.getAppId(),
-                                                         Long.toString(adu.getADUId())));
-                 var aos = Files.newInputStream(adu.getSource().toPath(), StandardOpenOption.READ)) {
-                aos.transferTo(os);
+            for (var adu : adus) {
+                try (var os = innerJar.createEntry(Paths.get(Constants.BUNDLE_ADU_DIRECTORY_NAME,
+                                                             adu.getAppId(),
+                                                             Long.toString(adu.getADUId())));
+                     var aos = Files.newInputStream(adu.getSource().toPath(), StandardOpenOption.READ)) {
+                    aos.transferTo(os);
+                }
             }
         }
-        innerJar.close();
     }
 
     public static void encryptPayloadAndCreateBundle(Encrypter payloadEncryptor,

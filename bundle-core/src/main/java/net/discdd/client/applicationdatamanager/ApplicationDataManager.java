@@ -88,20 +88,23 @@ public class ApplicationDataManager {
 
     public void storeReceivedADUs(String clientId, String bundleId, List<ADU> adus) {
         logger.log(INFO, "[ADM] Storing ADUs in the Data Store, Size:" + adus.size());
-
         for (final ADU adu : adus) {
-
             try {
-                receiveADUsStorage.addADU(null,
+                var aduFile = receiveADUsStorage.addADU(null,
                                           adu.getAppId(),
                                           Files.readAllBytes(adu.getSource().toPath()),
                                           adu.getADUId());
-                aduConsumer.accept(adu);
+                // if aduFile == null, the ADU was not added
+                if (aduFile != null) {
+                    aduConsumer.accept(adu);
+                }
                 logger.log(FINE, "[ADM] Updated Largest ADU id: " + adu.getADUId() + "," + adu.getSource());
             } catch (IOException e) {
                 logger.log(WARNING, "Could not persist adu: " + adu.getADUId(), e);
             }
         }
+        // this indicates that the batch of ADUs has been finished
+        aduConsumer.accept(null);
     }
 
     public List<ADU> fetchADUsToSend(long initialSize, String clientId) throws IOException {

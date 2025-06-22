@@ -37,24 +37,24 @@ class BundleManagerViewModel(
     fun getADUcount(ADUPath: Path?): String {
         ADUPath ?: "0"
         try {
-            val stream = Files.newDirectoryStream(ADUPath)
-            for (path in stream) {
-                if (path.fileName.toString().equals("net.discdd.k9")) {
-                    // check for "metadata.json" and exclude it
-                    if (path.toFile().isDirectory()) {
-                        // Get the list of files and exclude "metadata.json"
-                        val filteredFiles =
-                            path.toFile().listFiles {dir, name -> name != "metadata.json" }
-                                ?.map { it.name }?.toTypedArray() ?: emptyArray()
-                        if (filteredFiles.isNullOrEmpty())
-                            return "0"
-                        return filteredFiles.size.toString()
+            Files.newDirectoryStream(ADUPath).use { stream ->
+                for (path in stream) {
+                    if (path.fileName.toString().equals("net.discdd.k9")) {
+                        // check for "metadata.json" and exclude it
+                        if (path.toFile().isDirectory()) {
+                            // Get the list of files and exclude "metadata.json"
+                            val filteredFiles =
+                                path.toFile().listFiles { dir, name -> name != "metadata.json" }
+                                    ?.map { it.name }?.toTypedArray() ?: emptyArray()
+                            if (filteredFiles.isNullOrEmpty())
+                                return "0"
+                            return filteredFiles.size.toString()
+                        }
+                        return path.toFile().list()?.size?.toString() ?: "0"
                     }
-                    return path.toFile().list()?.size?.toString() ?: "0"
                 }
             }
-        }
-        catch (e : Exception) {
+        } catch (e : Exception) {
             when (e) {
                 is IOException, is DirectoryIteratorException -> {
                     System.err.println("Error reading the directory: ${e.message}");
