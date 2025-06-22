@@ -246,16 +246,17 @@ public class StoreADUs {
 
     /**
      * Add an ADU to the store.
+     *
      * @param clientId the client ID, can be null if there is only one client (for BundleClient mainly)
-     * @param appId the application ID of the ADU
-     * @param data the data to write to the ADU
-     * @param aduId if less than 0 we will set to next ID on the last write (when finished is true)
-     * @param offset the offset in the file where to write the data. Normally this is 0, but it can be
-     *               used to append data
+     * @param appId    the application ID of the ADU
+     * @param data     the data to write to the ADU
+     * @param aduId    if less than 0 we will set to next ID on the last write (when finished is true)
+     * @param offset   the offset in the file where to write the data. Normally this is 0, but it can be
+     *                 used to append data
      * @param finished if null or true, the ADU will not be written to again. (If the aduId was given as a negative
      *                 number, it will be set to the last ADU ID added and the file will be moved to the new location.)
      * @return the file where the ADU was written, or null if the ADU was skipped because the id is less
-     *         than or equal to the last deleted ADU ID.
+     * than or equal to the last deleted ADU ID.
      * @throws IOException if there is an error writing the ADU to the file system
      */
     public File addADU(String clientId, String appId, byte[] data, long aduId, long offset, Boolean finished) throws
