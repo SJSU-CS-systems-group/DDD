@@ -225,12 +225,17 @@ public class EmailService implements ApplicationRunner {
                                 (String) session.getProperty(ProxyCommand.SESSION_CLIENTIP_PROPERTY) :
                                 session.getRemoteAddress().getAddress().getHostAddress();
 
-                var result = spfValidator.checkSPF(ipAddress, from, ehloHost);
-                String status = result.getResult();
-                String explanation = result.getExplanation(); // May be null if no explanation available
-                if (!"pass".equalsIgnoreCase(status)) {
-                    String reason = explanation != null ? explanation : "SPF failed";
-                    return new Reply(550, "5.7.23 SPF check failed: " + reason);
+                try {
+                    var result = spfValidator.checkSPF(ipAddress, from, ehloHost);
+                    String status = result.getResult();
+                    String explanation = result.getExplanation(); // May be null if no explanation available
+                    if (!"pass".equalsIgnoreCase(status)) {
+                        String reason = explanation != null ? explanation : "SPF failed";
+                        return new Reply(550, "5.7.23 SPF check failed: " + reason);
+                    }
+                } catch (Exception e) {
+                    logger.log(Level.WARNING, format("SPF check failed for %s: %s", from, e.getMessage()), e);
+                    return new Reply(550, "5.7.23 SPF check failed: " + e.getMessage());
                 }
                 logger.log(Level.INFO, format("Receiving mail from %s", from));
             }
