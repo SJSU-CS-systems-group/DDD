@@ -91,9 +91,9 @@ public class ApplicationDataManager {
         for (final ADU adu : adus) {
             try {
                 var aduFile = receiveADUsStorage.addADU(null,
-                                          adu.getAppId(),
-                                          Files.readAllBytes(adu.getSource().toPath()),
-                                          adu.getADUId());
+                                                        adu.getAppId(),
+                                                        Files.readAllBytes(adu.getSource().toPath()),
+                                                        adu.getADUId());
                 // if aduFile == null, the ADU was not added
                 if (aduFile != null) {
                     aduConsumer.accept(adu);
