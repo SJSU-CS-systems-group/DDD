@@ -17,6 +17,7 @@ if (osName.contains("mac") && osArch.equals("aarch64")) {
 android {
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     composeOptions {

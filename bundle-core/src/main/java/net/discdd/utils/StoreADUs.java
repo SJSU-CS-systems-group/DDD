@@ -12,8 +12,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -29,6 +33,12 @@ public class StoreADUs {
     private static final Path METADATA_PATH = Paths.get(METADATA_FILENAME);
     public Path rootFolder;
     private static final Logger logger = Logger.getLogger(StoreADUs.class.getName());
+    /**
+     * Listeners that will be notified when a new ADU is added.
+     * This member is synchronized to allow concurrent access, and listeners can directly add or remove themselves.
+     * When a new ADU is added, all listeners will be notified with the appId of added ADUs.
+     */
+    public final Set<Consumer<String>> additionListeners = Collections.synchronizedSet(new HashSet<>());
 
     public StoreADUs(Path rootFolder) {
         logger.log(FINEST, "ADU rootFolder: " + rootFolder);
@@ -64,7 +74,7 @@ public class StoreADUs {
         Path folder = getAppFolder(clientId, appId);
         File file = folder.resolve(METADATA_PATH).toFile();
 
-        file.getParentFile().mkdirs();
+        var ignored = file.getParentFile().mkdirs();
         FileOutputStream oFile = new FileOutputStream(file);
         oFile.write(metadataString.getBytes());
         oFile.close();
@@ -77,42 +87,61 @@ public class StoreADUs {
 
     public Stream<ADU> getADUs(String clientId, String appId) throws IOException {
         getMetadata(clientId, appId);
-        return Files.list(getAppFolder(clientId, appId))
-                .filter(p -> !p.endsWith(METADATA_PATH))
-                .map(Path::toFile)
-                .map(f -> new ADU(f, appId, Long.parseLong(f.getName()), f.length(), clientId))
-                .sorted(Comparator.comparingLong(ADU::getADUId));
+
+        try (Stream<Path> files = Files.list(getAppFolder(clientId, appId))) {
+            var list = files.filter(p -> !p.endsWith(METADATA_PATH))
+                    .map(Path::toFile)
+                    .map(f -> new ADU(f, appId, Long.parseLong(f.getName()), f.length(), clientId))
+                    .sorted(Comparator.comparingLong(ADU::getADUId))
+                    .collect(Collectors.toUnmodifiableList());
+            return list.stream();
+        }
     }
 
     public boolean hasNewADUs(String clientId, long lastBundleSentTimestamp) {
         var appAdus = clientId == null ? rootFolder : rootFolder.resolve(clientId);
         try {
-            return Files.walk(appAdus)
-                    .filter(Files::isRegularFile)
-                    .map(Path::toFile)
-                    .anyMatch(f -> f.lastModified() > lastBundleSentTimestamp);
+            try (Stream<Path> walk = Files.walk(appAdus)) {
+                return walk.filter(Files::isRegularFile)
+                        .map(Path::toFile)
+                        .anyMatch(f -> f.lastModified() > lastBundleSentTimestamp);
+            }
         } catch (IOException e) {
             logger.log(SEVERE, "Failed to check for new ADUs answering false to newADUs", e);
             return false;
         }
     }
 
-    public record ClientApp(String clientId, String appId) {}
+    public record ClientApp(String clientId, String appId) implements Comparable<ClientApp> {
+        @Override
+        public int compareTo(ClientApp o) {
+            int clientIdComparison = this.clientId.compareTo(o.clientId);
+            if (clientIdComparison != 0) {
+                return clientIdComparison;
+            }
+            return this.appId.compareTo(o.appId);
+        }
+    }
 
     public Stream<ClientApp> getAllClientApps() {
         try {
-            var topPaths = Files.list(rootFolder);
-            return topPaths.filter(p -> p.toFile().isDirectory()).flatMap(clientIdPath -> {
-                try {
-                    var bottomPaths = Files.list(clientIdPath);
-                    return bottomPaths.map(Path::toFile)
-                            .filter(File::isDirectory)
-                            .map(File::getName)
-                            .map(appId -> new ClientApp(clientIdPath.toFile().getName(), appId));
-                } catch (IOException e) {
-                    return Stream.empty();
-                }
-            });
+            try (var topPaths = Files.list(rootFolder)) {
+                var allClientApps = topPaths.filter(p -> p.toFile().isDirectory()).flatMap(clientIdPath -> {
+                    try {
+                        try (var bottomPaths = Files.list(clientIdPath)) {
+                            return bottomPaths.map(Path::toFile)
+                                    .filter(File::isDirectory)
+                                    .map(File::getName)
+                                    .map(appId -> new ClientApp(clientIdPath.toFile().getName(), appId))
+                                    .collect(Collectors.toUnmodifiableList())
+                                    .stream();
+                        }
+                    } catch (IOException e) {
+                        return Stream.empty();
+                    }
+                });
+                return allClientApps.sorted().collect(Collectors.toUnmodifiableList()).stream();
+            }
         } catch (IOException e) {
             logger.log(FINE, "Nothing found in rootFolder: " + rootFolder);
             return Stream.empty();
@@ -124,30 +153,32 @@ public class StoreADUs {
     public List<AduIdData> getAllAppIdAndData(String appId) throws IOException {
         getMetadata(null, appId);
         var folder = rootFolder.resolve(appId);
-        return Files.list(folder)
-                .filter(p -> p.getFileName().toString().chars().allMatch(Character::isDigit))
-                .sorted(Comparator.comparingLong(p -> Long.parseLong(p.getFileName().toString())))
-                .map(path -> {
-                    try {
-                        String id = path.getFileName().toString();
-                        return new AduIdData(id, Files.readAllBytes(path));
-                    } catch (IOException e) {
-                        logger.log(SEVERE, "Failed to read file " + path, e);
-                        return null;
-                    }
-                })
-                .collect(Collectors.toList());
+        try (Stream<Path> list = Files.list(folder)) {
+            return list.filter(p -> p.getFileName().toString().chars().allMatch(Character::isDigit))
+                    .sorted(Comparator.comparingLong(p -> Long.parseLong(p.getFileName().toString())))
+                    .map(path -> {
+                        try {
+                            String id = path.getFileName().toString();
+                            return new AduIdData(id, Files.readAllBytes(path));
+                        } catch (IOException e) {
+                            logger.log(SEVERE, "Failed to read file " + path, e);
+                            return null;
+                        }
+                    })
+                    .collect(Collectors.toList());
+        }
     }
 
     public List<Long> getAllADUIds(String appId) throws IOException {
         getMetadata(null, appId);
         var folder = rootFolder.resolve(appId);
-        return Files.list(folder)
-                .map(path -> path.getFileName().toString())
-                .filter(fileName -> !fileName.equals(METADATA_FILENAME))
-                .map(Long::parseLong)
-                .sorted()
-                .collect(Collectors.toList());
+        try (Stream<Path> list = Files.list(folder)) {
+            return list.map(path -> path.getFileName().toString())
+                    .filter(fileName -> !fileName.equals(METADATA_FILENAME))
+                    .map(Long::parseLong)
+                    .sorted()
+                    .collect(Collectors.toList());
+        }
     }
 
     public byte[] getADU(String clientId, String appId, Long aduId) throws IOException {
@@ -214,12 +245,18 @@ public class StoreADUs {
     }
 
     /**
-     * @param clientId
-     * @param appId
-     * @param data
-     * @param aduId    if -1 we will set to next ID
-     * @return
-     * @throws IOException
+     * Add an ADU to the store.
+     * @param clientId the client ID, can be null if there is only one client (for BundleClient mainly)
+     * @param appId the application ID of the ADU
+     * @param data the data to write to the ADU
+     * @param aduId if less than 0 we will set to next ID on the last write (when finished is true)
+     * @param offset the offset in the file where to write the data. Normally this is 0, but it can be
+     *               used to append data
+     * @param finished if null or true, the ADU will not be written to again. (If the aduId was given as a negative
+     *                 number, it will be set to the last ADU ID added and the file will be moved to the new location.)
+     * @return the file where the ADU was written, or null if the ADU was skipped because the id is less
+     *         than or equal to the last deleted ADU ID.
+     * @throws IOException if there is an error writing the ADU to the file system
      */
     public File addADU(String clientId, String appId, byte[] data, long aduId, long offset, Boolean finished) throws
             IOException {
@@ -265,6 +302,9 @@ public class StoreADUs {
             }
         }
 
+        synchronized (additionListeners) {
+            additionListeners.forEach(c -> c.accept(appId));
+        }
         return aduPath.toFile();
     }
 }
