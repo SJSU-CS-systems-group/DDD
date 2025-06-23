@@ -7,7 +7,6 @@ import android.os.storage.StorageManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.lifecycle.ViewModelProvider
 import net.discdd.UsbConnectionManager
 import net.discdd.bundletransport.screens.TransportHomeScreen
 import net.discdd.bundletransport.viewmodels.TransportUsbViewModel
@@ -31,8 +30,9 @@ class BundleTransportActivity : ComponentActivity() {
 
         LogFragment.registerLoggerHandler()
 
-        var usbViewModel: TransportUsbViewModel
-        usbViewModel = ViewModelProvider(this).get(TransportUsbViewModel::class.java)
+        //var usbViewModel: TransportUsbViewModel
+        //usbViewModel = ViewModelProvider(this).get(TransportUsbViewModel::class.java)
+        val usbViewModel = TransportUsbViewModel(application, this)
         val openDocumentTreeLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK) {
                 usbViewModel.openedURI(applicationContext, result.data?.data)

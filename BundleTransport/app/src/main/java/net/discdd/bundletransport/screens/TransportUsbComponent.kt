@@ -12,6 +12,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -25,6 +26,7 @@ fun TransportUsbComponent(
         usbViewModel: TransportUsbViewModel,
         onTransferClick: () -> Unit,
 ) {
+    val context = LocalContext.current
     val usbState by usbViewModel.state.collectAsState()
     val isUsbConnected by UsbConnectionManager.usbConnected.collectAsState()
 
@@ -91,6 +93,7 @@ fun TransportUsbComponent(
 @Preview(showBackground = true)
 @Composable
 fun TransportUsbComponentPreview() {
-    val viewModel = TransportUsbViewModel(Application())
+    val context = LocalContext.current
+    val viewModel = TransportUsbViewModel(Application(), context)
     TransportUsbComponent(viewModel) {}
 }
