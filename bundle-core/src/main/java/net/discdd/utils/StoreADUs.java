@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -50,7 +51,7 @@ public class StoreADUs {
         this(rootFolder);
     }
 
-    private Metadata getMetadata(String clientId, String appId) {
+    public Metadata getMetadata(String clientId, String appId) {
         Path metadataPath = getAppFolder(clientId, appId).resolve(METADATA_FILENAME);
         try {
             String data = new String(Files.readAllBytes(metadataPath));
@@ -124,24 +125,40 @@ public class StoreADUs {
     }
 
     public Stream<ClientApp> getAllClientApps() {
+        return getAllClientApps(false);
+    }
+
+        /**
+         * Get all client applications in the store.
+         *
+         * @param singleClientId if true, there are no client IDs in the path, and the store is used by a single client
+         * @return a stream of ClientApp objects representing all client applications
+         */
+    public Stream<ClientApp> getAllClientApps(boolean singleClientId) {
         try {
-            try (var topPaths = Files.list(rootFolder)) {
-                var allClientApps = topPaths.filter(p -> p.toFile().isDirectory()).flatMap(clientIdPath -> {
-                    try {
-                        try (var bottomPaths = Files.list(clientIdPath)) {
-                            return bottomPaths.map(Path::toFile)
-                                    .filter(File::isDirectory)
-                                    .map(File::getName)
-                                    .map(appId -> new ClientApp(clientIdPath.toFile().getName(), appId))
-                                    .collect(Collectors.toUnmodifiableList())
-                                    .stream();
-                        }
-                    } catch (IOException e) {
-                        return Stream.empty();
-                    }
-                });
-                return allClientApps.sorted().collect(Collectors.toUnmodifiableList()).stream();
+            ArrayList<Path> topPaths = new ArrayList<>();
+            if (singleClientId) {
+                topPaths.add(rootFolder);
+            } else {
+                try (var clientIds = Files.list(rootFolder)) {
+                    clientIds.forEach(v -> topPaths.add(v));
+                }
             }
+            var allClientApps = topPaths.stream().filter(p -> p.toFile().isDirectory()).flatMap(clientIdPath -> {
+                try {
+                    try (var bottomPaths = Files.list(clientIdPath)) {
+                        return bottomPaths.map(Path::toFile)
+                                .filter(File::isDirectory)
+                                .map(File::getName)
+                                .map(appId -> new ClientApp(singleClientId ? "" : clientIdPath.toFile().getName(), appId))
+                                .collect(Collectors.toUnmodifiableList())
+                                .stream();
+                    }
+                } catch (IOException e) {
+                    return Stream.empty();
+                }
+            });
+            return allClientApps.sorted().collect(Collectors.toUnmodifiableList()).stream();
         } catch (IOException e) {
             logger.log(FINE, "Nothing found in rootFolder: " + rootFolder);
             return Stream.empty();

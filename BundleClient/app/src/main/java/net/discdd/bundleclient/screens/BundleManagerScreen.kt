@@ -38,30 +38,18 @@ fun ManagerScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            for (app in managerState.appData) {
             Text(
-                text = "k9:",
+                text = app.name,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
-            Row(
-                modifier = Modifier
-                    .padding(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
                 Text(
-                    text = stringResource(R.string.sent),
+                    text = "    out: delivered ${app.ackedOut} pending ${app.lastOut - app.ackedOut}",
                     fontSize = 20.sp
                 )
                 Text(
-                    text = managerState.numberBundlesSent,
-                    fontSize = 20.sp
-                )
-                Text(
-                    text = " " + stringResource(R.string.received) + ":",
-                    fontSize = 20.sp
-                )
-                Text(
-                    text = managerState.numberBundlesReceived,
+                    text = "    in: processed ${app.ackedIn} pending ${app.lastIn - app.ackedIn}",
                     fontSize = 20.sp
                 )
             }
