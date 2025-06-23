@@ -52,7 +52,7 @@ class BundleManagerViewModel(
                     lastOut = sendMeta.lastAduAdded,
                     ackedOut = sendMeta.lastAduDeleted,
                     lastIn = recvMeta.lastAduAdded,
-                    ackedIn = recvMeta.lastAduAdded,
+                    ackedIn = recvMeta.lastAduDeleted,
                 )
             }.collect(Collectors.toList())
             _state.update {
