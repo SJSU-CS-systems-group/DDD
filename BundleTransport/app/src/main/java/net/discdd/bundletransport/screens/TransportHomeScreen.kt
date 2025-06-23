@@ -1,7 +1,6 @@
 package net.discdd.bundletransport.screens
 
 import android.Manifest
-import android.app.Application
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -126,10 +125,7 @@ fun TransportHomeScreen(
     val usbTab = TabItem(
             title = stringResource(R.string.usb),
             screen = {
-                val context = LocalContext.current
-                val usbViewModel = remember {
-                    TransportUsbViewModel(context.applicationContext as Application, context)
-                }
+                val usbViewModel: TransportUsbViewModel = viewModel()
                 UsbScreen(usbViewModel) { viewModel ->
                     TransportUsbComponent(viewModel) {
                         viewModel.populate()

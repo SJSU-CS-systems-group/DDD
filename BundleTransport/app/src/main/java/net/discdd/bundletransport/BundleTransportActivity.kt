@@ -31,10 +31,8 @@ class BundleTransportActivity : ComponentActivity() {
 
         LogFragment.registerLoggerHandler()
 
-//        var usbViewModel: TransportUsbViewModel
-//        usbViewModel = ViewModelProvider(this).get(TransportUsbViewModel::class.java)
-        val usbViewModel = TransportUsbViewModel(application, this)
-
+        var usbViewModel: TransportUsbViewModel
+        usbViewModel = ViewModelProvider(this).get(TransportUsbViewModel::class.java)
         val openDocumentTreeLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK) {
                 usbViewModel.openedURI(applicationContext, result.data?.data)
