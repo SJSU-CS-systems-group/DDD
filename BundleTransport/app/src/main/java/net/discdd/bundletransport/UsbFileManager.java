@@ -3,6 +3,7 @@ package net.discdd.bundletransport;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 
+import android.content.Context;
 import android.os.storage.StorageManager;
 import android.os.storage.StorageVolume;
 
@@ -24,15 +25,19 @@ import java.util.stream.Stream;
 
 public class UsbFileManager {
     private static final Logger logger = Logger.getLogger(UsbFileManager.class.getName());
+    private static final String MAIL_APK_URL = "https://github.com/SJSU-CS-systems-group/DDD-thunderbird-android/releases/latest/download/ddd-mail.apk";
+    private static final String CLIENT_APK_URL = "https://github.com/SJSU-CS-systems-group/DDD/releases/latest/download/DDDClient.apk";
     private static final String USB_DIR_NAME = "DDD_transport";
     private static final String RELATIVE_CLIENT_PATH = "client";
     private static final String RELATIVE_SERVER_PATH = "server";
     private StorageManager storageManager;
     private TransportPaths transportPaths;
+    private Context context;
 
-    public UsbFileManager(StorageManager storageManager, TransportPaths transportPaths) {
+    public UsbFileManager(StorageManager storageManager, TransportPaths transportPaths, Context context) {
         this.storageManager = storageManager;
         this.transportPaths = transportPaths;
+        this.context = context;
     }
 
     /**
@@ -170,5 +175,19 @@ public class UsbFileManager {
               "Successfully deleted excess server files from USB" :
               "No excess server files to delete from USB";
         logger.log(INFO, res);
+    }
+
+    //not used (yet) because testing to see if context can be passed first
+    private void addApkFiles(File apkDest) {
+        logger.log(INFO, "USBFILEMANAGER: THIS IS OUR APK DEST DIR " + apkDest);
+        String apkFileName = MAIL_APK_URL + '/';
+        File apkRoot = context.getExternalFilesDir(null);
+        File file = new File(apkRoot, apkFileName);
+        logger.log(INFO, "USBFILEMANAGER: THIS IS OUR APK FILE " + file);
+        try {
+            Files.copy(apkDest.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
