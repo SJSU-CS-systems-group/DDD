@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
@@ -34,12 +35,10 @@ public class ApplicationDataManager {
 
     private static final Logger logger = Logger.getLogger(ApplicationDataManager.class.getName());
 
-    private StoreADUs sendADUsStorage;
-    private StoreADUs receiveADUsStorage;
+    public final StoreADUs sendADUsStorage;
+    public final StoreADUs receiveADUsStorage;
     private Consumer<ADU> aduConsumer;
     /* Database tables */
-
-    private static List<String> REGISTER_APP_IDS = List.of("com.example.mysignal", "net.discdd.k9", "testAppId");
 
     private ClientPaths clientPaths;
 
@@ -61,7 +60,9 @@ public class ApplicationDataManager {
     }
 
     public List<String> getRegisteredAppIds() throws IOException {
-        return REGISTER_APP_IDS;
+        return sendADUsStorage.getAllClientApps(true)
+                .map(StoreADUs.ClientApp::appId)
+                .collect(Collectors.toUnmodifiableList());
     }
 
     public void processAcknowledgement(String bundleId) {
