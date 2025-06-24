@@ -199,7 +199,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         } else if (!isLowerCaseASCII(parsedAdu.prefixes[0]) || !isLowerCaseASCII(parsedAdu.suffixes[0])) {
             message = "Prefix and suffix should only contain a-z characters";
         } else {
-            while (true) {
+            for (var i = 0; i < 20; i++) {
                 var email = parsedAdu.prefixes[0] + getRandNum() + getRandChar() + getRandChar() + getRandNum() +
                         parsedAdu.suffixes[0] + '@' + emailService.localDomain;
                 if (!clientToEmailRepository.existsById(email)) {
@@ -211,6 +211,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
                     return;
                 }
             }
+            message = "Could not generate a unique email address. Please use different prefix or suffix.";
         }
         RegisterAduAck ack = new RegisterAduAck(null, null, false, message);
         sendADUsStorage.addADU(clientId, APP_ID, ack.toByteArray(), -1);
