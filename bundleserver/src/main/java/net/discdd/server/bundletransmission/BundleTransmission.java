@@ -10,7 +10,6 @@ import net.discdd.grpc.BundleSenderType;
 import net.discdd.grpc.GetRecencyBlobResponse;
 import net.discdd.grpc.RecencyBlob;
 import net.discdd.grpc.RecencyBlobStatus;
-import net.discdd.model.ADU;
 import net.discdd.model.Bundle;
 import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
@@ -32,12 +31,10 @@ import org.whispersystems.libsignal.InvalidMessageException;
 import java.io.File;
 import java.io.IOException;
 import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -57,7 +54,6 @@ import static java.util.logging.Level.WARNING;
 import static net.discdd.bundlesecurity.SecurityUtils.generateID;
 import static net.discdd.grpc.BundleSenderType.CLIENT;
 import static net.discdd.grpc.BundleSenderType.TRANSPORT;
-import static net.discdd.utils.BundleUtils.runFuture;
 
 @EnableAsync
 @Service
@@ -207,9 +203,10 @@ public class BundleTransmission {
         long ackedRecievedBundle = counts.lastReceivedBundleCounter;
         applicationDataManager.registerNewBundleId(clientId, encryptedBundleId, bundleCounter, ackedRecievedBundle);
 
-        var adus = applicationDataManager.fetchADUsToSend(0, clientId);
+        var adus = applicationDataManager.fetchADUsToSend(encryptedBundleId, bundleCounter, 0, clientId);
         PipedInputStream pipedInputStream = new PipedInputStream();
-        Future<?> future = BundleUtils.runFuture(executorService, null, null, adus, null, pipedInputStream);
+        Future<?> future =
+                BundleUtils.runFuture(executorService, counts.lastReceivedBundleId, null, adus, null, pipedInputStream);
         try {
             var bundleOutputStream = Files.newOutputStream(getPathForBundleToSend(encryptedBundleId),
                                                            StandardOpenOption.CREATE,

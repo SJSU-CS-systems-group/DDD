@@ -128,12 +128,12 @@ public class StoreADUs {
         return getAllClientApps(false);
     }
 
-        /**
-         * Get all client applications in the store.
-         *
-         * @param singleClientId if true, there are no client IDs in the path, and the store is used by a single client
-         * @return a stream of ClientApp objects representing all client applications
-         */
+    /**
+     * Get all client applications in the store.
+     *
+     * @param singleClientId if true, there are no client IDs in the path, and the store is used by a single client
+     * @return a stream of ClientApp objects representing all client applications
+     */
     public Stream<ClientApp> getAllClientApps(boolean singleClientId) {
         try {
             ArrayList<Path> topPaths = new ArrayList<>();
@@ -150,7 +150,8 @@ public class StoreADUs {
                         return bottomPaths.map(Path::toFile)
                                 .filter(File::isDirectory)
                                 .map(File::getName)
-                                .map(appId -> new ClientApp(singleClientId ? "" : clientIdPath.toFile().getName(), appId))
+                                .map(appId -> new ClientApp(singleClientId ? "" : clientIdPath.toFile().getName(),
+                                                            appId))
                                 .collect(Collectors.toUnmodifiableList())
                                 .stream();
                     }
