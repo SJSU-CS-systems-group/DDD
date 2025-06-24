@@ -141,21 +141,32 @@ public class ApplicationDataManager {
         }
     }
 
-    public List<ADU> fetchADUsToSend(long initialSize, String clientId) throws IOException {
+    public List<ADU> fetchADUsToSend(String bundleId, long bundleCounter, long initialSize, String clientId) throws IOException {
         List<ADU> adusToSend = new ArrayList<>();
+
         final long dataSizeLimit = this.bundleServerConfig.getApplicationDataManager().getAppDataSizeLimit();
         var sizeLimiter = new SizeLimiter(dataSizeLimit - initialSize);
         for (String appId : this.getRegisteredAppIds()) {
+            var sentAdus = new SentAduDetails();
+            sentAdus.appId = appId;
+            sentAdus.bundleId = bundleId;
+            sentAdus.ClientBundleCounter = bundleCounter;
             sendADUsStorage.getADUs(clientId, appId)
                     .takeWhile(a -> sizeLimiter.test(a.getSize()))
+                    .peek(adu -> {
+                        if (adu.getADUId() > sentAdus.aduIdRangeEnd) {
+                            sentAdus.aduIdRangeEnd = adu.getADUId();
+                        }
+                        if (adu.getADUId() < sentAdus.aduIdRangeStart || sentAdus.aduIdRangeStart == 0) {
+                            sentAdus.aduIdRangeStart = adu.getADUId();
+                        }
+                    })
                     .forEach(adusToSend::add);
+            if (sentAdus.aduIdRangeEnd > 0) {
+                sentAduDetailsRepository.save(sentAdus);
+            }
         }
         return adusToSend;
-    }
-
-    public ADU fetchSentADU(String clientId, String appId, long aduId) {
-        File file = sendADUsStorage.getADUFile(clientId, appId, aduId);
-        return file.isFile() ? new ADU(file, appId, aduId, file.length(), clientId) : null;
     }
 
     /**
@@ -194,35 +205,6 @@ public class ApplicationDataManager {
         }
         var counters = getBundleCountersForClient(bundleDetails.get().clientId);
         return bundleDetails.get().ackCounter < counters.lastReceivedBundleCounter;
-    }
-
-    public Optional<UncompressedPayload.Builder> getLastSentBundlePayloadBuilder(String clientId) {
-        var counters = getBundleCountersForClient(clientId);
-        Map<String, Object> ret = new HashMap<>();
-        if (counters.lastSentBundleId != null && !counters.lastSentBundleId.isEmpty()) {
-            ret.put("bundle-id", counters.lastSentBundleId);
-            ret.put("acknowledgement", counters.lastReceivedBundleId);
-
-            List<SentAduDetails> bundleAduDetailsList =
-                    sentAduDetailsRepository.findByBundleId(counters.lastSentBundleId);
-
-            Map<String, List<ADU>> aduMap = new HashMap<>();
-            for (SentAduDetails bundleAduDetails : bundleAduDetailsList) {
-                Long rangeStart = bundleAduDetails.aduIdRangeStart;
-                Long rangeEnd = bundleAduDetails.aduIdRangeEnd;
-                String appId = bundleAduDetails.appId;
-                List<ADU> aduList = new ArrayList<>();
-                for (Long aduId = rangeStart; aduId <= rangeEnd; aduId++) {
-                    ADU adu = fetchSentADU(clientId, appId, aduId);
-                    aduList.add(adu);
-                }
-                aduMap.put(appId, aduList);
-            }
-            if (!aduMap.isEmpty()) {
-                ret.put("ADU", aduMap);
-            }
-        }
-        return BundleUtils.bundleStructureToBuilder(ret);
     }
 
     public interface AduDeliveredListener {

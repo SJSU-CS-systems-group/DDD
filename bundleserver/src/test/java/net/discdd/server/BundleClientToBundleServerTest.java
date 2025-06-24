@@ -21,6 +21,7 @@ import net.discdd.grpc.Status;
 import net.discdd.model.Bundle;
 import net.discdd.model.BundleDTO;
 import net.discdd.pathutils.ClientPaths;
+import net.discdd.server.repository.SentAduDetailsRepository;
 import net.discdd.tls.DDDNettyTLS;
 import net.discdd.utils.Constants;
 import net.discdd.utils.StoreADUs;
@@ -31,6 +32,7 @@ import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.io.TempDir;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.whispersystems.libsignal.InvalidKeyException;
 
@@ -44,8 +46,10 @@ import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -54,6 +58,7 @@ import java.util.logging.Logger;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SpringBootTest(classes = { BundleServerApplication.class, End2EndTest.End2EndTestInitializer.class })
 @TestMethodOrder(MethodOrderer.MethodName.class)
@@ -70,6 +75,9 @@ public class BundleClientToBundleServerTest extends End2EndTest {
     private static ClientPaths clientPaths;
     private static KeyPair clientKeyPair;
     private static X509Certificate clientCert;
+
+    @Autowired
+    private SentAduDetailsRepository sentAduDetailsRepository;
 
     @BeforeAll
     static void setUp() throws Exception {
@@ -106,8 +114,8 @@ public class BundleClientToBundleServerTest extends End2EndTest {
         sendBundle();
         checkReceivedFiles(clientId, Set.of());
 
-        Assertions.assertEquals(0, sendStore.getADUs(null, TEST_APPID).count());
-        Assertions.assertEquals(0, recieveStore.getADUs(null, TEST_APPID).count());
+        assertEquals(0, sendStore.getADUs(null, TEST_APPID).count());
+        assertEquals(0, recieveStore.getADUs(null, TEST_APPID).count());
 
     }
 
@@ -157,10 +165,18 @@ public class BundleClientToBundleServerTest extends End2EndTest {
         });
         checkReceivedFiles(clientId, Set.of());
         checkToSendFiles(clientId, Set.of("1"));
-        receiveBundle();
+        var receivedBundles = receiveBundle();
         checkToSendFiles(clientId, Set.of("1"));
-        Assertions.assertEquals(1, recieveStore.getADUs(null, TEST_APPID).count());
+        assertEquals(1, recieveStore.getADUs(null, TEST_APPID).count());
 
+        for (var bundleId: receivedBundles) {
+            var sentAduDetails = sentAduDetailsRepository.findByBundleId(bundleId);
+            assertEquals(1, sentAduDetails.size());
+
+            assertEquals(TEST_APPID, sentAduDetails.get(0).appId);
+            assertEquals(1, sentAduDetails.get(0).aduIdRangeStart);
+            assertEquals(1, sentAduDetails.get(0).aduIdRangeEnd);
+        }
         sendBundle();
     }
 
@@ -171,7 +187,7 @@ public class BundleClientToBundleServerTest extends End2EndTest {
         bundleTransmission.processRecencyBlob(fakeAddress, rsp);
         var rt = bundleTransmission.getRecentTransport(fakeAddress);
         // the blob should have been signed within the last second or so
-        Assertions.assertEquals((double) System.currentTimeMillis(), (double) rt.getRecencyTime(), 2000);
+        assertEquals((double) System.currentTimeMillis(), (double) rt.getRecencyTime(), 2000);
         var badBlob = rsp.toBuilder().setRecencyBlob(rsp.getRecencyBlob().toBuilder().setNonce(1)).build();
         // mess with the signature
         Assertions.assertThrows(IOException.class, () -> bundleTransmission.processRecencyBlob(fakeAddress, badBlob));
@@ -221,17 +237,17 @@ public class BundleClientToBundleServerTest extends End2EndTest {
         bundleUploadResponseObserver.waitForCompletion(Constants.GRPC_LONG_TIMEOUT_MS);
         Assertions.assertTrue(bundleUploadResponseObserver.completed,
                               () -> bundleUploadResponseObserver.throwable.getMessage());
-        Assertions.assertEquals(Status.SUCCESS, bundleUploadResponseObserver.bundleUploadResponse.getStatus());
+        assertEquals(Status.SUCCESS, bundleUploadResponseObserver.bundleUploadResponse.getStatus());
     }
 
-    private static void receiveBundle() throws Exception {
+    private static List<String> receiveBundle() throws Exception {
         var bundleRequests = bundleTransmission.getBundleSecurity()
                 .getClientWindow()
                 .getWindow(bundleTransmission.getBundleSecurity().getClientSecurity());
         var clientId = bundleTransmission.getBundleSecurity().getClientSecurity().getClientID();
         var clientSecurity = bundleTransmission.getBundleSecurity().getClientSecurity();
         var bundleSecurity = bundleTransmission.getBundleSecurity();
-
+        var receivedBundles = new ArrayList<String>();
         for (String bundle : bundleRequests) {
             PublicKeyMap publicKeyMap = PublicKeyMap.newBuilder()
                     .setClientPub(ByteString.copyFrom(clientSecurity.getClientIdentityPublicKey().serialize()))
@@ -262,9 +278,11 @@ public class BundleClientToBundleServerTest extends End2EndTest {
                     fileOutputStream.write(response.getChunk().getChunk().toByteArray());
                 }
                 bundleTransmission.processReceivedBundle(clientId, new Bundle(receivedBundleLocation.toFile()));
+                receivedBundles.add(downloadRequest.getBundleId().getEncryptedId());
             } catch (StatusRuntimeException e) {
                 logger.log(SEVERE, "Receive bundle failed " + channel, e);
             }
         }
+        return receivedBundles;
     }
 }
