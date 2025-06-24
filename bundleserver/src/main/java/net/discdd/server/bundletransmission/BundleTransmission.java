@@ -21,6 +21,8 @@ import net.discdd.server.bundlesecurity.BundleSecurity;
 import net.discdd.server.config.BundleServerConfig;
 import net.discdd.utils.BundleUtils;
 import net.discdd.utils.FileUtils;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -53,6 +55,7 @@ import static net.discdd.bundlesecurity.SecurityUtils.generateID;
 import static net.discdd.grpc.BundleSenderType.CLIENT;
 import static net.discdd.grpc.BundleSenderType.TRANSPORT;
 
+@EnableAsync
 @Service
 public class BundleTransmission {
 
@@ -84,8 +87,8 @@ public class BundleTransmission {
     public static String bundleSenderToString(BundleSenderType senderType, String senderId) {
         return senderType + " : " + senderId;
     }
-
-    @Transactional(rollbackFor = Exception.class)
+    @Async
+    @Transactional
     public void processReceivedBundle(BundleSenderType senderType, String senderId, Bundle bundle) throws Exception {
         logger.log(INFO,
                    "Processing received bundle: " + bundle.getSource().getName() + " from " +
