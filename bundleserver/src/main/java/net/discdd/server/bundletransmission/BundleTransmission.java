@@ -87,6 +87,7 @@ public class BundleTransmission {
     public static String bundleSenderToString(BundleSenderType senderType, String senderId) {
         return senderType + " : " + senderId;
     }
+
     @Async
     @Transactional
     public void processReceivedBundle(BundleSenderType senderType, String senderId, Bundle bundle) throws Exception {
