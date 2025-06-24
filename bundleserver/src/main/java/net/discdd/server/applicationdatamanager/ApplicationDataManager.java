@@ -141,7 +141,8 @@ public class ApplicationDataManager {
         }
     }
 
-    public List<ADU> fetchADUsToSend(String bundleId, long bundleCounter, long initialSize, String clientId) throws IOException {
+    public List<ADU> fetchADUsToSend(String bundleId, long bundleCounter, long initialSize, String clientId) throws
+            IOException {
         List<ADU> adusToSend = new ArrayList<>();
 
         final long dataSizeLimit = this.bundleServerConfig.getApplicationDataManager().getAppDataSizeLimit();
@@ -151,17 +152,14 @@ public class ApplicationDataManager {
             sentAdus.appId = appId;
             sentAdus.bundleId = bundleId;
             sentAdus.ClientBundleCounter = bundleCounter;
-            sendADUsStorage.getADUs(clientId, appId)
-                    .takeWhile(a -> sizeLimiter.test(a.getSize()))
-                    .peek(adu -> {
-                        if (adu.getADUId() > sentAdus.aduIdRangeEnd) {
-                            sentAdus.aduIdRangeEnd = adu.getADUId();
-                        }
-                        if (adu.getADUId() < sentAdus.aduIdRangeStart || sentAdus.aduIdRangeStart == 0) {
-                            sentAdus.aduIdRangeStart = adu.getADUId();
-                        }
-                    })
-                    .forEach(adusToSend::add);
+            sendADUsStorage.getADUs(clientId, appId).takeWhile(a -> sizeLimiter.test(a.getSize())).peek(adu -> {
+                if (adu.getADUId() > sentAdus.aduIdRangeEnd) {
+                    sentAdus.aduIdRangeEnd = adu.getADUId();
+                }
+                if (adu.getADUId() < sentAdus.aduIdRangeStart || sentAdus.aduIdRangeStart == 0) {
+                    sentAdus.aduIdRangeStart = adu.getADUId();
+                }
+            }).forEach(adusToSend::add);
             if (sentAdus.aduIdRangeEnd > 0) {
                 sentAduDetailsRepository.save(sentAdus);
             }

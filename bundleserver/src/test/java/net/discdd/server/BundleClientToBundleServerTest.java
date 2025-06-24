@@ -169,7 +169,7 @@ public class BundleClientToBundleServerTest extends End2EndTest {
         checkToSendFiles(clientId, Set.of("1"));
         assertEquals(1, recieveStore.getADUs(null, TEST_APPID).count());
 
-        for (var bundleId: receivedBundles) {
+        for (var bundleId : receivedBundles) {
             var sentAduDetails = sentAduDetailsRepository.findByBundleId(bundleId);
             assertEquals(1, sentAduDetails.size());
 
