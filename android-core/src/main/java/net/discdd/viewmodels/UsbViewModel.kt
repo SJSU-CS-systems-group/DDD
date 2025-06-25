@@ -42,6 +42,9 @@ open class UsbViewModel(
     private val _requestDirectoryAccess = MutableLiveData<Unit>()
     val requestDirectoryAccess: LiveData<Unit> get() = _requestDirectoryAccess
 
+    /**
+     * add requestApkDirAccess (like above) and make above one more specific
+     */
 
     init {
         viewModelScope.launch {

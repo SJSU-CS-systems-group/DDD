@@ -50,6 +50,9 @@ fun UsbFileRequestUI(
 
     Spacer(modifier = Modifier.height(16.dp))
 
+    /**
+     * reword reload to be more specific. select USB dir?
+     */
     Button(
             onClick = { usbViewModel.promptForDirectoryAccess() },
             modifier = Modifier.fillMaxWidth(0.8f)
@@ -58,6 +61,10 @@ fun UsbFileRequestUI(
                 text = stringResource(R.string.reload)
         )
     }
+
+    /**
+     * add similar button to one above. select APK source dir?
+     */
 }
 
 @Preview(showBackground = true)

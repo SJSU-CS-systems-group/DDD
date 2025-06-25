@@ -42,6 +42,9 @@ class BundleTransportActivity : ComponentActivity() {
             }
         }
 
+        /**
+         * refactor requestDirectoryAccess to be requestUsbDirAccess?
+         */
         usbViewModel.requestDirectoryAccess.observe(this) {
             val storageManager = getSystemService(Context.STORAGE_SERVICE) as StorageManager
             val volumes = storageManager.storageVolumes
@@ -50,6 +53,10 @@ class BundleTransportActivity : ComponentActivity() {
                 openDocumentTreeLauncher.launch(this)
             }
         }
+
+        /**
+         * similar to two code blocks above, make a openDocumentTreeLauncher
+         */
 
         UsbConnectionManager.initialize(applicationContext)
         ConnectivityManager.initialize(applicationContext)
