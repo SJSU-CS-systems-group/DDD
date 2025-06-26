@@ -19,7 +19,9 @@ class TransportUsbViewModel(
 
     fun populate() {
         try {
-            usbFileManager.populateUsb()
+            //usbFileManager.populateUsb()
+            val dddDir = usbDirectory; //"ddd_transport"
+            if (usbDirectory.createDirectory("server").exists())
             updateMessage("Exchange successful!", Color.GREEN)
         } catch (e: Exception) {
             updateMessage("Exchange failed: ${e.message}", Color.RED)

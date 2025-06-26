@@ -47,16 +47,21 @@ public class UsbFileManager {
      */
     public boolean populateUsb() throws IOException {
         boolean result = true;
+        // ^unused by caller
         List<StorageVolume> storageVolumes = storageManager.getStorageVolumes();
         for (StorageVolume volume : storageVolumes) {
             if (volume.isRemovable() && !volume.isEmulated()) {
                 File usbStorageDir = volume.getDirectory();
+                // get first removable volume in USB dir
                 if (usbStorageDir != null) {
                     File usbTransportDir = new File(usbStorageDir, USB_DIR_NAME);
+                    // append ddd_tra... to prev dir
                     File usbTransportToServerDir = new File(usbTransportDir, RELATIVE_SERVER_PATH);
+                    // append server to ddd dir to be created if does not exist
                     File usbTransportToClientDir = new File(usbTransportDir, RELATIVE_CLIENT_PATH);
+                    // append client to ddd dir to be created if does not exist
                     File usbApkDir = new File(usbTransportDir, RELATIVE_APK_PATH);
-
+                    // append apk to ddd dir to be created if does not exist
                     if (!usbTransportDir.exists()) {
                         usbTransportDir.mkdirs();
                         usbTransportToServerDir.mkdirs();
