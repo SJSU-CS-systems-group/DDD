@@ -1,58 +1,43 @@
 package net.discdd.bundletransport;
 
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
-
+import io.grpc.Server;
+import io.grpc.stub.StreamObserver;
 import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
-import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.grpc.BundleSenderType;
 import net.discdd.grpc.GetRecencyBlobRequest;
 import net.discdd.grpc.GetRecencyBlobResponse;
 import net.discdd.grpc.PublicKeyMap;
 import net.discdd.pathutils.TransportPaths;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.SecureRandom;
-import java.security.cert.CertificateException;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
-
 import net.discdd.tls.DDDNettyTLS;
 import net.discdd.tls.DDDTLSUtil;
-import net.discdd.tls.NettyServerCertificateInterceptor;
-import io.grpc.Grpc;
-import io.grpc.InsecureServerCredentials;
-import io.grpc.Server;
-import io.grpc.stub.StreamObserver;
-
 import net.discdd.tls.GrpcSecurity;
 import net.discdd.transport.GrpcSecurityHolder;
 import net.discdd.transport.TransportToBundleServerManager;
 
-import org.bouncycastle.operator.OperatorCreationException;
-import org.whispersystems.libsignal.InvalidKeyException;
-
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.SecureRandom;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 public class RpcServer {
     private static final Logger logger = Logger.getLogger(RpcServer.class.getName());
 
     // private final String TAG = "dddTransport";
     private static final int port = 7777;
-
-    private Server server;
     private static RpcServer rpcServerInstance;
-    private GrpcSecurity transportGrpcSecurity;
-
     private final BundleExchangeServiceImpl.BundleExchangeEventListener listener;
+    private Server server;
+    private GrpcSecurity transportGrpcSecurity;
 
     public RpcServer(BundleExchangeServiceImpl.BundleExchangeEventListener listener) {
         this.listener = listener;
@@ -114,7 +99,8 @@ public class RpcServer {
                             new TrustManager[] { DDDTLSUtil.trustManager },
                             new SecureRandom());
 
-            server = DDDNettyTLS.createGrpcServer(transportGrpcSecurity.getGrpcKeyPair(),
+            server = DDDNettyTLS.createGrpcServer(Executors.newCachedThreadPool(),
+                                                  transportGrpcSecurity.getGrpcKeyPair(),
                                                   transportGrpcSecurity.getGrpcCert(),
                                                   7777,
                                                   bundleExchangeService);
