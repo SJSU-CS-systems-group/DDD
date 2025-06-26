@@ -24,15 +24,20 @@ import java.util.stream.Stream;
 
 public class UsbFileManager {
     private static final Logger logger = Logger.getLogger(UsbFileManager.class.getName());
+    private static final String MAIL_APK_FILE_NAME = "ddd-mail.apk";
+    private static final String CLIENT_APK_FILE_NAME = "DDDClient.apk";
     private static final String USB_DIR_NAME = "DDD_transport";
     private static final String RELATIVE_CLIENT_PATH = "client";
     private static final String RELATIVE_SERVER_PATH = "server";
+    private static final String RELATIVE_APK_PATH = "apk";
     private StorageManager storageManager;
     private TransportPaths transportPaths;
+    private File apkDir;
 
-    public UsbFileManager(StorageManager storageManager, TransportPaths transportPaths) {
+    public UsbFileManager(StorageManager storageManager, TransportPaths transportPaths, File apkDir) {
         this.storageManager = storageManager;
         this.transportPaths = transportPaths;
+        this.apkDir = apkDir;
     }
 
     /**
@@ -42,18 +47,26 @@ public class UsbFileManager {
      */
     public boolean populateUsb() throws IOException {
         boolean result = true;
+        // ^unused by caller
         List<StorageVolume> storageVolumes = storageManager.getStorageVolumes();
         for (StorageVolume volume : storageVolumes) {
             if (volume.isRemovable() && !volume.isEmulated()) {
                 File usbStorageDir = volume.getDirectory();
+                // get first removable volume in USB dir
                 if (usbStorageDir != null) {
                     File usbTransportDir = new File(usbStorageDir, USB_DIR_NAME);
+                    // append ddd_tra... to prev dir
                     File usbTransportToServerDir = new File(usbTransportDir, RELATIVE_SERVER_PATH);
+                    // append server to ddd dir to be created if does not exist
                     File usbTransportToClientDir = new File(usbTransportDir, RELATIVE_CLIENT_PATH);
+                    // append client to ddd dir to be created if does not exist
+                    File usbApkDir = new File(usbTransportDir, RELATIVE_APK_PATH);
+                    // append apk to ddd dir to be created if does not exist
                     if (!usbTransportDir.exists()) {
                         usbTransportDir.mkdirs();
                         usbTransportToServerDir.mkdirs();
                         usbTransportToClientDir.mkdirs();
+                        usbApkDir.mkdirs();
                     } else {
                         if (!usbTransportToServerDir.exists()) {
                             usbTransportToServerDir.mkdirs();
@@ -61,10 +74,14 @@ public class UsbFileManager {
                         if (!usbTransportToClientDir.exists()) {
                             usbTransportToClientDir.mkdirs();
                         }
+                        if (!usbApkDir.exists()) {
+                            usbApkDir.mkdirs();
+                        }
                     }
                     try {
                         toClientList(usbTransportToClientDir);
                         toServerList(usbTransportToServerDir);
+                        addApkFiles(usbApkDir);
                     } catch (Exception e) {
                         result = false;
                         logger.log(WARNING, "Failed to populate USB and or Android device");
@@ -170,5 +187,38 @@ public class UsbFileManager {
               "Successfully deleted excess server files from USB" :
               "No excess server files to delete from USB";
         logger.log(INFO, res);
+    }
+
+    private void addApkFiles(File apkDest) {
+        // from device apk dirs
+        File mailApkSrc = new File(apkDir, MAIL_APK_FILE_NAME);
+        File clientApkSrc = new File(apkDir, CLIENT_APK_FILE_NAME);
+
+        // destination dirs on usb
+        File mailApkDest = new File(apkDest, MAIL_APK_FILE_NAME);
+        File clientApkDest = new File(apkDest, CLIENT_APK_FILE_NAME);
+
+        if (mailApkSrc.exists()) {
+            try {
+                Files.copy(mailApkSrc.toPath(), mailApkDest.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                logger.log(INFO, "Mail APK copied successfully");
+            } catch (IOException e) {
+                logger.log(WARNING, "Mail APK NOT copied: " + e.getMessage());
+                e.printStackTrace();
+            }
+        } else {
+            logger.log(WARNING, "Mail APK not found");
+        }
+        if (clientApkSrc.exists()) {
+            try {
+                Files.copy(clientApkSrc.toPath(), clientApkDest.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                logger.log(INFO, "Client APK copied successfully");
+            } catch (IOException e) {
+                logger.log(WARNING, "Client APK NOT copied: " + e.getMessage());
+                e.printStackTrace();
+            }
+        } else {
+            logger.log(WARNING, "Client APK not found");
+        }
     }
 }

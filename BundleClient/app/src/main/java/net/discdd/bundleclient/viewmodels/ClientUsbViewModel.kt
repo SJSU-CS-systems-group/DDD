@@ -3,7 +3,6 @@ package net.discdd.bundleclient.viewmodels
 import android.app.Application
 import android.content.Context
 import android.graphics.Color
-import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import net.discdd.bundleclient.R

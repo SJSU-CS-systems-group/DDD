@@ -12,11 +12,16 @@ class TransportUsbViewModel(
     private val transportPaths by lazy {
         TransportPaths(application.filesDir.toPath())
     }
-    private var usbFileManager: UsbFileManager = UsbFileManager(storageManager, transportPaths)
+    private val apksPath by lazy {
+        application.getExternalFilesDir(null)
+    }
+    private var usbFileManager: UsbFileManager = UsbFileManager(storageManager, transportPaths, apksPath)
 
     fun populate() {
         try {
-            usbFileManager.populateUsb()
+            //usbFileManager.populateUsb()
+            val dddDir = usbDirectory; //"ddd_transport"
+            if (usbDirectory.createDirectory("server").exists())
             updateMessage("Exchange successful!", Color.GREEN)
         } catch (e: Exception) {
             updateMessage("Exchange failed: ${e.message}", Color.RED)
