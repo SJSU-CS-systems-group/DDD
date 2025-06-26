@@ -60,8 +60,13 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
         this.dataCheckInterval = dataCheckInterval;
     }
 
+    long lastRevalidateAppsMs;
+
     // Synchronized because we want this to be an atomic operation
     synchronized private void revalidateApps() {
+        long now = System.currentTimeMillis();
+        if (lastRevalidateAppsMs + 10_000 /*ms*/ > now) return;
+        lastRevalidateAppsMs = now;
         var foundApps = new HashSet<String>();
         registeredAppAdapterRepository.findAll().forEach(appAdapter -> {
             foundApps.add(appAdapter.getAppId());
