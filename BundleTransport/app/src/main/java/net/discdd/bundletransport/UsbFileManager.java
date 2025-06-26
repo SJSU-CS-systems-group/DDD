@@ -185,40 +185,6 @@ public class UsbFileManager {
     }
 
     private void addApkFiles(File apkDest) {
-        File usbRoot = new File("/storage/8721-151F");
-        logger.log(INFO, "USB root exists: " + usbRoot.exists());
-        logger.log(INFO, "USB root canRead: " + usbRoot.canRead());
-        logger.log(INFO, "USB root canWrite: " + usbRoot.canWrite());
-        File testFile = new File(apkDest, "test.txt");
-        try {
-            boolean created = testFile.createNewFile();
-            logger.log(INFO, "Test file creation: " + created);
-            if (created) {
-                testFile.delete();
-            }
-        } catch (IOException e) {
-            logger.log(WARNING, "Cannot create test file: " + e.getMessage());
-        }
-        logger.log(INFO, "APK dest exists: " + apkDest.exists());
-        logger.log(INFO, "APK dest canWrite: " + apkDest.canWrite());
-        logger.log(INFO, "APK dest canRead: " + apkDest.canRead());
-        logger.log(INFO, "APK DEST DIR: " + apkDest.getAbsolutePath());
-        logger.log(INFO, "SOURCE APK DIR: " + apkDir.getAbsolutePath());
-        if (!apkDir.exists()) {
-            logger.log(WARNING, "Source APK directory does not exist: " + apkDir.getAbsolutePath());
-            return;
-        }
-        File[] files = apkDir.listFiles();
-        if (files != null) {
-            logger.log(INFO, "Files in APK directory (" + files.length + " total):");
-            for (File file : files) {
-                logger.log(INFO, "  - " + file.getName() + " (size: " + file.length() + " bytes)");
-            }
-        } else {
-            logger.log(WARNING, "Cannot list files in APK directory");
-        }
-        // DELETE everything on top of this comment
-
         // from device apk dirs
         File mailApkSrc = new File(apkDir, MAIL_APK_FILE_NAME);
         File clientApkSrc = new File(apkDir, CLIENT_APK_FILE_NAME);
@@ -226,17 +192,6 @@ public class UsbFileManager {
         // destination dirs on usb
         File mailApkDest = new File(apkDest, MAIL_APK_FILE_NAME);
         File clientApkDest = new File(apkDest, CLIENT_APK_FILE_NAME);
-
-        // DELETE below here but above...
-        long freeSpace = apkDest.getFreeSpace();
-        long totalSizeNeeded = mailApkSrc.length() + clientApkSrc.length();
-
-        if (freeSpace < totalSizeNeeded) {
-            logger.log(WARNING, "Insufficient space on USB. Available: " + freeSpace +
-                    ", Required: " + totalSizeNeeded);
-            return;
-        }
-        // ...here
 
         if (mailApkSrc.exists()) {
             try {

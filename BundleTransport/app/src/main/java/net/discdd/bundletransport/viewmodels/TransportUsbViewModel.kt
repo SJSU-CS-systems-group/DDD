@@ -19,9 +19,6 @@ class TransportUsbViewModel(
 
     fun populate() {
         try {
-            /**
-             * how will requestDirectoryAccess 2.0 affect this?
-             */
             usbFileManager.populateUsb()
             updateMessage("Exchange successful!", Color.GREEN)
         } catch (e: Exception) {

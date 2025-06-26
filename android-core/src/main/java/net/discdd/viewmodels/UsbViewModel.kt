@@ -4,7 +4,6 @@ import android.app.Application
 import android.content.Context
 import android.graphics.Color
 import android.net.Uri
-import android.os.Environment
 import android.os.storage.StorageManager
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.AndroidViewModel
@@ -41,10 +40,6 @@ open class UsbViewModel(
     // this is used to signal the activity to prompt the user for directory access
     private val _requestDirectoryAccess = MutableLiveData<Unit>()
     val requestDirectoryAccess: LiveData<Unit> get() = _requestDirectoryAccess
-
-    /**
-     * add requestApkDirAccess (like above) and make above one more specific
-     */
 
     init {
         viewModelScope.launch {

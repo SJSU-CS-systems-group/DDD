@@ -35,10 +35,6 @@ class BundleTransportActivity : ComponentActivity() {
         usbViewModel = ViewModelProvider(this).get(TransportUsbViewModel::class.java)
         val openDocumentTreeLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK) {
-                var flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                var uri = result.data?.data
-                if (uri != null)
-                    contentResolver.takePersistableUriPermission(uri, flags)
                 usbViewModel.openedURI(applicationContext, result.data?.data)
                 logger.info("Selected URI: ${result.data?.data}")
             } else {
@@ -46,9 +42,6 @@ class BundleTransportActivity : ComponentActivity() {
             }
         }
 
-        /**
-         * refactor requestDirectoryAccess to be requestUsbDirAccess?
-         */
         usbViewModel.requestDirectoryAccess.observe(this) {
             val storageManager = getSystemService(Context.STORAGE_SERVICE) as StorageManager
             val volumes = storageManager.storageVolumes
@@ -57,10 +50,6 @@ class BundleTransportActivity : ComponentActivity() {
                 openDocumentTreeLauncher.launch(this)
             }
         }
-
-        /**
-         * similar to two code blocks above, make a openDocumentTreeLauncher
-         */
 
         UsbConnectionManager.initialize(applicationContext)
         ConnectivityManager.initialize(applicationContext)
