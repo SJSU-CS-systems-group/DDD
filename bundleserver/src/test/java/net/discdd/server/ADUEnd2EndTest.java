@@ -145,7 +145,8 @@ public class ADUEnd2EndTest extends End2EndTest {
         try {
             var stub = BundleExchangeServiceGrpc.newStub(channel);
 
-            // carefull! this is all backwards: we pass an object to receive the response and we get an object back to send
+            // carefull! this is all backwards: we pass an object to receive the response and we get an object back
+            // to send
             // requests to the server
             BundleUploadResponseStreamObserver response = new BundleUploadResponseStreamObserver();
             var request = stub.uploadBundle(response);

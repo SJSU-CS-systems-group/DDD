@@ -35,6 +35,7 @@ public class EchoDDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServ
         executor.initialize();
         return executor;
     }
+
     @Override
     public void exchangeADUs(ExchangeADUsRequest request, StreamObserver<ExchangeADUsResponse> responseObserver) {
         LinkedList<AppDataUnit> dataList = new LinkedList<>();

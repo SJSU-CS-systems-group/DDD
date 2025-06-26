@@ -37,6 +37,7 @@ public class GrpcExecutor implements Executor {
         executor.setQueueCapacity(100);
         executor.initialize();
     }
+
     @Override
     public void execute(Runnable command) {
         try {
