@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.concurrent.Executor;
+import java.util.logging.Logger;
 
 /**
  * This crazy code is used to execute gRPC calls in a transactional context.
@@ -14,7 +15,10 @@ import java.util.concurrent.Executor;
 @Component
 @Qualifier("grpcExecutor")
 public class GrpcExecutor implements Executor {
+    private static final Logger logger = Logger.getLogger(GrpcExecutor.class.getName());
+
     // use a Spring-managed ThreadPoolTaskExecutor to handle gRPC calls
+    // don't forget to initialize it in the constructor!
     private final ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
     // this loooks really weird since the implementation is in this class! but ...
     // ... after a ton of chatGPTing ... reading doc ... debugging ... i landed on
@@ -39,7 +43,7 @@ public class GrpcExecutor implements Executor {
             executor.execute(() -> grpcTransactionalRunner.executeInTransaction(command));
         } catch (Exception e) {
             // Log the exception or handle it as needed
-            System.err.println("Error executing command: " + e.getMessage());
+            logger.severe("Error executing command: " + e.getMessage());
         }
     }
 
