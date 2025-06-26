@@ -31,10 +31,10 @@ jobs:
       matrix:
         # tragically, there isn't a nice way to dynamically build this list...
         runner:
+          - [self-hosted, cs-reed-01]
           - [self-hosted, cs-reed-02]
-          - [self-hosted, cs-reed-03]
-          - [self-hosted, cs-reed-04]
-          - [self-hosted, cs-reed-05]
+          #- [self-hosted, cs-reed-04]
+          #- [self-hosted, cs-reed-05]
           - [self-hosted, cs-reed-06]
           - [self-hosted, cs-reed-07]
           - [self-hosted, SJSU-office]
