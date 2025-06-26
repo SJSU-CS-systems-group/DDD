@@ -3,7 +3,7 @@ name: Android Release
 on:
   push:
     paths:
-      - build.gradle
+      - AndroidApps/build.gradle
     branches:
       - main  # or 'release' if that's your release branch
 
@@ -36,6 +36,7 @@ jobs:
 
       - name: Build release APK and AAB
         run: |
+          cd AndroidApps
           KEYFILE=${PWD}/signing-key.jks
           echo "${{ secrets.DDD_KEYFILE }}" | base64 -d > $KEYFILE
           echo "populated $KEYFILE"
@@ -45,10 +46,10 @@ jobs:
             -Pandroid.injected.signing.key.alias=ddd \
             -Pandroid.injected.signing.key.password=$DDD_KEYFILE_PASSWORD
           # rename the files so that the names are reasonable
-          mv BundleClient/app/build/outputs/bundle/release/app-release.aab DDDClient.aab
-          mv BundleClient/app/build/outputs/apk/release/app-release.apk DDDClient.apk
-          mv BundleTransport/app/build/outputs/bundle/release/app-release.aab DDDTransport.aab
-          mv BundleTransport/app/build/outputs/apk/release/app-release.apk DDDTransport.apk
+          mv BundleClient/app/build/outputs/bundle/release/app-release.aab ../DDDClient.aab
+          mv BundleClient/app/build/outputs/apk/release/app-release.apk ../DDDClient.apk
+          mv BundleTransport/app/build/outputs/bundle/release/app-release.aab ../DDDTransport.aab
+          mv BundleTransport/app/build/outputs/apk/release/app-release.apk ../DDDTransport.apk
         env:
           DDD_KEYFILE_PASSWORD: ${{ secrets.DDD_KEYFILE_PASSWORD }}
 
@@ -56,10 +57,10 @@ jobs:
       - name: Get version name
         id: version
         run: |
-              VERSION_NAME=$(grep appVersionName build.gradle | sed "s/.*'\(.*\)'.*/\1/")
+              VERSION_NAME=$(grep appVersionName AndroidApps/build.gradle | sed "s/.*'\(.*\)'.*/\1/")
               VERSION_NAME=${VERSION_NAME%%_*}
               VERSION_NAME="${VERSION_NAME}_$(git rev-parse --short HEAD)"
-              sed -i "s/appVersionName \?= \?['\"].*['\"]/appVersionName = '${VERSION_NAME}'/" build.gradle
+              sed -i "s/appVersionName \?= \?['\"].*['\"]/appVersionName = '${VERSION_NAME}'/" AndroidApps/build.gradle
               echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
