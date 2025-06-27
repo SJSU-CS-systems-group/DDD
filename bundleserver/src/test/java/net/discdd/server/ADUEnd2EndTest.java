@@ -147,36 +147,43 @@ public class ADUEnd2EndTest extends End2EndTest {
 
     private void sendBundle(Path bundleJarPath) throws Throwable {
         var channel = DDDNettyTLS.createGrpcChannel(clientKeyPair, clientCert, "localhost", BUNDLESERVER_GRPC_PORT);
+        try {
+            var stub = BundleExchangeServiceGrpc.newStub(channel);
 
-        var stub = BundleExchangeServiceGrpc.newStub(channel);
+            // carefull! this is all backwards: we pass an object to receive the response and we get an object back
+            // to send
+            // requests to the server
+            BundleUploadResponseStreamObserver response = new BundleUploadResponseStreamObserver();
+            var request = stub.uploadBundle(response);
+            var allBytes = Files.readAllBytes(bundleJarPath);
+            var firstByteString = ByteString.copyFrom(allBytes, 0, allBytes.length / 2);
+            var secondByteString =
+                    ByteString.copyFrom(allBytes, allBytes.length / 2, allBytes.length - allBytes.length / 2);
+            request.onNext(BundleUploadRequest.newBuilder().setSenderType(BundleSenderType.CLIENT).build());
+            request.onNext(BundleUploadRequest.newBuilder()
+                                   .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId("8675309").build())
+                                   .build());
+            request.onNext(BundleUploadRequest.newBuilder()
+                                   .setChunk(BundleChunk.newBuilder().setChunk(firstByteString).build())
+                                   .build());
+            request.onNext(BundleUploadRequest.newBuilder()
+                                   .setChunk(BundleChunk.newBuilder().setChunk(secondByteString).build())
+                                   .build());
+            request.onCompleted();
 
-        // carefull! this is all backwards: we pass an object to receive the response and we get an object back to send
-        // requests to the server
-        BundleUploadResponseStreamObserver response = new BundleUploadResponseStreamObserver();
-        var request = stub.uploadBundle(response);
-        var allBytes = Files.readAllBytes(bundleJarPath);
-        var firstByteString = ByteString.copyFrom(allBytes, 0, allBytes.length / 2);
-        var secondByteString =
-                ByteString.copyFrom(allBytes, allBytes.length / 2, allBytes.length - allBytes.length / 2);
-        request.onNext(BundleUploadRequest.newBuilder().setSenderType(BundleSenderType.CLIENT).build());
-        request.onNext(BundleUploadRequest.newBuilder()
-                               .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId("8675309").build())
-                               .build());
-        request.onNext(BundleUploadRequest.newBuilder()
-                               .setChunk(BundleChunk.newBuilder().setChunk(firstByteString).build())
-                               .build());
-        request.onNext(BundleUploadRequest.newBuilder()
-                               .setChunk(BundleChunk.newBuilder().setChunk(secondByteString).build())
-                               .build());
-        request.onCompleted();
-
-        // let's see if it worked...
-        Assertions.assertTrue(response.waitForCompletion(Duration.of(30, ChronoUnit.SECONDS)),
-                              "Timed out waiting for bundle upload RPC");
-        if (response.throwable != null) throw response.throwable;
-        if (response.response == null) throw new IllegalStateException("No response received");
-        var bundleUploadResponse = response.response;
-        Assertions.assertEquals(Status.SUCCESS, bundleUploadResponse.getStatus());
+            // let's see if it worked...
+            Assertions.assertTrue(response.waitForCompletion(Duration.of(30, ChronoUnit.SECONDS)),
+                                  "Timed out waiting for bundle upload RPC");
+            if (response.throwable != null) throw response.throwable;
+            if (response.response == null) throw new IllegalStateException("No response received");
+            var bundleUploadResponse = response.response;
+            Assertions.assertEquals(Status.SUCCESS, bundleUploadResponse.getStatus());
+        } finally {
+            channel.shutdown();
+            if (!channel.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                channel.shutdownNow();
+            }
+        }
 
         // TODO: it doesn't look like the bundle ID is being returned. we should remove from the proto
         // Assertions.assertEquals(bundleJarPath.toFile().getName(), bundleUploadResponse.getBid());

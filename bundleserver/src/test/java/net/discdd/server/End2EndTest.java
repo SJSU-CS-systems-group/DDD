@@ -23,6 +23,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -124,7 +125,6 @@ public class End2EndTest {
         serverPrivateRatchetKeyPath = keysDir.resolve(SecurityUtils.SERVER_RATCHET_PRIVATE_KEY);
         Files.writeString(serverPrivateRatchetKeyPath,
                           DDDPEMEncoder.encode(serverRatchetKey.getPrivateKey().serialize(), ECPrivateKeyType));
-
         // set up the client keys
         // create the keypairs for the client
         var clientIdentityPubKeyPair = Curve.generateKeyPair();
@@ -154,7 +154,12 @@ public class End2EndTest {
         var adapterKeyPair = DDDTLSUtil.generateKeyPair();
         var adapterCert = DDDTLSUtil.getSelfSignedCertificate(adapterKeyPair,
                                                               DDDTLSUtil.publicKeyToName(adapterKeyPair.getPublic()));
-        var server = DDDNettyTLS.createGrpcServer(adapterKeyPair, adapterCert, 0, testAppServiceAdapter);
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(10);
+        executor.setMaxPoolSize(20);
+        executor.setQueueCapacity(100);
+        executor.initialize();
+        var server = DDDNettyTLS.createGrpcServer(executor, adapterKeyPair, adapterCert, 0, testAppServiceAdapter);
 
         server.start();
         TEST_ADAPTER_GRPC_PORT = server.getPort();

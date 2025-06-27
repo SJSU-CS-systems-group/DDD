@@ -14,11 +14,12 @@ import javax.net.ssl.SSLException;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.function.Function;
 
 public class DDDNettyTLS {
-
-    public static Server createGrpcServer(KeyPair serverKeyPair,
+    public static Server createGrpcServer(Executor executor,
+                                          KeyPair serverKeyPair,
                                           X509Certificate serverCert,
                                           int port,
                                           BindableService... services) throws SSLException {
@@ -33,7 +34,7 @@ public class DDDNettyTLS {
         for (var service : services) {
             serviceBuilder.addService(service);
         }
-
+        serviceBuilder.executor(executor);
         serviceBuilder.intercept(new NettyServerCertificateInterceptor());
         return serviceBuilder.build();
     }

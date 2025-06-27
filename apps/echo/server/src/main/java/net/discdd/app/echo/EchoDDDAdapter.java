@@ -7,9 +7,13 @@ import net.discdd.grpc.ExchangeADUsRequest;
 import net.discdd.grpc.ExchangeADUsResponse;
 import net.discdd.grpc.GrpcService;
 import net.discdd.grpc.ServiceAdapterServiceGrpc;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Bean;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.concurrent.Executor;
 
 /*
  * This is just for testing and takes some shortcuts. We track the clientLastADUId in an in-memory hashmap,
@@ -20,6 +24,17 @@ import java.util.LinkedList;
 public class EchoDDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServiceImplBase {
     // this is a quick and dirty implementation of the echo service, so we use an in-memory hashmap
     private final HashMap<String, Long> clientLastADUId = new HashMap<>();
+
+    @Bean
+    @Qualifier("grpcExecutor")
+    public Executor grpcExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(10);
+        executor.setMaxPoolSize(20);
+        executor.setQueueCapacity(100);
+        executor.initialize();
+        return executor;
+    }
 
     @Override
     public void exchangeADUs(ExchangeADUsRequest request, StreamObserver<ExchangeADUsResponse> responseObserver) {

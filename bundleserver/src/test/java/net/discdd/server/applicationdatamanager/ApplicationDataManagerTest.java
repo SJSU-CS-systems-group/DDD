@@ -7,12 +7,14 @@ import net.discdd.server.repository.ClientBundleCountersRepository;
 import net.discdd.server.repository.RegisteredAppAdapterRepository;
 import net.discdd.server.repository.SentAduDetailsRepository;
 import net.discdd.server.repository.entity.RegisteredAppAdapter;
+import net.discdd.server.service.GrpcExecutor;
 import net.discdd.utils.StoreADUs;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
@@ -25,6 +27,7 @@ import java.util.ArrayList;
  * Also, these tests use H2 database for testing
  */
 @DataJpaTest
+@Import({ GrpcExecutor.class })
 public class ApplicationDataManagerTest {
     @TempDir
     static Path tempDir;
