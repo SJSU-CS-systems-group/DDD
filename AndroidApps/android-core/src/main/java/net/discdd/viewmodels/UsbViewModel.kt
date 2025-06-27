@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.discdd.UsbConnectionManager
-import java.util.logging.Logger
 
 data class UsbState(
         val filePermissionGranted: Boolean = false,
@@ -29,7 +28,6 @@ open class UsbViewModel(
         application: Application
 ) : AndroidViewModel(application) {
     private val usbDirName = "ddd_transport"
-    protected val logger: Logger = Logger.getLogger(UsbViewModel::class.java.name)
     protected val storageManager by lazy {
         application.getSystemService(Context.STORAGE_SERVICE) as StorageManager
     }
