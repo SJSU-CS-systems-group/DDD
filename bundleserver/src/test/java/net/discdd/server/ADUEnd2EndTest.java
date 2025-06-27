@@ -54,6 +54,7 @@ public class ADUEnd2EndTest extends End2EndTest {
     static void configureProperties(org.springframework.test.context.DynamicPropertyRegistry registry) {
         registry.add("serviceadapter.revalidate-delay", () -> "10ms");
     }
+
     @Test
     void test1ContextLoads() {}
 
