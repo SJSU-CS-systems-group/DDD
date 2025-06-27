@@ -25,8 +25,8 @@ import java.util.stream.Stream;
 public class UsbFileManager {
     private static final Logger logger = Logger.getLogger(UsbFileManager.class.getName());
     private static final String USB_DIR_NAME = "DDD_transport";
-    private static final String RELATIVE_CLIENT_PATH = "client";
-    private static final String RELATIVE_SERVER_PATH = "server";
+    private static final String RELATIVE_CLIENT_PATH = "toClient";
+    private static final String RELATIVE_SERVER_PATH = "toServer";
     private StorageManager storageManager;
     private TransportPaths transportPaths;
 
