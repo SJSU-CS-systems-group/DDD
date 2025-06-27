@@ -3,7 +3,6 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        jcenter()
         mavenLocal()
         // Warning: this repository is going to shut down soon
     }
