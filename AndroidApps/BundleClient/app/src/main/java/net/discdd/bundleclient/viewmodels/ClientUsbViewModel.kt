@@ -25,8 +25,8 @@ class ClientUsbViewModel(
 
     fun createIfDoesNotExist(parent : DocumentFile, name : String) : DocumentFile {
         var child = parent.findFile(name)
-        if (child?.isDirectory ?: true) {
-            child = parent.createDirectory("server")
+        if (child == null || !child.isDirectory) {
+            child = parent.createDirectory(name)
             logger.log(INFO, "\'$name\' directory has been created")
         } else {
             logger.log(INFO, "\'$name\' directory exists")
