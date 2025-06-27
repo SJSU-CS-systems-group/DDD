@@ -11,12 +11,13 @@ import net.discdd.server.repository.RegisteredAppAdapterRepository;
 import net.discdd.tls.DDDTLSUtil;
 import net.discdd.tls.GrpcSecurity;
 import net.discdd.utils.StoreADUs;
-import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.net.ssl.SSLException;
+import java.net.InetAddress;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.Set;
@@ -47,26 +48,35 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
     private final ConcurrentHashMap<String, AppState> apps = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
     private final Duration dataCheckInterval;
-    private long grpcTimeout = 20_000 /* milliseconds */;
-    @Autowired
-    private GrpcSecurity serverGrpcSecurity;
+    private final Duration revalidateAppSpinDelay;
+    private final long grpcTimeout = 20_000 /* milliseconds */;
+    private final GrpcSecurity serverGrpcSecurity;
 
     BundleServerAduDeliverer(AduStores aduStores,
                              RegisteredAppAdapterRepository registeredAppAdapterRepository,
-                             @Value("${serviceadapter.datacheck.interval}") Duration dataCheckInterval) {
+                             @Value("${serviceadapter.datacheck.interval}") Duration dataCheckInterval,
+                             @Value("${serviceadapter.revalidate-delay:5s}") Duration revalidateAppSpinDelay,
+                             GrpcSecurity serverGrpcSecurity) {
         this.sendFolder = aduStores.getSendADUsStorage();
         this.receiveFolder = aduStores.getReceiveADUsStorage();
         this.registeredAppAdapterRepository = registeredAppAdapterRepository;
         this.dataCheckInterval = dataCheckInterval;
+        this.revalidateAppSpinDelay = revalidateAppSpinDelay;
+        this.serverGrpcSecurity = serverGrpcSecurity;
     }
 
+    private long lastRevalidateAppsMs;
+
     // Synchronized because we want this to be an atomic operation
-    synchronized private void revalidateApps() {
+    synchronized private void revalidateApps(boolean forceRevalidation) {
+        long now = System.currentTimeMillis();
+        if (!forceRevalidation && lastRevalidateAppsMs + revalidateAppSpinDelay.toMillis() > now) return;
+        lastRevalidateAppsMs = now;
         var foundApps = new HashSet<String>();
         registeredAppAdapterRepository.findAll().forEach(appAdapter -> {
             foundApps.add(appAdapter.getAppId());
-            // TODO: we should also check if the location matches
-            if (!apps.containsKey(appAdapter.getAppId())) {
+            var state = apps.get(appAdapter.getAppId());
+            if (state == null || !state.addr.equals(appAdapter.getAddress())) {
                 try {
                     var sslClientContext = GrpcSslContexts.forClient()
                             .keyManager(serverGrpcSecurity.getGrpcKeyPair().getPrivate(),
@@ -83,7 +93,9 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
                     apps.put(appAdapter.getAppId(),
                              new AppState(appAdapter.getAppId(),
                                           Executors.newSingleThreadExecutor(),
-                                          new HashSet<>(),
+                                          // we might be reconnecting, so update the pending clients
+                                          state == null ? new HashSet<>() : state.pendingClients,
+                                          appAdapter.getAddress(),
                                           stub));
                 } catch (SSLException e) {
                     throw new RuntimeException(e);
@@ -100,7 +112,7 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
 
     @PostConstruct
     public void init() {
-        revalidateApps();
+        revalidateApps(false);
         sendFolder.getAllClientApps().forEach(app -> addAppWithPendingData(app.appId(), app.clientId()));
         logger.log(INFO, "Checking for pending data from service adapters every " + dataCheckInterval);
         scheduler.scheduleWithFixedDelay(this::checkServiceAdapters,
@@ -129,7 +141,7 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
 
     private void addAppWithPendingData(String appId, String clientId) {
         // if the app isn't registered, check to see if something changed
-        if (!apps.containsKey(appId)) revalidateApps();
+        if (!apps.containsKey(appId)) revalidateApps(true);
         final var appState = apps.get(appId);
         if (appState == null) {
             logger.log(SEVERE, "No service adapter for " + appId + " things are going to break");
@@ -201,5 +213,6 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
     record AppState(String appId,
                     Executor executor,
                     HashSet<String> pendingClients,
+                    String addr,
                     ServiceAdapterServiceGrpc.ServiceAdapterServiceBlockingStub stub) {}
 }
