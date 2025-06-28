@@ -10,6 +10,7 @@ import net.discdd.grpc.PublicKeyMap;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.tls.DDDNettyTLS;
 import net.discdd.tls.DDDTLSUtil;
+import net.discdd.tls.DDDX509ExtendedTrustManager;
 import net.discdd.tls.GrpcSecurity;
 import net.discdd.transport.GrpcSecurityHolder;
 import net.discdd.transport.TransportToBundleServerManager;
@@ -93,10 +94,11 @@ public class RpcServer {
         };
 
         try {
+            var trustManager = new DDDX509ExtendedTrustManager(false);
             var sslContext = SSLContext.getInstance("TLS");
             sslContext.init(DDDTLSUtil.getKeyManagerFactory(transportGrpcSecurity.getGrpcKeyPair(),
                                                             transportGrpcSecurity.getGrpcCert()).getKeyManagers(),
-                            new TrustManager[] { DDDTLSUtil.trustManager },
+                            new TrustManager[] { trustManager },
                             new SecureRandom());
 
             server = DDDNettyTLS.createGrpcServer(Executors.newCachedThreadPool(),

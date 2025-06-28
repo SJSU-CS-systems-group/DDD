@@ -35,6 +35,7 @@ import net.discdd.model.UncompressedBundle;
 import net.discdd.model.UncompressedPayload;
 import net.discdd.pathutils.ClientPaths;
 import net.discdd.tls.DDDTLSUtil;
+import net.discdd.tls.DDDX509ExtendedTrustManager;
 import net.discdd.utils.AckRecordUtils;
 import net.discdd.utils.BundleUtils;
 import net.discdd.utils.FileUtils;
@@ -372,11 +373,11 @@ public class BundleTransmission {
                                                         String transportAddress,
                                                         int port) throws Exception {
         var sslClientContext = SSLContext.getInstance("TLS");
-        var trustManager = new DDDTLSUtil();
+        var trustManager = new DDDX509ExtendedTrustManager(true);
         sslClientContext.init(DDDTLSUtil.getKeyManagerFactory(bundleSecurity.getClientGrpcSecurity().getGrpcKeyPair(),
                                                               bundleSecurity.getClientGrpcSecurity().getGrpcCert())
                                       .getKeyManagers(),
-                              new TrustManager[] { DDDTLSUtil.trustManager },
+                              new TrustManager[] { trustManager },
                               new SecureRandom());
 
         var channel = OkHttpChannelBuilder.forAddress(transportAddress, port)
