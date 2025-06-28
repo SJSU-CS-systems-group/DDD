@@ -7,6 +7,7 @@ import java.util.concurrent.Callable;
 
 @Command(name = "cli", subcommands = { DecryptBundle.class,
                                        EncryptBundle.class,
+                                       LocalAduSendReceive.class,
                                        SelfSignedCertCreator.class,
                                        JavaKeyCreator.class })
 public class Main implements Callable<Integer> {
