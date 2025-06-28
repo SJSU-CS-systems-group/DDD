@@ -7,7 +7,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
 public class DDDX509ExtendedTrustManager extends X509ExtendedTrustManager {
-    static private void checkCertificate(X509Certificate[] chain, String authType) throws CertificateException {
+    private void checkCertificate(X509Certificate[] chain, String authType) throws CertificateException {
         if (chain == null || chain.length == 0) throw new CertificateException("No certificate present");
         if (chain.length != 1) throw new CertificateException("No chained certificates expected");
         var cert = chain[0];
@@ -21,13 +21,24 @@ public class DDDX509ExtendedTrustManager extends X509ExtendedTrustManager {
         if (!actualCN.equals(expectedCN)) {
             throw new CertificateException("Subject name does not match public key: " + actualCN + " != " + expectedCN);
         }
+        if (checkedCert != null && !cert.equals(checkedCert)) {
+            throw new CertificateException("Certificate does not match previously checked certificate");
+        }
         // all good!
+    }
+
+    private X509Certificate checkedCert = null;
+
+    public X509Certificate getCheckedCert() {
+        return checkedCert;
     }
 
     @Override
     public void checkClientTrusted(X509Certificate[] chain, String authType, Socket socket) throws
             CertificateException {
         checkCertificate(chain, authType);
+        // if we get here, the certificate is valid
+        checkedCert = chain[0];
     }
 
     @Override
