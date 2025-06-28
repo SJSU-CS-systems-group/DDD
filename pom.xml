@@ -2,30 +2,30 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>net.discdd</groupId>
-    <artifactId>DDD</artifactId>
-    <version>1.0-SNAPSHOT</version>
-    <packaging>pom</packaging>
-
     <properties>
         <lombok.version>1.18.32</lombok.version>
         <protobuf-plugin.version>3.4.2</protobuf-plugin.version>
         <!-- careful! this version must be compatible with io.grpc -->
         <protobuf.version>4.31.1</protobuf.version>
         <grpc.version>1.73.0</grpc.version>
-        <spring-boot.version>3.5.3</spring-boot.version>
         <junit.version>5.12.2</junit.version>
     </properties>
 
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.3</version>
+    </parent>
+
+    <groupId>net.discdd</groupId>
+    <artifactId>DDD</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-dependencies</artifactId>
-                <version>${spring-boot.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
+            <!-- grpc-bom protobuf-java protoc-gen-grpc-java are for grpc -->
             <dependency>
                 <groupId>io.grpc</groupId>
                 <artifactId>grpc-bom</artifactId>
@@ -43,6 +43,7 @@
                 <artifactId>protoc-gen-grpc-java</artifactId>
                 <version>${grpc.version}</version>
             </dependency>
+            <!-- junit-bom is for junit 5 -->
             <dependency>
                 <groupId>org.junit</groupId>
                 <artifactId>junit-bom</artifactId>
@@ -62,16 +63,8 @@
     </dependencies>
 
     <build>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>org.springframework.boot</groupId>
-                    <artifactId>spring-boot-maven-plugin</artifactId>
-                    <version>${spring-boot.version}</version>
-                </plugin>
-            </plugins>
-        </pluginManagement>
         <plugins>
+            <!-- os-maven-plugin and protobuf-maven-plugin are needed to compile the .proto files -->
             <plugin>
                 <groupId>kr.motd.maven</groupId>
                 <artifactId>os-maven-plugin</artifactId>
@@ -105,6 +98,7 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- maven-surefire-plugin for junit -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
