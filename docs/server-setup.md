@@ -48,7 +48,7 @@ do that by creating the following file in /etc/cron.daily/certbot:
 /etc/cron.daily/certbot:
 ```bash
 #!/bin/bash
-certbot renew > /home/ddd/cert.renew.log 2>&
+certbot renew > /home/ddd/cert.renew.log 2>&1
 ````
 
 make sure the script is executable:
