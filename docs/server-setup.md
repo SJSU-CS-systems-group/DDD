@@ -51,6 +51,12 @@ do that by creating the following file in /etc/cron.daily/certbot:
 certbot renew > /home/ddd/cert.renew.log 2>&
 ````
 
+make sure the script is executable:
+
+```bash
+sudo chmod +x /etc/cron.daily/certbot
+```
+
 ## setup postfix mail relay
 
 install postfix:
@@ -69,6 +75,8 @@ all incoming mail will be from the k9 server running on the same machine, so we 
 and we don't want to allow external servers to use us as a relay.
 the provider we are using doesn't have PTR records for IPv6 addresses, so we will disable IPv6 in postfix.
 you can change to all if IPv6 works for you.
+
+**NOTE: the 
 
 `/etc/postfix/main.cf`
 ```
@@ -138,12 +146,24 @@ sudo systemctl enable postfix
     ```
 * give the user `ddd` with password `MYSQL_PASSWORD` (make it different from other passwords you use!) access to the mysql database.
     ```
-    # mysql -u root -p
-    MariaDB > CREATE USER 'ddd'@'localhost' IDENTIFIED BY 'MYSQL_PASSWORD';
-    MariaDB > GRANT ALL PRIVILEGES ON *.* TO 'ddd'@'localhost';
-    MariaDB > FLUSH PRIVILEGES;
+    # mysql -u root
+    CREATE USER 'ddd'@'localhost' IDENTIFIED BY 'MYSQL_PASSWORD';
+    GRANT ALL PRIVILEGES ON *.* TO 'ddd'@'localhost';
+    FLUSH PRIVILEGES;
+    create database dtn_server_db;
+    create database k9_adapter;
     ```
-   
+
+## give the ddd user the ability to manage its own systemd services
+
+create the following `99-ddd-services` file in `/etc/sudoers.d/`:
+
+`/etc/sudoers.d/99-ddd-services`:
+```bash
+ddd ALL=(ALL) NOPASSWD: /bin/systemctl restart bundleserver
+ddd ALL=(ALL) NOPASSWD: /bin/systemctl restart k9
+```
+
 ## build the code
 
 ### prerequisites
@@ -202,7 +222,7 @@ mvn install
 
 this will build both the BundleServer and K9 (email) server jar files.
 
-### setup the systemd services
+## setup the systemd services
 
 ### create the systemd service files
 
@@ -245,6 +265,15 @@ AmbientCapabilities=CAP_NET_BIND_SERVICE
 WantedBy=multi-user.target
 ```
 
+***AS ROOT YOU NEED TO ENABLE THESE SERVICES:***
+
+```bash
+sudo systemctl enable /home/ddd/systemd/bundleserver.service
+sudo systemctl enable /home/ddd/systemd/k9.service
+```
+
+***DO NOT START THEM YET, WE NEED TO SET UP THE CONFIGURATION FILES FIRST AND DEPLOY THE CODE.***
+
 ### create the configuration files
 
 `systemd/bundleserver.cfg`:
@@ -267,7 +296,15 @@ smtp.relay.port=2525
 smtp.localPort=25
 ```
 
-# set up the deployment script
+### make the data directories and set up the server keys
+
+```bash
+mkdir -p ~/bundleserver-data/BundleSecurity/Keys/Server
+mkdir -p ~/k9-data
+```
+
+YOU MUST NOW COPY THE SERVER KEYS TO `~/bundleserver-data/BundleSecurity/Keys/Server` HOW YOU GET THOSE KEYS IS OUTSIDE THE SCOPE OF THIS DOCUMENT.
+## set up the deployment script
 
 create a `deploy.sh` script in the `systemd` directory with the following content:
 
@@ -299,4 +336,20 @@ cp ~/git/DDD/apps/k9/server/target/k9-*.jar ~/systemd/k9.jar
 
 sudo systemctl restart k9
 sudo systemctl restart bundleserver
+```
+
+### enable and start the services
+
+run the following commands as ddd to build the code and start the services:
+
+```bash
+/home/ddd/systemd/deploy.sh
+```
+
+### add k9 to the application list
+
+once everything is running, add the k9 application to the list of applications in the BundleServer.
+
+```bash
+ java -jar bundleserver.jar bundleserver.cfg appids update net.discdd.mail 127.0.0.1:9091
 ```
