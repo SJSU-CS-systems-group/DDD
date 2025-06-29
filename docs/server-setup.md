@@ -18,21 +18,128 @@ we need to setup the following DNS records:
 
 * HOST: A canary.74.208.105.43
 * MX: canary.ravlykmail.com MX 0 canary.ravlykmail.com
-* SPF: TXT canary.ravlykmail.com TXT v=spf1 a:ravlykmail.com -all
+* SPF: TXT canary.ravlykmail.com TXT v=spf1 a:canary.ravlykmail.com -all
 * DKIM: TXT mail._domainkey.canary.ravlykmail.com TXT v=DKIM1; h=sha256; k=rsa; p=<base64 encoded public key>
 * DMARC: TXT _dmarc.canary.ravlykmail.com TXT v=DMARC1; p=quarantine; aspf=s; adkim=r
 
+## set up SSL certificates
+
+we need an SSL certificate for `canary.ravlykmail.com`.
+if you know how to create an SSL certificate, you can do it yourself.
+
+here is how to get a free SSL certificate using certbot on ubuntu:
+
+```bash
+sudo apt install certbot
+````
+
+get certificates for the domain (canary.ravlykmail.com in this example):
+
+```bash
+sudo certbot certonly --standalone  -d canary.ravlykmail.com
+cat <<EOF | sudo cron
+````
+
+(if you are running apache or nginx on that port, you need to use a slighly different command.)
+
+you want to make sure the certificate is renewed automatically.
+do that by creating the following file in /etc/cron.daily/certbot:
+
+/etc/cron.daily/certbot:
+```bash
+#!/bin/bash
+certbot renew > /home/ddd/cert.renew.log 2>&
+````
+
+## setup postfix mail relay
+
+install postfix:
+
+```bash
+sudo apt install postfix
+```
+
+configure it as an "internet site" with the system mail name set to `canary.ravlykmail.com`.
+
+edit `/etc/postfix/main.cf` and `/etc/postfix/master.cf` to make the following changes:
+
+the changes to `main.cf` are about configuring TLS, setting the hostname (remember to change canary.ravlykmail.com to your domain name),
+and restricting the interfaces and protocols postfix listens on and uses.
+all incoming mail will be from the k9 server running on the same machine, so we don't need to listen on all interfaces,
+and we don't want to allow external servers to use us as a relay.
+the provider we are using doesn't have PTR records for IPv6 addresses, so we will disable IPv6 in postfix.
+you can change to all if IPv6 works for you.
+
+`/etc/postfix/main.cf`
+```
+@@ -24,8 +24,8 @@ compatibility_level = 3.6
+ 
+ 
+ # TLS parameters
+-smtpd_tls_cert_file=/etc/ssl/certs/ssl-cert-snakeoil.pem
+-smtpd_tls_key_file=/etc/ssl/private/ssl-cert-snakeoil.key
++smtpd_tls_cert_file=/etc/letsencrypt/live/canary.ravlykmail.com/fullchain.pem
++smtpd_tls_key_file=/etc/letsencrypt/live/canary.ravlykmail.com/privkey.pem
+ smtpd_tls_security_level=may
+ 
+ smtp_tls_CApath=/etc/ssl/certs
+@@ -33,15 +33,15 @@ smtp_tls_security_level=may
+ smtp_tls_session_cache_database = btree:${data_directory}/smtp_scache
+ 
+ 
+-smtpd_relay_restrictions = permit_mynetworks permit_sasl_authenticated defer_unauth_destination
+-myhostname = ubuntu
++smtpd_relay_restrictions = permit_mynetworks
++myhostname = canary.ravlykmail.com
+ alias_maps = hash:/etc/aliases
+ alias_database = hash:/etc/aliases
+ myorigin = /etc/mailname
+-mydestination = $myhostname, canary.ravlykmail.com, ubuntu, localhost.localdomain, localhost
++mydestination = $myhostname, canary.ravlykmail.com
+ relayhost = 
+ mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128
+ mailbox_size_limit = 0
+ recipient_delimiter = +
+-inet_interfaces = all
+-inet_protocols = all
++inet_interfaces = loopback-only
++inet_protocols = ipv4
+```
+
+in `master.cf`, we will change the port postfix listens on from 25 to 2525, since k9 will be listening on port 25.
+k9 will then forward the mail to postfix on port 2525 for delivery.
+(k9's configuration file sets this port with the `smtp.relay.port` property.)
+
+`/etc/postfix/master.cf`
+```
+@@ -9,7 +9,7 @@
+ # service type  private unpriv  chroot  wakeup  maxproc command + args
+ #               (yes)   (yes)   (no)    (never) (100)
+ # ==========================================================================
+-smtp      inet  n       -       y       -       -       smtpd
++2525      inet  n       -       y       -       -       smtpd
+ #smtp      inet  n       -       y       -       1       postscreen
+ #smtpd     pass  -       -       y       -       -       smtpd
+ #dnsblog   unix  -       -       y       -       0       dnsblog
+ ```
+
+after making the changes, restart postfix and enable it to start on boot:
+
+```bash
+sudo systemctl restart postfix
+sudo systemctl enable postfix
+```
+
 ## create a ddd user with database access
 
-1. create the user `ddd` with a password of your choice.
+* create the user `ddd` with a password of your choice.
     ```
     adduser --disabled-password --shell /bin/bash --gecos "discdd account" ddd
     ```
-
-1. give the user `ddd` with password `your_password` (make it different from other passwords you use!) access to the mysql database.
+* give the user `ddd` with password `MYSQL_PASSWORD` (make it different from other passwords you use!) access to the mysql database.
     ```
     # mysql -u root -p
-    MariaDB > CREATE USER 'ddd'@'localhost' IDENTIFIED BY 'your_password';
+    MariaDB > CREATE USER 'ddd'@'localhost' IDENTIFIED BY 'MYSQL_PASSWORD';
     MariaDB > GRANT ALL PRIVILEGES ON *.* TO 'ddd'@'localhost';
     MariaDB > FLUSH PRIVILEGES;
     ```
@@ -101,7 +208,7 @@ this will build both the BundleServer and K9 (email) server jar files.
 
 in the ddd home directory directory, create a `systemd` directory with following service files:
 
-systemd/bundleserver.service:
+`systemd/bundleserver.service`:
 ```ini
 [Unit]
 Description=DDD Bundle Server
@@ -118,7 +225,7 @@ StandardError=append:/home/ddd/systemd/bundleserver.log
 WantedBy=multi-user.target
 ```
 
-systemd/k9.service:
+`systemd/k9.service`:
 ```ini
 [Unit]
 Description=K9 Mail Service Adapter
@@ -140,24 +247,56 @@ WantedBy=multi-user.target
 
 ### create the configuration files
 
-systemd/bundleserver.cfg:
+`systemd/bundleserver.cfg`:
 ```properties
 bundle-server.bundle-store-root = /home/ddd/bundleserver-data
 spring.datasource.username = ddd
-spring.datasource.password = <your_password>
+spring.datasource.password = MYSQL_PASSWORD
 serviceadapter.datacheck.interval = 30s
 ```
 
-systemd/k9.cfg:
+`systemd/k9.cfg`:
 ```properties
 spring.datasource.username=ddd
-spring.datasource.password=<your_password>
+spring.datasource.password=MYSQL_PASSWORD
 adapter-server.root-dir=/home/ddd/k9-data
 bundle-server.url=127.0.0.1:7778
-smtp.localDomain=YOUR_MAIL_DOMAIN
+smtp.localDomain=canary.ravlykmail.com
 smtp.relay.host=127.0.0.1
 smtp.relay.port=2525
 smtp.localPort=25
-smtp.tls.cert=/etc/.lego/certificates/YOUR_MAIL_DOMAIN.crt
-smtp.tls.private=/etc/.lego/certificates/YOUR_MAIL_DOMAIN.key
+```
+
+# set up the deployment script
+
+create a `deploy.sh` script in the `systemd` directory with the following content:
+
+`systemd/deploy.sh`:
+```bash
+#!/bin/bash
+set -e
+exec &> ~/deploy.log
+
+# use flock so that we don't have overlapping builds
+exec 200<> ~/deploy.lock
+flock -w 200 200
+
+# Do a fresh clone
+cd ~/git
+rm -rf DDD
+git clone --depth 1 https://github.com/SJSU-CS-systems-group/DDD
+
+# go to the project directory
+cd DDD
+
+# Recompile the project
+mvn clean install -Dmaven.test.skip=true
+
+# copy the files
+cp ~/git/DDD/bundleserver/target/bundleserver-*.jar ~/systemd/bundleserver.jar
+cp ~/git/DDD/apps/k9/server/target/k9-*.jar ~/systemd/k9.jar
+
+
+sudo systemctl restart k9
+sudo systemctl restart bundleserver
 ```
