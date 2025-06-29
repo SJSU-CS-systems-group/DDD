@@ -19,3 +19,8 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+# Ignore missing annotation processor service files
+-dontwarn javax.annotation.processing.**
+-dontwarn com.google.auto.service.processor.**
+-dontwarn reactor.blockhound.integration.**
+-dontwarn io.netty.util.internal.Hidden$NettyBlockHoundIntegration

@@ -1,6 +1,8 @@
 package net.discdd.bundletransport;
 
 import io.grpc.Server;
+import io.grpc.TlsServerCredentials;
+import io.grpc.okhttp.OkHttpServerBuilder;
 import io.grpc.stub.StreamObserver;
 import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
 import net.discdd.grpc.BundleSenderType;
@@ -8,19 +10,15 @@ import net.discdd.grpc.GetRecencyBlobRequest;
 import net.discdd.grpc.GetRecencyBlobResponse;
 import net.discdd.grpc.PublicKeyMap;
 import net.discdd.pathutils.TransportPaths;
-import net.discdd.tls.DDDNettyTLS;
 import net.discdd.tls.DDDTLSUtil;
-import net.discdd.tls.DDDX509ExtendedTrustManager;
 import net.discdd.tls.GrpcSecurity;
 import net.discdd.transport.GrpcSecurityHolder;
 import net.discdd.transport.TransportToBundleServerManager;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
+import javax.net.ssl.KeyManager;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.SecureRandom;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
@@ -94,18 +92,14 @@ public class RpcServer {
         };
 
         try {
-            var trustManager = new DDDX509ExtendedTrustManager(false);
-            var sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(DDDTLSUtil.getKeyManagerFactory(transportGrpcSecurity.getGrpcKeyPair(),
-                                                            transportGrpcSecurity.getGrpcCert()).getKeyManagers(),
-                            new TrustManager[] { trustManager },
-                            new SecureRandom());
-
-            server = DDDNettyTLS.createGrpcServer(Executors.newCachedThreadPool(),
-                                                  transportGrpcSecurity.getGrpcKeyPair(),
-                                                  transportGrpcSecurity.getGrpcCert(),
-                                                  7777,
-                                                  bundleExchangeService);
+            KeyManager[] keyManagers = DDDTLSUtil.getKeyManagerFactory(transportGrpcSecurity.getGrpcKeyPair(),
+                                                                       transportGrpcSecurity.getGrpcCert())
+                    .getKeyManagers();
+            var credentials = TlsServerCredentials.newBuilder().keyManager(keyManagers).build();
+            server = OkHttpServerBuilder.forPort(port, credentials).maxInboundMessageSize(20*1024*1024) // 20 MB;
+                    .addService(bundleExchangeService)
+                    .executor(Executors.newFixedThreadPool(4))
+                    .build();
         } catch (Exception e) {
             logger.log(SEVERE, "TLS communication exceptions ", e);
         }
