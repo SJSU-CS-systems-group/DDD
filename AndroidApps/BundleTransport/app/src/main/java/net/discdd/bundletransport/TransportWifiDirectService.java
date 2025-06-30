@@ -132,8 +132,10 @@ public class TransportWifiDirectService extends Service
                         notificationManager.cancel(1001);
                     }
 
-                    appendToClientLog("No clients connected. Shutting down gRPC server");
-                    stopRpcServer();
+                    // TODO: Disabled shutdown for now as it seems to cause problems with clients reconnecting
+                    //       I'm not sure we need to, it probably uses very little resources when idle.
+                    // appendToClientLog("No clients connected. Shutting down gRPC server");
+                    // stopRpcServer();
                 } else {
                     appendToClientLog(String.format("%d clients connected. Starting gRPC server",
                                                     groupInfo.getClientList().size()));
