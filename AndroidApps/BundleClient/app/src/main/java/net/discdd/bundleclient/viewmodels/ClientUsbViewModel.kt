@@ -9,6 +9,7 @@ import kotlinx.coroutines.launch
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiServiceManager
 import net.discdd.viewmodels.UsbViewModel
+import java.io.File
 import java.io.IOException
 import java.util.logging.Level
 import java.util.logging.Level.INFO
@@ -16,6 +17,7 @@ import java.util.logging.Logger
 
 class ClientUsbViewModel(
     application: Application,
+    private val rootDir: File,
 ) : UsbViewModel(application) {
     private val logger: Logger = Logger.getLogger(UsbViewModel::class.java.name)
     private val bundleTransmission by lazy {
@@ -51,6 +53,40 @@ class ClientUsbViewModel(
         if (targetFile == null) {
             updateMessage("Error creating target file in USB directory", Color.RED)
             return
+        }
+
+        viewModelScope.launch {
+            try {
+                context.contentResolver.openOutputStream(targetFile.uri)?.use { outputStream ->
+                    bundleFile.inputStream().use { inputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
+                }
+
+                logger.log(Level.INFO, "Bundle creation and transfer successful")
+                updateMessage("Bundle created and transferred to USB", Color.GREEN)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                updateMessage("Error creating or transferring bundle: ${e.message}", Color.RED)
+            }
+        }
+    }
+
+    fun usbTransferToClient(context: Context) {
+         */
+        val dddDir = usbDirectory
+        if (!state.value.dddDirectoryExists || dddDir == null || bundleTransmission == null) {
+            updateMessage(
+                context.getString(R.string.cannot_transfer_bundle_usb_not_ready_or_directory_not_found),
+                Color.RED
+            )
+            return
+        }
+        var dddClient = createIfDoesNotExist(dddDir, "toClient")
+        val bundleFiles = dddClient.listFiles()//Path clientDestDir = rootDir.resolve("files/");
+        val clientDestDir = DocumentFile.fromFile(rootDir.resolve(""))
+        for (file in bundleFiles) {
+            val targetFile = clientDestDir.createFile("data/octet", file.name.toString())
         }
 
         viewModelScope.launch {
