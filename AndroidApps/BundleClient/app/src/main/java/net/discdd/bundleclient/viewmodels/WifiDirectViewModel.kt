@@ -1,8 +1,8 @@
 package net.discdd.bundleclient.viewmodels
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.content.IntentFilter
-import android.net.wifi.p2p.WifiP2pGroup
 import android.text.format.DateUtils
 import androidx.lifecycle.viewModelScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -10,12 +10,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import net.discdd.bundleclient.BundleClientServiceBroadcastReceiver
-import net.discdd.bundleclient.BundleClientWifiDirectService
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiServiceManager
+import net.discdd.bundleclient.service.BundleClientService
+import net.discdd.bundleclient.service.BundleClientServiceBroadcastReceiver
 import net.discdd.viewmodels.WifiBannerViewModel
-import java.net.InetAddress
 import java.util.concurrent.CompletableFuture
 import java.util.logging.Logger
 
@@ -32,7 +31,8 @@ data class PeerDevice(
 
 data class WifiDirectState(
     val resultText: String = "",
-    val connectedDeviceText: String = "",
+    val dddWifiEnabled: Boolean = false,
+    val connectedStateText: String = "",
     val discoveryActive: Boolean = false,
     val clientId: String = "Service not running",
     val backgroundExchange: Boolean = false,
@@ -55,11 +55,11 @@ class WifiDirectViewModel(
     val state = _state.asStateFlow()
 
     init {
-        intentFilter.addAction(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_WIFI_EVENT_ACTION)
-        intentFilter.addAction(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_LOG_ACTION)
+        intentFilter.addAction(BundleClientService.NET_DISCDD_BUNDLECLIENT_SERVICE_EVENT_ACTION)
+        intentFilter.addAction(BundleClientService.NET_DISCDD_BUNDLECLIENT_LOG_ACTION)
     }
 
-    fun initialize(serviceReadyFuture: CompletableFuture<BundleClientWifiDirectService>) {
+    fun initialize(serviceReadyFuture: CompletableFuture<BundleClientService>) {
         viewModelScope.launch {
             serviceReadyFuture.thenAccept { service ->
                 _state.update {
@@ -89,6 +89,7 @@ class WifiDirectViewModel(
         _state.update { it.copy(dialogPeer = null) }
     }
 
+    @SuppressLint("MissingPermission")
     fun exchangeMessage(deviceAddress: String) {
         viewModelScope.launch {
             updatePeerExchangeStatus(deviceAddress, true)
@@ -144,9 +145,14 @@ class WifiDirectViewModel(
         }
     }
 
-    fun updateDeliveryStatus() {
-        _state.update {
-            it.copy(discoveryActive = wifiService?.isDiscoveryActive ?: false)
+    fun updateState() {
+        viewModelScope.launch {
+            _state.update {
+                it.copy(discoveryActive = wifiService?.isDiscoveryActive ?: false,
+                    dddWifiEnabled = (wifiService?.dddWifi?.isDddWifiEnabled ?: false),
+                    connectedStateText = wifiService?.dddWifi?.stateDescription ?: context.getString(R.string.not_connected)
+                )
+            }
         }
     }
 
@@ -197,15 +203,6 @@ class WifiDirectViewModel(
         }
     }
 
-    fun updateOwnerAndGroupInfo(groupOwnerAddress: InetAddress?, groupInfo: WifiP2pGroup?) {
-        viewModelScope.launch {
-            val ownerNameAndAddress = context.getString(
-                if (groupInfo?.owner == null) R.string.not_connected
-                else R.string.connected_to_transport
-            )
-            _state.update { it.copy(connectedDeviceText = ownerNameAndAddress) }
-        }
-    }
 
     fun discoverPeers() {
         viewModelScope.launch {
@@ -213,7 +210,7 @@ class WifiDirectViewModel(
         }
     }
 
-    fun getWifiBgService(): BundleClientWifiDirectService? {
+    fun getWifiBgService(): BundleClientService? {
         return wifiService
     }
 

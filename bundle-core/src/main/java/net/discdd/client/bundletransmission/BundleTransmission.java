@@ -369,9 +369,9 @@ public class BundleTransmission {
      * WHEN TALKING TO A DEVICE.
      */
     public BundleExchangeCounts doExchangeWithTransport(String deviceAddress,
-                                                        String deviceDeviceName,
                                                         String transportAddress,
-                                                        int port) throws Exception {
+                                                        int port,
+                                                        boolean connectingToTransport) throws Exception {
         var sslClientContext = SSLContext.getInstance("TLS");
         var trustManager = new DDDX509ExtendedTrustManager(true);
         sslClientContext.init(DDDTLSUtil.getKeyManagerFactory(bundleSecurity.getClientGrpcSecurity().getGrpcKeyPair(),
@@ -413,12 +413,12 @@ public class BundleTransmission {
                                                                                                     .getGrpcKeyPair()
                                                                                                     .getPublic())))
                         .build();
-                var bundlesDownloaded = deviceDeviceName.equals("BundleServer") ?
+                var bundlesDownloaded = connectingToTransport ?
+                                        downloadBundles(bundleRequests, BundleSenderType.CLIENT, blockingStub, null) :
                                         downloadBundles(bundleRequests,
                                                         BundleSenderType.CLIENT,
                                                         blockingStub,
-                                                        publicKeyMap) :
-                                        downloadBundles(bundleRequests, BundleSenderType.CLIENT, blockingStub, null);
+                                                        publicKeyMap);
 
                 try {
                     if (bundlesDownloaded == null) {

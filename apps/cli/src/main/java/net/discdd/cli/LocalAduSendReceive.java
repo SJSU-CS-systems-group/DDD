@@ -1,6 +1,5 @@
 package net.discdd.cli;
 
-import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.client.bundletransmission.BundleTransmission;
 import net.discdd.model.ADU;
 import net.discdd.pathutils.ClientPaths;
@@ -124,9 +123,9 @@ public class LocalAduSendReceive extends StdOutMixin {
             out().println("Received ADU: " + adu);
         });
         var bundleExchangeCounts = bundleTransmission.doExchangeWithTransport("XX:XX:XX:XX:XX:XX",
-                                                                              "BundleServer",
                                                                               serverAddress.getHostName(),
-                                                                              serverAddress.getPort());
+                                                                              serverAddress.getPort(),
+                                                                              false);
         out().printf("Sent %s, received %s%n",
                      bundleExchangeCounts.downloadStatus(),
                      bundleExchangeCounts.uploadStatus());

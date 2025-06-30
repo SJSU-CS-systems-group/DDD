@@ -3,20 +3,21 @@ package net.discdd.bundleclient
 import android.content.ComponentName
 import android.content.ServiceConnection
 import android.os.IBinder
+import net.discdd.bundleclient.service.BundleClientService
 import java.util.concurrent.CompletableFuture
 import java.util.logging.Logger
 
 object WifiServiceManager {
     private val logger = Logger.getLogger(WifiServiceManager::class.java.name)
-    private var _wifiBgService: BundleClientWifiDirectService? = null
+    private var _wifiBgService: BundleClientService? = null
 
-    val serviceReady = CompletableFuture<BundleClientWifiDirectService>()
+    val serviceReady = CompletableFuture<BundleClientService>()
     private lateinit var connection: ServiceConnection
 
     fun initializeConnection(activity: BundleClientActivity) {
          connection = object : ServiceConnection {
             override fun onServiceConnected(className: ComponentName, service: IBinder) {
-                val binder = service as BundleClientWifiDirectService.BundleClientWifiDirectServiceBinder
+                val binder = service as BundleClientService.BundleClientWifiDirectServiceBinder
                 setService(binder.service)
                 serviceReady.complete(binder.service)
             }
@@ -27,7 +28,7 @@ object WifiServiceManager {
     }
 
 
-    fun setService(service: BundleClientWifiDirectService?) {
+    fun setService(service: BundleClientService?) {
         logger.info("Setting WifiService reference: ${service != null}")
         _wifiBgService = service
     }
@@ -37,7 +38,7 @@ object WifiServiceManager {
         _wifiBgService = null
     }
 
-    fun getService(): BundleClientWifiDirectService? {
+    fun getService(): BundleClientService? {
         return _wifiBgService
     }
 

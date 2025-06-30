@@ -16,7 +16,7 @@ import android.os.Binder;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import net.discdd.bundleclient.BundleClientWifiDirectService;
+import net.discdd.bundleclient.service.BundleClientService;
 import net.discdd.client.bundlesecurity.ClientSecurity;
 import net.discdd.utils.StoreADUs;
 
@@ -138,7 +138,7 @@ public class MessageProvider extends ContentProvider {
             logger.log(INFO, format("%s inserting: %s bytes, at %s, %s is finished", appName, data.length, offset, finished));
             var rspUri = fromFile(sendADUsStorage.addADU(null, appName, data,
                                                    aduId == null ? -1 : aduId, offset == null ? 0 : offset, finished));
-            var service = BundleClientWifiDirectService.instance;
+            var service = BundleClientService.instance;
             if (service != null) {
                 service.notifyNewAdu();
             }
