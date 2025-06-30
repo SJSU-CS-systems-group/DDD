@@ -96,10 +96,8 @@ public class RpcServer {
                                                                        transportGrpcSecurity.getGrpcCert())
                     .getKeyManagers();
             var credentials = TlsServerCredentials.newBuilder().keyManager(keyManagers).build();
-            server = OkHttpServerBuilder.forPort(port, credentials).maxInboundMessageSize(20*1024*1024) // 20 MB;
-                    .addService(bundleExchangeService)
-                    .executor(Executors.newFixedThreadPool(4))
-                    .build();
+            server = OkHttpServerBuilder.forPort(port, credentials).maxInboundMessageSize(20 * 1024 * 1024) // 20 MB;
+                    .addService(bundleExchangeService).executor(Executors.newFixedThreadPool(4)).build();
         } catch (Exception e) {
             logger.log(SEVERE, "TLS communication exceptions ", e);
         }

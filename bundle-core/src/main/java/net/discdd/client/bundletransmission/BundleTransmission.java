@@ -376,9 +376,7 @@ public class BundleTransmission {
         var trustManager = new DDDX509ExtendedTrustManager(true);
         sslClientContext.init(DDDTLSUtil.getKeyManagerFactory(bundleSecurity.getClientGrpcSecurity().getGrpcKeyPair(),
                                                               bundleSecurity.getClientGrpcSecurity().getGrpcCert())
-                                      .getKeyManagers(),
-                              new TrustManager[] { trustManager },
-                              new SecureRandom());
+                                      .getKeyManagers(), new TrustManager[] { trustManager }, new SecureRandom());
 
         var channel = OkHttpChannelBuilder.forAddress(transportAddress, port)
                 .hostnameVerifier((host, session) -> true)

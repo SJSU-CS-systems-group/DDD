@@ -20,6 +20,7 @@ public class DDDX509ExtendedTrustManager extends X509ExtendedTrustManager {
     public DDDX509ExtendedTrustManager(boolean singleCert) {
         this.singleCert = singleCert;
     }
+
     private void checkCertificate(X509Certificate[] chain, String authType) throws CertificateException {
         if (chain == null || chain.length == 0) throw new CertificateException("No certificate present");
         if (chain.length != 1) throw new CertificateException("No chained certificates expected");
