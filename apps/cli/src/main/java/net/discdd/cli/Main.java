@@ -5,6 +5,7 @@ import picocli.CommandLine.Command;
 
 @Command(name = "cli", subcommands = { DecryptBundle.class,
                                        EncryptBundle.class,
+                                       LocalAduSendReceive.class,
                                        SelfSignedCertCreator.class,
                                        JavaKeyCreator.class }, mixinStandardHelpOptions = true)
 public class Main {
