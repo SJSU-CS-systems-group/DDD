@@ -221,7 +221,7 @@ public class EmailService implements ApplicationRunner {
                 var from = stripEmailAddress(mailFrom.getPath());
 
                 // No TLS private key, so we assume an SMTP proxy is going to send us a proxy command
-                var ipAddress = tlsPrivate == null ?
+                var ipAddress = tlsPrivate == null && session.getProperty(ProxyCommand.SESSION_CLIENTIP_PROPERTY) != null ?
                                 (String) session.getProperty(ProxyCommand.SESSION_CLIENTIP_PROPERTY) :
                                 session.getRemoteAddress().getAddress().getHostAddress();
 
