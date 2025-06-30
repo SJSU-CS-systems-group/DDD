@@ -11,15 +11,19 @@ import net.discdd.wifidirect.WifiDirectManager;
 import net.discdd.wifidirect.WifiDirectStateListener;
 
 import java.net.InetAddress;
-import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class DDDWifiDirect implements DDDWifi, WifiDirectStateListener {
     private static final Logger logger = Logger.getLogger(DDDWifiDirect.class.getName());
     final private WifiDirectManager wifiDirectManager;
     final private BundleClientService bundleClientService;
+    private final Map<String, DDDWifiDirectDevice> discoveredDevices = new HashMap<>();
 
     public DDDWifiDirect(BundleClientService bundleClientService) {
         this.bundleClientService = bundleClientService;
@@ -71,8 +75,35 @@ public class DDDWifiDirect implements DDDWifi, WifiDirectStateListener {
     }
 
     @Override
-    public List<DDDWifiDevice> listDevices() {
-        return Collections.emptyList();
+    synchronized public List<DDDWifiDevice> listDevices() {
+        long now = System.currentTimeMillis();
+        // we are going prune this list until we have just the ones to delete
+        var devicesToRemove = new HashSet<String>();
+        devicesToRemove.addAll(discoveredDevices.keySet());
+
+        wifiDirectManager.getPeerList().stream().filter(d -> {
+            if (devicesToRemove.remove(d.deviceAddress)) {
+                // this is an existing device, we update it
+                discoveredDevices.get(d.deviceAddress).markSeen(now);
+                return false; // do not add it again
+            } else {
+                return true; // this is a new device, we will add it
+            }
+        }).forEach(d -> {
+            // create a new DDDWifiDirectDevice and add it to the map
+            var dddDevice = new DDDWifiDirectDevice(d, now);
+            discoveredDevices.put(d.deviceAddress, dddDevice);
+        });
+
+        devicesToRemove.forEach(n -> {
+            var device = discoveredDevices.get(n);
+            if (device.getLastSeen() + 10000 < now) {
+                // this device has not been seen for more than 10 seconds, we can remove it
+                discoveredDevices.remove(n);
+            }
+        });
+
+        return discoveredDevices.values().stream().collect(Collectors.toUnmodifiableList());
     }
 
     @Override

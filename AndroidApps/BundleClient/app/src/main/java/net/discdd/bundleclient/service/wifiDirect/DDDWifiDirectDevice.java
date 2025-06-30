@@ -10,8 +10,19 @@ class DDDWifiDirectDevice implements DDDWifiDevice {
     final public WifiP2pDevice wifiP2pDevice;
     private List<InetAddress> addresses = List.of();
 
-    public DDDWifiDirectDevice(WifiP2pDevice wifiP2pDevice) {
+    private long lastSeen;
+
+    public DDDWifiDirectDevice(WifiP2pDevice wifiP2pDevice, long lastSeen) {
         this.wifiP2pDevice = wifiP2pDevice;
+        markSeen(lastSeen);
+    }
+
+    public void markSeen(long time) {
+        this.lastSeen = time;
+    }
+
+    public long getLastSeen() {
+        return lastSeen;
     }
 
     @Override
