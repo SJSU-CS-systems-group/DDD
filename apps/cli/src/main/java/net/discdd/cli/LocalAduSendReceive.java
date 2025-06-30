@@ -46,7 +46,8 @@ public class LocalAduSendReceive extends StdOutMixin {
         if (!missing.isEmpty()) {
             throw new ParameterException(cmd(),
                                          format("Server key files not found under %s: %s",
-                                                sourceServerKeyPath, String.join(",", missing)));
+                                                sourceServerKeyPath,
+                                                String.join(",", missing)));
         }
         var serverKeys = rootPath.resolve(Path.of("BundleSecurity", "Server_Keys"));
         try {
@@ -57,17 +58,20 @@ public class LocalAduSendReceive extends StdOutMixin {
                                          e);
         }
 
-            try {
-                Files.createDirectories(serverKeys);
-                Files.copy(sourceServerKeyPath.resolve(SERVER_IDENTITY_KEY),
-                           serverKeys.resolve(SERVER_IDENTITY_KEY), StandardCopyOption.REPLACE_EXISTING);
-                Files.copy(sourceServerKeyPath.resolve(SERVER_SIGNED_PRE_KEY),
-                           serverKeys.resolve(SERVER_SIGNED_PRE_KEY), StandardCopyOption.REPLACE_EXISTING);
-                Files.copy(sourceServerKeyPath.resolve(SERVER_RATCHET_KEY),
-                           serverKeys.resolve(SERVER_RATCHET_KEY), StandardCopyOption.REPLACE_EXISTING);
-            } catch (IOException | SecurityException e) {
-                throw new ParameterException(cmd(), "Failed to copy server key: " + e.getLocalizedMessage(), e);
-            }
+        try {
+            Files.createDirectories(serverKeys);
+            Files.copy(sourceServerKeyPath.resolve(SERVER_IDENTITY_KEY),
+                       serverKeys.resolve(SERVER_IDENTITY_KEY),
+                       StandardCopyOption.REPLACE_EXISTING);
+            Files.copy(sourceServerKeyPath.resolve(SERVER_SIGNED_PRE_KEY),
+                       serverKeys.resolve(SERVER_SIGNED_PRE_KEY),
+                       StandardCopyOption.REPLACE_EXISTING);
+            Files.copy(sourceServerKeyPath.resolve(SERVER_RATCHET_KEY),
+                       serverKeys.resolve(SERVER_RATCHET_KEY),
+                       StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException | SecurityException e) {
+            throw new ParameterException(cmd(), "Failed to copy server key: " + e.getLocalizedMessage(), e);
+        }
         try {
             Files.writeString(getServerAddressPath(rootPath), serverAddress);
         } catch (IOException e) {

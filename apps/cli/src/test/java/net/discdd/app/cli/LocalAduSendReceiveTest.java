@@ -17,11 +17,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-
 public class LocalAduSendReceiveTest {
     //NOTE!!! we assume a server is running on localhost:7778
     @TempDir
     private static Path serverKeysPath;
+
     @BeforeAll
     public static void setupServerKeys() {
         for (var keyfile : List.of(SecurityUtils.SERVER_IDENTITY_KEY,
@@ -44,7 +44,8 @@ public class LocalAduSendReceiveTest {
         var mydir = tempDir.resolve("mydir");
         var result = clirun(new Main(), "bc", "exchange", mydir.toString());
         Assertions.assertEquals(2, result.exitCode);
-        Assertions.assertTrue(result.err.contains("Problem reading"), "Expected 'Problem reading' in error, got: " + result.err);
+        Assertions.assertTrue(result.err.contains("Problem reading"),
+                              "Expected 'Problem reading' in error, got: " + result.err);
 
         try {
             new Socket("localhost", 7778).close();
@@ -65,6 +66,7 @@ public class LocalAduSendReceiveTest {
         Assertions.assertEquals(0, result.exitCode);
         Assertions.assertTrue(result.out.contains("complete"), "Expected 'complete' in output, got: " + result.out);
     }
+
     private static TestResult clirun(Object command, String... args) {
         var commandLine = new CommandLine(command);
         var out = new ByteArrayOutputStream();
