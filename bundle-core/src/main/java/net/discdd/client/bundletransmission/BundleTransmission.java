@@ -35,7 +35,7 @@ import net.discdd.model.UncompressedBundle;
 import net.discdd.model.UncompressedPayload;
 import net.discdd.pathutils.ClientPaths;
 import net.discdd.tls.DDDTLSUtil;
-import net.discdd.tls.NettyClientCertificateInterceptor;
+import net.discdd.tls.DDDX509ExtendedTrustManager;
 import net.discdd.utils.AckRecordUtils;
 import net.discdd.utils.BundleUtils;
 import net.discdd.utils.FileUtils;
@@ -63,11 +63,9 @@ import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -375,23 +373,18 @@ public class BundleTransmission {
                                                         String transportAddress,
                                                         int port) throws Exception {
         var sslClientContext = SSLContext.getInstance("TLS");
+        var trustManager = new DDDX509ExtendedTrustManager(true);
         sslClientContext.init(DDDTLSUtil.getKeyManagerFactory(bundleSecurity.getClientGrpcSecurity().getGrpcKeyPair(),
                                                               bundleSecurity.getClientGrpcSecurity().getGrpcCert())
-                                      .getKeyManagers(),
-                              new TrustManager[] { DDDTLSUtil.trustManager },
-                              new SecureRandom());
+                                      .getKeyManagers(), new TrustManager[] { trustManager }, new SecureRandom());
 
         var channel = OkHttpChannelBuilder.forAddress(transportAddress, port)
                 .hostnameVerifier((host, session) -> true)
                 .useTransportSecurity()
                 .sslSocketFactory(sslClientContext.getSocketFactory())
-                .intercept(new NettyClientCertificateInterceptor())
                 .build();
 
         var blockingStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
-
-        var certCompletion = new CompletableFuture<X509Certificate>();
-        blockingStub = NettyClientCertificateInterceptor.createServerCertificateOption(blockingStub, certCompletion);
 
         Statuses uploadStatus = Statuses.FAILED;
         Statuses downloadStatus = Statuses.FAILED;
@@ -441,18 +434,13 @@ public class BundleTransmission {
                 }
 
                 var stub = BundleExchangeServiceGrpc.newStub(channel);
-                stub = NettyClientCertificateInterceptor.createServerCertificateOption(stub, certCompletion);
                 uploadStatus = uploadBundle(stub);
 
             }
         } catch (Exception e) {
             logger.log(WARNING, "Exchange failed", e);
         }
-        try {
-            channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            logger.log(SEVERE, "could not shutdown channel, error: " + e.getMessage() + ", cause: " + e.getCause());
-        }
+        channel.shutdownNow();
         return new BundleExchangeCounts(uploadStatus, downloadStatus);
     }
 

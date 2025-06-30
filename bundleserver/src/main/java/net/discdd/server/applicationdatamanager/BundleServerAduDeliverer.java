@@ -9,6 +9,7 @@ import net.discdd.grpc.PendingDataCheckRequest;
 import net.discdd.grpc.ServiceAdapterServiceGrpc;
 import net.discdd.server.repository.RegisteredAppAdapterRepository;
 import net.discdd.tls.DDDTLSUtil;
+import net.discdd.tls.DDDX509ExtendedTrustManager;
 import net.discdd.tls.GrpcSecurity;
 import net.discdd.utils.StoreADUs;
 
@@ -81,7 +82,7 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
                     var sslClientContext = GrpcSslContexts.forClient()
                             .keyManager(serverGrpcSecurity.getGrpcKeyPair().getPrivate(),
                                         serverGrpcSecurity.getGrpcCert())
-                            .trustManager(DDDTLSUtil.trustManager)
+                            .trustManager(new DDDX509ExtendedTrustManager(true))
                             .build();
                     var channel = NettyChannelBuilder.forTarget(appAdapter.getAddress())
                             .useTransportSecurity()

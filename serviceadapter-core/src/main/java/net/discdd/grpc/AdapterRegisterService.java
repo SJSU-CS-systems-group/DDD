@@ -5,6 +5,7 @@ import io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.NettyChannelBuilder;
 import io.netty.handler.ssl.SslContext;
 import net.discdd.tls.DDDTLSUtil;
+import net.discdd.tls.DDDX509ExtendedTrustManager;
 import net.discdd.tls.GrpcSecurity;
 import net.discdd.tls.NettyClientCertificateInterceptor;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,7 +42,7 @@ public class AdapterRegisterService {
         try {
             sslClientContext = GrpcSslContexts.forClient()
                     .keyManager(grpcSecurity.getGrpcKeyPair().getPrivate(), grpcSecurity.getGrpcCert())
-                    .trustManager(DDDTLSUtil.trustManager)
+                    .trustManager(new DDDX509ExtendedTrustManager(true))
                     .build();
         } catch (SSLException e) {
             logger.log(SEVERE, "Could not create SSL context: " + e.getMessage());

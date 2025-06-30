@@ -8,9 +8,6 @@ import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder;
 
 import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.TrustManagerFactory;
-import javax.net.ssl.X509ExtendedTrustManager;
 import javax.security.auth.x500.X500Principal;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -23,7 +20,6 @@ import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
-import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PublicKey;
@@ -41,10 +37,6 @@ import java.util.Base64;
 import java.util.Date;
 
 public class DDDTLSUtil {
-    private static final String CERT_HEADER = "-----BEGIN CERTIFICATE-----";
-    private static final String CERT_FOOTER = "-----END CERTIFICATE-----";
-    public static final X509ExtendedTrustManager trustManager = new DDDX509ExtendedTrustManager();
-
     public static String publicKeyToName(PublicKey key) {
         var edKey = (ECPublicKey) key;
         return new String(Base64.getUrlEncoder().encode(edKey.getEncoded())).replace("=", "");
@@ -98,21 +90,6 @@ public class DDDTLSUtil {
                                                 csr.getSubject(),
                                                 csr.getSubjectPublicKeyInfo()).build(csrSigner);
         return new JcaX509CertificateConverter().getCertificate(cert);
-    }
-
-    public static TrustManager[] getTrustManager(X509Certificate cert) throws NoSuchAlgorithmException,
-            KeyStoreException, CertificateException, IOException {
-        X500Principal principal = new X500Principal("CN=" + publicKeyToName(cert.getPublicKey()));
-        var keyStore = KeyStore.getInstance("PKCS12");
-        keyStore.load(null, new char[0]);
-        keyStore.setCertificateEntry(principal.getName(), cert);
-
-        TrustManagerFactory trustManagerFactory =
-                TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-
-        trustManagerFactory.init(keyStore);
-
-        return new TrustManager[] { trustManagerFactory.getTrustManagers()[0], trustManager };
     }
 
     public static KeyManagerFactory getKeyManagerFactory(KeyPair keyPair, X509Certificate cert) throws Exception {

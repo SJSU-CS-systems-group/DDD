@@ -26,7 +26,7 @@ public class DDDNettyTLS {
         var sslServerContext =
                 GrpcSslContexts.configure(SslContextBuilder.forServer(serverKeyPair.getPrivate(), serverCert))
                         .clientAuth(ClientAuth.REQUIRE)
-                        .trustManager(DDDTLSUtil.trustManager)
+                        .trustManager(new DDDX509ExtendedTrustManager(false))
                         .build();
         var serviceBuilder = NettyServerBuilder.forPort(port)
                 .sslContext(sslServerContext)
@@ -49,7 +49,7 @@ public class DDDNettyTLS {
             SSLException {
         var sslClientContext = GrpcSslContexts.forClient()
                 .keyManager(clientKeyPair.getPrivate(), clientCert)
-                .trustManager(DDDTLSUtil.trustManager)
+                .trustManager(new DDDX509ExtendedTrustManager(true))
                 .build();
         var channel = NettyChannelBuilder.forAddress(host, port)
                 .useTransportSecurity()
@@ -69,7 +69,7 @@ public class DDDNettyTLS {
                                                    int port) throws SSLException {
         var sslClientContext = GrpcSslContexts.forClient()
                 .keyManager(clientKeyPair.getPrivate(), clientCert)
-                .trustManager(DDDTLSUtil.trustManager)
+                .trustManager(new DDDX509ExtendedTrustManager(true))
                 .build();
 
         return NettyChannelBuilder.forAddress(host, port).useTransportSecurity().sslContext(sslClientContext).build();
