@@ -95,9 +95,8 @@ you can change to all if IPv6 works for you.
  smtp_tls_session_cache_database = btree:${data_directory}/smtp_scache
  
  
--smtpd_relay_restrictions = permit_mynetworks permit_sasl_authenticated defer_unauth_destination
+smtpd_relay_restrictions = permit_mynetworks permit_sasl_authenticated defer_unauth_destination
 -myhostname = ubuntu
-+smtpd_relay_restrictions = permit_mynetworks
 +myhostname = canary.ravlykmail.com
  alias_maps = hash:/etc/aliases
  alias_database = hash:/etc/aliases
@@ -162,6 +161,15 @@ create the following `99-ddd-services` file in `/etc/sudoers.d/`:
 ```bash
 ddd ALL=(ALL) NOPASSWD: /bin/systemctl restart bundleserver
 ddd ALL=(ALL) NOPASSWD: /bin/systemctl restart k9
+```
+
+## give the ddd user access to the SSL certificates
+
+we take advantage of the ddd group to grant ddd access to the SSL certificates created by certbot.
+
+```bash
+chgrp ddd $(find /etc/letsencrypt/archive/ /etc/letsencrypt/live)
+chmod g+x $(find /etc/letsencrypt/archive/ /etc/letsencrypt/live --type d)
 ```
 
 ## build the code
@@ -294,7 +302,12 @@ smtp.localDomain=canary.ravlykmail.com
 smtp.relay.host=127.0.0.1
 smtp.relay.port=2525
 smtp.localPort=25
+smtp.tls.cert=/etc/letsencrypt/live/canary.ravlykmail.com/fullchain.pem
+smtp.tls.private=/etc/letsencrypt/live/canary.ravlykmail.com/privkey.pem
+smtp.dkim.keyFile=/home/ddd/systemd/dkim.private
 ```
+
+copy your DKIM private key to `/home/ddd/systemd/dkim.private`.
 
 ### make the data directories and set up the server keys
 
