@@ -19,7 +19,9 @@ import java.util.logging.Logger
 class ClientUsbViewModel(
     application: Application,
 ) : UsbViewModel(application) {
-    private val logger: Logger = Logger.getLogger(UsbViewModel::class.java.name)
+    companion object {
+        private val logger: Logger = Logger.getLogger(UsbViewModel::class.java.name)
+    }
     lateinit var rootDir: File
     private val bundleTransmission by lazy {
         val wifiBgService = WifiServiceManager.getService()
@@ -80,30 +82,15 @@ class ClientUsbViewModel(
         val toClientDir = createIfDoesNotExist(usbDirectory!!, "toClient")
         val devicePath: Path =
             rootDir.toPath().getParent().resolve("BundleTransmission/bundle-generation/received-processing")
-        logger.log(INFO, "HERE IS MY DEVICE PATH: " + devicePath)
-//        if (!devicePath.exists()) {
-//            if (!rootDir.resolve("BundleTransmission/bundle-generation").exists()) {
-//                if (!rootDir.resolve("BundleTransmission").exists()) {
-//                    if (!rootDir.exists()) {
-//                        logger.log(Level.WARNING, "root dir is not being recognized!!!")
-//                    }
-//                    DocumentFile.fromFile(rootDir).createFile("data/octet","BundleTransmission")
-//                }
-//                DocumentFile.fromFile(rootDir).createFile("data/octet","BundleTransmission")
-//            }
-//            DocumentFile.fromFile(rootDir).createFile("data/octet","BundleTransmission")
-//        }
         val deviceDir = DocumentFile.fromFile(devicePath.toFile())
         val filesToTransfer = toClientDir.listFiles()
         if (filesToTransfer.isEmpty()) {
             updateMessage("No files found in 'toClient' directory on USB", Color.YELLOW)
             return
         }
-
         viewModelScope.launch { //coroutine for I/O-bound work
             try {
                 for (file in filesToTransfer) {
-                    //deviceDir.creat
                     val targetFile = deviceDir.createFile("data/octet", file.name!!)
                     if (targetFile == null) {
                         logger.log(Level.WARNING, "Failed to create file '${file.name}' in device received-processing directory")
