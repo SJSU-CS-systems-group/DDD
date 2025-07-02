@@ -8,8 +8,6 @@ package net.discdd.client.bundletransmission;
 public interface TransportDevice {
     String getDescription();
 
-
-
     static TransportDevice SERVER_DEVICE = new FakeDevice("Server");
     static TransportDevice FAKE_DEVICE = new FakeDevice("Fake");
 }

@@ -350,7 +350,8 @@ public class BundleTransmission {
                 return true;
             } catch (IOException e) {
                 logger.log(SEVERE,
-                           "Try: " + tries + " | Error - " + transportAddress + " message: " + e.getMessage() + ", cause: " + e.getCause());
+                           "Try: " + tries + " | Error - " + transportAddress + " message: " + e.getMessage() +
+                                   ", cause: " + e.getCause());
                 try {
                     Thread.sleep(500);
                 } catch (Exception ex) {
@@ -390,7 +391,8 @@ public class BundleTransmission {
         try {
             if (isServerRunning(transportAddress, port)) {
                 var recencyBlobRequest = GetRecencyBlobRequest.newBuilder().build();
-                var blobRecencyReply = blockingStub.withDeadlineAfter(GRPC_SHORT_TIMEOUT_MS, MILLISECONDS).getRecencyBlob(recencyBlobRequest);
+                var blobRecencyReply = blockingStub.withDeadlineAfter(GRPC_SHORT_TIMEOUT_MS, MILLISECONDS)
+                        .getRecencyBlob(recencyBlobRequest);
                 var recencyBlob = blobRecencyReply.getRecencyBlob();
                 if (!processRecencyBlob(device, blobRecencyReply)) {
                     logger.log(SEVERE,
@@ -432,7 +434,8 @@ public class BundleTransmission {
                     logger.log(WARNING, "Processing received bundle failed", e);
                 }
 
-                var stub = BundleExchangeServiceGrpc.newStub(channel).withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, MILLISECONDS);
+                var stub = BundleExchangeServiceGrpc.newStub(channel)
+                        .withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, MILLISECONDS);
                 uploadStatus = uploadBundle(stub);
 
             }
@@ -450,8 +453,7 @@ public class BundleTransmission {
         var bundleUploadResponseObserver = new BundleUploadResponseObserver();
 
         StreamObserver<BundleUploadRequest> uploadRequestStreamObserver =
-                stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, MILLISECONDS)
-                        .uploadBundle(bundleUploadResponseObserver);
+                stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, MILLISECONDS).uploadBundle(bundleUploadResponseObserver);
 
         uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder()
                                                    .setBundleId(EncryptedBundleId.newBuilder()
