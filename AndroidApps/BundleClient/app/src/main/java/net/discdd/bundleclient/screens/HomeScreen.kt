@@ -119,6 +119,7 @@ fun HomeScreen(
                 UsbScreen(usbViewModel) { viewModel ->
                     ClientUsbComponent(viewModel) {
                         viewModel.transferBundleToUsb(currentContext)
+                        viewModel.usbTransferToClient(currentContext)
                     }
                 }
             }
