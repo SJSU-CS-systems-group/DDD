@@ -11,7 +11,6 @@ import static net.discdd.wifidirect.WifiDirectManager.WifiDirectEventType.WIFI_D
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
-import static net.discdd.wifidirect.WifiDirectManager.WifiDirectEventType.WIFI_DIRECT_MANAGER_SHUTDOWN;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -79,7 +78,7 @@ public class WifiDirectManager {
         } else {
             this.channel = this.manager.initialize(this.context,
                                                    this.context.getMainLooper(),
-                                                   () -> notifyActionToListeners(WIFI_DIRECT_MANAGER_SHUTDOWN,
+                                                   () -> notifyActionToListeners(WIFI_DIRECT_MANAGER_INITIALIZED,
                                                                                  "Channel disconnected"));
             if (channel == null) {
                 logger.log(WARNING, "Cannot initialize Wi-Fi Direct");
@@ -208,14 +207,6 @@ public class WifiDirectManager {
         return cFuture;
     }
 
-    public CompletableFuture<InetAddress> requestConnectionInfo() {
-        var cFuture = new CompletableFuture<InetAddress>();
-        this.manager.requestConnectionInfo(channel, ci -> {
-            cFuture.complete(ci.groupOwnerAddress);
-        });
-        return cFuture;
-    }
-
     @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES })
     public CompletableFuture<WifiP2pGroup> connect(WifiP2pDevice device) {
         CompletableFuture<WifiP2pGroup> completableFuture = new CompletableFuture<>();
@@ -317,7 +308,6 @@ public class WifiDirectManager {
 
     public enum WifiDirectEventType {
         WIFI_DIRECT_MANAGER_INITIALIZED,
-        WIFI_DIRECT_MANAGER_SHUTDOWN,
         WIFI_DIRECT_MANAGER_PEERS_CHANGED,
         WIFI_DIRECT_MANAGER_CONNECTION_CHANGED,
         WIFI_DIRECT_MANAGER_GROUP_INFO_CHANGED,
@@ -378,12 +368,11 @@ public class WifiDirectManager {
                             manager.requestDiscoveryState(channel,
                                                           state1 -> discoveryActive =
                                                                   state1 == WifiP2pManager.WIFI_P2P_DISCOVERY_STARTED);
-                            notifyActionToListeners(WIFI_DIRECT_MANAGER_INITIALIZED);
                         } else {
-                            notifyActionToListeners(WIFI_DIRECT_MANAGER_SHUTDOWN);
                             logger.log(INFO, "WifiDirect not enabled");
                             wifiDirectEnabled = false;
                         }
+                        notifyActionToListeners(WifiDirectEventType.WIFI_DIRECT_MANAGER_INITIALIZED);
                     }
                     case WIFI_P2P_PEERS_CHANGED_ACTION -> {
                         // Broadcast intent action indicating that the available peer list has changed.

@@ -35,7 +35,7 @@ public class BundleClientServiceBroadcastReceiver extends BroadcastReceiver {
                 case DDDWIFI_PEERS_CHANGED -> viewModel.updateConnectedDevices();
             }
             if (bundleClientTransmissionEvent != null) {
-                var deviceAddress = intent.getStringExtra(BundleClientService.NET_DISCDD_BUNDLECLIENT_DEVICEADDRESS_EXTRA);
+                // var deviceAddress = intent.getStringExtra(BundleClientService.NET_DISCDD_BUNDLECLIENT_DEVICEADDRESS_EXTRA);
                 switch (bundleClientTransmissionEvent) {
                     case WIFI_DIRECT_CLIENT_EXCHANGE_STARTED -> {
                     }

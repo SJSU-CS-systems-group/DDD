@@ -55,19 +55,21 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
+// the service is usually formatting messages for the log rather than users, so don't complain about locales
+@SuppressLint("DefaultLocale")
 public class BundleClientService extends Service {
     public static final String NET_DISCDD_BUNDLECLIENT_LOG_ACTION = "net.discdd.bundleclient.CLIENT_LOG";
     public static final String NET_DISCDD_BUNDLECLIENT_WIFI_ACTION = "net.discdd.bundleclient.WIFI_EVENT";
     public static final String NET_DISCDD_BUNDLECLIENT_SETTINGS = "net.discdd.bundleclient";
     public static final int REEXCHANGE_TIME_PERIOD_MS = 2 * 60 * 1000;
-    public static final String DDDWIFI_EVENT_EXTRA = "wifiDirectEvent";
-    public static final String BUNDLE_CLIENT_TRANSMISSION_EVENT_EXTRA = "BundleClientWifiEvent";
+    public static final String DDDWIFI_EVENT_EXTRA = "DDDWifiEvent";
+    public static final String BUNDLE_CLIENT_TRANSMISSION_EVENT_EXTRA = "BundleClientTransmissionEvent";
     public static final String NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE = "background_exchange";
     public static final String NET_DISCDD_BUNDLECLIENT_DEVICEADDRESS_EXTRA = "deviceAddress";
     private static final Logger logger = Logger.getLogger(BundleClientService.class.getName());
     private static final BundleExchangeCounts FAILED_EXCHANGE_COUNTS = new BundleExchangeCounts(Statuses.FAILED,Statuses.FAILED);
     private static SharedPreferences preferences;
-    private final IBinder binder = new BundleClientWifiDirectServiceBinder();
+    private final IBinder binder = new BundleClientServiceBinder();
     private final ScheduledExecutorService periodicExecutor = Executors.newSingleThreadScheduledExecutor();
     PeriodicRunnable periodicRunnable = new PeriodicRunnable();
     private DDDWifi dddWifi;
@@ -245,9 +247,7 @@ public class BundleClientService extends Service {
 
             final String text = text1 + "\n" + text2;
             Handler handler = new Handler(Looper.getMainLooper());
-            handler.post(() -> {
-                Toast.makeText(getApplicationContext(), text, Toast.LENGTH_LONG).show();
-            });
+            handler.post(() -> Toast.makeText(getApplicationContext(), text, Toast.LENGTH_LONG).show());
             return currentBundle;
 
         } catch (Throwable e) {
@@ -262,7 +262,7 @@ public class BundleClientService extends Service {
             }
             dddWifi.startDiscovery();
             broadcastBundleClientWifiEvent(BundleClientTransmissionEventType.WIFI_DIRECT_CLIENT_EXCHANGE_FINISHED,
-                                           device.getDescription());
+                                           device.getWifiAddress());
 
         }
         return FAILED_EXCHANGE_COUNTS;
@@ -273,7 +273,6 @@ public class BundleClientService extends Service {
             case COMPLETE -> "Complete";
             case FAILED -> "Failed";
             case EMPTY -> "Skipped";
-            default -> "Unknown";
         };
     }
 
@@ -403,7 +402,7 @@ public class BundleClientService extends Service {
     }
 
     public void peersUpdated() {
-        dddWifi.listDevices().stream().forEach(bundleTransmission::processDiscoveredPeer);
+        dddWifi.listDevices().forEach(bundleTransmission::processDiscoveredPeer);
         // expire peers that haven't been seen for a minute
         long expirationTime = System.currentTimeMillis() - 60 * 1000;
         bundleTransmission.expireNotSeenPeers(expirationTime);
@@ -439,7 +438,7 @@ public class BundleClientService extends Service {
         }
     }
 
-    public class BundleClientWifiDirectServiceBinder extends Binder {
+    public class BundleClientServiceBinder extends Binder {
         public BundleClientService getService() {return BundleClientService.this;}
     }
 

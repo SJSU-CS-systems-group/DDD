@@ -106,6 +106,7 @@ public class DDDWifiDirect implements DDDWifi {
                                 intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP, WifiP2pGroup.class);
                         DDDWifiDirect.this.group = conGroup;
                         DDDWifiDirect.this.ownerAddress = conInfo.groupOwnerAddress;
+                        // if we got an address, let all the completions waiting for an address know about it.
                         if (conInfo.groupOwnerAddress != null) {
                             completeAddressWaiters(conGroup.getOwner(), conInfo.groupOwnerAddress);
                         }
@@ -183,21 +184,28 @@ public class DDDWifiDirect implements DDDWifi {
     public String getStateDescription() {
         var statusString = status >= 0 && status < STATUS_STRINGS.length ? STATUS_STRINGS[status] : "UNKNOWN";
         if (wifiP2pManager == null) {
-            return "WiFi Direct is not available: " + statusString;
+            return "🚫📶: " + statusString;
         }
         if (wifiChannel == null) {
-            return "WiFi Direct is not initialized: " + statusString;
+            return "🔴📶: " + statusString;
         }
 
+        var statusBuilder = new StringBuilder();
+        statusBuilder.append("🟢📶: ");
+        statusBuilder.append(statusString);
         if (group == null) {
-            return statusString;
+            return statusBuilder.toString();
         }
 
+        statusBuilder.append(" ");
+        statusBuilder.append(group.getOwner().deviceName);
         if (ownerAddress != null) {
-            return format("%s\n%s %s", statusString, group.getOwner().deviceName, ownerAddress.getHostAddress());
+            statusBuilder.append(" ");
+            statusBuilder.append(ownerAddress.getHostAddress());
+            return statusBuilder.toString();
         }
 
-        return format("%s\n%s N/A", statusString, group.getOwner().deviceName);
+        return statusBuilder.toString();
     }
 
     @Override
@@ -213,13 +221,10 @@ public class DDDWifiDirect implements DDDWifi {
         }
 
         /**
-         * iff this object is NOT waiting for the given WifiP2pDevice.
-         * If it is not, the exception will be thrown.
-         *
-         * @param con the current connection.
-         * @throws DDDWifiException.DDDWifiConnectionException if this completion is waiting for a different device.
+         * completes the waiting futures with the given connection.
+         * if the connection doesn't match the device the completable future was created for,
+         * it will complete exceptionally with a DDDWifiConnectionException.
          */
-
         void completeWithConnection(DDDWifiDirectConnection con) throws DDDWifiException.DDDWifiConnectionException {
             if (!device.equals(con.dev)) {
                 completeExceptionally(new DDDWifiException.DDDWifiConnectionException(format("connected to %s rather than %s",
@@ -242,7 +247,7 @@ public class DDDWifiDirect implements DDDWifi {
         toComplete.forEach(cf -> cf.completeWithConnection(con));
     }
 
-    private CompletableFuture<DDDWifiConnection> addWaitConnection(DDDWifiDirectDevice dev) {
+    private CompletableFuture<DDDWifiConnection> addAddressWaiter(DDDWifiDirectDevice dev) {
         var cf = new DDDWifiDirectCompletableConnection(dev);
         DDDWifiConnection con = null;
         synchronized (addressFutures) {
@@ -252,6 +257,7 @@ public class DDDWifiDirect implements DDDWifi {
                 addressFutures.add(cf);
             }
         }
+        // if we already have the connection we need, complete outside of the synchronized block
         if (con != null) {
             cf.complete(con);
         }
@@ -264,7 +270,6 @@ public class DDDWifiDirect implements DDDWifi {
         var cf = new CompletableFuture<Boolean>();
         var p2pConfig = new WifiP2pConfig();
         p2pConfig.deviceAddress = directDev.wifiP2pDevice.deviceAddress;
-        p2pConfig.wps.setup = WpsInfo.PBC;
         try {
             wifiP2pManager.connect(wifiChannel, p2pConfig, new DDDActionListener(cf));
         } catch (SecurityException e) {
@@ -272,7 +277,7 @@ public class DDDWifiDirect implements DDDWifi {
         }
         return cf.thenCompose(connectionStarted -> {
             if (!connectionStarted) throw new DDDWifiException.DDDWifiConnectionException("Failed to start connection to " + dev.getDescription(), null);
-            return addWaitConnection(directDev);
+            return addAddressWaiter(directDev);
         });
     }
 

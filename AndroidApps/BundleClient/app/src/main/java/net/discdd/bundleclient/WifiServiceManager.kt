@@ -17,7 +17,7 @@ object WifiServiceManager {
     fun initializeConnection(activity: BundleClientActivity) {
          connection = object : ServiceConnection {
             override fun onServiceConnected(className: ComponentName, service: IBinder) {
-                val binder = service as BundleClientService.BundleClientWifiDirectServiceBinder
+                val binder = service as BundleClientService.BundleClientServiceBinder
                 setService(binder.service)
                 serviceReady.complete(binder.service)
             }

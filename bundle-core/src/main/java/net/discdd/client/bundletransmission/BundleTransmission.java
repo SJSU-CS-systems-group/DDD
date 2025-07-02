@@ -365,7 +365,7 @@ public class BundleTransmission {
     }
 
     /**
-     * IT IS VERY VERY IMPORTANT THAT TRANSPORT IS THE HOSTNAME WHEN TALKING TO THE SERVER, AND AN ADDRESS
+     * IT IS VERY VERY IMPORTANT THAT TransportAddress IS THE HOSTNAME WHEN TALKING TO THE SERVER, AND AN ADDRESS
      * WHEN TALKING TO A DEVICE.
      */
     public BundleExchangeCounts doExchangeWithTransport(TransportDevice device,
@@ -413,6 +413,8 @@ public class BundleTransmission {
                                                                                                     .getGrpcKeyPair()
                                                                                                     .getPublic())))
                         .build();
+                // we don't include the public key map if we are connecting to a transport, since we only authenticate
+                // ourselves to BundleServers not transports
                 var bundlesDownloaded = connectingToTransport ?
                                         downloadBundles(bundleRequests, BundleSenderType.CLIENT, blockingStub, null) :
                                         downloadBundles(bundleRequests,

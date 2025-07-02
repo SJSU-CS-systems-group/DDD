@@ -2,15 +2,17 @@ package net.discdd.bundleclient.service;
 
 import net.discdd.client.bundletransmission.TransportDevice;
 
-import java.net.InetAddress;
-import java.util.List;
-
 public interface DDDWifiDevice extends TransportDevice, Comparable<DDDWifiDevice> {
+
+    /**
+     * Returns the wifi address of the device.
+     * This is usually the MAC address or similar unique identifier.
+     *
+     * @return The wifi address as a String.
+     */
     String getWifiAddress();
 
     String getDescription();
-
-    List<InetAddress> getInetAddresses();
 
     @Override
     default int compareTo(DDDWifiDevice o) {
