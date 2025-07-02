@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.DynamicPropertySource;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -47,6 +48,11 @@ public class ADUEnd2EndTest extends End2EndTest {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @DynamicPropertySource
+    static void configureProperties(org.springframework.test.context.DynamicPropertyRegistry registry) {
+        registry.add("serviceadapter.revalidate-delay", () -> "10ms");
     }
 
     @Test

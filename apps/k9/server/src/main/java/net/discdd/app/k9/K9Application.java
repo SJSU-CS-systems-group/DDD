@@ -30,7 +30,7 @@ public class K9Application {
 
     public static void main(String[] args) throws IOException {
         if (args.length < 1) {
-            System.out.println("Usage: java -jar jar_file_path.jar BundleServerURL");
+            System.out.println("Usage: java -jar jar_file_path.jar <k9_config_file> [other spring boot args]");
             System.exit(1);
         }
 

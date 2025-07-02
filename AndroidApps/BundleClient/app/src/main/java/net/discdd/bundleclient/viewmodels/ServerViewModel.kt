@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.discdd.AndroidAppConstants
-import net.discdd.bundleclient.BundleClientWifiDirectService
+import net.discdd.bundleclient.service.BundleClientService
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiServiceManager
 
@@ -23,7 +23,7 @@ class ServerViewModel(
     application: Application,
 ): AndroidViewModel(application) {
     private val context get() = getApplication<Application>()
-    private val sharedPref = context.getSharedPreferences(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE)
+    private val sharedPref = context.getSharedPreferences(BundleClientService.NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE)
     private val _state = MutableStateFlow(ServerState())
     val state = _state.asStateFlow()
 

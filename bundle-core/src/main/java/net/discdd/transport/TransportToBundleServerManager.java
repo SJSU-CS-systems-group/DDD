@@ -19,6 +19,7 @@ import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.grpc.GetRecencyBlobRequest;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.tls.DDDTLSUtil;
+import net.discdd.tls.DDDX509ExtendedTrustManager;
 import net.discdd.tls.GrpcSecurity;
 import net.discdd.utils.Constants;
 
@@ -85,7 +86,7 @@ public class TransportToBundleServerManager implements Runnable {
             var sslClientContext = SSLContext.getInstance("TLS");
             sslClientContext.init(DDDTLSUtil.getKeyManagerFactory(transportGrpcSecurity.getGrpcKeyPair(),
                                                                   transportGrpcSecurity.getGrpcCert()).getKeyManagers(),
-                                  new TrustManager[] { DDDTLSUtil.trustManager },
+                                  new TrustManager[] { new DDDX509ExtendedTrustManager(true) },
                                   new SecureRandom());
 
             channel = OkHttpChannelBuilder.forAddress(serverHost, serverPort)
