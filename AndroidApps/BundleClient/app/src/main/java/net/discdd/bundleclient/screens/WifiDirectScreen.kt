@@ -148,7 +148,7 @@ fun WifiDirectScreen(
                 content = { Text(text = "ClientId: ${state.clientId}") },
                 onToggle = onToggle,
             )
-            Text(text = "Wifi Direct Enabled: ${state.dddWifiEnabled}")
+            Text(text = "Wifi Direct Enabled: ${if (state.dddWifiEnabled) "✅" else "❌"}")
             Text(text = "Status: ${state.connectedStateText}")
             Text(
                 text = "Discovery Status: ${

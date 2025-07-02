@@ -91,6 +91,7 @@ class WifiDirectViewModel(
     @SuppressLint("MissingPermission")
     fun exchangeMessage(device: DDDWifiDevice) {
         viewModelScope.launch {
+            clearResultLogs()
             updatePeerExchangeStatus(device, true)
             wifiService?.initiateExchange(device)?.thenAccept {
                 updatePeerExchangeStatus(device, false)

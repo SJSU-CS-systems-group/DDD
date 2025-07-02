@@ -69,7 +69,6 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 
@@ -88,8 +87,8 @@ public class BundleTransmission {
     private final BundleSecurity bundleSecurity;
     public final ApplicationDataManager applicationDataManager;
 
-    private ClientRouting clientRouting;
-    private ClientPaths clientPaths;
+    final private ClientRouting clientRouting;
+    final private ClientPaths clientPaths;
 
     public BundleTransmission(ClientPaths clientPaths, Consumer<ADU> aduConsumer) throws
             WindowExceptions.BufferOverflow, IOException, InvalidKeyException,
@@ -310,12 +309,10 @@ public class BundleTransmission {
             throw new IOException("Recency blob signature verification failed");
         }
         synchronized (recentTransports) {
-            if (device != TransportDevice.FAKE_DEVICE) {
-                RecentTransport recentTransport = recentTransports.computeIfAbsent(device, RecentTransport::new);
-                if (recencyBlob.getBlobTimestamp() > recentTransport.recencyTime) {
-                    recentTransport.recencyTime = recencyBlob.getBlobTimestamp();
-                    return true;
-                }
+            RecentTransport recentTransport = recentTransports.computeIfAbsent(device, RecentTransport::new);
+            if (recencyBlob.getBlobTimestamp() > recentTransport.recencyTime) {
+                recentTransport.recencyTime = recencyBlob.getBlobTimestamp();
+                return true;
             }
             return false;
         }
