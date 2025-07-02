@@ -11,18 +11,22 @@ import net.discdd.bundleclient.WifiServiceManager
 import net.discdd.viewmodels.UsbViewModel
 import java.io.File
 import java.io.IOException
+import java.nio.file.Path
 import java.util.logging.Level
 import java.util.logging.Level.INFO
 import java.util.logging.Logger
 
 class ClientUsbViewModel(
     application: Application,
-    private val rootDir: File,
 ) : UsbViewModel(application) {
     private val logger: Logger = Logger.getLogger(UsbViewModel::class.java.name)
+    lateinit var rootDir: File
     private val bundleTransmission by lazy {
         val wifiBgService = WifiServiceManager.getService()
         wifiBgService?.bundleTransmission
+    }
+    fun setRoot(dir: File) {
+        rootDir = dir
     }
 
     fun createIfDoesNotExist(parent : DocumentFile, name : String) : DocumentFile {
@@ -44,7 +48,7 @@ class ClientUsbViewModel(
             )
             return
         }
-        logger.log(Level.INFO, "Starting bundle creation...")
+        logger.log(INFO, "Starting bundle creation...")
         val bundleDTO = bundleTransmission!!.generateBundleForTransmission()
         val bundleFile = bundleDTO.bundle.source
 
@@ -73,35 +77,49 @@ class ClientUsbViewModel(
     }
 
     fun usbTransferToClient(context: Context) {
-         */
-        val dddDir = usbDirectory
-        if (!state.value.dddDirectoryExists || dddDir == null || bundleTransmission == null) {
-            updateMessage(
-                context.getString(R.string.cannot_transfer_bundle_usb_not_ready_or_directory_not_found),
-                Color.RED
-            )
+        val toClientDir = createIfDoesNotExist(usbDirectory!!, "toClient")
+        val devicePath: Path =
+            rootDir.toPath().getParent().resolve("BundleTransmission/bundle-generation/received-processing")
+        logger.log(INFO, "HERE IS MY DEVICE PATH: " + devicePath)
+//        if (!devicePath.exists()) {
+//            if (!rootDir.resolve("BundleTransmission/bundle-generation").exists()) {
+//                if (!rootDir.resolve("BundleTransmission").exists()) {
+//                    if (!rootDir.exists()) {
+//                        logger.log(Level.WARNING, "root dir is not being recognized!!!")
+//                    }
+//                    DocumentFile.fromFile(rootDir).createFile("data/octet","BundleTransmission")
+//                }
+//                DocumentFile.fromFile(rootDir).createFile("data/octet","BundleTransmission")
+//            }
+//            DocumentFile.fromFile(rootDir).createFile("data/octet","BundleTransmission")
+//        }
+        val deviceDir = DocumentFile.fromFile(devicePath.toFile())
+        val filesToTransfer = toClientDir.listFiles()
+        if (filesToTransfer.isEmpty()) {
+            updateMessage("No files found in 'toClient' directory on USB", Color.YELLOW)
             return
         }
-        var dddClient = createIfDoesNotExist(dddDir, "toClient")
-        val bundleFiles = dddClient.listFiles()//Path clientDestDir = rootDir.resolve("files/");
-        val clientDestDir = DocumentFile.fromFile(rootDir.resolve(""))
-        for (file in bundleFiles) {
-            val targetFile = clientDestDir.createFile("data/octet", file.name.toString())
-        }
 
-        viewModelScope.launch {
+        viewModelScope.launch { //coroutine for I/O-bound work
             try {
-                context.contentResolver.openOutputStream(targetFile.uri)?.use { outputStream ->
-                    bundleFile.inputStream().use { inputStream ->
-                        inputStream.copyTo(outputStream)
+                for (file in filesToTransfer) {
+                    //deviceDir.creat
+                    val targetFile = deviceDir.createFile("data/octet", file.name!!)
+                    if (targetFile == null) {
+                        logger.log(Level.WARNING, "Failed to create file '${file.name}' in device received-processing directory")
+                        continue
                     }
+                    context.contentResolver.openOutputStream(targetFile.uri)?.use { outputStream ->
+                        context.contentResolver.openInputStream(file.uri)?.use { inputStream ->
+                            inputStream.copyTo(outputStream)
+                        }
+                    }
+                    logger.log(INFO, "Transferred file: ${file.name}")
                 }
-
-                logger.log(Level.INFO, "Bundle creation and transfer successful")
-                updateMessage("Bundle created and transferred to USB", Color.GREEN)
+                updateMessage("All files transferred from 'toClient' to device received-processing successfully", Color.GREEN)
             } catch (e: Exception) {
                 e.printStackTrace()
-                updateMessage("Error creating or transferring bundle: ${e.message}", Color.RED)
+                updateMessage("Error during USB file transfer: ${e.message}", Color.RED)
             }
         }
     }
