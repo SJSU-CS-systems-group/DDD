@@ -1,6 +1,7 @@
 package net.discdd.cli;
 
 import net.discdd.client.bundletransmission.BundleTransmission;
+import net.discdd.client.bundletransmission.TransportDevice;
 import net.discdd.model.ADU;
 import net.discdd.pathutils.ClientPaths;
 import net.discdd.utils.StoreADUs;
@@ -122,7 +123,7 @@ public class LocalAduSendReceive extends StdOutMixin {
         var bundleTransmission = new BundleTransmission(clientPaths, (ADU adu) -> {
             out().println("Received ADU: " + adu);
         });
-        var bundleExchangeCounts = bundleTransmission.doExchangeWithTransport("XX:XX:XX:XX:XX:XX",
+        var bundleExchangeCounts = bundleTransmission.doExchangeWithTransport(TransportDevice.SERVER_DEVICE,
                                                                               serverAddress.getHostName(),
                                                                               serverAddress.getPort(),
                                                                               false);

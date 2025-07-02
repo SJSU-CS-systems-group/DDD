@@ -6,5 +6,5 @@ import java.util.List;
 public interface DDDWifiConnection {
     List<InetAddress> getAddresses();
 
-    String getConnectionDescription();
+    DDDWifiDevice getDevice();
 }

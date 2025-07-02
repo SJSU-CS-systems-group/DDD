@@ -1,10 +1,12 @@
 package net.discdd.bundleclient.service;
 
+import androidx.lifecycle.LiveData;
+
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public interface DDDWifi {
-    CompletableFuture<Void> startDiscovery();
+    CompletableFuture<Boolean> startDiscovery();
 
     boolean isDiscoveryActive();
 
@@ -20,4 +22,5 @@ public interface DDDWifi {
 
     void shutdown();
 
+    LiveData<DDDWifiEventType> getEventLiveData();
 }

@@ -18,7 +18,6 @@ import android.content.pm.ServiceInfo;
 import android.net.ConnectivityManager;
 import android.net.NetworkCapabilities;
 import android.net.Uri;
-import android.net.wifi.p2p.WifiP2pGroup;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
@@ -29,6 +28,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresPermission;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
+import androidx.lifecycle.Observer;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import net.discdd.bundleclient.R;
@@ -37,6 +37,7 @@ import net.discdd.client.bundlesecurity.BundleSecurity;
 import net.discdd.client.bundletransmission.BundleTransmission;
 import net.discdd.client.bundletransmission.BundleTransmission.Statuses;
 import net.discdd.client.bundletransmission.BundleTransmission.BundleExchangeCounts;
+import net.discdd.client.bundletransmission.TransportDevice;
 import net.discdd.datastore.providers.MessageProvider;
 import net.discdd.model.ADU;
 import net.discdd.pathutils.ClientPaths;
@@ -52,13 +53,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
 public class BundleClientService extends Service {
     public static final String NET_DISCDD_BUNDLECLIENT_LOG_ACTION = "net.discdd.bundleclient.CLIENT_LOG";
-    public static final String NET_DISCDD_BUNDLECLIENT_SERVICE_EVENT_ACTION = "net.discdd.bundleclient.WIFI_EVENT";
+    public static final String NET_DISCDD_BUNDLECLIENT_WIFI_ACTION = "net.discdd.bundleclient.WIFI_EVENT";
     public static final String NET_DISCDD_BUNDLECLIENT_SETTINGS = "net.discdd.bundleclient";
     public static final int REEXCHANGE_TIME_PERIOD_MS = 2 * 60 * 1000;
     public static final String DDDWIFI_EVENT_EXTRA = "wifiDirectEvent";
@@ -68,13 +67,13 @@ public class BundleClientService extends Service {
     private static final Logger logger = Logger.getLogger(BundleClientService.class.getName());
     private static final BundleExchangeCounts FAILED_EXCHANGE_COUNTS = new BundleExchangeCounts(Statuses.FAILED,Statuses.FAILED);
     private static SharedPreferences preferences;
-    final AtomicReference<CompletableFuture<WifiP2pGroup>> connectionWaiter = new AtomicReference<>();
     private final IBinder binder = new BundleClientWifiDirectServiceBinder();
     private final ScheduledExecutorService periodicExecutor = Executors.newSingleThreadScheduledExecutor();
     PeriodicRunnable periodicRunnable = new PeriodicRunnable();
     private DDDWifi dddWifi;
     private BundleTransmission bundleTransmission;
     ConnectivityManager connectivityManager;
+    final private Observer<? super DDDWifiEventType> liveDataObserver = this::broadcastWifiEvent;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -125,6 +124,7 @@ public class BundleClientService extends Service {
 
         var dddWifiDirect = new DDDWifiDirect(this);
         this.dddWifi = dddWifiDirect;
+        this.dddWifi.getEventLiveData().observeForever(liveDataObserver);
         try {
             dddWifiDirect.initialize();
         } catch (Exception e) {
@@ -182,7 +182,10 @@ public class BundleClientService extends Service {
     @Override
     public void onDestroy() {
         instance = null;
-        if (dddWifi != null) dddWifi.shutdown();
+        if (dddWifi != null) {
+            dddWifi.getEventLiveData().removeObserver(liveDataObserver);
+            dddWifi.shutdown();
+        }
         super.onDestroy();
     }
 
@@ -192,35 +195,12 @@ public class BundleClientService extends Service {
         return binder;
     }
 
-    private void addConnectionWaiter(CompletableFuture<WifiP2pGroup> connectedFuture) {
-        logger.log(INFO, "Adding connection waiter" + connectedFuture);
-        var oldFuture = connectionWaiter.getAndSet(connectedFuture);
-        if (oldFuture != null && !oldFuture.isDone()) {
-            oldFuture.completeExceptionally(new TimeoutException("Connection timed out"));
-        }
-    }
-
-    private void completeConnectionWaiter(WifiP2pGroup groupInfo) {
-        var future = connectionWaiter.getAndSet(null);
-        logger.log(INFO, "Completing connection waiter" + future);
-
-        if (future != null && !future.isDone()) {
-            future.complete(groupInfo);
-        }
-    }
-
-
-
+    @SuppressLint("MissingPermission")
     private void exchangeWithTransports() {
         var recentTransports = bundleTransmission.getRecentTransports();
         for (var transport : recentTransports) {
-            // map the transport deviceAddress to WifiP2pDevice in the peers list
-            // and call exchangeWith if mapping exists
-            dddWifi.listDevices().stream()
-                    .filter(peer -> peer.getWifiAddress().equals(transport.getDeviceAddress())).findFirst()
-                    .map(this::exchangeWith).ifPresent(bc -> {
-                        logger.log(INFO, format("Upload status: %s, Download status: %s",bc.uploadStatus().toString(), bc.downloadStatus().toString()));
-                    });
+            var bc = exchangeWith((DDDWifiDevice) transport.getDevice());
+            logger.log(INFO, format("Upload status: %s, Download status: %s",bc.uploadStatus().toString(), bc.downloadStatus().toString()));
         }
         initiateServerExchange();
     }
@@ -230,8 +210,8 @@ public class BundleClientService extends Service {
         broadcastBundleClientWifiEvent(BundleClientTransmissionEventType.WIFI_DIRECT_CLIENT_EXCHANGE_STARTED,
                                        device.getWifiAddress());
         try {
-            broadcastBundleClientLogEvent(format("Connecting %s (%s)", device.getDescription(), device.getWifiAddress()));
-            var connection = dddWifi.connectTo(device).get();
+            broadcastBundleClientLogEvent(format("Connecting to %s", device.getDescription()));
+            var connection = dddWifi.connectTo(device).get(10, TimeUnit.SECONDS);
 
             if (connection == null || connection.getAddresses().isEmpty()) {
                 broadcastBundleClientLogEvent("Failed to connect to " + device.getDescription());
@@ -239,7 +219,7 @@ public class BundleClientService extends Service {
             }
             var addr = connection.getAddresses().get(0);
             broadcastBundleClientLogEvent(format("Connected to %s (%s)", device.getDescription(), addr.getHostAddress()));
-            BundleExchangeCounts currentBundle = bundleTransmission.doExchangeWithTransport(device.getWifiAddress(),
+            BundleExchangeCounts currentBundle = bundleTransmission.doExchangeWithTransport(device,
                                                                                             addr.getHostAddress(),
                                                                                             7777,
                                                                                             true);
@@ -271,11 +251,16 @@ public class BundleClientService extends Service {
             return currentBundle;
 
         } catch (Throwable e) {
-            broadcastBundleClientLogEvent("Failed to connect to " + device.getDescription() + ": " + e.getMessage());
-            logger.log(WARNING, "Failed to connect to " + device.getDescription(), e);
+            broadcastBundleClientLogEvent(e.getLocalizedMessage());
+            logger.log(WARNING, e.getMessage(), e);
 
         } finally {
-            dddWifi.disconnectFrom(device);
+            try {
+                dddWifi.disconnectFrom(device).get(5, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                logger.log(WARNING, "Problem disconnecting from " + device.getDescription(), e);
+            }
+            dddWifi.startDiscovery();
             broadcastBundleClientWifiEvent(BundleClientTransmissionEventType.WIFI_DIRECT_CLIENT_EXCHANGE_FINISHED,
                                            device.getDescription());
 
@@ -298,15 +283,23 @@ public class BundleClientService extends Service {
         LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
     }
 
+    /**
+     * Broadcast a wifi event to any interested receivers.
+     * THIS CODE ALSO PROCESSES EVENTS IT IS INTERESTED IN
+     * @param type the type of event
+     */
     public void broadcastWifiEvent(DDDWifiEventType type) {
-        var intent = new Intent(NET_DISCDD_BUNDLECLIENT_SERVICE_EVENT_ACTION);
+        if (type == DDDWifiEventType.DDDWIFI_PEERS_CHANGED) {
+            peersUpdated();
+        }
+        var intent = new Intent(NET_DISCDD_BUNDLECLIENT_WIFI_ACTION);
         intent.putExtra(DDDWIFI_EVENT_EXTRA, type);
         LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
     }
 
     public void broadcastBundleClientWifiEvent(BundleClientTransmissionEventType event, String deviceAddress) {
         //var intent = new Intent(getApplicationContext(), TransportWifiDirectFragment.class);
-        var intent = new Intent(NET_DISCDD_BUNDLECLIENT_SERVICE_EVENT_ACTION);
+        var intent = new Intent(NET_DISCDD_BUNDLECLIENT_WIFI_ACTION);
         intent.putExtra(BUNDLE_CLIENT_TRANSMISSION_EVENT_EXTRA, event);
         intent.putExtra(NET_DISCDD_BUNDLECLIENT_DEVICEADDRESS_EXTRA, deviceAddress);
         LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
@@ -322,16 +315,8 @@ public class BundleClientService extends Service {
 
     @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES })
     @SuppressLint("NotificationPermission")
-    public CompletableFuture<BundleExchangeCounts> initiateExchange(String deviceAddress) {
+    public CompletableFuture<BundleExchangeCounts> initiateExchange(DDDWifiDevice device) {
         var completableFuture = new CompletableFuture<BundleExchangeCounts>();
-        var device = dddWifi.listDevices().stream().filter(peer -> peer.getWifiAddress().equals(deviceAddress))
-                .findFirst().orElse(null);
-        if (device == null) {
-            broadcastBundleClientLogEvent("Couldn't find " + deviceAddress);
-            completableFuture.complete(FAILED_EXCHANGE_COUNTS);
-            return completableFuture;
-        }
-
         NotificationChannel channel =
                 new NotificationChannel("DDD-Exchange", "DDD Bundle Client", NotificationManager.IMPORTANCE_HIGH);
         channel.setDescription("Initiating Bundle Exchange...");
@@ -385,7 +370,7 @@ public class BundleClientService extends Service {
                     return;
                 }
                 var bundleExchangeCounts =
-                        bundleTransmission.doExchangeWithTransport("XX:XX:XX:XX:XX:XX", serverAddress,
+                        bundleTransmission.doExchangeWithTransport(TransportDevice.SERVER_DEVICE, serverAddress,
                                                                    port, false);
                 logger.log(INFO, format("Upload status: %s, Download status: %s",bundleExchangeCounts.uploadStatus().toString(), bundleExchangeCounts.downloadStatus().toString()));
                 completableFuture.complete(bundleExchangeCounts);
@@ -405,10 +390,10 @@ public class BundleClientService extends Service {
         return dddWifi.isDiscoveryActive();
     }
 
-    public BundleTransmission.RecentTransport getPeer(String deviceAddress) {
+    public BundleTransmission.RecentTransport getRecentTransport(DDDWifiDevice peer) {
         return Arrays.stream(bundleTransmission.getRecentTransports())
-                .filter(rt -> deviceAddress.equals(rt.getDeviceAddress())).findFirst()
-                .orElse(new BundleTransmission.RecentTransport(deviceAddress));
+                .filter(rt -> peer.equals(rt.getDevice())).findFirst()
+                .orElse(new BundleTransmission.RecentTransport(peer));
     }
 
     public void notifyNewAdu() {
@@ -418,8 +403,7 @@ public class BundleClientService extends Service {
     }
 
     public void peersUpdated() {
-        dddWifi.listDevices().stream()
-                .forEach(peer -> bundleTransmission.processDiscoveredPeer(peer.getWifiAddress(), peer.getDescription()));
+        dddWifi.listDevices().stream().forEach(bundleTransmission::processDiscoveredPeer);
         // expire peers that haven't been seen for a minute
         long expirationTime = System.currentTimeMillis() - 60 * 1000;
         bundleTransmission.expireNotSeenPeers(expirationTime);

@@ -101,7 +101,7 @@ fun WifiDirectScreen(
         state.dialogPeer?.let { peer ->
             AlertDialog(
                 onDismissRequest = { viewModel.dismissDialog() },
-                title = { Text(text = peer.deviceName) },
+                title = { Text(text = peer.device.description) },
                 text = {
                     Column {
                         Text(text = "Last seen: ${viewModel.getRelativeTime(peer.lastSeen)}")
@@ -225,9 +225,9 @@ fun PeersList(
     ) {
         for (peer in peers) {
             PeerItem(peer = peer, onExchangeClick = {
-                viewModel.exchangeMessage(peer.deviceAddress)
+                viewModel.exchangeMessage(peer.device)
             }, onItemClick = {
-                viewModel.showPeerDialog(peer.deviceAddress)
+                viewModel.showPeerDialog(peer.device)
             })
         }
     }
@@ -245,7 +245,7 @@ fun PeerItem(
         TextButton(
             onClick = onItemClick
         ) {
-            Text(text = peer.deviceName)
+            Text(text = peer.device.description)
         }
         Button(
             onClick = onExchangeClick,

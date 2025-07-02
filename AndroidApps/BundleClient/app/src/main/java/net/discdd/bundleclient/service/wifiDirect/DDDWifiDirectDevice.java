@@ -10,29 +10,13 @@ class DDDWifiDirectDevice implements DDDWifiDevice {
     final public WifiP2pDevice wifiP2pDevice;
     private List<InetAddress> addresses = List.of();
 
-    private long lastSeen;
-
-    public DDDWifiDirectDevice(WifiP2pDevice wifiP2pDevice, long lastSeen) {
+    public DDDWifiDirectDevice(WifiP2pDevice wifiP2pDevice) {
         this.wifiP2pDevice = wifiP2pDevice;
-        markSeen(lastSeen);
-    }
-
-    public void markSeen(long time) {
-        this.lastSeen = time;
-    }
-
-    public long getLastSeen() {
-        return lastSeen;
     }
 
     @Override
     public String getWifiAddress() {
         return wifiP2pDevice.deviceAddress;
-    }
-
-    @Override
-    public byte[] getAssociatedData() {
-        return new byte[0];
     }
 
     @Override
@@ -47,5 +31,14 @@ class DDDWifiDirectDevice implements DDDWifiDevice {
     @Override
     public List<InetAddress> getInetAddresses() {
         return addresses;
+    }
+
+    public boolean equals(Object o) {
+        if (!(o instanceof DDDWifiDirectDevice owdd)) return false;
+        return this.compareTo(owdd) == 0;
+    }
+
+    public int hashCode() {
+        return this.wifiP2pDevice.deviceName.hashCode() ^ this.wifiP2pDevice.deviceAddress.hashCode();
     }
 }

@@ -22,7 +22,7 @@ public class BundleClientServiceBroadcastReceiver extends BroadcastReceiver {
         if (action.equals(BundleClientService.NET_DISCDD_BUNDLECLIENT_LOG_ACTION)) {
             String message = intent.getStringExtra("message");
             viewModel.appendResultText(message);
-        } else if (action.equals(BundleClientService.NET_DISCDD_BUNDLECLIENT_SERVICE_EVENT_ACTION)) {
+        } else if (action.equals(BundleClientService.NET_DISCDD_BUNDLECLIENT_WIFI_ACTION)) {
             // we might be betting a wifi event or an event about a transmission.
             // we distinguish them by the presence of a specific extra.
             var wifiEvent = intent.getSerializableExtra(BundleClientService.DDDWIFI_EVENT_EXTRA,
@@ -31,19 +31,15 @@ public class BundleClientServiceBroadcastReceiver extends BroadcastReceiver {
                     intent.getSerializableExtra(BundleClientService.BUNDLE_CLIENT_TRANSMISSION_EVENT_EXTRA,
                                                 BundleClientService.BundleClientTransmissionEventType.class);
             if (wifiEvent != null) switch (wifiEvent) {
-                case DDDWIFI_INITIALIZED, DDDWIFI_SHUTDOWN, DDDWIFI_DISCOVERY_CHANGED, DDDWIFI_STATE_CHANGED -> viewModel.updateState();
+                case DDDWIFI_DISCOVERY_CHANGED, DDDWIFI_STATE_CHANGED -> viewModel.updateState();
                 case DDDWIFI_PEERS_CHANGED -> viewModel.updateConnectedDevices();
             }
             if (bundleClientTransmissionEvent != null) {
                 var deviceAddress = intent.getStringExtra(BundleClientService.NET_DISCDD_BUNDLECLIENT_DEVICEADDRESS_EXTRA);
                 switch (bundleClientTransmissionEvent) {
                     case WIFI_DIRECT_CLIENT_EXCHANGE_STARTED -> {
-                        var message = String.format("Exchange started with %s", deviceAddress);
-                        viewModel.appendResultText(message);
                     }
                     case WIFI_DIRECT_CLIENT_EXCHANGE_FINISHED -> {
-                        var message = String.format("Exchange completed with %s", deviceAddress);
-                        viewModel.appendResultText(message);
                     }
                 }
             }

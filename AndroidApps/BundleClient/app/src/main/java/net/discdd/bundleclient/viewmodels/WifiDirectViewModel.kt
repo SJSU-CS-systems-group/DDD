@@ -14,6 +14,7 @@ import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiServiceManager
 import net.discdd.bundleclient.service.BundleClientService
 import net.discdd.bundleclient.service.BundleClientServiceBroadcastReceiver
+import net.discdd.bundleclient.service.DDDWifiDevice
 import net.discdd.viewmodels.WifiBannerViewModel
 import java.util.concurrent.CompletableFuture
 import java.util.logging.Logger
@@ -21,8 +22,7 @@ import java.util.logging.Logger
 private val logger = Logger.getLogger(WifiDirectViewModel::class.java.name)
 
 data class PeerDevice(
-    val deviceAddress: String,
-    val deviceName: String,
+    val device: DDDWifiDevice,
     val lastSeen: Long = 0,
     val lastExchange: Long = 0,
     val recencyTime: Long = 0,
@@ -48,14 +48,13 @@ class WifiDirectViewModel(
         setViewModel(this@WifiDirectViewModel)
     }
     private val wifiService by lazy { WifiServiceManager.getService() }
-    private val peerDeviceAddresses = ArrayList<String>()
     private val intentFilter = IntentFilter()
 
     private val _state = MutableStateFlow(WifiDirectState())
     val state = _state.asStateFlow()
 
     init {
-        intentFilter.addAction(BundleClientService.NET_DISCDD_BUNDLECLIENT_SERVICE_EVENT_ACTION)
+        intentFilter.addAction(BundleClientService.NET_DISCDD_BUNDLECLIENT_WIFI_ACTION)
         intentFilter.addAction(BundleClientService.NET_DISCDD_BUNDLECLIENT_LOG_ACTION)
     }
 
@@ -72,9 +71,9 @@ class WifiDirectViewModel(
         }
     }
 
-    fun showPeerDialog(deviceAddress: String) {
-        val peer = wifiService?.getPeer(deviceAddress)
-        val currentPeer = _state.value.peers.find { it.deviceAddress == deviceAddress }
+    fun showPeerDialog(device: DDDWifiDevice) {
+        val peer = wifiService?.getRecentTransport(device)
+        val currentPeer = _state.value.peers.find { it.device == device }
         currentPeer ?: return
         val updatedPeer = currentPeer.copy(
             lastSeen = peer?.lastSeen ?: 0,
@@ -90,18 +89,18 @@ class WifiDirectViewModel(
     }
 
     @SuppressLint("MissingPermission")
-    fun exchangeMessage(deviceAddress: String) {
+    fun exchangeMessage(device: DDDWifiDevice) {
         viewModelScope.launch {
-            updatePeerExchangeStatus(deviceAddress, true)
-            wifiService?.initiateExchange(deviceAddress)?.thenAccept {
-                updatePeerExchangeStatus(deviceAddress, false)
+            updatePeerExchangeStatus(device, true)
+            wifiService?.initiateExchange(device)?.thenAccept {
+                updatePeerExchangeStatus(device, false)
             }
         }
     }
 
-    private fun updatePeerExchangeStatus(deviceAddress: String, inProgress: Boolean) {
+    private fun updatePeerExchangeStatus(device: DDDWifiDevice, inProgress: Boolean) {
         val updatedPeers = _state.value.peers.map { peer ->
-            if (peer.deviceAddress == deviceAddress) {
+            if (peer.device.equals(device)) {
                 peer.copy(isExchangeInProgress = inProgress)
             } else {
                 peer
@@ -160,45 +159,29 @@ class WifiDirectViewModel(
     fun updateConnectedDevices() {
         viewModelScope.launch {
             val recentTransports = wifiService?.recentTransports ?: return@launch
-            val discoveredPeers = recentTransports.map { it.deviceAddress }
-            val currentPeers = HashSet(peerDeviceAddresses)
+            val currentPeersMap = _state.value.peers.associateBy { it.device }
 
-            // new names (discoveredPeers - currentPeers)
-            val newNames = HashSet(discoveredPeers)
-            newNames.removeAll(currentPeers)
-
-            // removed names (currentPeers - discoveredPeers)
-            val removedNames = HashSet(currentPeers)
-            removedNames.removeAll(discoveredPeers.toSet())
-            peerDeviceAddresses.removeIf { removedNames.contains(it) }
-            peerDeviceAddresses.addAll(newNames)
-
-            val updatedPeers = peerDeviceAddresses.mapNotNull { deviceAddress ->
-                val peer = wifiService?.getPeer(deviceAddress)
-                if (peer != null) {
-                    val currentPeer = _state.value.peers.find { it.deviceAddress == deviceAddress }
-                    if (currentPeer != null) {
-                        // Update existing peer
-                        currentPeer.copy(
-                            deviceName = peer.deviceName,
-                            lastSeen = peer.lastSeen,
-                            lastExchange = peer.lastExchange,
-                            recencyTime = peer.recencyTime
-                        )
-                    } else {
-                        // Create new peer
-                        PeerDevice(
-                            deviceAddress = deviceAddress,
-                            deviceName = peer.deviceName,
-                            lastSeen = peer.lastSeen,
-                            lastExchange = peer.lastExchange,
-                            recencyTime = peer.recencyTime
-                        )
-                    }
+            val updatedPeers = recentTransports.map { recentTransport ->
+                val currentPeer = currentPeersMap[recentTransport.device]
+                if (currentPeer != null) {
+                    // Update existing peer
+                    currentPeer.copy(
+                        device = recentTransport.device as DDDWifiDevice,
+                        lastSeen = recentTransport.lastSeen,
+                        lastExchange = recentTransport.lastExchange,
+                        recencyTime = recentTransport.recencyTime
+                    )
                 } else {
-                    null
+                    // Create new peer
+                    PeerDevice(
+                        device = recentTransport.device as DDDWifiDevice,
+                        lastSeen = recentTransport.lastSeen,
+                        lastExchange = recentTransport.lastExchange,
+                        recencyTime = recentTransport.recencyTime
+                    )
                 }
-            }
+            }.toList()
+
             _state.update { it.copy(peers = updatedPeers) }
         }
     }

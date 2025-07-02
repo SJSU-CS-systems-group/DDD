@@ -208,6 +208,14 @@ public class WifiDirectManager {
         return cFuture;
     }
 
+    public CompletableFuture<InetAddress> requestConnectionInfo() {
+        var cFuture = new CompletableFuture<InetAddress>();
+        this.manager.requestConnectionInfo(channel, ci -> {
+            cFuture.complete(ci.groupOwnerAddress);
+        });
+        return cFuture;
+    }
+
     @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES })
     public CompletableFuture<WifiP2pGroup> connect(WifiP2pDevice device) {
         CompletableFuture<WifiP2pGroup> completableFuture = new CompletableFuture<>();
