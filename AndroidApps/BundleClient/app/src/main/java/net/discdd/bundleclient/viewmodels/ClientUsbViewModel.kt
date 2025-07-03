@@ -10,8 +10,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiServiceManager
-import net.discdd.client.bundletransmission.BundleTransmission
-import net.discdd.model.Bundle
 import net.discdd.viewmodels.UsbViewModel
 import java.io.File
 import java.io.IOException
