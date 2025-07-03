@@ -57,8 +57,10 @@ open class UsbViewModel(
     }
 
     protected fun updateMessage(message: String?, color: Int) {
-        _state.update {
-            it.copy(showMessage = message, messageColor = color)
+        viewModelScope.launch {
+            _state.update {
+                it.copy(showMessage = message, messageColor = color)
+            }
         }
     }
 
