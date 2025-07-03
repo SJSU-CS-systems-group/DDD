@@ -43,7 +43,7 @@ class ClientUsbViewModel(
         }
         return child ?: throw IOException ("Could not create $name")
     }
-    fun transferBundleToUsb(context: Context) {
+    fun transferBundleToUsb(context: Context) { //clientTransferToUsb
         val dddDir = usbDirectory
         if (!state.value.dddDirectoryExists || dddDir == null || bundleTransmission == null) {
             updateMessage(
