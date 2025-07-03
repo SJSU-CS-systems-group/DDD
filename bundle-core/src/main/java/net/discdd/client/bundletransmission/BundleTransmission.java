@@ -405,7 +405,7 @@ public class BundleTransmission {
 
                 timestampExchangeWithTransport(device);
                 var clientSecurity = bundleSecurity.getClientSecurity();
-                var bundleRequests = bundleSecurity.getClientWindow().getWindow(clientSecurity);
+                var bundleRequests = getNextBundles();
                 PublicKeyMap publicKeyMap = PublicKeyMap.newBuilder()
                         .setClientPub(ByteString.copyFrom(clientSecurity.getClientIdentityPublicKey().serialize()))
                         .setSignedTLSPub(ByteString.copyFrom(clientSecurity.getSignedTLSPub(bundleSecurity.getClientGrpcSecurity()
@@ -444,6 +444,11 @@ public class BundleTransmission {
         }
         channel.shutdownNow();
         return new BundleExchangeCounts(uploadStatus, downloadStatus);
+    }
+
+    public List<String> getNextBundles() throws InvalidKeyException, GeneralSecurityException {
+        var clientSecurity = bundleSecurity.getClientSecurity();
+        return bundleSecurity.getClientWindow().getWindow(clientSecurity);
     }
 
     private Statuses uploadBundle(BundleExchangeServiceGrpc.BundleExchangeServiceStub stub) throws

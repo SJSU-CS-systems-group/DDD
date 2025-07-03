@@ -5,9 +5,13 @@ import android.content.Context
 import android.graphics.Color
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiServiceManager
+import net.discdd.client.bundletransmission.BundleTransmission
+import net.discdd.model.Bundle
 import net.discdd.viewmodels.UsbViewModel
 import java.io.File
 import java.io.IOException
@@ -96,12 +100,17 @@ class ClientUsbViewModel(
                         logger.log(Level.WARNING, "Failed to create file '${file.name}' in device received-processing directory")
                         continue
                     }
-                    context.contentResolver.openOutputStream(targetFile.uri)?.use { outputStream ->
-                        context.contentResolver.openInputStream(file.uri)?.use { inputStream ->
-                            inputStream.copyTo(outputStream)
+                    val bundleDTO = bundleTransmission!!.getNextBundles() //rename this... what does DTO stand for?
+                    if (bundleDTO.contains(targetFile.name)) {
+                        val result = withContext(Dispatchers.IO) {
+                            context.contentResolver.openOutputStream(targetFile.uri)?.use { outputStream ->
+                                context.contentResolver.openInputStream(file.uri)?.use { inputStream ->
+                                    inputStream.copyTo(outputStream)
+                                }
+                            }
                         }
+                        logger.log(INFO, "Transferred file: ${file.name} of ${result} bytes to ${devicePath}")
                     }
-                    logger.log(INFO, "Transferred file: ${file.name}")
                 }
                 updateMessage("All files transferred from 'toClient' to device received-processing successfully", Color.GREEN)
             } catch (e: Exception) {
