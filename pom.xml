@@ -121,6 +121,7 @@
         <module>apps/cli</module>
         <module>apps/echo/server</module>
         <module>apps/k9/server</module>
+        <module>apps/k9/common</module>
     </modules>
 
 </project>
