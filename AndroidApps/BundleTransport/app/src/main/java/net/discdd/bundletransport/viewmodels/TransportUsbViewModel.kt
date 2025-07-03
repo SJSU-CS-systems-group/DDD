@@ -14,18 +14,12 @@ class TransportUsbViewModel(
     }
     private var usbFileManager: UsbFileManager = UsbFileManager(storageManager, transportPaths)
 
-    //usbTransferToTransport
     fun populate() {
         try {
-            //get toServer list with DocumentFile.listFiles
-            //for every file in list
-                //DocumentFile.createFile(mime type, file.getName)
             usbFileManager.populateUsb()
             updateMessage("Exchange successful!", Color.GREEN)
         } catch (e: Exception) {
             updateMessage("Exchange failed: ${e.message}", Color.RED)
         }
     }
-
-    //transportTransfer to Usb
 }
