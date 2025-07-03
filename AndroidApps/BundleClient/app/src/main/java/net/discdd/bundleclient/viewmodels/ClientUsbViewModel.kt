@@ -45,8 +45,6 @@ class ClientUsbViewModel(
         }
         return child ?: throw IOException ("Could not create $name")
     }
-    //upStream
-    //clientTransferToUsb
     fun transferBundleToUsb(context: Context) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
@@ -86,7 +84,6 @@ class ClientUsbViewModel(
             }
         }
     }
-    //downStream
     fun usbTransferToClient(context: Context) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
