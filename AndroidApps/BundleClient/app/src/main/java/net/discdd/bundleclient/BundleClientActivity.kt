@@ -46,6 +46,7 @@ class BundleClientActivity: ComponentActivity() {
 
         var usbViewModel: ClientUsbViewModel
         usbViewModel = ViewModelProvider(this).get(ClientUsbViewModel::class.java)
+        usbViewModel.setRoot(applicationContext.filesDir)
         val openDocumentTreeLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK) {
                 usbViewModel.openedURI(applicationContext, result.data?.data)
