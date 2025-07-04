@@ -130,11 +130,12 @@ fun WifiDirectScreen(
             )
 
             var expanded by remember { mutableStateOf(false) }
+            val backgroundExchange by viewModel.backgroundExchange.collectAsState()
 
-            val exchangeText = if (viewModel.backgroundExchange.value <= 0) {
+            val exchangeText = if (backgroundExchange <= 0) {
                 "Disabled"
             } else {
-                "${viewModel.backgroundExchange.value} minute(s)"
+                "${backgroundExchange} minute(s)"
             }
             ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
                 TextField(
@@ -143,7 +144,7 @@ fun WifiDirectScreen(
                     readOnly = true,
                     label = { Text("Background Transfer Interval") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                    modifier = Modifier.menuAnchor()
+                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
                 )
                 ExposedDropdownMenu(
                     expanded = expanded,

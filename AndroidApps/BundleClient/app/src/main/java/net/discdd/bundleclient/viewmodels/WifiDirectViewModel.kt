@@ -20,9 +20,6 @@ import net.discdd.bundleclient.service.BundleClientServiceBroadcastReceiver
 import net.discdd.bundleclient.service.DDDWifiDevice
 import net.discdd.viewmodels.WifiBannerViewModel
 import java.util.concurrent.CompletableFuture
-import java.util.logging.Logger
-
-private val logger = Logger.getLogger(WifiDirectViewModel::class.java.name)
 
 data class PeerDevice(
     val device: DDDWifiDevice,
@@ -46,7 +43,10 @@ data class WifiDirectState(
 class WifiDirectViewModel(
     application: Application,
 ): WifiBannerViewModel(application) {
-    private val preferences: SharedPreferences
+    private val preferences: SharedPreferences = getApplication<Application>().getSharedPreferences(
+    BundleClientService.NET_DISCDD_BUNDLECLIENT_SETTINGS,
+    Context.MODE_PRIVATE
+    )
     private val bundleClientServiceBroadcastReceiver = BundleClientServiceBroadcastReceiver().apply {
         setViewModel(this@WifiDirectViewModel)
     }
@@ -60,11 +60,7 @@ class WifiDirectViewModel(
     val backgroundExchange = _backgroundExchange.asStateFlow()
 
     init {
-        preferences = getApplication<Application>().getSharedPreferences(
-        BundleClientService.NET_DISCDD_BUNDLECLIENT_SETTINGS,
-        Context.MODE_PRIVATE
-        )
-        _backgroundExchange.value = preferences.getInt(BundleClientService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, 0)
+        _backgroundExchange.value = BundleClientService.getBackgroundExchangeSetting(preferences)
         intentFilter.addAction(BundleClientService.NET_DISCDD_BUNDLECLIENT_WIFI_ACTION)
         intentFilter.addAction(BundleClientService.NET_DISCDD_BUNDLECLIENT_LOG_ACTION)
             viewModelScope.launch {
@@ -118,7 +114,7 @@ class WifiDirectViewModel(
 
     private fun updatePeerExchangeStatus(device: DDDWifiDevice, inProgress: Boolean) {
         val updatedPeers = _state.value.peers.map { peer ->
-            if (peer.device.equals(device)) {
+            if (peer.device == device) {
                 peer.copy(isExchangeInProgress = inProgress)
             } else {
                 peer
@@ -209,10 +205,6 @@ class WifiDirectViewModel(
         viewModelScope.launch {
             wifiService?.discoverPeers()
         }
-    }
-
-    fun getWifiBgService(): BundleClientService? {
-        return wifiService
     }
 
     fun clearResultLogs() {
