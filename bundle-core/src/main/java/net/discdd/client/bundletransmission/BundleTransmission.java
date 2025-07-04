@@ -69,14 +69,15 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 import static net.discdd.utils.Constants.GRPC_LONG_TIMEOUT_MS;
+import static net.discdd.utils.Constants.GRPC_SHORT_TIMEOUT_MS;
 import static net.discdd.utils.FileUtils.crashReportExists;
 import static net.discdd.utils.FileUtils.readCrashReportFromFile;
 
@@ -86,8 +87,8 @@ public class BundleTransmission {
     private final BundleSecurity bundleSecurity;
     public final ApplicationDataManager applicationDataManager;
 
-    private ClientRouting clientRouting;
-    private ClientPaths clientPaths;
+    final private ClientRouting clientRouting;
+    final private ClientPaths clientPaths;
 
     public BundleTransmission(ClientPaths clientPaths, Consumer<ADU> aduConsumer) throws
             WindowExceptions.BufferOverflow, IOException, InvalidKeyException,
@@ -235,12 +236,7 @@ public class BundleTransmission {
      */
     @Getter
     public static class RecentTransport {
-        /**
-         * from WifiP2pDevice.deviceAddress
-         */
-        private String deviceAddress;
-        /* @param deviceName from WifiP2pDevice.deviceName */
-        private String deviceName = "???";
+        private TransportDevice device;
         /* @param lastExchange time of last bundle exchange */
         private long lastExchange;
         /* @param lastSeen time of last device discovery */
@@ -248,12 +244,12 @@ public class BundleTransmission {
         /* @param recencyTime time from the last recencyBlob received */
         private long recencyTime;
 
-        public RecentTransport(String deviceAddress) {
-            this.deviceAddress = deviceAddress;
+        public RecentTransport(TransportDevice device) {
+            this.device = device;
         }
     }
 
-    final private HashMap<String, RecentTransport> recentTransports = new HashMap();
+    final private HashMap<TransportDevice, RecentTransport> recentTransports = new HashMap();
 
     public RecentTransport[] getRecentTransports() {
         synchronized (recentTransports) {
@@ -261,23 +257,24 @@ public class BundleTransmission {
         }
     }
 
-    public RecentTransport getRecentTransport(String deviceAddress) {
+    public RecentTransport getRecentTransport(TransportDevice device) {
         synchronized (recentTransports) {
-            return recentTransports.get(deviceAddress);
+            return recentTransports.get(device);
         }
     }
 
-    public void processDiscoveredPeer(String deviceAddress, String deviceName) {
+    public void processDiscoveredPeer(TransportDevice device) {
         synchronized (recentTransports) {
-            RecentTransport recentTransport = recentTransports.computeIfAbsent(deviceAddress, RecentTransport::new);
-            recentTransport.deviceName = deviceName;
+            RecentTransport recentTransport = recentTransports.computeIfAbsent(device, RecentTransport::new);
+            recentTransport.device = device;
             recentTransport.lastSeen = System.currentTimeMillis();
         }
     }
 
-    public void timestampExchangeWithTransport(String deviceAddress) {
+    public void timestampExchangeWithTransport(TransportDevice device) {
+        if (device == TransportDevice.SERVER_DEVICE) return;
         synchronized (recentTransports) {
-            RecentTransport recentTransport = recentTransports.computeIfAbsent(deviceAddress, RecentTransport::new);
+            RecentTransport recentTransport = recentTransports.computeIfAbsent(device, RecentTransport::new);
             var now = System.currentTimeMillis();
             recentTransport.lastExchange = now;
             recentTransport.lastSeen = now;
@@ -291,7 +288,7 @@ public class BundleTransmission {
     }
 
     // returns true if the blob is more recent than previously seen
-    public boolean processRecencyBlob(String deviceAddress, GetRecencyBlobResponse recencyBlobResponse) throws
+    public boolean processRecencyBlob(TransportDevice device, GetRecencyBlobResponse recencyBlobResponse) throws
             IOException, InvalidKeyException {
         // first make sure the data is valid
         if (recencyBlobResponse.getStatus() != RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS) {
@@ -312,7 +309,7 @@ public class BundleTransmission {
             throw new IOException("Recency blob signature verification failed");
         }
         synchronized (recentTransports) {
-            RecentTransport recentTransport = recentTransports.computeIfAbsent(deviceAddress, RecentTransport::new);
+            RecentTransport recentTransport = recentTransports.computeIfAbsent(device, RecentTransport::new);
             if (recencyBlob.getBlobTimestamp() > recentTransport.recencyTime) {
                 recentTransport.recencyTime = recencyBlob.getBlobTimestamp();
                 return true;
@@ -353,7 +350,8 @@ public class BundleTransmission {
                 return true;
             } catch (IOException e) {
                 logger.log(SEVERE,
-                           "Try: " + tries + " | Error - message: " + e.getMessage() + ", cause: " + e.getCause());
+                           "Try: " + tries + " | Error - " + transportAddress + " message: " + e.getMessage() +
+                                   ", cause: " + e.getCause());
                 try {
                     Thread.sleep(500);
                 } catch (Exception ex) {
@@ -365,13 +363,13 @@ public class BundleTransmission {
     }
 
     /**
-     * IT IS VERY VERY IMPORTANT THAT TRANSPORT IS THE HOSTNAME WHEN TALKING TO THE SERVER, AND AN ADDRESS
+     * IT IS VERY VERY IMPORTANT THAT TransportAddress IS THE HOSTNAME WHEN TALKING TO THE SERVER, AND AN ADDRESS
      * WHEN TALKING TO A DEVICE.
      */
-    public BundleExchangeCounts doExchangeWithTransport(String deviceAddress,
-                                                        String deviceDeviceName,
+    public BundleExchangeCounts doExchangeWithTransport(TransportDevice device,
                                                         String transportAddress,
-                                                        int port) throws Exception {
+                                                        int port,
+                                                        boolean connectingToTransport) throws Exception {
         var sslClientContext = SSLContext.getInstance("TLS");
         var trustManager = new DDDX509ExtendedTrustManager(true);
         sslClientContext.init(DDDTLSUtil.getKeyManagerFactory(bundleSecurity.getClientGrpcSecurity().getGrpcKeyPair(),
@@ -393,9 +391,10 @@ public class BundleTransmission {
         try {
             if (isServerRunning(transportAddress, port)) {
                 var recencyBlobRequest = GetRecencyBlobRequest.newBuilder().build();
-                var blobRecencyReply = blockingStub.getRecencyBlob(recencyBlobRequest);
+                var blobRecencyReply = blockingStub.withDeadlineAfter(GRPC_SHORT_TIMEOUT_MS, MILLISECONDS)
+                        .getRecencyBlob(recencyBlobRequest);
                 var recencyBlob = blobRecencyReply.getRecencyBlob();
-                if (!processRecencyBlob(deviceAddress, blobRecencyReply)) {
+                if (!processRecencyBlob(device, blobRecencyReply)) {
                     logger.log(SEVERE,
                                "Did not process recency blob. In the future, we need to stop talking to this " +
                                        "device");
@@ -404,21 +403,23 @@ public class BundleTransmission {
                     logger.log(INFO, "Recency blob processed for " + transportSenderId);
                 }
 
-                timestampExchangeWithTransport(deviceAddress);
+                timestampExchangeWithTransport(device);
                 var clientSecurity = bundleSecurity.getClientSecurity();
-                var bundleRequests = bundleSecurity.getClientWindow().getWindow(clientSecurity);
+                var bundleRequests = getNextBundles();
                 PublicKeyMap publicKeyMap = PublicKeyMap.newBuilder()
                         .setClientPub(ByteString.copyFrom(clientSecurity.getClientIdentityPublicKey().serialize()))
                         .setSignedTLSPub(ByteString.copyFrom(clientSecurity.getSignedTLSPub(bundleSecurity.getClientGrpcSecurity()
                                                                                                     .getGrpcKeyPair()
                                                                                                     .getPublic())))
                         .build();
-                var bundlesDownloaded = deviceDeviceName.equals("BundleServer") ?
+                // we don't include the public key map if we are connecting to a transport, since we only authenticate
+                // ourselves to BundleServers not transports
+                var bundlesDownloaded = connectingToTransport ?
+                                        downloadBundles(bundleRequests, BundleSenderType.CLIENT, blockingStub, null) :
                                         downloadBundles(bundleRequests,
                                                         BundleSenderType.CLIENT,
                                                         blockingStub,
-                                                        publicKeyMap) :
-                                        downloadBundles(bundleRequests, BundleSenderType.CLIENT, blockingStub, null);
+                                                        publicKeyMap);
 
                 try {
                     if (bundlesDownloaded == null) {
@@ -433,7 +434,8 @@ public class BundleTransmission {
                     logger.log(WARNING, "Processing received bundle failed", e);
                 }
 
-                var stub = BundleExchangeServiceGrpc.newStub(channel);
+                var stub = BundleExchangeServiceGrpc.newStub(channel)
+                        .withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, MILLISECONDS);
                 uploadStatus = uploadBundle(stub);
 
             }
@@ -444,6 +446,11 @@ public class BundleTransmission {
         return new BundleExchangeCounts(uploadStatus, downloadStatus);
     }
 
+    public List<String> getNextBundles() throws InvalidKeyException, GeneralSecurityException {
+        var clientSecurity = bundleSecurity.getClientSecurity();
+        return bundleSecurity.getClientWindow().getWindow(clientSecurity);
+    }
+
     private Statuses uploadBundle(BundleExchangeServiceGrpc.BundleExchangeServiceStub stub) throws
             RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException, GeneralSecurityException {
         BundleDTO toSend = generateBundleForTransmission();
@@ -451,8 +458,7 @@ public class BundleTransmission {
         var bundleUploadResponseObserver = new BundleUploadResponseObserver();
 
         StreamObserver<BundleUploadRequest> uploadRequestStreamObserver =
-                stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                        .uploadBundle(bundleUploadResponseObserver);
+                stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, MILLISECONDS).uploadBundle(bundleUploadResponseObserver);
 
         uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder()
                                                    .setBundleId(EncryptedBundleId.newBuilder()
@@ -505,7 +511,7 @@ public class BundleTransmission {
             }
 
             logger.log(INFO, "Downloading file: " + bundle);
-            var responses = stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+            var responses = stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, MILLISECONDS)
                     .downloadBundle(downloadRequestBuilder.build());
             OutputStream fileOutputStream = null;
 

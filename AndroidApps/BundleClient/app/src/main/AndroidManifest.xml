@@ -12,13 +12,7 @@
         android:theme="@style/Theme.AppCompat.DayNight"
         android:supportsRtl="true">
         <service
-                android:name=".BundleClientWifiDirectService"
-                android:enabled="true"
-                android:foregroundServiceType="dataSync"
-                android:exported="false" >
-        </service>
-        <service
-                android:name=".BundleClientWifiAwareService"
+                android:name=".service.BundleClientService"
                 android:enabled="true"
                 android:foregroundServiceType="dataSync"
                 android:exported="false" >

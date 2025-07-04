@@ -15,6 +15,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import net.discdd.UsbConnectionManager
 import net.discdd.bundleclient.screens.HomeScreen
+import net.discdd.bundleclient.service.BundleClientService
 import net.discdd.bundleclient.viewmodels.ClientUsbViewModel
 import net.discdd.screens.LogFragment
 import net.discdd.theme.ComposableTheme
@@ -27,7 +28,7 @@ class BundleClientActivity: ComponentActivity() {
         getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     }
     private val sharedPreferences by lazy {
-        getSharedPreferences(BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE)
+        getSharedPreferences(BundleClientService.NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,6 +46,7 @@ class BundleClientActivity: ComponentActivity() {
 
         var usbViewModel: ClientUsbViewModel
         usbViewModel = ViewModelProvider(this).get(ClientUsbViewModel::class.java)
+        usbViewModel.setRoot(applicationContext.filesDir)
         val openDocumentTreeLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK) {
                 usbViewModel.openedURI(applicationContext, result.data?.data)
@@ -70,7 +72,7 @@ class BundleClientActivity: ComponentActivity() {
         lifecycleScope.launch {
             try {
                 applicationContext.startForegroundService(
-                    Intent(this@BundleClientActivity, BundleClientWifiDirectService::class.java)
+                    Intent(this@BundleClientActivity, BundleClientService::class.java)
                 )
             } catch (e: Exception) {
                 logger.log(WARNING, "Failed to start BundleWifiDirectService", e)
@@ -87,7 +89,7 @@ class BundleClientActivity: ComponentActivity() {
             */
 
             try {
-                val wifiDirectIntent = Intent(this@BundleClientActivity, BundleClientWifiDirectService::class.java)
+                val wifiDirectIntent = Intent(this@BundleClientActivity, BundleClientService::class.java)
                 bindService(wifiDirectIntent, WifiServiceManager.getConnection(), Context.BIND_AUTO_CREATE)
             } catch (e: Exception) {
                 logger.log(WARNING, "Failed to bind to BundleWifiDirectService", e)
@@ -114,9 +116,9 @@ class BundleClientActivity: ComponentActivity() {
         super.onDestroy()
 
         if (!sharedPreferences.getBoolean(
-            BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, false
+            BundleClientService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, false
         )) {
-            stopService(Intent(this, BundleClientWifiDirectService::class.java))
+            stopService(Intent(this, BundleClientService::class.java))
         }
 
         UsbConnectionManager.cleanup(applicationContext)

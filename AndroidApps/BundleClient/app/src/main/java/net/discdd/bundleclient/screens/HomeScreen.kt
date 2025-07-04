@@ -104,10 +104,6 @@ fun HomeScreen(
             title = context.getString(R.string.permissions_tab),
             screen = { PermissionScreen(runtimePermissions = listOf(nearbyWifiState, notificationState)) }
         ),
-        TabItem(
-            title = context.getString(R.string.wifi_aware_tab),
-            screen = { WifiAwareSubscriberScreen() }
-        )
     )
 
     val usbTab = listOf(
@@ -119,6 +115,7 @@ fun HomeScreen(
                 UsbScreen(usbViewModel) { viewModel ->
                     ClientUsbComponent(viewModel) {
                         viewModel.transferBundleToUsb(currentContext)
+                        viewModel.usbTransferToClient(currentContext)
                     }
                 }
             }

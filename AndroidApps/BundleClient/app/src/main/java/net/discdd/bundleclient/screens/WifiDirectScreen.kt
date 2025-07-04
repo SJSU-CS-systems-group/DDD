@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -54,7 +52,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
-import net.discdd.bundleclient.BundleClientWifiDirectService
+import net.discdd.bundleclient.service.BundleClientService
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.viewmodels.PeerDevice
 import net.discdd.bundleclient.viewmodels.WifiDirectViewModel
@@ -66,10 +64,10 @@ import java.util.concurrent.CompletableFuture
 @Composable
 fun WifiDirectScreen(
     viewModel: WifiDirectViewModel = viewModel(),
-    serviceReadyFuture: CompletableFuture<BundleClientWifiDirectService>,
+    serviceReadyFuture: CompletableFuture<BundleClientService>,
     nearbyWifiState: PermissionState,
     preferences: SharedPreferences = LocalContext.current.getSharedPreferences(
-        BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTINGS,
+        BundleClientService.NET_DISCDD_BUNDLECLIENT_SETTINGS,
         Context.MODE_PRIVATE
     ),
     onToggle: () -> Unit,
@@ -103,7 +101,7 @@ fun WifiDirectScreen(
         state.dialogPeer?.let { peer ->
             AlertDialog(
                 onDismissRequest = { viewModel.dismissDialog() },
-                title = { Text(text = peer.deviceName) },
+                title = { Text(text = peer.device.description) },
                 text = {
                     Column {
                         Text(text = "Last seen: ${viewModel.getRelativeTime(peer.lastSeen)}")
@@ -150,7 +148,8 @@ fun WifiDirectScreen(
                 content = { Text(text = "ClientId: ${state.clientId}") },
                 onToggle = onToggle,
             )
-            Text(text = "Connected Device Addresses: ${state.connectedDeviceText}")
+            Text(text = "Wifi Direct Enabled: ${if (state.dddWifiEnabled) "✅" else "❌"}")
+            Text(text = "Status: ${state.connectedStateText}")
             Text(
                 text = "Discovery Status: ${
                     if (state.discoveryActive) {
@@ -162,7 +161,7 @@ fun WifiDirectScreen(
             var checked by remember {
                 mutableStateOf(
                     preferences.getBoolean(
-                        BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE,
+                        BundleClientService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE,
                         false
                     )
                 )
@@ -174,7 +173,7 @@ fun WifiDirectScreen(
                     checked = checked, onCheckedChange = {
                         checked = it
                         preferences.edit().putBoolean(
-                            BundleClientWifiDirectService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, it
+                            BundleClientService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, it
                         ).apply()
                     }, modifier = Modifier.weight(1f)
                 )
@@ -226,9 +225,9 @@ fun PeersList(
     ) {
         for (peer in peers) {
             PeerItem(peer = peer, onExchangeClick = {
-                viewModel.exchangeMessage(peer.deviceAddress)
+                viewModel.exchangeMessage(peer.device)
             }, onItemClick = {
-                viewModel.showPeerDialog(peer.deviceAddress)
+                viewModel.showPeerDialog(peer.device)
             })
         }
     }
@@ -246,7 +245,7 @@ fun PeerItem(
         TextButton(
             onClick = onItemClick
         ) {
-            Text(text = peer.deviceName)
+            Text(text = peer.device.description)
         }
         Button(
             onClick = onExchangeClick,
