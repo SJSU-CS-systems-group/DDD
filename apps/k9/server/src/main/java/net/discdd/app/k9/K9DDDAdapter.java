@@ -243,10 +243,8 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
     }
 
     private void processWhoAmIAdu(ControlAdu.WhoAmIControlAdu ignored, String clientId) throws IOException {
-        var ack = new ControlAdu.WhoAmIAckControlAdu(Map.of("email",
-                                                            clientToEmailRepository.findById(clientId)
-                                                                    .map(rec -> rec.email)
-                                                                    .orElse("")));
+        String email = clientToEmailRepository.findById(clientId).map(rec -> rec.email).orElse("");
+        var ack = new ControlAdu.WhoAmIAckControlAdu(Map.of("email", email, "success", !email.isEmpty()));
         sendADUsStorage.addADU(clientId, APP_ID, ack.toBytes(), -1);
 
     }
