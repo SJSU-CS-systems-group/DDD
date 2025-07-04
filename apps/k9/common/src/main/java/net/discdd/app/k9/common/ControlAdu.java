@@ -204,12 +204,15 @@ public class ControlAdu {
         }
     }
 
-    public static class WhoAmIAckControlAdu extends ControlAdu {
+    public static class WhoAmIAckControlAdu extends ControlAdu implements EmailAck {
         public WhoAmIAckControlAdu(Map<String, Object> properties) {
             super(properties);
         }
 
+        @Override
         public String email() {return properties.getProperty("email");}
+        @Override
+        public boolean success() {return Boolean.parseBoolean(properties.getProperty("success"));}
     }
 
 }
