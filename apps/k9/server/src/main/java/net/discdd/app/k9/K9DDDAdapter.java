@@ -184,8 +184,10 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
 
     private void processRegisterAdus(ControlAdu.RegisterControlAdu adu, String clientId) throws IOException {
         String message = null;
-        if (!isLowerCaseASCII(adu.prefix()) || !isLowerCaseASCII(adu.suffix()) || adu.prefix().length() > 10 || adu.suffix().length() > 10) {
-            message = "Prefix and suffix must be lower case ASCII characters only.";
+        if (!isLowerCaseASCII(adu.prefix()) || !isLowerCaseASCII(adu.suffix()) ||
+                adu.prefix().length() > 10 || adu.prefix().length() < 3 ||
+                adu.suffix().length() > 10 || adu.suffix().length() < 3) {
+            message = "Prefix and suffix must be 3 to 10 lower case ASCII characters only.";
         }
         int tries = 0;
         while (message == null) {
