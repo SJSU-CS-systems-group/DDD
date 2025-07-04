@@ -188,7 +188,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
             message = "Prefix and suffix must be lower case ASCII characters only.";
         }
         int tries = 0;
-        while (message != null) {
+        while (message == null) {
             var email = adu.prefix() + getRandNum() + getRandChar() + getRandChar() + getRandNum() +
                     adu.suffix() + '@' + emailService.localDomain;
             if (!clientToEmailRepository.existsById(email)) {

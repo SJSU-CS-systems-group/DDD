@@ -27,14 +27,14 @@ public class ControlAdu {
                                                                                     WhoAmIControlAdu.class,
                                                                                     "whoami-ack",
                                                                                     WhoAmIAckControlAdu.class);
-
-    // ugly hack to turn off strict method checking when creating ControlAdu instances
-    // from deserialized properties.
-    private static final ThreadLocal<Boolean> checkMethods = ThreadLocal.withInitial(() -> Boolean.TRUE);
     // The header for control ADUs, used to identify them in the byte stream.
     // start with a # to make it compatible with properties files
     public static final String CONTROL_HEADER = "# CONTROL";
+    // ugly hack to turn off strict method checking when creating ControlAdu instances
+    // from deserialized properties.
+    private static final ThreadLocal<Boolean> checkMethods = ThreadLocal.withInitial(() -> Boolean.TRUE);
     final protected Properties properties = new Properties();
+
     ControlAdu(Map<String, Object> map) {
         if (map == null || map.isEmpty()) {
             return;
@@ -136,6 +136,11 @@ public class ControlAdu {
         return properties.hashCode();
     }
 
+    public interface EmailAck {
+        String email();
+        boolean success();
+    }
+
     public static class LoginControlAdu extends ControlAdu {
         public LoginControlAdu(Map<String, Object> properties) {
             super(properties);
@@ -146,7 +151,7 @@ public class ControlAdu {
         public String password() {return properties.getProperty("password");}
     }
 
-    public static class LoginAckControlAdu extends ControlAdu {
+    public static class LoginAckControlAdu extends ControlAdu implements EmailAck {
         public LoginAckControlAdu(Map<String, Object> properties) {
             super(properties);
         }
@@ -172,7 +177,7 @@ public class ControlAdu {
         public String password() {return properties.getProperty("password");}
     }
 
-    public static class RegisterAckControlAdu extends ControlAdu {
+    public static class RegisterAckControlAdu extends ControlAdu implements EmailAck {
         public RegisterAckControlAdu(Map<String, Object> properties) {
             super(properties);
         }
@@ -190,6 +195,7 @@ public class ControlAdu {
         public WhoAmIControlAdu() {
             super(null);
         }
+
         // we need this one for deserialization
         public WhoAmIControlAdu(Map<String, Object> properties) {
             super(properties);
