@@ -211,6 +211,7 @@ public class ControlAdu {
 
         @Override
         public String email() {return properties.getProperty("email");}
+
         @Override
         public boolean success() {return Boolean.parseBoolean(properties.getProperty("success"));}
     }
