@@ -138,6 +138,7 @@ public class ControlAdu {
 
     public interface EmailAck {
         String email();
+
         boolean success();
     }
 

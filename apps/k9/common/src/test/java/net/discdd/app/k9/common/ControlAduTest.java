@@ -13,15 +13,26 @@ public class ControlAduTest {
         var serDeserLoginAdu = ControlAdu.fromBytes(origLoginAdu.toBytes());
         Assertions.assertEquals(origLoginAdu, serDeserLoginAdu);
 
-        var origLoginAckAdu = new ControlAdu.LoginAckControlAdu(Map.of("email", "testemail", "password", "testpass", "success", "true"));
+        var origLoginAckAdu = new ControlAdu.LoginAckControlAdu(Map.of("email",
+                                                                       "testemail",
+                                                                       "password",
+                                                                       "testpass",
+                                                                       "success",
+                                                                       "true"));
         var serDeserLoginAckAdu = ControlAdu.fromBytes(origLoginAckAdu.toBytes());
         Assertions.assertEquals(origLoginAckAdu, serDeserLoginAckAdu);
 
-        var origRegisterAdu = new ControlAdu.RegisterControlAdu(Map.of("prefix", "testprefix", "suffix", "testsuffix", "password", "testpass"));
+        var origRegisterAdu = new ControlAdu.RegisterControlAdu(Map.of("prefix",
+                                                                       "testprefix",
+                                                                       "suffix",
+                                                                       "testsuffix",
+                                                                       "password",
+                                                                       "testpass"));
         var serDeserRegisterAdu = ControlAdu.fromBytes(origRegisterAdu.toBytes());
         Assertions.assertEquals(origRegisterAdu, serDeserRegisterAdu);
 
-        var origRegisterAckAdu = new ControlAdu.RegisterAckControlAdu(Map.of("email", "testemail", "password", "testpass"));
+        var origRegisterAckAdu =
+                new ControlAdu.RegisterAckControlAdu(Map.of("email", "testemail", "password", "testpass"));
         var serDeserRegisterAckAdu = ControlAdu.fromBytes(origRegisterAckAdu.toBytes());
         Assertions.assertEquals(origRegisterAckAdu, serDeserRegisterAckAdu);
 
@@ -37,7 +48,12 @@ public class ControlAduTest {
     @Test
     public void testControlAduExtraData() {
         Assertions.assertThrows(IllegalArgumentException.class, () -> {
-            new ControlAdu.LoginControlAdu(Map.of("username", "testuser", "password", "testpass", "extraData", "testdata"));
+            new ControlAdu.LoginControlAdu(Map.of("username",
+                                                  "testuser",
+                                                  "password",
+                                                  "testpass",
+                                                  "extraData",
+                                                  "testdata"));
         });
     }
 }
