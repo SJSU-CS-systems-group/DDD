@@ -6,7 +6,7 @@ import android.content.Context
 import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.text.format.DateUtils
-import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.edit
 import androidx.lifecycle.viewModelScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +21,6 @@ import net.discdd.bundleclient.service.DDDWifiDevice
 import net.discdd.viewmodels.WifiBannerViewModel
 import java.util.concurrent.CompletableFuture
 import java.util.logging.Logger
-import androidx.core.content.edit
 
 private val logger = Logger.getLogger(WifiDirectViewModel::class.java.name)
 
