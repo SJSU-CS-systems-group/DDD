@@ -2,8 +2,11 @@ package net.discdd.bundleclient.viewmodels
 
 import android.annotation.SuppressLint
 import android.app.Application
+import android.content.Context
 import android.content.IntentFilter
+import android.content.SharedPreferences
 import android.text.format.DateUtils
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewModelScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,6 +21,7 @@ import net.discdd.bundleclient.service.DDDWifiDevice
 import net.discdd.viewmodels.WifiBannerViewModel
 import java.util.concurrent.CompletableFuture
 import java.util.logging.Logger
+import androidx.core.content.edit
 
 private val logger = Logger.getLogger(WifiDirectViewModel::class.java.name)
 
@@ -35,7 +39,6 @@ data class WifiDirectState(
     val connectedStateText: String = "",
     val discoveryActive: Boolean = false,
     val clientId: String = "Service not running",
-    val backgroundExchange: Boolean = false,
     val peers: List<PeerDevice> = emptyList(),
     val showPeerDialog: Boolean = false,
     val dialogPeer: PeerDevice? = null, // null: hide dialog
@@ -44,6 +47,7 @@ data class WifiDirectState(
 class WifiDirectViewModel(
     application: Application,
 ): WifiBannerViewModel(application) {
+    private val preferences: SharedPreferences
     private val bundleClientServiceBroadcastReceiver = BundleClientServiceBroadcastReceiver().apply {
         setViewModel(this@WifiDirectViewModel)
     }
@@ -53,9 +57,23 @@ class WifiDirectViewModel(
     private val _state = MutableStateFlow(WifiDirectState())
     val state = _state.asStateFlow()
 
+    private val _backgroundExchange = MutableStateFlow(0)
+    val backgroundExchange = _backgroundExchange.asStateFlow()
+
     init {
+        preferences = getApplication<Application>().getSharedPreferences(
+        BundleClientService.NET_DISCDD_BUNDLECLIENT_SETTINGS,
+        Context.MODE_PRIVATE
+        )
+        _backgroundExchange.value = preferences.getInt(BundleClientService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, 0)
         intentFilter.addAction(BundleClientService.NET_DISCDD_BUNDLECLIENT_WIFI_ACTION)
         intentFilter.addAction(BundleClientService.NET_DISCDD_BUNDLECLIENT_LOG_ACTION)
+            viewModelScope.launch {
+                _backgroundExchange.collect { value ->
+                    // Replace with your SharedPreferences instance
+                    preferences.edit {putInt("background_exchange", value)}
+                }
+            }
     }
 
     fun initialize(serviceReadyFuture: CompletableFuture<BundleClientService>) {
@@ -202,5 +220,10 @@ class WifiDirectViewModel(
         viewModelScope.launch {
             _state.update { it.copy(resultText = "") }
         }
+    }
+
+    fun setBackgroundExchange(value: Int) {
+        // we set up a collector in the init that will save this value to SharedPreferences
+        _backgroundExchange.value = value
     }
 }

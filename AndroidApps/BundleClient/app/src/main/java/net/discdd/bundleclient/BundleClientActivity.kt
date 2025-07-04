@@ -115,9 +115,9 @@ class BundleClientActivity: ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
 
-        if (!sharedPreferences.getBoolean(
-            BundleClientService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, false
-        )) {
+        if (sharedPreferences.getInt(
+            BundleClientService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, 0
+        ) > 0) {
             stopService(Intent(this, BundleClientService::class.java))
         }
 
