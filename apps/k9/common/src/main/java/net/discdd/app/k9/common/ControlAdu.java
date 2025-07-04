@@ -127,7 +127,8 @@ public class ControlAdu {
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
-        if (!(obj instanceof ControlAdu that)) return false;
+        if (!(obj instanceof ControlAdu)) return false;
+        ControlAdu that = (ControlAdu) obj;
         return properties.equals(that.properties);
     }
 
