@@ -141,6 +141,7 @@ public class ControlAdu {
         String email();
 
         boolean success();
+        String message();
     }
 
     public static class LoginControlAdu extends ControlAdu {
@@ -148,7 +149,7 @@ public class ControlAdu {
             super(properties);
         }
 
-        public String username() {return properties.getProperty("username");}
+        public String email() {return properties.getProperty("email");}
 
         public String password() {return properties.getProperty("password");}
     }
@@ -159,8 +160,6 @@ public class ControlAdu {
         }
 
         public String email() {return properties.getProperty("email");}
-
-        public String password() {return properties.getProperty("password");}
 
         public boolean success() {return Boolean.parseBoolean(properties.getProperty("success"));}
 
@@ -185,8 +184,6 @@ public class ControlAdu {
         }
 
         public String email() {return properties.getProperty("email");}
-
-        public String password() {return properties.getProperty("password");}
 
         public boolean success() {return Boolean.parseBoolean(properties.getProperty("success"));}
 
@@ -214,6 +211,8 @@ public class ControlAdu {
 
         @Override
         public boolean success() {return Boolean.parseBoolean(properties.getProperty("success"));}
+        @Override
+        public String message() {return properties.getProperty("message");}
     }
 
 }

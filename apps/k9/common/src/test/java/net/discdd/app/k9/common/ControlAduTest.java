@@ -9,17 +9,16 @@ import java.util.Map;
 public class ControlAduTest {
     @Test
     public void testControlAdus() throws IOException {
-        var origLoginAdu = new ControlAdu.LoginControlAdu(Map.of("username", "testuser", "password", "testpass"));
+        var origLoginAdu = new ControlAdu.LoginControlAdu(Map.of("email", "testuser", "password", "testpass"));
         var serDeserLoginAdu = ControlAdu.fromBytes(origLoginAdu.toBytes());
         Assertions.assertEquals(origLoginAdu, serDeserLoginAdu);
 
         var origLoginAckAdu = new ControlAdu.LoginAckControlAdu(Map.of("email",
                                                                        "testemail",
-                                                                       "password",
-                                                                       "testpass",
                                                                        "success",
                                                                        "true"));
-        var serDeserLoginAckAdu = ControlAdu.fromBytes(origLoginAckAdu.toBytes());
+        var serDeserLoginAckAdu = (ControlAdu.EmailAck)ControlAdu.fromBytes(origLoginAckAdu.toBytes());
+        Assertions.assertTrue(serDeserLoginAckAdu.success());
         Assertions.assertEquals(origLoginAckAdu, serDeserLoginAckAdu);
 
         var origRegisterAdu = new ControlAdu.RegisterControlAdu(Map.of("prefix",
@@ -32,8 +31,9 @@ public class ControlAduTest {
         Assertions.assertEquals(origRegisterAdu, serDeserRegisterAdu);
 
         var origRegisterAckAdu =
-                new ControlAdu.RegisterAckControlAdu(Map.of("email", "testemail", "password", "testpass"));
-        var serDeserRegisterAckAdu = ControlAdu.fromBytes(origRegisterAckAdu.toBytes());
+                new ControlAdu.RegisterAckControlAdu(Map.of("email", "testemail"));
+        var serDeserRegisterAckAdu = (ControlAdu.RegisterAckControlAdu)ControlAdu.fromBytes(origRegisterAckAdu.toBytes());
+        Assertions.assertFalse(serDeserRegisterAckAdu.success());
         Assertions.assertEquals(origRegisterAckAdu, serDeserRegisterAckAdu);
 
         var origWhoAmIControlAdu = new ControlAdu.WhoAmIControlAdu();

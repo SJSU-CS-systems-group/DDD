@@ -145,17 +145,17 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
 
     private void processLoginAdus(ControlAdu.LoginControlAdu adu, String clientId) throws IOException {
         // verify email
-        boolean emailExists = clientToEmailRepository.existsById(adu.username());
+        boolean emailExists = clientToEmailRepository.existsById(adu.email());
         if (emailExists) {
-            Optional<K9ClientIdToEmailMapping> entity = clientToEmailRepository.findById(adu.username());
+            Optional<K9ClientIdToEmailMapping> entity = clientToEmailRepository.findById(adu.email());
             if (entity.isPresent()) {
                 String hashedPassword = entity.get().password;
                 if (passwordEncoder.matches(adu.password(), hashedPassword)) {
                     // update email clientId entry
-                    clientToEmailRepository.updateClientId(clientId, adu.username());
+                    clientToEmailRepository.updateClientId(clientId, adu.email());
                     // create success ack
                     var ack = new ControlAdu.LoginAckControlAdu(Map.of("email",
-                                                                       adu.username() + "@" + emailService.localDomain,
+                                                                       adu.email(),
                                                                        "password",
                                                                        hashedPassword,
                                                                        "success",
