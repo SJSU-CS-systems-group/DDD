@@ -141,6 +141,7 @@ public class ControlAdu {
         String email();
 
         boolean success();
+
         String message();
     }
 
@@ -211,6 +212,7 @@ public class ControlAdu {
 
         @Override
         public boolean success() {return Boolean.parseBoolean(properties.getProperty("success"));}
+
         @Override
         public String message() {return properties.getProperty("message");}
     }

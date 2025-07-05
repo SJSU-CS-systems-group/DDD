@@ -13,11 +13,8 @@ public class ControlAduTest {
         var serDeserLoginAdu = ControlAdu.fromBytes(origLoginAdu.toBytes());
         Assertions.assertEquals(origLoginAdu, serDeserLoginAdu);
 
-        var origLoginAckAdu = new ControlAdu.LoginAckControlAdu(Map.of("email",
-                                                                       "testemail",
-                                                                       "success",
-                                                                       "true"));
-        var serDeserLoginAckAdu = (ControlAdu.EmailAck)ControlAdu.fromBytes(origLoginAckAdu.toBytes());
+        var origLoginAckAdu = new ControlAdu.LoginAckControlAdu(Map.of("email", "testemail", "success", "true"));
+        var serDeserLoginAckAdu = (ControlAdu.EmailAck) ControlAdu.fromBytes(origLoginAckAdu.toBytes());
         Assertions.assertTrue(serDeserLoginAckAdu.success());
         Assertions.assertEquals(origLoginAckAdu, serDeserLoginAckAdu);
 
@@ -30,9 +27,9 @@ public class ControlAduTest {
         var serDeserRegisterAdu = ControlAdu.fromBytes(origRegisterAdu.toBytes());
         Assertions.assertEquals(origRegisterAdu, serDeserRegisterAdu);
 
-        var origRegisterAckAdu =
-                new ControlAdu.RegisterAckControlAdu(Map.of("email", "testemail"));
-        var serDeserRegisterAckAdu = (ControlAdu.RegisterAckControlAdu)ControlAdu.fromBytes(origRegisterAckAdu.toBytes());
+        var origRegisterAckAdu = new ControlAdu.RegisterAckControlAdu(Map.of("email", "testemail"));
+        var serDeserRegisterAckAdu =
+                (ControlAdu.RegisterAckControlAdu) ControlAdu.fromBytes(origRegisterAckAdu.toBytes());
         Assertions.assertFalse(serDeserRegisterAckAdu.success());
         Assertions.assertEquals(origRegisterAckAdu, serDeserRegisterAckAdu);
 
