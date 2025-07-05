@@ -11,6 +11,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.discdd.bundleclient.R
@@ -66,7 +67,7 @@ class WifiDirectViewModel(
             viewModelScope.launch {
                 _backgroundExchange.collect { value ->
                     // Replace with your SharedPreferences instance
-                    preferences.edit {putInt("background_exchange", value)}
+                    preferences.edit {putInt(BundleClientService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, value)}
                 }
             }
     }

@@ -67,7 +67,6 @@ class BundleClientActivity: ComponentActivity() {
 
         UsbConnectionManager.initialize(applicationContext)
         WifiServiceManager.initializeConnection(this)
-        //WifiAwareManager.initializeConnection(this)
 
         lifecycleScope.launch {
             try {
@@ -77,31 +76,12 @@ class BundleClientActivity: ComponentActivity() {
                 logger.log(WARNING, "Failed to start BundleWifiDirectService", e)
             }
 
-            /*
-            try {
-                applicationContext.startForegroundService(
-                    Intent(this@BundleClientActivity, BundleClientWifiAwareService::class.java)
-                )
-            } catch (e: Exception) {
-                logger.log(WARNING, "Failed to start BundleWifiAwareService", e)
-            }
-            */
-
             try {
                 val wifiDirectIntent = Intent(this@BundleClientActivity, BundleClientService::class.java)
                 bindService(wifiDirectIntent, WifiServiceManager.getConnection(), BIND_AUTO_CREATE)
             } catch (e: Exception) {
                 logger.log(WARNING, "Failed to bind to BundleWifiDirectService", e)
             }
-
-            /*
-            try {
-                val wifiAwareIntent = Intent(this@BundleClientActivity, BundleClientWifiAwareService::class.java)
-                bindService(wifiAwareIntent, WifiAwareManager.getConnection(), Context.BIND_AUTO_CREATE)
-            } catch (e: Exception) {
-                logger.log(WARNING, "Failed to bind to BundleWifiAwareService", e)
-            }
-             */
         }
 
         setContent {
@@ -114,7 +94,7 @@ class BundleClientActivity: ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
 
-        if (BundleClientService.getBackgroundExchangeSetting(sharedPreferences) > 0) {
+        if (BundleClientService.getBackgroundExchangeSetting(sharedPreferences) <= 0) {
             stopService(serviceIntent)
         }
 
@@ -122,10 +102,5 @@ class BundleClientActivity: ComponentActivity() {
 
         WifiServiceManager.clearService()
         unbindService(WifiServiceManager.getConnection())
-/*
-        WifiAwareManager.clearService()
-        unbindService(WifiAwareManager.getConnection())
-
- */
     }
 }
