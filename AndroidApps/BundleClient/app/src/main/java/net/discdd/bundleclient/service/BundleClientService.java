@@ -61,7 +61,6 @@ public class BundleClientService extends Service {
     public static final String NET_DISCDD_BUNDLECLIENT_LOG_ACTION = "net.discdd.bundleclient.CLIENT_LOG";
     public static final String NET_DISCDD_BUNDLECLIENT_WIFI_ACTION = "net.discdd.bundleclient.WIFI_EVENT";
     public static final String NET_DISCDD_BUNDLECLIENT_SETTINGS = "net.discdd.bundleclient";
-    public static final int REEXCHANGE_TIME_PERIOD_MS = 2 * 60 * 1000;
     public static final String DDDWIFI_EVENT_EXTRA = "DDDWifiEvent";
     public static final String BUNDLE_CLIENT_TRANSMISSION_EVENT_EXTRA = "BundleClientTransmissionEvent";
     public static final String NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE = "background_exchange";
@@ -96,10 +95,24 @@ public class BundleClientService extends Service {
         return dddWifi;
     }
 
+    public static int getBackgroundExchangeSetting(SharedPreferences preferences) {
+        try {
+            return preferences.getInt(NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, 0);
+        } catch (ClassCastException e) {
+            // we are transitioning from boolean to int, so we need to handle the case where the value is a boolean
+            int value = preferences.getBoolean(NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, false) ? 1 : 0;
+            preferences.edit()
+                    .remove(NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE)
+                    .putInt(NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, value)
+                    .apply();
+            return value;
+        }
+    }
+
     private void processBackgroundExchangeSetting() {
-        var backgroundExchange = preferences.getBoolean(NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, false);
-        if (backgroundExchange) {
-            periodicRunnable.schedule();
+        var backgroundExchange = getBackgroundExchangeSetting(preferences);
+        if (backgroundExchange > 0) {
+            periodicRunnable.schedule(backgroundExchange);
         } else {
             periodicRunnable.cancel();
         }
@@ -396,7 +409,7 @@ public class BundleClientService extends Service {
     }
 
     public void notifyNewAdu() {
-        if (preferences != null && preferences.getBoolean(NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, false)) {
+        if (preferences != null && getBackgroundExchangeSetting(preferences) > 0) {
             initiateServerExchange();
         }
     }
@@ -415,11 +428,11 @@ public class BundleClientService extends Service {
     private class PeriodicRunnable implements Runnable {
         private ScheduledFuture<?> scheduledFuture;
 
-        synchronized public void schedule() {
+        synchronized public void schedule(int minutes) {
             if (scheduledFuture == null) {
-                logger.info(format("Scheduling periodic exchange with transports every %d ms", REEXCHANGE_TIME_PERIOD_MS));
-                scheduledFuture = periodicExecutor.scheduleWithFixedDelay(this, 0, REEXCHANGE_TIME_PERIOD_MS,
-                                                                          TimeUnit.MILLISECONDS);
+                logger.info(format("Scheduling periodic exchange with transports every %d minutes", minutes));
+                scheduledFuture = periodicExecutor.scheduleWithFixedDelay(this, 0, minutes,
+                                                                          TimeUnit.MINUTES);
             }
         }
 
