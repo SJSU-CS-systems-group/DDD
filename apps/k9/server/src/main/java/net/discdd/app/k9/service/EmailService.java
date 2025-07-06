@@ -125,7 +125,6 @@ public class EmailService implements ApplicationRunner {
                 .withProperty("mail.smtp.starttls.enable", "false")
                 .withProperty("mail.smtp.starttls.required", "false")
                 .withProperty("mail.smtp.ssl.enable", "false")
-                .withDebugLogging(true)
                 .buildMailer()) {
             mailer.sendMail(email).get();
         }
