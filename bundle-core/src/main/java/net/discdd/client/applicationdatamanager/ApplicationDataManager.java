@@ -4,9 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import net.discdd.model.ADU;
-import net.discdd.model.UncompressedPayload;
 import net.discdd.pathutils.ClientPaths;
-import net.discdd.utils.BundleUtils;
 import net.discdd.utils.StoreADUs;
 import net.discdd.utils.StreamExt;
 
@@ -20,7 +18,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
@@ -37,10 +34,10 @@ public class ApplicationDataManager {
 
     public final StoreADUs sendADUsStorage;
     public final StoreADUs receiveADUsStorage;
-    private Consumer<ADU> aduConsumer;
+    final private Consumer<ADU> aduConsumer;
     /* Database tables */
 
-    private ClientPaths clientPaths;
+    final private ClientPaths clientPaths;
 
     public ApplicationDataManager(ClientPaths clientPaths, Consumer<ADU> aduConsumer) {
         this.clientPaths = clientPaths;
@@ -51,15 +48,14 @@ public class ApplicationDataManager {
         try {
             File sentBundleDetails = clientPaths.sendBundleDetailsPath.toFile();
             sentBundleDetails.createNewFile();
-
-            File lastSentBundleStructure = clientPaths.lastSentBundleStructurePath.toFile();
-            lastSentBundleStructure.createNewFile();
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.log(SEVERE, "Failed to create send bundle details file", e);
         }
     }
 
-    public List<String> getRegisteredAppIds() throws IOException {
+    // we cannot use .toList() since we are targeting Java 11, but Intellij really wants us to
+    @SuppressWarnings("all")
+    public List<String> getRegisteredAppIds() {
         return sendADUsStorage.getAllClientApps(true)
                 .map(StoreADUs.ClientApp::appId)
                 .collect(Collectors.toUnmodifiableList());
@@ -79,10 +75,8 @@ public class ApplicationDataManager {
             Long aduId = details.get(appId);
             try {
                 sendADUsStorage.deleteAllFilesUpTo(null, appId, aduId);
-
             } catch (IOException e) {
                 logger.log(WARNING, "Could not delete ADUs up to adu: " + aduId, e);
-                continue;
             }
         }
     }
@@ -110,7 +104,7 @@ public class ApplicationDataManager {
 
     public List<ADU> fetchADUsToSend(long initialSize, String clientId) throws IOException {
         List<ADU> adusToSend = new ArrayList<>();
-        final long dataSizeLimit = clientPaths.APP_DATA_SIZE_LIMIT;
+        final long dataSizeLimit = ClientPaths.APP_DATA_SIZE_LIMIT;
         var sizeLimiter = new SizeLimiter(dataSizeLimit - initialSize);
         for (String appId : this.getRegisteredAppIds()) {
             StreamExt.takeWhile(sendADUsStorage.getADUs(clientId, appId), a -> sizeLimiter.test(a.getSize()))
@@ -119,16 +113,16 @@ public class ApplicationDataManager {
         return adusToSend;
     }
 
-    public void notifyBundleSent(UncompressedPayload bundle) {
-        if (bundle.getADUs().isEmpty()) {
+    public void notifyBundleSent(List<ADU> sentAdus, String bundleId) {
+        if (sentAdus.isEmpty()) {
             return;
         }
         Map<String, Map<String, Long>> sentBundleDetails = this.getSentBundleDetails();
-        if (sentBundleDetails.containsKey(bundle.getBundleId())) {
+        if (sentBundleDetails.containsKey(bundleId)) {
             return;
         }
         Map<String, Long> bundleDetails = new HashMap<>();
-        for (ADU adu : bundle.getADUs()) {
+        for (ADU adu : sentAdus) {
             String appId = adu.getAppId();
             Long aduId = adu.getADUId();
 
@@ -136,17 +130,8 @@ public class ApplicationDataManager {
                 bundleDetails.put(appId, aduId);
             }
         }
-        sentBundleDetails.put(bundle.getBundleId(), bundleDetails);
+        sentBundleDetails.put(bundleId, bundleDetails);
         this.writeSentBundleDetails(sentBundleDetails);
-        this.writeLastSentBundleStructure(bundle);
-    }
-
-    public Optional<UncompressedPayload.Builder> getLastSentBundleBuilder() {
-        return BundleUtils.jsonToBundleBuilder(clientPaths.lastSentBundleStructurePath.toFile());
-    }
-
-    private void writeLastSentBundleStructure(UncompressedPayload lastSentBundle) {
-        BundleUtils.writeBundleStructureToJson(lastSentBundle, clientPaths.lastSentBundleStructurePath.toFile());
     }
 
     private void writeSentBundleDetails(Map<String, Map<String, Long>> sentBundleDetails) {
@@ -155,7 +140,7 @@ public class ApplicationDataManager {
         try (FileWriter writer = new FileWriter(clientPaths.sendBundleDetailsPath.toFile())) {
             writer.write(jsonString);
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.log(SEVERE, "Failed to write sent bundle details", e);
         }
     }
 
