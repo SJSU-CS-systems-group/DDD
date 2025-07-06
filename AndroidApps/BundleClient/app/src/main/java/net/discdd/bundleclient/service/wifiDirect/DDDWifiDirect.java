@@ -1,10 +1,10 @@
 package net.discdd.bundleclient.service.wifiDirect;
 
+import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pDeviceList;
@@ -58,10 +58,11 @@ public class DDDWifiDirect implements DDDWifi {
                                                     "FAILED",
                                                     "AVAILABLE",
                                                     "UNAVAILABLE"};
-    private int status;
+    private int status = WifiP2pDevice.UNAVAILABLE;
     private boolean wifiEnable;
 
     private class DDDWifiDirectBroadcastReceiver extends BroadcastReceiver {
+        @SuppressLint("MissingPermission")
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
@@ -70,9 +71,18 @@ public class DDDWifiDirect implements DDDWifi {
                     case WIFI_P2P_STATE_CHANGED_ACTION -> {
                         var wifiState = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1);
                         switch(wifiState) {
-                            case WIFI_P2P_STATE_ENABLED -> wifiEnable = true;
+                            case WIFI_P2P_STATE_ENABLED -> {
+                                if (!wifiEnable) {
+                                    // we are switching from disabled to enabled, so discover peers
+                                    startDiscovery();
+                                }
+                                wifiEnable = true;
+                            }
                             case WIFI_P2P_STATE_DISABLED -> wifiEnable = false;
                             default -> logger.log(WARNING, "unknown p2p state %d", wifiState);
+                        }
+                        if (wifiEnable) {
+                            wifiP2pManager.requestDeviceInfo(wifiChannel, (DDDWifiDirect.this::processDeviceInfo));
                         }
                         eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_STATE_CHANGED);
                     }
@@ -110,25 +120,16 @@ public class DDDWifiDirect implements DDDWifi {
                         if (conInfo.groupOwnerAddress != null) {
                             completeAddressWaiters(conGroup.getOwner(), conInfo.groupOwnerAddress);
                         }
+                        // we need to call this when groupOwnerAddress is null because we are waiting for a disconnect
+                        // but we should also call with non null since the address may have changed also indicating
+                        // a disconnect.
+                        completeDisconnectWaiters(conGroup == null ? null : conGroup.getOwner());
                         eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_STATE_CHANGED);
                     }
                     case WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> {
                         WifiP2pDevice wifiP2pDevice = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE,
                                                                     WifiP2pDevice.class);
-                        if (wifiP2pDevice != null) {
-                            var infoChanged = false;
-                            if (!wifiP2pDevice.deviceName.equals(deviceName)) {
-                                DDDWifiDirect.this.deviceName = wifiP2pDevice.deviceName;
-                                infoChanged = true;
-                            }
-                            if (wifiP2pDevice.status != status) {
-                                DDDWifiDirect.this.status = wifiP2pDevice.status;
-                                infoChanged = true;
-                            }
-                            if (infoChanged) {
-                                eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_STATE_CHANGED);
-                            }
-                        }
+                        processDeviceInfo(wifiP2pDevice);
                     }
                     case WIFI_P2P_DISCOVERY_CHANGED_ACTION -> {
                         int discoveryState = intent.getIntExtra(WifiP2pManager.EXTRA_DISCOVERY_STATE, -1);
@@ -137,6 +138,25 @@ public class DDDWifiDirect implements DDDWifi {
                     }
                 }
             }
+        }
+    }
+
+    private void processDeviceInfo(WifiP2pDevice wifiP2pDevice) {
+        if (wifiP2pDevice != null) {
+            var infoChanged = false;
+            if (!wifiP2pDevice.deviceName.equals(deviceName)) {
+                DDDWifiDirect.this.deviceName = wifiP2pDevice.deviceName;
+                infoChanged = true;
+            }
+            if (wifiP2pDevice.status != status) {
+                DDDWifiDirect.this.status = wifiP2pDevice.status;
+                infoChanged = true;
+            }
+            if (infoChanged) {
+                eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_STATE_CHANGED);
+            }
+        } else {
+            this.status = WifiP2pDevice.UNAVAILABLE;
         }
     }
 
@@ -152,6 +172,7 @@ public class DDDWifiDirect implements DDDWifi {
         this.wifiP2pManager = (WifiP2pManager) bundleClientService.getSystemService(Context.WIFI_P2P_SERVICE);
     }
 
+    @SuppressLint("MissingPermission")
     public void initialize() {
         if (wifiChannel != null) {
             logger.severe("Calling initialize on an initialized channel. Ignoring.");
@@ -160,7 +181,6 @@ public class DDDWifiDirect implements DDDWifi {
         this.handlerThread = new HandlerThread("WifiP2PHandlerThread");
         this.handlerThread.start();
         this.wifiChannel = wifiP2pManager.initialize(bundleClientService, handlerThread.getLooper(), () -> logger.warning("Framework lost. Ignoring"));
-        wifiP2pManager.requestP2pState(wifiChannel, state -> this.wifiEnable = this.status == WIFI_P2P_STATE_ENABLED);
         bundleClientService.registerReceiver(broadcastReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
     }
 
@@ -184,14 +204,14 @@ public class DDDWifiDirect implements DDDWifi {
     public String getStateDescription() {
         var statusString = status >= 0 && status < STATUS_STRINGS.length ? STATUS_STRINGS[status] : "UNKNOWN";
         if (wifiP2pManager == null) {
-            return "🚫📶: " + statusString;
+            return "🚫: " + statusString;
         }
         if (wifiChannel == null) {
-            return "🔴📶: " + statusString;
+            return "📶: " + statusString;
         }
 
         var statusBuilder = new StringBuilder();
-        statusBuilder.append("🟢📶: ");
+        statusBuilder.append("🛜: ");
         statusBuilder.append(statusString);
         if (group == null) {
             return statusBuilder.toString();
@@ -210,7 +230,7 @@ public class DDDWifiDirect implements DDDWifi {
 
     @Override
     public boolean isDddWifiEnabled() {
-        return wifiChannel != null;
+        return wifiEnable;
     }
 
     static private class DDDWifiDirectCompletableConnection extends CompletableFuture<DDDWifiConnection> {
@@ -235,6 +255,12 @@ public class DDDWifiDirect implements DDDWifi {
             }
         }
     }
+
+    static private class ConnectionWaiter {
+        private DDDWifiDirectConnection connection;
+        CompletableFuture<Void> completableFuture;
+    }
+    final private List<ConnectionWaiter> disconnectWaiters = new ArrayList<>();
     final private List<DDDWifiDirectCompletableConnection> addressFutures = new ArrayList<>();
 
     private void completeAddressWaiters(WifiP2pDevice groupOwner, InetAddress groupOwnerAddress) {
@@ -245,6 +271,23 @@ public class DDDWifiDirect implements DDDWifi {
         }
         var con = new DDDWifiDirectConnection(new DDDWifiDirectDevice(groupOwner), groupOwnerAddress);
         toComplete.forEach(cf -> cf.completeWithConnection(con));
+    }
+
+    // we are targetting JDK 11 (Android 13) so we cannot use toList(), but Intellij keeps suggesting it. (it's a trap!)
+    @SuppressWarnings("all")
+    private void completeDisconnectWaiters(WifiP2pDevice newGroupOwner) {
+        List<ConnectionWaiter> toComplete;
+        synchronized (disconnectWaiters) {
+            toComplete = disconnectWaiters.stream().filter(cw -> fireableConnectionWaiter(cw, newGroupOwner))
+                    .collect(Collectors.toUnmodifiableList());
+            disconnectWaiters.removeIf(cw -> fireableConnectionWaiter(cw, newGroupOwner));
+        }
+        toComplete.forEach(cw -> cw.completableFuture.complete(null));
+    }
+
+    private boolean fireableConnectionWaiter(ConnectionWaiter cw, WifiP2pDevice groupOwner) {
+        var groupOwnerToDisconnect = cw.connection.dev.wifiP2pDevice;
+        return !groupOwnerToDisconnect.equals(groupOwner);
     }
 
     private CompletableFuture<DDDWifiConnection> addAddressWaiter(DDDWifiDirectDevice dev) {
@@ -262,6 +305,20 @@ public class DDDWifiDirect implements DDDWifi {
             cf.complete(con);
         }
         return cf;
+    }
+
+    private CompletableFuture<Void> addDisconnectWaiter(DDDWifiDirectConnection con) {
+        var cw = new ConnectionWaiter();
+        cw.connection = con;
+        cw.completableFuture = new CompletableFuture<>();
+        synchronized (disconnectWaiters) {
+            if (fireableConnectionWaiter(cw, group == null ? null : group.getOwner())) {
+                cw.completableFuture.complete(null);
+            } else {
+                disconnectWaiters.add(cw);
+            }
+        }
+        return cw.completableFuture;
     }
 
     @Override
@@ -287,14 +344,17 @@ public class DDDWifiDirect implements DDDWifi {
     }
 
     @Override
-    public CompletableFuture<Void> disconnectFrom(DDDWifiDevice dev) {
+    public CompletableFuture<Void> disconnectFrom(DDDWifiConnection con) {
+        var disconnectCf = addDisconnectWaiter((DDDWifiDirectConnection) con);
+
         var cf = new CompletableFuture<Boolean>();
         try {
+            // we can only be connected to one device at a time, so we can just remove the group
             wifiP2pManager.removeGroup(wifiChannel, new DDDActionListener(cf));
         } catch (SecurityException e) {
             cf.completeExceptionally(e);
         }
-        return cf.thenAccept(b -> {});
+        return cf.thenCompose(b -> disconnectCf);
     }
 
     public void shutdown() {
@@ -307,7 +367,9 @@ public class DDDWifiDirect implements DDDWifi {
         // shutdown looper
         handlerThread.quit();
         // there is no shutdown for wifiP2pManager
+        wifiEnable = false;
         wifiChannel = null;
+        eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_STATE_CHANGED);
     }
 
     @Override
