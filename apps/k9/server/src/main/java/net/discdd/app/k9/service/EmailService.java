@@ -233,7 +233,8 @@ public class EmailService implements ApplicationRunner {
                         return new Reply(550, "5.7.23 SPF check failed: " + reason);
                     }
                 } catch (Exception e) {
-                    logger.log(Level.WARNING, format("SPF check failed for %s (%s): %s", from, mailFrom.getPath(), e.getMessage()));
+                    logger.log(Level.WARNING,
+                               format("SPF check failed for %s (%s): %s", from, mailFrom.getPath(), e.getMessage()));
                     return new Reply(550, "5.7.23 SPF check failed: " + e.getMessage());
                 }
                 logger.log(Level.INFO, format("Receiving mail from %s", from));
