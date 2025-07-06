@@ -154,10 +154,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
                     // update email clientId entry
                     clientToEmailRepository.updateClientId(clientId, adu.email());
                     // create success ack
-                    var ack = new ControlAdu.LoginAckControlAdu(Map.of("email",
-                                                                       adu.email(),
-                                                                       "success",
-                                                                       true));
+                    var ack = new ControlAdu.LoginAckControlAdu(Map.of("email", adu.email(), "success", true));
                     sendADUsStorage.addADU(clientId, APP_ID, ack.toBytes(), -1);
                     return;
                 }
@@ -165,8 +162,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         }
 
         // create error ack
-        var ack = new ControlAdu.LoginAckControlAdu(Map.of("message",
-                                                           "Email doesn't exist or password is incorrect."));
+        var ack = new ControlAdu.LoginAckControlAdu(Map.of("message", "Email doesn't exist or password is incorrect."));
         sendADUsStorage.addADU(clientId, APP_ID, ack.toBytes(), -1);
     }
 
@@ -193,10 +189,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
                 String hashedPassword = passwordEncoder.encode(adu.password());
                 K9ClientIdToEmailMapping entity = new K9ClientIdToEmailMapping(email, clientId, hashedPassword);
                 clientToEmailRepository.save(entity);
-                var ack = new ControlAdu.RegisterAckControlAdu(Map.of("email",
-                                                                      email,
-                                                                      "success",
-                                                                      true));
+                var ack = new ControlAdu.RegisterAckControlAdu(Map.of("email", email, "success", true));
                 sendADUsStorage.addADU(clientId, APP_ID, ack.toBytes(), -1);
                 return;
             }
