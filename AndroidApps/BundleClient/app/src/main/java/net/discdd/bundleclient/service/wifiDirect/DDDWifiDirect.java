@@ -24,6 +24,10 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -97,6 +101,11 @@ public class DDDWifiDirect implements DDDWifi {
                                         .filter(d -> d.deviceName.startsWith("ddd_"))
                                         .map(DDDWifiDirectDevice::new)
                                         .collect(Collectors.toList());
+                                var waitingForPeer = awaitingDiscovery.get();
+                                if (waitingForPeer != null && peers.contains(waitingForPeer.dev)) {
+                                    waitingForPeer.complete(null);
+                                    awaitingDiscovery.compareAndSet(waitingForPeer, null);
+                                }
                             }
                             eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_PEERS_CHANGED);
                         } catch (SecurityException e) {
@@ -120,10 +129,6 @@ public class DDDWifiDirect implements DDDWifi {
                         if (conInfo.groupOwnerAddress != null) {
                             completeAddressWaiters(conGroup.getOwner(), conInfo.groupOwnerAddress);
                         }
-                        // we need to call this when groupOwnerAddress is null because we are waiting for a disconnect
-                        // but we should also call with non null since the address may have changed also indicating
-                        // a disconnect.
-                        completeDisconnectWaiters(conGroup == null ? null : conGroup.getOwner());
                         eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_STATE_CHANGED);
                     }
                     case WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> {
@@ -263,7 +268,6 @@ public class DDDWifiDirect implements DDDWifi {
         private DDDWifiDirectConnection connection;
         CompletableFuture<Void> completableFuture;
     }
-    final private List<ConnectionWaiter> disconnectWaiters = new ArrayList<>();
     final private List<DDDWifiDirectCompletableConnection> addressFutures = new ArrayList<>();
 
     private void completeAddressWaiters(WifiP2pDevice groupOwner, InetAddress groupOwnerAddress) {
@@ -274,18 +278,6 @@ public class DDDWifiDirect implements DDDWifi {
         }
         var con = new DDDWifiDirectConnection(new DDDWifiDirectDevice(groupOwner), groupOwnerAddress);
         toComplete.forEach(cf -> cf.completeWithConnection(con));
-    }
-
-    // we are targetting JDK 11 (Android 13) so we cannot use toList(), but Intellij keeps suggesting it. (it's a trap!)
-    @SuppressWarnings("all")
-    private void completeDisconnectWaiters(WifiP2pDevice newGroupOwner) {
-        List<ConnectionWaiter> toComplete;
-        synchronized (disconnectWaiters) {
-            toComplete = disconnectWaiters.stream().filter(cw -> fireableConnectionWaiter(cw, newGroupOwner))
-                    .collect(Collectors.toUnmodifiableList());
-            disconnectWaiters.removeIf(cw -> fireableConnectionWaiter(cw, newGroupOwner));
-        }
-        toComplete.forEach(cw -> cw.completableFuture.complete(null));
     }
 
     private boolean fireableConnectionWaiter(ConnectionWaiter cw, WifiP2pDevice groupOwner) {
@@ -310,23 +302,35 @@ public class DDDWifiDirect implements DDDWifi {
         return cf;
     }
 
-    private CompletableFuture<Void> addDisconnectWaiter(DDDWifiDirectConnection con) {
-        var cw = new ConnectionWaiter();
-        cw.connection = con;
-        cw.completableFuture = new CompletableFuture<>();
-        synchronized (disconnectWaiters) {
-            if (fireableConnectionWaiter(cw, group == null ? null : group.getOwner())) {
-                cw.completableFuture.complete(null);
-            } else {
-                disconnectWaiters.add(cw);
-            }
+    static class AwaitingDiscovery extends CompletableFuture<Void> {
+        final DDDWifiDevice dev;
+
+        AwaitingDiscovery(DDDWifiDevice dev) {
+            super();
+            this.dev = dev;
         }
-        return cw.completableFuture;
     }
+    AtomicReference<AwaitingDiscovery> awaitingDiscovery = new AtomicReference<>(null);
 
     @Override
     public CompletableFuture<DDDWifiConnection> connectTo(DDDWifiDevice dev) {
         var directDev = (DDDWifiDirectDevice) dev;
+
+        // we are going to watch for discovery if we don't already see the device in the list of peers.
+        var discoveryCF = new AwaitingDiscovery(dev);
+        awaitingDiscovery.set(discoveryCF);
+        if (!peers.contains(dev)) {
+            // we should start discovery to see if the device is around
+            startDiscovery();
+            try {
+                // give a bit of time to discover the device we want
+                discoveryCF.get(5, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                // hmmm, we'll let's try anyway...
+            }
+        }
+        awaitingDiscovery.compareAndExchange(discoveryCF, null);
+
         var cf = new CompletableFuture<Boolean>();
         var p2pConfig = new WifiP2pConfig();
         p2pConfig.deviceAddress = directDev.wifiP2pDevice.deviceAddress;
@@ -348,8 +352,6 @@ public class DDDWifiDirect implements DDDWifi {
 
     @Override
     public CompletableFuture<Void> disconnectFrom(DDDWifiConnection con) {
-        var disconnectCf = addDisconnectWaiter((DDDWifiDirectConnection) con);
-
         var cf = new CompletableFuture<Boolean>();
         try {
             // we can only be connected to one device at a time, so we can just remove the group
@@ -357,7 +359,7 @@ public class DDDWifiDirect implements DDDWifi {
         } catch (SecurityException e) {
             cf.completeExceptionally(e);
         }
-        return cf.thenCompose(b -> disconnectCf);
+        return cf.thenAccept(d -> {});
     }
 
     public void shutdown() {
