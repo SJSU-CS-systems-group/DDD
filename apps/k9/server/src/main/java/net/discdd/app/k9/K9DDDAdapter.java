@@ -156,8 +156,6 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
                     // create success ack
                     var ack = new ControlAdu.LoginAckControlAdu(Map.of("email",
                                                                        adu.email(),
-                                                                       "password",
-                                                                       hashedPassword,
                                                                        "success",
                                                                        true));
                     sendADUsStorage.addADU(clientId, APP_ID, ack.toBytes(), -1);
@@ -168,8 +166,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
 
         // create error ack
         var ack = new ControlAdu.LoginAckControlAdu(Map.of("message",
-                                                           "Either not parsable, email doesn't exist, or password is " +
-                                                                   "incorrect."));
+                                                           "Email doesn't exist or password is incorrect."));
         sendADUsStorage.addADU(clientId, APP_ID, ack.toBytes(), -1);
     }
 
@@ -198,8 +195,6 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
                 clientToEmailRepository.save(entity);
                 var ack = new ControlAdu.RegisterAckControlAdu(Map.of("email",
                                                                       email,
-                                                                      "password",
-                                                                      hashedPassword,
                                                                       "success",
                                                                       true));
                 sendADUsStorage.addADU(clientId, APP_ID, ack.toBytes(), -1);
