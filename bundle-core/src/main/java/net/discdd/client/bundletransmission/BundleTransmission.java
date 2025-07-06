@@ -158,14 +158,15 @@ public class BundleTransmission {
 
         this.applicationDataManager.processAcknowledgement(ackedBundleId);
         this.applicationDataManager.storeReceivedADUs(null, null, uncompressedPayload.getADUs());
+        deleteSentBundle(bundle);
     }
 
     public static String bundleSenderToString(String senderId) {
         return senderId;
     }
 
-    private BundleDTO generateNewBundle(String bundleId) throws RoutingExceptions.ClientMetaDataFileException,
-            IOException, NoSuchAlgorithmException, InvalidKeyException {
+    private BundleDTO generateNewBundle(String bundleId) throws IOException, NoSuchAlgorithmException,
+            InvalidKeyException {
         Acknowledgement ackRecord = AckRecordUtils.readAckRecordFromFile(clientPaths.ackRecordPath);
         String crashReport = crashReportExists(String.valueOf(clientPaths.crashReportPath)) ?
                              readCrashReportFromFile(clientPaths.crashReportPath) :
@@ -195,7 +196,7 @@ public class BundleTransmission {
                                                       bundleId,
                                                       pipedInputStream,
                                                       os);
-
+            applicationDataManager.notifyBundleSent(adus, bundleId);
         } catch (InvalidMessageException e) {
             throw new IOException("Error processing message: " + e.getMessage(), e);
         } finally {
@@ -249,7 +250,7 @@ public class BundleTransmission {
         }
     }
 
-    final private HashMap<TransportDevice, RecentTransport> recentTransports = new HashMap();
+    final private HashMap<TransportDevice, RecentTransport> recentTransports = new HashMap<>();
 
     public RecentTransport[] getRecentTransports() {
         synchronized (recentTransports) {
@@ -318,16 +319,12 @@ public class BundleTransmission {
         }
     }
 
-    public void notifyBundleSent(BundleDTO bundle) {
-        FileUtils.recursiveDelete(bundle.getBundle().getSource().toPath());
+    public void deleteSentBundle(Bundle bundle) {
+        FileUtils.recursiveDelete(bundle.getSource().toPath());
     }
 
     public BundleSecurity getBundleSecurity() {
         return this.bundleSecurity;
-    }
-
-    public ClientRouting getClientRouting() {
-        return clientRouting;
     }
 
     public enum Statuses {
@@ -345,6 +342,7 @@ public class BundleTransmission {
 
     private boolean isServerRunning(String transportAddress, int port) {
         for (var tries = 0; tries < INITIAL_CONNECT_RETRIES; tries++) {
+            // just seeing if the port is open
             try (Socket socket = new Socket(transportAddress, port)) {
                 logger.log(INFO, "transport server is running");
                 return true;

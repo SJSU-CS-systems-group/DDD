@@ -60,7 +60,7 @@ public class ClientPaths {
     public final Path sendADUsPath;
     public final Path receiveADUsPath;
     public final Path sendBundleDetailsPath;
-    public final Path lastSentBundleStructurePath;
+    //public final Path lastSentBundleStructurePath;
 
     // Bundle security directory
     public final Path bundleSecurityPath;
@@ -105,7 +105,7 @@ public class ClientPaths {
         sendADUsPath = rootDir.resolve("send");
         receiveADUsPath = rootDir.resolve("receive");
         sendBundleDetailsPath = rootDir.resolve(SENT_BUNDLE_DETAILS);
-        lastSentBundleStructurePath = rootDir.resolve(LAST_SENT_BUNDLE_STRUCTURE);
+        //lastSentBundleStructurePath = rootDir.resolve(LAST_SENT_BUNDLE_STRUCTURE);
 
         // Bundle security directory
         bundleSecurityPath = rootDir.resolve(SecurityUtils.BUNDLE_SECURITY_DIR);
