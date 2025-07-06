@@ -102,6 +102,10 @@ public class StoreADUs {
     public boolean hasNewADUs(String clientId, long lastBundleSentTimestamp) {
         var appAdus = clientId == null ? rootFolder : rootFolder.resolve(clientId);
         try {
+            if (!Files.exists(appAdus)) {
+                logger.log(INFO, "No ADUs found for clientId: " + clientId);
+                return false;
+            }
             try (Stream<Path> walk = Files.walk(appAdus)) {
                 return walk.filter(Files::isRegularFile)
                         .map(Path::toFile)

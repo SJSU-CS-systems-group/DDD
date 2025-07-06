@@ -224,9 +224,10 @@ public class BundleClientService extends Service {
     private BundleExchangeCounts exchangeWith(DDDWifiDevice device) {
         broadcastBundleClientWifiEvent(BundleClientTransmissionEventType.WIFI_DIRECT_CLIENT_EXCHANGE_STARTED,
                                        device.getWifiAddress());
+        DDDWifiConnection connection = null;
         try {
             broadcastBundleClientLogEvent(format("Connecting to %s", device.getDescription()));
-            var connection = dddWifi.connectTo(device).get(10, TimeUnit.SECONDS);
+            connection = dddWifi.connectTo(device).get(10, TimeUnit.SECONDS);
 
             if (connection == null || connection.getAddresses().isEmpty()) {
                 broadcastBundleClientLogEvent("Failed to connect to " + device.getDescription());
@@ -269,7 +270,9 @@ public class BundleClientService extends Service {
 
         } finally {
             try {
-                dddWifi.disconnectFrom(device).get(5, TimeUnit.SECONDS);
+                if (connection != null) {
+                    dddWifi.disconnectFrom(connection).get(10, TimeUnit.SECONDS);
+                }
             } catch (Exception e) {
                 logger.log(WARNING, "Problem disconnecting from " + device.getDescription(), e);
             }
