@@ -47,7 +47,7 @@ public class ApplicationDataManager {
 
         try {
             File sentBundleDetails = clientPaths.sendBundleDetailsPath.toFile();
-            boolean ignored = sentBundleDetails.createNewFile();
+            sentBundleDetails.createNewFile();
         } catch (IOException e) {
             logger.log(SEVERE, "Failed to create send bundle details file", e);
         }
