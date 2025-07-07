@@ -5,7 +5,7 @@
 
     <groupId>net.discdd.app</groupId>
     <artifactId>k9-common</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.1</version>
     <description>DDD Email common data structures between client and server</description>
 
     <properties>
