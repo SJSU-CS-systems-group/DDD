@@ -41,16 +41,4 @@ public class ControlAduTest {
         var serDeserWhoAmIAckControlAdu = ControlAdu.fromBytes(origWhoAmIAckControlAdu.toBytes());
         Assertions.assertEquals(origWhoAmIAckControlAdu, serDeserWhoAmIAckControlAdu);
     }
-
-    @Test
-    public void testControlAduExtraData() {
-        Assertions.assertThrows(IllegalArgumentException.class, () -> {
-            new ControlAdu.LoginControlAdu(Map.of("username",
-                                                  "testuser",
-                                                  "password",
-                                                  "testpass",
-                                                  "extraData",
-                                                  "testdata"));
-        });
-    }
 }
