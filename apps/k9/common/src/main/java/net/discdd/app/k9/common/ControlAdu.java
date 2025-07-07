@@ -35,7 +35,8 @@ public class ControlAdu {
     ControlAdu(Map<String, Object> map) {
         if (map == null || map.isEmpty()) {
             return;
-        };
+        }
+        ;
         for (var entry : map.entrySet()) {
             // make sure the method exists
             String key = entry.getKey();
