@@ -8,8 +8,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 import java.util.Properties;
 
-import static java.lang.String.format;
-
 /**
  * this interface uses properties to convert bytes to and from Adu records.
  * the records are stored as a property file that starts with a comment "# CONTROL".
@@ -32,24 +30,15 @@ public class ControlAdu {
     public static final String CONTROL_HEADER = "# CONTROL";
     // ugly hack to turn off strict method checking when creating ControlAdu instances
     // from deserialized properties.
-    private static final ThreadLocal<Boolean> checkMethods = ThreadLocal.withInitial(() -> Boolean.TRUE);
     final protected Properties properties = new Properties();
 
     ControlAdu(Map<String, Object> map) {
         if (map == null || map.isEmpty()) {
             return;
-        }
-        Class<? extends ControlAdu> clazz = this.getClass();
+        };
         for (var entry : map.entrySet()) {
             // make sure the method exists
             String key = entry.getKey();
-            try {
-                var ignored = clazz.getMethod(key);
-            } catch (NoSuchMethodException e) {
-                if (checkMethods.get()) {
-                    throw new IllegalArgumentException(format("%s is not a method of %s", key, clazz.getName()), e);
-                }
-            }
             var value = entry.getValue();
             properties.put(key, value.toString());
         }
@@ -80,15 +69,12 @@ public class ControlAdu {
             throw new IOException("Unknown ADU type: " + type);
         }
         try {
-            checkMethods.set(false);
             var clazz = ADU_TYPES.get(type);
             Constructor<? extends ControlAdu> ctor = clazz.getConstructor(Map.class);
             return ctor.newInstance(props);
         } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException |
                  InstantiationException e) {
             throw new IOException("Failed to create ADU from bytes", e);
-        } finally {
-            checkMethods.set(true);
         }
     }
 
