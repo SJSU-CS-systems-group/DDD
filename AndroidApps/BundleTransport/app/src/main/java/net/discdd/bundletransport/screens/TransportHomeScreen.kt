@@ -129,7 +129,7 @@ fun TransportHomeScreen(
                 UsbScreen(usbViewModel) { viewModel ->
                     TransportUsbComponent(viewModel) {
                         viewModel.transportTransferToUsb(context)
-                        viewModel.transportTransferToUsb(context)
+                        viewModel.usbTransferToTransport(context)
                     }
                 }
             }
