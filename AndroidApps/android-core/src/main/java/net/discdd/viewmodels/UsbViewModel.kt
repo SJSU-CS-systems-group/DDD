@@ -19,7 +19,7 @@ import net.discdd.UsbConnectionManager
 data class UsbState(
         val filePermissionGranted: Boolean = false,
         val dddDirectoryExists: Boolean = false,
-        val showMessage: String? = null, // null means no message
+        val showMessage: String = "", // null means no message
         val messageColor: Int = Color.BLACK,
 )
 
@@ -55,10 +55,10 @@ open class UsbViewModel(
         }
     }
 
-    protected fun appendMessage(message: String?, color: Int) {
+    protected fun appendMessage(message: String, color: Int) {
         viewModelScope.launch {
             _state.update {
-                val currentLines = it.showMessage?.split("\n")?.takeLast(10) ?: emptyList()
+                val currentLines = it.showMessage.split("\n").takeLast(10)
                 val newLines = (currentLines + message)
                 it.copy(showMessage = newLines.joinToString("\n"), messageColor = color)
             }

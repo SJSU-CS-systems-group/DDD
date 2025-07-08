@@ -13,7 +13,6 @@ import net.discdd.viewmodels.UsbViewModel
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
-import java.nio.file.Path
 import java.util.logging.Level.INFO
 import java.util.logging.Logger
 
@@ -41,7 +40,13 @@ class TransportUsbViewModel(
     fun usbTransferToTransport(context: Context) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                val sourceDir = createIfDoesNotExist(usbDirectory!!, "toServer")
+                val currentUsbDir = usbDirectory
+                if (currentUsbDir == null) {
+                    appendMessage("USB directory is not available", Color.RED)
+                    logger.log(INFO, "usbDirectory is null. Aborting transfer.")
+                    return@withContext
+                }
+                val sourceDir = createIfDoesNotExist(currentUsbDir, "toServer")
                 val destinationDir = transportPaths.toServerPath
                 val bundlesToTransfer = sourceDir.listFiles()
                 if (bundlesToTransfer.isEmpty()) {
@@ -51,7 +56,7 @@ class TransportUsbViewModel(
                 try {
                     for (bundle in bundlesToTransfer) {
                         val targetFile = destinationDir.resolve(bundle.name)
-                        Files.newOutputStream(targetFile)?.let { outputStream ->
+                        Files.newOutputStream(targetFile).use { outputStream ->
                             context.contentResolver.openInputStream(bundle.uri).use { inputStream ->
                                 inputStream?.copyTo(outputStream)
                             }
@@ -79,8 +84,14 @@ class TransportUsbViewModel(
             withContext(Dispatchers.IO) {
                 // TODO: Get APK from external? internal? path
                 val sourceDir = transportPaths.toClientPath.toFile()
-                val destinationDir = createIfDoesNotExist(usbDirectory!!, "toClient")
-                val bundlesToTransfer : List<File> = sourceDir.walk().toList()
+                val currentUsbDir = usbDirectory
+                if (currentUsbDir == null) {
+                    appendMessage("USB directory is not available", Color.RED)
+                    logger.log(INFO, "usbDirectory is null. Aborting transfer.")
+                    return@withContext
+                }
+                val destinationDir = createIfDoesNotExist(currentUsbDir, "toClient")
+                val bundlesToTransfer : List<File> = sourceDir.walk().filter(File :: isFile).toList()
                 if (bundlesToTransfer.isEmpty()) {
                     logger.log(INFO, "No files found in 'toClient' directory on Transport Device")
                     appendMessage("No files found in 'toClient' directory on Transport Device", Color.YELLOW)
@@ -89,10 +100,11 @@ class TransportUsbViewModel(
                 try {
                     for (bundle in bundlesToTransfer) {
                         val targetFile = destinationDir.createFile("data/octet", bundle.name)
-                        if (targetFile == null) {
-                            Files.newOutputStream(targetFile)?.let { outputStream ->
-                                Files.newInputStream(bundle as Path?).use { inputStream ->
-                                inputStream?.copyTo(outputStream)
+                        if (targetFile != null) {
+                            context.contentResolver.openOutputStream(targetFile.uri)?.use { outputStream ->
+                                Files.newInputStream(bundle.toPath())?.use { inputStream ->
+                                    appendMessage("Copying from: ${bundle} to ${targetFile.uri}", Color.RED)
+                                    inputStream.copyTo(outputStream)
                             }
                         }
                             }
@@ -101,8 +113,8 @@ class TransportUsbViewModel(
                     appendMessage("Bundle from transport transferred to usb successfully", Color.GREEN)
                 } catch (e : Exception) {
                     e.printStackTrace()
-                    logger.log(INFO, "Error transferring from transport to usb: ${e.message}")
-                    appendMessage("Error transferring from transport to usb: ${e.message}", Color.RED)
+                    logger.log(INFO, "Error transferring from transport to usb: ${e.message}", e)
+                    appendMessage("Error transferring from transport to usb: ${e.message}" + e, Color.RED)
                 }
             }
         }
