@@ -144,14 +144,6 @@ public class BundleClientService extends Service {
             logger.log(SEVERE, "Failed to start foreground service", e);
         }
 
-        var dddWifiDirect = new DDDWifiDirect(this);
-        this.dddWifi = dddWifiDirect;
-        this.dddWifi.getEventLiveData().observeForever(liveDataObserver);
-        try {
-            dddWifiDirect.initialize();
-        } catch (Exception e) {
-            logger.log(SEVERE, "Failed to initialize DDDWifiDirect", e);
-        }
         try {
             ClientPaths clientPaths = new ClientPaths(getApplicationContext().getDataDir().toPath());
 
@@ -169,6 +161,14 @@ public class BundleClientService extends Service {
             }
 
             bundleTransmission = new BundleTransmission(clientPaths, this::processIncomingADU);
+            var dddWifiDirect = new DDDWifiDirect(this);
+            this.dddWifi = dddWifiDirect;
+            this.dddWifi.getEventLiveData().observeForever(liveDataObserver);
+            try {
+                dddWifiDirect.initialize();
+            } catch (Exception e) {
+                logger.log(SEVERE, "Failed to initialize DDDWifiDirect", e);
+            }
         } catch (Exception e) {
             logger.log(SEVERE, "Failed to initialize BundleTransmission", e);
         }
@@ -222,8 +222,13 @@ public class BundleClientService extends Service {
     private void exchangeWithTransports() {
         var recentTransports = bundleTransmission.getRecentTransports();
         for (var transport : recentTransports) {
-            var bc = exchangeWith((DDDWifiDevice) transport.getDevice());
-            logger.log(INFO, format("Upload status: %s, Download status: %s",bc.uploadStatus().toString(), bc.downloadStatus().toString()));
+            if (transport.getDevice() instanceof DDDWifiDevice) {
+                var bc = exchangeWith((DDDWifiDevice) transport.getDevice());
+                logger.log(INFO,
+                           format("Upload status: %s, Download status: %s",
+                                  bc.uploadStatus().toString(),
+                                  bc.downloadStatus().toString()));
+            }
         }
         initiateServerExchange();
     }
@@ -457,8 +462,12 @@ public class BundleClientService extends Service {
 
         @Override
         public void run() {
-            logger.info("Periodic exchange with transports started");
-            BundleClientService.this.exchangeWithTransports();
+            try {
+                logger.info("Periodic exchange with transports started");
+                BundleClientService.this.exchangeWithTransports();
+            } catch (Exception e) {
+                logger.log(SEVERE, "Periodic exchange with transports failed", e);
+            }
         }
     }
 

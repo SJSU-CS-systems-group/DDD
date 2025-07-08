@@ -24,3 +24,9 @@
 -dontwarn com.google.auto.service.processor.**
 -dontwarn reactor.blockhound.integration.**
 -dontwarn io.netty.util.internal.Hidden$NettyBlockHoundIntegration
+-dontobfuscate
+-keep class org.whispersystems.** { *; }
+-keep class com.fasterxml.jackson.** { *; }
+-keepattributes Signature
+-keepattributes *Annotation*
+-keep class net.discdd.** { *; }
