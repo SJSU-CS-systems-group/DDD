@@ -145,13 +145,21 @@ class WifiDirectViewModel(
     fun appendToClientLog(message: String) {
         viewModelScope.launch {
             if (state.value.clientLog.toString().lines().size > 20) {
-                val nl = state.value.clientLog.indexOf('\n')
+                val nl = state.value.clientLog.lastIndexOf('\n')
                 _state.update {
                     it.copy(clientLog = state.value.clientLog.substring(0, nl))
                 }
             }
             _state.update {
                 it.copy(clientLog = state.value.clientLog + message + '\n')
+            }
+        }
+    }
+
+    fun clearClientLog() {
+        viewModelScope.launch {
+            _state.update {
+                it.copy(clientLog = "")
             }
         }
     }
