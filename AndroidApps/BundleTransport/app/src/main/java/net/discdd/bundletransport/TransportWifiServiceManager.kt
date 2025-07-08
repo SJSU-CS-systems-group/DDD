@@ -11,10 +11,7 @@ object TransportWifiServiceManager {
     private var _btService: BundleTransportService? = null
 
     val serviceReady = CompletableFuture<BundleTransportService>()
-    private lateinit var connection: ServiceConnection
-
-    fun initialize(activity: BundleTransportActivity) {
-        connection = object : ServiceConnection {
+    val connection = object : ServiceConnection {
             override fun onServiceConnected(className: ComponentName, service: IBinder) {
                 // We've bound to LocalService, cast the IBinder and get LocalService instance.
                 val binder = service as BundleTransportService.TransportWifiDirectServiceBinder
@@ -22,11 +19,10 @@ object TransportWifiServiceManager {
                 serviceReady.complete(binder.service)
             }
 
-            override fun onServiceDisconnected(arg0: ComponentName) {
+            override fun onServiceDisconnected(ignore: ComponentName) {
                 clearService()
             }
         }
-    }
 
     fun setService(service: BundleTransportService) {
         logger.info("Setting transport wifi service: ${service}")
@@ -42,7 +38,4 @@ object TransportWifiServiceManager {
         return _btService
     }
 
-    fun getConnection(): ServiceConnection {
-        return connection
-    }
 }

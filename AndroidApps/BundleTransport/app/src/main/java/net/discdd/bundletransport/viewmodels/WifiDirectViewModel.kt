@@ -115,7 +115,7 @@ class WifiDirectViewModel(
             val gi = btService!!.groupInfo
             logger.info("Group info: " + gi)
             viewModelScope.launch {
-                var info
+                var info: String
                 if (gi == null) {
                     info = context.getString(R.string.wifi_transport_not_active)
                     //find candidate for nested if statement to use R.string.wifi_transport_not_active_group_info_null
