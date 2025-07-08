@@ -8,16 +8,16 @@ import java.util.logging.Logger
 
 object TransportWifiServiceManager {
     private val logger = Logger.getLogger(TransportWifiServiceManager::class.java.name)
-    private var _btService: TransportWifiDirectService? = null
+    private var _btService: BundleTransportService? = null
 
-    val serviceReady = CompletableFuture<TransportWifiDirectService>()
+    val serviceReady = CompletableFuture<BundleTransportService>()
     private lateinit var connection: ServiceConnection
 
     fun initialize(activity: BundleTransportActivity) {
         connection = object : ServiceConnection {
             override fun onServiceConnected(className: ComponentName, service: IBinder) {
                 // We've bound to LocalService, cast the IBinder and get LocalService instance.
-                val binder = service as TransportWifiDirectService.TransportWifiDirectServiceBinder
+                val binder = service as BundleTransportService.TransportWifiDirectServiceBinder
                 setService(binder.service)
                 serviceReady.complete(binder.service)
             }
@@ -28,8 +28,8 @@ object TransportWifiServiceManager {
         }
     }
 
-    fun setService(service: TransportWifiDirectService) {
-        logger.info("Setting transport wifi service: ${service != null}")
+    fun setService(service: BundleTransportService) {
+        logger.info("Setting transport wifi service: ${service}")
         _btService = service
     }
 
@@ -38,7 +38,7 @@ object TransportWifiServiceManager {
         _btService = null
     }
 
-    fun getService(): TransportWifiDirectService? {
+    fun getService(): BundleTransportService? {
         return _btService
     }
 
