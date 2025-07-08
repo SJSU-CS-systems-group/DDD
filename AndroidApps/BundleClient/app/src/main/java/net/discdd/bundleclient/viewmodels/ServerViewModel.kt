@@ -2,7 +2,6 @@ package net.discdd.bundleclient.viewmodels
 
 import android.app.Application
 import android.content.Context.MODE_PRIVATE
-import androidx.compose.runtime.MutableState
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,9 +9,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.discdd.AndroidAppConstants
-import net.discdd.bundleclient.service.BundleClientService
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiServiceManager
+import net.discdd.bundleclient.service.BundleClientService
 
 data class ServerState(
     val domain: String = "",
@@ -65,16 +64,15 @@ class ServerViewModel(
                 wifiBgService?.let { service ->
                     service.initiateServerExchange()
                         .thenAccept { bec ->
-                            {
-                                appendMessage(
-                                    context.getString(
-                                        R.string.upload_status,
-                                        bec.uploadStatus(),
-                                        bec.downloadStatus()
-                                    )
+                            appendMessage(
+                                context.getString(
+                                    R.string.upload_status,
+                                    bec.uploadStatus(),
+                                    bec.downloadStatus()
                                 )
-                                _isTransmitting.value = false
-                            }}
+                            )
+                            _isTransmitting.value = false
+                        }
                         } ?: run {
                     appendMessage(context.getString(R.string.service_not_available))
                     _isTransmitting.value = false

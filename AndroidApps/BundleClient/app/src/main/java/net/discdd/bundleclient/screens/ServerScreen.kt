@@ -49,7 +49,7 @@ fun ServerScreen(
     val serverState by serverViewModel.state.collectAsState()
     val showEasterEgg by settingsViewModel.showEasterEgg.collectAsState()
     val connectivityState by connectivityViewModel.state.collectAsState()
-    var isTransmitting = serverViewModel.isTransmitting.collectAsState()
+    val isTransmitting by serverViewModel.isTransmitting.collectAsState()
     var enableConnectBtn by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
 
@@ -58,7 +58,7 @@ fun ServerScreen(
         enableConnectBtn = enable
     }
 
-    var scrollState = rememberScrollState()
+    val scrollState = rememberScrollState()
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -106,7 +106,7 @@ fun ServerScreen(
             }
 
             FilledTonalButton(
-                enabled = !isTransmitting.value && enableConnectBtn,
+                enabled = !isTransmitting && enableConnectBtn,
                 onClick = {
                     serverViewModel.connectServer()
                 },
@@ -115,13 +115,11 @@ fun ServerScreen(
                 Text("Connect to Bundle Server")
             }
             Box(modifier = Modifier.fillMaxWidth()) {
-                serverState.message.let { message ->
-                    Text(
-                        text = message,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
+                Text(
+                    text = serverState.message,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
                 if (serverState.message.isNotBlank()) {
                     FloatingActionButton(
                         onClick = { serverViewModel.clearMessage() },
