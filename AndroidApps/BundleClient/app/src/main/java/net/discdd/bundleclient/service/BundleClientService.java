@@ -208,6 +208,7 @@ public class BundleClientService extends Service {
             dddWifi.getEventLiveData().removeObserver(liveDataObserver);
             dddWifi.shutdown();
         }
+        preferences.unregisterOnSharedPreferenceChangeListener(onSharedPreferenceChangeListener);
         super.onDestroy();
     }
 
