@@ -2,12 +2,19 @@ package net.discdd.bundleclient.screens
 
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -19,14 +26,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.delay
+import net.discdd.bundleclient.R
 import net.discdd.bundleclient.viewmodels.ServerViewModel
 import net.discdd.viewmodels.ConnectivityViewModel
 import net.discdd.viewmodels.SettingsViewModel
@@ -40,6 +49,7 @@ fun ServerScreen(
     val serverState by serverViewModel.state.collectAsState()
     val showEasterEgg by settingsViewModel.showEasterEgg.collectAsState()
     val connectivityState by connectivityViewModel.state.collectAsState()
+    var isTransmitting = serverViewModel.isTransmitting.collectAsState()
     var enableConnectBtn by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
 
@@ -48,6 +58,8 @@ fun ServerScreen(
         enableConnectBtn = enable
     }
 
+    var scrollState = rememberScrollState()
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
@@ -55,6 +67,7 @@ fun ServerScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(scrollState)
                 .padding(16.dp)
                 .pointerInput(Unit) {
                     detectTapGestures(onTap = {
@@ -84,45 +97,44 @@ fun ServerScreen(
                 )
                 FilledTonalButton(
                     onClick = {
-                        serverViewModel.connectServer()
-                    },
-                    enabled = enableConnectBtn,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Connect to Bundle Server")
-                }
-                FilledTonalButton(
-                    onClick = {
                         serverViewModel.saveDomainPort()
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Save Domain and Port")
                 }
-                serverState.message?.let { message ->
+            }
+
+            FilledTonalButton(
+                enabled = !isTransmitting.value && enableConnectBtn,
+                onClick = {
+                    serverViewModel.connectServer()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Connect to Bundle Server")
+            }
+            Box(modifier = Modifier.fillMaxWidth()) {
+                serverState.message.let { message ->
                     Text(
                         text = message,
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
-            } else {
-                FilledTonalButton(
-                    onClick = {
-                        serverViewModel.connectServer()
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Connect to Bundle Server")
+                if (serverState.message.isNotBlank()) {
+                    FloatingActionButton(
+                        onClick = { serverViewModel.clearMessage() },
+                        modifier = Modifier.align(Alignment.BottomEnd)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = stringResource(id = R.string.delete_logs)
+                        )
+                    }
                 }
             }
-            serverState.message?.let { message ->
-                Text(
-                    text = message,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
+
         }
     }
 }
