@@ -170,7 +170,8 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         if (currentRecord != null) {
             if (currentRecord.email.equals(adu.email())) {
                 // client is already logged in with the same email, no need to update
-                sendADUsStorage.addADU(clientId, APP_ID, adu.toBytes(), -1);
+                var ack = new ControlAdu.LoginAckControlAdu(Map.of("email", adu.email(), "success", true));
+                sendADUsStorage.addADU(clientId, APP_ID, ack.toBytes(), -1);
                 return;
             }
             // the client is logging in as a different email, so log out the current email
