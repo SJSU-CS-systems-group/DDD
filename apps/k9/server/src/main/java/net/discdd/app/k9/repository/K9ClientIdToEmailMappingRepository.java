@@ -8,6 +8,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 @Repository
 public interface K9ClientIdToEmailMappingRepository extends CrudRepository<K9ClientIdToEmailMapping, String> {
     @Transactional
@@ -15,4 +17,6 @@ public interface K9ClientIdToEmailMappingRepository extends CrudRepository<K9Cli
     @Query(value = "UPDATE k9client_id_to_email_mapping SET client_id = :newClientId WHERE email = :email",
             nativeQuery = true)
     void updateClientId(@Param("newClientId") String newClientId, @Param("email") String email);
+
+    Optional<K9ClientIdToEmailMapping> findByClientId(String clientId);
 }
