@@ -75,16 +75,23 @@ public class BundleClientService extends Service {
     private BundleTransmission bundleTransmission;
     ConnectivityManager connectivityManager;
     final private Observer<? super DDDWifiEventType> liveDataObserver = this::broadcastWifiEvent;
+    // per https://developer.android.com/reference/android/content/SharedPreferences the listener needs
+    // to be a strong reference
+    final private SharedPreferences.OnSharedPreferenceChangeListener onSharedPreferenceChangeListener;
 
+    public BundleClientService() {
+        super();
+        onSharedPreferenceChangeListener = (sharedPreferences, key) -> {
+            if (NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE.equals(key)) {
+                processBackgroundExchangeSetting();
+            }
+        };
+    }
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
         preferences = getSharedPreferences(NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE);
-        preferences.registerOnSharedPreferenceChangeListener((sharedPreferences, key) -> {
-            if (NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE.equals(key)) {
-                processBackgroundExchangeSetting();
-            }
-        });
+        preferences.registerOnSharedPreferenceChangeListener(onSharedPreferenceChangeListener);
         processBackgroundExchangeSetting();
         startForeground();
         connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
