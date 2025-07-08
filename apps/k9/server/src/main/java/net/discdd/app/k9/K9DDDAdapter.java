@@ -79,7 +79,8 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
                 bouncedMessage.append("You are not currently logged into DDD Mail.\n");
             } else if (!clientEmailAddress.equals(mimeMessage.getFrom()[0])) {
                 bouncedMessage.append(format("You are trying to send an email as %s but you are logged in as %s.\n",
-                        mimeMessage.getFrom()[0], clientEmailAddress));
+                                             mimeMessage.getFrom()[0],
+                                             clientEmailAddress));
             } else if (addressList.size() > MAX_RECIPIENTS) {
                 bouncedMessage.append(format("Emails cannot have more than %s recipients\n", MAX_RECIPIENTS));
             } else {
@@ -133,14 +134,13 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
     }
 
     private @Nullable InternetAddress getCurrentEmailAddress(String clientId) {
-        return clientToEmailRepository.findByClientId(clientId)
-                .map(r -> {
-                    try {
-                        return new InternetAddress(r.email);
-                    } catch (AddressException e) {
-                        return null;
-                    }
-                }).orElse(null);
+        return clientToEmailRepository.findByClientId(clientId).map(r -> {
+            try {
+                return new InternetAddress(r.email);
+            } catch (AddressException e) {
+                return null;
+            }
+        }).orElse(null);
     }
 
     private MimeMessage createBounceMessage(Session session,
@@ -155,9 +155,9 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         // Create the bounce message content
         String bounceText = String.format("""
                                                   Your message could not be delivered.
-                                                  
+                                                                                                    
                                                   Reason: %s
-                                                  
+                                                                                                    
                                                   Original message: %s""",
                                           bouncedMessage,
                                           new String(originalMessage, 0, Math.min(1024, originalMessage.length)));
