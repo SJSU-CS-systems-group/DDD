@@ -4,7 +4,6 @@ import android.app.Application
 import android.content.Context
 import android.graphics.Color
 import android.net.Uri
-import android.os.Environment
 import android.os.storage.StorageManager
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.AndroidViewModel
@@ -20,7 +19,7 @@ import net.discdd.UsbConnectionManager
 data class UsbState(
         val filePermissionGranted: Boolean = false,
         val dddDirectoryExists: Boolean = false,
-        val showMessage: String? = null, // null means no message
+        val showMessage: String = "", // null means no message
         val messageColor: Int = Color.BLACK,
 )
 
@@ -56,10 +55,12 @@ open class UsbViewModel(
         }
     }
 
-    protected fun updateMessage(message: String?, color: Int) {
+    protected fun appendMessage(message: String, color: Int) {
         viewModelScope.launch {
             _state.update {
-                it.copy(showMessage = message, messageColor = color)
+                val currentLines = it.showMessage.split("\n").takeLast(10)
+                val newLines = (currentLines + message)
+                it.copy(showMessage = newLines.joinToString("\n"), messageColor = color)
             }
         }
     }
@@ -82,13 +83,13 @@ open class UsbViewModel(
         val dddDirDoc = treeDocFile.findFile(usbDirName)
         if (dddDataDoc != null) {
             usbDirectory = dddDataDoc
-            updateMessage("USB DDD_transport directory found!", Color.GREEN)
+            appendMessage("USB DDD_transport directory found!", Color.GREEN)
         } else if (dddDirDoc != null) {
             usbDirectory = dddDirDoc
-            updateMessage("USB DDD_transport directory found", Color.GREEN)
+            appendMessage("USB DDD_transport directory found", Color.GREEN)
         } else {
             usbDirectory = null
-            updateMessage("USB DDD_transport directory not found!", Color.RED)
+            appendMessage("USB DDD_transport directory not found!", Color.RED)
         }
         _state.update {
             it.copy(dddDirectoryExists = usbDirectory != null)
