@@ -50,7 +50,7 @@ class ClientUsbViewModel(
             withContext(Dispatchers.IO) {
                 val dddDir = usbDirectory
                 if (!state.value.dddDirectoryExists || dddDir == null || bundleTransmission == null) {
-                    updateMessage(
+                    appendMessage(
                         context.getString(R.string.cannot_transfer_bundle_usb_not_ready_or_directory_not_found),
                         Color.RED
                     )
@@ -63,7 +63,7 @@ class ClientUsbViewModel(
                 var dddServer = createIfDoesNotExist(dddDir, "toServer")
                 val targetFile = dddServer.createFile("data/octet", bundleFile.name)
                 if (targetFile == null) {
-                    updateMessage("Error creating target file in USB directory", Color.RED)
+                    appendMessage("Error creating target file in USB directory", Color.RED)
                     return@withContext
                 }
 
@@ -76,10 +76,10 @@ class ClientUsbViewModel(
                     }
 
                     logger.log(INFO, "Bundle creation and transfer successful")
-                    updateMessage("Bundle created and transferred to USB", Color.GREEN)
+                    appendMessage("Bundle created and transferred to USB", Color.GREEN)
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    updateMessage("Error creating or transferring bundle: ${e.message}", Color.RED)
+                    appendMessage("Error creating or transferring bundle: ${e.message}", Color.RED)
                 }
             }
         }
@@ -89,7 +89,7 @@ class ClientUsbViewModel(
             withContext(Dispatchers.IO) {
                 val recencyLocation = usbDirectory?.findFile("recencyBlob.bin")
                 if (recencyLocation == null) {
-                    updateMessage("No recency blob found on USB", Color.YELLOW)
+                    appendMessage("No recency blob found on USB", Color.YELLOW)
                     return@withContext
                 }
                     val recencyBlob = context.contentResolver.openInputStream(recencyLocation.uri)?.use { inputStream ->
@@ -97,7 +97,7 @@ class ClientUsbViewModel(
                         RecencyBlob.parseFrom(bytes)
                     }
                     if (recencyBlob == null) {
-                        updateMessage("Invalid recency blob found on USB", Color.YELLOW)
+                        appendMessage("Invalid recency blob found on USB", Color.YELLOW)
                         return@withContext
                     }
                     val toClientDir = createIfDoesNotExist(usbDirectory!!, "toClient")
@@ -105,7 +105,7 @@ class ClientUsbViewModel(
                         rootDir.toPath().parent.resolve("BundleTransmission/bundle-generation/received-processing")
                     val filesToTransfer = toClientDir.listFiles()
                     if (filesToTransfer.isEmpty()) {
-                        updateMessage("No files found in 'toClient' directory on USB", Color.YELLOW)
+                        appendMessage("No files found in 'toClient' directory on USB", Color.YELLOW)
                         return@withContext
                     }
                     try {
@@ -129,13 +129,13 @@ class ClientUsbViewModel(
                                 logger.log(INFO, "Transferred file: ${bundleFile.name} of ${result} bytes to ${devicePath}")
                             }
                         }
-                        updateMessage(
+                        appendMessage(
                             "Bundle transferred from 'toClient' to device received-processing successfully",
                             Color.GREEN
                         )
                     } catch (e: Exception) {
                         e.printStackTrace()
-                        updateMessage("Error during USB file transfer: ${e.message}", Color.RED)
+                        appendMessage("Error during USB file transfer: ${e.message}", Color.RED)
                     }
                 }
             }

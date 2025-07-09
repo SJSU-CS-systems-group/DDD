@@ -128,7 +128,8 @@ fun TransportHomeScreen(
                 val usbViewModel: TransportUsbViewModel = viewModel()
                 UsbScreen(usbViewModel) { viewModel ->
                     TransportUsbComponent(viewModel) {
-                        viewModel.populate()
+                        viewModel.transportTransferToUsb(context)
+                        viewModel.usbTransferToTransport(context)
                     }
                 }
             }

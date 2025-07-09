@@ -51,20 +51,21 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import net.discdd.bundletransport.BundleTransportService
 import net.discdd.bundletransport.R
-import net.discdd.bundletransport.TransportWifiDirectService
 import net.discdd.bundletransport.viewmodels.WifiDirectViewModel
 import net.discdd.components.WifiPermissionBanner
 import java.util.concurrent.CompletableFuture
+import androidx.core.content.edit
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun WifiDirectScreen(
         wifiViewModel: WifiDirectViewModel = viewModel(),
-        serviceReadyFuture: CompletableFuture<TransportWifiDirectService>,
+        serviceReadyFuture: CompletableFuture<BundleTransportService>,
         nearbyWifiState: PermissionState,
         preferences: SharedPreferences = LocalContext.current.getSharedPreferences(
-                TransportWifiDirectService.WIFI_DIRECT_PREFERENCES,
+                BundleTransportService.WIFI_DIRECT_PREFERENCES,
                 Context.MODE_PRIVATE
         )
 ) {
@@ -99,7 +100,7 @@ fun WifiDirectScreen(
                 var checked by remember {
                     mutableStateOf(
                             preferences.getBoolean(
-                                    TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
+                                    BundleTransportService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
                                     true
                             )
                     )
@@ -177,10 +178,12 @@ fun WifiDirectScreen(
                             checked = checked,
                             onCheckedChange = {
                                 checked = it
-                                preferences.edit().putBoolean(
-                                        TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
-                                        it
-                                ).apply()
+                                preferences.edit {
+                                    putBoolean(
+                                            BundleTransportService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
+                                            it
+                                    )
+                                }
                             }
                     )
                     Text(text = stringResource(R.string.collect_data_even_when_app_is_closed))
