@@ -54,10 +54,10 @@ import androidx.core.content.edit
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun WifiDirectScreen(
-    wifiViewModel: WifiDirectViewModel = viewModel(),
-    serviceReadyFuture: CompletableFuture<BundleTransportService>,
-    nearbyWifiState: PermissionState,
-    preferences: SharedPreferences = LocalContext.current.getSharedPreferences(
+        wifiViewModel: WifiDirectViewModel = viewModel(),
+        serviceReadyFuture: CompletableFuture<BundleTransportService>,
+        nearbyWifiState: PermissionState,
+        preferences: SharedPreferences = LocalContext.current.getSharedPreferences(
                 BundleTransportService.WIFI_DIRECT_PREFERENCES,
                 Context.MODE_PRIVATE
         )
@@ -178,8 +178,8 @@ fun WifiDirectScreen(
                                 checked = it
                                 preferences.edit {
                                     putBoolean(
-                                        BundleTransportService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
-                                        it
+                                            BundleTransportService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
+                                            it
                                     )
                                 }
                             }

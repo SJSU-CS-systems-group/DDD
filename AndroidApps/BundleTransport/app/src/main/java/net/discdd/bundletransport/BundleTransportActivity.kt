@@ -88,7 +88,7 @@ class BundleTransportActivity : ComponentActivity() {
         super.onDestroy()
 
         if (!sharedPreferences.getBoolean(BundleTransportService.WIFI_DIRECT_PREFERENCE_BG_SERVICE, true) &&
-            serviceIntent != null) {
+                serviceIntent != null) {
             stopService(serviceIntent)
         }
 
