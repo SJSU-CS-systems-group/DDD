@@ -23,7 +23,6 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
 import net.discdd.bundletransport.viewmodels.WifiDirectViewModel;
-import net.discdd.client.bundletransmission.BundleTransmission;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.screens.LogFragment;
 import net.discdd.wifidirect.WifiDirectManager;
@@ -43,11 +42,11 @@ import java.util.stream.Collectors;
  * service to handle using the TransportWifiDirectServiceBinder which
  * returns a reference to this service.
  */
-public class TransportWifiDirectService extends Service
+public class BundleTransportService extends Service
         implements WifiDirectStateListener, BundleExchangeServiceImpl.BundleExchangeEventListener {
     public static final String NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION = "net.discdd.bundletransport.CLIENT_LOG";
     public static final String NET_DISCDD_BUNDLETRANSPORT_WIFI_EVENT_ACTION = "net.discdd.bundletransport.WIFI_EVENT";
-    private static final Logger logger = Logger.getLogger(TransportWifiDirectService.class.getName());
+    private static final Logger logger = Logger.getLogger(BundleTransportService.class.getName());
     public static final String WIFI_DIRECT_PREFERENCES = "wifi_direct";
     public static final String WIFI_DIRECT_PREFERENCE_BG_SERVICE = "background_wifi";
     private final IBinder binder = new TransportWifiDirectServiceBinder();
@@ -64,16 +63,16 @@ public class TransportWifiDirectService extends Service
     public int onStartCommand(Intent intent, int flags, int startId) {
         this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
         super.onStartCommand(intent, flags, startId);
-        // TransportWifiDirectService doesn't use LogFragment directly, but we do want our
+        // BundleTransportService doesn't use LogFragment directly, but we do want our
         // logs to go to its logger
         LogFragment.registerLoggerHandler();
         sharedPreferences = getSharedPreferences(WIFI_DIRECT_PREFERENCES, Context.MODE_PRIVATE);
         logger.log(INFO,
-                   "Starting " + TransportWifiDirectService.class.getName() + " with flags " + flags + " and startId " +
+                   "Starting " + BundleTransportService.class.getName() + " with flags " + flags + " and startId " +
                            startId);
         startForeground();
         logger.log(INFO,
-                   "Started " + TransportWifiDirectService.class.getName() + " with flags " + flags + " and startId " +
+                   "Started " + BundleTransportService.class.getName() + " with flags " + flags + " and startId " +
                            startId);
         return START_STICKY;
     }
@@ -194,15 +193,6 @@ public class TransportWifiDirectService extends Service
         }
     }
 
-    private void stopRpcServer() {
-        synchronized (grpcServer) {
-            if (!grpcServer.isShutdown()) {
-                appendToClientLog("Shutting down gRPC server");
-                grpcServer.shutdownServer();
-            }
-        }
-    }
-
     @Override
     public void onBundleExchangeEvent(BundleExchangeServiceImpl.BundleExchangeEvent exchangeEvent) {
         appendToClientLog("File service event: " + exchangeEvent);
@@ -223,10 +213,6 @@ public class TransportWifiDirectService extends Service
         LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
     }
 
-    public CompletableFuture<WifiP2pDevice> requestDeviceInfo() {
-        return wifiDirectManager.requestDeviceInfo();
-    }
-
     public String getDeviceName() {
         return wifiDirectManager.getDeviceName();
     }
@@ -240,8 +226,8 @@ public class TransportWifiDirectService extends Service
     }
 
     public class TransportWifiDirectServiceBinder extends Binder {
-        TransportWifiDirectService getService() {
-            return TransportWifiDirectService.this;
+        BundleTransportService getService() {
+            return BundleTransportService.this;
         }
     }
 

@@ -24,9 +24,7 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -375,6 +373,7 @@ public class DDDWifiDirect implements DDDWifi {
         wifiEnable = false;
         wifiChannel = null;
         eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_STATE_CHANGED);
+        wifiChannel.close();
     }
 
     @Override
