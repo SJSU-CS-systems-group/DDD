@@ -140,22 +140,22 @@
             </plugin>
             <!-- check that git pull.rebase is configured correctly -->
             <plugin>
-              <groupId>org.codehaus.mojo</groupId>
-              <artifactId>exec-maven-plugin</artifactId>
-              <version>3.1.0</version>
-              <executions>
-                <execution>
-                  <id>check-git-pull-rebase</id>
-                  <phase>validate</phase>
-                  <goals>
-                    <goal>exec</goal>
-                  </goals>
-                  <configuration>
-                    <executable>${checkpullrebase}</executable>
-                    <addOutputToClasspath>false</addOutputToClasspath>
-                  </configuration>
-                </execution>
-              </executions>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>check-git-pull-rebase</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>${checkpullrebase}</executable>
+                            <addOutputToClasspath>false</addOutputToClasspath>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
 
         </plugins>
