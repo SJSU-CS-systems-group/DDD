@@ -9,7 +9,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.DayNight" >
         <service
-            android:name=".TransportWifiDirectService"
+            android:name=".BundleTransportService"
             android:enabled="true"
                 android:foregroundServiceType="dataSync"
             android:exported="false" >
