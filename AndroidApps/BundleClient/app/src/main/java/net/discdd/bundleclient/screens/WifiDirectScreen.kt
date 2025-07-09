@@ -1,42 +1,17 @@
 package net.discdd.bundleclient.screens
 
 import android.Manifest
-import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.net.Uri
 import android.provider.Settings
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -52,8 +27,8 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
-import net.discdd.bundleclient.service.BundleClientService
 import net.discdd.bundleclient.R
+import net.discdd.bundleclient.service.BundleClientService
 import net.discdd.bundleclient.viewmodels.PeerDevice
 import net.discdd.bundleclient.viewmodels.WifiDirectViewModel
 import net.discdd.components.EasterEgg
@@ -66,10 +41,6 @@ fun WifiDirectScreen(
     viewModel: WifiDirectViewModel = viewModel(),
     serviceReadyFuture: CompletableFuture<BundleClientService>,
     nearbyWifiState: PermissionState,
-    preferences: SharedPreferences = LocalContext.current.getSharedPreferences(
-        BundleClientService.NET_DISCDD_BUNDLECLIENT_SETTINGS,
-        Context.MODE_PRIVATE
-    ),
     onToggle: () -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
@@ -145,7 +116,7 @@ fun WifiDirectScreen(
             * Click this portion 7 times in <3sec in order to toggle the easter egg!
             * */
             EasterEgg(
-                content = { Text(text = "ClientId: ${state.clientId}") },
+                content = { Text(text = "ClientId: ${state.clientId.substring(0,10)}") },
                 onToggle = onToggle,
             )
             Text(text = "Wifi Direct Enabled: ${if (state.dddWifiEnabled) "✅" else "❌"}")
@@ -158,28 +129,49 @@ fun WifiDirectScreen(
                 }"
             )
 
-            var checked by remember {
-                mutableStateOf(
-                    preferences.getBoolean(
-                        BundleClientService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE,
-                        false
-                    )
-                )
+            var expanded by remember { mutableStateOf(false) }
+            val backgroundExchange by viewModel.backgroundExchange.collectAsState()
+
+            val exchangeText = if (backgroundExchange <= 0) {
+                "Disabled"
+            } else {
+                "${backgroundExchange} minute(s)"
             }
+            ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+                TextField(
+                    value = exchangeText,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Background Transfer Interval") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
+                )
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    DropdownMenuItem(text = { Text("disabled") }, onClick = {
+                        expanded = false
+                        viewModel.setBackgroundExchange(0)
+                    }) // disable background transfers
+                    for (i in 1..10) {
+                        DropdownMenuItem(
+                            text = { Text("$i minute(s)") },
+                            onClick = {
+                                expanded = false
+                                viewModel.setBackgroundExchange(i)
+                            }
+                        )
+                    }
+                }
+            }
+
             Row(
                 verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()
             ) {
-                Checkbox(
-                    checked = checked, onCheckedChange = {
-                        checked = it
-                        preferences.edit().putBoolean(
-                            BundleClientService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, it
-                        ).apply()
-                    }, modifier = Modifier.weight(1f)
-                )
-
                 Text(
-                    text = "Do transfers in the background", modifier = Modifier.weight(3f)
+                    text = "Nearby transports: ", modifier = Modifier.weight(3f)
                 )
 
                 IconButton(

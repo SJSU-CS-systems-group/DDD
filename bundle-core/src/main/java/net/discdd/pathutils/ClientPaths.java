@@ -60,9 +60,7 @@ public class ClientPaths {
     public final Path sendADUsPath;
     public final Path receiveADUsPath;
     public final Path sendBundleDetailsPath;
-    public final Path lastSentBundleStructurePath;
 
-    // Bundle security directory
     public final Path bundleSecurityPath;
     public final Path serverKeyPath;
     public final Path bundleIdNextCounter;
@@ -80,7 +78,7 @@ public class ClientPaths {
         ackRecordPath = toBeBundledDir.resolve(Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME);
         net.discdd.utils.FileUtils.createFileWithDefaultIfNeeded(ackRecordPath, "HB".getBytes());
         crashReportPath = toBeBundledDir.resolve(Constants.BUNDLE_CRASH_REPORT_FILE_NAME);
-        net.discdd.utils.FileUtils.createFileWithDefaultIfNeeded(crashReportPath, "HB".getBytes());
+        net.discdd.utils.FileUtils.createFileWithDefaultIfNeeded(crashReportPath, "No report".getBytes());
         tosendDir = bundleGenerationDir.resolve(TO_SEND_DIRECTORY);
         tosendDir.toFile().mkdirs();
 
@@ -105,7 +103,6 @@ public class ClientPaths {
         sendADUsPath = rootDir.resolve("send");
         receiveADUsPath = rootDir.resolve("receive");
         sendBundleDetailsPath = rootDir.resolve(SENT_BUNDLE_DETAILS);
-        lastSentBundleStructurePath = rootDir.resolve(LAST_SENT_BUNDLE_STRUCTURE);
 
         // Bundle security directory
         bundleSecurityPath = rootDir.resolve(SecurityUtils.BUNDLE_SECURITY_DIR);

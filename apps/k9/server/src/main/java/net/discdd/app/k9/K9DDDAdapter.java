@@ -2,10 +2,8 @@ package net.discdd.app.k9;
 
 import com.google.protobuf.ByteString;
 import io.grpc.stub.StreamObserver;
-import net.discdd.app.k9.model.LoginAdu;
-import net.discdd.app.k9.model.LoginAduAck;
-import net.discdd.app.k9.model.RegisterAdu;
-import net.discdd.app.k9.model.RegisterAduAck;
+import jakarta.mail.internet.AddressException;
+import net.discdd.app.k9.common.ControlAdu;
 import net.discdd.app.k9.repository.K9ClientIdToEmailMappingRepository;
 import net.discdd.app.k9.repository.entity.K9ClientIdToEmailMapping;
 import net.discdd.app.k9.service.EmailService;
@@ -19,6 +17,7 @@ import net.discdd.grpc.PendingDataCheckResponse;
 import net.discdd.grpc.ServiceAdapterServiceGrpc;
 import net.discdd.model.ADU;
 import net.discdd.utils.StoreADUs;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -32,8 +31,9 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Random;
@@ -45,6 +45,7 @@ import static java.util.logging.Level.SEVERE;
 
 @GrpcService
 public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServiceImplBase {
+
     static final Logger logger = Logger.getLogger(K9DDDAdapter.class.getName());
     public static final int MAX_RECIPIENTS = 5;
     // yahoo and gmail are 25M and MS is 20M
@@ -56,6 +57,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
     private final StoreADUs sendADUsStorage;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final String supportEmail;
     @Autowired
     private K9ClientIdToEmailMappingRepository clientToEmailRepository;
 
@@ -63,15 +65,23 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         this.sendADUsStorage = sendADUsStorage;
         passwordEncoder = new BCryptPasswordEncoder();
         this.emailService = emailService;
+        this.supportEmail = "support@" + emailService.localDomain;
     }
 
     private void processEmailAdus(AppDataUnit adu, String clientId) {
         var bouncedMessage = new StringBuilder();
         var originalMessage = adu.getData().toByteArray();
         try {
+            var clientEmailAddress = getCurrentEmailAddress(clientId);
             var mimeMessage = MailUtils.getMimeMessage(new ByteArrayInputStream(originalMessage));
             var addressList = MailUtils.getToCCBccAddresses(mimeMessage);
-            if (addressList.size() > MAX_RECIPIENTS) {
+            if (clientEmailAddress == null) {
+                bouncedMessage.append("You are not currently logged into DDD Mail.\n");
+            } else if (!clientEmailAddress.equals(mimeMessage.getFrom()[0])) {
+                bouncedMessage.append(format("You are trying to send an email as %s but you are logged in as %s.\n",
+                                             mimeMessage.getFrom()[0],
+                                             clientEmailAddress));
+            } else if (addressList.size() > MAX_RECIPIENTS) {
                 bouncedMessage.append(format("Emails cannot have more than %s recipients\n", MAX_RECIPIENTS));
             } else {
                 var externalDomains = false;
@@ -100,7 +110,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.log(SEVERE, format("Error processing email ADU for client %s: %s", clientId, e.getMessage()), e);
             bouncedMessage.append(format("Could not send message. %s\n", e.getMessage()));
             if (e.getCause() != null) {
                 bouncedMessage.append(format("  %s\n", e.getCause().getMessage()));
@@ -123,13 +133,23 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         }
     }
 
+    private @Nullable InternetAddress getCurrentEmailAddress(String clientId) {
+        return clientToEmailRepository.findByClientId(clientId).map(r -> {
+            try {
+                return new InternetAddress(r.email);
+            } catch (AddressException e) {
+                return null;
+            }
+        }).orElse(null);
+    }
+
     private MimeMessage createBounceMessage(Session session,
                                             StringBuilder bouncedMessage,
                                             byte[] originalMessage) throws MessagingException {
         MimeMessage bounceMessage = new MimeMessage(session);
 
         // Set bounce message headers
-        bounceMessage.setFrom(new InternetAddress("mailer-daemon@" + emailService.localDomain));
+        bounceMessage.setFrom(new InternetAddress(supportEmail));
         bounceMessage.setSubject("Mail delivery failed");
 
         // Create the bounce message content
@@ -145,33 +165,55 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         return bounceMessage;
     }
 
-    private void processLoginAdus(AppDataUnit adu, String clientId) throws IOException {
-        LoginAdu parsedAdu = LoginAdu.parseAdu(adu);
-        if (parsedAdu != null) {
-            // verify email
-            boolean emailExists = clientToEmailRepository.existsById(parsedAdu.getEmail());
-            if (emailExists) {
-                Optional<K9ClientIdToEmailMapping> entity = clientToEmailRepository.findById(parsedAdu.getEmail());
-                if (entity.isPresent()) {
-                    String hashedPassword = entity.get().password;
-                    if (passwordEncoder.matches(parsedAdu.getPassword(), hashedPassword)) {
-                        // update email clientId entry
-                        clientToEmailRepository.updateClientId(clientId, parsedAdu.getEmail());
-                        // create success ack
-                        LoginAduAck ack = new LoginAduAck(parsedAdu.getEmail(), hashedPassword, true, null);
-                        sendADUsStorage.addADU(clientId, APP_ID, ack.toByteArray(), -1);
-                        return;
-                    }
-                }
+    private void processLoginAdus(ControlAdu.LoginControlAdu adu, String clientId) throws IOException {
+        var currentRecord = clientToEmailRepository.findByClientId(clientId).orElse(null);
+        if (currentRecord != null) {
+            if (currentRecord.email.equals(adu.email())) {
+                // client is already logged in with the same email, no need to update
+                var ack = new ControlAdu.LoginAckControlAdu(Map.of("email", adu.email(), "success", true));
+                sendADUsStorage.addADU(clientId, APP_ID, ack.toBytes(), -1);
+                return;
             }
+            // the client is logging in as a different email, so log out the current email
+            currentRecord.clientId = "";
+            clientToEmailRepository.save(currentRecord);
         }
 
-        // create error ack
-        LoginAduAck ack = new LoginAduAck(null,
-                                          null,
-                                          false,
-                                          "Either not parsable, email doesn't exist, or password is incorrect.");
-        sendADUsStorage.addADU(clientId, APP_ID, ack.toByteArray(), -1);
+        // verify email
+        var optionalRecord = clientToEmailRepository.findById(adu.email());
+        if (optionalRecord.isPresent()) {
+            var emailRecord = optionalRecord.get();
+            String hashedPassword = emailRecord.password;
+            if (passwordEncoder.matches(adu.password(), hashedPassword)) {
+                var oldClientId = emailRecord.clientId;
+                // update email clientId entry
+                clientToEmailRepository.updateClientId(clientId, adu.email());
+                // create success ack
+                var ack = new ControlAdu.LoginAckControlAdu(Map.of("email", adu.email(), "success", true));
+                sendADUsStorage.addADU(clientId, APP_ID, ack.toBytes(), -1);
+                sendADUsStorage.addADU(clientId, APP_ID, getEmail("login", adu.email()), -1);
+                if (!Objects.equals(clientId, oldClientId)) {
+                    sendADUsStorage.addADU(oldClientId, APP_ID, getEmail("logout", adu.email()), -1);
+                }
+            }
+        } else {
+            var ack = new ControlAdu.LoginAckControlAdu(Map.of("message",
+                                                               "Email doesn't exist or password is incorrect."));
+            sendADUsStorage.addADU(clientId, APP_ID, ack.toBytes(), -1);
+        }
+    }
+
+    private byte[] getEmail(String type, String email) {
+        var username = email.split("@")[0];
+        try (var is = K9DDDAdapter.class.getResourceAsStream("/emails/" + type)) {
+            return new String(is.readAllBytes()).replace("DDD_SUPPORT_EMAIL", supportEmail)
+                    .replace("EMAIL_ADDRESS", email)
+                    .replace("USERNAME", username)
+                    .getBytes();
+        } catch (IOException e) {
+            logger.log(SEVERE, "Error fetching email template for type: " + type, e);
+            return null;
+        }
     }
 
     private char getRandNum() {
@@ -182,36 +224,51 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         return (char) ('a' + rand.nextInt(26));
     }
 
-    private void processRegisterAdus(AppDataUnit adu, String clientId) throws IOException {
-        RegisterAdu parsedAdu = RegisterAdu.parseAdu(adu);
-        final String message;
+    private void processRegisterAdus(ControlAdu.RegisterControlAdu adu, String clientId) throws IOException {
+        String message = null;
+        if (!isLowerCaseASCII(adu.prefix()) || !isLowerCaseASCII(adu.suffix()) || adu.prefix().length() > 10 ||
+                adu.prefix().length() < 3 || adu.suffix().length() > 10 || adu.suffix().length() < 3) {
+            message = "Prefix and suffix must be 3 to 10 lower case ASCII characters only.";
+        }
+        int tries = 0;
+        String hashedPassword = passwordEncoder.encode(adu.password());
 
-        if (parsedAdu == null) {
-            message = "Registration is not parsable";
-        } else if (parsedAdu.password.length() < 8) {
-            message = "Password is less than 8 characters";
-        } else if (parsedAdu.prefixes.length < 1 || parsedAdu.suffixes.length < 1) {
-            message = "No prefixes or suffixes found";
-        } else if (parsedAdu.prefixes[0].length() < 3 || parsedAdu.suffixes[0].length() < 3) {
-            message = "Prefix or suffix is less than 3 characters";
-        } else if (!isLowerCaseASCII(parsedAdu.prefixes[0]) || !isLowerCaseASCII(parsedAdu.suffixes[0])) {
-            message = "Prefix and suffix should only contain a-z characters";
-        } else {
-            while (true) {
-                var email = parsedAdu.prefixes[0] + getRandNum() + getRandChar() + getRandChar() + getRandNum() +
-                        parsedAdu.suffixes[0] + '@' + emailService.localDomain;
-                if (!clientToEmailRepository.existsById(email)) {
-                    String hashedPassword = passwordEncoder.encode(parsedAdu.password);
-                    K9ClientIdToEmailMapping entity = new K9ClientIdToEmailMapping(email, clientId, hashedPassword);
-                    clientToEmailRepository.save(entity);
-                    RegisterAduAck ack = new RegisterAduAck(email, hashedPassword, true, null);
-                    sendADUsStorage.addADU(clientId, APP_ID, ack.toByteArray(), -1);
-                    return;
-                }
+        var optionalCurrentRecord = clientToEmailRepository.findByClientId(clientId);
+        if (optionalCurrentRecord.isPresent()) {
+            var currentRecord = optionalCurrentRecord.get();
+            var currentEmail = currentRecord.email;
+
+            if (currentEmail.startsWith(adu.prefix()) && currentEmail.endsWith(adu.suffix())) {
+                currentRecord.password = hashedPassword;
+                clientToEmailRepository.save(currentRecord);
+                // if the current email already matches the prefix and suffix, no need to generate a new one
+                var ack = new ControlAdu.RegisterAckControlAdu(Map.of("email", currentEmail, "success", true));
+                sendADUsStorage.addADU(clientId, APP_ID, ack.toBytes(), -1);
+                return;
+            }
+            // if the current email does not match the prefix and suffix, we need to generate a new one so remove
+            // the client from the current record
+            currentRecord.clientId = "";
+            clientToEmailRepository.save(currentRecord);
+        }
+        while (message == null) {
+            var email =
+                    adu.prefix() + getRandNum() + getRandChar() + getRandChar() + getRandNum() + adu.suffix() + '@' +
+                            emailService.localDomain;
+            if (!clientToEmailRepository.existsById(email)) {
+                K9ClientIdToEmailMapping entity = new K9ClientIdToEmailMapping(email, clientId, hashedPassword);
+                clientToEmailRepository.save(entity);
+                var ack = new ControlAdu.RegisterAckControlAdu(Map.of("email", email, "success", true));
+                sendADUsStorage.addADU(clientId, APP_ID, ack.toBytes(), -1);
+                sendADUsStorage.addADU(clientId, APP_ID, getEmail("welcome", email), -1);
+                return;
+            }
+            if (tries++ > 100) {
+                message = "Could not generate a unique email address. Please try with different prefix or suffix.";
             }
         }
-        RegisterAduAck ack = new RegisterAduAck(null, null, false, message);
-        sendADUsStorage.addADU(clientId, APP_ID, ack.toByteArray(), -1);
+        var ack = new ControlAdu.RegisterAckControlAdu(Map.of("message", message));
+        sendADUsStorage.addADU(clientId, APP_ID, ack.toBytes(), -1);
     }
 
     private boolean isLowerCaseASCII(String fix) {
@@ -221,16 +278,33 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
     // This method will parse the ToAddress from the mail ADUs and prepares ADUs for the respective
     // client directories
     private void processADUsToSend(AppDataUnit adu, String clientId) throws IOException {
-        byte[] prefixBytes = Arrays.copyOfRange(adu.getData().toByteArray(), 0, 15);
-        String dataStr = new String(prefixBytes);
-
-        if (dataStr.startsWith("login")) {
-            processLoginAdus(adu, clientId);
-        } else if (dataStr.startsWith("register")) {
-            processRegisterAdus(adu, clientId);
+        var bytes = adu.getData().toByteArray();
+        if (ControlAdu.isControlAdu(bytes)) {
+            try {
+                var controlAdu = ControlAdu.fromBytes(bytes);
+                if (controlAdu instanceof ControlAdu.LoginControlAdu loginControlAdu) {
+                    processLoginAdus(loginControlAdu, clientId);
+                } else if (controlAdu instanceof ControlAdu.RegisterControlAdu registerControlAdu) {
+                    processRegisterAdus(registerControlAdu, clientId);
+                } else if (controlAdu instanceof ControlAdu.WhoAmIControlAdu whoAmIControlAdu) {
+                    processWhoAmIAdu(whoAmIControlAdu, clientId);
+                } else {
+                    logger.log(SEVERE, "Unknown control ADU type: " + controlAdu.getClass().getName());
+                }
+            } catch (Exception e) {
+                logger.log(SEVERE, "Error processing control ADU for clientId: " + clientId, e);
+                sendADUsStorage.addADU(clientId, APP_ID, ("ERROR\n" + e.getMessage()).getBytes(), -1);
+            }
         } else {
             processEmailAdus(adu, clientId);
         }
+    }
+
+    private void processWhoAmIAdu(ControlAdu.WhoAmIControlAdu ignored, String clientId) throws IOException {
+        String email = clientToEmailRepository.findByClientId(clientId).map(rec -> rec.email).orElse("");
+        var ack = new ControlAdu.WhoAmIAckControlAdu(Map.of("email", email, "success", !email.isEmpty()));
+        sendADUsStorage.addADU(clientId, APP_ID, ack.toBytes(), -1);
+
     }
 
     @Override

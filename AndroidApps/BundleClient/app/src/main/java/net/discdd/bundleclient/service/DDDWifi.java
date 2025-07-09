@@ -18,7 +18,7 @@ public interface DDDWifi {
 
     List<DDDWifiDevice> listDevices();
 
-    CompletableFuture<Void> disconnectFrom(DDDWifiDevice dev);
+    CompletableFuture<Void> disconnectFrom(DDDWifiConnection con);
 
     void shutdown();
 

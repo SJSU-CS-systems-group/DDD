@@ -9,14 +9,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.discdd.AndroidAppConstants
-import net.discdd.bundleclient.service.BundleClientService
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiServiceManager
+import net.discdd.bundleclient.service.BundleClientService
 
 data class ServerState(
     val domain: String = "",
     val port: String = "",
-    val message: String? = null,
+    val message: String = "",
 )
 
 class ServerViewModel(
@@ -26,6 +26,9 @@ class ServerViewModel(
     private val sharedPref = context.getSharedPreferences(BundleClientService.NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE)
     private val _state = MutableStateFlow(ServerState())
     val state = _state.asStateFlow()
+
+    private val _isTransmitting = MutableStateFlow(false)
+    val isTransmitting = _isTransmitting.asStateFlow()
 
     init {
         AndroidAppConstants.checkDefaultDomainPortSettings(sharedPref)
@@ -41,18 +44,19 @@ class ServerViewModel(
     }
 
     fun clearMessage() {
-        _state.update { it.copy(message = null) }
+        viewModelScope.launch { _state.update { it.copy(message = "") } }
     }
 
-    fun appendMessage(message: String) {
+    private fun appendMessage(message: String) {
         _state.update { current ->
-            val currentLines = current.message?.split("\n")?.takeLast(10) ?: emptyList()
+            val currentLines = current.message.split("\n").takeLast(10)
             val newLines = (currentLines + message)
             current.copy(message = newLines.joinToString("\n"))
         }
     }
 
     fun connectServer() {
+        _isTransmitting.value = true
         viewModelScope.launch {
             try {
                 appendMessage(context.getString(R.string.connecting_to_server))
@@ -60,15 +64,21 @@ class ServerViewModel(
                 wifiBgService?.let { service ->
                     service.initiateServerExchange()
                         .thenAccept { bec ->
-                            appendMessage(context.getString(
-                                R.string.upload_status,
-                                bec.uploadStatus(),
-                                bec.downloadStatus()
-                            )) }
+                            appendMessage(
+                                context.getString(
+                                    R.string.upload_status,
+                                    bec.uploadStatus(),
+                                    bec.downloadStatus()
+                                )
+                            )
+                            _isTransmitting.value = false
+                        }
                         } ?: run {
                     appendMessage(context.getString(R.string.service_not_available))
+                    _isTransmitting.value = false
                 }
             } catch (e : Exception) {
+                _isTransmitting.value = false
                 appendMessage(context.getString(R.string.service_not_available))
             }
         }

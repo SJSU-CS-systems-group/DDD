@@ -1,0 +1,19 @@
+From: DDD_SUPPORT_EMAIL
+To: EMAIL_ADDRESS
+Subject: Welcome to DDD Mail!
+
+Hi USERNAME,
+
+Thank you for signing up for DDD Mail! We're excited to have you try out our service.
+
+There are a couple of things to keep in mind:
+
+* This is a highly experimental service, so please expect some bugs and issues. There are no guarantees of any kind.
+* We are not responsible for any data loss, so please do not use this service for important emails.
+* We use encryption to protect your emails as they travel to our servers, but must decrypt them to process and send them. Please set up PGP to encrypt your messages over the internet.
+* We don't know your password, so if you lose it, we cannot help you recover it. Please keep it safe.
+* Your emails travel through our servers, but once we know they have been delivered, we delete them. We cannot recover them for you.
+
+Welcome to DDD Mail!
+
+- DDD Support Team

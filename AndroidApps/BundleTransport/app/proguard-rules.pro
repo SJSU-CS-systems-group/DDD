@@ -24,3 +24,5 @@
 -dontwarn com.google.auto.service.processor.**
 -dontwarn reactor.blockhound.integration.**
 -dontwarn io.netty.util.internal.Hidden$NettyBlockHoundIntegration
+-dontobfuscate
+

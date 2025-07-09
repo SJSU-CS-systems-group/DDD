@@ -61,7 +61,6 @@ public class BundleClientService extends Service {
     public static final String NET_DISCDD_BUNDLECLIENT_LOG_ACTION = "net.discdd.bundleclient.CLIENT_LOG";
     public static final String NET_DISCDD_BUNDLECLIENT_WIFI_ACTION = "net.discdd.bundleclient.WIFI_EVENT";
     public static final String NET_DISCDD_BUNDLECLIENT_SETTINGS = "net.discdd.bundleclient";
-    public static final int REEXCHANGE_TIME_PERIOD_MS = 2 * 60 * 1000;
     public static final String DDDWIFI_EVENT_EXTRA = "DDDWifiEvent";
     public static final String BUNDLE_CLIENT_TRANSMISSION_EVENT_EXTRA = "BundleClientTransmissionEvent";
     public static final String NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE = "background_exchange";
@@ -76,16 +75,23 @@ public class BundleClientService extends Service {
     private BundleTransmission bundleTransmission;
     ConnectivityManager connectivityManager;
     final private Observer<? super DDDWifiEventType> liveDataObserver = this::broadcastWifiEvent;
+    // per https://developer.android.com/reference/android/content/SharedPreferences the listener needs
+    // to be a strong reference
+    final private SharedPreferences.OnSharedPreferenceChangeListener onSharedPreferenceChangeListener;
 
+    public BundleClientService() {
+        super();
+        onSharedPreferenceChangeListener = (sharedPreferences, key) -> {
+            if (NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE.equals(key)) {
+                processBackgroundExchangeSetting();
+            }
+        };
+    }
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
         preferences = getSharedPreferences(NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE);
-        preferences.registerOnSharedPreferenceChangeListener((sharedPreferences, key) -> {
-            if (NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE.equals(key)) {
-                processBackgroundExchangeSetting();
-            }
-        });
+        preferences.registerOnSharedPreferenceChangeListener(onSharedPreferenceChangeListener);
         processBackgroundExchangeSetting();
         startForeground();
         connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
@@ -96,10 +102,24 @@ public class BundleClientService extends Service {
         return dddWifi;
     }
 
+    public static int getBackgroundExchangeSetting(SharedPreferences preferences) {
+        try {
+            return preferences.getInt(NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, 0);
+        } catch (ClassCastException e) {
+            // we are transitioning from boolean to int, so we need to handle the case where the value is a boolean
+            int value = preferences.getBoolean(NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, false) ? 1 : 0;
+            preferences.edit()
+                    .remove(NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE)
+                    .putInt(NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, value)
+                    .apply();
+            return value;
+        }
+    }
+
     private void processBackgroundExchangeSetting() {
-        var backgroundExchange = preferences.getBoolean(NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, false);
-        if (backgroundExchange) {
-            periodicRunnable.schedule();
+        var backgroundExchange = getBackgroundExchangeSetting(preferences);
+        if (backgroundExchange > 0) {
+            periodicRunnable.schedule(backgroundExchange);
         } else {
             periodicRunnable.cancel();
         }
@@ -124,14 +144,6 @@ public class BundleClientService extends Service {
             logger.log(SEVERE, "Failed to start foreground service", e);
         }
 
-        var dddWifiDirect = new DDDWifiDirect(this);
-        this.dddWifi = dddWifiDirect;
-        this.dddWifi.getEventLiveData().observeForever(liveDataObserver);
-        try {
-            dddWifiDirect.initialize();
-        } catch (Exception e) {
-            logger.log(SEVERE, "Failed to initialize DDDWifiDirect", e);
-        }
         try {
             ClientPaths clientPaths = new ClientPaths(getApplicationContext().getDataDir().toPath());
 
@@ -149,6 +161,14 @@ public class BundleClientService extends Service {
             }
 
             bundleTransmission = new BundleTransmission(clientPaths, this::processIncomingADU);
+            var dddWifiDirect = new DDDWifiDirect(this);
+            this.dddWifi = dddWifiDirect;
+            this.dddWifi.getEventLiveData().observeForever(liveDataObserver);
+            try {
+                dddWifiDirect.initialize();
+            } catch (Exception e) {
+                logger.log(SEVERE, "Failed to initialize DDDWifiDirect", e);
+            }
         } catch (Exception e) {
             logger.log(SEVERE, "Failed to initialize BundleTransmission", e);
         }
@@ -188,6 +208,7 @@ public class BundleClientService extends Service {
             dddWifi.getEventLiveData().removeObserver(liveDataObserver);
             dddWifi.shutdown();
         }
+        preferences.unregisterOnSharedPreferenceChangeListener(onSharedPreferenceChangeListener);
         super.onDestroy();
     }
 
@@ -201,8 +222,13 @@ public class BundleClientService extends Service {
     private void exchangeWithTransports() {
         var recentTransports = bundleTransmission.getRecentTransports();
         for (var transport : recentTransports) {
-            var bc = exchangeWith((DDDWifiDevice) transport.getDevice());
-            logger.log(INFO, format("Upload status: %s, Download status: %s",bc.uploadStatus().toString(), bc.downloadStatus().toString()));
+            if (transport.getDevice() instanceof DDDWifiDevice) {
+                var bc = exchangeWith((DDDWifiDevice) transport.getDevice());
+                logger.log(INFO,
+                           format("Upload status: %s, Download status: %s",
+                                  bc.uploadStatus().toString(),
+                                  bc.downloadStatus().toString()));
+            }
         }
         initiateServerExchange();
     }
@@ -211,9 +237,10 @@ public class BundleClientService extends Service {
     private BundleExchangeCounts exchangeWith(DDDWifiDevice device) {
         broadcastBundleClientWifiEvent(BundleClientTransmissionEventType.WIFI_DIRECT_CLIENT_EXCHANGE_STARTED,
                                        device.getWifiAddress());
+        DDDWifiConnection connection = null;
         try {
             broadcastBundleClientLogEvent(format("Connecting to %s", device.getDescription()));
-            var connection = dddWifi.connectTo(device).get(10, TimeUnit.SECONDS);
+            connection = dddWifi.connectTo(device).get(10, TimeUnit.SECONDS);
 
             if (connection == null || connection.getAddresses().isEmpty()) {
                 broadcastBundleClientLogEvent("Failed to connect to " + device.getDescription());
@@ -256,7 +283,9 @@ public class BundleClientService extends Service {
 
         } finally {
             try {
-                dddWifi.disconnectFrom(device).get(5, TimeUnit.SECONDS);
+                if (connection != null) {
+                    dddWifi.disconnectFrom(connection).get(10, TimeUnit.SECONDS);
+                }
             } catch (Exception e) {
                 logger.log(WARNING, "Problem disconnecting from " + device.getDescription(), e);
             }
@@ -396,7 +425,7 @@ public class BundleClientService extends Service {
     }
 
     public void notifyNewAdu() {
-        if (preferences != null && preferences.getBoolean(NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, false)) {
+        if (preferences != null && getBackgroundExchangeSetting(preferences) > 0) {
             initiateServerExchange();
         }
     }
@@ -415,11 +444,11 @@ public class BundleClientService extends Service {
     private class PeriodicRunnable implements Runnable {
         private ScheduledFuture<?> scheduledFuture;
 
-        synchronized public void schedule() {
+        synchronized public void schedule(int minutes) {
             if (scheduledFuture == null) {
-                logger.info(format("Scheduling periodic exchange with transports every %d ms", REEXCHANGE_TIME_PERIOD_MS));
-                scheduledFuture = periodicExecutor.scheduleWithFixedDelay(this, 0, REEXCHANGE_TIME_PERIOD_MS,
-                                                                          TimeUnit.MILLISECONDS);
+                logger.info(format("Scheduling periodic exchange with transports every %d minutes", minutes));
+                scheduledFuture = periodicExecutor.scheduleWithFixedDelay(this, 0, minutes,
+                                                                          TimeUnit.MINUTES);
             }
         }
 
@@ -433,8 +462,12 @@ public class BundleClientService extends Service {
 
         @Override
         public void run() {
-            logger.info("Periodic exchange with transports started");
-            BundleClientService.this.exchangeWithTransports();
+            try {
+                logger.info("Periodic exchange with transports started");
+                BundleClientService.this.exchangeWithTransports();
+            } catch (Exception e) {
+                logger.log(SEVERE, "Periodic exchange with transports failed", e);
+            }
         }
     }
 
