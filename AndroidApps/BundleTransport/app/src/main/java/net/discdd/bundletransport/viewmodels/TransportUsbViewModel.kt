@@ -22,11 +22,12 @@ class TransportUsbViewModel(
     companion object {
         private val logger: Logger = Logger.getLogger(TransportUsbViewModel::class.java.name)
     }
+
     private val transportPaths by lazy {
         TransportPaths(application.filesDir.toPath())
     }
 
-    fun createIfDoesNotExist(parent : DocumentFile, name : String) : DocumentFile {
+    fun createIfDoesNotExist(parent: DocumentFile, name: String): DocumentFile {
         var child = parent.findFile(name)
         if (child == null || !child.isDirectory) {
             child = parent.createDirectory(name)
@@ -34,7 +35,7 @@ class TransportUsbViewModel(
         } else {
             logger.log(INFO, "\'$name\' directory exists")
         }
-        return child ?: throw IOException ("Could not create $name")
+        return child ?: throw IOException("Could not create $name")
     }
 
     fun usbTransferToTransport(context: Context) {
@@ -64,14 +65,14 @@ class TransportUsbViewModel(
                         try {
                             bundle.delete()
                             appendMessage("Deleted bundle on usb: ${bundle.name}", Color.GREEN)
-                        } catch (e : Exception) {
+                        } catch (e: Exception) {
                             e.printStackTrace()
                             appendMessage("Error deleting bundle on usb: ${e.message}", Color.RED)
                         }
                         logger.log(INFO, "Bundle from usb transferred to transport successfully")
                     }
                     appendMessage("Bundle from usb transferred to transport successfully", Color.GREEN)
-                } catch (e : Exception) {
+                } catch (e: Exception) {
                     e.printStackTrace()
                     appendMessage("Error transferring from usb to transport: ${e.message}", Color.RED)
                 }
@@ -91,7 +92,7 @@ class TransportUsbViewModel(
                     return@withContext
                 }
                 val destinationDir = createIfDoesNotExist(currentUsbDir, "toClient")
-                val bundlesToTransfer : List<File> = sourceDir.walk().filter(File :: isFile).toList()
+                val bundlesToTransfer: List<File> = sourceDir.walk().filter(File::isFile).toList()
                 if (bundlesToTransfer.isEmpty()) {
                     logger.log(INFO, "No files found in 'toClient' directory on Transport Device")
                     appendMessage("No files found in 'toClient' directory on Transport Device", Color.YELLOW)
@@ -105,13 +106,13 @@ class TransportUsbViewModel(
                                 Files.newInputStream(bundle.toPath())?.use { inputStream ->
                                     appendMessage("Copying from: ${bundle} to ${targetFile.uri}", Color.RED)
                                     inputStream.copyTo(outputStream)
+                                }
                             }
                         }
-                            }
                         logger.log(INFO, "Bundle from transport transferred to usb successfully")
                     }
                     appendMessage("Bundle from transport transferred to usb successfully", Color.GREEN)
-                } catch (e : Exception) {
+                } catch (e: Exception) {
                     e.printStackTrace()
                     logger.log(INFO, "Error transferring from transport to usb: ${e.message}", e)
                     appendMessage("Error transferring from transport to usb: ${e.message}" + e, Color.RED)
