@@ -156,6 +156,14 @@ class WifiDirectViewModel(
         }
     }
 
+    fun clearClientLog() {
+        viewModelScope.launch {
+            _state.update {
+                it.copy(clientLog = "")
+            }
+        }
+    }
+
     fun openInfoSettings() {
         val intent = Intent(Settings.ACTION_DEVICE_INFO_SETTINGS).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

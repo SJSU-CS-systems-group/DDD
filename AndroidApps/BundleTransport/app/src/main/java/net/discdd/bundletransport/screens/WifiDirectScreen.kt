@@ -8,14 +8,21 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -88,12 +95,7 @@ fun WifiDirectScreen(
             onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
         }
 
-        Column(
-                modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+       ScrollingColumn(showActionButton = state.clientLog.isNotEmpty(), onActionClick = {wifiViewModel.clearClientLog()}) {
             if (wifiViewModel.isWifiEnabled()) {
                 var checked by remember {
                     mutableStateOf(
@@ -127,7 +129,7 @@ fun WifiDirectScreen(
                         modifier = Modifier.clickable { showDialog = true }
                 )
 
-                if (showDialog == true) {
+                if (showDialog) {
                     val connectedPeers: ArrayList<String> = ArrayList()
                     wifiViewModel.getService()?.groupInfo?.let { gi ->
                         gi.clientList.forEach { c -> connectedPeers.add(c.deviceName) }
@@ -200,6 +202,37 @@ fun WifiDirectScreen(
                 ) {
                     Text("Open Wifi Settings")
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun ScrollingColumn(
+        showActionButton: Boolean = false,
+        onActionClick: () -> Unit = {},
+        content: @Composable () -> Unit,
+) {
+    val scrollState = rememberScrollState()
+    Box {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(scrollState)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            content()
+        }
+        if (showActionButton) {
+            FloatingActionButton(
+                onClick = { onActionClick() },
+                modifier = Modifier.align(Alignment.BottomEnd)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    "Delete Logs",
+                )
             }
         }
     }
