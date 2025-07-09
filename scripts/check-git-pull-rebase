@@ -1,0 +1,14 @@
+#!/bin/bash
+
+value=$(git config --get pull.rebase)
+
+if [ "$value" = "true" ]; then
+  echo "✅ pull.rebase is set to true"
+  exit 0
+else
+  echo "❌ pull.rebase is NOT set to true"
+  echo "run"
+  echo "    git config pull.rebase true"
+  exit 1
+fi
+
