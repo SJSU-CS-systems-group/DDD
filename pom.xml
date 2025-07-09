@@ -11,7 +11,6 @@
         <junit.version>5.12.2</junit.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-
     </properties>
 
     <parent>
@@ -25,6 +24,31 @@
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
+    <profiles>
+        <profile>
+            <id>windows</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+            <properties>
+                <checkpullrebase>scripts\check-git-pull-rebase.bat</checkpullrebase>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>non-windows</id>
+            <activation>
+                <os>
+                    <family>!windows</family>
+                </os>
+            </activation>
+            <properties>
+                <checkpullrebase>scripts/check-git-pull-rebase</checkpullrebase>
+            </properties>
+        </profile>
+    </profiles>
 
     <dependencyManagement>
         <dependencies>
@@ -114,6 +138,26 @@
                     <reuseForks>false</reuseForks>
                 </configuration>
             </plugin>
+            <!-- check that git pull.rebase is configured correctly -->
+            <plugin>
+              <groupId>org.codehaus.mojo</groupId>
+              <artifactId>exec-maven-plugin</artifactId>
+              <version>3.1.0</version>
+              <executions>
+                <execution>
+                  <id>check-git-pull-rebase</id>
+                  <phase>validate</phase>
+                  <goals>
+                    <goal>exec</goal>
+                  </goals>
+                  <configuration>
+                    <executable>${checkpullrebase}</executable>
+                    <addOutputToClasspath>false</addOutputToClasspath>
+                  </configuration>
+                </execution>
+              </executions>
+            </plugin>
+
         </plugins>
     </build>
 

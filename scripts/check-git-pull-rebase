@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# If running in GitHub Actions, always succeed
+if [ "$GITHUB_ACTIONS" = "true" ]; then
+  echo "Detected GitHub Actions: skipping pull.rebase check."
+  exit 0
+fi
+
+value=$(git config --get pull.rebase)
+
+if [ "$value" = "true" ]; then
+  echo "✅ pull.rebase is set to true"
+  exit 0
+else
+  echo "❌ pull.rebase is NOT set to true"
+  echo "run"
+  echo "    git config pull.rebase true"
+  exit 1
+fi
+
