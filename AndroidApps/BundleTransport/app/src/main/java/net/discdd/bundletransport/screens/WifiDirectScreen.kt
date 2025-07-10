@@ -77,7 +77,6 @@ fun WifiDirectScreen(
 ) {
     val state by wifiViewModel.state.collectAsState()
     val numDenied by wifiViewModel.numDenied.collectAsState()
-    val lifecycleOwner = LocalLifecycleOwner.current
     var showDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
 

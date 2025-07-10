@@ -30,7 +30,7 @@ public class DDDFixedRateScheduler<T> {
 
     /**
      * sets a new period for scheduling. any outstanding future invocations will be canceled, before
-     * new invocations scheduled usign the given period.
+     * new invocations scheduled using the given period.
      *
      * @param periodInMinutes the period between runs of the callable. if <= 0, periodic scheduling will
      *                        be canceled.
@@ -61,7 +61,7 @@ public class DDDFixedRateScheduler<T> {
     }
 
     /**
-     * does one time invocation of the collable. it will not affect the periodically scheduled callables.
+     * does one time invocation of the callable. it will not affect the periodically scheduled callables.
      * it also will not affect lastResult and lastCallable
      * @return the future representing pending callable.
      */
