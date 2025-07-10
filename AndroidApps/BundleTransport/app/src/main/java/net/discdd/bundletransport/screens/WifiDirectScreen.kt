@@ -20,13 +20,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -58,14 +64,14 @@ import net.discdd.components.WifiPermissionBanner
 import java.util.concurrent.CompletableFuture
 import androidx.core.content.edit
 
-@OptIn(ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun WifiDirectScreen(
         wifiViewModel: WifiDirectViewModel = viewModel(),
         serviceReadyFuture: CompletableFuture<BundleTransportService>,
         nearbyWifiState: PermissionState,
         preferences: SharedPreferences = LocalContext.current.getSharedPreferences(
-                BundleTransportService.WIFI_DIRECT_PREFERENCES,
+                BundleTransportService.BUNDLETRANSPORT_PREFERENCES,
                 Context.MODE_PRIVATE
         )
 ) {
@@ -83,25 +89,13 @@ fun WifiDirectScreen(
             wifiViewModel.initialize(serviceReadyFuture)
         }
 
-        DisposableEffect(lifecycleOwner) {
-            val observer = LifecycleEventObserver { _, event ->
-                when (event) {
-                    Lifecycle.Event.ON_RESUME -> wifiViewModel.registerBroadcastReceiver()
-                    Lifecycle.Event.ON_PAUSE -> wifiViewModel.unregisterBroadcastReceiver()
-                    else -> {}
-                }
-            }
-            lifecycleOwner.lifecycle.addObserver(observer)
-            onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-        }
-
         ScrollingColumn(showActionButton = state.clientLog.isNotEmpty(), onActionClick = { wifiViewModel.clearClientLog() }) {
             if (wifiViewModel.isWifiEnabled()) {
-                var checked by remember {
+                var backgroundPeriod by remember {
                     mutableStateOf(
-                            preferences.getBoolean(
-                                    BundleTransportService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
-                                    true
+                            preferences.getInt(
+                                    BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE,
+                                    0
                             )
                     )
                 }
@@ -171,22 +165,51 @@ fun WifiDirectScreen(
                     }
                 }
 
-                Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Checkbox(
-                            checked = checked,
-                            onCheckedChange = {
-                                checked = it
-                                preferences.edit {
-                                    putBoolean(
-                                            BundleTransportService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
-                                            it
-                                    )
-                                }
-                            }
+                var expanded by remember { mutableStateOf(false) }
+
+                val exchangeText = if (backgroundPeriod <= 0) {
+                    "Disabled"
+                } else {
+                    "${backgroundPeriod} minute(s)"
+                }
+                ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+                    TextField(
+                        value = exchangeText,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Background Exchange Interval") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
                     )
-                    Text(text = stringResource(R.string.collect_data_even_when_app_is_closed))
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        DropdownMenuItem(text = { Text("disabled") }, onClick = {
+                            expanded = false
+                            preferences.edit {
+                                putInt(
+                                    BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE,
+                                    0
+                                )
+                            }
+                        }) // disable background transfers
+                        for (i in listOf(1, 5, 10, 15, 30, 45, 60, 90, 120)) {
+                            DropdownMenuItem(
+                                text = { Text("$i minute(s)") },
+                                onClick = {
+                                    expanded = false
+                                    preferences.edit {
+                                        putInt(
+                                            BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE,
+                                            i
+                                        )
+                                    }
+                                }
+                            )
+                        }
+                    }
                 }
 
                 Text(text = stringResource(R.string.interactions_with_bundleclients))

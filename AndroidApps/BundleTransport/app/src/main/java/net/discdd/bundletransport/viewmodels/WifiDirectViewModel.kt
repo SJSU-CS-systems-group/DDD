@@ -2,32 +2,24 @@ package net.discdd.bundletransport.viewmodels
 
 import android.app.Application
 import android.content.Intent
-import android.content.IntentFilter
-import android.provider.Settings
 import android.net.wifi.WifiManager
+import android.provider.Settings
 import androidx.core.content.ContextCompat.startActivity
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.lifecycle.viewModelScope
-
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.discdd.bundletransport.BundleTransportService
-
-import net.discdd.bundletransport.BundleTransportWifiEvent
 import net.discdd.bundletransport.R
 import net.discdd.bundletransport.TransportWifiServiceManager
+import net.discdd.bundletransport.service.DDDWifiServiceEvents
+import net.discdd.bundletransport.wifi.DDDWifiServer
 import net.discdd.pathutils.TransportPaths
 import net.discdd.viewmodels.WifiBannerViewModel
 import net.discdd.wifidirect.WifiDirectManager.WifiDirectStatus
-
-import java.net.Inet4Address
-import java.net.NetworkInterface
-import java.net.SocketException
 import java.util.concurrent.CompletableFuture
 import java.util.logging.Logger
-import java.util.stream.Collectors
 
 data class WifiDirectState(
         val deviceName: String = "",
@@ -40,10 +32,6 @@ class WifiDirectViewModel(
         application: Application
 ) : WifiBannerViewModel(application) {
     private val logger = Logger.getLogger(WifiDirectViewModel::class.java.name)
-    private val intentFilter = IntentFilter()
-    private val bundleTransportWifiEvent = BundleTransportWifiEvent().apply {
-        setViewModel(this@WifiDirectViewModel)
-    }
     private val _state = MutableStateFlow(WifiDirectState())
     private val btService by lazy { TransportWifiServiceManager.getService() }
     private var transportPaths: TransportPaths = TransportPaths(context.getExternalFilesDir(null)?.toPath())
@@ -51,9 +39,18 @@ class WifiDirectViewModel(
 
 
     init {
-        intentFilter.addAction(BundleTransportService.NET_DISCDD_BUNDLETRANSPORT_WIFI_EVENT_ACTION)
-        intentFilter.addAction(BundleTransportService.NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION)
-        intentFilter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION)
+        viewModelScope.launch {
+            updateGroupInfo()
+            processDeviceInfoChange()
+
+            DDDWifiServiceEvents.events.collect { event ->
+                when (event.type) {
+                    DDDWifiServer.DDDWifiServerEventType.DDDWIFISERVER_MESSAGE -> appendToClientLog(event.data)
+                    DDDWifiServer.DDDWifiServerEventType.DDDWIFISERVER_DEVICENAME_CHANGED -> processDeviceInfoChange()
+                    DDDWifiServer.DDDWifiServerEventType.DDDWIFISERVER_NETWORKINFO_CHANGED -> updateGroupInfo()
+                }
+            }
+        }
     }
 
     fun initialize(serviceReadyFuture: CompletableFuture<BundleTransportService>) {
@@ -78,12 +75,12 @@ class WifiDirectViewModel(
         viewModelScope.launch {
             if (btService == null) return@launch
 
-            val serviceName = btService!!.deviceName
+            val serviceName = btService?.dddWifiServer?.deviceName
             _state.update {
                 it.copy(deviceName = if (!serviceName.isNullOrBlank()) serviceName else "Unknown")
             }
 
-            val status = btService!!.status
+            val status = btService?.dddWifiServer?.status ?: WifiDirectStatus.FAILED
             _state.update {
                 it.copy(
                         wifiStatus = when (status) {
@@ -100,43 +97,11 @@ class WifiDirectViewModel(
         }
     }
 
-    fun registerBroadcastReceiver() {
-        LocalBroadcastManager.getInstance(context).registerReceiver(bundleTransportWifiEvent, intentFilter)
-        updateGroupInfo()
-        processDeviceInfoChange()
-    }
-
-    fun unregisterBroadcastReceiver() {
-        LocalBroadcastManager.getInstance(context).unregisterReceiver(bundleTransportWifiEvent)
-    }
-
     fun updateGroupInfo() {
-        if (btService != null) {
-            val gi = btService!!.groupInfo
-            logger.info("Group info: " + gi)
+        btService?.dddWifiServer?.networkInfo?.let { ni ->
             viewModelScope.launch {
-                var info: String
-                if (gi == null) {
-                    info = context.getString(R.string.wifi_transport_not_active)
-                    //find candidate for nested if statement to use R.string.wifi_transport_not_active_group_info_null
-                } else {
-                    var addresses: String
-                    try {
-                        val ni: NetworkInterface? = NetworkInterface.getByName(gi.`interface`)
-                        addresses = if (ni == null) "N/A" else ni.getInterfaceAddresses()
-                                .stream()
-                                .filter({ ia -> ia.getAddress() is Inet4Address })
-                                .map({ ia -> ia.getAddress().getHostAddress() }).collect(Collectors.joining(", "))
-                    } catch (e: SocketException) {
-                        addresses = "unknown"
-                    }
-                    info = String.format(
-                            "SSID: %s\nPassword: %s\nAddress: %s\nConnected devices: %d",
-                            gi.getNetworkName(), gi.getPassphrase(), addresses, gi.getClientList().size
-                    )
-                }   //TO-DO connected devices seems to not along with the group info devices
                 _state.update {
-                    it.copy(wifiInfo = info)
+                    it.copy(wifiInfo = "SSID: ${ni.ssid}\nPassword: ${ni.password}\nAddress: ${ni.inetAddress}\nConnected devices: ${ni.clientList.size}")
                 }
             }
         }

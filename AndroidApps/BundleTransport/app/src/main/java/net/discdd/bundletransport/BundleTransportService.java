@@ -1,38 +1,33 @@
 package net.discdd.bundletransport;
 
-import android.content.Context;
-
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
-import android.net.wifi.p2p.WifiP2pDevice;
-import android.net.wifi.p2p.WifiP2pGroup;
 import android.os.Binder;
 import android.os.IBinder;
-
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-
+import androidx.lifecycle.Observer;
 import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
-import net.discdd.bundletransport.viewmodels.WifiDirectViewModel;
+import net.discdd.bundletransport.service.DDDWifiServiceEvents;
+import net.discdd.bundletransport.wifi.DDDWifiServer;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.screens.LogFragment;
-import net.discdd.wifidirect.WifiDirectManager;
-import net.discdd.wifidirect.WifiDirectStateListener;
+import net.discdd.transport.TransportToBundleServerManager;
+import net.discdd.util.DDDFixedRateScheduler;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
+
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 
 /**
  * This service handles the Wifi Direct group and the gRPC server.
@@ -42,22 +37,54 @@ import java.util.stream.Collectors;
  * service to handle using the TransportWifiDirectServiceBinder which
  * returns a reference to this service.
  */
-public class BundleTransportService extends Service
-        implements WifiDirectStateListener, BundleExchangeServiceImpl.BundleExchangeEventListener {
-    public static final String NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION = "net.discdd.bundletransport.CLIENT_LOG";
-    public static final String NET_DISCDD_BUNDLETRANSPORT_WIFI_EVENT_ACTION = "net.discdd.bundletransport.WIFI_EVENT";
+public class BundleTransportService extends Service implements BundleExchangeServiceImpl.BundleExchangeEventListener {
+    public static final String BUNDLETRANSPORT_PREFERENCES = "net.discdd.bundletransport";
+    public static final String BUNDLETRANSPORT_HOST_PREFERENCE = "host";
+    public static final String BUNDLETRANSPORT_PORT_PREFERENCE = "port";
+    public static final String BUNDLETRANSPORT_PERIODIC_PREFERENCE = "periodicExchangeInMinutes";
     private static final Logger logger = Logger.getLogger(BundleTransportService.class.getName());
-    public static final String WIFI_DIRECT_PREFERENCES = "wifi_direct";
-    public static final String WIFI_DIRECT_PREFERENCE_BG_SERVICE = "background_wifi";
     private final IBinder binder = new TransportWifiDirectServiceBinder();
     private final RpcServer grpcServer = new RpcServer(this);
+    final private Observer<? super DDDWifiServer.DDDWifiServerEvent> liveDataObserver = event -> {
+        switch (event.type) {
+            case DDDWIFISERVER_MESSAGE -> appendToClientLog(event.data);
+            case DDDWIFISERVER_DEVICENAME_CHANGED, DDDWIFISERVER_NETWORKINFO_CHANGED -> broadcastWifiEvent(event);
+        }
+    };
+    String host;
+    int port;
     private TransportPaths transportPaths;
-    private WifiDirectManager wifiDirectManager;
-    private SharedPreferences sharedPreferences;
-    Context getApplicationContext;
+    final DDDFixedRateScheduler<Void> periodicExchangeScheduler = new DDDFixedRateScheduler<>(this::doServerExchange);
+    final private SharedPreferences.OnSharedPreferenceChangeListener preferenceChangeListener =
+            (sharedPreferences, key) -> {
+                switch (key) {
+                    case BUNDLETRANSPORT_HOST_PREFERENCE -> host = sharedPreferences.getString(key, "");
+                    case BUNDLETRANSPORT_PORT_PREFERENCE -> port = sharedPreferences.getInt(key, 0);
+                    case BUNDLETRANSPORT_PERIODIC_PREFERENCE ->
+                            periodicExchangeScheduler.setPeriodInMinutes(sharedPreferences.getInt(key, 0));
+                }
+            };
     private NotificationManager notificationManager;
     private FileHttpServer httpServer;
     private boolean httpServerRunning = false;
+    private DDDWifiServer dddWifiServer;
+    // 0 means server exchanges are disabled
+
+    private Void doServerExchange() throws Exception {
+        // TODO: change TransportToBundleServerManager into a Callable to make this all cleaner
+        CompletableFuture<Void> result = new CompletableFuture<>();
+        if (host == null || port == 0) {
+            throw new NullPointerException("host and port has not been set");
+        }
+        new TransportToBundleServerManager(transportPaths, host, Integer.toString(port), v -> {
+            result.complete(null);
+            return null;
+        }, e -> {
+            result.completeExceptionally(e);
+            return null;
+        }).run();
+        return result.get();
+    }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -66,7 +93,11 @@ public class BundleTransportService extends Service
         // BundleTransportService doesn't use LogFragment directly, but we do want our
         // logs to go to its logger
         LogFragment.registerLoggerHandler();
-        sharedPreferences = getSharedPreferences(WIFI_DIRECT_PREFERENCES, Context.MODE_PRIVATE);
+        SharedPreferences sharedPreferences = getSharedPreferences(BUNDLETRANSPORT_PREFERENCES, Context.MODE_PRIVATE);
+        host = sharedPreferences.getString(BUNDLETRANSPORT_HOST_PREFERENCE, "");
+        port = sharedPreferences.getInt(BUNDLETRANSPORT_PORT_PREFERENCE, 0);
+        periodicExchangeScheduler.setPeriodInMinutes(sharedPreferences.getInt(BUNDLETRANSPORT_PERIODIC_PREFERENCE, 0));
+        sharedPreferences.registerOnSharedPreferenceChangeListener(preferenceChangeListener);
         logger.log(INFO,
                    "Starting " + BundleTransportService.class.getName() + " with flags " + flags + " and startId " +
                            startId);
@@ -95,68 +126,25 @@ public class BundleTransportService extends Service
         } catch (Exception e) {
             logger.log(SEVERE, "Failed to start foreground service", e);
         }
-
-        wifiDirectManager = new WifiDirectManager(this, this, true);
-        wifiDirectManager.initialize();
+        dddWifiServer = new DDDWifiServer(getApplicationContext());
+        dddWifiServer.initialize();
         startHttpServer();
+        startRpcServer();
     }
 
     @Override
     public void onDestroy() {
-        if (wifiDirectManager != null) {
-            wifiDirectManager.shutdown();
+        if (dddWifiServer != null) {
+            dddWifiServer.shutdown();
         }
         stopHttpServer();
+        stopRpcServer();
         super.onDestroy();
     }
 
     @Override
     public IBinder onBind(Intent intent) {
         return binder;
-    }
-
-    @Override
-    public void onReceiveAction(WifiDirectManager.WifiDirectEvent action) {
-        switch (action.type()) {
-            case WIFI_DIRECT_MANAGER_GROUP_INFO_CHANGED:
-                var groupInfo = wifiDirectManager.getGroupInfo();
-                appendToClientLog("Group info: " + (groupInfo == null ?
-                                                    "N/A" :
-                                                    groupInfo.getClientList()
-                                                            .stream()
-                                                            .map(d -> d.deviceName)
-                                                            .collect(Collectors.joining(", "))));
-                if (groupInfo == null || groupInfo.getClientList().isEmpty()) {
-                    if (notificationManager != null) {
-                        notificationManager.cancel(1001);
-                    }
-
-                    // TODO: Disabled shutdown for now as it seems to cause problems with clients reconnecting
-                    //       I'm not sure we need to, it probably uses very little resources when idle.
-                    // appendToClientLog("No clients connected. Shutting down gRPC server");
-                    // stopRpcServer();
-                } else {
-                    appendToClientLog(String.format("%d clients connected. Starting gRPC server",
-                                                    groupInfo.getClientList().size()));
-                    startRpcServer();
-
-                    NotificationChannel channel = new NotificationChannel("DDD-Exchange",
-                                                                          "DDD Bundle Transport",
-                                                                          NotificationManager.IMPORTANCE_HIGH);
-                    channel.setDescription("Initiating Bundle Exchange...");
-
-                    NotificationCompat.Builder builder = new NotificationCompat.Builder(this,
-                                                                                        "DDD-Transport").setSmallIcon(R.drawable.bundletransport_icon)
-                            .setContentTitle(getString(R.string.exchanging_with_client))
-                            .setContentText(getString(R.string.initiating_bundle_exchange))
-                            .setPriority(NotificationCompat.PRIORITY_HIGH)
-                            .setAutoCancel(false)
-                            .setOngoing(true);
-
-                    notificationManager.notify(1001, builder.build());
-                }
-        }
-        broadcastWifiEvent(action);
     }
 
     private void startHttpServer() {
@@ -193,36 +181,33 @@ public class BundleTransportService extends Service
         }
     }
 
+    private void stopRpcServer() {
+        synchronized (grpcServer) {
+            if (!grpcServer.isShutdown()) {
+                appendToClientLog("Stopping gRPC server");
+                logger.log(INFO, "stopping gRPC server");
+                grpcServer.shutdownServer();
+                appendToClientLog("server stopped");
+            }
+        }
+    }
+
     @Override
     public void onBundleExchangeEvent(BundleExchangeServiceImpl.BundleExchangeEvent exchangeEvent) {
         appendToClientLog("File service event: " + exchangeEvent);
     }
 
     private void appendToClientLog(String message) {
-        var intent = new Intent(getApplicationContext(), WifiDirectViewModel.class);
-        intent.setAction(NET_DISCDD_BUNDLETRANSPORT_CLIENT_LOG_ACTION);
-        intent.putExtra("message", message);
-        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+        DDDWifiServiceEvents.sendEvent(new DDDWifiServer.DDDWifiServerEvent(DDDWifiServer.DDDWifiServerEventType.DDDWIFISERVER_MESSAGE,
+                                                                            message));
     }
 
-    private void broadcastWifiEvent(WifiDirectManager.WifiDirectEvent event) {
-        //var intent = new Intent(getApplicationContext(), TransportWifiDirectFragment.class);
-        var intent = new Intent(NET_DISCDD_BUNDLETRANSPORT_WIFI_EVENT_ACTION);
-        intent.putExtra("type", event.type());
-        intent.putExtra("message", event.message());
-        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+    private void broadcastWifiEvent(DDDWifiServer.DDDWifiServerEvent event) {
+        DDDWifiServiceEvents.sendEvent(event);
     }
 
-    public String getDeviceName() {
-        return wifiDirectManager.getDeviceName();
-    }
-
-    public WifiDirectManager.WifiDirectStatus getStatus() {
-        return wifiDirectManager.getStatus();
-    }
-
-    public WifiP2pGroup getGroupInfo() {
-        return wifiDirectManager.getGroupInfo();
+    public DDDWifiServer getDddWifiServer() {
+        return dddWifiServer;
     }
 
     public class TransportWifiDirectServiceBinder extends Binder {
@@ -230,5 +215,4 @@ public class BundleTransportService extends Service
             return BundleTransportService.this;
         }
     }
-
 }
