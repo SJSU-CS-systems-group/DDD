@@ -123,10 +123,8 @@ fun WifiDirectScreen(
                 )
 
                 if (showDialog) {
-                    val connectedPeers: ArrayList<String> = ArrayList()
-                    wifiViewModel.getService()?.groupInfo?.let { gi ->
-                        gi.clientList.forEach { c -> connectedPeers.add(c.deviceName) }
-                    }
+                    val connectedPeers = wifiViewModel.getService()?.dddWifiServer
+                            ?.networkInfo?.clientList ?: emptyList<String>()
 
                     AlertDialog(
                             title = { Text(text = stringResource(R.string.connected_devices)) },
@@ -192,6 +190,7 @@ fun WifiDirectScreen(
                                     BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE,
                                     0
                                 )
+                                backgroundPeriod = 0
                             }
                         }) // disable background transfers
                         for (i in listOf(1, 5, 10, 15, 30, 45, 60, 90, 120)) {
@@ -205,6 +204,7 @@ fun WifiDirectScreen(
                                             i
                                         )
                                     }
+                                    backgroundPeriod = i
                                 }
                             )
                         }
@@ -228,6 +228,8 @@ fun WifiDirectScreen(
         }
     }
 }
+
+
 
 @Composable
 fun ScrollingColumn(
