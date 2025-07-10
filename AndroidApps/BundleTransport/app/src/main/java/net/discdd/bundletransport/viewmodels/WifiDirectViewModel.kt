@@ -15,9 +15,9 @@ import net.discdd.bundletransport.R
 import net.discdd.bundletransport.TransportWifiServiceManager
 import net.discdd.bundletransport.service.DDDWifiServiceEvents
 import net.discdd.bundletransport.wifi.DDDWifiServer
+import net.discdd.bundletransport.wifi.DDDWifiServer.WifiDirectStatus
 import net.discdd.pathutils.TransportPaths
 import net.discdd.viewmodels.WifiBannerViewModel
-import net.discdd.wifidirect.WifiDirectManager.WifiDirectStatus
 import java.util.concurrent.CompletableFuture
 import java.util.logging.Logger
 
@@ -90,6 +90,7 @@ class WifiDirectViewModel(
                             WifiDirectStatus.FAILED -> context.getString(R.string.failed)
                             WifiDirectStatus.AVAILABLE -> context.getString(R.string.available)
                             WifiDirectStatus.UNAVAILABLE -> context.getString(R.string.unavailable)
+                            else -> "Unavailable"
                         }
                 )
             }
