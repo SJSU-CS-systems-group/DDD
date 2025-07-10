@@ -41,6 +41,14 @@ public class DDDWifiServer {
     private boolean wifiDirectEnabled;
     private WifiDirectStatus status = WifiDirectStatus.UNDEFINED;
 
+    public void wifiPermissionGranted() {
+        if (channel == null) {
+            initialize();
+        } else if (wifiGroup == null) {
+            createGroup();
+        }
+    }
+
     public enum WifiDirectStatus {FAILED, INVITED, AVAILABLE, UNAVAILABLE, UNDEFINED, CONNECTED}
 
     public DDDWifiServer(Context applicationContext) {

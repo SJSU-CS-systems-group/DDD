@@ -99,10 +99,12 @@ class WifiDirectViewModel(
     }
 
     fun updateGroupInfo() {
-        btService?.dddWifiServer?.networkInfo?.let { ni ->
-            viewModelScope.launch {
-                _state.update {
-                    it.copy(wifiInfo = "SSID: ${ni.ssid}\nPassword: ${ni.password}\nAddress: ${ni.inetAddress}\nConnected devices: ${ni.clientList.size}")
+        viewModelScope.launch {
+            btService?.dddWifiServer?.networkInfo?.let { ni ->
+                viewModelScope.launch {
+                    _state.update {
+                        it.copy(wifiInfo = "SSID: ${ni.ssid}\nPassword: ${ni.password}\nAddress: ${ni.inetAddress}\nConnected devices: ${ni.clientList.size}")
+                    }
                 }
             }
         }
