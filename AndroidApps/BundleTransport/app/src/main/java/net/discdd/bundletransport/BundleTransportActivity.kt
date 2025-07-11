@@ -87,7 +87,7 @@ class BundleTransportActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
 
-        if (sharedPreferences.getInt(BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE, 0) > 0 &&
+        if (sharedPreferences.getInt(BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE, 0) <= 0 &&
                 serviceIntent != null) {
             stopService(serviceIntent)
         }
