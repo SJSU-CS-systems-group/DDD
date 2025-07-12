@@ -20,7 +20,7 @@ class BundleTransportActivity : ComponentActivity() {
     private var serviceIntent: Intent? = null
     private val logger = Logger.getLogger(BundleTransportActivity::class.java.name)
     private val sharedPreferences by lazy {
-        getSharedPreferences(BundleTransportService.WIFI_DIRECT_PREFERENCES, MODE_PRIVATE)
+        getSharedPreferences(BundleTransportService.BUNDLETRANSPORT_PREFERENCES, MODE_PRIVATE)
     }
     private val transportPaths by lazy {
         TransportPaths(applicationContext.filesDir.toPath())
@@ -87,7 +87,7 @@ class BundleTransportActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
 
-        if (!sharedPreferences.getBoolean(BundleTransportService.WIFI_DIRECT_PREFERENCE_BG_SERVICE, true) &&
+        if (sharedPreferences.getInt(BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE, 0) <= 0 &&
                 serviceIntent != null) {
             stopService(serviceIntent)
         }
