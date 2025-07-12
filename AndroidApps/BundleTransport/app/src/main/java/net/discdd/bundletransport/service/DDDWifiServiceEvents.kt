@@ -7,7 +7,8 @@ import kotlinx.coroutines.launch
 import net.discdd.bundletransport.wifi.DDDWifiServer
 
 object DDDWifiServiceEvents {
-    val events = MutableSharedFlow<DDDWifiServer.DDDWifiServerEvent>()
+    // some of these events (especially the state events come in bursts, so we need a backlog
+    val events = MutableSharedFlow<DDDWifiServer.DDDWifiServerEvent>(5)
     private val serviceScope = CoroutineScope(Dispatchers.Default)
 
     @JvmStatic

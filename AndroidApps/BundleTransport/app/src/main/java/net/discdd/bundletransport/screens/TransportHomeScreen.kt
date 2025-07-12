@@ -30,6 +30,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.launch
 import net.discdd.UsbConnectionManager
@@ -63,6 +64,12 @@ fun TransportHomeScreen(
     val nearbyWifiState = rememberPermissionState(
             Manifest.permission.NEARBY_WIFI_DEVICES
     )
+    LaunchedEffect(nearbyWifiState.status) {
+        if (nearbyWifiState.status.isGranted) {
+            TransportWifiServiceManager.getService()?.wifiPermissionGranted()
+        }
+    }
+
     val notificationState = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS,
             onPermissionResult = {
                 viewModel.onFirstOpen()
