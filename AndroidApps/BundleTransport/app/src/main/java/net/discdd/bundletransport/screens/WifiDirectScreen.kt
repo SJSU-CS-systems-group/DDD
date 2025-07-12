@@ -171,41 +171,41 @@ fun WifiDirectScreen(
                 }
                 ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
                     TextField(
-                        value = exchangeText,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Background Exchange Interval") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
+                            value = exchangeText,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Background Exchange Interval") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+                            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
                     )
                     ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false },
-                        modifier = Modifier.fillMaxWidth()
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false },
+                            modifier = Modifier.fillMaxWidth()
                     ) {
                         DropdownMenuItem(text = { Text("disabled") }, onClick = {
                             expanded = false
                             preferences.edit {
                                 putInt(
-                                    BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE,
-                                    0
+                                        BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE,
+                                        0
                                 )
                                 backgroundPeriod = 0
                             }
                         }) // disable background transfers
                         for (i in listOf(1, 5, 10, 15, 30, 45, 60, 90, 120)) {
                             DropdownMenuItem(
-                                text = { Text("$i minute(s)") },
-                                onClick = {
-                                    expanded = false
-                                    preferences.edit {
-                                        putInt(
-                                            BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE,
-                                            i
-                                        )
+                                    text = { Text("$i minute(s)") },
+                                    onClick = {
+                                        expanded = false
+                                        preferences.edit {
+                                            putInt(
+                                                    BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE,
+                                                    i
+                                            )
+                                        }
+                                        backgroundPeriod = i
                                     }
-                                    backgroundPeriod = i
-                                }
                             )
                         }
                     }
@@ -228,7 +228,6 @@ fun WifiDirectScreen(
         }
     }
 }
-
 
 
 @Composable

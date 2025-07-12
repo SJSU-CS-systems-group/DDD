@@ -220,8 +220,7 @@ public class DDDWifiServer {
      * we will handle the event
      */
     public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
-        private static final Logger logger =
-                Logger.getLogger(WifiDirectBroadcastReceiver.class.getName());
+        private static final Logger logger = Logger.getLogger(WifiDirectBroadcastReceiver.class.getName());
 
         /**
          * Listener callback whenever one of the registered WifiDirect Intents

@@ -63,11 +63,12 @@ public class DDDFixedRateScheduler<T> {
     /**
      * does one time invocation of the callable. it will not affect the periodically scheduled callables.
      * it also will not affect lastResult and lastCallable
+     *
      * @return the future representing pending callable.
      */
     public Future<T> callItNow() {
         return scheduler.submit(callable);
     }
 
-    int getPeriodInMinutes() { return periodInMinutes; }
+    int getPeriodInMinutes() {return periodInMinutes;}
 }
