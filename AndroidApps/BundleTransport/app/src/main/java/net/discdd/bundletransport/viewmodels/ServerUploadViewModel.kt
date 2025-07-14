@@ -11,8 +11,10 @@ import kotlinx.coroutines.launch
 import net.discdd.AndroidAppConstants
 import net.discdd.pathutils.TransportPaths
 import net.discdd.bundletransport.R
+import net.discdd.bundletransport.TransportServiceManager
 import net.discdd.transport.GrpcSecurityHolder
 import net.discdd.transport.TransportToBundleServerManager
+import net.discdd.utils.UserLogRepository
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.logging.Level
@@ -51,26 +53,10 @@ class ServerUploadViewModel(
     }
 
     fun connectServer() {
-        viewModelScope.launch {
-            if (!state.value.domain.isEmpty() && !state.value.port.isEmpty()) {
-                _state.update { it.copy(message = context.getString(R.string.enter_the_domain_and_port)) }
-                logger.log(Level.INFO, "Sending to " + state.value.domain + ":" + state.value.port + "...\n")
-
-                try {
-                    _state.update {
-                        it.copy(message = "Initiating server exchange to " + state.value.domain + ":" + state.value.port + "...\n")
-                    }
-
-                    var transportToBundleServerManager: TransportToBundleServerManager =
-                            TransportToBundleServerManager(transportPaths, state.value.domain, state.value.port,
-                                    { x: Void -> serverConnectComplete() },
-                                    { e: Exception -> serverConnectionError(e, state.value.domain + ":" + state.value.port) })
-                    executor.execute(transportToBundleServerManager)
-                } catch (e: Exception) {
-                    _state.update { it.copy(message = context.getString(R.string.bundles_upload_failed)) }
-                }
-            }
+        if (TransportServiceManager.getService()?.queueServerExchangeNow() == null) {
+            UserLogRepository.log(UserLogRepository.UserLogType.EXCHANGE, "TransportService is not available.", level = Level.SEVERE)
         }
+        reloadCount()
     }
 
     fun serverConnectComplete(): Void? {

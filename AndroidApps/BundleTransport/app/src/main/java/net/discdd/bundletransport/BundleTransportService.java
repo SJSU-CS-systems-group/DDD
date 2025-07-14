@@ -1,6 +1,9 @@
 package net.discdd.bundletransport;
 
-import android.Manifest;
+import static java.lang.String.format;
+import static net.discdd.AndroidAppConstants.BUNDLE_SERVER_DOMAIN;
+import static net.discdd.AndroidAppConstants.BUNDLE_SERVER_PORT;
+
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -8,11 +11,10 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.os.Binder;
 import android.os.IBinder;
-import androidx.core.app.ActivityCompat;
+
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
 import androidx.lifecycle.Observer;
@@ -28,6 +30,7 @@ import net.discdd.utils.UserLogRepository;
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -48,7 +51,7 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     public static final String BUNDLETRANSPORT_PORT_PREFERENCE = "port";
     public static final String BUNDLETRANSPORT_PERIODIC_PREFERENCE = "periodicExchangeInMinutes";
     private static final Logger logger = Logger.getLogger(BundleTransportService.class.getName());
-    private final TransportWifiDirectServiceBinder binder = new TransportWifiDirectServiceBinder();
+    private final IBinder binder = new TransportWifiDirectServiceBinder();
     private final RpcServer grpcServer = new RpcServer(this);
     String host;
     int port;
@@ -96,21 +99,25 @@ public class BundleTransportService extends Service implements BundleExchangeSer
         }
     };
 
-    private Void doServerExchange() throws Exception {
-        // TODO: change TransportToBundleServerManager into a Callable to make this all cleaner
-        CompletableFuture<Void> result = new CompletableFuture<>();
-        if (host == null || port == 0) {
-            throw new NullPointerException("host and port has not been set");
-        }
+    public Future<Void> queueServerExchangeNow() {
+        return periodicExchangeScheduler.callItNow();
+    }
+
+    private Void doServerExchange() {
         logExchange(INFO, "Starting server exchange with host: " + host + ", port: " + port);
-        new TransportToBundleServerManager(transportPaths, host, Integer.toString(port), v -> {
-            result.complete(null);
-            return null;
-        }, e -> {
-            result.completeExceptionally(e);
-            return null;
-        }).run();
-        return result.get();
+        try {
+            var exchangeCounts =
+                    new TransportToBundleServerManager(transportPaths, host, Integer.toString(port)).doExchange();
+            logExchange(INFO, format("deleted %d bundles, sent %d/%d, received %d/%d",
+                                     exchangeCounts.deleteCount,
+                                     exchangeCounts.uploadCount,
+                                     exchangeCounts.toUploadCount,
+                                     exchangeCounts.downloadCount,
+                                     exchangeCounts.toDownloadCount));
+        } catch (Exception e) {
+            logExchange(SEVERE, "Error during server exchange: " + e.getMessage());
+        }
+        return null;
     }
 
     public static void logWifi(Level level, String message) {
@@ -128,8 +135,8 @@ public class BundleTransportService extends Service implements BundleExchangeSer
         // logs to go to its logger
         LogFragment.registerLoggerHandler();
         SharedPreferences sharedPreferences = getSharedPreferences(BUNDLETRANSPORT_PREFERENCES, Context.MODE_PRIVATE);
-        host = sharedPreferences.getString(BUNDLETRANSPORT_HOST_PREFERENCE, "");
-        port = sharedPreferences.getInt(BUNDLETRANSPORT_PORT_PREFERENCE, 0);
+        host = sharedPreferences.getString(BUNDLETRANSPORT_HOST_PREFERENCE, BUNDLE_SERVER_DOMAIN);
+        port = sharedPreferences.getInt(BUNDLETRANSPORT_PORT_PREFERENCE, BUNDLE_SERVER_PORT);
         periodicExchangeScheduler.setPeriodInMinutes(sharedPreferences.getInt(BUNDLETRANSPORT_PERIODIC_PREFERENCE, 0));
         sharedPreferences.registerOnSharedPreferenceChangeListener(preferenceChangeListener);
         logger.log(INFO,

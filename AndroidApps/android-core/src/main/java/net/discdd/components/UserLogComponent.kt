@@ -12,7 +12,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.flow.collectLatest
 import net.discdd.utils.UserLogRepository
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.logging.Level
+
+val DATE_FORMAT = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+
 
 @Composable
 fun UserLogComponent(type: UserLogRepository.UserLogType) {
@@ -28,13 +34,15 @@ fun UserLogComponent(type: UserLogRepository.UserLogType) {
         UserLogRepository.getRepo(type)
     }
     Column(modifier = Modifier.fillMaxSize()) {
-        for (entry in entries) {
+        for (entry in entries.asReversed()) {
+            // format entry.time from milliseconds since epoch to HH:MM:SS
+            val timeStr = DATE_FORMAT.format(Date(entry.time))
             Text(
-                text = entry.message,
+                text = "$timeStr ${entry.message}",
                 color = when (entry.level) {
                     Level.SEVERE -> Color.Red
                     Level.WARNING -> Color.Yellow
-                    else -> Color.Black
+                    else -> Color.Blue
                 }
             )
         }

@@ -56,7 +56,7 @@ class BundleTransportActivity : ComponentActivity() {
         try {
             serviceIntent = Intent(this, BundleTransportService::class.java)
             applicationContext.startForegroundService(serviceIntent)
-            bindService(serviceIntent!!, TransportWifiServiceManager.connection, BIND_AUTO_CREATE)
+            bindService(serviceIntent!!, TransportServiceManager.connection, BIND_AUTO_CREATE)
         } catch (e: Exception) {
             logger.warning("Failed to start BundleTransportService")
         }
@@ -94,7 +94,7 @@ class BundleTransportActivity : ComponentActivity() {
 
         UsbConnectionManager.cleanup(applicationContext)
         ConnectivityManager.cleanup()
-        TransportWifiServiceManager.clearService()
-        unbindService(TransportWifiServiceManager.connection)
+        TransportServiceManager.clearService()
+        unbindService(TransportServiceManager.connection)
     }
 }

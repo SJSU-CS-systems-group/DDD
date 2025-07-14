@@ -16,9 +16,12 @@ object UserLogRepository {
     private val _event = MutableSharedFlow<Unit>(5)
     val event = _event.asSharedFlow()
 
+    @Synchronized
     fun getRepo(component: UserLogType): List<UserLogEntry> {
-        return repositories[component]!!
+        return repositories[component]!!.toList()
     }
+
+    @Synchronized
     fun log(entry: UserLogEntry) {
         val repo = repositories.getOrPut(entry.type) {mutableListOf()}// we have a default, this should never be null
         if (repo.size >= MAX_LOG_ENTRIES) {

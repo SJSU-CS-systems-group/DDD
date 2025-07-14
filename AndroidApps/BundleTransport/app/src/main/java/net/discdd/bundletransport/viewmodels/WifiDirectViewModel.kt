@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.discdd.bundletransport.BundleTransportService
 import net.discdd.bundletransport.R
-import net.discdd.bundletransport.TransportWifiServiceManager
+import net.discdd.bundletransport.TransportServiceManager
 import net.discdd.bundletransport.service.DDDWifiServiceEvents
 import net.discdd.bundletransport.wifi.DDDWifiServer
 import net.discdd.bundletransport.wifi.DDDWifiServer.WifiDirectStatus
@@ -32,7 +32,7 @@ class WifiDirectViewModel(
 ) : WifiBannerViewModel(application) {
     private val logger = Logger.getLogger(WifiDirectViewModel::class.java.name)
     private val _state = MutableStateFlow(WifiDirectState())
-    private val btService by lazy { TransportWifiServiceManager.getService() }
+    private val btService by lazy { TransportServiceManager.getService() }
     private var transportPaths: TransportPaths = TransportPaths(context.getExternalFilesDir(null)?.toPath())
     val state = _state.asStateFlow()
 

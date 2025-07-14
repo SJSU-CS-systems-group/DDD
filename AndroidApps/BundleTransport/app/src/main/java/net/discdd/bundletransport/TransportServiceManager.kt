@@ -6,8 +6,8 @@ import android.os.IBinder
 import java.util.concurrent.CompletableFuture
 import java.util.logging.Logger
 
-object TransportWifiServiceManager {
-    private val logger = Logger.getLogger(TransportWifiServiceManager::class.java.name)
+object TransportServiceManager {
+    private val logger = Logger.getLogger(TransportServiceManager::class.java.name)
     private var _btService: BundleTransportService? = null
 
     val serviceReady = CompletableFuture<BundleTransportService>()
