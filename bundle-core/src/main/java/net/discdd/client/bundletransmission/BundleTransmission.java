@@ -87,6 +87,7 @@ public class BundleTransmission {
             super(message);
         }
     }
+
     private static final Logger logger = Logger.getLogger(BundleTransmission.class.getName());
     private final ExecutorService executorService = Executors.newCachedThreadPool();
     private final BundleSecurity bundleSecurity;
