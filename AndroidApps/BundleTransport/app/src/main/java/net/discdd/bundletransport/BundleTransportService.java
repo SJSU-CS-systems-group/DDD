@@ -68,7 +68,7 @@ public class BundleTransportService extends Service implements BundleExchangeSer
             case DDDWIFISERVER_DEVICENAME_CHANGED -> broadcastWifiEvent(event);
             case DDDWIFISERVER_NETWORKINFO_CHANGED -> {
                 if (dddWifiServer == null || dddWifiServer.getNetworkInfo() == null ||
-                dddWifiServer.getNetworkInfo().inetAddress == null) {
+                        dddWifiServer.getNetworkInfo().inetAddress == null) {
                     if (notificationManager != null) {
                         notificationManager.cancel(1001);
                     }
