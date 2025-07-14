@@ -1,16 +1,13 @@
 package net.discdd.bundletransport.screens
 
 import android.Manifest
-import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -19,22 +16,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -49,9 +39,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat.startActivity
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
@@ -62,7 +49,6 @@ import net.discdd.bundletransport.R
 import net.discdd.bundletransport.viewmodels.WifiDirectViewModel
 import net.discdd.components.WifiPermissionBanner
 import java.util.concurrent.CompletableFuture
-import androidx.core.content.edit
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -70,10 +56,6 @@ fun WifiDirectScreen(
         wifiViewModel: WifiDirectViewModel = viewModel(),
         serviceReadyFuture: CompletableFuture<BundleTransportService>,
         nearbyWifiState: PermissionState,
-        preferences: SharedPreferences = LocalContext.current.getSharedPreferences(
-                BundleTransportService.BUNDLETRANSPORT_PREFERENCES,
-                Context.MODE_PRIVATE
-        )
 ) {
     val state by wifiViewModel.state.collectAsState()
     val numDenied by wifiViewModel.numDenied.collectAsState()
@@ -90,14 +72,6 @@ fun WifiDirectScreen(
 
         ScrollingColumn(showActionButton = state.clientLog.isNotEmpty(), onActionClick = { wifiViewModel.clearClientLog() }) {
             if (wifiViewModel.isWifiEnabled()) {
-                var backgroundPeriod by remember {
-                    mutableStateOf(
-                            preferences.getInt(
-                                    BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE,
-                                    0
-                            )
-                    )
-                }
                 val nameValid by remember {
                     derivedStateOf { state.deviceName.startsWith("ddd_") }
                 }
@@ -159,55 +133,6 @@ fun WifiDirectScreen(
                             modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(stringResource(R.string.change_phone_name))
-                    }
-                }
-
-                var expanded by remember { mutableStateOf(false) }
-
-                val exchangeText = if (backgroundPeriod <= 0) {
-                    "Disabled"
-                } else {
-                    "${backgroundPeriod} minute(s)"
-                }
-                ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
-                    TextField(
-                            value = exchangeText,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Background Exchange Interval") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
-                    )
-                    ExposedDropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false },
-                            modifier = Modifier.fillMaxWidth()
-                    ) {
-                        DropdownMenuItem(text = { Text("disabled") }, onClick = {
-                            expanded = false
-                            preferences.edit {
-                                putInt(
-                                        BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE,
-                                        0
-                                )
-                                backgroundPeriod = 0
-                            }
-                        }) // disable background transfers
-                        for (i in listOf(1, 5, 10, 15, 30, 45, 60, 90, 120)) {
-                            DropdownMenuItem(
-                                    text = { Text("$i minute(s)") },
-                                    onClick = {
-                                        expanded = false
-                                        preferences.edit {
-                                            putInt(
-                                                    BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE,
-                                                    i
-                                            )
-                                        }
-                                        backgroundPeriod = i
-                                    }
-                            )
-                        }
                     }
                 }
 
