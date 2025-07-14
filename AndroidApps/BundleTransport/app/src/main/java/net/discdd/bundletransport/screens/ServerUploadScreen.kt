@@ -1,5 +1,7 @@
 package net.discdd.bundletransport.screens
 
+import android.content.Context
+import android.content.SharedPreferences
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,12 +15,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -29,13 +37,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.edit
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
+import net.discdd.bundletransport.BundleTransportService
 import net.discdd.bundletransport.viewmodels.ServerUploadViewModel
 import net.discdd.components.EasterEgg
 import net.discdd.viewmodels.ConnectivityViewModel
@@ -46,6 +57,10 @@ fun ServerUploadScreen(
         uploadViewModel: ServerUploadViewModel = viewModel(),
         connectivityViewModel: ConnectivityViewModel = viewModel(),
         settingsViewModel: SettingsViewModel = viewModel(),
+        preferences: SharedPreferences = LocalContext.current.getSharedPreferences(
+            BundleTransportService.BUNDLETRANSPORT_PREFERENCES,
+            Context.MODE_PRIVATE
+        ),
         onToggle: () -> Unit,
 ) {
     val uploadState by uploadViewModel.state.collectAsState()
@@ -125,6 +140,8 @@ fun ServerUploadScreen(
                 }
             }
 
+            BackGroundExchange(preferences)
+
             Row(
                     modifier = Modifier
                             .fillMaxWidth()
@@ -170,6 +187,68 @@ fun ServerUploadScreen(
                         text = message,
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BackGroundExchange(preferences: SharedPreferences) {
+    var backgroundPeriod by remember {
+        mutableStateOf(
+            preferences.getInt(
+                BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE,
+                0
+            )
+        )
+    }
+
+    var expanded by remember { mutableStateOf(false) }
+
+    val exchangeText = if (backgroundPeriod <= 0) {
+        "Disabled"
+    } else {
+        "${backgroundPeriod} minute(s)"
+    }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+        TextField(
+            value = exchangeText,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Background Exchange Interval") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            DropdownMenuItem(text = { Text("disabled") }, onClick = {
+                expanded = false
+                preferences.edit {
+                    putInt(
+                        BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE,
+                        0
+                    )
+                    backgroundPeriod = 0
+                }
+            }) // disable background transfers
+            for (i in listOf(1, 5, 10, 15, 30, 45, 60, 90, 120)) {
+                DropdownMenuItem(
+                    text = { Text("$i minute(s)") },
+                    onClick = {
+                        expanded = false
+                        preferences.edit {
+                            putInt(
+                                BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE,
+                                i
+                            )
+                        }
+                        backgroundPeriod = i
+                    }
                 )
             }
         }
