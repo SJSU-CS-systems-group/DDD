@@ -45,12 +45,6 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     private static final Logger logger = Logger.getLogger(BundleTransportService.class.getName());
     private final IBinder binder = new TransportWifiDirectServiceBinder();
     private final RpcServer grpcServer = new RpcServer(this);
-    final private Observer<? super DDDWifiServer.DDDWifiServerEvent> liveDataObserver = event -> {
-        switch (event.type) {
-            case DDDWIFISERVER_MESSAGE -> appendToClientLog(event.data);
-            case DDDWIFISERVER_DEVICENAME_CHANGED, DDDWIFISERVER_NETWORKINFO_CHANGED -> broadcastWifiEvent(event);
-        }
-    };
     String host;
     int port;
     private TransportPaths transportPaths;
@@ -68,7 +62,35 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     private FileHttpServer httpServer;
     private boolean httpServerRunning = false;
     private DDDWifiServer dddWifiServer;
-    // 0 means server exchanges are disabled
+    final private Observer<? super DDDWifiServer.DDDWifiServerEvent> liveDataObserver = event -> {
+        switch (event.type) {
+            case DDDWIFISERVER_MESSAGE -> appendToClientLog(event.data);
+            case DDDWIFISERVER_DEVICENAME_CHANGED -> broadcastWifiEvent(event);
+            case DDDWIFISERVER_NETWORKINFO_CHANGED -> {
+                if (dddWifiServer == null || dddWifiServer.getNetworkInfo() == null ||
+                dddWifiServer.getNetworkInfo().inetAddress == null) {
+                    if (notificationManager != null) {
+                        notificationManager.cancel(1001);
+                    }
+                } else {
+                    NotificationChannel channel = new NotificationChannel("DDD-Exchange",
+                                                                          "DDD Bundle Transport",
+                                                                          NotificationManager.IMPORTANCE_HIGH);
+                    channel.setDescription("Initiating Bundle Exchange...");
+
+                    NotificationCompat.Builder builder = new NotificationCompat.Builder(this,
+                                                                                        "DDD-Transport").setSmallIcon(R.drawable.bundletransport_icon)
+                            .setContentTitle(getString(R.string.exchanging_with_client))
+                            .setContentText(getString(R.string.initiating_bundle_exchange))
+                            .setPriority(NotificationCompat.PRIORITY_HIGH)
+                            .setAutoCancel(false)
+                            .setOngoing(true);
+                    notificationManager.notify(1001, builder.build());
+                }
+                broadcastWifiEvent(event);
+            }
+        }
+    };
 
     private Void doServerExchange() throws Exception {
         // TODO: change TransportToBundleServerManager into a Callable to make this all cleaner
@@ -208,6 +230,10 @@ public class BundleTransportService extends Service implements BundleExchangeSer
 
     public DDDWifiServer getDddWifiServer() {
         return dddWifiServer;
+    }
+
+    public void wifiPermissionGranted() {
+        dddWifiServer.wifiPermissionGranted();
     }
 
     public class TransportWifiDirectServiceBinder extends Binder {
