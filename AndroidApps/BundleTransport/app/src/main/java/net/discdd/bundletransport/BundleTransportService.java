@@ -1,5 +1,6 @@
 package net.discdd.bundletransport;
 
+import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -7,9 +8,11 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.os.Binder;
 import android.os.IBinder;
+import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
 import androidx.lifecycle.Observer;
@@ -20,10 +23,12 @@ import net.discdd.pathutils.TransportPaths;
 import net.discdd.screens.LogFragment;
 import net.discdd.transport.TransportToBundleServerManager;
 import net.discdd.util.DDDFixedRateScheduler;
+import net.discdd.utils.UserLogRepository;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
@@ -43,7 +48,7 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     public static final String BUNDLETRANSPORT_PORT_PREFERENCE = "port";
     public static final String BUNDLETRANSPORT_PERIODIC_PREFERENCE = "periodicExchangeInMinutes";
     private static final Logger logger = Logger.getLogger(BundleTransportService.class.getName());
-    private final IBinder binder = new TransportWifiDirectServiceBinder();
+    private final TransportWifiDirectServiceBinder binder = new TransportWifiDirectServiceBinder();
     private final RpcServer grpcServer = new RpcServer(this);
     String host;
     int port;
@@ -64,7 +69,6 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     private DDDWifiServer dddWifiServer;
     final private Observer<? super DDDWifiServer.DDDWifiServerEvent> liveDataObserver = event -> {
         switch (event.type) {
-            case DDDWIFISERVER_MESSAGE -> appendToClientLog(event.data);
             case DDDWIFISERVER_DEVICENAME_CHANGED -> broadcastWifiEvent(event);
             case DDDWIFISERVER_NETWORKINFO_CHANGED -> {
                 if (dddWifiServer == null || dddWifiServer.getNetworkInfo() == null ||
@@ -98,6 +102,7 @@ public class BundleTransportService extends Service implements BundleExchangeSer
         if (host == null || port == 0) {
             throw new NullPointerException("host and port has not been set");
         }
+        logExchange(INFO, "Starting server exchange with host: " + host + ", port: " + port);
         new TransportToBundleServerManager(transportPaths, host, Integer.toString(port), v -> {
             result.complete(null);
             return null;
@@ -106,6 +111,13 @@ public class BundleTransportService extends Service implements BundleExchangeSer
             return null;
         }).run();
         return result.get();
+    }
+
+    public static void logWifi(Level level, String message) {
+        UserLogRepository.INSTANCE.log(UserLogRepository.UserLogType.WIFI, message, System.currentTimeMillis(), level);
+    }
+    static void logExchange(Level level, String message) {
+        UserLogRepository.INSTANCE.log(UserLogRepository.UserLogType.EXCHANGE, message, System.currentTimeMillis(), level);
     }
 
     @Override
@@ -124,8 +136,7 @@ public class BundleTransportService extends Service implements BundleExchangeSer
                    "Starting " + BundleTransportService.class.getName() + " with flags " + flags + " and startId " +
                            startId);
         startForeground();
-        logger.log(INFO,
-                   "Started " + BundleTransportService.class.getName() + " with flags " + flags + " and startId " +
+        logger.log(INFO, "Started " + BundleTransportService.class.getName() + " with flags " + flags + " and startId " +
                            startId);
         return START_STICKY;
     }
@@ -176,10 +187,10 @@ public class BundleTransportService extends Service implements BundleExchangeSer
                 httpServer = new FileHttpServer(8080, filesDir);
                 httpServer.start();
                 httpServerRunning = true;
-                appendToClientLog("HTTP file server started on port 8080");
+                logExchange(INFO, "HTTP file server started on port 8080");
             } catch (IOException e) {
                 logger.log(SEVERE, "Failed to start HTTP server", e);
-                appendToClientLog("Failed to start HTTP server: " + e.getMessage());
+                logExchange(SEVERE, "Failed to start HTTP server: " + e.getMessage());
             }
         }
     }
@@ -188,17 +199,17 @@ public class BundleTransportService extends Service implements BundleExchangeSer
         if (httpServerRunning && httpServer != null) {
             httpServer.stop();
             httpServerRunning = false;
-            appendToClientLog("HTTP file server stopped");
+            logExchange(INFO, "HTTP file server stopped");
         }
     }
 
     private void startRpcServer() {
         synchronized (grpcServer) {
             if (grpcServer.isShutdown()) {
-                appendToClientLog("Starting gRPC server");
+                logExchange(INFO, "Starting gRPC server");
                 logger.log(INFO, "starting grpc server from main activity!!!!!!!");
                 grpcServer.startServer(this.transportPaths);
-                appendToClientLog("server started");
+                logExchange(INFO, "server started");
             }
         }
     }
@@ -206,22 +217,17 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     private void stopRpcServer() {
         synchronized (grpcServer) {
             if (!grpcServer.isShutdown()) {
-                appendToClientLog("Stopping gRPC server");
+                logExchange(INFO, "Stopping gRPC server");
                 logger.log(INFO, "stopping gRPC server");
                 grpcServer.shutdownServer();
-                appendToClientLog("server stopped");
+                logExchange(INFO, "server stopped");
             }
         }
     }
 
     @Override
     public void onBundleExchangeEvent(BundleExchangeServiceImpl.BundleExchangeEvent exchangeEvent) {
-        appendToClientLog("File service event: " + exchangeEvent);
-    }
-
-    private void appendToClientLog(String message) {
-        DDDWifiServiceEvents.sendEvent(new DDDWifiServer.DDDWifiServerEvent(DDDWifiServer.DDDWifiServerEventType.DDDWIFISERVER_MESSAGE,
-                                                                            message));
+        logExchange(INFO, "File service event: " + exchangeEvent);
     }
 
     private void broadcastWifiEvent(DDDWifiServer.DDDWifiServerEvent event) {

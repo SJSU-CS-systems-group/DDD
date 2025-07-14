@@ -2,6 +2,7 @@ package net.discdd.transport;
 
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
+import io.grpc.StatusRuntimeException;
 import io.grpc.okhttp.OkHttpChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
@@ -175,7 +176,16 @@ public class TransportToBundleServerManager implements Runnable {
 
                             @Override
                             public void onError(Throwable t) {
-                                logger.log(SEVERE, "Failed to download file: " + path, t);
+                                var level = SEVERE;
+                                if (t instanceof StatusRuntimeException sre) {
+                                    if (sre.getStatus().getCode() == io.grpc.Status.Code.NOT_FOUND) {
+                                        // this is not an unexpected error, since we probe for bundles that we
+                                        // hope are there
+                                        t = null;
+                                        level = Level.FINE;
+                                    }
+                                }
+                                logger.log(level, "Failed to download file: " + path, t);
                                 completion.completeExceptionally(t);
                             }
 

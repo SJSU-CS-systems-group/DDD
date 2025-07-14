@@ -49,6 +49,8 @@ import kotlinx.coroutines.delay
 import net.discdd.bundletransport.BundleTransportService
 import net.discdd.bundletransport.viewmodels.ServerUploadViewModel
 import net.discdd.components.EasterEgg
+import net.discdd.components.UserLogComponent
+import net.discdd.utils.UserLogRepository
 import net.discdd.viewmodels.ConnectivityViewModel
 import net.discdd.viewmodels.SettingsViewModel
 
@@ -181,6 +183,8 @@ fun ServerUploadScreen(
                     )
                 }
             }
+
+            UserLogComponent(UserLogRepository.UserLogType.EXCHANGE)
 
             uploadState.message?.let { message ->
                 Text(

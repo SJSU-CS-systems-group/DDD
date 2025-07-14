@@ -11,6 +11,7 @@ import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import androidx.annotation.RequiresPermission;
+import net.discdd.bundletransport.BundleTransportService;
 import net.discdd.bundletransport.service.DDDWifiServiceEvents;
 
 import java.net.Inet4Address;
@@ -99,10 +100,6 @@ public class DDDWifiServer {
                                                               null));
     }
 
-    public void sendMessage(String message) {
-        DDDWifiServiceEvents.sendEvent(new DDDWifiServerEvent(DDDWifiServerEventType.DDDWIFISERVER_MESSAGE, message));
-    }
-
     @SuppressLint("MissingPermission")
     public void initialize() {
         this.wifiP2pManager = (WifiP2pManager) this.context.getSystemService(Context.WIFI_P2P_SERVICE);
@@ -179,7 +176,7 @@ public class DDDWifiServer {
     }
 
     public enum DDDWifiServerEventType {
-        DDDWIFISERVER_NETWORKINFO_CHANGED, DDDWIFISERVER_DEVICENAME_CHANGED, DDDWIFISERVER_MESSAGE
+        DDDWIFISERVER_NETWORKINFO_CHANGED, DDDWIFISERVER_DEVICENAME_CHANGED
     }
 
     public static class DDDWifiServerEvent {
@@ -271,16 +268,13 @@ public class DDDWifiServer {
                         DDDWifiServer.this.wifiGroup =
                                 intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP, WifiP2pGroup.class);
 
-                        DDDWifiServiceEvents.sendEvent(new DDDWifiServerEvent(DDDWifiServerEventType.DDDWIFISERVER_MESSAGE,
-                                                                              "Group info: " +
-                                                                                      (DDDWifiServer.this.wifiGroup ==
-                                                                                               null ?
-                                                                                       "N/A" :
-                                                                                       DDDWifiServer.this.wifiGroup.getClientList()
-                                                                                               .stream()
-                                                                                               .map(d -> d.deviceName)
-                                                                                               .collect(Collectors.joining(
-                                                                                                       ", ")))));
+                        BundleTransportService.logWifi(INFO,
+                                                       "Group info: " + (DDDWifiServer.this.wifiGroup == null ?
+                                                                         "N/A" :
+                                                                         DDDWifiServer.this.wifiGroup.getClientList()
+                                                                                 .stream()
+                                                                                 .map(d -> d.deviceName)
+                                                                                 .collect(Collectors.joining(", "))));
                         sendStateChange();
                     }
                     case WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> processDeviceInfo(intent.getParcelableExtra(

@@ -49,6 +49,9 @@ import net.discdd.bundletransport.R
 import net.discdd.bundletransport.viewmodels.WifiDirectViewModel
 import net.discdd.components.WifiPermissionBanner
 import java.util.concurrent.CompletableFuture
+import androidx.core.content.edit
+import net.discdd.components.UserLogComponent
+import net.discdd.utils.UserLogRepository
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -70,7 +73,7 @@ fun WifiDirectScreen(
             wifiViewModel.initialize(serviceReadyFuture)
         }
 
-        ScrollingColumn(showActionButton = state.clientLog.isNotEmpty(), onActionClick = { wifiViewModel.clearClientLog() }) {
+        ScrollingColumn(showActionButton = false, onActionClick = {}) {
             if (wifiViewModel.isWifiEnabled()) {
                 val nameValid by remember {
                     derivedStateOf { state.deviceName.startsWith("ddd_") }
@@ -136,8 +139,7 @@ fun WifiDirectScreen(
                     }
                 }
 
-                Text(text = stringResource(R.string.interactions_with_bundleclients))
-                Text(text = state.clientLog)
+                UserLogComponent(UserLogRepository.UserLogType.WIFI)
             } else {
                 Text(text = stringResource(
                         R.string.Wifi_disabled

@@ -24,7 +24,6 @@ import java.util.logging.Logger
 data class WifiDirectState(
         val deviceName: String = "",
         val wifiInfo: String = "",
-        val clientLog: String = "",
         val wifiStatus: String = "",
 )
 
@@ -45,7 +44,6 @@ class WifiDirectViewModel(
 
             DDDWifiServiceEvents.events.collect { event ->
                 when (event.type) {
-                    DDDWifiServer.DDDWifiServerEventType.DDDWIFISERVER_MESSAGE -> appendToClientLog(event.data)
                     DDDWifiServer.DDDWifiServerEventType.DDDWIFISERVER_DEVICENAME_CHANGED -> processDeviceInfoChange()
                     DDDWifiServer.DDDWifiServerEventType.DDDWIFISERVER_NETWORKINFO_CHANGED -> updateGroupInfo()
                 }
@@ -106,28 +104,6 @@ class WifiDirectViewModel(
                         it.copy(wifiInfo = "SSID: ${ni.ssid}\nPassword: ${ni.password}\nAddress: ${ni.inetAddress}\nConnected devices: ${ni.clientList.size}")
                     }
                 }
-            }
-        }
-    }
-
-    fun appendToClientLog(message: String) {
-        viewModelScope.launch {
-            if (state.value.clientLog.lines().size > 20) {
-                val nl = state.value.clientLog.indexOf('\n')
-                _state.update {
-                    it.copy(clientLog = state.value.clientLog.substring(0, nl))
-                }
-            }
-            _state.update {
-                it.copy(clientLog = state.value.clientLog + message + '\n')
-            }
-        }
-    }
-
-    fun clearClientLog() {
-        viewModelScope.launch {
-            _state.update {
-                it.copy(clientLog = "")
             }
         }
     }

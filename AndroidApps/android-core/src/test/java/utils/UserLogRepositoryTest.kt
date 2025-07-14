@@ -1,7 +1,7 @@
 package utils
 
 import net.discdd.utils.UserLogRepository
-import net.discdd.utils.UserLogRepository.UserLogComponent.WIFI
+import net.discdd.utils.UserLogRepository.UserLogType.WIFI
 import org.junit.Assert
 import org.junit.Test
 
@@ -19,7 +19,7 @@ class UserLogRepositoryTest {
             Assert.assertEquals(now.toDouble(), logEntry.time.toDouble(), 10.0)
             Assert.assertEquals("message $i", logEntry.message)
             Assert.assertEquals(UserLogRepository.UserLogLevel.INFO, logEntry.level)
-            Assert.assertEquals(WIFI, logEntry.component)
+            Assert.assertEquals(WIFI, logEntry.type)
         }
     }
 

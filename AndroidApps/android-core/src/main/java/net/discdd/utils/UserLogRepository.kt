@@ -1,6 +1,8 @@
 package net.discdd.utils
 
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import java.util.logging.Level
 
 /**
  * this class collects logs to be displayed to a user. it is mainly
@@ -8,24 +10,24 @@ import kotlinx.coroutines.flow.MutableSharedFlow
  */
 object UserLogRepository {
     const val MAX_LOG_ENTRIES = 20
-    enum class UserLogComponent{ WIFI, EXCHANGE }
-    enum class UserLogLevel{ ERROR, WARN, INFO }
-    data class UserLogEntry(val component: UserLogComponent, val time: Long, val message:String, val level: UserLogLevel = UserLogLevel.INFO) {}
-    private val repositories = mutableMapOf<UserLogComponent, MutableList<UserLogEntry>>()
-    private val _event = MutableSharedFlow<Void>(0)
-    private val event = _event.to
+    enum class UserLogType{ WIFI, EXCHANGE }
+    data class UserLogEntry(val type: UserLogType, val time: Long, val message:String, val level: Level = Level.INFO) {}
+    private val repositories = mutableMapOf<UserLogType, MutableList<UserLogEntry>>()
+    private val _event = MutableSharedFlow<Unit>(5)
+    val event = _event.asSharedFlow()
 
-    fun getRepo(component: UserLogComponent): List<UserLogEntry> {
+    fun getRepo(component: UserLogType): List<UserLogEntry> {
         return repositories[component]!!
     }
     fun log(entry: UserLogEntry) {
-        val repo = repositories.getOrPut(entry.component) {mutableListOf()}// we have a default, this should never be null
+        val repo = repositories.getOrPut(entry.type) {mutableListOf()}// we have a default, this should never be null
         if (repo.size >= MAX_LOG_ENTRIES) {
             repo.removeAt(0)
         }
         repo.add(entry)
+        _event.tryEmit(Unit)
     }
-    fun log(userLogComponent: UserLogComponent, message: String, time: Long = System.currentTimeMillis(), level: UserLogLevel = UserLogLevel.INFO) {
-        log(UserLogEntry(userLogComponent, time, message, level))
+    fun log(userLogType: UserLogType, message: String, time: Long = System.currentTimeMillis(), level: Level = Level.INFO) {
+        log(UserLogEntry(userLogType, time, message, level))
     }
 }
