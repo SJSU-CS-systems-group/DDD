@@ -450,7 +450,7 @@ public class BundleClientService extends Service {
         synchronized public void schedule(int minutes) {
             if (scheduledFuture == null) {
                 logger.info(format("Scheduling periodic exchange with transports every %d minutes", minutes));
-                scheduledFuture = periodicExecutor.scheduleWithFixedDelay(this, 0, minutes,
+                scheduledFuture = periodicExecutor.scheduleWithFixedDelay(this, minutes, minutes,
                                                                           TimeUnit.MINUTES);
             }
         }
