@@ -66,7 +66,7 @@ public class BundleClientService extends Service {
     public static final String NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE = "background_exchange";
     public static final String NET_DISCDD_BUNDLECLIENT_DEVICEADDRESS_EXTRA = "deviceAddress";
     private static final Logger logger = Logger.getLogger(BundleClientService.class.getName());
-    private static final BundleExchangeCounts FAILED_EXCHANGE_COUNTS = new BundleExchangeCounts(Statuses.FAILED,Statuses.FAILED);
+    private static final BundleExchangeCounts FAILED_EXCHANGE_COUNTS = new BundleExchangeCounts(Statuses.FAILED,Statuses.FAILED, null);
     private static SharedPreferences preferences;
     private final IBinder binder = new BundleClientServiceBinder();
     private final ScheduledExecutorService periodicExecutor = Executors.newSingleThreadScheduledExecutor();
@@ -247,28 +247,32 @@ public class BundleClientService extends Service {
                 return FAILED_EXCHANGE_COUNTS;
             }
             var addr = connection.getAddresses().get(0);
-            broadcastBundleClientLogEvent(format("Connected to %s (%s)", device.getDescription(), addr.getHostAddress()));
-            BundleExchangeCounts currentBundle = bundleTransmission.doExchangeWithTransport(device,
-                                                                                            addr.getHostAddress(),
-                                                                                            7777,
-                                                                                            true);
-            broadcastBundleClientLogEvent(format("%s upload: %s download: %s", device.getDescription(),
-                                                                                 statusesToString(currentBundle.uploadStatus()),
-                                                                                 statusesToString(currentBundle.downloadStatus())));
+            broadcastBundleClientLogEvent(format("Connected to %s (%s)",
+                                                 device.getDescription(),
+                                                 addr.getHostAddress()));
+            BundleExchangeCounts currentBundle =
+                    bundleTransmission.doExchangeWithTransport(device, addr.getHostAddress(), 7777, true);
+            broadcastBundleClientLogEvent(format("%s upload: %s download: %s",
+                                                 device.getDescription(),
+                                                 statusesToString(currentBundle.uploadStatus()),
+                                                 statusesToString(currentBundle.downloadStatus())));
+            if (currentBundle.e() instanceof BundleTransmission.RecencyException) {
+                broadcastBundleClientLogEvent("Transport has not exchanged with server recently: " + currentBundle.e().getMessage());
+            }
             String text1;
             String text2;
-            if(currentBundle.uploadStatus() == Statuses.FAILED){
+            if (currentBundle.uploadStatus() == Statuses.FAILED) {
                 text1 = getString(R.string.Upload_Failed);
-            }else if(currentBundle.uploadStatus() == Statuses.COMPLETE){
+            } else if (currentBundle.uploadStatus() == Statuses.COMPLETE) {
                 text1 = getString(R.string.Upload_Success);
-            }else{
+            } else {
                 text1 = getString(R.string.Upload_Empty);
             }
-            if(currentBundle.downloadStatus() == Statuses.FAILED){
+            if (currentBundle.downloadStatus() == Statuses.FAILED) {
                 text2 = getString(R.string.Download_Failed);
-            }else if(currentBundle.downloadStatus() == Statuses.COMPLETE){
+            } else if (currentBundle.downloadStatus() == Statuses.COMPLETE) {
                 text2 = getString(R.string.Download_Success);
-            }else{
+            } else {
                 text2 = getString(R.string.Download_Empty);
             }
 
@@ -276,7 +280,6 @@ public class BundleClientService extends Service {
             Handler handler = new Handler(Looper.getMainLooper());
             handler.post(() -> Toast.makeText(getApplicationContext(), text, Toast.LENGTH_LONG).show());
             return currentBundle;
-
         } catch (Throwable e) {
             broadcastBundleClientLogEvent(e.getLocalizedMessage());
             logger.log(WARNING, e.getMessage(), e);
