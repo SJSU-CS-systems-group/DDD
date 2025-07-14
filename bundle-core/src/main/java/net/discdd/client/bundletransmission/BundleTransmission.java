@@ -82,6 +82,11 @@ import static net.discdd.utils.FileUtils.crashReportExists;
 import static net.discdd.utils.FileUtils.readCrashReportFromFile;
 
 public class BundleTransmission {
+    public static class RecencyException extends IOException {
+        public RecencyException(String message) {
+            super(message);
+        }
+    }
     private static final Logger logger = Logger.getLogger(BundleTransmission.class.getName());
     private final ExecutorService executorService = Executors.newCachedThreadPool();
     private final BundleSecurity bundleSecurity;
@@ -293,21 +298,21 @@ public class BundleTransmission {
             IOException, InvalidKeyException {
         // first make sure the data is valid
         if (recencyBlobResponse.getStatus() != RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS) {
-            throw new IOException("Recency request failed");
+            throw new RecencyException("Recency request failed");
         }
         var recencyBlob = recencyBlobResponse.getRecencyBlob();
         // we will allow a 1 minute clock skew
         if (recencyBlob.getBlobTimestamp() > System.currentTimeMillis() + 60 * 1000) {
-            throw new IOException("Recency blob timestamp is in the future");
+            throw new RecencyException("Recency blob timestamp is in the future");
         }
         var receivedServerPublicKey = Curve.decodePoint(recencyBlobResponse.getServerPublicKey().toByteArray(), 0);
         if (!bundleSecurity.getClientSecurity().getServerPublicKey().equals(receivedServerPublicKey)) {
-            throw new IOException("Recency blob signed by unknown server");
+            throw new RecencyException("Recency blob signed by unknown server");
         }
         if (!SecurityUtils.verifySignatureRaw(recencyBlob.toByteArray(),
                                               receivedServerPublicKey,
                                               recencyBlobResponse.getRecencyBlobSignature().toByteArray())) {
-            throw new IOException("Recency blob signature verification failed");
+            throw new RecencyException("Recency blob signature verification failed");
         }
         synchronized (recentTransports) {
             RecentTransport recentTransport = recentTransports.computeIfAbsent(device, RecentTransport::new);
@@ -336,7 +341,7 @@ public class BundleTransmission {
         }
     }
 
-    public record BundleExchangeCounts(Statuses uploadStatus, Statuses downloadStatus) {}
+    public record BundleExchangeCounts(Statuses uploadStatus, Statuses downloadStatus, Exception e) {}
 
     private static final int INITIAL_CONNECT_RETRIES = 8;
 
@@ -386,6 +391,7 @@ public class BundleTransmission {
         Statuses downloadStatus = Statuses.FAILED;
 
         String transportSenderId = null;
+        Exception transmissionException = null;
         try {
             if (isServerRunning(transportAddress, port)) {
                 var recencyBlobRequest = GetRecencyBlobRequest.newBuilder().build();
@@ -439,9 +445,10 @@ public class BundleTransmission {
             }
         } catch (Exception e) {
             logger.log(WARNING, "Exchange failed", e);
+            transmissionException = e;
         }
         channel.shutdownNow();
-        return new BundleExchangeCounts(uploadStatus, downloadStatus);
+        return new BundleExchangeCounts(uploadStatus, downloadStatus, transmissionException);
     }
 
     public List<String> getNextBundles() throws InvalidKeyException, GeneralSecurityException {
