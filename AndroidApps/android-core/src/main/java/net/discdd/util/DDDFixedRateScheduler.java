@@ -57,7 +57,7 @@ public class DDDFixedRateScheduler<T> {
             } finally {
                 lastExecutionFinish = System.currentTimeMillis();
             }
-        }, 0, periodInMinutes, TimeUnit.MINUTES);
+        }, periodInMinutes, periodInMinutes, TimeUnit.MINUTES);
     }
 
     /**
