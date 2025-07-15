@@ -59,7 +59,7 @@ class ServerUploadViewModel(
         if (exchangeFuture == null) {
             UserLogRepository.log(UserLogRepository.UserLogType.EXCHANGE, "TransportService is not available.", level = Level.SEVERE)
         } else {
-            viewModelScope.async {
+            viewModelScope.launch {
                 try {
                     val message = exchangeFuture.get()
                     UserLogRepository.log(
