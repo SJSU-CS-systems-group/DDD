@@ -38,8 +38,8 @@ public class GrpcSecurityKey {
         try {
             keyPair = DDDTLSUtil.loadKeyPairfromFiles(grpcPublicKeyPath, grpcPrivateKeyPath);
             logger.log(INFO, "Loaded key pair from file: " + grpcPublicKeyPath);
-        } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException |
-                   InvalidKeyException | NoSuchProviderException e) {
+        } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException | InvalidKeyException |
+                 NoSuchProviderException e) {
             grpcSecurityPath.toFile().mkdirs();
 
             logger.log(WARNING, "No existing keypair: " + e.getMessage());

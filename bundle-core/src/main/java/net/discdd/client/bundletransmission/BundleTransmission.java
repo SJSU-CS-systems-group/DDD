@@ -413,9 +413,7 @@ public class BundleTransmission {
                 var bundleRequests = getNextBundles();
                 PublicKeyMap publicKeyMap = PublicKeyMap.newBuilder()
                         .setClientPub(ByteString.copyFrom(clientSecurity.getClientIdentityPublicKey().serialize()))
-                        .setSignedTLSPub(ByteString.copyFrom(clientSecurity.getSignedTLSPub(bundleSecurity.getClientGrpcSecurityKey()
-                                                                                                    .grpcKeyPair
-                                                                                                    .getPublic())))
+                        .setSignedTLSPub(ByteString.copyFrom(clientSecurity.getSignedTLSPub(bundleSecurity.getClientGrpcSecurityKey().grpcKeyPair.getPublic())))
                         .build();
                 // we don't include the public key map if we are connecting to a transport, since we only authenticate
                 // ourselves to BundleServers not transports

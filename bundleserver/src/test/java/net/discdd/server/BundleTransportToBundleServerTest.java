@@ -63,7 +63,8 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
         toClientPath = transportPaths.toClientPath;
         toServerPath = transportPaths.toServerPath;
 
-        manager = new TransportToBundleServerManager(grpcSecurity, transportPaths,
+        manager = new TransportToBundleServerManager(grpcSecurity,
+                                                     transportPaths,
                                                      "localhost",
                                                      Integer.toString(BUNDLESERVER_GRPC_PORT));
         stub = BundleExchangeServiceGrpc.newStub(channel);

@@ -252,9 +252,7 @@ public class BundleClientToBundleServerTest extends End2EndTest {
         for (String bundle : bundleRequests) {
             PublicKeyMap publicKeyMap = PublicKeyMap.newBuilder()
                     .setClientPub(ByteString.copyFrom(clientSecurity.getClientIdentityPublicKey().serialize()))
-                    .setSignedTLSPub(ByteString.copyFrom(clientSecurity.getSignedTLSPub(bundleSecurity.getClientGrpcSecurityKey()
-                                                                                                .grpcKeyPair
-                                                                                                .getPublic())))
+                    .setSignedTLSPub(ByteString.copyFrom(clientSecurity.getSignedTLSPub(bundleSecurity.getClientGrpcSecurityKey().grpcKeyPair.getPublic())))
                     .build();
 
             var downloadRequest = BundleDownloadRequest.newBuilder()

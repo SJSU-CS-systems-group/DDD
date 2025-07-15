@@ -77,8 +77,7 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
             if (state == null || !state.addr.equals(appAdapter.getAddress())) {
                 try {
                     var sslClientContext = GrpcSslContexts.forClient()
-                            .keyManager(serverGrpcSecurityKey.grpcKeyPair.getPrivate(),
-                                        serverGrpcSecurityKey.grpcCert)
+                            .keyManager(serverGrpcSecurityKey.grpcKeyPair.getPrivate(), serverGrpcSecurityKey.grpcCert)
                             .trustManager(new DDDX509ExtendedTrustManager(true))
                             .build();
                     var channel = NettyChannelBuilder.forTarget(appAdapter.getAddress())

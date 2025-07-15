@@ -122,8 +122,10 @@ public class BundleTransportService extends Service implements BundleExchangeSer
         logExchange(INFO, "Starting server exchange with host: " + host + ", port: " + port);
         String message;
         try {
-            var exchangeCounts =
-                    new TransportToBundleServerManager(grpcKeys, transportPaths, host, Integer.toString(port)).doExchange();
+            var exchangeCounts = new TransportToBundleServerManager(grpcKeys,
+                                                                    transportPaths,
+                                                                    host,
+                                                                    Integer.toString(port)).doExchange();
             message = format("deleted %d bundles, sent %d/%d, received %d/%d",
                              exchangeCounts.deleteCount,
                              exchangeCounts.uploadCount,

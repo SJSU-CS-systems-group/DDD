@@ -56,7 +56,10 @@ public class TransportToBundleServerManager {
     private final int serverPort;
     private final GrpcSecurityKey grpcSecurityKey;
 
-    public TransportToBundleServerManager(GrpcSecurityKey grpcSecurityKey, TransportPaths transportPaths, String host, String port) {
+    public TransportToBundleServerManager(GrpcSecurityKey grpcSecurityKey,
+                                          TransportPaths transportPaths,
+                                          String host,
+                                          String port) {
         this.grpcSecurityKey = grpcSecurityKey;
         this.serverHost = host;
         this.serverPort = Integer.parseInt(port);
@@ -78,8 +81,8 @@ public class TransportToBundleServerManager {
         ExchangeResult exchangeResult = new ExchangeResult();
         try {
             var sslClientContext = SSLContext.getInstance("TLS");
-            sslClientContext.init(DDDTLSUtil.getKeyManagerFactory(grpcSecurityKey.grpcKeyPair,
-                                                                  grpcSecurityKey.grpcCert).getKeyManagers(),
+            sslClientContext.init(DDDTLSUtil.getKeyManagerFactory(grpcSecurityKey.grpcKeyPair, grpcSecurityKey.grpcCert)
+                                          .getKeyManagers(),
                                   new TrustManager[] { new DDDX509ExtendedTrustManager(true) },
                                   new SecureRandom());
 
