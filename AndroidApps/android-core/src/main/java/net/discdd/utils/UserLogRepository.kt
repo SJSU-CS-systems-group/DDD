@@ -17,8 +17,8 @@ object UserLogRepository {
     val event = _event.asSharedFlow()
 
     @Synchronized
-    fun getRepo(component: UserLogType): List<UserLogEntry> {
-        return repositories[component]!!.toList()
+    fun getRepo(type: UserLogType): List<UserLogEntry> {
+        return repositories.get(type)?.toList() ?: emptyList()
     }
 
     @Synchronized
@@ -32,5 +32,11 @@ object UserLogRepository {
     }
     fun log(userLogType: UserLogType, message: String, time: Long = System.currentTimeMillis(), level: Level = Level.INFO) {
         log(UserLogEntry(userLogType, time, message, level))
+    }
+
+    @Synchronized
+    fun clearRepo(type: UserLogType) {
+        repositories.get(type)?.clear()
+        _event.tryEmit(Unit)
     }
 }

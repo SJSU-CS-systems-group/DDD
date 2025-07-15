@@ -12,6 +12,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
+import android.net.ConnectivityManager;
+import android.net.NetworkCapabilities;
 import android.os.Binder;
 import android.os.IBinder;
 
@@ -56,7 +58,8 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     String host;
     int port;
     private TransportPaths transportPaths;
-    final DDDFixedRateScheduler<Void> periodicExchangeScheduler = new DDDFixedRateScheduler<>(this::doServerExchange);
+    final DDDFixedRateScheduler<String> periodicExchangeScheduler = new DDDFixedRateScheduler<>(this::doServerExchange);
+    ConnectivityManager connectivityManager;
     final private SharedPreferences.OnSharedPreferenceChangeListener preferenceChangeListener =
             (sharedPreferences, key) -> {
                 switch (key) {
@@ -99,25 +102,34 @@ public class BundleTransportService extends Service implements BundleExchangeSer
         }
     };
 
-    public Future<Void> queueServerExchangeNow() {
+    public Future<String> queueServerExchangeNow() {
         return periodicExchangeScheduler.callItNow();
     }
 
-    private Void doServerExchange() {
+    private String doServerExchange() {
+        var activeNetwork = connectivityManager.getActiveNetwork();
+        var caps = activeNetwork == null ? null : connectivityManager.getNetworkCapabilities(activeNetwork);
+        if (caps == null || !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) || !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
+            return "No internet connection available, skipping server exchange.";
+        }
+
         logExchange(INFO, "Starting server exchange with host: " + host + ", port: " + port);
+        String message;
         try {
             var exchangeCounts =
                     new TransportToBundleServerManager(transportPaths, host, Integer.toString(port)).doExchange();
-            logExchange(INFO, format("deleted %d bundles, sent %d/%d, received %d/%d",
-                                     exchangeCounts.deleteCount,
-                                     exchangeCounts.uploadCount,
-                                     exchangeCounts.toUploadCount,
-                                     exchangeCounts.downloadCount,
-                                     exchangeCounts.toDownloadCount));
+            message = format("deleted %d bundles, sent %d/%d, received %d/%d",
+                                   exchangeCounts.deleteCount,
+                                   exchangeCounts.uploadCount,
+                                   exchangeCounts.toUploadCount,
+                                   exchangeCounts.downloadCount,
+                                   exchangeCounts.toDownloadCount);
+            logExchange(INFO, message);
         } catch (Exception e) {
-            logExchange(SEVERE, "Error during server exchange: " + e.getMessage());
+            message = "Error during server exchange: " + e.getMessage();
+            logExchange(SEVERE, message);
         }
-        return null;
+        return message;
     }
 
     public static void logWifi(Level level, String message) {
@@ -131,6 +143,7 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     public int onStartCommand(Intent intent, int flags, int startId) {
         this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
         super.onStartCommand(intent, flags, startId);
+        connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
         // BundleTransportService doesn't use LogFragment directly, but we do want our
         // logs to go to its logger
         LogFragment.registerLoggerHandler();
@@ -234,7 +247,6 @@ public class BundleTransportService extends Service implements BundleExchangeSer
 
     @Override
     public void onBundleExchangeEvent(BundleExchangeServiceImpl.BundleExchangeEvent exchangeEvent) {
-        logExchange(INFO, "File service event: " + exchangeEvent);
     }
 
     private void broadcastWifiEvent(DDDWifiServer.DDDWifiServerEvent event) {

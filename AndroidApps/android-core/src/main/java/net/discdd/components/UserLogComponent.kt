@@ -33,7 +33,7 @@ fun UserLogComponent(type: UserLogRepository.UserLogType) {
     val entries = remember(trigger.intValue) {
         UserLogRepository.getRepo(type)
     }
-    Column(modifier = Modifier.fillMaxSize()) {
+    ScrollingColumn(showActionButton = entries.isNotEmpty(), onActionClick = {UserLogRepository.clearRepo(type)}) {
         for (entry in entries.asReversed()) {
             // format entry.time from milliseconds since epoch to HH:MM:SS
             val timeStr = DATE_FORMAT.format(Date(entry.time))

@@ -50,6 +50,7 @@ import net.discdd.bundletransport.viewmodels.WifiDirectViewModel
 import net.discdd.components.WifiPermissionBanner
 import java.util.concurrent.CompletableFuture
 import androidx.core.content.edit
+import net.discdd.components.ScrollingColumn
 import net.discdd.components.UserLogComponent
 import net.discdd.utils.UserLogRepository
 
@@ -151,38 +152,6 @@ fun WifiDirectScreen(
                 ) {
                     Text("Open Wifi Settings")
                 }
-            }
-        }
-    }
-}
-
-
-@Composable
-fun ScrollingColumn(
-        showActionButton: Boolean = false,
-        onActionClick: () -> Unit = {},
-        content: @Composable () -> Unit,
-) {
-    val scrollState = rememberScrollState()
-    Box {
-        Column(
-                modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(scrollState)
-                        .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            content()
-        }
-        if (showActionButton) {
-            FloatingActionButton(
-                    onClick = { onActionClick() },
-                    modifier = Modifier.align(Alignment.BottomEnd)
-            ) {
-                Icon(
-                        imageVector = Icons.Default.Delete,
-                        "Delete Logs",
-                )
             }
         }
     }

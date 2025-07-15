@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context.MODE_PRIVATE
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -12,6 +13,7 @@ import net.discdd.AndroidAppConstants
 import net.discdd.pathutils.TransportPaths
 import net.discdd.bundletransport.R
 import net.discdd.bundletransport.TransportServiceManager
+import net.discdd.components.UserLogComponent
 import net.discdd.transport.GrpcSecurityHolder
 import net.discdd.transport.TransportToBundleServerManager
 import net.discdd.utils.UserLogRepository
@@ -53,26 +55,27 @@ class ServerUploadViewModel(
     }
 
     fun connectServer() {
-        if (TransportServiceManager.getService()?.queueServerExchangeNow() == null) {
+        val exchangeFuture = TransportServiceManager.getService()?.queueServerExchangeNow()
+        if (exchangeFuture == null) {
             UserLogRepository.log(UserLogRepository.UserLogType.EXCHANGE, "TransportService is not available.", level = Level.SEVERE)
+        } else {
+            viewModelScope.async {
+                try {
+                    val message = exchangeFuture.get()
+                    UserLogRepository.log(
+                            UserLogRepository.UserLogType.EXCHANGE,
+                            message
+                    )
+                    reloadCount()
+                } catch (e: Exception) {
+                    UserLogRepository.log(
+                            UserLogRepository.UserLogType.EXCHANGE,
+                            "Server connection error: ${e.message}",
+                            level = Level.SEVERE
+                    )
+                }
+            }
         }
-        reloadCount()
-    }
-
-    fun serverConnectComplete(): Void? {
-        _state.update { it.copy(message = "Server exchange complete.\n") }
-        return null
-    }
-
-    fun serverConnectionError(e: Exception, transportTarget: String): Void? {
-        _state.update {
-            it.copy(
-                    message = "Server exchange incomplete with error.\n" +
-                            "Error: " + e.message + "\n" +
-                            "Invalid hostname: " + transportTarget
-            )
-        }
-        return null
     }
 
     fun reloadCount() {
