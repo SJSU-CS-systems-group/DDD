@@ -13,7 +13,7 @@ import net.discdd.bundletransport.R
 import net.discdd.bundletransport.TransportServiceManager
 import net.discdd.pathutils.TransportPaths
 import net.discdd.utils.UserLogRepository
-import java.util.*
+import java.util.Base64
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.logging.Level

@@ -2,11 +2,9 @@ package net.discdd.server;
 
 import io.grpc.ManagedChannel;
 import net.discdd.bundlesecurity.SecurityUtils;
-import net.discdd.config.GrpcSecurityConfig;
 import net.discdd.grpc.BundleExchangeServiceGrpc;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.pathutils.TransportPaths;
-import net.discdd.server.config.BundleServerConfig;
 import net.discdd.tls.DDDNettyTLS;
 import net.discdd.tls.GrpcSecurityKey;
 import net.discdd.transport.TransportToBundleServerManager;
