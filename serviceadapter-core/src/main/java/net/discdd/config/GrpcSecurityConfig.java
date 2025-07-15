@@ -1,7 +1,7 @@
 package net.discdd.config;
 
 import net.discdd.bundlesecurity.SecurityUtils;
-import net.discdd.tls.GrpcSecurity;
+import net.discdd.tls.GrpcSecurityKey;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,11 +19,11 @@ public class GrpcSecurityConfig {
     private Path grpcSecurityPath;
 
     @Bean
-    GrpcSecurity createGrpcSecurityInstance() {
+    GrpcSecurityKey createGrpcSecurityInstance() {
         try {
             logger.log(INFO, "Creating GrpcSecurity instance");
 
-            return new GrpcSecurity(grpcSecurityPath, SecurityUtils.SERVER);
+            return new GrpcSecurityKey(grpcSecurityPath, SecurityUtils.SERVER);
         } catch (Exception e) {
             logger.log(SEVERE, "Catch adapter security failures");
             e.printStackTrace();

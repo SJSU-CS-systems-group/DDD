@@ -1,13 +1,14 @@
 package net.discdd.server;
 
 import io.grpc.ManagedChannel;
+import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.grpc.BundleExchangeServiceGrpc;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.tls.DDDNettyTLS;
-import net.discdd.tls.GrpcSecurity;
-import net.discdd.transport.GrpcSecurityHolder;
+import net.discdd.tls.GrpcSecurityKey;
 import net.discdd.transport.TransportToBundleServerManager;
+import org.bouncycastle.operator.OperatorCreationException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
@@ -15,13 +16,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.cert.CertificateException;
 import java.util.Comparator;
 import java.util.List;
 import java.util.logging.Logger;
@@ -42,33 +46,26 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
     private static ManagedChannel channel;
     private Path toClientPath;
     private Path toServerPath;
-    private GrpcSecurity transportGrpcSecurity;
 
     @BeforeEach
-    void setUp() {
+    void setUpEach() throws IOException, InvalidAlgorithmParameterException, CertificateException,
+            NoSuchAlgorithmException, NoSuchProviderException, OperatorCreationException {
         // Initialize the TransportPaths class
         TransportPaths transportPaths = new TransportPaths(End2EndTest.tempRootDir);
+        toClientPath = transportPaths.toClientPath;
+        toServerPath = transportPaths.toServerPath;
+        var grpcSecurity = new GrpcSecurityKey(transportPaths.grpcSecurityPath, SecurityUtils.TRANSPORT);
+        channel = DDDNettyTLS.createGrpcChannel(grpcSecurity.grpcKeyPair,
+                                                grpcSecurity.grpcCert,
+                                                "localhost",
+                                                BUNDLESERVER_GRPC_PORT);
 
         toClientPath = transportPaths.toClientPath;
         toServerPath = transportPaths.toServerPath;
 
-        try {
-            transportGrpcSecurity = GrpcSecurityHolder.setGrpcSecurityHolder(transportPaths.grpcSecurityPath);
-        } catch (Exception e) {
-            logger.severe("Failed to initialize GrpcSecurity: " + e.getMessage());
-        }
-
-        manager = new TransportToBundleServerManager(transportPaths,
+        manager = new TransportToBundleServerManager(grpcSecurity, transportPaths,
                                                      "localhost",
                                                      Integer.toString(BUNDLESERVER_GRPC_PORT));
-    }
-
-    @BeforeEach
-    void setUpEach() throws SSLException {
-        channel = DDDNettyTLS.createGrpcChannel(transportGrpcSecurity.getGrpcKeyPair(),
-                                                transportGrpcSecurity.getGrpcCert(),
-                                                "localhost",
-                                                BUNDLESERVER_GRPC_PORT);
         stub = BundleExchangeServiceGrpc.newStub(channel);
         blockingStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
 

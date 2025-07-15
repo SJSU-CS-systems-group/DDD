@@ -7,7 +7,6 @@ import io.grpc.stub.StreamObserver;
 import net.discdd.bundlerouting.RoutingExceptions;
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
 import net.discdd.client.bundletransmission.BundleTransmission;
-import net.discdd.client.bundletransmission.TransportDevice;
 import net.discdd.grpc.AppDataUnit;
 import net.discdd.grpc.BundleChunk;
 import net.discdd.grpc.BundleDownloadRequest;
@@ -93,9 +92,10 @@ public class BundleClientToBundleServerTest extends End2EndTest {
         recieveStore = new StoreADUs(clientPaths.receiveADUsPath);
 
         bundleTransmission = new BundleTransmission(clientPaths, adu -> {});
+        var grpcKey = bundleTransmission.getBundleSecurity().getClientGrpcSecurityKey();
         clientId = bundleTransmission.getBundleSecurity().getClientSecurity().getClientID();
-        clientKeyPair = bundleTransmission.getBundleSecurity().getClientGrpcSecurity().getGrpcKeyPair();
-        clientCert = bundleTransmission.getBundleSecurity().getClientGrpcSecurity().getGrpcCert();
+        clientKeyPair = grpcKey.grpcKeyPair;
+        clientCert = grpcKey.grpcCert;
     }
 
     @BeforeEach
@@ -252,8 +252,8 @@ public class BundleClientToBundleServerTest extends End2EndTest {
         for (String bundle : bundleRequests) {
             PublicKeyMap publicKeyMap = PublicKeyMap.newBuilder()
                     .setClientPub(ByteString.copyFrom(clientSecurity.getClientIdentityPublicKey().serialize()))
-                    .setSignedTLSPub(ByteString.copyFrom(clientSecurity.getSignedTLSPub(bundleSecurity.getClientGrpcSecurity()
-                                                                                                .getGrpcKeyPair()
+                    .setSignedTLSPub(ByteString.copyFrom(clientSecurity.getSignedTLSPub(bundleSecurity.getClientGrpcSecurityKey()
+                                                                                                .grpcKeyPair
                                                                                                 .getPublic())))
                     .build();
 

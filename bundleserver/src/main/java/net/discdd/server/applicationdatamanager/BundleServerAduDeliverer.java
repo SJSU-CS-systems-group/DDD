@@ -8,17 +8,14 @@ import net.discdd.grpc.ExchangeADUsRequest;
 import net.discdd.grpc.PendingDataCheckRequest;
 import net.discdd.grpc.ServiceAdapterServiceGrpc;
 import net.discdd.server.repository.RegisteredAppAdapterRepository;
-import net.discdd.tls.DDDTLSUtil;
 import net.discdd.tls.DDDX509ExtendedTrustManager;
-import net.discdd.tls.GrpcSecurity;
+import net.discdd.tls.GrpcSecurityKey;
 import net.discdd.utils.StoreADUs;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.net.ssl.SSLException;
-import java.net.InetAddress;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.Set;
@@ -51,19 +48,19 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
     private final Duration dataCheckInterval;
     private final Duration revalidateAppSpinDelay;
     private final long grpcTimeout = 20_000 /* milliseconds */;
-    private final GrpcSecurity serverGrpcSecurity;
+    private final GrpcSecurityKey serverGrpcSecurityKey;
 
     BundleServerAduDeliverer(AduStores aduStores,
                              RegisteredAppAdapterRepository registeredAppAdapterRepository,
                              @Value("${serviceadapter.datacheck.interval}") Duration dataCheckInterval,
                              @Value("${serviceadapter.revalidate-delay:5s}") Duration revalidateAppSpinDelay,
-                             GrpcSecurity serverGrpcSecurity) {
+                             GrpcSecurityKey serverGrpcSecurityKey) {
         this.sendFolder = aduStores.getSendADUsStorage();
         this.receiveFolder = aduStores.getReceiveADUsStorage();
         this.registeredAppAdapterRepository = registeredAppAdapterRepository;
         this.dataCheckInterval = dataCheckInterval;
         this.revalidateAppSpinDelay = revalidateAppSpinDelay;
-        this.serverGrpcSecurity = serverGrpcSecurity;
+        this.serverGrpcSecurityKey = serverGrpcSecurityKey;
     }
 
     private long lastRevalidateAppsMs;
@@ -80,8 +77,8 @@ public class BundleServerAduDeliverer implements ApplicationDataManager.AduDeliv
             if (state == null || !state.addr.equals(appAdapter.getAddress())) {
                 try {
                     var sslClientContext = GrpcSslContexts.forClient()
-                            .keyManager(serverGrpcSecurity.getGrpcKeyPair().getPrivate(),
-                                        serverGrpcSecurity.getGrpcCert())
+                            .keyManager(serverGrpcSecurityKey.grpcKeyPair.getPrivate(),
+                                        serverGrpcSecurityKey.grpcCert)
                             .trustManager(new DDDX509ExtendedTrustManager(true))
                             .build();
                     var channel = NettyChannelBuilder.forTarget(appAdapter.getAddress())
