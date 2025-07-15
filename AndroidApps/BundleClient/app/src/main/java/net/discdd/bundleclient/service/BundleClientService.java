@@ -49,10 +49,12 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Logger;
 
 // the service is usually formatting messages for the log rather than users, so don't complain about locales
@@ -220,6 +222,13 @@ public class BundleClientService extends Service {
 
     @SuppressLint("MissingPermission")
     private void exchangeWithTransports() {
+        try {
+            dddWifi.startDiscovery().get(10, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            logger.log(WARNING, "Failed to start discovery", e);
+            broadcastBundleClientLogEvent("Failed to start discovery: " + e.getMessage());
+            // not the end of the world, we can still try
+        }
         var recentTransports = bundleTransmission.getRecentTransports();
         for (var transport : recentTransports) {
             if (transport.getDevice() instanceof DDDWifiDevice) {
