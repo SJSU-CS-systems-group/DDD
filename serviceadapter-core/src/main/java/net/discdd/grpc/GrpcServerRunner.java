@@ -3,7 +3,7 @@ package net.discdd.grpc;
 import io.grpc.BindableService;
 import io.grpc.Server;
 import net.discdd.tls.DDDNettyTLS;
-import net.discdd.tls.GrpcSecurity;
+import net.discdd.tls.GrpcSecurityKey;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,15 +27,15 @@ public class GrpcServerRunner implements CommandLineRunner {
     ApplicationContext context;
     int BUNDLE_SERVER_PORT;
     private Server server;
-    private final GrpcSecurity grpcSecurity;
+    private final GrpcSecurityKey grpcSecurityKey;
     private Thread awaitThread;
     private final Executor executor;
 
     public GrpcServerRunner(@Value("${ssl-grpc.server.port}") int port,
-                            GrpcSecurity grpcSecurity,
+                            GrpcSecurityKey grpcSecurityKey,
                             @Qualifier("grpcExecutor") Executor executor) {
         BUNDLE_SERVER_PORT = port;
-        this.grpcSecurity = grpcSecurity;
+        this.grpcSecurityKey = grpcSecurityKey;
         this.executor = executor;
     }
 
@@ -49,8 +49,8 @@ public class GrpcServerRunner implements CommandLineRunner {
 
         // make sure we have a spring aware thread pool executor
         server = DDDNettyTLS.createGrpcServer(executor,
-                                              grpcSecurity.getGrpcKeyPair(),
-                                              grpcSecurity.getGrpcCert(),
+                                              grpcSecurityKey.grpcKeyPair,
+                                              grpcSecurityKey.grpcCert,
                                               BUNDLE_SERVER_PORT,
                                               services.toArray(new BindableService[0]));
 

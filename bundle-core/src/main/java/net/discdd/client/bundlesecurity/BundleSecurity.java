@@ -7,13 +7,12 @@ import net.discdd.client.bundlerouting.ClientWindow;
 import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
 import net.discdd.pathutils.ClientPaths;
-import net.discdd.tls.GrpcSecurity;
+import net.discdd.tls.GrpcSecurityKey;
 import net.discdd.utils.Constants;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.InvalidMessageException;
-import org.whispersystems.libsignal.LegacyMessageException;
 import org.whispersystems.libsignal.NoSessionException;
 
 import java.io.File;
@@ -38,7 +37,7 @@ public class BundleSecurity {
     private final ClientBundleGenerator clientBundleGenerator;
     private final boolean isEncryptionEnabled = true;
     private ClientSecurity client = null;
-    private GrpcSecurity clientGrpcSecurity = null;
+    private GrpcSecurityKey clientGrpcSecurityKey = null;
     private int counter = 0;
 
     public BundleSecurity(ClientPaths clientPaths) throws IOException, InvalidKeyException,
@@ -52,7 +51,7 @@ public class BundleSecurity {
         clientBundleGenerator = ClientBundleGenerator.initializeInstance(client, clientPaths);
         clientWindow = ClientWindow.initializeInstance(5, client.getClientID(), clientPaths);
         try {
-            this.clientGrpcSecurity = new GrpcSecurity(clientPaths.grpcSecurityPath, SecurityUtils.CLIENT);
+            this.clientGrpcSecurityKey = new GrpcSecurityKey(clientPaths.grpcSecurityPath, SecurityUtils.CLIENT);
         } catch (IOException | NoSuchAlgorithmException | InvalidAlgorithmParameterException | CertificateException |
                  NoSuchProviderException | OperatorCreationException e) {
             logger.log(SEVERE, "Failed to initialize GrpcSecurity for CLIENT", e);
@@ -121,7 +120,7 @@ public class BundleSecurity {
         return this.client;
     }
 
-    public GrpcSecurity getClientGrpcSecurity() {
-        return this.clientGrpcSecurity;
+    public GrpcSecurityKey getClientGrpcSecurityKey() {
+        return this.clientGrpcSecurityKey;
     }
 }

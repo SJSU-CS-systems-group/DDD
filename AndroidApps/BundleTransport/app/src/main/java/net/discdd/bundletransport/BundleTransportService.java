@@ -1,9 +1,5 @@
 package net.discdd.bundletransport;
 
-import static java.lang.String.format;
-import static net.discdd.AndroidAppConstants.BUNDLE_SERVER_DOMAIN;
-import static net.discdd.AndroidAppConstants.BUNDLE_SERVER_PORT;
-
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -16,28 +12,36 @@ import android.net.ConnectivityManager;
 import android.net.NetworkCapabilities;
 import android.os.Binder;
 import android.os.IBinder;
-
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
 import androidx.lifecycle.Observer;
 import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
+import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.bundletransport.service.DDDWifiServiceEvents;
 import net.discdd.bundletransport.wifi.DDDWifiServer;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.screens.LogFragment;
+import net.discdd.tls.GrpcSecurityKey;
 import net.discdd.transport.TransportToBundleServerManager;
 import net.discdd.util.DDDFixedRateScheduler;
 import net.discdd.utils.UserLogRepository;
+import org.bouncycastle.operator.OperatorCreationException;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.concurrent.CompletableFuture;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.cert.CertificateException;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static java.lang.String.format;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
+import static net.discdd.AndroidAppConstants.BUNDLE_SERVER_DOMAIN;
+import static net.discdd.AndroidAppConstants.BUNDLE_SERVER_PORT;
 
 /**
  * This service handles the Wifi Direct group and the gRPC server.
@@ -101,6 +105,7 @@ public class BundleTransportService extends Service implements BundleExchangeSer
             }
         }
     };
+    public GrpcSecurityKey grpcKeys;
 
     public Future<String> queueServerExchangeNow() {
         return periodicExchangeScheduler.callItNow();
@@ -118,7 +123,7 @@ public class BundleTransportService extends Service implements BundleExchangeSer
         String message;
         try {
             var exchangeCounts =
-                    new TransportToBundleServerManager(transportPaths, host, Integer.toString(port)).doExchange();
+                    new TransportToBundleServerManager(grpcKeys, transportPaths, host, Integer.toString(port)).doExchange();
             message = format("deleted %d bundles, sent %d/%d, received %d/%d",
                              exchangeCounts.deleteCount,
                              exchangeCounts.uploadCount,
@@ -146,8 +151,15 @@ public class BundleTransportService extends Service implements BundleExchangeSer
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
         super.onStartCommand(intent, flags, startId);
+        this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
+        try {
+            this.grpcKeys = new GrpcSecurityKey(transportPaths.grpcSecurityPath, SecurityUtils.SERVER);
+        } catch (InvalidAlgorithmParameterException | NoSuchAlgorithmException | NoSuchProviderException |
+                 CertificateException | OperatorCreationException | IOException e) {
+            logger.log(SEVERE, "Failed to initialize GrpcSecurity for SERVER", e);
+            logExchange(SEVERE, "Failed to initialize GrpcSecurity for SERVER: " + e.getMessage());
+        }
         connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
         // BundleTransportService doesn't use LogFragment directly, but we do want our
         // logs to go to its logger
