@@ -13,7 +13,6 @@ import net.discdd.bundletransport.viewmodels.TransportUsbViewModel
 import net.discdd.pathutils.TransportPaths
 import net.discdd.screens.LogFragment
 import net.discdd.theme.ComposableTheme
-import net.discdd.transport.GrpcSecurityHolder
 import java.util.logging.Logger
 
 class BundleTransportActivity : ComponentActivity() {
@@ -59,12 +58,6 @@ class BundleTransportActivity : ComponentActivity() {
             bindService(serviceIntent!!, TransportServiceManager.connection, BIND_AUTO_CREATE)
         } catch (e: Exception) {
             logger.warning("Failed to start BundleTransportService")
-        }
-
-        try {
-            GrpcSecurityHolder.setGrpcSecurityHolder(transportPaths.grpcSecurityPath)
-        } catch (e: Exception) {
-            logger.severe("Failed to initialize GrpcSecurity for transport")
         }
 
         setContent {

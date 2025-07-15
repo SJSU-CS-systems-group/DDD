@@ -87,11 +87,12 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
         } catch (Exception e) {
             logger.log(SEVERE, "Couldn't generate deletion list", e);
         }
-        responseObserver.onNext(BundleInventoryResponse.newBuilder()
-                                        .addAllBundlesToDelete(deletionList)
-                                        .addAllBundlesToDownload(downloadList)
-                                        .addAllBundlesToUpload(request.getBundlesFromClientsOnTransportList())
-                                        .build());
+        BundleInventoryResponse inventoryResponse = BundleInventoryResponse.newBuilder()
+                .addAllBundlesToDelete(deletionList)
+                .addAllBundlesToDownload(downloadList)
+                .addAllBundlesToUpload(request.getBundlesFromClientsOnTransportList())
+                .build();
+        responseObserver.onNext(inventoryResponse);
         responseObserver.onCompleted();
     }
 

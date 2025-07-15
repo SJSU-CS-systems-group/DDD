@@ -376,8 +376,8 @@ public class BundleTransmission {
                                                         boolean connectingToTransport) throws Exception {
         var sslClientContext = SSLContext.getInstance("TLS");
         var trustManager = new DDDX509ExtendedTrustManager(true);
-        sslClientContext.init(DDDTLSUtil.getKeyManagerFactory(bundleSecurity.getClientGrpcSecurity().getGrpcKeyPair(),
-                                                              bundleSecurity.getClientGrpcSecurity().getGrpcCert())
+        sslClientContext.init(DDDTLSUtil.getKeyManagerFactory(bundleSecurity.getClientGrpcSecurityKey().grpcKeyPair,
+                                                              bundleSecurity.getClientGrpcSecurityKey().grpcCert)
                                       .getKeyManagers(), new TrustManager[] { trustManager }, new SecureRandom());
 
         var channel = OkHttpChannelBuilder.forAddress(transportAddress, port)
@@ -413,9 +413,7 @@ public class BundleTransmission {
                 var bundleRequests = getNextBundles();
                 PublicKeyMap publicKeyMap = PublicKeyMap.newBuilder()
                         .setClientPub(ByteString.copyFrom(clientSecurity.getClientIdentityPublicKey().serialize()))
-                        .setSignedTLSPub(ByteString.copyFrom(clientSecurity.getSignedTLSPub(bundleSecurity.getClientGrpcSecurity()
-                                                                                                    .getGrpcKeyPair()
-                                                                                                    .getPublic())))
+                        .setSignedTLSPub(ByteString.copyFrom(clientSecurity.getSignedTLSPub(bundleSecurity.getClientGrpcSecurityKey().grpcKeyPair.getPublic())))
                         .build();
                 // we don't include the public key map if we are connecting to a transport, since we only authenticate
                 // ourselves to BundleServers not transports

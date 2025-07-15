@@ -21,7 +21,7 @@ import net.discdd.grpc.GetRecencyBlobRequest;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.tls.DDDTLSUtil;
 import net.discdd.tls.DDDX509ExtendedTrustManager;
-import net.discdd.tls.GrpcSecurity;
+import net.discdd.tls.GrpcSecurityKey;
 import net.discdd.utils.Constants;
 
 import javax.net.ssl.SSLContext;
@@ -31,9 +31,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,10 +39,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Stream;
 
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
@@ -58,19 +54,18 @@ public class TransportToBundleServerManager {
     private final Path crashReportsPath;
     private final String serverHost;
     private final int serverPort;
-    private GrpcSecurity transportGrpcSecurity;
+    private final GrpcSecurityKey grpcSecurityKey;
 
-    public TransportToBundleServerManager(TransportPaths transportPaths, String host, String port) {
+    public TransportToBundleServerManager(GrpcSecurityKey grpcSecurityKey,
+                                          TransportPaths transportPaths,
+                                          String host,
+                                          String port) {
+        this.grpcSecurityKey = grpcSecurityKey;
         this.serverHost = host;
         this.serverPort = Integer.parseInt(port);
         this.fromClientPath = transportPaths.toServerPath;
         this.fromServerPath = transportPaths.toClientPath;
         this.crashReportsPath = transportPaths.crashReportPath;
-        try {
-            this.transportGrpcSecurity = GrpcSecurityHolder.getGrpcSecurityHolder();
-        } catch (Exception e) {
-            logger.log(SEVERE, "Failed to get GrpcSecurity instance", e);
-        }
     }
 
     public static class ExchangeResult {
@@ -86,8 +81,8 @@ public class TransportToBundleServerManager {
         ExchangeResult exchangeResult = new ExchangeResult();
         try {
             var sslClientContext = SSLContext.getInstance("TLS");
-            sslClientContext.init(DDDTLSUtil.getKeyManagerFactory(transportGrpcSecurity.getGrpcKeyPair(),
-                                                                  transportGrpcSecurity.getGrpcCert()).getKeyManagers(),
+            sslClientContext.init(DDDTLSUtil.getKeyManagerFactory(grpcSecurityKey.grpcKeyPair, grpcSecurityKey.grpcCert)
+                                          .getKeyManagers(),
                                   new TrustManager[] { new DDDX509ExtendedTrustManager(true) },
                                   new SecureRandom());
 
