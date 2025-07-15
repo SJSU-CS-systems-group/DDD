@@ -60,9 +60,7 @@ public class TransportToBundleServerManager {
     private final int serverPort;
     private GrpcSecurity transportGrpcSecurity;
 
-    public TransportToBundleServerManager(TransportPaths transportPaths,
-                                          String host,
-                                          String port) {
+    public TransportToBundleServerManager(TransportPaths transportPaths, String host, String port) {
         this.serverHost = host;
         this.serverPort = Integer.parseInt(port);
         this.fromClientPath = transportPaths.toServerPath;
@@ -82,6 +80,7 @@ public class TransportToBundleServerManager {
         public int toDownloadCount = 0;
         public int deleteCount = 0;
     }
+
     public ExchangeResult doExchange() throws Exception {
         ManagedChannel channel = null;
         ExchangeResult exchangeResult = new ExchangeResult();
@@ -123,7 +122,8 @@ public class TransportToBundleServerManager {
             exchangeResult.toUploadCount = inventoryResponse.getBundlesToUploadCount();
             exchangeResult.uploadCount = processUploadBundles(inventoryResponse.getBundlesToUploadList(), exchangeStub);
             exchangeResult.toDownloadCount = inventoryResponse.getBundlesToDownloadCount();
-            exchangeResult.downloadCount = processDownloadBundles(inventoryResponse.getBundlesToDownloadList(), exchangeStub);
+            exchangeResult.downloadCount =
+                    processDownloadBundles(inventoryResponse.getBundlesToDownloadList(), exchangeStub);
             processRecencyBlob(blockingExchangeStub);
 
             logger.log(INFO, "Connect server completed");
@@ -155,7 +155,7 @@ public class TransportToBundleServerManager {
     }
 
     private int processDownloadBundles(List<EncryptedBundleId> bundlesToDownloadList,
-                                        BundleExchangeServiceGrpc.BundleExchangeServiceStub exchangeStub) {
+                                       BundleExchangeServiceGrpc.BundleExchangeServiceStub exchangeStub) {
         int downloadCount = 0;
         for (var toReceive : bundlesToDownloadList) {
             var path = fromServerPath.resolve(toReceive.getEncryptedId());
@@ -208,7 +208,7 @@ public class TransportToBundleServerManager {
     }
 
     private int processUploadBundles(List<EncryptedBundleId> bundlesToUploadList,
-                                      BundleExchangeServiceGrpc.BundleExchangeServiceStub exchangeStub) {
+                                     BundleExchangeServiceGrpc.BundleExchangeServiceStub exchangeStub) {
         int uploadCount = 0;
         for (var toSend : bundlesToUploadList) {
             var path = fromClientPath.resolve(toSend.getEncryptedId());

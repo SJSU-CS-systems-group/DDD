@@ -60,8 +60,7 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
 
         manager = new TransportToBundleServerManager(transportPaths,
                                                      "localhost",
-                                                     Integer.toString(BUNDLESERVER_GRPC_PORT)
-                                                    );
+                                                     Integer.toString(BUNDLESERVER_GRPC_PORT));
     }
 
     @BeforeEach

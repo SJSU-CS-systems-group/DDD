@@ -33,17 +33,17 @@ fun UserLogComponent(type: UserLogRepository.UserLogType) {
     val entries = remember(trigger.intValue) {
         UserLogRepository.getRepo(type)
     }
-    ScrollingColumn(showActionButton = entries.isNotEmpty(), onActionClick = {UserLogRepository.clearRepo(type)}) {
+    ScrollingColumn(showActionButton = entries.isNotEmpty(), onActionClick = { UserLogRepository.clearRepo(type) }) {
         for (entry in entries.asReversed()) {
             // format entry.time from milliseconds since epoch to HH:MM:SS
             val timeStr = DATE_FORMAT.format(Date(entry.time))
             Text(
-                text = "$timeStr ${entry.message}",
-                color = when (entry.level) {
-                    Level.SEVERE -> Color.Red
-                    Level.WARNING -> Color.Yellow
-                    else -> Color.Blue
-                }
+                    text = "$timeStr ${entry.message}",
+                    color = when (entry.level) {
+                        Level.SEVERE -> Color.Red
+                        Level.WARNING -> Color.Yellow
+                        else -> Color.Blue
+                    }
             )
         }
     }

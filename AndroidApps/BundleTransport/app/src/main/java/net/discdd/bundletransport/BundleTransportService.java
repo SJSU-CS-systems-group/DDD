@@ -109,7 +109,8 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     private String doServerExchange() {
         var activeNetwork = connectivityManager.getActiveNetwork();
         var caps = activeNetwork == null ? null : connectivityManager.getNetworkCapabilities(activeNetwork);
-        if (caps == null || !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) || !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
+        if (caps == null || !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) ||
+                !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
             return "No internet connection available, skipping server exchange.";
         }
 
@@ -119,11 +120,11 @@ public class BundleTransportService extends Service implements BundleExchangeSer
             var exchangeCounts =
                     new TransportToBundleServerManager(transportPaths, host, Integer.toString(port)).doExchange();
             message = format("deleted %d bundles, sent %d/%d, received %d/%d",
-                                   exchangeCounts.deleteCount,
-                                   exchangeCounts.uploadCount,
-                                   exchangeCounts.toUploadCount,
-                                   exchangeCounts.downloadCount,
-                                   exchangeCounts.toDownloadCount);
+                             exchangeCounts.deleteCount,
+                             exchangeCounts.uploadCount,
+                             exchangeCounts.toUploadCount,
+                             exchangeCounts.downloadCount,
+                             exchangeCounts.toDownloadCount);
             logExchange(INFO, message);
         } catch (Exception e) {
             message = "Error during server exchange: " + e.getMessage();
@@ -135,8 +136,12 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     public static void logWifi(Level level, String message) {
         UserLogRepository.INSTANCE.log(UserLogRepository.UserLogType.WIFI, message, System.currentTimeMillis(), level);
     }
+
     static void logExchange(Level level, String message) {
-        UserLogRepository.INSTANCE.log(UserLogRepository.UserLogType.EXCHANGE, message, System.currentTimeMillis(), level);
+        UserLogRepository.INSTANCE.log(UserLogRepository.UserLogType.EXCHANGE,
+                                       message,
+                                       System.currentTimeMillis(),
+                                       level);
     }
 
     @Override
@@ -156,7 +161,8 @@ public class BundleTransportService extends Service implements BundleExchangeSer
                    "Starting " + BundleTransportService.class.getName() + " with flags " + flags + " and startId " +
                            startId);
         startForeground();
-        logger.log(INFO, "Started " + BundleTransportService.class.getName() + " with flags " + flags + " and startId " +
+        logger.log(INFO,
+                   "Started " + BundleTransportService.class.getName() + " with flags " + flags + " and startId " +
                            startId);
         return START_STICKY;
     }
