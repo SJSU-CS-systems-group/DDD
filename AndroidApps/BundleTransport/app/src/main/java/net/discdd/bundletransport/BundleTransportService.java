@@ -1,5 +1,9 @@
 package net.discdd.bundletransport;
 
+import static java.lang.String.format;
+import static net.discdd.AndroidAppConstants.BUNDLE_SERVER_DOMAIN;
+import static net.discdd.AndroidAppConstants.BUNDLE_SERVER_PORT;
+
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -8,8 +12,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
+import android.net.ConnectivityManager;
+import android.net.NetworkCapabilities;
 import android.os.Binder;
 import android.os.IBinder;
+
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
 import androidx.lifecycle.Observer;
@@ -20,10 +27,13 @@ import net.discdd.pathutils.TransportPaths;
 import net.discdd.screens.LogFragment;
 import net.discdd.transport.TransportToBundleServerManager;
 import net.discdd.util.DDDFixedRateScheduler;
+import net.discdd.utils.UserLogRepository;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
@@ -48,7 +58,8 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     String host;
     int port;
     private TransportPaths transportPaths;
-    final DDDFixedRateScheduler<Void> periodicExchangeScheduler = new DDDFixedRateScheduler<>(this::doServerExchange);
+    final DDDFixedRateScheduler<String> periodicExchangeScheduler = new DDDFixedRateScheduler<>(this::doServerExchange);
+    ConnectivityManager connectivityManager;
     final private SharedPreferences.OnSharedPreferenceChangeListener preferenceChangeListener =
             (sharedPreferences, key) -> {
                 switch (key) {
@@ -64,7 +75,6 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     private DDDWifiServer dddWifiServer;
     final private Observer<? super DDDWifiServer.DDDWifiServerEvent> liveDataObserver = event -> {
         switch (event.type) {
-            case DDDWIFISERVER_MESSAGE -> appendToClientLog(event.data);
             case DDDWIFISERVER_DEVICENAME_CHANGED -> broadcastWifiEvent(event);
             case DDDWIFISERVER_NETWORKINFO_CHANGED -> {
                 if (dddWifiServer == null || dddWifiServer.getNetworkInfo() == null ||
@@ -92,40 +102,61 @@ public class BundleTransportService extends Service implements BundleExchangeSer
         }
     };
 
-    private Void doServerExchange() throws Exception {
-        // TODO: change TransportToBundleServerManager into a Callable to make this all cleaner
-        CompletableFuture<Void> result = new CompletableFuture<>();
-        if (host == null || port == 0) {
-            throw new NullPointerException("host and port has not been set");
+    public Future<String> queueServerExchangeNow() {
+        return periodicExchangeScheduler.callItNow();
+    }
+
+    private String doServerExchange() {
+        var activeNetwork = connectivityManager.getActiveNetwork();
+        var caps = activeNetwork == null ? null : connectivityManager.getNetworkCapabilities(activeNetwork);
+        if (caps == null || !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) || !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
+            return "No internet connection available, skipping server exchange.";
         }
-        new TransportToBundleServerManager(transportPaths, host, Integer.toString(port), v -> {
-            result.complete(null);
-            return null;
-        }, e -> {
-            result.completeExceptionally(e);
-            return null;
-        }).run();
-        return result.get();
+
+        logExchange(INFO, "Starting server exchange with host: " + host + ", port: " + port);
+        String message;
+        try {
+            var exchangeCounts =
+                    new TransportToBundleServerManager(transportPaths, host, Integer.toString(port)).doExchange();
+            message = format("deleted %d bundles, sent %d/%d, received %d/%d",
+                                   exchangeCounts.deleteCount,
+                                   exchangeCounts.uploadCount,
+                                   exchangeCounts.toUploadCount,
+                                   exchangeCounts.downloadCount,
+                                   exchangeCounts.toDownloadCount);
+            logExchange(INFO, message);
+        } catch (Exception e) {
+            message = "Error during server exchange: " + e.getMessage();
+            logExchange(SEVERE, message);
+        }
+        return message;
+    }
+
+    public static void logWifi(Level level, String message) {
+        UserLogRepository.INSTANCE.log(UserLogRepository.UserLogType.WIFI, message, System.currentTimeMillis(), level);
+    }
+    static void logExchange(Level level, String message) {
+        UserLogRepository.INSTANCE.log(UserLogRepository.UserLogType.EXCHANGE, message, System.currentTimeMillis(), level);
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
         super.onStartCommand(intent, flags, startId);
+        connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
         // BundleTransportService doesn't use LogFragment directly, but we do want our
         // logs to go to its logger
         LogFragment.registerLoggerHandler();
         SharedPreferences sharedPreferences = getSharedPreferences(BUNDLETRANSPORT_PREFERENCES, Context.MODE_PRIVATE);
-        host = sharedPreferences.getString(BUNDLETRANSPORT_HOST_PREFERENCE, "");
-        port = sharedPreferences.getInt(BUNDLETRANSPORT_PORT_PREFERENCE, 0);
+        host = sharedPreferences.getString(BUNDLETRANSPORT_HOST_PREFERENCE, BUNDLE_SERVER_DOMAIN);
+        port = sharedPreferences.getInt(BUNDLETRANSPORT_PORT_PREFERENCE, BUNDLE_SERVER_PORT);
         periodicExchangeScheduler.setPeriodInMinutes(sharedPreferences.getInt(BUNDLETRANSPORT_PERIODIC_PREFERENCE, 0));
         sharedPreferences.registerOnSharedPreferenceChangeListener(preferenceChangeListener);
         logger.log(INFO,
                    "Starting " + BundleTransportService.class.getName() + " with flags " + flags + " and startId " +
                            startId);
         startForeground();
-        logger.log(INFO,
-                   "Started " + BundleTransportService.class.getName() + " with flags " + flags + " and startId " +
+        logger.log(INFO, "Started " + BundleTransportService.class.getName() + " with flags " + flags + " and startId " +
                            startId);
         return START_STICKY;
     }
@@ -176,10 +207,10 @@ public class BundleTransportService extends Service implements BundleExchangeSer
                 httpServer = new FileHttpServer(8080, filesDir);
                 httpServer.start();
                 httpServerRunning = true;
-                appendToClientLog("HTTP file server started on port 8080");
+                logExchange(INFO, "HTTP file server started on port 8080");
             } catch (IOException e) {
                 logger.log(SEVERE, "Failed to start HTTP server", e);
-                appendToClientLog("Failed to start HTTP server: " + e.getMessage());
+                logExchange(SEVERE, "Failed to start HTTP server: " + e.getMessage());
             }
         }
     }
@@ -188,17 +219,17 @@ public class BundleTransportService extends Service implements BundleExchangeSer
         if (httpServerRunning && httpServer != null) {
             httpServer.stop();
             httpServerRunning = false;
-            appendToClientLog("HTTP file server stopped");
+            logExchange(INFO, "HTTP file server stopped");
         }
     }
 
     private void startRpcServer() {
         synchronized (grpcServer) {
             if (grpcServer.isShutdown()) {
-                appendToClientLog("Starting gRPC server");
+                logExchange(INFO, "Starting gRPC server");
                 logger.log(INFO, "starting grpc server from main activity!!!!!!!");
                 grpcServer.startServer(this.transportPaths);
-                appendToClientLog("server started");
+                logExchange(INFO, "server started");
             }
         }
     }
@@ -206,22 +237,16 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     private void stopRpcServer() {
         synchronized (grpcServer) {
             if (!grpcServer.isShutdown()) {
-                appendToClientLog("Stopping gRPC server");
+                logExchange(INFO, "Stopping gRPC server");
                 logger.log(INFO, "stopping gRPC server");
                 grpcServer.shutdownServer();
-                appendToClientLog("server stopped");
+                logExchange(INFO, "server stopped");
             }
         }
     }
 
     @Override
     public void onBundleExchangeEvent(BundleExchangeServiceImpl.BundleExchangeEvent exchangeEvent) {
-        appendToClientLog("File service event: " + exchangeEvent);
-    }
-
-    private void appendToClientLog(String message) {
-        DDDWifiServiceEvents.sendEvent(new DDDWifiServer.DDDWifiServerEvent(DDDWifiServer.DDDWifiServerEventType.DDDWIFISERVER_MESSAGE,
-                                                                            message));
     }
 
     private void broadcastWifiEvent(DDDWifiServer.DDDWifiServerEvent event) {

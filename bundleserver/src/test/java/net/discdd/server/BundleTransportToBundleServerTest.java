@@ -60,15 +60,8 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
 
         manager = new TransportToBundleServerManager(transportPaths,
                                                      "localhost",
-                                                     Integer.toString(BUNDLESERVER_GRPC_PORT),
-                                                     (Void) -> {
-                                                         System.out.println("connectComplete");
-                                                         return null;
-                                                     },
-                                                     (Exception e) -> {
-                                                         System.out.println("connectError");
-                                                         return null;
-                                                     });
+                                                     Integer.toString(BUNDLESERVER_GRPC_PORT)
+                                                    );
     }
 
     @BeforeEach
@@ -109,7 +102,7 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
     }
 
     @Test
-    void testRun() throws IOException {
+    void testRun() throws Exception {
         // Create files for upload
         Files.createFile(toServerPath.resolve("bundle1"));
         Files.createFile(toServerPath.resolve("bundle2"));
@@ -125,7 +118,7 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
         Files.createFile(toClientPath.resolve("bundle8"));
         Files.createFile(toClientPath.resolve("bundle9"));
 
-        manager.run();
+        manager.doExchange();
 
         // Verify that the files were deleted after upload, download, and deletion
         assertEquals(0, Files.list(toServerPath).count(), "/server is not empty");

@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.discdd.bundletransport.BundleTransportService
 import net.discdd.bundletransport.R
-import net.discdd.bundletransport.TransportWifiServiceManager
+import net.discdd.bundletransport.TransportServiceManager
 import net.discdd.bundletransport.service.DDDWifiServiceEvents
 import net.discdd.bundletransport.wifi.DDDWifiServer
 import net.discdd.bundletransport.wifi.DDDWifiServer.WifiDirectStatus
@@ -24,7 +24,6 @@ import java.util.logging.Logger
 data class WifiDirectState(
         val deviceName: String = "",
         val wifiInfo: String = "",
-        val clientLog: String = "",
         val wifiStatus: String = "",
 )
 
@@ -33,7 +32,7 @@ class WifiDirectViewModel(
 ) : WifiBannerViewModel(application) {
     private val logger = Logger.getLogger(WifiDirectViewModel::class.java.name)
     private val _state = MutableStateFlow(WifiDirectState())
-    private val btService by lazy { TransportWifiServiceManager.getService() }
+    private val btService by lazy { TransportServiceManager.getService() }
     private var transportPaths: TransportPaths = TransportPaths(context.getExternalFilesDir(null)?.toPath())
     val state = _state.asStateFlow()
 
@@ -45,7 +44,6 @@ class WifiDirectViewModel(
 
             DDDWifiServiceEvents.events.collect { event ->
                 when (event.type) {
-                    DDDWifiServer.DDDWifiServerEventType.DDDWIFISERVER_MESSAGE -> appendToClientLog(event.data)
                     DDDWifiServer.DDDWifiServerEventType.DDDWIFISERVER_DEVICENAME_CHANGED -> processDeviceInfoChange()
                     DDDWifiServer.DDDWifiServerEventType.DDDWIFISERVER_NETWORKINFO_CHANGED -> updateGroupInfo()
                 }
@@ -106,28 +104,6 @@ class WifiDirectViewModel(
                         it.copy(wifiInfo = "SSID: ${ni.ssid}\nPassword: ${ni.password}\nAddress: ${ni.inetAddress}\nConnected devices: ${ni.clientList.size}")
                     }
                 }
-            }
-        }
-    }
-
-    fun appendToClientLog(message: String) {
-        viewModelScope.launch {
-            if (state.value.clientLog.lines().size > 20) {
-                val nl = state.value.clientLog.indexOf('\n')
-                _state.update {
-                    it.copy(clientLog = state.value.clientLog.substring(0, nl))
-                }
-            }
-            _state.update {
-                it.copy(clientLog = state.value.clientLog + message + '\n')
-            }
-        }
-    }
-
-    fun clearClientLog() {
-        viewModelScope.launch {
-            _state.update {
-                it.copy(clientLog = "")
             }
         }
     }

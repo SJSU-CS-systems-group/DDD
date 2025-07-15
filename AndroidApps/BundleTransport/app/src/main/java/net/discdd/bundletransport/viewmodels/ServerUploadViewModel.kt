@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context.MODE_PRIVATE
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -11,8 +12,11 @@ import kotlinx.coroutines.launch
 import net.discdd.AndroidAppConstants
 import net.discdd.pathutils.TransportPaths
 import net.discdd.bundletransport.R
+import net.discdd.bundletransport.TransportServiceManager
+import net.discdd.components.UserLogComponent
 import net.discdd.transport.GrpcSecurityHolder
 import net.discdd.transport.TransportToBundleServerManager
+import net.discdd.utils.UserLogRepository
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.logging.Level
@@ -51,42 +55,27 @@ class ServerUploadViewModel(
     }
 
     fun connectServer() {
-        viewModelScope.launch {
-            if (!state.value.domain.isEmpty() && !state.value.port.isEmpty()) {
-                _state.update { it.copy(message = context.getString(R.string.enter_the_domain_and_port)) }
-                logger.log(Level.INFO, "Sending to " + state.value.domain + ":" + state.value.port + "...\n")
-
+        val exchangeFuture = TransportServiceManager.getService()?.queueServerExchangeNow()
+        if (exchangeFuture == null) {
+            UserLogRepository.log(UserLogRepository.UserLogType.EXCHANGE, "TransportService is not available.", level = Level.SEVERE)
+        } else {
+            viewModelScope.launch {
                 try {
-                    _state.update {
-                        it.copy(message = "Initiating server exchange to " + state.value.domain + ":" + state.value.port + "...\n")
-                    }
-
-                    var transportToBundleServerManager: TransportToBundleServerManager =
-                            TransportToBundleServerManager(transportPaths, state.value.domain, state.value.port,
-                                    { x: Void -> serverConnectComplete() },
-                                    { e: Exception -> serverConnectionError(e, state.value.domain + ":" + state.value.port) })
-                    executor.execute(transportToBundleServerManager)
+                    val message = exchangeFuture.get()
+                    UserLogRepository.log(
+                            UserLogRepository.UserLogType.EXCHANGE,
+                            message
+                    )
+                    reloadCount()
                 } catch (e: Exception) {
-                    _state.update { it.copy(message = context.getString(R.string.bundles_upload_failed)) }
+                    UserLogRepository.log(
+                            UserLogRepository.UserLogType.EXCHANGE,
+                            "Server connection error: ${e.message}",
+                            level = Level.SEVERE
+                    )
                 }
             }
         }
-    }
-
-    fun serverConnectComplete(): Void? {
-        _state.update { it.copy(message = "Server exchange complete.\n") }
-        return null
-    }
-
-    fun serverConnectionError(e: Exception, transportTarget: String): Void? {
-        _state.update {
-            it.copy(
-                    message = "Server exchange incomplete with error.\n" +
-                            "Error: " + e.message + "\n" +
-                            "Invalid hostname: " + transportTarget
-            )
-        }
-        return null
     }
 
     fun reloadCount() {

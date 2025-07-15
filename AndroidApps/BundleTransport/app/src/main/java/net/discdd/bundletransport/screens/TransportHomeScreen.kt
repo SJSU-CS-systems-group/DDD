@@ -37,7 +37,7 @@ import net.discdd.UsbConnectionManager
 import net.discdd.bundletransport.ConnectivityManager
 import net.discdd.components.NotificationBottomSheet
 import net.discdd.bundletransport.R
-import net.discdd.bundletransport.TransportWifiServiceManager
+import net.discdd.bundletransport.TransportServiceManager
 import net.discdd.bundletransport.viewmodels.TransportUsbViewModel
 import net.discdd.screens.LogScreen
 import net.discdd.screens.PermissionScreen
@@ -66,7 +66,7 @@ fun TransportHomeScreen(
     )
     LaunchedEffect(nearbyWifiState.status) {
         if (nearbyWifiState.status.isGranted) {
-            TransportWifiServiceManager.getService()?.wifiPermissionGranted()
+            TransportServiceManager.getService()?.wifiPermissionGranted()
         }
     }
 
@@ -123,7 +123,7 @@ fun TransportHomeScreen(
             title = context.getString(R.string.local_wifi),
             screen = {
                 WifiDirectScreen(
-                        serviceReadyFuture = TransportWifiServiceManager.serviceReady,
+                        serviceReadyFuture = TransportServiceManager.serviceReady,
                         nearbyWifiState = nearbyWifiState
                 )
             }
