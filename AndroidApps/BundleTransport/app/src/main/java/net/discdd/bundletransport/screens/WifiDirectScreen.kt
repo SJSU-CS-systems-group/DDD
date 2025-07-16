@@ -89,27 +89,27 @@ fun WifiDirectScreen(
                 Row {
                     Column {
                         Text(
-                            text = state.wifiInfo,
-                            modifier = Modifier.clickable { showConnectedPeersDialog = true }
+                                text = state.wifiInfo,
+                                modifier = Modifier.clickable { showConnectedPeersDialog = true }
                         )
 
                         if (showConnectedPeersDialog) {
                             val connectedPeers = wifiViewModel.getService()?.dddWifiServer
-                                ?.networkInfo?.clientList ?: emptyList<String>()
+                                    ?.networkInfo?.clientList ?: emptyList<String>()
 
                             AlertDialog(
-                                title = { Text(text = stringResource(R.string.connected_devices)) },
-                                text = { Text(text = connectedPeers.toTypedArray().joinToString(", ")) },
-                                onDismissRequest = { showConnectedPeersDialog = false },
-                                confirmButton = {
-                                    TextButton(
-                                        onClick = {
-                                            showConnectedPeersDialog = false
+                                    title = { Text(text = stringResource(R.string.connected_devices)) },
+                                    text = { Text(text = connectedPeers.toTypedArray().joinToString(", ")) },
+                                    onDismissRequest = { showConnectedPeersDialog = false },
+                                    confirmButton = {
+                                        TextButton(
+                                                onClick = {
+                                                    showConnectedPeersDialog = false
+                                                }
+                                        ) {
+                                            Text(stringResource(R.string.dismiss))
                                         }
-                                    ) {
-                                        Text(stringResource(R.string.dismiss))
                                     }
-                                }
                             )
                         }
 
@@ -121,15 +121,15 @@ fun WifiDirectScreen(
                             Text(text = "Device Name: ${state.deviceName}")
                         } else {
                             Text(
-                                text = stringResource(
-                                    R.string.phone_name_must_start_with_ddd_found,
-                                    state.deviceName
-                                )
+                                    text = stringResource(
+                                            R.string.phone_name_must_start_with_ddd_found,
+                                            state.deviceName
+                                    )
                             )
 
                             FilledTonalButton(
-                                onClick = { wifiViewModel.openInfoSettings() },
-                                modifier = Modifier.fillMaxWidth()
+                                    onClick = { wifiViewModel.openInfoSettings() },
+                                    modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(stringResource(R.string.change_phone_name))
                             }
@@ -138,9 +138,9 @@ fun WifiDirectScreen(
                     state.wifiConnectURL?.let { url ->
                         generateQRCode(url, 500, 500)?.let {
                             Image(
-                                bitmap = it.asImageBitmap(),
-                                contentDescription = "QR Code",
-                                modifier = Modifier.weight(1f).fillMaxWidth(),
+                                    bitmap = it.asImageBitmap(),
+                                    contentDescription = "QR Code",
+                                    modifier = Modifier.weight(1f).fillMaxWidth(),
                             )
                         }
                     }

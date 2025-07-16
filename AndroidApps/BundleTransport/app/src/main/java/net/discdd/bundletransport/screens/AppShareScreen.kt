@@ -44,14 +44,14 @@ import java.net.URL
 
 @Composable
 fun AppShareScreen(
-    viewModel: WifiDirectViewModel = viewModel(),
+        viewModel: WifiDirectViewModel = viewModel(),
 ) {
     val url = "http://192.168.49.1:8080"
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     // APK URLs
     val mailApkUrl =
-        "https://github.com/SJSU-CS-systems-group/DDD-thunderbird-android/releases/latest/download/ddd-mail.apk"
+            "https://github.com/SJSU-CS-systems-group/DDD-thunderbird-android/releases/latest/download/ddd-mail.apk"
     val clientApkUrl = "https://github.com/SJSU-CS-systems-group/DDD/releases/latest/download/DDDClient.apk"
     val mailApkFile = File(context.getExternalFilesDir(null), "ddd-mail.apk")
     val clientApkFile = File(context.getExternalFilesDir(null), "DDDClient.apk")
@@ -74,88 +74,88 @@ fun AppShareScreen(
 
     Surface(color = MaterialTheme.colorScheme.background) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
-            horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier.fillMaxSize().padding(16.dp),
+                verticalArrangement = Arrangement.SpaceBetween,
+                horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Show either download message or QR code
             if (mailApkVersion == null || clientApkVersion == null) {
                 Text(
-                    text = "Download APK files first to enable app sharing",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                        text = "Download APK files first to enable app sharing",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(bottom = 16.dp)
                 )
             } else {
                 wifiConnectURL?.let { connectUrl ->
                     Text(
-                        text = "QR code to connect your phone to this transport",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(bottom = 16.dp)
+                            text = "QR code to connect your phone to this transport",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(bottom = 16.dp)
 
                     )
                     generateQRCode(connectUrl, 200, 200)?.let { qrCodeBitmap ->
                         Image(
-                            bitmap = qrCodeBitmap.asImageBitmap(),
-                            contentDescription = "QR Code",
-                            modifier = Modifier.size(200.dp)
+                                bitmap = qrCodeBitmap.asImageBitmap(),
+                                contentDescription = "QR Code",
+                                modifier = Modifier.size(200.dp)
                         )
                         Text(
-                            text = "QR code to download DDD client and mail apps",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(bottom = 16.dp)
+                                text = "QR code to download DDD client and mail apps",
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.padding(bottom = 16.dp)
                         )
                     }
 
                 }
-                    ?: Text(
-                        text = "Wifi Direct is not available.",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
+                        ?: Text(
+                                text = "Wifi Direct is not available.",
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.padding(bottom = 16.dp)
+                        )
             }
 
             // it seems a bit strange to put the button in the middle of the screen, but it separates
             // the QR codes more and makes them easier to scan
             Button(
-                onClick = {
-                    isDownloadingMail = true
-                    isDownloadingClient = true
-                    scope.launch {
-                        try {
-                            downloadFile(
-                                context,
-                                mailApkUrl,
-                            ) { progress ->
-                                downloadMailProgress = progress
+                    onClick = {
+                        isDownloadingMail = true
+                        isDownloadingClient = true
+                        scope.launch {
+                            try {
+                                downloadFile(
+                                        context,
+                                        mailApkUrl,
+                                ) { progress ->
+                                    downloadMailProgress = progress
+                                }
+                                mailApkVersion = getApkVersionInfo(context, mailApkFile)
+                                downloadMailStatus = getApkStatus(mailApkFile, mailApkVersion)
+                            } catch (e: Exception) {
+                                downloadMailStatus = "Error: ${e.message}"
+                            } finally {
+                                isDownloadingMail = false
                             }
-                            mailApkVersion = getApkVersionInfo(context, mailApkFile)
-                            downloadMailStatus = getApkStatus(mailApkFile, mailApkVersion)
-                        } catch (e: Exception) {
-                            downloadMailStatus = "Error: ${e.message}"
-                        } finally {
-                            isDownloadingMail = false
                         }
-                    }
-                    scope.launch {
-                        try {
-                            downloadFile(
-                                context,
-                                clientApkUrl,
-                            ) { progress ->
-                                downloadClientProgress = progress
+                        scope.launch {
+                            try {
+                                downloadFile(
+                                        context,
+                                        clientApkUrl,
+                                ) { progress ->
+                                    downloadClientProgress = progress
+                                }
+                                clientApkVersion = getApkVersionInfo(context, clientApkFile)
+                                downloadClientStatus = getApkStatus(clientApkFile, clientApkVersion)
+                            } catch (e: Exception) {
+                                downloadClientStatus = "Error: ${e.message}"
+                            } finally {
+                                isDownloadingClient = false
                             }
-                            clientApkVersion = getApkVersionInfo(context, clientApkFile)
-                            downloadClientStatus = getApkStatus(clientApkFile, clientApkVersion)
-                        } catch (e: Exception) {
-                            downloadClientStatus = "Error: ${e.message}"
-                        } finally {
-                            isDownloadingClient = false
                         }
-                    }
-                }, enabled = !isDownloadingMail && !isDownloadingClient
+                    }, enabled = !isDownloadingMail && !isDownloadingClient
             ) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(Icons.Default.ArrowDropDown, contentDescription = "Download")
                     Text("Download DDD APKs")
@@ -164,43 +164,43 @@ fun AppShareScreen(
 
             if (isDownloadingMail) {
                 LinearProgressIndicator(
-                    progress = { downloadMailProgress }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                        progress = { downloadMailProgress }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
                 )
             } else {
                 Text(
-                    text = downloadMailStatus,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (downloadMailStatus.contains("Error")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                        text = downloadMailStatus,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (downloadMailStatus.contains("Error")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                 )
             }
 
             if (isDownloadingClient) {
                 LinearProgressIndicator(
-                    progress = { downloadClientProgress }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                        progress = { downloadClientProgress }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
                 )
             } else {
                 Text(
-                    text = downloadClientStatus,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (downloadClientStatus.contains("Error")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                        text = downloadClientStatus,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (downloadClientStatus.contains("Error")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                 )
             }
-        if (wifiConnectURL != null) {
-            qrBitmap?.let {
-                Image(
-                    bitmap = it.asImageBitmap(),
-                    contentDescription = "QR Code",
-                    modifier = Modifier.size(200.dp)
-                )
-            }
+            if (wifiConnectURL != null) {
+                qrBitmap?.let {
+                    Image(
+                            bitmap = it.asImageBitmap(),
+                            contentDescription = "QR Code",
+                            modifier = Modifier.size(200.dp)
+                    )
+                }
 
-            Text(
-                text = url,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(top = 16.dp)
-            )
-        }
+                Text(
+                        text = url,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 16.dp)
+                )
             }
+        }
     }
 }
 
