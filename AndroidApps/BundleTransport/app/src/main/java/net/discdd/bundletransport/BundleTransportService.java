@@ -247,7 +247,7 @@ public class BundleTransportService extends Service implements BundleExchangeSer
         synchronized (grpcServer) {
             if (grpcServer.isShutdown()) {
                 logExchange(INFO, "Starting gRPC server");
-                logger.log(INFO, "starting grpc server from main activity!!!!!!!");
+                logger.log(INFO, "starting grpc server");
                 grpcServer.startServer(this.transportPaths);
                 logExchange(INFO, "server started");
             }

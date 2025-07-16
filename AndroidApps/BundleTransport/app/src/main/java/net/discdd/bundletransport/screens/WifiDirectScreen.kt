@@ -4,8 +4,10 @@ import android.Manifest
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.AlertDialog
@@ -24,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -35,6 +38,7 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import net.discdd.bundletransport.BundleTransportService
 import net.discdd.bundletransport.R
+import net.discdd.bundletransport.utils.generateQRCode
 import net.discdd.bundletransport.viewmodels.WifiDirectViewModel
 import net.discdd.components.UserLogComponent
 import net.discdd.components.WifiPermissionBanner
@@ -50,7 +54,7 @@ fun WifiDirectScreen(
 ) {
     val state by wifiViewModel.state.collectAsState()
     val numDenied by wifiViewModel.numDenied.collectAsState()
-    var showDialog by remember { mutableStateOf(false) }
+    var showConnectedPeersDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     Surface(
@@ -82,52 +86,65 @@ fun WifiDirectScreen(
                     }
                 }
 
-                Text(
-                        text = state.wifiInfo,
-                        modifier = Modifier.clickable { showDialog = true }
-                )
+                Row {
+                    Column {
+                        Text(
+                            text = state.wifiInfo,
+                            modifier = Modifier.clickable { showConnectedPeersDialog = true }
+                        )
 
-                if (showDialog) {
-                    val connectedPeers = wifiViewModel.getService()?.dddWifiServer
-                            ?.networkInfo?.clientList ?: emptyList<String>()
+                        if (showConnectedPeersDialog) {
+                            val connectedPeers = wifiViewModel.getService()?.dddWifiServer
+                                ?.networkInfo?.clientList ?: emptyList<String>()
 
-                    AlertDialog(
-                            title = { Text(text = stringResource(R.string.connected_devices)) },
-                            text = { Text(text = connectedPeers.toTypedArray().joinToString(", ")) },
-                            onDismissRequest = { showDialog = false },
-                            confirmButton = {
-                                TextButton(
+                            AlertDialog(
+                                title = { Text(text = stringResource(R.string.connected_devices)) },
+                                text = { Text(text = connectedPeers.toTypedArray().joinToString(", ")) },
+                                onDismissRequest = { showConnectedPeersDialog = false },
+                                confirmButton = {
+                                    TextButton(
                                         onClick = {
-                                            showDialog = false
+                                            showConnectedPeersDialog = false
                                         }
-                                ) {
-                                    Text(stringResource(R.string.dismiss))
+                                    ) {
+                                        Text(stringResource(R.string.dismiss))
+                                    }
                                 }
+                            )
+                        }
+
+                        Text(text = "Wifi Status: ${state.wifiStatus}")
+
+                        // only show the name change button if we don't have a valid device name
+                        // (transports must have device names starting with ddd_)
+                        if (nameValid) {
+                            Text(text = "Device Name: ${state.deviceName}")
+                        } else {
+                            Text(
+                                text = stringResource(
+                                    R.string.phone_name_must_start_with_ddd_found,
+                                    state.deviceName
+                                )
+                            )
+
+                            FilledTonalButton(
+                                onClick = { wifiViewModel.openInfoSettings() },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(stringResource(R.string.change_phone_name))
                             }
-                    )
-                }
-
-                Text(text = "Wifi Status: ${state.wifiStatus}")
-
-                // only show the name change button if we don't have a valid device name
-                // (transports must have device names starting with ddd_)
-                if (nameValid) {
-                    Text(text = "Device Name: ${state.deviceName}")
-                } else {
-                    Text(text = stringResource(
-                            R.string.phone_name_must_start_with_ddd_found,
-                            state.deviceName
-                    ))
-
-                    FilledTonalButton(
-                            onClick = { wifiViewModel.openInfoSettings() },
-                            modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(stringResource(R.string.change_phone_name))
+                        }
+                    }
+                    state.wifiConnectURL?.let { url ->
+                        generateQRCode(url, 500, 500)?.let {
+                            Image(
+                                bitmap = it.asImageBitmap(),
+                                contentDescription = "QR Code",
+                                modifier = Modifier.weight(1f).fillMaxWidth(),
+                            )
+                        }
                     }
                 }
-
-                UserLogComponent(UserLogRepository.UserLogType.WIFI)
             } else {
                 Text(text = stringResource(
                         R.string.Wifi_disabled
@@ -140,6 +157,8 @@ fun WifiDirectScreen(
                     Text("Open Wifi Settings")
                 }
             }
+
+            UserLogComponent(UserLogRepository.UserLogType.WIFI)
         }
     }
 }
