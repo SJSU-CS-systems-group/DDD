@@ -99,6 +99,7 @@ fun AppShareScreen() {
                                 mailApkVersion = getApkVersionInfo(context, mailApkFile)
                                 downloadMailStatus = getApkStatus(mailApkFile, mailApkVersion)
                             } catch (e: Exception) {
+                                //TODO: if we arent connected a network, request to connect
                                 downloadMailStatus = "Error: ${e.message}"
                             } finally {
                                 isDownloadingMail = false
