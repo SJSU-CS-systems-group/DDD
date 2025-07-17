@@ -83,7 +83,8 @@ class TransportUsbViewModel(
     fun transportTransferToUsb(context: Context) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                // TODO: Get APK from external? internal? path
+                val mailApkFile = File(context.getExternalFilesDir(null), "ddd-mail.apk")
+                val clientApkFile = File(context.getExternalFilesDir(null), "DDDClient.apk")
                 val sourceDir = transportPaths.toClientPath.toFile()
                 val currentUsbDir = usbDirectory
                 if (currentUsbDir == null) {
@@ -92,7 +93,10 @@ class TransportUsbViewModel(
                     return@withContext
                 }
                 val destinationDir = createIfDoesNotExist(currentUsbDir, "toClient")
-                val bundlesToTransfer: List<File> = sourceDir.walk().filter(File::isFile).toList()
+                val bundlesToTransfer: MutableList<File> = sourceDir.walk().filter(File::isFile).toList().toMutableList()
+                //val bundlesToTransfer: MutableList<File> = sourceDir.walk().filter(File::isFile).toList() as MutableList<File>
+                bundlesToTransfer.add(mailApkFile)
+                bundlesToTransfer.add(clientApkFile)
                 if (bundlesToTransfer.isEmpty()) {
                     logger.log(INFO, "No files found in 'toClient' directory on Transport Device")
                     appendMessage("No files found in 'toClient' directory on Transport Device", Color.YELLOW)
@@ -105,6 +109,7 @@ class TransportUsbViewModel(
                             context.contentResolver.openOutputStream(targetFile.uri)?.use { outputStream ->
                                 Files.newInputStream(bundle.toPath())?.use { inputStream ->
                                     appendMessage("Copying from: ${bundle} to ${targetFile.uri}", Color.RED)
+                                    logger.log(INFO, "Copying from: ${bundle} to ${targetFile.uri}")
                                     inputStream.copyTo(outputStream)
                                 }
                             }
