@@ -1,8 +1,12 @@
 package net.discdd.bundletransport.screens
 
 import android.Manifest
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.net.Uri
+import android.net.wifi.WifiManager
 import android.provider.Settings
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -18,6 +22,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -56,6 +61,11 @@ fun WifiDirectScreen(
     val numDenied by wifiViewModel.numDenied.collectAsState()
     var showConnectedPeersDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+    val wifiState = remember { mutableStateOf(wifiManager.isWifiEnabled) }
+    WifiStateObserver { enabled ->
+        wifiState.value = enabled
+    }
 
     Surface(
             modifier = Modifier.fillMaxSize(),
@@ -66,7 +76,7 @@ fun WifiDirectScreen(
         }
 
         Column {
-            if (wifiViewModel.isWifiEnabled()) {
+            if (wifiState.value) {
                 val nameValid by remember {
                     derivedStateOf { state.deviceName.startsWith("ddd_") }
                 }
@@ -162,6 +172,36 @@ fun WifiDirectScreen(
         }
     }
 }
+
+@Composable
+fun WifiStateObserver(
+    onWifiStateChanged: (Boolean) -> Unit
+) {
+    val context = LocalContext.current
+
+    DisposableEffect(Unit) {
+        val wifiReceiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
+                if (intent?.action == WifiManager.WIFI_STATE_CHANGED_ACTION) {
+                    val state = intent.getIntExtra(
+                        WifiManager.EXTRA_WIFI_STATE,
+                        WifiManager.WIFI_STATE_UNKNOWN
+                    )
+                    onWifiStateChanged(state == WifiManager.WIFI_STATE_ENABLED)
+                }
+            }
+        }
+
+        val filter = IntentFilter(WifiManager.WIFI_STATE_CHANGED_ACTION)
+        context.registerReceiver(wifiReceiver, filter)
+
+        // Cleanup when the Composable leaves the composition
+        onDispose {
+            context.unregisterReceiver(wifiReceiver)
+        }
+    }
+}
+
 
 @Preview(showBackground = true)
 @OptIn(ExperimentalPermissionsApi::class)

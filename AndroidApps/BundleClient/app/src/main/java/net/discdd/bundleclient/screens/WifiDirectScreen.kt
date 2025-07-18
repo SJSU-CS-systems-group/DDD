@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -32,7 +31,9 @@ import net.discdd.bundleclient.service.BundleClientService
 import net.discdd.bundleclient.viewmodels.PeerDevice
 import net.discdd.bundleclient.viewmodels.WifiDirectViewModel
 import net.discdd.components.EasterEgg
+import net.discdd.components.UserLogComponent
 import net.discdd.components.WifiPermissionBanner
+import net.discdd.utils.UserLogRepository
 import java.util.concurrent.CompletableFuture
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
@@ -91,8 +92,7 @@ fun WifiDirectScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
 
         ) {
@@ -189,20 +189,7 @@ fun WifiDirectScreen(
             PeersList(
                 viewModel = viewModel
             )
-            Box {
-                Text(text = state.resultText)
-                if (state.resultText.isNotBlank()) {
-                    FloatingActionButton(
-                        onClick = { viewModel.clearResultLogs() },
-                        modifier = Modifier.align(Alignment.BottomEnd)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = stringResource(id = R.string.delete_logs)
-                        )
-                    }
-                }
-            }
+            UserLogComponent(UserLogRepository.UserLogType.WIFI)
         }
     }
 }

@@ -6,11 +6,12 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
-import androidx.annotation.RequiresPermission;
+import androidx.core.app.ActivityCompat;
 import net.discdd.bundletransport.BundleTransportService;
 import net.discdd.bundletransport.service.DDDWifiServiceEvents;
 
@@ -18,9 +19,12 @@ import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -28,6 +32,7 @@ import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_AC
 import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION;
 import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION;
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
 public class DDDWifiServer {
@@ -39,14 +44,18 @@ public class DDDWifiServer {
     private WifiP2pGroup wifiGroup;
     private String deviceName;
     private WifiDirectBroadcastReceiver receiver;
-    private boolean wifiDirectEnabled;
+
     private WifiDirectStatus status = WifiDirectStatus.UNDEFINED;
 
+    @SuppressLint("MissingPermission")
     public void wifiPermissionGranted() {
         if (channel == null) {
             initialize();
         } else if (wifiGroup == null) {
-            createGroup();
+            // we need to reregister things with the new permission
+            unregisterWifiIntentReceiver();
+            registerWifiIntentReceiver();
+            wifiP2pManager.requestDeviceInfo(channel, this::processDeviceInfo);
         }
     }
 
@@ -83,8 +92,9 @@ public class DDDWifiServer {
         return new DDDWifiNetworkInfo(wifiGroup.getNetworkName(), wifiGroup.getPassphrase(), inetAddress, clientList);
     }
 
-    // TODO
-    public void shutdown() {}
+    public void shutdown() {
+        unregisterWifiIntentReceiver();
+    }
 
     public String getDeviceName() {
         return deviceName;
@@ -104,7 +114,7 @@ public class DDDWifiServer {
     public void initialize() {
         this.wifiP2pManager = (WifiP2pManager) this.context.getSystemService(Context.WIFI_P2P_SERVICE);
         if (wifiP2pManager == null) {
-            logger.log(INFO, "Cannot get Wi-Fi system service");
+            logger.log(SEVERE, "Cannot get Wi-Fi system service");
         } else {
             this.channel =
                     this.wifiP2pManager.initialize(this.context, this.context.getMainLooper(), this::sendStateChange);
@@ -115,16 +125,20 @@ public class DDDWifiServer {
         }
 
         this.receiver = new WifiDirectBroadcastReceiver();
-        registerWifiIntentReceiver();
-        wifiP2pManager.requestDeviceInfo(channel, this::processDeviceInfo);
-
+        if (hasPermission()) {
+            registerWifiIntentReceiver();
+            wifiP2pManager.requestDeviceInfo(channel, this::processDeviceInfo);
+        }
     }
 
+    AtomicBoolean intentRegistered = new AtomicBoolean(false);
     public void unregisterWifiIntentReceiver() {
+        if (!intentRegistered.getAndSet(false)) return;
         context.unregisterReceiver(receiver);
     }
 
     public void registerWifiIntentReceiver() {
+        if (intentRegistered.getAndSet(true)) return;
         context.registerReceiver(receiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
     }
 
@@ -132,10 +146,19 @@ public class DDDWifiServer {
         return status;
     }
 
+    private boolean hasPermission() {
+        var rc = ActivityCompat.checkSelfPermission(this.context, Manifest.permission.ACCESS_FINE_LOCATION) ==
+                PackageManager.PERMISSION_GRANTED ||
+                ActivityCompat.checkSelfPermission(this.context, Manifest.permission.NEARBY_WIFI_DEVICES) ==
+                        PackageManager.PERMISSION_GRANTED;
+        return rc;
+    }
+
     @SuppressLint("MissingPermission")
     public CompletableActionListener createGroup() {
         var cal = new CompletableActionListener();
-        this.wifiP2pManager.createGroup(this.channel, cal);
+        if (hasPermission()) this.wifiP2pManager.createGroup(this.channel, cal);
+        else cal.complete(OptionalInt.of(WifiP2pManager.P2P_UNSUPPORTED));
         return cal;
     }
 
@@ -187,6 +210,9 @@ public class DDDWifiServer {
             this.type = type;
             this.data = data;
         }
+        public String toString() {
+            return type + (data == null ? "" : ": " + data);
+        }
     }
 
     public static class DDDWifiNetworkInfo {
@@ -235,9 +261,7 @@ public class DDDWifiServer {
          * @param intent  Intent object containing triggered action.
          * @noinspection deprecation, deprecation
          */
-
-        @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION,
-                                      Manifest.permission.NEARBY_WIFI_DEVICES })
+        @SuppressLint("MissingPermission")
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
@@ -249,11 +273,11 @@ public class DDDWifiServer {
                         var state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1);
                         if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
                             logger.log(INFO, "WifiDirect enabled");
-                            wifiDirectEnabled = true;
-                            wifiP2pManager.requestDeviceInfo(channel, DDDWifiServer.this::processDeviceInfo);
+                            if (hasPermission()) {
+                                wifiP2pManager.requestDeviceInfo(channel, DDDWifiServer.this::processDeviceInfo);
+                            }
                         } else {
                             logger.log(INFO, "WifiDirect not enabled");
-                            wifiDirectEnabled = false;
                         }
                         sendStateChange();
                     }
@@ -265,16 +289,34 @@ public class DDDWifiServer {
                         //         EXTRA_WIFI_P2P_GROUP provides the details of the group and
                         //         may contain a null
                         var conInfo = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_INFO, WifiP2pInfo.class);
-                        DDDWifiServer.this.wifiGroup =
+                        var oldGroup = DDDWifiServer.this.wifiGroup;
+                        var newGroup =
                                 intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP, WifiP2pGroup.class);
 
-                        BundleTransportService.logWifi(INFO,
-                                                       "Group info: " + (DDDWifiServer.this.wifiGroup == null ?
-                                                                         "N/A" :
-                                                                         DDDWifiServer.this.wifiGroup.getClientList()
-                                                                                 .stream()
-                                                                                 .map(d -> d.deviceName)
-                                                                                 .collect(Collectors.joining(", "))));
+                        if (newGroup == null)  {
+                            if (oldGroup != null) {
+                                BundleTransportService.logWifi(INFO, "Lost group: " + oldGroup.getNetworkName());
+                            }
+                        } else {
+                            if (oldGroup == null || !oldGroup.getNetworkName().equals(newGroup.getNetworkName())) {
+                                BundleTransportService.logWifi(INFO, "New group: " + newGroup.getNetworkName());
+                            }
+                            var newClientList = newGroup.getClientList().stream().map(w -> w.deviceName).collect(
+                                    Collectors.toSet());
+                            var origNewClientList = new HashSet<>(newClientList);
+                            var oldClientList = oldGroup == null ? Collections.<String>emptySet() :
+                                                oldGroup.getClientList().stream().map(w -> w.deviceName).collect(
+                                                        Collectors.toSet());
+                            newClientList.removeAll(oldClientList);
+                            oldClientList.removeAll(origNewClientList);
+                            if (!newClientList.isEmpty()) {
+                                BundleTransportService.logWifi(INFO, "New clients: " + String.join(", ", newClientList));
+                            }
+                            if (!oldClientList.isEmpty()) {
+                                BundleTransportService.logWifi(INFO, "Lost clients: " + String.join(", ", oldClientList));
+                            }
+                        }
+                        DDDWifiServer.this.wifiGroup = newGroup;
                         sendStateChange();
                     }
                     case WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> processDeviceInfo(intent.getParcelableExtra(

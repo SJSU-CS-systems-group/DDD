@@ -2,7 +2,6 @@ package net.discdd.bundletransport.viewmodels
 
 import android.app.Application
 import android.content.Intent
-import android.net.wifi.WifiManager
 import android.provider.Settings
 import androidx.core.content.ContextCompat.startActivity
 import androidx.lifecycle.viewModelScope
@@ -89,7 +88,6 @@ class WifiDirectViewModel(
                             WifiDirectStatus.FAILED -> context.getString(R.string.failed)
                             WifiDirectStatus.AVAILABLE -> context.getString(R.string.available)
                             WifiDirectStatus.UNAVAILABLE -> context.getString(R.string.unavailable)
-                            else -> "Unavailable"
                         }
                 )
             }
@@ -121,10 +119,5 @@ class WifiDirectViewModel(
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         startActivity(context, intent, null)
-    }
-
-    fun isWifiEnabled(): Boolean {
-        val wifiManager = context.applicationContext.getSystemService(Application.WIFI_SERVICE) as WifiManager
-        return wifiManager.isWifiEnabled
     }
 }
