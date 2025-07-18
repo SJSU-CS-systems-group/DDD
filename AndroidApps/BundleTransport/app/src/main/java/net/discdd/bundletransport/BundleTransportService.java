@@ -77,34 +77,7 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     private FileHttpServer httpServer;
     private boolean httpServerRunning = false;
     private DDDWifiServer dddWifiServer;
-    final private Observer<? super DDDWifiServer.DDDWifiServerEvent> liveDataObserver = event -> {
-        switch (event.type) {
-            case DDDWIFISERVER_DEVICENAME_CHANGED -> broadcastWifiEvent(event);
-            case DDDWIFISERVER_NETWORKINFO_CHANGED -> {
-                if (dddWifiServer == null || dddWifiServer.getNetworkInfo() == null ||
-                        dddWifiServer.getNetworkInfo().inetAddress == null) {
-                    if (notificationManager != null) {
-                        notificationManager.cancel(1001);
-                    }
-                } else {
-                    NotificationChannel channel = new NotificationChannel("DDD-Exchange",
-                                                                          "DDD Bundle Transport",
-                                                                          NotificationManager.IMPORTANCE_HIGH);
-                    channel.setDescription("Initiating Bundle Exchange...");
 
-                    NotificationCompat.Builder builder = new NotificationCompat.Builder(this,
-                                                                                        "DDD-Transport").setSmallIcon(R.drawable.bundletransport_icon)
-                            .setContentTitle(getString(R.string.exchanging_with_client))
-                            .setContentText(getString(R.string.initiating_bundle_exchange))
-                            .setPriority(NotificationCompat.PRIORITY_HIGH)
-                            .setAutoCancel(false)
-                            .setOngoing(true);
-                    notificationManager.notify(1001, builder.build());
-                }
-                broadcastWifiEvent(event);
-            }
-        }
-    };
     public GrpcSecurityKey grpcKeys;
 
     public Future<String> queueServerExchangeNow() {

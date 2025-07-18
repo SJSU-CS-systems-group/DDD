@@ -23,4 +23,6 @@ public interface DDDWifi {
     void shutdown();
 
     LiveData<DDDWifiEventType> getEventLiveData();
+
+    void wifiPermissionGranted();
 }

@@ -19,10 +19,7 @@ public class BundleClientServiceBroadcastReceiver extends BroadcastReceiver {
 
         var action = intent.getAction();
         if (action == null) return;
-        if (action.equals(BundleClientService.NET_DISCDD_BUNDLECLIENT_LOG_ACTION)) {
-            String message = intent.getStringExtra("message");
-            viewModel.appendResultText(message);
-        } else if (action.equals(BundleClientService.NET_DISCDD_BUNDLECLIENT_WIFI_ACTION)) {
+        if (action.equals(BundleClientService.NET_DISCDD_BUNDLECLIENT_WIFI_ACTION)) {
             // we might be betting a wifi event or an event about a transmission.
             // we distinguish them by the presence of a specific extra.
             var wifiEvent = intent.getSerializableExtra(BundleClientService.DDDWIFI_EVENT_EXTRA,

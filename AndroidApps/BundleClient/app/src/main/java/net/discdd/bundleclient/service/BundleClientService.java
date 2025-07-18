@@ -1,10 +1,5 @@
 package net.discdd.bundleclient.service;
 
-import static java.lang.String.format;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
-
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Notification;
@@ -21,7 +16,6 @@ import android.net.Uri;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
-
 import android.os.Looper;
 import android.widget.Toast;
 import androidx.annotation.Nullable;
@@ -30,17 +24,17 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
 import androidx.lifecycle.Observer;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-
 import net.discdd.bundleclient.R;
 import net.discdd.bundleclient.service.wifiDirect.DDDWifiDirect;
 import net.discdd.client.bundlesecurity.BundleSecurity;
 import net.discdd.client.bundletransmission.BundleTransmission;
-import net.discdd.client.bundletransmission.BundleTransmission.Statuses;
 import net.discdd.client.bundletransmission.BundleTransmission.BundleExchangeCounts;
+import net.discdd.client.bundletransmission.BundleTransmission.Statuses;
 import net.discdd.client.bundletransmission.TransportDevice;
 import net.discdd.datastore.providers.MessageProvider;
 import net.discdd.model.ADU;
 import net.discdd.pathutils.ClientPaths;
+import net.discdd.utils.UserLogRepository;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -49,18 +43,20 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.logging.Logger;
+
+import static java.lang.String.format;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 // the service is usually formatting messages for the log rather than users, so don't complain about locales
 @SuppressLint("DefaultLocale")
 public class BundleClientService extends Service {
-    public static final String NET_DISCDD_BUNDLECLIENT_LOG_ACTION = "net.discdd.bundleclient.CLIENT_LOG";
     public static final String NET_DISCDD_BUNDLECLIENT_WIFI_ACTION = "net.discdd.bundleclient.WIFI_EVENT";
     public static final String NET_DISCDD_BUNDLECLIENT_SETTINGS = "net.discdd.bundleclient";
     public static final String DDDWIFI_EVENT_EXTRA = "DDDWifiEvent";
@@ -290,9 +286,8 @@ public class BundleClientService extends Service {
             handler.post(() -> Toast.makeText(getApplicationContext(), text, Toast.LENGTH_LONG).show());
             return currentBundle;
         } catch (Throwable e) {
-            broadcastBundleClientLogEvent(e.getLocalizedMessage());
             logger.log(WARNING, e.getMessage(), e);
-
+            broadcastBundleClientLogEvent("Could not start exchange: " + e.getLocalizedMessage());
         } finally {
             try {
                 if (connection != null) {
@@ -318,9 +313,7 @@ public class BundleClientService extends Service {
     }
 
     private void broadcastBundleClientLogEvent(String message) {
-        var intent = new Intent(NET_DISCDD_BUNDLECLIENT_LOG_ACTION);
-        intent.putExtra("message", message);
-        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+        UserLogRepository.INSTANCE.log(UserLogRepository.UserLogType.WIFI, message, System.currentTimeMillis(), INFO);
     }
 
     /**
@@ -447,6 +440,10 @@ public class BundleClientService extends Service {
         // expire peers that haven't been seen for a minute
         long expirationTime = System.currentTimeMillis() - 60 * 1000;
         bundleTransmission.expireNotSeenPeers(expirationTime);
+    }
+
+    public void wifiPermissionGranted() {
+        dddWifi.wifiPermissionGranted();
     }
 
     public enum BundleClientTransmissionEventType {
