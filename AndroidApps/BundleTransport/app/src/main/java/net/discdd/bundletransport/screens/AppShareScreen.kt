@@ -19,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -48,29 +49,14 @@ fun AppShareScreen(
 ) {
     val url = "http://192.168.49.1:8080"
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    // APK URLs
-    val mailApkUrl =
-            "https://github.com/SJSU-CS-systems-group/DDD-thunderbird-android/releases/latest/download/ddd-mail.apk"
-    val clientApkUrl = "https://github.com/SJSU-CS-systems-group/DDD/releases/latest/download/DDDClient.apk"
     val mailApkFile = File(context.getExternalFilesDir(null), "ddd-mail.apk")
     val clientApkFile = File(context.getExternalFilesDir(null), "DDDClient.apk")
-    var mailApkVersion by remember { mutableStateOf(getApkVersionInfo(context, mailApkFile)) }
-    var clientApkVersion by remember { mutableStateOf(getApkVersionInfo(context, clientApkFile)) }
-
-    // Download states
-    var isDownloadingMail by remember { mutableStateOf(false) }
-    var isDownloadingClient by remember { mutableStateOf(false) }
-    var downloadMailProgress by remember { mutableFloatStateOf(0f) }
-    var downloadClientProgress by remember { mutableFloatStateOf(0f) }
-    var downloadMailStatus by remember { mutableStateOf(getApkStatus(mailApkFile, mailApkVersion)) }
-    var downloadClientStatus by remember { mutableStateOf(getApkStatus(clientApkFile, clientApkVersion)) }
-
     // Generate QR code bitmap
-    val qrBitmap = remember {
+    val downloadQrBitmap = remember {
         generateQRCode(url, 300, 300)
     }
     val wifiConnectURL = viewModel.state.collectAsState().value.wifiConnectURL
+    val appsAvailable = remember { mutableStateOf(mailApkFile.exists() || clientApkFile.exists()) }
 
     Surface(color = MaterialTheme.colorScheme.background) {
         Column(
@@ -79,127 +65,157 @@ fun AppShareScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Show either download message or QR code
-            if (mailApkVersion == null || clientApkVersion == null) {
+            if (wifiConnectURL == null) {
                 Text(
+                    text = "Wifi Direct is not available.",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+            } else {
+                if (!appsAvailable.value) {
+                    Text(
                         text = "Download APK files first to enable app sharing",
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(bottom = 16.dp)
-                )
-            } else {
-                wifiConnectURL?.let { connectUrl ->
+                    )
+                } else {
                     Text(
-                            text = "QR code to connect your phone to this transport",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(bottom = 16.dp)
+                        text = "QR code to connect your phone to this transport",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(bottom = 16.dp)
 
                     )
-                    generateQRCode(connectUrl, 200, 200)?.let { qrCodeBitmap ->
+                    generateQRCode(wifiConnectURL, 200, 200)?.let { wifiQrCodeBitmap ->
                         Image(
-                                bitmap = qrCodeBitmap.asImageBitmap(),
-                                contentDescription = "QR Code",
-                                modifier = Modifier.size(200.dp)
-                        )
-                        Text(
-                                text = "QR code to download DDD client and mail apps",
-                                style = MaterialTheme.typography.titleMedium,
-                                modifier = Modifier.padding(bottom = 16.dp)
+                            bitmap = wifiQrCodeBitmap.asImageBitmap(),
+                            contentDescription = "QR Code",
+                            modifier = Modifier.size(200.dp)
                         )
                     }
-
                 }
-                        ?: Text(
-                                text = "Wifi Direct is not available.",
-                                style = MaterialTheme.typography.titleMedium,
-                                modifier = Modifier.padding(bottom = 16.dp)
-                        )
-            }
 
-            // it seems a bit strange to put the button in the middle of the screen, but it separates
-            // the QR codes more and makes them easier to scan
-            Button(
-                    onClick = {
-                        isDownloadingMail = true
-                        isDownloadingClient = true
-                        scope.launch {
-                            try {
-                                downloadFile(
-                                        context,
-                                        mailApkUrl,
-                                ) { progress ->
-                                    downloadMailProgress = progress
-                                }
-                                mailApkVersion = getApkVersionInfo(context, mailApkFile)
-                                downloadMailStatus = getApkStatus(mailApkFile, mailApkVersion)
-                            } catch (e: Exception) {
-                                downloadMailStatus = "Error: ${e.message}"
-                            } finally {
-                                isDownloadingMail = false
-                            }
-                        }
-                        scope.launch {
-                            try {
-                                downloadFile(
-                                        context,
-                                        clientApkUrl,
-                                ) { progress ->
-                                    downloadClientProgress = progress
-                                }
-                                clientApkVersion = getApkVersionInfo(context, clientApkFile)
-                                downloadClientStatus = getApkStatus(clientApkFile, clientApkVersion)
-                            } catch (e: Exception) {
-                                downloadClientStatus = "Error: ${e.message}"
-                            } finally {
-                                isDownloadingClient = false
-                            }
-                        }
-                    }, enabled = !isDownloadingMail && !isDownloadingClient
-            ) {
-                Row(
-                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(Icons.Default.ArrowDropDown, contentDescription = "Download")
-                    Text("Download DDD APKs")
-                }
-            }
+                // it seems a bit strange to put the button in the middle of the screen, but it separates
+                // the QR codes more and makes them easier to scan
+                DownloadButton(mailApkFile, clientApkFile, appsAvailable)
 
-            if (isDownloadingMail) {
-                LinearProgressIndicator(
-                        progress = { downloadMailProgress }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
-                )
-            } else {
-                Text(
-                        text = downloadMailStatus,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (downloadMailStatus.contains("Error")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                )
-            }
+                if (appsAvailable.value) {
+                    Text(
+                        text = "QR code to download DDD client and mail apps",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
 
-            if (isDownloadingClient) {
-                LinearProgressIndicator(
-                        progress = { downloadClientProgress }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
-                )
-            } else {
-                Text(
-                        text = downloadClientStatus,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (downloadClientStatus.contains("Error")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                )
-            }
-            if (wifiConnectURL != null) {
-                qrBitmap?.let {
-                    Image(
+                    downloadQrBitmap?.let {
+                        Image(
                             bitmap = it.asImageBitmap(),
                             contentDescription = "QR Code",
                             modifier = Modifier.size(200.dp)
-                    )
-                }
+                        )
+                    }
 
-                Text(
+                    Text(
                         text = url,
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(top = 16.dp)
-                )
+                    )
+                } else {
+                    // we have this little blank text to keep the button in the middle of the screen
+                    Text(text = " ")
+                }
             }
+        }
+    }
+}
+
+@Composable
+fun DownloadButton(mailApkFile: File, clientApkFile: File, appsAvailable: MutableState<Boolean>) {
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var isDownloadingMail by remember { mutableStateOf(false) }
+    var isDownloadingClient by remember { mutableStateOf(false) }
+    var downloadMailProgress by remember { mutableFloatStateOf(0f) }
+    var downloadClientProgress by remember { mutableFloatStateOf(0f) }
+    var mailApkVersion by remember { mutableStateOf(getApkVersionInfo(context, mailApkFile)) }
+    var clientApkVersion by remember { mutableStateOf(getApkVersionInfo(context, clientApkFile)) }
+    var downloadMailStatus by remember { mutableStateOf(getApkStatus(mailApkFile, mailApkVersion)) }
+    var downloadClientStatus by remember { mutableStateOf(getApkStatus(clientApkFile, clientApkVersion)) }
+    // APK URLs
+    val mailApkUrl =
+        "https://github.com/SJSU-CS-systems-group/DDD-thunderbird-android/releases/latest/download/ddd-mail.apk"
+    val clientApkUrl = "https://github.com/SJSU-CS-systems-group/DDD/releases/latest/download/DDDClient.apk"
+
+    Column {
+        Button(
+            onClick = {
+                isDownloadingMail = true
+                isDownloadingClient = true
+                scope.launch {
+                    try {
+                        downloadFile(
+                            context,
+                            mailApkUrl,
+                        ) { progress ->
+                            downloadMailProgress = progress
+                        }
+                        mailApkVersion = getApkVersionInfo(context, mailApkFile)
+                        downloadMailStatus = getApkStatus(mailApkFile, mailApkVersion)
+                        if (mailApkVersion != null) appsAvailable.value = true
+                    } catch (e: Exception) {
+                        downloadMailStatus = "Error: ${e.message}"
+                    } finally {
+                        isDownloadingMail = false
+                    }
+                }
+                scope.launch {
+                    try {
+                        downloadFile(
+                            context,
+                            clientApkUrl,
+                        ) { progress ->
+                            downloadClientProgress = progress
+                        }
+                        clientApkVersion = getApkVersionInfo(context, clientApkFile)
+                        downloadClientStatus = getApkStatus(clientApkFile, clientApkVersion)
+                        if (clientApkVersion != null) appsAvailable.value = true
+                    } catch (e: Exception) {
+                        downloadClientStatus = "Error: ${e.message}"
+                    } finally {
+                        isDownloadingClient = false
+                    }
+                }
+            }, enabled = !isDownloadingMail && !isDownloadingClient
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(Icons.Default.ArrowDropDown, contentDescription = "Download")
+                Text("Download DDD APKs")
+            }
+        }
+
+        if (isDownloadingMail) {
+            LinearProgressIndicator(
+                progress = { downloadMailProgress }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+            )
+        } else {
+            Text(
+                text = downloadMailStatus,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (downloadMailStatus.contains("Error")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+            )
+        }
+
+        if (isDownloadingClient) {
+            LinearProgressIndicator(
+                progress = { downloadClientProgress }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+            )
+        } else {
+            Text(
+                text = downloadClientStatus,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (downloadClientStatus.contains("Error")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+            )
         }
     }
 }
