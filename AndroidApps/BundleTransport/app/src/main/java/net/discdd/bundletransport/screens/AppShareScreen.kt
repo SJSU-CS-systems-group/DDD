@@ -67,30 +67,30 @@ fun AppShareScreen(
             // Show either download message or QR code
             if (wifiConnectURL == null) {
                 Text(
-                    text = "Wifi Direct is not available.",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                        text = "Wifi Direct is not available.",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(bottom = 16.dp)
                 )
 
             } else {
                 if (!appsAvailable.value) {
                     Text(
-                        text = "Download APK files first to enable app sharing",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(bottom = 16.dp)
+                            text = "Download APK files first to enable app sharing",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(bottom = 16.dp)
                     )
                 } else {
                     Text(
-                        text = "QR code to connect your phone to this transport",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(bottom = 16.dp)
+                            text = "QR code to connect your phone to this transport",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(bottom = 16.dp)
 
                     )
                     generateQRCode(wifiConnectURL, 200, 200)?.let { wifiQrCodeBitmap ->
                         Image(
-                            bitmap = wifiQrCodeBitmap.asImageBitmap(),
-                            contentDescription = "QR Code",
-                            modifier = Modifier.size(200.dp)
+                                bitmap = wifiQrCodeBitmap.asImageBitmap(),
+                                contentDescription = "QR Code",
+                                modifier = Modifier.size(200.dp)
                         )
                     }
                 }
@@ -101,23 +101,23 @@ fun AppShareScreen(
 
                 if (appsAvailable.value) {
                     Text(
-                        text = "QR code to download DDD client and mail apps",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(bottom = 16.dp)
+                            text = "QR code to download DDD client and mail apps",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(bottom = 16.dp)
                     )
 
                     downloadQrBitmap?.let {
                         Image(
-                            bitmap = it.asImageBitmap(),
-                            contentDescription = "QR Code",
-                            modifier = Modifier.size(200.dp)
+                                bitmap = it.asImageBitmap(),
+                                contentDescription = "QR Code",
+                                modifier = Modifier.size(200.dp)
                         )
                     }
 
                     Text(
-                        text = url,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(top = 16.dp)
+                            text = url,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(top = 16.dp)
                     )
                 } else {
                     // we have this little blank text to keep the button in the middle of the screen
@@ -142,52 +142,52 @@ fun DownloadButton(mailApkFile: File, clientApkFile: File, appsAvailable: Mutabl
     var downloadClientStatus by remember { mutableStateOf(getApkStatus(clientApkFile, clientApkVersion)) }
     // APK URLs
     val mailApkUrl =
-        "https://github.com/SJSU-CS-systems-group/DDD-thunderbird-android/releases/latest/download/ddd-mail.apk"
+            "https://github.com/SJSU-CS-systems-group/DDD-thunderbird-android/releases/latest/download/ddd-mail.apk"
     val clientApkUrl = "https://github.com/SJSU-CS-systems-group/DDD/releases/latest/download/DDDClient.apk"
 
     Column {
         Button(
-            onClick = {
-                isDownloadingMail = true
-                isDownloadingClient = true
-                scope.launch {
-                    try {
-                        downloadFile(
-                            context,
-                            mailApkUrl,
-                        ) { progress ->
-                            downloadMailProgress = progress
+                onClick = {
+                    isDownloadingMail = true
+                    isDownloadingClient = true
+                    scope.launch {
+                        try {
+                            downloadFile(
+                                    context,
+                                    mailApkUrl,
+                            ) { progress ->
+                                downloadMailProgress = progress
+                            }
+                            mailApkVersion = getApkVersionInfo(context, mailApkFile)
+                            downloadMailStatus = getApkStatus(mailApkFile, mailApkVersion)
+                            if (mailApkVersion != null) appsAvailable.value = true
+                        } catch (e: Exception) {
+                            downloadMailStatus = "Error: ${e.message}"
+                        } finally {
+                            isDownloadingMail = false
                         }
-                        mailApkVersion = getApkVersionInfo(context, mailApkFile)
-                        downloadMailStatus = getApkStatus(mailApkFile, mailApkVersion)
-                        if (mailApkVersion != null) appsAvailable.value = true
-                    } catch (e: Exception) {
-                        downloadMailStatus = "Error: ${e.message}"
-                    } finally {
-                        isDownloadingMail = false
                     }
-                }
-                scope.launch {
-                    try {
-                        downloadFile(
-                            context,
-                            clientApkUrl,
-                        ) { progress ->
-                            downloadClientProgress = progress
+                    scope.launch {
+                        try {
+                            downloadFile(
+                                    context,
+                                    clientApkUrl,
+                            ) { progress ->
+                                downloadClientProgress = progress
+                            }
+                            clientApkVersion = getApkVersionInfo(context, clientApkFile)
+                            downloadClientStatus = getApkStatus(clientApkFile, clientApkVersion)
+                            if (clientApkVersion != null) appsAvailable.value = true
+                        } catch (e: Exception) {
+                            downloadClientStatus = "Error: ${e.message}"
+                        } finally {
+                            isDownloadingClient = false
                         }
-                        clientApkVersion = getApkVersionInfo(context, clientApkFile)
-                        downloadClientStatus = getApkStatus(clientApkFile, clientApkVersion)
-                        if (clientApkVersion != null) appsAvailable.value = true
-                    } catch (e: Exception) {
-                        downloadClientStatus = "Error: ${e.message}"
-                    } finally {
-                        isDownloadingClient = false
                     }
-                }
-            }, enabled = !isDownloadingMail && !isDownloadingClient
+                }, enabled = !isDownloadingMail && !isDownloadingClient
         ) {
             Row(
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Icon(Icons.Default.ArrowDropDown, contentDescription = "Download")
                 Text("Download DDD APKs")
@@ -196,25 +196,25 @@ fun DownloadButton(mailApkFile: File, clientApkFile: File, appsAvailable: Mutabl
 
         if (isDownloadingMail) {
             LinearProgressIndicator(
-                progress = { downloadMailProgress }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                    progress = { downloadMailProgress }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
             )
         } else {
             Text(
-                text = downloadMailStatus,
-                style = MaterialTheme.typography.bodySmall,
-                color = if (downloadMailStatus.contains("Error")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                    text = downloadMailStatus,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (downloadMailStatus.contains("Error")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
             )
         }
 
         if (isDownloadingClient) {
             LinearProgressIndicator(
-                progress = { downloadClientProgress }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                    progress = { downloadClientProgress }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
             )
         } else {
             Text(
-                text = downloadClientStatus,
-                style = MaterialTheme.typography.bodySmall,
-                color = if (downloadClientStatus.contains("Error")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                    text = downloadClientStatus,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (downloadClientStatus.contains("Error")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
             )
         }
     }
