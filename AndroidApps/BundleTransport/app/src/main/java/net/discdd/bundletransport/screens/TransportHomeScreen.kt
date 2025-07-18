@@ -88,6 +88,15 @@ fun TransportHomeScreen(
                         }
                 ),
                 TabItem(
+                    title = context.getString(R.string.local_wifi),
+                    screen = {
+                        WifiDirectScreen(
+                            serviceReadyFuture = TransportServiceManager.serviceReady,
+                            nearbyWifiState = nearbyWifiState
+                        )
+                    }
+                ),
+                TabItem(
                         title = context.getString(R.string.storage),
                         screen = {
                             StorageScreen()
@@ -119,16 +128,6 @@ fun TransportHomeScreen(
             ),
     )
 
-    val wifiDirectTab = TabItem(
-            title = context.getString(R.string.local_wifi),
-            screen = {
-                WifiDirectScreen(
-                        serviceReadyFuture = TransportServiceManager.serviceReady,
-                        nearbyWifiState = nearbyWifiState
-                )
-            }
-    )
-
     val usbTab = TabItem(
             title = stringResource(R.string.usb),
             screen = {
@@ -148,7 +147,6 @@ fun TransportHomeScreen(
 
     LaunchedEffect(internetAvailable, showUsbScreen, showEasterEgg) {
         var newTabs = standardTabs.toMutableList()
-        newTabs.add(1, wifiDirectTab)
         if (showUsbScreen) newTabs += usbTab
         if (showEasterEgg) newTabs += adminTabs
         tabItems = newTabs
@@ -177,7 +175,7 @@ fun TransportHomeScreen(
             }
 
             ScrollableTabRow(
-                    selectedTabIndex = selectedTabIndex,
+                    selectedTabIndex = selectedTabIndex.coerceIn(tabItems.indices),
                     edgePadding = 0.dp
             ) {
                 tabItems.forEachIndexed { index, item ->

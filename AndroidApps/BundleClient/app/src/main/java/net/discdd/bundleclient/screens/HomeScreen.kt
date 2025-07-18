@@ -156,7 +156,7 @@ fun HomeScreen(
             }
 
             ScrollableTabRow(
-                selectedTabIndex = selectedTabIndex,
+                selectedTabIndex = selectedTabIndex.coerceIn(tabItems.indices),
                 edgePadding = 0.dp
             ) {
                 tabItems.forEachIndexed { index, item ->
