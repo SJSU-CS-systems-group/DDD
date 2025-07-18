@@ -175,7 +175,7 @@ fun WifiDirectScreen(
 
 @Composable
 fun WifiStateObserver(
-    onWifiStateChanged: (Boolean) -> Unit
+        onWifiStateChanged: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
 
@@ -184,8 +184,8 @@ fun WifiStateObserver(
             override fun onReceive(ctx: Context?, intent: Intent?) {
                 if (intent?.action == WifiManager.WIFI_STATE_CHANGED_ACTION) {
                     val state = intent.getIntExtra(
-                        WifiManager.EXTRA_WIFI_STATE,
-                        WifiManager.WIFI_STATE_UNKNOWN
+                            WifiManager.EXTRA_WIFI_STATE,
+                            WifiManager.WIFI_STATE_UNKNOWN
                     )
                     onWifiStateChanged(state == WifiManager.WIFI_STATE_ENABLED)
                 }

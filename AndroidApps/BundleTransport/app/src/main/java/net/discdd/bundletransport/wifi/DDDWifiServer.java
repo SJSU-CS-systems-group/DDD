@@ -132,6 +132,7 @@ public class DDDWifiServer {
     }
 
     AtomicBoolean intentRegistered = new AtomicBoolean(false);
+
     public void unregisterWifiIntentReceiver() {
         if (!intentRegistered.getAndSet(false)) return;
         context.unregisterReceiver(receiver);
@@ -157,8 +158,9 @@ public class DDDWifiServer {
     @SuppressLint("MissingPermission")
     public CompletableActionListener createGroup() {
         var cal = new CompletableActionListener();
-        if (hasPermission()) this.wifiP2pManager.createGroup(this.channel, cal);
-        else cal.complete(OptionalInt.of(WifiP2pManager.P2P_UNSUPPORTED));
+        if (hasPermission()) {this.wifiP2pManager.createGroup(this.channel, cal);} else {
+            cal.complete(OptionalInt.of(WifiP2pManager.P2P_UNSUPPORTED));
+        }
         return cal;
     }
 
@@ -210,6 +212,7 @@ public class DDDWifiServer {
             this.type = type;
             this.data = data;
         }
+
         public String toString() {
             return type + (data == null ? "" : ": " + data);
         }
@@ -293,7 +296,7 @@ public class DDDWifiServer {
                         var newGroup =
                                 intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP, WifiP2pGroup.class);
 
-                        if (newGroup == null)  {
+                        if (newGroup == null) {
                             if (oldGroup != null) {
                                 BundleTransportService.logWifi(INFO, "Lost group: " + oldGroup.getNetworkName());
                             }
@@ -301,19 +304,26 @@ public class DDDWifiServer {
                             if (oldGroup == null || !oldGroup.getNetworkName().equals(newGroup.getNetworkName())) {
                                 BundleTransportService.logWifi(INFO, "New group: " + newGroup.getNetworkName());
                             }
-                            var newClientList = newGroup.getClientList().stream().map(w -> w.deviceName).collect(
-                                    Collectors.toSet());
+                            var newClientList = newGroup.getClientList()
+                                    .stream()
+                                    .map(w -> w.deviceName)
+                                    .collect(Collectors.toSet());
                             var origNewClientList = new HashSet<>(newClientList);
-                            var oldClientList = oldGroup == null ? Collections.<String>emptySet() :
-                                                oldGroup.getClientList().stream().map(w -> w.deviceName).collect(
-                                                        Collectors.toSet());
+                            var oldClientList = oldGroup == null ?
+                                                Collections.<String>emptySet() :
+                                                oldGroup.getClientList()
+                                                        .stream()
+                                                        .map(w -> w.deviceName)
+                                                        .collect(Collectors.toSet());
                             newClientList.removeAll(oldClientList);
                             oldClientList.removeAll(origNewClientList);
                             if (!newClientList.isEmpty()) {
-                                BundleTransportService.logWifi(INFO, "New clients: " + String.join(", ", newClientList));
+                                BundleTransportService.logWifi(INFO,
+                                                               "New clients: " + String.join(", ", newClientList));
                             }
                             if (!oldClientList.isEmpty()) {
-                                BundleTransportService.logWifi(INFO, "Lost clients: " + String.join(", ", oldClientList));
+                                BundleTransportService.logWifi(INFO,
+                                                               "Lost clients: " + String.join(", ", oldClientList));
                             }
                         }
                         DDDWifiServer.this.wifiGroup = newGroup;
