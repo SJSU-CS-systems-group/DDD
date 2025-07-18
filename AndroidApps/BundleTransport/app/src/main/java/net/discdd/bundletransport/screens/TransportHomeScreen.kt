@@ -88,13 +88,13 @@ fun TransportHomeScreen(
                         }
                 ),
                 TabItem(
-                    title = context.getString(R.string.local_wifi),
-                    screen = {
-                        WifiDirectScreen(
-                            serviceReadyFuture = TransportServiceManager.serviceReady,
-                            nearbyWifiState = nearbyWifiState
-                        )
-                    }
+                        title = context.getString(R.string.local_wifi),
+                        screen = {
+                            WifiDirectScreen(
+                                    serviceReadyFuture = TransportServiceManager.serviceReady,
+                                    nearbyWifiState = nearbyWifiState
+                            )
+                        }
                 ),
                 TabItem(
                         title = context.getString(R.string.storage),
