@@ -59,13 +59,4 @@ object UsbConnectionManager {
         }
         isInitialized = false
     }
-
-    fun refreshUsbState(context: Context) {
-        val usbManager = context.getSystemService(Context.USB_SERVICE) as? UsbManager
-        _usbConnected.value = usbManager?.deviceList?.isNotEmpty() == true
-    }
-
-    fun getUsbReceiver(): BroadcastReceiver? {
-        return usbReceiver
-    }
 }
