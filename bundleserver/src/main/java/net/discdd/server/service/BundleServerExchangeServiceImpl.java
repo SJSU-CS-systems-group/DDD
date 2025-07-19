@@ -108,7 +108,7 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
                 return null;
             } catch (Exception e) {
                 logger.log(SEVERE, "Problem generating bundle for client " + senderId, e);
-                throw new RuntimeException("Problem generating bundle: " + e.getMessage());
+                return null;
             }
         } else {
             byte[] randomBytes = new byte[16];

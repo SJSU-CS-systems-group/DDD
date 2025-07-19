@@ -67,7 +67,6 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
                                                                                             .build())
                                                                           .build()));
             }
-            Files.delete(downloadPath);
             logger.log(INFO, "Complete " + request.getBundleId().getEncryptedId());
             responseObserver.onCompleted();
         } catch (Exception e) {
