@@ -77,7 +77,7 @@ public class ApplicationDataManager {
         sentAduDetailsRepository.deleteByBundleId(bundleId);
 
         logger.log(INFO,
-                   "[StateManager] Processed acknowledgement for sent bundle id " + bundleId +
+                   "[StateManager] Processed acknowledgement and deleted bundle id " + bundleId +
                            " corresponding to client " + clientId);
     }
 
