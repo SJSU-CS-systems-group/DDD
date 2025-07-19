@@ -85,7 +85,7 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
             bundleTransmission.getPathForBundleToSend(bundleExchangeName.encryptedBundleId());
             var bundlePath = bundleTransmission.getPathForBundleToSend(bundleExchangeName.encryptedBundleId());
             logger.info(String.format("Path for bundle %s is %s exists %s",
-                                                bundleExchangeName.encryptedBundleId(),
+                                      bundleExchangeName.encryptedBundleId(),
                                       bundlePath.toString(),
                                       bundlePath.toFile().exists()));
             if (bundlePath.toFile().exists()) {

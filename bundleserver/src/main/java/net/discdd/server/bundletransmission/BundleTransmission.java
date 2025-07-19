@@ -199,7 +199,9 @@ public class BundleTransmission {
 
         ClientBundleCounters bundleCountersForClient = this.applicationDataManager.getBundleCountersForClient(clientId);
         if (this.serverWindowService.isWindowFull(clientId)) {
-            logger.log(INFO, "Server's window is full for the client " + clientId + " returning last sent bundle ID " + bundleCountersForClient.lastSentBundleId);
+            logger.log(INFO,
+                       "Server's window is full for the client " + clientId + " returning last sent bundle ID " +
+                               bundleCountersForClient.lastSentBundleId);
             return bundleCountersForClient.lastSentBundleId;
         }
 
@@ -239,8 +241,9 @@ public class BundleTransmission {
         } finally {
             future.cancel(true);
         }
-        logger.log(INFO, "Bundle generated for client " + clientId + " with ID: " +
-                encryptedBundleId + " in " + getPathForBundleToSend(encryptedBundleId));
+        logger.log(INFO,
+                   "Bundle generated for client " + clientId + " with ID: " + encryptedBundleId + " in " +
+                           getPathForBundleToSend(encryptedBundleId));
         return encryptedBundleId;
     }
 

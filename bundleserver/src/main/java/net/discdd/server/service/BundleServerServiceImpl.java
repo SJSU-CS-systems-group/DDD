@@ -97,16 +97,13 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
                                   senderId,
                                   bundleListToString(inventoryResponse.getBundlesToDeleteList()),
                                   bundleListToString(inventoryResponse.getBundlesToDownloadList()),
-                                  bundleListToString(inventoryResponse.getBundlesToUploadList())
-        ));
+                                  bundleListToString(inventoryResponse.getBundlesToUploadList())));
         responseObserver.onNext(inventoryResponse);
         responseObserver.onCompleted();
     }
 
     private static String bundleListToString(List<EncryptedBundleId> bundleList) {
-        return bundleList.stream()
-                .map(EncryptedBundleId::getEncryptedId)
-                .collect(Collectors.joining(","));
+        return bundleList.stream().map(EncryptedBundleId::getEncryptedId).collect(Collectors.joining(","));
     }
 
     @Override
