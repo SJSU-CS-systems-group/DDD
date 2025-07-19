@@ -90,6 +90,7 @@ public class BundleTransmission {
     }
 
     private static Random random = new Random();
+
     private String nextRandomString() {
         return Long.toHexString(random.nextLong());
     }
@@ -104,7 +105,8 @@ public class BundleTransmission {
             return;
         }
 
-        Path bundleRecvProcDir = this.config.getBundleTransmission().getReceivedProcessingDirectory().resolve(nextRandomString());
+        Path bundleRecvProcDir =
+                this.config.getBundleTransmission().getReceivedProcessingDirectory().resolve(nextRandomString());
         try {
             Files.createDirectories(bundleRecvProcDir);
 
