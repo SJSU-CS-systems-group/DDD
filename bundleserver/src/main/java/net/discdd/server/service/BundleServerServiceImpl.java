@@ -103,7 +103,7 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
         responseObserver.onCompleted();
     }
 
-    static private String bundleListToString(List<EncryptedBundleId> bundleList) {
+    private static String bundleListToString(List<EncryptedBundleId> bundleList) {
         return bundleList.stream()
                 .map(EncryptedBundleId::getEncryptedId)
                 .collect(Collectors.joining(","));
