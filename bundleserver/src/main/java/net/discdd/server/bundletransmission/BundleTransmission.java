@@ -42,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -89,6 +90,12 @@ public class BundleTransmission {
         return senderType + " : " + senderId;
     }
 
+    private static Random random = new Random();
+
+    private String nextRandomString() {
+        return Long.toHexString(random.nextLong());
+    }
+
     @Async
     @Transactional
     public void processReceivedBundle(BundleSenderType senderType, String senderId, Bundle bundle) throws Exception {
@@ -99,67 +106,69 @@ public class BundleTransmission {
             return;
         }
 
-        Path bundleRecvProcDir = TRANSPORT == senderType ?
-                                 this.config.getBundleTransmission()
-                                         .getReceivedProcessingDirectory()
-                                         .resolve(senderId) :
-                                 this.config.getBundleTransmission().getReceivedProcessingDirectory();
-
-        Files.createDirectories(bundleRecvProcDir);
-
-        UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, bundleRecvProcDir);
-        String serverIdReceived =
-                generateID(uncompressedBundle.getSource().toPath().resolve(SecurityUtils.SERVER_IDENTITY_KEY));
-        if (!bundleSecurity.bundleServerIdMatchesCurrentServer(serverIdReceived)) {
-            logger.log(WARNING,
-                       "Received bundle's serverIdentity didn't match with current server, " +
-                               "ignoring bundle with bundleId: " + uncompressedBundle.getBundleId());
-            return;
-        }
-
-        String clientIdBase64 = SecurityUtils.decodeEncryptedPublicKeyfromFile(serverSecurity.getSigningKey(),
-                                                                               uncompressedBundle.getSource()
-                                                                                       .toPath()
-                                                                                       .resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
-        String clientId = generateID(clientIdBase64);
-        var counters = this.applicationDataManager.getBundleCountersForClient(clientId);
-
-        var receivedBundleCounter =
-                this.bundleSecurity.getCounterFromBundlePath(uncompressedBundle.getSource().toPath(),
-                                                             BundleIDGenerator.UPSTREAM);
-
-        if (receivedBundleCounter <= counters.lastReceivedBundleCounter) {
-            logger.log(WARNING,
-                       "[BundleTransmission] Skipping bundle " + bundle.getSource().getName() + " already received");
-            return;
-        }
-
-        Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
-        if (payload == null) {
-            throw new Exception("Payload is null");
-        }
-
-        UncompressedPayload uncompressedPayload =
-                BundleUtils.extractPayload(payload, uncompressedBundle.getSource().toPath());
-        logger.log(FINE, "[BundleTransmission] extracted payload from uncompressed bundle");
-
-        if (!"HB".equals(uncompressedPayload.getAckRecord().getBundleId())) {
-            this.serverWindowService.processACK(clientId, uncompressedPayload.getAckRecord().getBundleId());
-        }
-
+        Path bundleRecvProcDir =
+                this.config.getBundleTransmission().getReceivedProcessingDirectory().resolve(nextRandomString());
         try {
-            this.bundleRouting.processClientMetaData(uncompressedPayload.getSource().toPath(), senderId, clientId);
-        } catch (ClientMetaDataFileException | SQLException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
+            Files.createDirectories(bundleRecvProcDir);
 
-        this.applicationDataManager.processAcknowledgement(clientId, uncompressedPayload.getAckRecord().getBundleId());
-        if (!uncompressedPayload.getADUs().isEmpty()) {
-            this.applicationDataManager.storeReceivedADUs(clientId,
-                                                          uncompressedPayload.getBundleId(),
-                                                          receivedBundleCounter,
-                                                          uncompressedPayload.getADUs());
+            UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, bundleRecvProcDir);
+            String serverIdReceived =
+                    generateID(uncompressedBundle.getSource().toPath().resolve(SecurityUtils.SERVER_IDENTITY_KEY));
+            if (!bundleSecurity.bundleServerIdMatchesCurrentServer(serverIdReceived)) {
+                logger.log(WARNING,
+                           "Received bundle's serverIdentity didn't match with current server, " +
+                                   "ignoring bundle with bundleId: " + uncompressedBundle.getBundleId());
+                return;
+            }
+
+            String clientIdBase64 = SecurityUtils.decodeEncryptedPublicKeyfromFile(serverSecurity.getSigningKey(),
+                                                                                   uncompressedBundle.getSource()
+                                                                                           .toPath()
+                                                                                           .resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
+            String clientId = generateID(clientIdBase64);
+            var counters = this.applicationDataManager.getBundleCountersForClient(clientId);
+
+            var receivedBundleCounter =
+                    this.bundleSecurity.getCounterFromBundlePath(uncompressedBundle.getSource().toPath(),
+                                                                 BundleIDGenerator.UPSTREAM);
+
+            if (receivedBundleCounter <= counters.lastReceivedBundleCounter) {
+                logger.log(WARNING,
+                           "[BundleTransmission] Skipping bundle " + bundle.getSource().getName() +
+                                   " already received");
+                return;
+            }
+
+            Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
+            if (payload == null) {
+                throw new Exception("Payload is null");
+            }
+
+            UncompressedPayload uncompressedPayload =
+                    BundleUtils.extractPayload(payload, uncompressedBundle.getSource().toPath());
+            logger.log(FINE, "[BundleTransmission] extracted payload from uncompressed bundle");
+
+            if (!"HB".equals(uncompressedPayload.getAckRecord().getBundleId())) {
+                this.serverWindowService.processACK(clientId, uncompressedPayload.getAckRecord().getBundleId());
+            }
+
+            try {
+                this.bundleRouting.processClientMetaData(uncompressedPayload.getSource().toPath(), senderId, clientId);
+            } catch (ClientMetaDataFileException | SQLException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+
+            this.applicationDataManager.processAcknowledgement(clientId,
+                                                               uncompressedPayload.getAckRecord().getBundleId());
+            if (!uncompressedPayload.getADUs().isEmpty()) {
+                this.applicationDataManager.storeReceivedADUs(clientId,
+                                                              uncompressedPayload.getBundleId(),
+                                                              receivedBundleCounter,
+                                                              uncompressedPayload.getADUs());
+            }
+        } finally {
+            FileUtils.recursiveDelete(bundleRecvProcDir);
         }
     }
 
