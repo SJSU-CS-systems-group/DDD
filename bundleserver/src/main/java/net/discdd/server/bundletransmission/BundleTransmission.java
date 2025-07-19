@@ -227,6 +227,8 @@ public class BundleTransmission {
         } finally {
             future.cancel(true);
         }
+        logger.log(INFO, "Bundle generated for client " + clientId + " with ID: " +
+                encryptedBundleId + " in " + getPathForBundleToSend(encryptedBundleId));
         return encryptedBundleId;
     }
 

@@ -54,6 +54,7 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
                                 pathProducer(bundleExchangeName, request.getSenderType(), null);
 
             if (downloadPath == null) {
+                logger.log(SEVERE, "Could not produce a path for " + bundleExchangeName.encryptedBundleId + " with map " + request.getPublicKeyMap());
                 responseObserver.onError(io.grpc.Status.NOT_FOUND.withDescription("Bundle not found").asException());
                 return;
             }
