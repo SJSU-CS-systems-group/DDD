@@ -41,6 +41,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -88,6 +89,11 @@ public class BundleTransmission {
         return senderType + " : " + senderId;
     }
 
+    private static Random random = new Random();
+    private String nextRandomString() {
+        return Long.toHexString(random.nextLong());
+    }
+
     @Async
     @Transactional
     public void processReceivedBundle(BundleSenderType senderType, String senderId, Bundle bundle) throws Exception {
@@ -98,11 +104,7 @@ public class BundleTransmission {
             return;
         }
 
-        Path bundleRecvProcDir = TRANSPORT == senderType ?
-                                 this.config.getBundleTransmission()
-                                         .getReceivedProcessingDirectory()
-                                         .resolve(senderId) :
-                                 this.config.getBundleTransmission().getReceivedProcessingDirectory();
+        Path bundleRecvProcDir = this.config.getBundleTransmission().getReceivedProcessingDirectory().resolve(nextRandomString());
         try {
             Files.createDirectories(bundleRecvProcDir);
 
