@@ -84,6 +84,10 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
 
             bundleTransmission.getPathForBundleToSend(bundleExchangeName.encryptedBundleId());
             var bundlePath = bundleTransmission.getPathForBundleToSend(bundleExchangeName.encryptedBundleId());
+            logger.info(String.format("Path for bundle %s is %s exists %s",
+                                                bundleExchangeName.encryptedBundleId(),
+                                      bundlePath.toString(),
+                                      bundlePath.toFile().exists()));
             if (bundlePath.toFile().exists()) {
                 return bundlePath;
             }
@@ -104,7 +108,7 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
                 return null;
             } catch (Exception e) {
                 logger.log(SEVERE, "Problem generating bundle for client " + senderId, e);
-                throw new RuntimeException("Problem generating bundle: " + e.getMessage());
+                return null;
             }
         } else {
             byte[] randomBytes = new byte[16];

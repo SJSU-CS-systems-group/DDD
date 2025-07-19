@@ -19,6 +19,7 @@ import net.discdd.server.bundlerouting.BundleRouting;
 import net.discdd.server.bundlerouting.ServerWindowService;
 import net.discdd.server.bundlesecurity.BundleSecurity;
 import net.discdd.server.config.BundleServerConfig;
+import net.discdd.server.repository.entity.ClientBundleCounters;
 import net.discdd.utils.BundleUtils;
 import net.discdd.utils.FileUtils;
 import org.springframework.scheduling.annotation.Async;
@@ -196,11 +197,13 @@ public class BundleTransmission {
             InvalidKeyException, IOException {
         logger.log(INFO, "[BundleTransmission] Processing bundle generation request for client " + clientId);
 
+        ClientBundleCounters bundleCountersForClient = this.applicationDataManager.getBundleCountersForClient(clientId);
         if (this.serverWindowService.isWindowFull(clientId)) {
-            return this.applicationDataManager.getBundleCountersForClient(clientId).lastSentBundleId;
+            logger.log(INFO, "Server's window is full for the client " + clientId + " returning last sent bundle ID " + bundleCountersForClient.lastSentBundleId);
+            return bundleCountersForClient.lastSentBundleId;
         }
 
-        var counts = this.applicationDataManager.getBundleCountersForClient(clientId);
+        var counts = bundleCountersForClient;
         if (counts.lastSentBundleCounter > 0 && !applicationDataManager.newDataToSend(counts.lastSentBundleId) &&
                 !applicationDataManager.newAckNeeded(counts.lastSentBundleId)) {
             // Nothing new to send, so lets send the last bundle again.
@@ -236,6 +239,8 @@ public class BundleTransmission {
         } finally {
             future.cancel(true);
         }
+        logger.log(INFO, "Bundle generated for client " + clientId + " with ID: " +
+                encryptedBundleId + " in " + getPathForBundleToSend(encryptedBundleId));
         return encryptedBundleId;
     }
 

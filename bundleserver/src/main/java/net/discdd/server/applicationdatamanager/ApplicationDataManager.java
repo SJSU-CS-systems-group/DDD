@@ -1,7 +1,6 @@
 package net.discdd.server.applicationdatamanager;
 
 import net.discdd.model.ADU;
-import net.discdd.model.UncompressedPayload;
 import net.discdd.server.config.BundleServerConfig;
 import net.discdd.server.repository.BundleMetadataRepository;
 import net.discdd.server.repository.ClientBundleCountersRepository;
@@ -10,11 +9,9 @@ import net.discdd.server.repository.SentAduDetailsRepository;
 import net.discdd.server.repository.entity.BundleMetadata;
 import net.discdd.server.repository.entity.ClientBundleCounters;
 import net.discdd.server.repository.entity.SentAduDetails;
-import net.discdd.utils.BundleUtils;
 import net.discdd.utils.StoreADUs;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
@@ -22,7 +19,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
@@ -81,7 +77,7 @@ public class ApplicationDataManager {
         sentAduDetailsRepository.deleteByBundleId(bundleId);
 
         logger.log(INFO,
-                   "[StateManager] Processed acknowledgement for sent bundle id " + bundleId +
+                   "[StateManager] Processed acknowledgement and deleted bundle id " + bundleId +
                            " corresponding to client " + clientId);
     }
 
