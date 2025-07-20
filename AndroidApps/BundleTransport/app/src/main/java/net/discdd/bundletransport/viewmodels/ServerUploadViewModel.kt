@@ -9,15 +9,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.discdd.AndroidAppConstants
-import net.discdd.pathutils.TransportPaths
 import net.discdd.bundletransport.R
-import net.discdd.transport.GrpcSecurityHolder
-import net.discdd.transport.TransportToBundleServerManager
+import net.discdd.bundletransport.TransportServiceManager
+import net.discdd.pathutils.TransportPaths
+import net.discdd.utils.UserLogRepository
+import java.util.Base64
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.logging.Level
 import java.util.logging.Logger
-import java.util.Base64;
 
 data class ServerState(
         val domain: String = "",
@@ -30,63 +30,50 @@ data class ServerState(
 class ServerUploadViewModel(
         application: Application
 ) : AndroidViewModel(application) {
+    // this is a truncated version of the transport ID, which is used to identify the transport
     public val transportID: String
+        get() {
+            val service = TransportServiceManager.getService()
+            return service?.grpcKeys?.grpcKeyPair?.public?.encoded?.let {
+                Base64.getEncoder().encodeToString(it).slice(4..21)
+            } ?: "Unknown"
+        }
     private val context get() = getApplication<Application>()
     private val sharedPref = context.getSharedPreferences("server_endpoint", MODE_PRIVATE)
     private val logger = Logger.getLogger(ServerUploadViewModel::class.java.name)
     private val _state = MutableStateFlow(ServerState())
     private val executor: ExecutorService = Executors.newFixedThreadPool(2);
     private var transportPaths: TransportPaths = TransportPaths(context.getExternalFilesDir(null)?.toPath())
-    private val transportGrpcSecurity = GrpcSecurityHolder.setGrpcSecurityHolder(transportPaths.grpcSecurityPath);
     val state = _state.asStateFlow()
 
     init {
-        val publicKey = transportGrpcSecurity.grpcKeyPair.public.encoded
-        transportID = Base64.getEncoder().encodeToString(
-                publicKey
-        )
         AndroidAppConstants.checkDefaultDomainPortSettings(sharedPref)
         restoreDomainPort()
         reloadCount()
     }
 
     fun connectServer() {
-        viewModelScope.launch {
-            if (!state.value.domain.isEmpty() && !state.value.port.isEmpty()) {
-                _state.update { it.copy(message = context.getString(R.string.enter_the_domain_and_port)) }
-                logger.log(Level.INFO, "Sending to " + state.value.domain + ":" + state.value.port + "...\n")
-
+        val exchangeFuture = TransportServiceManager.getService()?.queueServerExchangeNow()
+        if (exchangeFuture == null) {
+            UserLogRepository.log(UserLogRepository.UserLogType.EXCHANGE, "TransportService is not available.", level = Level.SEVERE)
+        } else {
+            viewModelScope.launch {
                 try {
-                    _state.update {
-                        it.copy(message = "Initiating server exchange to " + state.value.domain + ":" + state.value.port + "...\n")
-                    }
-
-                    var transportToBundleServerManager: TransportToBundleServerManager =
-                            TransportToBundleServerManager(transportPaths, state.value.domain, state.value.port,
-                                    { x: Void -> serverConnectComplete() },
-                                    { e: Exception -> serverConnectionError(e, state.value.domain + ":" + state.value.port) })
-                    executor.execute(transportToBundleServerManager)
+                    val message = exchangeFuture.get()
+                    UserLogRepository.log(
+                            UserLogRepository.UserLogType.EXCHANGE,
+                            message
+                    )
+                    reloadCount()
                 } catch (e: Exception) {
-                    _state.update { it.copy(message = context.getString(R.string.bundles_upload_failed)) }
+                    UserLogRepository.log(
+                            UserLogRepository.UserLogType.EXCHANGE,
+                            "Server connection error: ${e.message}",
+                            level = Level.SEVERE
+                    )
                 }
             }
         }
-    }
-
-    fun serverConnectComplete(): Void? {
-        _state.update { it.copy(message = "Server exchange complete.\n") }
-        return null
-    }
-
-    fun serverConnectionError(e: Exception, transportTarget: String): Void? {
-        _state.update {
-            it.copy(
-                    message = "Server exchange incomplete with error.\n" +
-                            "Error: " + e.message + "\n" +
-                            "Invalid hostname: " + transportTarget
-            )
-        }
-        return null
     }
 
     fun reloadCount() {

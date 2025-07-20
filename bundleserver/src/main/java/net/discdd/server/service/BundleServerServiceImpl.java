@@ -23,6 +23,7 @@ import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -71,10 +72,10 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
         var downloadList = new ArrayList<EncryptedBundleId>();
 
         X509Certificate clientCert = NettyServerCertificateInterceptor.CLIENT_CERTIFICATE_KEY.get(Context.current());
+        String senderId = DDDTLSUtil.publicKeyToName(clientCert.getPublicKey());
         try {
             var bundlesToExchange = bundleTransmission.inventoryBundlesForTransmission(request.getSenderType(),
-                                                                                       DDDTLSUtil.publicKeyToName(
-                                                                                               clientCert.getPublicKey()),
+                                                                                       senderId,
                                                                                        serverBundlesOnTransport);
             bundlesToExchange.bundlesToDelete()
                     .stream()
@@ -87,12 +88,22 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
         } catch (Exception e) {
             logger.log(SEVERE, "Couldn't generate deletion list", e);
         }
-        responseObserver.onNext(BundleInventoryResponse.newBuilder()
-                                        .addAllBundlesToDelete(deletionList)
-                                        .addAllBundlesToDownload(downloadList)
-                                        .addAllBundlesToUpload(request.getBundlesFromClientsOnTransportList())
-                                        .build());
+        BundleInventoryResponse inventoryResponse = BundleInventoryResponse.newBuilder()
+                .addAllBundlesToDelete(deletionList)
+                .addAllBundlesToDownload(downloadList)
+                .addAllBundlesToUpload(request.getBundlesFromClientsOnTransportList())
+                .build();
+        logger.info(String.format("%s to delete %s download %s upload %s",
+                                  senderId,
+                                  bundleListToString(inventoryResponse.getBundlesToDeleteList()),
+                                  bundleListToString(inventoryResponse.getBundlesToDownloadList()),
+                                  bundleListToString(inventoryResponse.getBundlesToUploadList())));
+        responseObserver.onNext(inventoryResponse);
         responseObserver.onCompleted();
+    }
+
+    private static String bundleListToString(List<EncryptedBundleId> bundleList) {
+        return bundleList.stream().map(EncryptedBundleId::getEncryptedId).collect(Collectors.joining(","));
     }
 
     @Override

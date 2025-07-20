@@ -6,7 +6,7 @@ import io.grpc.netty.NettyChannelBuilder;
 import io.netty.handler.ssl.SslContext;
 import net.discdd.tls.DDDTLSUtil;
 import net.discdd.tls.DDDX509ExtendedTrustManager;
-import net.discdd.tls.GrpcSecurity;
+import net.discdd.tls.GrpcSecurityKey;
 import net.discdd.tls.NettyClientCertificateInterceptor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -21,14 +21,14 @@ import static java.util.logging.Level.WARNING;
 @Service
 public class AdapterRegisterService {
     private static final Logger logger = Logger.getLogger(AdapterRegisterService.class.getName());
-    private GrpcSecurity grpcSecurity;
+    private GrpcSecurityKey grpcSecurityKey;
 
     public AdapterRegisterService(@Value("${bundle-server.url}") String bundleServerURL,
                                   @Value("${my.grpc.url}") String myGrpcUrl,
                                   @Value("${spring.application.name}") String appName,
                                   @Value("${adapter-server.root-dir}") String rootDir,
-                                  GrpcSecurity grpcSecurity) {
-        this.grpcSecurity = grpcSecurity;
+                                  GrpcSecurityKey grpcSecurityKey) {
+        this.grpcSecurityKey = grpcSecurityKey;
         registerWithBundleServer(bundleServerURL, myGrpcUrl, rootDir, appName);
     }
 
@@ -41,7 +41,7 @@ public class AdapterRegisterService {
         SslContext sslClientContext;
         try {
             sslClientContext = GrpcSslContexts.forClient()
-                    .keyManager(grpcSecurity.getGrpcKeyPair().getPrivate(), grpcSecurity.getGrpcCert())
+                    .keyManager(grpcSecurityKey.grpcKeyPair.getPrivate(), grpcSecurityKey.grpcCert)
                     .trustManager(new DDDX509ExtendedTrustManager(true))
                     .build();
         } catch (SSLException e) {

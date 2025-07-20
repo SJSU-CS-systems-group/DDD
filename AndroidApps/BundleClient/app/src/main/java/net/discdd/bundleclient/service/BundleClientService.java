@@ -1,10 +1,5 @@
 package net.discdd.bundleclient.service;
 
-import static java.lang.String.format;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
-
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Notification;
@@ -21,7 +16,6 @@ import android.net.Uri;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
-
 import android.os.Looper;
 import android.widget.Toast;
 import androidx.annotation.Nullable;
@@ -30,17 +24,17 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
 import androidx.lifecycle.Observer;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-
 import net.discdd.bundleclient.R;
 import net.discdd.bundleclient.service.wifiDirect.DDDWifiDirect;
 import net.discdd.client.bundlesecurity.BundleSecurity;
 import net.discdd.client.bundletransmission.BundleTransmission;
-import net.discdd.client.bundletransmission.BundleTransmission.Statuses;
 import net.discdd.client.bundletransmission.BundleTransmission.BundleExchangeCounts;
+import net.discdd.client.bundletransmission.BundleTransmission.Statuses;
 import net.discdd.client.bundletransmission.TransportDevice;
 import net.discdd.datastore.providers.MessageProvider;
 import net.discdd.model.ADU;
 import net.discdd.pathutils.ClientPaths;
+import net.discdd.utils.UserLogRepository;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -55,10 +49,14 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
+import static java.lang.String.format;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
+
 // the service is usually formatting messages for the log rather than users, so don't complain about locales
 @SuppressLint("DefaultLocale")
 public class BundleClientService extends Service {
-    public static final String NET_DISCDD_BUNDLECLIENT_LOG_ACTION = "net.discdd.bundleclient.CLIENT_LOG";
     public static final String NET_DISCDD_BUNDLECLIENT_WIFI_ACTION = "net.discdd.bundleclient.WIFI_EVENT";
     public static final String NET_DISCDD_BUNDLECLIENT_SETTINGS = "net.discdd.bundleclient";
     public static final String DDDWIFI_EVENT_EXTRA = "DDDWifiEvent";
@@ -66,7 +64,7 @@ public class BundleClientService extends Service {
     public static final String NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE = "background_exchange";
     public static final String NET_DISCDD_BUNDLECLIENT_DEVICEADDRESS_EXTRA = "deviceAddress";
     private static final Logger logger = Logger.getLogger(BundleClientService.class.getName());
-    private static final BundleExchangeCounts FAILED_EXCHANGE_COUNTS = new BundleExchangeCounts(Statuses.FAILED,Statuses.FAILED);
+    private static final BundleExchangeCounts FAILED_EXCHANGE_COUNTS = new BundleExchangeCounts(Statuses.FAILED,Statuses.FAILED, null);
     private static SharedPreferences preferences;
     private final IBinder binder = new BundleClientServiceBinder();
     private final ScheduledExecutorService periodicExecutor = Executors.newSingleThreadScheduledExecutor();
@@ -220,6 +218,13 @@ public class BundleClientService extends Service {
 
     @SuppressLint("MissingPermission")
     private void exchangeWithTransports() {
+        try {
+            dddWifi.startDiscovery().get(10, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            logger.log(WARNING, "Failed to start discovery", e);
+            broadcastBundleClientLogEvent("Failed to start discovery: " + e.getMessage());
+            // not the end of the world, we can still try
+        }
         var recentTransports = bundleTransmission.getRecentTransports();
         for (var transport : recentTransports) {
             if (transport.getDevice() instanceof DDDWifiDevice) {
@@ -247,28 +252,32 @@ public class BundleClientService extends Service {
                 return FAILED_EXCHANGE_COUNTS;
             }
             var addr = connection.getAddresses().get(0);
-            broadcastBundleClientLogEvent(format("Connected to %s (%s)", device.getDescription(), addr.getHostAddress()));
-            BundleExchangeCounts currentBundle = bundleTransmission.doExchangeWithTransport(device,
-                                                                                            addr.getHostAddress(),
-                                                                                            7777,
-                                                                                            true);
-            broadcastBundleClientLogEvent(format("%s upload: %s download: %s", device.getDescription(),
-                                                                                 statusesToString(currentBundle.uploadStatus()),
-                                                                                 statusesToString(currentBundle.downloadStatus())));
+            broadcastBundleClientLogEvent(format("Connected to %s (%s)",
+                                                 device.getDescription(),
+                                                 addr.getHostAddress()));
+            BundleExchangeCounts currentBundle =
+                    bundleTransmission.doExchangeWithTransport(device, addr.getHostAddress(), 7777, true);
+            broadcastBundleClientLogEvent(format("%s upload: %s download: %s",
+                                                 device.getDescription(),
+                                                 statusesToString(currentBundle.uploadStatus()),
+                                                 statusesToString(currentBundle.downloadStatus())));
+            if (currentBundle.e() instanceof BundleTransmission.RecencyException) {
+                broadcastBundleClientLogEvent("Transport has not exchanged with server recently: " + currentBundle.e().getMessage());
+            }
             String text1;
             String text2;
-            if(currentBundle.uploadStatus() == Statuses.FAILED){
+            if (currentBundle.uploadStatus() == Statuses.FAILED) {
                 text1 = getString(R.string.Upload_Failed);
-            }else if(currentBundle.uploadStatus() == Statuses.COMPLETE){
+            } else if (currentBundle.uploadStatus() == Statuses.COMPLETE) {
                 text1 = getString(R.string.Upload_Success);
-            }else{
+            } else {
                 text1 = getString(R.string.Upload_Empty);
             }
-            if(currentBundle.downloadStatus() == Statuses.FAILED){
+            if (currentBundle.downloadStatus() == Statuses.FAILED) {
                 text2 = getString(R.string.Download_Failed);
-            }else if(currentBundle.downloadStatus() == Statuses.COMPLETE){
+            } else if (currentBundle.downloadStatus() == Statuses.COMPLETE) {
                 text2 = getString(R.string.Download_Success);
-            }else{
+            } else {
                 text2 = getString(R.string.Download_Empty);
             }
 
@@ -276,11 +285,9 @@ public class BundleClientService extends Service {
             Handler handler = new Handler(Looper.getMainLooper());
             handler.post(() -> Toast.makeText(getApplicationContext(), text, Toast.LENGTH_LONG).show());
             return currentBundle;
-
         } catch (Throwable e) {
-            broadcastBundleClientLogEvent(e.getLocalizedMessage());
             logger.log(WARNING, e.getMessage(), e);
-
+            broadcastBundleClientLogEvent("Could not start exchange: " + e.getLocalizedMessage());
         } finally {
             try {
                 if (connection != null) {
@@ -306,9 +313,7 @@ public class BundleClientService extends Service {
     }
 
     private void broadcastBundleClientLogEvent(String message) {
-        var intent = new Intent(NET_DISCDD_BUNDLECLIENT_LOG_ACTION);
-        intent.putExtra("message", message);
-        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+        UserLogRepository.INSTANCE.log(UserLogRepository.UserLogType.WIFI, message, System.currentTimeMillis(), INFO);
     }
 
     /**
@@ -437,6 +442,10 @@ public class BundleClientService extends Service {
         bundleTransmission.expireNotSeenPeers(expirationTime);
     }
 
+    public void wifiPermissionGranted() {
+        dddWifi.wifiPermissionGranted();
+    }
+
     public enum BundleClientTransmissionEventType {
         WIFI_DIRECT_CLIENT_EXCHANGE_STARTED, WIFI_DIRECT_CLIENT_EXCHANGE_FINISHED
     }
@@ -447,7 +456,7 @@ public class BundleClientService extends Service {
         synchronized public void schedule(int minutes) {
             if (scheduledFuture == null) {
                 logger.info(format("Scheduling periodic exchange with transports every %d minutes", minutes));
-                scheduledFuture = periodicExecutor.scheduleWithFixedDelay(this, 0, minutes,
+                scheduledFuture = periodicExecutor.scheduleWithFixedDelay(this, minutes, minutes,
                                                                           TimeUnit.MINUTES);
             }
         }

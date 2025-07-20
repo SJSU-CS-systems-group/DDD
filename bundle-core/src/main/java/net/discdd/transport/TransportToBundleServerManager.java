@@ -2,6 +2,7 @@ package net.discdd.transport;
 
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
+import io.grpc.StatusRuntimeException;
 import io.grpc.okhttp.OkHttpChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
@@ -20,7 +21,7 @@ import net.discdd.grpc.GetRecencyBlobRequest;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.tls.DDDTLSUtil;
 import net.discdd.tls.DDDX509ExtendedTrustManager;
-import net.discdd.tls.GrpcSecurity;
+import net.discdd.tls.GrpcSecurityKey;
 import net.discdd.utils.Constants;
 
 import javax.net.ssl.SSLContext;
@@ -30,7 +31,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -39,53 +39,50 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Stream;
 
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
-public class TransportToBundleServerManager implements Runnable {
+public class TransportToBundleServerManager {
 
     private static final Logger logger = Logger.getLogger(TransportToBundleServerManager.class.getName());
     public static final String RECENCY_BLOB_BIN = "recencyBlob.bin";
     private final Path fromClientPath;
     private final Path fromServerPath;
     private final Path crashReportsPath;
-    private final Function<Void, Void> connectComplete;
-    private final Function<Exception, Void> connectError;
     private final String serverHost;
     private final int serverPort;
-    private GrpcSecurity transportGrpcSecurity;
+    private final GrpcSecurityKey grpcSecurityKey;
 
-    public TransportToBundleServerManager(TransportPaths transportPaths,
+    public TransportToBundleServerManager(GrpcSecurityKey grpcSecurityKey,
+                                          TransportPaths transportPaths,
                                           String host,
-                                          String port,
-                                          Function<Void, Void> connectComplete,
-                                          Function<Exception, Void> connectError) {
-        this.connectComplete = connectComplete;
-        this.connectError = connectError;
+                                          String port) {
+        this.grpcSecurityKey = grpcSecurityKey;
         this.serverHost = host;
         this.serverPort = Integer.parseInt(port);
         this.fromClientPath = transportPaths.toServerPath;
         this.fromServerPath = transportPaths.toClientPath;
         this.crashReportsPath = transportPaths.crashReportPath;
-        try {
-            this.transportGrpcSecurity = GrpcSecurityHolder.getGrpcSecurityHolder();
-        } catch (Exception e) {
-            logger.log(SEVERE, "Failed to get GrpcSecurity instance", e);
-        }
     }
 
-    @Override
-    public void run() {
+    public static class ExchangeResult {
+        public int uploadCount = 0; // the count actually uploaded
+        public int toUploadCount = 0; // the count we were supposed to upload
+        public int downloadCount = 0;
+        public int toDownloadCount = 0;
+        public int deleteCount = 0;
+    }
+
+    public ExchangeResult doExchange() throws Exception {
         ManagedChannel channel = null;
+        ExchangeResult exchangeResult = new ExchangeResult();
         try {
             var sslClientContext = SSLContext.getInstance("TLS");
-            sslClientContext.init(DDDTLSUtil.getKeyManagerFactory(transportGrpcSecurity.getGrpcKeyPair(),
-                                                                  transportGrpcSecurity.getGrpcCert()).getKeyManagers(),
+            sslClientContext.init(DDDTLSUtil.getKeyManagerFactory(grpcSecurityKey.grpcKeyPair, grpcSecurityKey.grpcCert)
+                                          .getKeyManagers(),
                                   new TrustManager[] { new DDDX509ExtendedTrustManager(true) },
                                   new SecureRandom());
 
@@ -115,16 +112,16 @@ public class TransportToBundleServerManager implements Runnable {
                                              .addAllBundlesFromServerOnTransport(bundlesFromServer)
                                              .build());
 
+            exchangeResult.downloadCount = inventoryResponse.getBundlesToDeleteCount();
             processDeleteBundles(inventoryResponse.getBundlesToDeleteList());
-            processUploadBundles(inventoryResponse.getBundlesToUploadList(), exchangeStub);
-            processDownloadBundles(inventoryResponse.getBundlesToDownloadList(), exchangeStub);
+            exchangeResult.toUploadCount = inventoryResponse.getBundlesToUploadCount();
+            exchangeResult.uploadCount = processUploadBundles(inventoryResponse.getBundlesToUploadList(), exchangeStub);
+            exchangeResult.toDownloadCount = inventoryResponse.getBundlesToDownloadCount();
+            exchangeResult.downloadCount =
+                    processDownloadBundles(inventoryResponse.getBundlesToDownloadList(), exchangeStub);
             processRecencyBlob(blockingExchangeStub);
 
             logger.log(INFO, "Connect server completed");
-            connectComplete.apply(null);
-        } catch (Exception e) {
-            logger.log(SEVERE, "Failed to connect to server", e);
-            connectError.apply(e);
         } finally {
             try {
                 if (channel != null) {
@@ -134,6 +131,7 @@ public class TransportToBundleServerManager implements Runnable {
                 logger.log(SEVERE, "could not shutdown channel, error: " + e.getMessage() + ", cause: " + e.getCause());
             }
         }
+        return exchangeResult;
     }
 
     private void processRecencyBlob(BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub blockingExchangeStub) {
@@ -151,8 +149,9 @@ public class TransportToBundleServerManager implements Runnable {
         }
     }
 
-    private void processDownloadBundles(List<EncryptedBundleId> bundlesToDownloadList,
-                                        BundleExchangeServiceGrpc.BundleExchangeServiceStub exchangeStub) {
+    private int processDownloadBundles(List<EncryptedBundleId> bundlesToDownloadList,
+                                       BundleExchangeServiceGrpc.BundleExchangeServiceStub exchangeStub) {
+        int downloadCount = 0;
         for (var toReceive : bundlesToDownloadList) {
             var path = fromServerPath.resolve(toReceive.getEncryptedId());
             try (OutputStream os = Files.newOutputStream(path,
@@ -175,7 +174,15 @@ public class TransportToBundleServerManager implements Runnable {
 
                             @Override
                             public void onError(Throwable t) {
-                                logger.log(SEVERE, "Failed to download file: " + path, t);
+                                var level = SEVERE;
+                                if (t instanceof StatusRuntimeException sre) {
+                                    if (sre.getStatus().getCode() == io.grpc.Status.Code.NOT_FOUND) {
+                                        // this is not an unexpected error, since we probe for bundles that we
+                                        // hope are there
+                                        level = Level.FINE;
+                                    }
+                                }
+                                logger.log(level, "Failed to download file: " + path, t);
                                 completion.completeExceptionally(t);
                             }
 
@@ -187,15 +194,17 @@ public class TransportToBundleServerManager implements Runnable {
                         });
 
                 completion.get(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+                downloadCount++;
             } catch (IOException | ExecutionException | InterruptedException | TimeoutException e) {
                 logger.log(SEVERE, "Failed to download file: " + path, e);
-
             }
         }
+        return downloadCount;
     }
 
-    private void processUploadBundles(List<EncryptedBundleId> bundlesToUploadList,
-                                      BundleExchangeServiceGrpc.BundleExchangeServiceStub exchangeStub) {
+    private int processUploadBundles(List<EncryptedBundleId> bundlesToUploadList,
+                                     BundleExchangeServiceGrpc.BundleExchangeServiceStub exchangeStub) {
+        int uploadCount = 0;
         for (var toSend : bundlesToUploadList) {
             var path = fromClientPath.resolve(toSend.getEncryptedId());
             StreamObserver<BundleUploadResponse> responseObserver = null;
@@ -218,16 +227,16 @@ public class TransportToBundleServerManager implements Runnable {
                 }
                 uploadRequestStreamObserver.onCompleted();
                 logger.log(INFO, "Completed upload for bundle: " + toSend.getEncryptedId());
-                if (responseObserver != null) {
-                    responseObserver.onCompleted();
-                    logger.log(INFO, "Deleting bundle file: " + path);
-                    Files.delete(path);
-                }
+                responseObserver.onCompleted();
+                logger.log(INFO, "Deleting bundle file: " + path);
+                Files.delete(path);
+                uploadCount++;
             } catch (IOException e) {
                 logger.log(SEVERE, "Failed to upload file: " + path, e);
                 if (responseObserver != null) responseObserver.onError(e);
             }
         }
+        return uploadCount;
     }
 
     private void processDeleteBundles(List<EncryptedBundleId> bundlesToDeleteList) {

@@ -30,13 +30,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.launch
 import net.discdd.UsbConnectionManager
 import net.discdd.bundletransport.ConnectivityManager
 import net.discdd.components.NotificationBottomSheet
 import net.discdd.bundletransport.R
-import net.discdd.bundletransport.TransportWifiServiceManager
+import net.discdd.bundletransport.TransportServiceManager
 import net.discdd.bundletransport.viewmodels.TransportUsbViewModel
 import net.discdd.screens.LogScreen
 import net.discdd.screens.PermissionScreen
@@ -63,6 +64,12 @@ fun TransportHomeScreen(
     val nearbyWifiState = rememberPermissionState(
             Manifest.permission.NEARBY_WIFI_DEVICES
     )
+    LaunchedEffect(nearbyWifiState.status) {
+        if (nearbyWifiState.status.isGranted) {
+            TransportServiceManager.getService()?.wifiPermissionGranted()
+        }
+    }
+
     val notificationState = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS,
             onPermissionResult = {
                 viewModel.onFirstOpen()
@@ -78,6 +85,15 @@ fun TransportHomeScreen(
                                 viewModel.onToggleEasterEgg()
                                 Toast.makeText(context, "Easter Egg Toggled!", Toast.LENGTH_SHORT).show()
                             }
+                        }
+                ),
+                TabItem(
+                        title = context.getString(R.string.local_wifi),
+                        screen = {
+                            WifiDirectScreen(
+                                    serviceReadyFuture = TransportServiceManager.serviceReady,
+                                    nearbyWifiState = nearbyWifiState
+                            )
                         }
                 ),
                 TabItem(
@@ -112,16 +128,6 @@ fun TransportHomeScreen(
             ),
     )
 
-    val wifiDirectTab = TabItem(
-            title = context.getString(R.string.local_wifi),
-            screen = {
-                WifiDirectScreen(
-                        serviceReadyFuture = TransportWifiServiceManager.serviceReady,
-                        nearbyWifiState = nearbyWifiState
-                )
-            }
-    )
-
     val usbTab = TabItem(
             title = stringResource(R.string.usb),
             screen = {
@@ -141,7 +147,6 @@ fun TransportHomeScreen(
 
     LaunchedEffect(internetAvailable, showUsbScreen, showEasterEgg) {
         var newTabs = standardTabs.toMutableList()
-        newTabs.add(1, wifiDirectTab)
         if (showUsbScreen) newTabs += usbTab
         if (showEasterEgg) newTabs += adminTabs
         tabItems = newTabs
@@ -170,7 +175,7 @@ fun TransportHomeScreen(
             }
 
             ScrollableTabRow(
-                    selectedTabIndex = selectedTabIndex,
+                    selectedTabIndex = selectedTabIndex.coerceIn(tabItems.indices),
                     edgePadding = 0.dp
             ) {
                 tabItems.forEachIndexed { index, item ->

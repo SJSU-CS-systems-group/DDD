@@ -54,6 +54,9 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
                                 pathProducer(bundleExchangeName, request.getSenderType(), null);
 
             if (downloadPath == null) {
+                logger.log(SEVERE,
+                           "Could not produce a path for {0} with map {1}",
+                           new Object[] { bundleExchangeName.encryptedBundleId, request.getPublicKeyMap() });
                 responseObserver.onError(io.grpc.Status.NOT_FOUND.withDescription("Bundle not found").asException());
                 return;
             }
@@ -66,7 +69,6 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
                                                                                             .build())
                                                                           .build()));
             }
-            Files.delete(downloadPath);
             logger.log(INFO, "Complete " + request.getBundleId().getEncryptedId());
             responseObserver.onCompleted();
         } catch (Exception e) {

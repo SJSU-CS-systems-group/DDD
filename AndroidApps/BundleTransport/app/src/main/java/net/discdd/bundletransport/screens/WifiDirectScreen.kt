@@ -1,20 +1,21 @@
 package net.discdd.bundletransport.screens
 
 import android.Manifest
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
+import android.content.IntentFilter
 import android.net.Uri
+import android.net.wifi.WifiManager
 import android.provider.Settings
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -29,43 +30,42 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat.startActivity
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import net.discdd.bundletransport.BundleTransportService
 import net.discdd.bundletransport.R
-import net.discdd.bundletransport.TransportWifiDirectService
+import net.discdd.bundletransport.utils.generateQRCode
 import net.discdd.bundletransport.viewmodels.WifiDirectViewModel
+import net.discdd.components.UserLogComponent
 import net.discdd.components.WifiPermissionBanner
+import net.discdd.utils.UserLogRepository
 import java.util.concurrent.CompletableFuture
 
-@OptIn(ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun WifiDirectScreen(
         wifiViewModel: WifiDirectViewModel = viewModel(),
-        serviceReadyFuture: CompletableFuture<TransportWifiDirectService>,
+        serviceReadyFuture: CompletableFuture<BundleTransportService>,
         nearbyWifiState: PermissionState,
-        preferences: SharedPreferences = LocalContext.current.getSharedPreferences(
-                TransportWifiDirectService.WIFI_DIRECT_PREFERENCES,
-                Context.MODE_PRIVATE
-        )
 ) {
     val state by wifiViewModel.state.collectAsState()
     val numDenied by wifiViewModel.numDenied.collectAsState()
-    val lifecycleOwner = LocalLifecycleOwner.current
-    var showDialog by remember { mutableStateOf(false) }
+    var showConnectedPeersDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+    val wifiState = remember { mutableStateOf(wifiManager.isWifiEnabled) }
+    WifiStateObserver { enabled ->
+        wifiState.value = enabled
+    }
 
     Surface(
             modifier = Modifier.fillMaxSize(),
@@ -75,33 +75,8 @@ fun WifiDirectScreen(
             wifiViewModel.initialize(serviceReadyFuture)
         }
 
-        DisposableEffect(lifecycleOwner) {
-            val observer = LifecycleEventObserver { _, event ->
-                when (event) {
-                    Lifecycle.Event.ON_RESUME -> wifiViewModel.registerBroadcastReceiver()
-                    Lifecycle.Event.ON_PAUSE -> wifiViewModel.unregisterBroadcastReceiver()
-                    else -> {}
-                }
-            }
-            lifecycleOwner.lifecycle.addObserver(observer)
-            onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-        }
-
-        Column(
-                modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            if (wifiViewModel.isWifiEnabled()) {
-                var checked by remember {
-                    mutableStateOf(
-                            preferences.getBoolean(
-                                    TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
-                                    true
-                            )
-                    )
-                }
+        Column {
+            if (wifiState.value) {
                 val nameValid by remember {
                     derivedStateOf { state.deviceName.startsWith("ddd_") }
                 }
@@ -121,71 +96,65 @@ fun WifiDirectScreen(
                     }
                 }
 
-                Text(
-                        text = state.wifiInfo,
-                        modifier = Modifier.clickable { showDialog = true }
-                )
+                Row {
+                    Column {
+                        Text(
+                                text = state.wifiInfo,
+                                modifier = Modifier.clickable { showConnectedPeersDialog = true }
+                        )
 
-                if (showDialog == true) {
-                    val connectedPeers: ArrayList<String> = ArrayList()
-                    wifiViewModel.getService()?.groupInfo?.let { gi ->
-                        gi.clientList.forEach { c -> connectedPeers.add(c.deviceName) }
-                    }
+                        if (showConnectedPeersDialog) {
+                            val connectedPeers = wifiViewModel.getService()?.dddWifiServer
+                                    ?.networkInfo?.clientList ?: emptyList<String>()
 
-                    AlertDialog(
-                            title = { Text(text = stringResource(R.string.connected_devices)) },
-                            text = { Text(text = connectedPeers.toTypedArray().joinToString(", ")) },
-                            onDismissRequest = { showDialog = false },
-                            confirmButton = {
-                                TextButton(
-                                        onClick = {
-                                            showDialog = false
+                            AlertDialog(
+                                    title = { Text(text = stringResource(R.string.connected_devices)) },
+                                    text = { Text(text = connectedPeers.toTypedArray().joinToString(", ")) },
+                                    onDismissRequest = { showConnectedPeersDialog = false },
+                                    confirmButton = {
+                                        TextButton(
+                                                onClick = {
+                                                    showConnectedPeersDialog = false
+                                                }
+                                        ) {
+                                            Text(stringResource(R.string.dismiss))
                                         }
-                                ) {
-                                    Text(stringResource(R.string.dismiss))
-                                }
+                                    }
+                            )
+                        }
+
+                        Text(text = "Wifi Status: ${state.wifiStatus}")
+
+                        // only show the name change button if we don't have a valid device name
+                        // (transports must have device names starting with ddd_)
+                        if (nameValid) {
+                            Text(text = "Device Name: ${state.deviceName}")
+                        } else {
+                            Text(
+                                    text = stringResource(
+                                            R.string.phone_name_must_start_with_ddd_found,
+                                            state.deviceName
+                                    )
+                            )
+
+                            FilledTonalButton(
+                                    onClick = { wifiViewModel.openInfoSettings() },
+                                    modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(stringResource(R.string.change_phone_name))
                             }
-                    )
-                }
-
-                Text(text = "Wifi Status: ${state.wifiStatus}")
-
-                // only show the name change button if we don't have a valid device name
-                // (transports must have device names starting with ddd_)
-                if (nameValid) {
-                    Text(text = "Device Name: ${state.deviceName}")
-                } else {
-                    Text(text = stringResource(
-                            R.string.phone_name_must_start_with_ddd_found,
-                            state.deviceName
-                    ))
-
-                    FilledTonalButton(
-                            onClick = { wifiViewModel.openInfoSettings() },
-                            modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(stringResource(R.string.change_phone_name))
+                        }
+                    }
+                    state.wifiConnectURL?.let { url ->
+                        generateQRCode(url, 500, 500)?.let {
+                            Image(
+                                    bitmap = it.asImageBitmap(),
+                                    contentDescription = "QR Code",
+                                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                            )
+                        }
                     }
                 }
-
-                Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Checkbox(
-                            checked = checked,
-                            onCheckedChange = {
-                                checked = it
-                                preferences.edit().putBoolean(
-                                        TransportWifiDirectService.WIFI_DIRECT_PREFERENCE_BG_SERVICE,
-                                        it
-                                ).apply()
-                            }
-                    )
-                    Text(text = stringResource(R.string.collect_data_even_when_app_is_closed))
-                }
-
-                Text(text = stringResource(R.string.interactions_with_bundleclients))
-                Text(text = state.clientLog)
             } else {
                 Text(text = stringResource(
                         R.string.Wifi_disabled
@@ -198,9 +167,41 @@ fun WifiDirectScreen(
                     Text("Open Wifi Settings")
                 }
             }
+
+            UserLogComponent(UserLogRepository.UserLogType.WIFI)
         }
     }
 }
+
+@Composable
+fun WifiStateObserver(
+        onWifiStateChanged: (Boolean) -> Unit
+) {
+    val context = LocalContext.current
+
+    DisposableEffect(Unit) {
+        val wifiReceiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
+                if (intent?.action == WifiManager.WIFI_STATE_CHANGED_ACTION) {
+                    val state = intent.getIntExtra(
+                            WifiManager.EXTRA_WIFI_STATE,
+                            WifiManager.WIFI_STATE_UNKNOWN
+                    )
+                    onWifiStateChanged(state == WifiManager.WIFI_STATE_ENABLED)
+                }
+            }
+        }
+
+        val filter = IntentFilter(WifiManager.WIFI_STATE_CHANGED_ACTION)
+        context.registerReceiver(wifiReceiver, filter)
+
+        // Cleanup when the Composable leaves the composition
+        onDispose {
+            context.unregisterReceiver(wifiReceiver)
+        }
+    }
+}
+
 
 @Preview(showBackground = true)
 @OptIn(ExperimentalPermissionsApi::class)

@@ -1,10 +1,12 @@
 package net.discdd.bundleclient.service.wifiDirect;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pDeviceList;
@@ -12,6 +14,8 @@ import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.os.HandlerThread;
+import androidx.annotation.RequiresPermission;
+import androidx.core.app.ActivityCompat;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import net.discdd.bundleclient.service.BundleClientService;
@@ -24,9 +28,8 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -65,8 +68,16 @@ public class DDDWifiDirect implements DDDWifi {
     private int status = WifiP2pDevice.UNAVAILABLE;
     private boolean wifiEnable;
 
+    private boolean hasPermission() {
+        return ActivityCompat.checkSelfPermission(bundleClientService.getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) ==
+                PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(bundleClientService.getApplicationContext(), Manifest.permission.NEARBY_WIFI_DEVICES) ==
+                        PackageManager.PERMISSION_GRANTED;
+    }
+
     private class DDDWifiDirectBroadcastReceiver extends BroadcastReceiver {
-        @SuppressLint("MissingPermission")
+        @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION,
+                                      Manifest.permission.NEARBY_WIFI_DEVICES })
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
@@ -86,7 +97,9 @@ public class DDDWifiDirect implements DDDWifi {
                             default -> logger.log(WARNING, "unknown p2p state %d", wifiState);
                         }
                         if (wifiEnable) {
-                            wifiP2pManager.requestDeviceInfo(wifiChannel, (DDDWifiDirect.this::processDeviceInfo));
+                            if (hasPermission()) {
+                                wifiP2pManager.requestDeviceInfo(wifiChannel, (DDDWifiDirect.this::processDeviceInfo));
+                            }
                         }
                         eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_STATE_CHANGED);
                     }
@@ -180,7 +193,6 @@ public class DDDWifiDirect implements DDDWifi {
         this.wifiP2pManager = (WifiP2pManager) bundleClientService.getSystemService(Context.WIFI_P2P_SERVICE);
     }
 
-    @SuppressLint("MissingPermission")
     public void initialize() {
         if (wifiChannel != null) {
             logger.severe("Calling initialize on an initialized channel. Ignoring.");
@@ -189,7 +201,20 @@ public class DDDWifiDirect implements DDDWifi {
         this.handlerThread = new HandlerThread("WifiP2PHandlerThread");
         this.handlerThread.start();
         this.wifiChannel = wifiP2pManager.initialize(bundleClientService, handlerThread.getLooper(), () -> logger.warning("Framework lost. Ignoring"));
+        if (hasPermission()) {
+            registerBroadcastReceiver();
+        }
+    }
+
+    AtomicBoolean isReceiverRegistered = new AtomicBoolean(false);
+    private void registerBroadcastReceiver() {
+        if (isReceiverRegistered.getAndSet(true)) return;
         bundleClientService.registerReceiver(broadcastReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
+    }
+
+    private void unregisterBroadcastReceiver() {
+        if (!isReceiverRegistered.getAndSet(false)) return;
+        bundleClientService.unregisterReceiver(broadcastReceiver);
     }
 
     @Override
@@ -368,18 +393,26 @@ public class DDDWifiDirect implements DDDWifi {
             return;
         }
         // unregister the broadcast receiver
-        bundleClientService.unregisterReceiver(broadcastReceiver);
+        unregisterBroadcastReceiver();
         // shutdown looper
         handlerThread.quit();
         // there is no shutdown for wifiP2pManager
         wifiEnable = false;
         wifiChannel = null;
         eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_STATE_CHANGED);
+        wifiChannel.close();
     }
 
     @Override
     public LiveData<DDDWifiEventType> getEventLiveData() {
         return eventsLiveData;
+    }
+
+    @Override
+    public void wifiPermissionGranted() {
+        // reregister the receivers with the new permissions
+        unregisterBroadcastReceiver();
+        registerBroadcastReceiver();
     }
 }
 

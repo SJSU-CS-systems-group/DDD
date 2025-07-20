@@ -82,6 +82,12 @@ import static net.discdd.utils.FileUtils.crashReportExists;
 import static net.discdd.utils.FileUtils.readCrashReportFromFile;
 
 public class BundleTransmission {
+    public static class RecencyException extends IOException {
+        public RecencyException(String message) {
+            super(message);
+        }
+    }
+
     private static final Logger logger = Logger.getLogger(BundleTransmission.class.getName());
     private final ExecutorService executorService = Executors.newCachedThreadPool();
     private final BundleSecurity bundleSecurity;
@@ -293,21 +299,21 @@ public class BundleTransmission {
             IOException, InvalidKeyException {
         // first make sure the data is valid
         if (recencyBlobResponse.getStatus() != RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS) {
-            throw new IOException("Recency request failed");
+            throw new RecencyException("Recency request failed");
         }
         var recencyBlob = recencyBlobResponse.getRecencyBlob();
         // we will allow a 1 minute clock skew
         if (recencyBlob.getBlobTimestamp() > System.currentTimeMillis() + 60 * 1000) {
-            throw new IOException("Recency blob timestamp is in the future");
+            throw new RecencyException("Recency blob timestamp is in the future");
         }
         var receivedServerPublicKey = Curve.decodePoint(recencyBlobResponse.getServerPublicKey().toByteArray(), 0);
         if (!bundleSecurity.getClientSecurity().getServerPublicKey().equals(receivedServerPublicKey)) {
-            throw new IOException("Recency blob signed by unknown server");
+            throw new RecencyException("Recency blob signed by unknown server");
         }
         if (!SecurityUtils.verifySignatureRaw(recencyBlob.toByteArray(),
                                               receivedServerPublicKey,
                                               recencyBlobResponse.getRecencyBlobSignature().toByteArray())) {
-            throw new IOException("Recency blob signature verification failed");
+            throw new RecencyException("Recency blob signature verification failed");
         }
         synchronized (recentTransports) {
             RecentTransport recentTransport = recentTransports.computeIfAbsent(device, RecentTransport::new);
@@ -336,7 +342,7 @@ public class BundleTransmission {
         }
     }
 
-    public record BundleExchangeCounts(Statuses uploadStatus, Statuses downloadStatus) {}
+    public record BundleExchangeCounts(Statuses uploadStatus, Statuses downloadStatus, Exception e) {}
 
     private static final int INITIAL_CONNECT_RETRIES = 8;
 
@@ -370,8 +376,8 @@ public class BundleTransmission {
                                                         boolean connectingToTransport) throws Exception {
         var sslClientContext = SSLContext.getInstance("TLS");
         var trustManager = new DDDX509ExtendedTrustManager(true);
-        sslClientContext.init(DDDTLSUtil.getKeyManagerFactory(bundleSecurity.getClientGrpcSecurity().getGrpcKeyPair(),
-                                                              bundleSecurity.getClientGrpcSecurity().getGrpcCert())
+        sslClientContext.init(DDDTLSUtil.getKeyManagerFactory(bundleSecurity.getClientGrpcSecurityKey().grpcKeyPair,
+                                                              bundleSecurity.getClientGrpcSecurityKey().grpcCert)
                                       .getKeyManagers(), new TrustManager[] { trustManager }, new SecureRandom());
 
         var channel = OkHttpChannelBuilder.forAddress(transportAddress, port)
@@ -386,6 +392,7 @@ public class BundleTransmission {
         Statuses downloadStatus = Statuses.FAILED;
 
         String transportSenderId = null;
+        Exception transmissionException = null;
         try {
             if (isServerRunning(transportAddress, port)) {
                 var recencyBlobRequest = GetRecencyBlobRequest.newBuilder().build();
@@ -406,9 +413,7 @@ public class BundleTransmission {
                 var bundleRequests = getNextBundles();
                 PublicKeyMap publicKeyMap = PublicKeyMap.newBuilder()
                         .setClientPub(ByteString.copyFrom(clientSecurity.getClientIdentityPublicKey().serialize()))
-                        .setSignedTLSPub(ByteString.copyFrom(clientSecurity.getSignedTLSPub(bundleSecurity.getClientGrpcSecurity()
-                                                                                                    .getGrpcKeyPair()
-                                                                                                    .getPublic())))
+                        .setSignedTLSPub(ByteString.copyFrom(clientSecurity.getSignedTLSPub(bundleSecurity.getClientGrpcSecurityKey().grpcKeyPair.getPublic())))
                         .build();
                 // we don't include the public key map if we are connecting to a transport, since we only authenticate
                 // ourselves to BundleServers not transports
@@ -439,9 +444,10 @@ public class BundleTransmission {
             }
         } catch (Exception e) {
             logger.log(WARNING, "Exchange failed", e);
+            transmissionException = e;
         }
         channel.shutdownNow();
-        return new BundleExchangeCounts(uploadStatus, downloadStatus);
+        return new BundleExchangeCounts(uploadStatus, downloadStatus, transmissionException);
     }
 
     public List<String> getNextBundles() throws InvalidKeyException, GeneralSecurityException {

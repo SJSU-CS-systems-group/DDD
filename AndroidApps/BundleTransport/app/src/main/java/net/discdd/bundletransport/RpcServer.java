@@ -11,8 +11,7 @@ import net.discdd.grpc.GetRecencyBlobResponse;
 import net.discdd.grpc.PublicKeyMap;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.tls.DDDTLSUtil;
-import net.discdd.tls.GrpcSecurity;
-import net.discdd.transport.GrpcSecurityHolder;
+import net.discdd.tls.GrpcSecurityKey;
 import net.discdd.transport.TransportToBundleServerManager;
 
 import javax.net.ssl.KeyManager;
@@ -34,27 +33,23 @@ public class RpcServer {
     // private final String TAG = "dddTransport";
     private static final int port = 7777;
     private static RpcServer rpcServerInstance;
-    private final BundleExchangeServiceImpl.BundleExchangeEventListener listener;
+    private final BundleTransportService bundleTransportService;
     private Server server;
-    private GrpcSecurity transportGrpcSecurity;
 
-    public RpcServer(BundleExchangeServiceImpl.BundleExchangeEventListener listener) {
-        this.listener = listener;
+    public RpcServer(BundleTransportService bundleTransportService) {
+        this.bundleTransportService = bundleTransportService;
     }
 
     public void startServer(TransportPaths transportPaths) {
         if (server != null && !server.isShutdown()) {
             return;
         }
-
-        this.transportGrpcSecurity = GrpcSecurityHolder.getGrpcSecurityHolder();
-
         var toServerPath = transportPaths.toServerPath;
         var toClientPath = transportPaths.toClientPath;
         var bundleExchangeService = new BundleExchangeServiceImpl() {
             @Override
             protected void onBundleExchangeEvent(BundleExchangeEvent bundleExchangeEvent) {
-                listener.onBundleExchangeEvent(bundleExchangeEvent);
+                bundleTransportService.onBundleExchangeEvent(bundleExchangeEvent);
             }
 
             @Override
@@ -92,14 +87,15 @@ public class RpcServer {
         };
 
         try {
-            KeyManager[] keyManagers = DDDTLSUtil.getKeyManagerFactory(transportGrpcSecurity.getGrpcKeyPair(),
-                                                                       transportGrpcSecurity.getGrpcCert())
+            KeyManager[] keyManagers = DDDTLSUtil.getKeyManagerFactory(bundleTransportService.grpcKeys.grpcKeyPair,
+                                                                       bundleTransportService.grpcKeys.grpcCert)
                     .getKeyManagers();
             var credentials = TlsServerCredentials.newBuilder().keyManager(keyManagers).build();
             server = OkHttpServerBuilder.forPort(port, credentials).maxInboundMessageSize(20 * 1024 * 1024) // 20 MB;
                     .addService(bundleExchangeService).executor(Executors.newFixedThreadPool(4)).build();
         } catch (Exception e) {
             logger.log(SEVERE, "TLS communication exceptions ", e);
+            return;
         }
         logger.log(INFO, "Starting rpc server at: " + server.toString());
 

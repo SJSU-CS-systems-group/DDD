@@ -11,7 +11,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.discdd.bundleclient.R
@@ -31,7 +30,6 @@ data class PeerDevice(
 )
 
 data class WifiDirectState(
-    val resultText: String = "",
     val dddWifiEnabled: Boolean = false,
     val connectedStateText: String = "",
     val discoveryActive: Boolean = false,
@@ -63,7 +61,6 @@ class WifiDirectViewModel(
     init {
         _backgroundExchange.value = BundleClientService.getBackgroundExchangeSetting(preferences)
         intentFilter.addAction(BundleClientService.NET_DISCDD_BUNDLECLIENT_WIFI_ACTION)
-        intentFilter.addAction(BundleClientService.NET_DISCDD_BUNDLECLIENT_LOG_ACTION)
             viewModelScope.launch {
                 _backgroundExchange.collect { value ->
                     // Replace with your SharedPreferences instance
@@ -105,7 +102,6 @@ class WifiDirectViewModel(
     @SuppressLint("MissingPermission")
     fun exchangeMessage(device: DDDWifiDevice) {
         viewModelScope.launch {
-            clearResultLogs()
             updatePeerExchangeStatus(device, true)
             wifiService?.initiateExchange(device)?.thenAccept {
                 updatePeerExchangeStatus(device, false)
@@ -140,22 +136,6 @@ class WifiDirectViewModel(
         viewModelScope.launch {
             LocalBroadcastManager.getInstance(context)
                 .unregisterReceiver(bundleClientServiceBroadcastReceiver)
-        }
-    }
-
-    fun appendResultText(text: String?) {
-        viewModelScope.launch {
-            text ?: return@launch
-            var resultText = _state.value.resultText
-            if (resultText.count { it == '\n' } > 20) {
-                val nl = resultText.indexOf('\n')
-                if (nl != -1) {
-                    resultText = resultText.substring(nl + 1)
-                }
-            }
-
-            resultText += "$text\n"
-            _state.update { it.copy(resultText = resultText) }
         }
     }
 
@@ -208,11 +188,6 @@ class WifiDirectViewModel(
         }
     }
 
-    fun clearResultLogs() {
-        viewModelScope.launch {
-            _state.update { it.copy(resultText = "") }
-        }
-    }
 
     fun setBackgroundExchange(value: Int) {
         // we set up a collector in the init that will save this value to SharedPreferences
