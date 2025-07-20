@@ -85,23 +85,8 @@ public class DDDWifiDirect implements DDDWifi {
                 switch (action) {
                     case WIFI_P2P_STATE_CHANGED_ACTION -> {
                         var wifiState = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1);
-                        switch(wifiState) {
-                            case WIFI_P2P_STATE_ENABLED -> {
-                                if (!wifiEnable) {
-                                    // we are switching from disabled to enabled, so discover peers
-                                    startDiscovery();
-                                }
-                                wifiEnable = true;
-                            }
-                            case WIFI_P2P_STATE_DISABLED -> wifiEnable = false;
-                            default -> logger.log(WARNING, "unknown p2p state %d", wifiState);
-                        }
-                        if (wifiEnable) {
-                            if (hasPermission()) {
-                                wifiP2pManager.requestDeviceInfo(wifiChannel, (DDDWifiDirect.this::processDeviceInfo));
-                            }
-                        }
-                        eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_STATE_CHANGED);
+                        var enabled = wifiState == WIFI_P2P_STATE_ENABLED;
+                        processStateChanged(enabled);
                     }
                     case WIFI_P2P_PEERS_CHANGED_ACTION -> {
                         // Broadcast intent action indicating that the available peer list has changed.
@@ -136,13 +121,7 @@ public class DDDWifiDirect implements DDDWifi {
                         var conInfo = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_INFO, WifiP2pInfo.class);
                         var conGroup =
                                 intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP, WifiP2pGroup.class);
-                        DDDWifiDirect.this.group = conGroup;
-                        DDDWifiDirect.this.ownerAddress = conInfo.groupOwnerAddress;
-                        // if we got an address, let all the completions waiting for an address know about it.
-                        if (conInfo.groupOwnerAddress != null) {
-                            completeAddressWaiters(conGroup.getOwner(), conInfo.groupOwnerAddress);
-                        }
-                        eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_STATE_CHANGED);
+                        processGroupInfo(conGroup, conInfo.groupOwnerAddress);
                     }
                     case WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> {
                         WifiP2pDevice wifiP2pDevice = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE,
@@ -157,6 +136,40 @@ public class DDDWifiDirect implements DDDWifi {
                 }
             }
         }
+    }
+
+    @SuppressLint("MissingPermission")
+    private void processStateChanged(boolean enabled) {
+        if (enabled) {
+            // check if we are already in a group
+            wifiP2pManager.requestGroupInfo(wifiChannel, (group) -> {
+                if (group != null) {
+                    wifiP2pManager.requestConnectionInfo(wifiChannel, (info) -> {
+                        var conAddress =
+                                info != null && info.groupFormed && info.isGroupOwner ? info.groupOwnerAddress : null;
+                        processGroupInfo(group, conAddress);
+                    });
+                }
+                wifiP2pManager.requestDeviceInfo(wifiChannel, (DDDWifiDirect.this::processDeviceInfo));
+                startDiscovery();
+            });
+            wifiEnable = true;
+        } else {
+            wifiEnable = false;
+            group = null;
+            ownerAddress = null;
+        }
+        eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_STATE_CHANGED);
+    }
+
+    private void processGroupInfo(WifiP2pGroup conGroup, InetAddress conAddress) {
+        DDDWifiDirect.this.group = conGroup;
+        DDDWifiDirect.this.ownerAddress = conAddress;
+        // if we got an address, let all the completions waiting for an address know about it.
+        if (conAddress != null) {
+            completeAddressWaiters(conGroup.getOwner(), conAddress);
+        }
+        eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_STATE_CHANGED);
     }
 
     private void processDeviceInfo(WifiP2pDevice wifiP2pDevice) {
@@ -201,9 +214,7 @@ public class DDDWifiDirect implements DDDWifi {
         this.handlerThread = new HandlerThread("WifiP2PHandlerThread");
         this.handlerThread.start();
         this.wifiChannel = wifiP2pManager.initialize(bundleClientService, handlerThread.getLooper(), () -> logger.warning("Framework lost. Ignoring"));
-        if (hasPermission()) {
-            registerBroadcastReceiver();
-        }
+        registerBroadcastReceiver();
     }
 
     AtomicBoolean isReceiverRegistered = new AtomicBoolean(false);
@@ -413,6 +424,9 @@ public class DDDWifiDirect implements DDDWifi {
         // reregister the receivers with the new permissions
         unregisterBroadcastReceiver();
         registerBroadcastReceiver();
+        wifiP2pManager.requestP2pState(wifiChannel, (state) -> {
+            processStateChanged(state == WIFI_P2P_STATE_ENABLED);
+        });
     }
 }
 

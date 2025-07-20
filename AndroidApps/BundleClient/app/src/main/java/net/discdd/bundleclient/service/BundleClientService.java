@@ -290,9 +290,7 @@ public class BundleClientService extends Service {
             broadcastBundleClientLogEvent("Could not start exchange: " + e.getLocalizedMessage());
         } finally {
             try {
-                if (connection != null) {
-                    dddWifi.disconnectFrom(connection).get(10, TimeUnit.SECONDS);
-                }
+                dddWifi.disconnectFrom(connection).get(10, TimeUnit.SECONDS);
             } catch (Exception e) {
                 logger.log(WARNING, "Problem disconnecting from " + device.getDescription(), e);
             }
