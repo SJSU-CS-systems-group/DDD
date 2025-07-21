@@ -33,13 +33,12 @@ public class DDDFixedRateScheduler<T> {
     private WifiManager.WifiLock wifiLock;
 
     private void doWakeLock(boolean running) {
-        if (wakeLock.isHeld() && !running) {
-            wakeLock.release();
-            wifiLock.release();
-        }
-        else if (!wakeLock.isHeld() && running) {
-            wakeLock.acquire();
-            wifiLock.acquire();
+        if (running) {
+            if (wakeLock != null && !wakeLock.isHeld()) wakeLock.acquire();
+            if (wifiLock != null && !wifiLock.isHeld()) wifiLock.acquire();
+        } else {
+            if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
+            if (wifiLock != null && wifiLock.isHeld()) wifiLock.release();
         }
     }
 
@@ -50,10 +49,10 @@ public class DDDFixedRateScheduler<T> {
      */
     public DDDFixedRateScheduler(Context context, Callable<T> callable) {
         this.callable = callable;
-        var powerManager = (PowerManager)context.getSystemService(Context.POWER_SERVICE);
-        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, SVC_POWER_LOCK);
-        var wifiManager = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
-        wifiLock = wifiManager.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, SVC_POWER_LOCK);
+        var pm = (PowerManager)context.getSystemService(Context.POWER_SERVICE);
+        if (pm != null) wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, SVC_POWER_LOCK);
+        var wm = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
+        if (wm != null) wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, SVC_POWER_LOCK);
     }
 
     /**
