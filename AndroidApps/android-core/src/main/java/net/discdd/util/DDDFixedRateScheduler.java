@@ -1,11 +1,16 @@
 package net.discdd.util;
 
+import android.content.Context;
+import android.net.wifi.WifiManager;
+import android.os.PowerManager;
+
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 /**
  * This is a single threaded scheduler that periodically runs the given Callable.
@@ -23,9 +28,32 @@ public class DDDFixedRateScheduler<T> {
     public long lastExecutionStart;
     public long lastExecutionFinish;
     private ScheduledFuture<?> scheduleFuture;
+    public static final String SVC_POWER_LOCK = "net.discdd.scheduler::SvcPowerLock";
+    private PowerManager.WakeLock wakeLock;
+    private WifiManager.WifiLock wifiLock;
 
-    public DDDFixedRateScheduler(Callable<T> callable) {
+    private void doWakeLock(boolean running) {
+        if (wakeLock.isHeld() && !running) {
+            wakeLock.release();
+            wifiLock.release();
+        }
+        else if (!wakeLock.isHeld() && running) {
+            wakeLock.acquire();
+            wifiLock.acquire();
+        }
+    }
+
+
+    /**
+     * the callable will be run periodically. the same callable will be used repeatedly.
+     * @param callable the callable to run periodically. it should not throw any exceptions.
+     */
+    public DDDFixedRateScheduler(Context context, Callable<T> callable) {
         this.callable = callable;
+        var powerManager = (PowerManager)context.getSystemService(Context.POWER_SERVICE);
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, SVC_POWER_LOCK);
+        var wifiManager = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
+        wifiLock = wifiManager.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, SVC_POWER_LOCK);
     }
 
     /**
@@ -39,10 +67,12 @@ public class DDDFixedRateScheduler<T> {
         this.periodInMinutes = periodInMinutes;
         if (this.scheduleFuture != null) {
             this.scheduleFuture.cancel(false);
+            doWakeLock(false);
         }
         if (periodInMinutes <= 0) {
             return;
         }
+        doWakeLock(true);
         this.scheduleFuture = scheduler.scheduleWithFixedDelay(() -> {
             // in theory, we don't need to worry about races (and thus no synchronized) here
             // since we are running in a single threaded scheduler
@@ -71,4 +101,8 @@ public class DDDFixedRateScheduler<T> {
     }
 
     int getPeriodInMinutes() {return periodInMinutes;}
+
+    public Future<T> callItNow(Callable<T> oneTimeCallable) {
+        return scheduler.submit(oneTimeCallable);
+    }
 }

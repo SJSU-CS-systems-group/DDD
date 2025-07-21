@@ -14,10 +14,8 @@ import android.os.Binder;
 import android.os.IBinder;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
-import androidx.lifecycle.Observer;
 import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
 import net.discdd.bundlesecurity.SecurityUtils;
-import net.discdd.bundletransport.service.DDDWifiServiceEvents;
 import net.discdd.bundletransport.wifi.DDDWifiServer;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.screens.LogFragment;
@@ -59,11 +57,12 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     private static final Logger logger = Logger.getLogger(BundleTransportService.class.getName());
     private final IBinder binder = new TransportWifiDirectServiceBinder();
     private final RpcServer grpcServer = new RpcServer(this);
+    public GrpcSecurityKey grpcKeys;
     String host;
     int port;
-    private TransportPaths transportPaths;
-    final DDDFixedRateScheduler<String> periodicExchangeScheduler = new DDDFixedRateScheduler<>(this::doServerExchange);
     ConnectivityManager connectivityManager;
+    private TransportPaths transportPaths;
+    private DDDFixedRateScheduler<String> periodicExchangeScheduler;
     final private SharedPreferences.OnSharedPreferenceChangeListener preferenceChangeListener =
             (sharedPreferences, key) -> {
                 switch (key) {
@@ -73,12 +72,9 @@ public class BundleTransportService extends Service implements BundleExchangeSer
                             periodicExchangeScheduler.setPeriodInMinutes(sharedPreferences.getInt(key, 0));
                 }
             };
-    private NotificationManager notificationManager;
     private FileHttpServer httpServer;
     private boolean httpServerRunning = false;
     private DDDWifiServer dddWifiServer;
-
-    public GrpcSecurityKey grpcKeys;
 
     public Future<String> queueServerExchangeNow() {
         return periodicExchangeScheduler.callItNow();
@@ -142,7 +138,8 @@ public class BundleTransportService extends Service implements BundleExchangeSer
         SharedPreferences sharedPreferences = getSharedPreferences(BUNDLETRANSPORT_PREFERENCES, Context.MODE_PRIVATE);
         host = sharedPreferences.getString(BUNDLETRANSPORT_HOST_PREFERENCE, BUNDLE_SERVER_DOMAIN);
         port = sharedPreferences.getInt(BUNDLETRANSPORT_PORT_PREFERENCE, BUNDLE_SERVER_PORT);
-        periodicExchangeScheduler.setPeriodInMinutes(sharedPreferences.getInt(BUNDLETRANSPORT_PERIODIC_PREFERENCE, 0));
+        periodicExchangeScheduler = new DDDFixedRateScheduler<>(getApplicationContext(), this::doServerExchange);
+         periodicExchangeScheduler.setPeriodInMinutes(sharedPreferences.getInt(BUNDLETRANSPORT_PERIODIC_PREFERENCE, 0));
         sharedPreferences.registerOnSharedPreferenceChangeListener(preferenceChangeListener);
         logger.log(INFO,
                    "Starting " + BundleTransportService.class.getName() + " with flags " + flags + " and startId " +
@@ -161,7 +158,7 @@ public class BundleTransportService extends Service implements BundleExchangeSer
                                                                   NotificationManager.IMPORTANCE_HIGH);
             channel.setDescription("DDD Transport Service");
 
-            notificationManager = getSystemService(NotificationManager.class);
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
             notificationManager.createNotificationChannel(channel);
 
             Notification notification =
@@ -240,10 +237,6 @@ public class BundleTransportService extends Service implements BundleExchangeSer
 
     @Override
     public void onBundleExchangeEvent(BundleExchangeServiceImpl.BundleExchangeEvent exchangeEvent) {
-    }
-
-    private void broadcastWifiEvent(DDDWifiServer.DDDWifiServerEvent event) {
-        DDDWifiServiceEvents.sendEvent(event);
     }
 
     public DDDWifiServer getDddWifiServer() {
