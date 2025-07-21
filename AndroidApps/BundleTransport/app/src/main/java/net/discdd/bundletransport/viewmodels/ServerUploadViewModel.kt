@@ -4,10 +4,12 @@ import android.app.Application
 import android.content.Context.MODE_PRIVATE
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.discdd.AndroidAppConstants
 import net.discdd.bundletransport.R
 import net.discdd.bundletransport.TransportServiceManager
@@ -58,19 +60,21 @@ class ServerUploadViewModel(
             UserLogRepository.log(UserLogRepository.UserLogType.EXCHANGE, "TransportService is not available.", level = Level.SEVERE)
         } else {
             viewModelScope.launch {
-                try {
-                    val message = exchangeFuture.get()
-                    UserLogRepository.log(
+                withContext(Dispatchers.IO) {
+                    try {
+                        val message = exchangeFuture.get()
+                        UserLogRepository.log(
                             UserLogRepository.UserLogType.EXCHANGE,
                             message
-                    )
-                    reloadCount()
-                } catch (e: Exception) {
-                    UserLogRepository.log(
+                        )
+                        reloadCount()
+                    } catch (e: Exception) {
+                        UserLogRepository.log(
                             UserLogRepository.UserLogType.EXCHANGE,
                             "Server connection error: ${e.message}",
                             level = Level.SEVERE
-                    )
+                        )
+                    }
                 }
             }
         }
