@@ -400,7 +400,7 @@ public class DDDWifiDirect implements DDDWifi {
         wifiEnable = false;
         wifiChannel = null;
         eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_STATE_CHANGED);
-        wifiChannel.close();
+        if (wifiChannel != null) wifiChannel.close();
     }
 
     @Override
