@@ -342,7 +342,10 @@ public class BundleTransmission {
         }
     }
 
-    public record BundleExchangeCounts(TransportDevice device, Statuses uploadStatus, Statuses downloadStatus, Exception e) {}
+    public record BundleExchangeCounts(TransportDevice device,
+                                       Statuses uploadStatus,
+                                       Statuses downloadStatus,
+                                       Exception e) {}
 
     private static final int INITIAL_CONNECT_RETRIES = 8;
 

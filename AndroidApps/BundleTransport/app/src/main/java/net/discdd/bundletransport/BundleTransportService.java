@@ -139,7 +139,7 @@ public class BundleTransportService extends Service implements BundleExchangeSer
         host = sharedPreferences.getString(BUNDLETRANSPORT_HOST_PREFERENCE, BUNDLE_SERVER_DOMAIN);
         port = sharedPreferences.getInt(BUNDLETRANSPORT_PORT_PREFERENCE, BUNDLE_SERVER_PORT);
         periodicExchangeScheduler = new DDDFixedRateScheduler<>(getApplicationContext(), this::doServerExchange);
-         periodicExchangeScheduler.setPeriodInMinutes(sharedPreferences.getInt(BUNDLETRANSPORT_PERIODIC_PREFERENCE, 0));
+        periodicExchangeScheduler.setPeriodInMinutes(sharedPreferences.getInt(BUNDLETRANSPORT_PERIODIC_PREFERENCE, 0));
         sharedPreferences.registerOnSharedPreferenceChangeListener(preferenceChangeListener);
         logger.log(INFO,
                    "Starting " + BundleTransportService.class.getName() + " with flags " + flags + " and startId " +
