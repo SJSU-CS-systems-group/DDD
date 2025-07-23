@@ -1,0 +1,48 @@
+<resources>
+    <string name="title_activity_bundle_transport" translatable="false">النقل DDD</string>
+    <string name="app_name">النقل DDD</string>
+    <string name="bundle_server_host">Ravlykmail.com</string>
+    <string name="select">حدد العنصر</string>
+    <string name="wifi_request_groupinfo">"أطلب groupInfo:"</string>
+    <string name="grpc_running">حالة خادم GRPC: التشغيل</string>
+    <string name="grpc_pending">حالة خادم GRPC: معلقة</string>
+    <string name="grpc_shutdown">حالة خادم GRPC: إيقاف التشغيل</string>
+    <string name="connecting_to_server">بدء تبادل الخادم إلى ٪ 1 $ s: ٪ 2 $ s ... ٪ n</string>
+    <string name="enter_the_domain_and_port">أدخل المجال والميناء</string>
+    <string name="bundles_upload_failed">فشلت حزم التحميل. ٪ n</string>
+    <string name="saved">أنقذ</string>
+    <string name="connected_devices">الأجهزة المتصلة:</string>
+    <string name="change_phone_name">تغيير اسم الهاتف</string>
+    <string name="interactions_with_bundleclients">التفاعلات مع البوندليكات</string>
+    <string name="wifi_transport_not_active">نقل wifi غير نشط</string>
+    <string name="wifi_transport_not_active_group_info_null">نقل WiFi غير نشط: معلومات المجموعة خالية ، تحقق من تمكين WiFi</string>
+    <string name="connected">متصل</string>
+    <string name="invited">مدعو</string>
+    <string name="failed">فشل</string>
+    <string name="available">متاح</string>
+    <string name="unavailable">غير متاح</string>
+    <string name="upload">رفع</string>
+    <string name="local_wifi">wifi المحلية</string>
+    <string name="permissions">أذونات</string>
+    <string name="logs">سجلات</string>
+    <string name="reload">إعادة تحميل</string>
+    <string name="check_permissions_and_that_wifi_is_enabled">تحقق من الأذونات ويتم تمكين شبكة wifi</string>
+    <string name="no_usb_connection_detected">لم يتم اكتشاف اتصال USB</string>
+    <string name="usb_connection_detected">تم اكتشاف اتصال USB</string>
+    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">تم توصيل USB ولكن لم يتم اكتشاف دليل النقل DDD</string>
+    <string name="exchange_usb_data">تبادل بيانات USB</string>
+    <string name="to_settings_text">لتمكين تطبيقنا من إدارة الملفات المتعلقة بالتطبيق على هذا الجهاز وتخزين USB الخاص بك ، يرجى تبديل \ "نعم \" ل bundletransport في إعداداتك. نؤكد لكم أنه سيتم الوصول إلى الملفات التي تم إنشاؤها بواسطة تطبيقنا فقط. تعد حماية خصوصية المستخدم والحفاظ على الممارسات الأخلاقية أولوياتنا العليا.</string>
+    <string name="error_updating_storage_info">خطأ في تحديث معلومات التخزين</string>
+    <string name="apply_changes">انقر فوق تعيين سعة التخزين لتطبيق التغييرات</string>
+    <string name="storage_updated">تخزين تحديث</string>
+    <string name="failed_to_update_storage">فشل في تحديث التخزين</string>
+    <string name="initiating_bundle_exchange">بدء تبادل الحزمة ...</string>
+    <string name="exchanging_with_client">تبادل مع العميل</string>
+    <string name="collect_data_even_when_app_is_closed">جمع البيانات حتى عند إغلاق التطبيق</string>
+    <string name="dismiss">رفض</string>
+    <string name="storage" translatable="false">تخزين</string>
+    <string name="usb" translatable="false">USB</string>
+    <string name="phone_name_must_start_with_ddd_found">يجب أن يبدأ اسم الهاتف بـ DDD_ الموجود: ٪ 1 $ s</string>
+    <string name="phone_name_unreachable">اسم الجهاز غير معروف</string>
+    <string name="Wifi_disabled">يرجى تشغيل wifi لاستخدام ميزات bundletransport</string>
+</resources>
