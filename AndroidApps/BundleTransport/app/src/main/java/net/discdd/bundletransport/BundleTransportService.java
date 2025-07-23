@@ -179,6 +179,7 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     public void onDestroy() {
         if (dddWifiServer != null) {
             dddWifiServer.shutdown();
+            dddWifiServer = null;
         }
         stopHttpServer();
         stopRpcServer();
