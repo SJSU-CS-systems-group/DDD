@@ -42,16 +42,16 @@ public class DDDFixedRateScheduler<T> {
         }
     }
 
-
     /**
      * the callable will be run periodically. the same callable will be used repeatedly.
+     *
      * @param callable the callable to run periodically. it should not throw any exceptions.
      */
     public DDDFixedRateScheduler(Context context, Callable<T> callable) {
         this.callable = callable;
-        var pm = (PowerManager)context.getSystemService(Context.POWER_SERVICE);
+        var pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
         if (pm != null) wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, SVC_POWER_LOCK);
-        var wm = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
+        var wm = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
         if (wm != null) wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, SVC_POWER_LOCK);
     }
 
