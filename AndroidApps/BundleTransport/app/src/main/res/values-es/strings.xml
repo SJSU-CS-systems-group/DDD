@@ -1,0 +1,48 @@
+<resources>
+    <string name="title_activity_bundle_transport" translatable="false">Transporte de DDD</string>
+    <string name="app_name">Transporte de DDD</string>
+    <string name="bundle_server_host">Ravlykmail.com</string>
+    <string name="select">Seleccionar elemento</string>
+    <string name="wifi_request_groupinfo">"Solicito GroupInfo:"</string>
+    <string name="grpc_running">Estado del servidor GRPC: en ejecución</string>
+    <string name="grpc_pending">Estado del servidor GRPC: pendiente</string>
+    <string name="grpc_shutdown">Estado del servidor GRPC: apagado</string>
+    <string name="connecting_to_server">Iniciar el intercambio del servidor a%1$s:%2$s ...%n</string>
+    <string name="enter_the_domain_and_port">Ingrese el dominio y el puerto</string>
+    <string name="bundles_upload_failed">Falló la carga de bundles.%N</string>
+    <string name="saved">Guardado</string>
+    <string name="connected_devices">Dispositivos conectados:</string>
+    <string name="change_phone_name">Cambiar el nombre del teléfono</string>
+    <string name="interactions_with_bundleclients">Interacciones con bundleclients</string>
+    <string name="wifi_transport_not_active">Transporte wifi no activo</string>
+    <string name="wifi_transport_not_active_group_info_null">Wifi Transport no activo: la información del grupo es nula, verifique que WiFi esté habilitado</string>
+    <string name="connected">Conectado</string>
+    <string name="invited">Invitado</string>
+    <string name="failed">Fallido</string>
+    <string name="available">Disponible</string>
+    <string name="unavailable">Indisponible</string>
+    <string name="upload">Subir</string>
+    <string name="local_wifi">Wifi local</string>
+    <string name="permissions">Permisos</string>
+    <string name="logs">Registro</string>
+    <string name="reload">Recargar</string>
+    <string name="check_permissions_and_that_wifi_is_enabled">Verifique los permisos y ese wifi está habilitado</string>
+    <string name="no_usb_connection_detected">Sin conexión USB detectada</string>
+    <string name="usb_connection_detected">Conexión USB detectada</string>
+    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">USB estaba conectado pero no se detectó el directorio de transporte DDD</string>
+    <string name="exchange_usb_data">Intercambiar datos USB</string>
+    <string name="to_settings_text">Para habilitar nuestra aplicación para administrar archivos relacionados con la aplicación en este dispositivo y su almacenamiento USB, alterne \ "sí \" para Bundletransport en su configuración. Le aseguramos que solo se accederán a los archivos creados por nuestra aplicación. Proteger la privacidad del usuario y mantener las prácticas éticas son nuestras principales prioridades.</string>
+    <string name="error_updating_storage_info">Error de actualización de información de almacenamiento</string>
+    <string name="apply_changes">Haga clic en Establecer almacenamiento para aplicar los cambios</string>
+    <string name="storage_updated">Almacenamiento actualizado</string>
+    <string name="failed_to_update_storage">No se pudo actualizar el almacenamiento</string>
+    <string name="initiating_bundle_exchange">Iniciar el intercambio de paquetes ...</string>
+    <string name="exchanging_with_client">Intercambio con el cliente</string>
+    <string name="collect_data_even_when_app_is_closed">Recopilar datos incluso cuando la aplicación esté cerrada</string>
+    <string name="dismiss">Despedir</string>
+    <string name="storage" translatable="false">Almacenamiento</string>
+    <string name="usb" translatable="false">USB</string>
+    <string name="phone_name_must_start_with_ddd_found">El nombre del teléfono debe comenzar con ddd_ encontrado: %1$s</string>
+    <string name="phone_name_unreachable">El nombre del dispositivo es desconocido</string>
+    <string name="Wifi_disabled">Encienda WiFi para usar las funciones de Bundletransport</string>
+</resources>

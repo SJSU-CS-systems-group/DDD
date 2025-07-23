@@ -1,0 +1,11 @@
+<resources>
+    <string name="manual_action_required">Une action manuelle est nécessaire pour accorder l\'accès aux appareils à proximité. Pour continuer, cliquez sur \'Activer\' -&gt; \'Permissions\' -&gt; \'PRICALS ACTICIAL\' -&gt; \'ALLER\'&gt;</string>
+    <string name="generic_ask_permission">Cette autorisation est nécessaire pour découvrir et se connecter aux appareils à proximité pour les transferts de fichiers.</string>
+    <string name="urgent_ask_permission">Avoir accès aux appareils à proximité est important pour les fonctionnalités de transport. Veuillez nous accorder l\'accès à continuer. Merci: D</string>
+    <string name="close_bottom_sheet">Fermer la plaque inférieure</string>
+    <string name="turn_on_notifications">Activer les notifications</string>
+    <string name="ask_notification_desc">Ne manquez pas les messages importants comme les progrès du téléchargement du bundle et de l\'activité d\'application</string>
+    <string name="to_settings">Aux paramètres</string>
+    <string name="to_settings_text">Pour permettre à notre application de gérer les fichiers liés à l\'application sur cet appareil et votre stockage USB, veuillez basculer "Oui" pour BundleClient dans vos paramètres. Nous vous assurons que seuls les fichiers créés par notre application seront accessibles. La protection de la confidentialité des utilisateurs et le maintien des pratiques éthiques sont nos principales priorités.</string>
+    <string name="reload">Recharger</string>
+</resources>

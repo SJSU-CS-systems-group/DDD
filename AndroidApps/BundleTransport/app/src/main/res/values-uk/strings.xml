@@ -1,0 +1,48 @@
+<resources>
+    <string name="title_activity_bundle_transport" translatable="false">DDD Transport</string>
+    <string name="app_name">DDD Transport</string>
+    <string name="bundle_server_host">ravlykmail.com</string>
+    <string name="select">Виберіть елемент</string>
+    <string name="wifi_request_groupinfo">"Я запитую GroupInfo:"</string>
+    <string name="grpc_running">Стан сервера GRPC: запуск</string>
+    <string name="grpc_pending">Стан сервера GRPC: очікування</string>
+    <string name="grpc_shutdown">Стан сервера GRPC: відключення</string>
+    <string name="connecting_to_server">Ініціювання обміну сервером до%1$s:%2$s ...%n</string>
+    <string name="enter_the_domain_and_port">Введіть домен і порт</string>
+    <string name="bundles_upload_failed">Завантаження пучків не вдалося.%N</string>
+    <string name="saved">Врятований</string>
+    <string name="connected_devices">Підключені пристрої:</string>
+    <string name="change_phone_name">Змінити ім\'я телефону</string>
+    <string name="interactions_with_bundleclients">Взаємодія з Bundleclients</string>
+    <string name="wifi_transport_not_active">Wi -Fi Transport не активний</string>
+    <string name="wifi_transport_not_active_group_info_null">Wi -Fi Transport Не активний: Інформація про групу нульова, перевірте, чи включений Wi -Fi</string>
+    <string name="connected">З\'єднаний</string>
+    <string name="invited">Запрошений</string>
+    <string name="failed">Провалився</string>
+    <string name="available">Доступний</string>
+    <string name="unavailable">Недоступний</string>
+    <string name="upload">Завантажувати</string>
+    <string name="local_wifi">Місцевий Wi -Fi</string>
+    <string name="permissions">Дозволи</string>
+    <string name="logs">Журнали</string>
+    <string name="reload">Перезавантажувати</string>
+    <string name="check_permissions_and_that_wifi_is_enabled">Перевірте дозволи і що Wi -Fi увімкнено</string>
+    <string name="no_usb_connection_detected">Не виявлено USB -з\'єднання</string>
+    <string name="usb_connection_detected">Виявлено USB -з\'єднання</string>
+    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">USB був підключений, але транспортний довідник DDD не був виявлений</string>
+    <string name="exchange_usb_data">Обмін USB -даних</string>
+    <string name="to_settings_text">Щоб дозволити нашому додатку керувати файлами, пов\'язаними з додатками на цьому пристрої, та на вашому USB-сховищі, будь ласка, перемикайте \ "так \" для Bundletransport у своїх налаштуваннях. Ми запевняємо вас, що доступні лише файли, створені нашим додатком. Захист конфіденційності користувачів та підтримання етичних практик - наші основні пріоритети.</string>
+    <string name="error_updating_storage_info">Помилка оновлення інформації про зберігання</string>
+    <string name="apply_changes">Клацніть Встановити сховище, щоб застосувати зміни</string>
+    <string name="storage_updated">Зберігання оновлено</string>
+    <string name="failed_to_update_storage">Не вдалося оновити зберігання</string>
+    <string name="initiating_bundle_exchange">Ініціювання обміну пакету ...</string>
+    <string name="exchanging_with_client">Обмін з клієнтом</string>
+    <string name="collect_data_even_when_app_is_closed">Збирати дані навіть тоді, коли додаток закрито</string>
+    <string name="dismiss">Звільнити</string>
+    <string name="storage" translatable="false">Зберігання</string>
+    <string name="usb" translatable="false">USB</string>
+    <string name="phone_name_must_start_with_ddd_found">Назва телефону повинна починатися з DDD_ знайдено: %1$s</string>
+    <string name="phone_name_unreachable">Назва пристрою невідома</string>
+    <string name="Wifi_disabled">Увімкніть Wi -Fi, щоб використовувати функції Bundletransport</string>
+</resources>
