@@ -34,25 +34,27 @@ import net.discdd.client.bundletransmission.TransportDevice;
 import net.discdd.datastore.providers.MessageProvider;
 import net.discdd.model.ADU;
 import net.discdd.pathutils.ClientPaths;
+import net.discdd.util.DDDFixedRateScheduler;
 import net.discdd.utils.UserLogRepository;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Logger;
 
 import static java.lang.String.format;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
+import static net.discdd.utils.Constants.GRPC_LONG_TIMEOUT_MS;
 
 // the service is usually formatting messages for the log rather than users, so don't complain about locales
 @SuppressLint("DefaultLocale")
@@ -64,18 +66,19 @@ public class BundleClientService extends Service {
     public static final String NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE = "background_exchange";
     public static final String NET_DISCDD_BUNDLECLIENT_DEVICEADDRESS_EXTRA = "deviceAddress";
     private static final Logger logger = Logger.getLogger(BundleClientService.class.getName());
-    private static final BundleExchangeCounts FAILED_EXCHANGE_COUNTS = new BundleExchangeCounts(Statuses.FAILED,Statuses.FAILED, null);
+    public static BundleClientService instance;
     private static SharedPreferences preferences;
     private final IBinder binder = new BundleClientServiceBinder();
-    private final ScheduledExecutorService periodicExecutor = Executors.newSingleThreadScheduledExecutor();
-    PeriodicRunnable periodicRunnable = new PeriodicRunnable();
-    private DDDWifi dddWifi;
-    private BundleTransmission bundleTransmission;
-    ConnectivityManager connectivityManager;
-    final private Observer<? super DDDWifiEventType> liveDataObserver = this::broadcastWifiEvent;
+    private DDDFixedRateScheduler<BundleExchangeCounts[]> fixedRateSched;
     // per https://developer.android.com/reference/android/content/SharedPreferences the listener needs
     // to be a strong reference
     final private SharedPreferences.OnSharedPreferenceChangeListener onSharedPreferenceChangeListener;
+    // this is used by processIncomingADU to track which appIds have been inserted
+    final private Set<String> insertedAppIds = Collections.synchronizedSet(new HashSet<>());
+    ConnectivityManager connectivityManager;
+    private DDDWifi dddWifi;
+    private BundleTransmission bundleTransmission;
+    final private Observer<? super DDDWifiEventType> liveDataObserver = this::broadcastWifiEvent;
 
     public BundleClientService() {
         super();
@@ -85,19 +88,9 @@ public class BundleClientService extends Service {
             }
         };
     }
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        super.onStartCommand(intent, flags, startId);
-        preferences = getSharedPreferences(NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE);
-        preferences.registerOnSharedPreferenceChangeListener(onSharedPreferenceChangeListener);
-        processBackgroundExchangeSetting();
-        startForeground();
-        connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
-        return START_STICKY;
-    }
 
-    public DDDWifi getDddWifi() {
-        return dddWifi;
+    private static BundleExchangeCounts failedExchangeCounts(TransportDevice device) {
+        return new BundleExchangeCounts(device, Statuses.FAILED, Statuses.FAILED, null);
     }
 
     public static int getBackgroundExchangeSetting(SharedPreferences preferences) {
@@ -114,13 +107,25 @@ public class BundleClientService extends Service {
         }
     }
 
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        super.onStartCommand(intent, flags, startId);
+        preferences = getSharedPreferences(NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE);
+        preferences.registerOnSharedPreferenceChangeListener(onSharedPreferenceChangeListener);
+        fixedRateSched = new DDDFixedRateScheduler<>(getApplicationContext(), this::exchangeWithTransports);
+        processBackgroundExchangeSetting();
+        startForeground();
+        connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        return START_STICKY;
+    }
+
+    public DDDWifi getDddWifi() {
+        return dddWifi;
+    }
+
     private void processBackgroundExchangeSetting() {
         var backgroundExchange = getBackgroundExchangeSetting(preferences);
-        if (backgroundExchange > 0) {
-            periodicRunnable.schedule(backgroundExchange);
-        } else {
-            periodicRunnable.cancel();
-        }
+        fixedRateSched.setPeriodInMinutes(backgroundExchange);
         logger.info("Client background exchange changed to " + backgroundExchange);
     }
 
@@ -147,12 +152,12 @@ public class BundleClientService extends Service {
 
             //Application context
             var resources = getApplicationContext().getResources();
-            try (InputStream inServerIdentity = resources.openRawResource(
-                    net.discdd.android_core.R.raw.server_identity); InputStream inServerSignedPre =
-                    resources.openRawResource(
-                    net.discdd.android_core.R.raw.server_signed_pre); InputStream inServerRatchet =
-                    resources.openRawResource(
-                    net.discdd.android_core.R.raw.server_ratchet)) {
+            try (InputStream inServerIdentity =
+                         resources.openRawResource(net.discdd.android_core.R.raw.server_identity);
+                 InputStream inServerSignedPre =
+                         resources.openRawResource(net.discdd.android_core.R.raw.server_signed_pre);
+                 InputStream inServerRatchet =
+                         resources.openRawResource(net.discdd.android_core.R.raw.server_ratchet)) {
                 BundleSecurity.initializeKeyPaths(clientPaths, inServerIdentity, inServerSignedPre, inServerRatchet);
             } catch (IOException e) {
                 logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
@@ -172,8 +177,6 @@ public class BundleClientService extends Service {
         }
     }
 
-    // this is used by processIncomingADU to track which appIds have been inserted
-    final private Set<String> insertedAppIds = Collections.synchronizedSet(new HashSet<>());
     private void processIncomingADU(ADU adu) {
         if (adu == null) {
             // the null adu is used to signal that the current batch of processing ADUs is done
@@ -188,8 +191,6 @@ public class BundleClientService extends Service {
             insertedAppIds.add(adu.getAppId());
         }
     }
-
-    public static BundleClientService instance;
 
     @Override
     public void onCreate() {
@@ -217,7 +218,9 @@ public class BundleClientService extends Service {
     }
 
     @SuppressLint("MissingPermission")
-    private void exchangeWithTransports() {
+    private BundleExchangeCounts[] exchangeWithTransports() throws ExecutionException, InterruptedException,
+            TimeoutException {
+        var exchangeCounts = new ArrayList<BundleExchangeCounts>();
         try {
             dddWifi.startDiscovery().get(10, TimeUnit.SECONDS);
         } catch (Exception e) {
@@ -229,13 +232,16 @@ public class BundleClientService extends Service {
         for (var transport : recentTransports) {
             if (transport.getDevice() instanceof DDDWifiDevice) {
                 var bc = exchangeWith((DDDWifiDevice) transport.getDevice());
+                exchangeCounts.add(bc);
                 logger.log(INFO,
                            format("Upload status: %s, Download status: %s",
                                   bc.uploadStatus().toString(),
                                   bc.downloadStatus().toString()));
             }
         }
-        initiateServerExchange();
+        var bc = initiateServerExchange().get(GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+        exchangeCounts.add(bc);
+        return exchangeCounts.toArray(new BundleExchangeCounts[0]);
     }
 
     @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES })
@@ -249,7 +255,7 @@ public class BundleClientService extends Service {
 
             if (connection == null || connection.getAddresses().isEmpty()) {
                 broadcastBundleClientLogEvent("Failed to connect to " + device.getDescription());
-                return FAILED_EXCHANGE_COUNTS;
+                return failedExchangeCounts(device);
             }
             var addr = connection.getAddresses().get(0);
             broadcastBundleClientLogEvent(format("Connected to %s (%s)",
@@ -262,7 +268,8 @@ public class BundleClientService extends Service {
                                                  statusesToString(currentBundle.uploadStatus()),
                                                  statusesToString(currentBundle.downloadStatus())));
             if (currentBundle.e() instanceof BundleTransmission.RecencyException) {
-                broadcastBundleClientLogEvent("Transport has not exchanged with server recently: " + currentBundle.e().getMessage());
+                broadcastBundleClientLogEvent(
+                        "Transport has not exchanged with server recently: " + currentBundle.e().getMessage());
             }
             String text1;
             String text2;
@@ -285,9 +292,12 @@ public class BundleClientService extends Service {
             Handler handler = new Handler(Looper.getMainLooper());
             handler.post(() -> Toast.makeText(getApplicationContext(), text, Toast.LENGTH_LONG).show());
             return currentBundle;
+        } catch (TimeoutException e) {
+            logger.log(WARNING, "Timeout connecting to " + device.getDescription());
+            broadcastBundleClientLogEvent("Timeout connecting to " + device.getDescription() + " perhaps not accepting connection?");
         } catch (Throwable e) {
             logger.log(WARNING, e.getMessage(), e);
-            broadcastBundleClientLogEvent("Could not start exchange: " + e.getLocalizedMessage());
+            broadcastBundleClientLogEvent("Could not start exchange: " + e.getMessage());
         } finally {
             try {
                 if (connection != null) {
@@ -301,7 +311,7 @@ public class BundleClientService extends Service {
                                            device.getWifiAddress());
 
         }
-        return FAILED_EXCHANGE_COUNTS;
+        return failedExchangeCounts(device);
     }
 
     private String statusesToString(Statuses statuses) {
@@ -319,6 +329,7 @@ public class BundleClientService extends Service {
     /**
      * Broadcast a wifi event to any interested receivers.
      * THIS CODE ALSO PROCESSES EVENTS IT IS INTERESTED IN
+     *
      * @param type the type of event
      */
     public void broadcastWifiEvent(DDDWifiEventType type) {
@@ -354,25 +365,26 @@ public class BundleClientService extends Service {
                 new NotificationChannel("DDD-Exchange", "DDD Bundle Client", NotificationManager.IMPORTANCE_HIGH);
         channel.setDescription("Initiating Bundle Exchange...");
 
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "DDD-Client")
-                .setSmallIcon(R.drawable.bundleclient_icon)
-                .setContentTitle(getString(R.string.exchanging_with_transport))
-                .setContentText(getString(R.string.initiating_bundle_exchange))
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setAutoCancel(false)
-                .setOngoing(true);
+        NotificationCompat.Builder builder =
+                new NotificationCompat.Builder(this, "DDD-Client").setSmallIcon(R.drawable.bundleclient_icon)
+                        .setContentTitle(getString(R.string.exchanging_with_transport))
+                        .setContentText(getString(R.string.initiating_bundle_exchange))
+                        .setPriority(NotificationCompat.PRIORITY_HIGH)
+                        .setAutoCancel(false)
+                        .setOngoing(true);
 
         NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         notificationManager.notify(1002, builder.build());
 
-        // we want to use the executor to make sure that only one exchange is going on at a time
-        periodicExecutor.submit(() -> {
+        fixedRateSched.callItNow(() -> {
             try {
                 var bundleExchangeCounts = exchangeWith(device);
                 completableFuture.complete(bundleExchangeCounts);
+                return new BundleExchangeCounts[] { bundleExchangeCounts };
             } catch (Exception e) {
                 logger.log(WARNING, "Failed to initiate exchange with " + device.getDescription(), e);
-                completableFuture.complete(FAILED_EXCHANGE_COUNTS);
+                completableFuture.complete(failedExchangeCounts(device));
+                throw e;
             }
         });
 
@@ -389,28 +401,36 @@ public class BundleClientService extends Service {
         var connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
         var activeNetwork = connectivityManager.getActiveNetwork();
         var caps = activeNetwork == null ? null : connectivityManager.getNetworkCapabilities(activeNetwork);
-        if (caps == null || !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) || !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
+        var FAILED_EXCHANGE_COUNTS = failedExchangeCounts(TransportDevice.SERVER_DEVICE);
+        if (caps == null || !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) ||
+                !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
             logger.info("Not connected to the internet, skipping server exchange");
             completableFuture.complete(FAILED_EXCHANGE_COUNTS);
             return completableFuture;
         }
-        periodicExecutor.submit(() -> {
+        fixedRateSched.callItNow(() -> {
+            var bc = FAILED_EXCHANGE_COUNTS;
             try {
                 var serverAddress = preferences.getString("domain", "");
                 var port = preferences.getInt("port", 0);
                 if (serverAddress.isEmpty() || port == 0) {
                     completableFuture.complete(FAILED_EXCHANGE_COUNTS);
-                    return;
+                } else {
+                    bc = bundleTransmission.doExchangeWithTransport(TransportDevice.SERVER_DEVICE,
+                                                                    serverAddress,
+                                                                    port,
+                                                                    false);
+                    logger.log(INFO,
+                               format("Upload status: %s, Download status: %s",
+                                      bc.uploadStatus().toString(),
+                                      bc.downloadStatus().toString()));
+                    completableFuture.complete(bc);
                 }
-                var bundleExchangeCounts =
-                        bundleTransmission.doExchangeWithTransport(TransportDevice.SERVER_DEVICE, serverAddress,
-                                                                   port, false);
-                logger.log(INFO, format("Upload status: %s, Download status: %s",bundleExchangeCounts.uploadStatus().toString(), bundleExchangeCounts.downloadStatus().toString()));
-                completableFuture.complete(bundleExchangeCounts);
             } catch (Exception e) {
                 logger.log(WARNING, "Failed to initiate exchange with server", e);
                 completableFuture.complete(FAILED_EXCHANGE_COUNTS);
             }
+            return new BundleExchangeCounts[] { bc };
         });
         return completableFuture;
     }
@@ -425,7 +445,8 @@ public class BundleClientService extends Service {
 
     public BundleTransmission.RecentTransport getRecentTransport(DDDWifiDevice peer) {
         return Arrays.stream(bundleTransmission.getRecentTransports())
-                .filter(rt -> peer.equals(rt.getDevice())).findFirst()
+                .filter(rt -> peer.equals(rt.getDevice()))
+                .findFirst()
                 .orElse(new BundleTransmission.RecentTransport(peer));
     }
 
@@ -446,45 +467,17 @@ public class BundleClientService extends Service {
         dddWifi.wifiPermissionGranted();
     }
 
-    public enum BundleClientTransmissionEventType {
-        WIFI_DIRECT_CLIENT_EXCHANGE_STARTED, WIFI_DIRECT_CLIENT_EXCHANGE_FINISHED
+    public BundleTransmission getBundleTransmission() {
+        return bundleTransmission;
     }
 
-    private class PeriodicRunnable implements Runnable {
-        private ScheduledFuture<?> scheduledFuture;
-
-        synchronized public void schedule(int minutes) {
-            if (scheduledFuture == null) {
-                logger.info(format("Scheduling periodic exchange with transports every %d minutes", minutes));
-                scheduledFuture = periodicExecutor.scheduleWithFixedDelay(this, minutes, minutes,
-                                                                          TimeUnit.MINUTES);
-            }
-        }
-
-        synchronized public void cancel() {
-            if (scheduledFuture != null) {
-                logger.warning("Cancelling periodic exchange with transports");
-                scheduledFuture.cancel(false);
-                scheduledFuture = null;
-            }
-        }
-
-        @Override
-        public void run() {
-            try {
-                logger.info("Periodic exchange with transports started");
-                BundleClientService.this.exchangeWithTransports();
-            } catch (Exception e) {
-                logger.log(SEVERE, "Periodic exchange with transports failed", e);
-            }
-        }
+    public enum BundleClientTransmissionEventType {
+        WIFI_DIRECT_CLIENT_EXCHANGE_STARTED, WIFI_DIRECT_CLIENT_EXCHANGE_FINISHED
     }
 
     public class BundleClientServiceBinder extends Binder {
         public BundleClientService getService() {return BundleClientService.this;}
     }
 
-    public BundleTransmission getBundleTransmission() {
-        return bundleTransmission;
-    }
+
 }
