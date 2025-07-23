@@ -1,0 +1,42 @@
+<resources>
+    <string name="app_name">عميل DDD</string>
+    <string name="Upload_Success">كان التحميل نجاحًا</string>
+    <string name="Upload_Empty">لا شيء للتحميل</string>
+    <string name="Upload_Failed">فشل التحميل</string>
+    <string name="Download_Success">كان التنزيل نجاحًا</string>
+    <string name="Download_Empty">التنزيل فارغ</string>
+    <string name="Download_Failed">فشل التنزيل</string>
+    <string name="home_tab">بيت</string>
+    <string name="permissions_tab">أذونات</string>
+    <string name="usb_tab">USB</string>
+    <string name="logs_tab">سجلات</string>
+    <string name="bm_tab">مدير حزمة</string>
+    <string name="server_tab">الخادم</string>
+    <string name="no_usb_connection_detected">لم يتم اكتشاف أي اتصال USB ٪ n</string>
+    <string name="exchange_usb_data">تبادل بيانات USB</string>
+    <string name="not_connected">غير متصل</string>
+    <string name="connected_to_transport">متصل بالنقل</string>
+    <string name="refresh_peers">تحديث الأقران</string>
+    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">تم توصيل USB ، ولكن لم يتم اكتشاف دليل /ddd_transport ٪ n</string>
+    <string name="never">أبداً</string>
+    <string name="usb_connection_detected">تم اكتشاف اتصال USB</string>
+    <string name="settings_saved">الإعدادات المحفوظة</string>
+    <string name="connecting_to_server">الاتصال بالخادم ...</string>
+    <string name="upload_status">حالة التحميل: ٪ 1 $ s ، تنزيل الحالة: ٪ 2 $ s</string>
+    <string name="service_not_available">خطأ: الخدمة غير متوفرة.</string>
+    <string name="initiating_bundle_exchange">بدء تبادل الحزمة ...</string>
+    <string name="exchanging_with_transport">التبادل مع النقل</string>
+    <string name="reload">إعادة تحميل</string>
+    <string name="to_settings_text">لتمكين تطبيقنا لإدارة الملفات المتعلقة بالتطبيق على هذا الجهاز وتخزين USB الخاص بك ، يرجى تبديل \ "نعم \" للبوندليكلين في إعداداتك. نؤكد لكم أنه سيتم الوصول إلى الملفات التي تم إنشاؤها بواسطة تطبيقنا فقط. تعد حماية خصوصية المستخدم والحفاظ على الممارسات الأخلاقية أولوياتنا العليا.</string>
+    <string name="subscribe">يشترك</string>
+    <string name="service_name" translatable="false">DDD</string>
+    <string name="unsubscribe">إلغاء الاشتراك</string>
+    <string name="unknown_error">خطأ غير معروف</string>
+    <string name="turn_on_notifications">قم بتشغيل الإخطارات</string>
+    <string name="close_bottom_sheet">أغلق الورقة السفلية</string>
+    <string name="wifi_aware_tab">واي فاي مدرك</string>
+    <string name="sent">"مرسل: "</string>
+    <string name="received">تلقى</string>
+    <string name="cannot_transfer_bundle_usb_not_ready_or_directory_not_found">لا يمكن نقل حزمة: USB غير جاهز أو لم يتم العثور على الدليل</string>
+    <string name="delete_logs">سجلات واضحة</string>
+</resources>

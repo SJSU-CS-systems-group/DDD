@@ -1,0 +1,42 @@
+<resources>
+    <string name="app_name">Client DDD</string>
+    <string name="Upload_Success">Le téléchargement a été un succès</string>
+    <string name="Upload_Empty">Rien à télécharger</string>
+    <string name="Upload_Failed">Le téléchargement a échoué</string>
+    <string name="Download_Success">Le téléchargement a été un succès</string>
+    <string name="Download_Empty">Le téléchargement est vide</string>
+    <string name="Download_Failed">Le téléchargement a échoué</string>
+    <string name="home_tab">Maison</string>
+    <string name="permissions_tab">Autorisation</string>
+    <string name="usb_tab">USB</string>
+    <string name="logs_tab">Bûches</string>
+    <string name="bm_tab">Gestionnaire</string>
+    <string name="server_tab">Serveur</string>
+    <string name="no_usb_connection_detected">Aucune connexion USB détectée% n</string>
+    <string name="exchange_usb_data">Échanger des données USB</string>
+    <string name="not_connected">Non connecté</string>
+    <string name="connected_to_transport">Connecté au transport</string>
+    <string name="refresh_peers">Actualiser les pairs</string>
+    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">L\'USB était connecté, mais le répertoire DDD_TRANSPORT n\'a pas été détecté% n</string>
+    <string name="never">Jamais</string>
+    <string name="usb_connection_detected">Connexion USB détectée</string>
+    <string name="settings_saved">Paramètres enregistrés</string>
+    <string name="connecting_to_server">Connexion au serveur ...</string>
+    <string name="upload_status">Statut de téléchargement:%1$s, statut de téléchargement:% 2 $ S</string>
+    <string name="service_not_available">Erreur: le service n\'est pas disponible.</string>
+    <string name="initiating_bundle_exchange">Échange de bundle initiant ...</string>
+    <string name="exchanging_with_transport">Échange avec le transport</string>
+    <string name="reload">Recharger</string>
+    <string name="to_settings_text">Pour permettre à notre application de gérer les fichiers liés à l\'application sur cet appareil et votre stockage USB, veuillez basculer \ "Oui \" pour BundleClient dans vos paramètres. Nous vous assurons que seuls les fichiers créés par notre application seront accessibles. La protection de la confidentialité des utilisateurs et le maintien des pratiques éthiques sont nos principales priorités.</string>
+    <string name="subscribe">S\'abonner</string>
+    <string name="service_name" translatable="false">DDD</string>
+    <string name="unsubscribe">Se désabonner</string>
+    <string name="unknown_error">Erreur inconnue</string>
+    <string name="turn_on_notifications">Activer les notifications</string>
+    <string name="close_bottom_sheet">Fermer la plaque inférieure</string>
+    <string name="wifi_aware_tab">WiFi conscient</string>
+    <string name="sent">"envoyé: "</string>
+    <string name="received">reçu</string>
+    <string name="cannot_transfer_bundle_usb_not_ready_or_directory_not_found">Impossible de transférer Bundle: USB non prêt ou le répertoire n\'est pas trouvé</string>
+    <string name="delete_logs">Effacer les journaux</string>
+</resources>

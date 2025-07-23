@@ -1,11 +1,11 @@
 <resources>
-    <string name="manual_action_required"><![CDATA[Manual action is required to grant access to nearby devices. To proceed, click \'Enable\' -> \'Permissions\' -> \'Nearby devices\' -> \'Allow\']]></string>
+    <string name="manual_action_required">Manual action is required to grant access to nearby devices. To proceed, click \'Enable\' -> \'Permissions\' -> \'Nearby devices\' -> \'Allow\'</string>
     <string name="generic_ask_permission">This permission is needed to discover and connect to nearby devices for file transfers.</string>
     <string name="urgent_ask_permission">Getting access to nearby devices is important for transport functionality. Please grant us access to continue. Thank you :D</string>
     <string name="close_bottom_sheet">Close bottom sheet</string>
     <string name="turn_on_notifications">Turn on notifications</string>
     <string name="ask_notification_desc">Don\'t miss important messages like bundle upload progress and application activity</string>
     <string name="to_settings">To Settings</string>
-    <string name="to_settings_text">To enable our app to manage app-related files on this device and your USB storage, please toggle \\\"Yes\\\" for BundleClient in your settings. We assure you that only files created by our app will be accessed. Protecting user privacy and maintaining ethical practices are our top priorities.</string>
+    <string name="to_settings_text">To enable our app to manage app-related files on this device and your USB storage, please toggle "Yes" for BundleClient in your settings. We assure you that only files created by our app will be accessed. Protecting user privacy and maintaining ethical practices are our top priorities.</string>
     <string name="reload">Reload</string>
 </resources>
