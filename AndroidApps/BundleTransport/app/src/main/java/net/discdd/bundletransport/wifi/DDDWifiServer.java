@@ -94,6 +94,7 @@ public class DDDWifiServer {
 
     public void shutdown() {
         unregisterWifiIntentReceiver();
+        if (channel != null) channel.close();
     }
 
     public String getDeviceName() {

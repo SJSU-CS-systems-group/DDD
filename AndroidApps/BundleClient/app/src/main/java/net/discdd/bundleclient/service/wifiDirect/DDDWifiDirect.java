@@ -398,9 +398,9 @@ public class DDDWifiDirect implements DDDWifi {
         handlerThread.quit();
         // there is no shutdown for wifiP2pManager
         wifiEnable = false;
+        wifiChannel.close();
         wifiChannel = null;
         eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_STATE_CHANGED);
-        if (wifiChannel != null) wifiChannel.close();
     }
 
     @Override
