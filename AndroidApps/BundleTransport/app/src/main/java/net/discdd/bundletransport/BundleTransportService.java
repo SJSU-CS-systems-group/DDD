@@ -12,6 +12,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkCapabilities;
 import android.os.Binder;
 import android.os.IBinder;
+import android.os.StrictMode;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
 import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
@@ -23,6 +24,7 @@ import net.discdd.tls.GrpcSecurityKey;
 import net.discdd.transport.TransportToBundleServerManager;
 import net.discdd.utils.DDDFixedRateScheduler;
 import net.discdd.utils.UserLogRepository;
+import org.acra.BuildConfig;
 import org.bouncycastle.operator.OperatorCreationException;
 
 import java.io.File;
@@ -118,6 +120,15 @@ public class BundleTransportService extends Service implements BundleExchangeSer
                                        message,
                                        System.currentTimeMillis(),
                                        level);
+    }
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        if (BuildConfig.DEBUG) {
+            StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().detectAll().penaltyLog().build());
+            StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().detectAll().penaltyLog().build());
+        }
     }
 
     @Override
