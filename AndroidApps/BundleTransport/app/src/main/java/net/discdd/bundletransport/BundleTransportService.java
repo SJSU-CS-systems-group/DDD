@@ -22,6 +22,7 @@ import net.discdd.screens.LogFragment;
 import net.discdd.tls.GrpcSecurityKey;
 import net.discdd.transport.TransportToBundleServerManager;
 import net.discdd.util.DDDFixedRateScheduler;
+import net.discdd.utils.DDDFixedRateScheduler;
 import net.discdd.utils.UserLogRepository;
 import org.bouncycastle.operator.OperatorCreationException;
 

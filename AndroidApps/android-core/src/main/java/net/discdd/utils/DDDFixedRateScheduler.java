@@ -66,9 +66,10 @@ public class DDDFixedRateScheduler<T> {
         this.periodInMinutes = periodInMinutes;
         if (this.scheduleFuture != null) {
             this.scheduleFuture.cancel(false);
-            doWakeLock(false);
+            this.scheduleFuture = null;
         }
         if (periodInMinutes <= 0) {
+            doWakeLock(false);
             return;
         }
         doWakeLock(true);
