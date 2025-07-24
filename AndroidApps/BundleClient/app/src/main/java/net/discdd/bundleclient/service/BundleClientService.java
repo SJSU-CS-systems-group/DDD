@@ -34,7 +34,6 @@ import net.discdd.client.bundletransmission.TransportDevice;
 import net.discdd.datastore.providers.MessageProvider;
 import net.discdd.model.ADU;
 import net.discdd.pathutils.ClientPaths;
-import net.discdd.util.DDDFixedRateScheduler;
 import net.discdd.utils.DDDFixedRateScheduler;
 import net.discdd.utils.UserLogRepository;
 
