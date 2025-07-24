@@ -92,7 +92,6 @@ public class BundleTransportService extends Service implements BundleExchangeSer
         }
 
         logExchange(INFO, R.string.starting_server_exchange_with_host_s_port_d, host, port);
-        String message;
         try {
             var exchangeCounts = new TransportToBundleServerManager(grpcKeys,
                                                                     transportPaths,
@@ -120,8 +119,6 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     }
     void logExchange(Level level, @StringRes int resId, Object... args) {
         LogUtil.logUi(getApplicationContext(), logger, EXCHANGE, level, resId, args);
-                    new StrictMode.ThreadPolicy.Builder()
-        }
     }
 
     @Override

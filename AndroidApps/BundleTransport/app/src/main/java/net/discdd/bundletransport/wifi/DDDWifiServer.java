@@ -9,7 +9,6 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
-import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import androidx.core.app.ActivityCompat;
 import net.discdd.bundletransport.BundleTransportService;
@@ -24,9 +23,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -36,12 +33,9 @@ import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_A
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
-import static net.discdd.utils.LogUtil.logUi;
-import static net.discdd.utils.UserLogRepository.UserLogType.WIFI;
 
 public class DDDWifiServer {
     private static final Logger logger = Logger.getLogger(DDDWifiServer.class.getName());
-    private final Context context;
     private final IntentFilter intentFilter = new IntentFilter();
     private final BundleTransportService bts;
     private WifiP2pManager wifiP2pManager;
@@ -190,7 +184,6 @@ public class DDDWifiServer {
                 if (deviceName.startsWith("ddd_")) createGroup();
                 sendDeviceNameChange();
             }
-            var infoChanged = false;
             var newStatus = switch (wifiP2pDevice.status) {
                 case WifiP2pDevice.CONNECTED -> WifiDirectStatus.CONNECTED;
                 case WifiP2pDevice.INVITED -> WifiDirectStatus.INVITED;
