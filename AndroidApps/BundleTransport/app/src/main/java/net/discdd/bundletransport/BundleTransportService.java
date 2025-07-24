@@ -123,6 +123,10 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
+        if (transportPaths != null) {
+            // If the transport paths are already initialized, we don't need to reinitialize them
+            return START_STICKY;
+        }
         this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
         try {
             this.grpcKeys = new GrpcSecurityKey(transportPaths.grpcSecurityPath, SecurityUtils.SERVER);
