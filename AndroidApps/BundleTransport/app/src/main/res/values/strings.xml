@@ -45,4 +45,29 @@
     <string name="phone_name_must_start_with_ddd_found">Phone name must start with ddd_ found: %1$s</string>
     <string name="phone_name_unreachable">Device name is UNKNOWN</string>
     <string name="Wifi_disabled">Please turn on WiFi to use BundleTransport features</string>
+    <string name="exception_creating_group_s">Exception creating group: %s</string>
+    <string name="problem_creating_group_error_d">Problem creating group error = %d</string>
+    <string name="group_created_successfully">Group created successfully</string>
+    <string name="cannot_create_wifi_group_missing_permissions">Cannot create WiFi group, missing permissions</string>
+    <string name="problem_removing_group_error_d">Problem removing group error = %d</string>
+    <string name="group_removed_successfully">Left group successfully.</string>
+    <string name="exception_removing_group_s">Exception while leaving group: %s</string>
+    <string name="starting_server_exchange_with_host_s_port_d">Starting server exchange with host: %s, port: %d</string>
+    <string name="deleted_d_bundles_sent_d_d_received_d_d">deleted %d bundles, sent %d/%d, received %d/%d</string>
+    <string name="error_during_server_exchange_s">Error during server exchange: %s</string>
+    <string name="no_internet_connection_available_skipping_server_exchange">No internet connection available, skipping
+        server exchange.
+    </string>
+    <string name="failed_to_initialize_grpcsecurity_s">Failed to initialize GrpcSecurity for SERVER: %s</string>
+    <string name="http_file_server_started_on_port_8080">HTTP file server started on port 8080</string>
+    <string name="failed_to_start_http_server_s">Failed to start HTTP server: %s</string>
+    <string name="http_file_server_stopped">HTTP file server stopped</string>
+    <string name="starting_grpc_server">Starting gRPC server</string>
+    <string name="server_started">server started</string>
+    <string name="stopping_grpc_server">Stopping gRPC server</string>
+    <string name="server_stopped">server stopped</string>
+    <string name="left_group_s">Left group: %s</string>
+    <string name="new_group_s">New group: %s</string>
+    <string name="new_clients_s">New clients: %s</string>
+    <string name="lost_clients_s">Lost clients: %s</string>
 </resources>

@@ -43,6 +43,7 @@ import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_STATE_DISABLED;
 import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_STATE_ENABLED;
 import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION;
 import static java.lang.String.format;
+import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
@@ -137,9 +138,13 @@ public class DDDWifiDirect implements DDDWifi {
                         var conGroup =
                                 intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP, WifiP2pGroup.class);
                         DDDWifiDirect.this.group = conGroup;
+                        logger.info(format("connected to %s", group == null ? "noone" : group.getOwner().deviceName));
                         DDDWifiDirect.this.ownerAddress = conInfo.groupOwnerAddress;
                         // if we got an address, let all the completions waiting for an address know about it.
                         if (conInfo.groupOwnerAddress != null) {
+                            logger.info(format("Got connect to %s with address %s",
+                                               conGroup.getOwner().deviceName,
+                                               conInfo.groupOwnerAddress.getHostAddress()));
                             completeAddressWaiters(conGroup.getOwner(), conInfo.groupOwnerAddress);
                         }
                         eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_STATE_CHANGED);
@@ -322,8 +327,10 @@ public class DDDWifiDirect implements DDDWifi {
         }
         // if we already have the connection we need, complete outside of the synchronized block
         if (con != null) {
+            logger.log(INFO, format("addAddressWaiter: already connected to %s", dev.getDescription()));
             cf.complete(con);
         }
+        logger.log(INFO, format("addAddressWaiter: waiting for connection to %s", dev.getDescription()));
         return cf;
     }
 
@@ -365,6 +372,7 @@ public class DDDWifiDirect implements DDDWifi {
             cf.completeExceptionally(e);
         }
         return cf.thenCompose(connectionStarted -> {
+            logger.log(INFO, format("connectTo: connection started to %s: %b", dev.getDescription(), connectionStarted));
             if (!connectionStarted) throw new DDDWifiException.DDDWifiConnectionException("Failed to start connection to " + dev.getDescription(), null);
             return addAddressWaiter(directDev);
         });

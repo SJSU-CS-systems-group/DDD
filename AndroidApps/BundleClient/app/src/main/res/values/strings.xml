@@ -39,4 +39,12 @@
     <string name="received">received</string>
     <string name="cannot_transfer_bundle_usb_not_ready_or_directory_not_found">Cannot transfer bundle: USB not ready or directory not found</string>
     <string name="delete_logs">Clear Logs</string>
+    <string name="failed_to_start_discovery_s">Failed to start discovery: %s</string>
+    <string name="connecting_to_s">Connecting to %s</string>
+    <string name="failed_to_connect_to_s">Failed to connect to %s</string>
+    <string name="connected_to_s_s">Connected to %s (%s)</string>
+    <string name="s_upload_s_download_s">%s upload: %s download: %s</string>
+    <string name="not_exchanged_recently_s">Transport has not exchanged with server recently: %s</string>
+    <string name="timeout_connecting_to_s">Timeout connecting to %s perhaps not accepting connection?</string>
+    <string name="could_not_start_exchange">"Could not start exchange: "</string>
 </resources>
