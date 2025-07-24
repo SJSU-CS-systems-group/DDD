@@ -1,4 +1,4 @@
-package net.discdd.util;
+package net.discdd.utils;
 
 import android.content.Context;
 import android.net.wifi.WifiManager;
@@ -10,7 +10,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 /**
  * This is a single threaded scheduler that periodically runs the given Callable.
