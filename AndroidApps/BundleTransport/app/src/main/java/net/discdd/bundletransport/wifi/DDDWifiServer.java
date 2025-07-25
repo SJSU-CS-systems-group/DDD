@@ -9,10 +9,10 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
-import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import androidx.core.app.ActivityCompat;
 import net.discdd.bundletransport.BundleTransportService;
+import net.discdd.bundletransport.R;
 import net.discdd.bundletransport.service.DDDWifiServiceEvents;
 
 import java.net.Inet4Address;
@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -37,8 +36,8 @@ import static java.util.logging.Level.WARNING;
 
 public class DDDWifiServer {
     private static final Logger logger = Logger.getLogger(DDDWifiServer.class.getName());
-    private final Context context;
     private final IntentFilter intentFilter = new IntentFilter();
+    private final BundleTransportService bts;
     private WifiP2pManager wifiP2pManager;
     private WifiP2pManager.Channel channel;
     private WifiP2pGroup wifiGroup;
@@ -61,11 +60,11 @@ public class DDDWifiServer {
 
     public enum WifiDirectStatus {FAILED, INVITED, AVAILABLE, UNAVAILABLE, UNDEFINED, CONNECTED}
 
-    public DDDWifiServer(Context applicationContext) {
+    public DDDWifiServer(BundleTransportService bundleTransportService) {
         intentFilter.addAction(WIFI_P2P_STATE_CHANGED_ACTION);
         intentFilter.addAction(WIFI_P2P_CONNECTION_CHANGED_ACTION);
         intentFilter.addAction(WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
-        this.context = applicationContext;
+        this.bts = bundleTransportService;
     }
 
     public DDDWifiNetworkInfo getNetworkInfo() {
@@ -113,12 +112,13 @@ public class DDDWifiServer {
 
     @SuppressLint("MissingPermission")
     public void initialize() {
-        this.wifiP2pManager = (WifiP2pManager) this.context.getSystemService(Context.WIFI_P2P_SERVICE);
+        this.wifiP2pManager = (WifiP2pManager) this.bts.getSystemService(Context.WIFI_P2P_SERVICE);
         if (wifiP2pManager == null) {
             logger.log(SEVERE, "Cannot get Wi-Fi system service");
         } else {
-            this.channel =
-                    this.wifiP2pManager.initialize(this.context, this.context.getMainLooper(), this::sendStateChange);
+            this.channel = this.wifiP2pManager.initialize(this.bts,
+                                                          this.bts.getMainLooper(),
+                                                          this::sendStateChange);
             if (channel == null) {
                 logger.log(WARNING, "Cannot initialize Wi-Fi Direct");
             }
@@ -136,12 +136,12 @@ public class DDDWifiServer {
 
     public void unregisterWifiIntentReceiver() {
         if (!intentRegistered.getAndSet(false)) return;
-        context.unregisterReceiver(receiver);
+        bts.unregisterReceiver(receiver);
     }
 
     public void registerWifiIntentReceiver() {
         if (intentRegistered.getAndSet(true)) return;
-        context.registerReceiver(receiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
+        bts.registerReceiver(receiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
     }
 
     public WifiDirectStatus getStatus() {
@@ -149,11 +149,10 @@ public class DDDWifiServer {
     }
 
     private boolean hasPermission() {
-        var rc = ActivityCompat.checkSelfPermission(this.context, Manifest.permission.ACCESS_FINE_LOCATION) ==
+        return ActivityCompat.checkSelfPermission(this.bts, Manifest.permission.ACCESS_FINE_LOCATION) ==
                 PackageManager.PERMISSION_GRANTED ||
-                ActivityCompat.checkSelfPermission(this.context, Manifest.permission.NEARBY_WIFI_DEVICES) ==
+                ActivityCompat.checkSelfPermission(this.bts, Manifest.permission.NEARBY_WIFI_DEVICES) ==
                         PackageManager.PERMISSION_GRANTED;
-        return rc;
     }
 
     @SuppressLint("MissingPermission")
@@ -185,7 +184,6 @@ public class DDDWifiServer {
                 if (deviceName.startsWith("ddd_")) createGroup();
                 sendDeviceNameChange();
             }
-            var infoChanged = false;
             var newStatus = switch (wifiP2pDevice.status) {
                 case WifiP2pDevice.CONNECTED -> WifiDirectStatus.CONNECTED;
                 case WifiP2pDevice.INVITED -> WifiDirectStatus.INVITED;
@@ -263,7 +261,6 @@ public class DDDWifiServer {
          *
          * @param context Context/MainActivity where the intent is triggered
          * @param intent  Intent object containing triggered action.
-         * @noinspection deprecation, deprecation
          */
         @SuppressLint("MissingPermission")
         @Override
@@ -292,18 +289,17 @@ public class DDDWifiServer {
                         //         WifiP2pInfo object.
                         //         EXTRA_WIFI_P2P_GROUP provides the details of the group and
                         //         may contain a null
-                        var conInfo = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_INFO, WifiP2pInfo.class);
                         var oldGroup = DDDWifiServer.this.wifiGroup;
                         var newGroup =
                                 intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP, WifiP2pGroup.class);
 
                         if (newGroup == null) {
                             if (oldGroup != null) {
-                                BundleTransportService.logWifi(INFO, "Lost group: " + oldGroup.getNetworkName());
+                                bts.logWifi(INFO, R.string.left_group_s, oldGroup.getNetworkName());
                             }
                         } else {
                             if (oldGroup == null || !oldGroup.getNetworkName().equals(newGroup.getNetworkName())) {
-                                BundleTransportService.logWifi(INFO, "New group: " + newGroup.getNetworkName());
+                                bts.logWifi(INFO, R.string.new_group_s, newGroup.getNetworkName());
                             }
                             var newClientList = newGroup.getClientList()
                                     .stream()
@@ -319,12 +315,10 @@ public class DDDWifiServer {
                             newClientList.removeAll(oldClientList);
                             oldClientList.removeAll(origNewClientList);
                             if (!newClientList.isEmpty()) {
-                                BundleTransportService.logWifi(INFO,
-                                                               "New clients: " + String.join(", ", newClientList));
+                                bts.logWifi(INFO, R.string.new_clients_s, String.join(", ", newClientList));
                             }
                             if (!oldClientList.isEmpty()) {
-                                BundleTransportService.logWifi(INFO,
-                                                               "Lost clients: " + String.join(", ", oldClientList));
+                                bts.logWifi(INFO, R.string.lost_clients_s, String.join(", ", oldClientList));
                             }
                         }
                         DDDWifiServer.this.wifiGroup = newGroup;
