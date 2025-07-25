@@ -158,11 +158,12 @@ public class DDDWifiServer {
      * represents the state of group creation.
      * if null, no group has been created, otherwise it is the name
      * of the group being created.
-     *
+     * <p>
      * NOTE: there is some weirdness: the SSID doesn't seem to change
-     *       if the device name changes...
+     * if the device name changes...
      */
     AtomicReference<String> createdGroupName = new AtomicReference<>(null);
+
     @SuppressLint("MissingPermission")
     public void createGroup() {
         if (deviceName == null || !deviceName.startsWith("ddd_")) return;
@@ -199,8 +200,9 @@ public class DDDWifiServer {
      */
     public CompletableFuture<OptionalInt> removeGroup() {
         var cal = new CompletableActionListener();
-        if (wifiGroup != null) this.wifiP2pManager.removeGroup(this.channel, cal);
-        else cal.complete(OptionalInt.empty());
+        if (wifiGroup != null) {this.wifiP2pManager.removeGroup(this.channel, cal);} else {
+            cal.complete(OptionalInt.empty());
+        }
         return cal;
     }
 
