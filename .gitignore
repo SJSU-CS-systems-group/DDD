@@ -4,4 +4,5 @@
 /**/.gradle
 /**/local.properties
 /**/build
+/**/.venv
 application.properties
