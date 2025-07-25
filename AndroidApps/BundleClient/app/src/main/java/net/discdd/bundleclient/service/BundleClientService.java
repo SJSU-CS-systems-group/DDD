@@ -21,6 +21,7 @@ import android.os.StrictMode;
 import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresPermission;
+import androidx.annotation.StringRes;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
 import androidx.lifecycle.Observer;
@@ -37,6 +38,7 @@ import net.discdd.datastore.providers.MessageProvider;
 import net.discdd.model.ADU;
 import net.discdd.pathutils.ClientPaths;
 import net.discdd.utils.DDDFixedRateScheduler;
+import net.discdd.utils.LogUtil;
 import net.discdd.utils.UserLogRepository;
 
 import java.io.IOException;
@@ -112,6 +114,10 @@ public class BundleClientService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
+        if (preferences != null) {
+            // if preferences are initialized, everything else should be too
+            return START_STICKY;
+        }
         preferences = getSharedPreferences(NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE);
         preferences.registerOnSharedPreferenceChangeListener(onSharedPreferenceChangeListener);
         fixedRateSched = new DDDFixedRateScheduler<>(getApplicationContext(), this::exchangeWithTransports);
@@ -231,7 +237,7 @@ public class BundleClientService extends Service {
             dddWifi.startDiscovery().get(10, TimeUnit.SECONDS);
         } catch (Exception e) {
             logger.log(WARNING, "Failed to start discovery", e);
-            broadcastBundleClientLogEvent("Failed to start discovery: " + e.getMessage());
+            broadcastBundleClientLogEvent(R.string.failed_to_start_discovery_s, e.getMessage());
             // not the end of the world, we can still try
         }
         var recentTransports = bundleTransmission.getRecentTransports();
@@ -256,26 +262,25 @@ public class BundleClientService extends Service {
                                        device.getWifiAddress());
         DDDWifiConnection connection = null;
         try {
-            broadcastBundleClientLogEvent(format("Connecting to %s", device.getDescription()));
+            broadcastBundleClientLogEvent(R.string.connecting_to_s, device.getDescription());
             connection = dddWifi.connectTo(device).get(10, TimeUnit.SECONDS);
 
             if (connection == null || connection.getAddresses().isEmpty()) {
-                broadcastBundleClientLogEvent("Failed to connect to " + device.getDescription());
+                broadcastBundleClientLogEvent(R.string.failed_to_connect_to_s, device.getDescription());
                 return failedExchangeCounts(device);
             }
             var addr = connection.getAddresses().get(0);
-            broadcastBundleClientLogEvent(format("Connected to %s (%s)",
+            broadcastBundleClientLogEvent(R.string.connected_to_s_s,
                                                  device.getDescription(),
-                                                 addr.getHostAddress()));
+                                                 addr.getHostAddress());
             BundleExchangeCounts currentBundle =
                     bundleTransmission.doExchangeWithTransport(device, addr.getHostAddress(), 7777, true);
-            broadcastBundleClientLogEvent(format("%s upload: %s download: %s",
+            broadcastBundleClientLogEvent(R.string.s_upload_s_download_s,
                                                  device.getDescription(),
                                                  statusesToString(currentBundle.uploadStatus()),
-                                                 statusesToString(currentBundle.downloadStatus())));
+                                                 statusesToString(currentBundle.downloadStatus()));
             if (currentBundle.e() instanceof BundleTransmission.RecencyException) {
-                broadcastBundleClientLogEvent(
-                        "Transport has not exchanged with server recently: " + currentBundle.e().getMessage());
+                broadcastBundleClientLogEvent(R.string.not_exchanged_recently_s, currentBundle.e().getMessage());
             }
             String text1;
             String text2;
@@ -300,10 +305,10 @@ public class BundleClientService extends Service {
             return currentBundle;
         } catch (TimeoutException e) {
             logger.log(WARNING, "Timeout connecting to " + device.getDescription());
-            broadcastBundleClientLogEvent("Timeout connecting to " + device.getDescription() + " perhaps not accepting connection?");
+            broadcastBundleClientLogEvent(R.string.timeout_connecting_to_s, device.getDescription());
         } catch (Throwable e) {
             logger.log(WARNING, e.getMessage(), e);
-            broadcastBundleClientLogEvent("Could not start exchange: " + e.getMessage());
+            broadcastBundleClientLogEvent(R.string.could_not_start_exchange, e.getMessage());
         } finally {
             try {
                 if (connection != null) {
@@ -328,8 +333,8 @@ public class BundleClientService extends Service {
         };
     }
 
-    private void broadcastBundleClientLogEvent(String message) {
-        UserLogRepository.INSTANCE.log(UserLogRepository.UserLogType.WIFI, message, System.currentTimeMillis(), INFO);
+    private void broadcastBundleClientLogEvent(@StringRes int resId, Object... args) {
+        LogUtil.logUi(getApplicationContext(), logger, UserLogRepository.UserLogType.WIFI, INFO, resId, args);
     }
 
     /**
