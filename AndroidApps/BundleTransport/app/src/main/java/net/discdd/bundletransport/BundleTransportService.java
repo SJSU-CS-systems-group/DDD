@@ -10,11 +10,12 @@ import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
 import android.net.ConnectivityManager;
 import android.net.NetworkCapabilities;
+import android.net.TrafficStats;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.StrictMode;
 import androidx.annotation.StringRes;
-import androidx.core.app.NotificationCompat;x
+import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
 import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
 import net.discdd.bundlesecurity.SecurityUtils;
@@ -26,7 +27,6 @@ import net.discdd.transport.TransportToBundleServerManager;
 import net.discdd.utils.DDDFixedRateScheduler;
 import net.discdd.utils.LogUtil;
 import net.discdd.utils.UserLogRepository;
-import org.acra.BuildConfig;
 import org.bouncycastle.operator.OperatorCreationException;
 
 import java.io.File;
@@ -35,6 +35,8 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.cert.CertificateException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -54,6 +56,7 @@ import static net.discdd.utils.UserLogRepository.UserLogType.EXCHANGE;
  * returns a reference to this service.
  */
 public class BundleTransportService extends Service implements BundleExchangeServiceImpl.BundleExchangeEventListener {
+    ExecutorService executor = Executors.newCachedThreadPool();
     public static final String BUNDLETRANSPORT_PREFERENCES = "net.discdd.bundletransport";
     public static final String BUNDLETRANSPORT_HOST_PREFERENCE = "host";
     public static final String BUNDLETRANSPORT_PORT_PREFERENCE = "port";
@@ -144,30 +147,34 @@ public class BundleTransportService extends Service implements BundleExchangeSer
             // If the transport paths are already initialized, we don't need to reinitialize them
             return START_STICKY;
         }
-        this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
-        try {
-            this.grpcKeys = new GrpcSecurityKey(transportPaths.grpcSecurityPath, SecurityUtils.SERVER);
-        } catch (InvalidAlgorithmParameterException | NoSuchAlgorithmException | NoSuchProviderException |
-                 CertificateException | OperatorCreationException | IOException e) {
-            logExchange(SEVERE, e, R.string.failed_to_initialize_grpcsecurity_s, e.getMessage());
-        }
-        connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
-        // BundleTransportService doesn't use LogFragment directly, but we do want our
-        // logs to go to its logger
-        LogFragment.registerLoggerHandler();
-        SharedPreferences sharedPreferences = getSharedPreferences(BUNDLETRANSPORT_PREFERENCES, Context.MODE_PRIVATE);
-        host = sharedPreferences.getString(BUNDLETRANSPORT_HOST_PREFERENCE, BUNDLE_SERVER_DOMAIN);
-        port = sharedPreferences.getInt(BUNDLETRANSPORT_PORT_PREFERENCE, BUNDLE_SERVER_PORT);
-        periodicExchangeScheduler = new DDDFixedRateScheduler<>(getApplicationContext(), this::doServerExchange);
-        periodicExchangeScheduler.setPeriodInMinutes(sharedPreferences.getInt(BUNDLETRANSPORT_PERIODIC_PREFERENCE, 0));
-        sharedPreferences.registerOnSharedPreferenceChangeListener(preferenceChangeListener);
-        logger.log(INFO,
-                   "Starting " + BundleTransportService.class.getName() + " with flags " + flags + " and startId " +
-                           startId);
-        startForeground();
-        logger.log(INFO,
-                   "Started " + BundleTransportService.class.getName() + " with flags " + flags + " and startId " +
-                           startId);
+        executor.submit(() -> {
+            this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
+            try {
+                this.grpcKeys = new GrpcSecurityKey(transportPaths.grpcSecurityPath, SecurityUtils.SERVER);
+            } catch (InvalidAlgorithmParameterException | NoSuchAlgorithmException | NoSuchProviderException |
+                     CertificateException | OperatorCreationException | IOException e) {
+                logExchange(SEVERE, e, R.string.failed_to_initialize_grpcsecurity_s, e.getMessage());
+            }
+            connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+            // BundleTransportService doesn't use LogFragment directly, but we do want our
+            // logs to go to its logger
+            LogFragment.registerLoggerHandler();
+            SharedPreferences sharedPreferences =
+                    getSharedPreferences(BUNDLETRANSPORT_PREFERENCES, Context.MODE_PRIVATE);
+            host = sharedPreferences.getString(BUNDLETRANSPORT_HOST_PREFERENCE, BUNDLE_SERVER_DOMAIN);
+            port = sharedPreferences.getInt(BUNDLETRANSPORT_PORT_PREFERENCE, BUNDLE_SERVER_PORT);
+            periodicExchangeScheduler = new DDDFixedRateScheduler<>(getApplicationContext(), this::doServerExchange);
+            periodicExchangeScheduler.setPeriodInMinutes(sharedPreferences.getInt(BUNDLETRANSPORT_PERIODIC_PREFERENCE,
+                                                                                  0));
+            sharedPreferences.registerOnSharedPreferenceChangeListener(preferenceChangeListener);
+            logger.log(INFO,
+                       "Starting " + BundleTransportService.class.getName() + " with flags " + flags + " and startId " +
+                               startId);
+            startForeground();
+            logger.log(INFO,
+                       "Started " + BundleTransportService.class.getName() + " with flags " + flags + " and startId " +
+                               startId);
+        });
         return START_STICKY;
     }
 
@@ -214,6 +221,7 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     private void startHttpServer() {
         if (!httpServerRunning) {
             try {
+                TrafficStats.setThreadStatsTag(0xD15CDDD);
                 File filesDir = getApplicationContext().getExternalFilesDir(null);
                 httpServer = new FileHttpServer(8080, filesDir);
                 httpServer.start();

@@ -37,6 +37,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.discdd.bundletransport.utils.generateQRCode
+import net.discdd.bundletransport.viewmodels.AppShareViewModel
 import net.discdd.bundletransport.viewmodels.WifiDirectViewModel
 import java.io.File
 import java.io.FileOutputStream
@@ -45,18 +46,18 @@ import java.net.URL
 
 @Composable
 fun AppShareScreen(
-        viewModel: WifiDirectViewModel = viewModel(),
+    wifiViewModel: WifiDirectViewModel = viewModel(),
+    appShareViewModel: AppShareViewModel = viewModel()
 ) {
     val url = "http://192.168.49.1:8080"
-    val context = LocalContext.current
-    val mailApkFile = File(context.getExternalFilesDir(null), "ddd-mail.apk")
-    val clientApkFile = File(context.getExternalFilesDir(null), "DDDClient.apk")
     // Generate QR code bitmap
     val downloadQrBitmap = remember {
         generateQRCode(url, 300, 300)
     }
-    val wifiConnectURL = viewModel.state.collectAsState().value.wifiConnectURL
-    val appsAvailable = remember { mutableStateOf(mailApkFile.exists() || clientApkFile.exists()) }
+    val wifiConnectURL = wifiViewModel.state.collectAsState().value.wifiConnectURL
+    val mailApkVersion by appShareViewModel.mailApkVersion.collectAsState()
+    val clientApkVersion by appShareViewModel.clientApkVersion.collectAsState()
+    val appsAvailable = remember { mailApkVersion != null || clientApkVersion != null }
 
     Surface(color = MaterialTheme.colorScheme.background) {
         Column(
@@ -73,7 +74,7 @@ fun AppShareScreen(
                 )
 
             } else {
-                if (!appsAvailable.value) {
+                if (!appsAvailable) {
                     Text(
                             text = "Download APK files first to enable app sharing",
                             style = MaterialTheme.typography.titleMedium,
@@ -97,9 +98,9 @@ fun AppShareScreen(
 
                 // it seems a bit strange to put the button in the middle of the screen, but it separates
                 // the QR codes more and makes them easier to scan
-                DownloadButton(mailApkFile, clientApkFile, appsAvailable)
+                DownloadButton(appShareViewModel)
 
-                if (appsAvailable.value) {
+                if (appsAvailable) {
                     Text(
                             text = "QR code to download DDD client and mail apps",
                             style = MaterialTheme.typography.titleMedium,
@@ -129,62 +130,18 @@ fun AppShareScreen(
 }
 
 @Composable
-fun DownloadButton(mailApkFile: File, clientApkFile: File, appsAvailable: MutableState<Boolean>) {
-    val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-    var isDownloadingMail by remember { mutableStateOf(false) }
-    var isDownloadingClient by remember { mutableStateOf(false) }
-    var downloadMailProgress by remember { mutableFloatStateOf(0f) }
-    var downloadClientProgress by remember { mutableFloatStateOf(0f) }
-    var mailApkVersion by remember { mutableStateOf(getApkVersionInfo(context, mailApkFile)) }
-    var clientApkVersion by remember { mutableStateOf(getApkVersionInfo(context, clientApkFile)) }
-    var downloadMailStatus by remember { mutableStateOf(getApkStatus(mailApkFile, mailApkVersion)) }
-    var downloadClientStatus by remember { mutableStateOf(getApkStatus(clientApkFile, clientApkVersion)) }
-    // APK URLs
-    val mailApkUrl =
-            "https://github.com/SJSU-CS-systems-group/DDD-thunderbird-android/releases/latest/download/ddd-mail.apk"
-    val clientApkUrl = "https://github.com/SJSU-CS-systems-group/DDD/releases/latest/download/DDDClient.apk"
+fun DownloadButton(viewModel: AppShareViewModel) {
+    val downloadMailProgress by viewModel.downloadMailProgress.collectAsState()
+    val downloadClientProgress by viewModel.downloadClientProgress.collectAsState()
+    val mailApkVersion by viewModel.mailApkVersion.collectAsState()
+    val clientApkVersion by viewModel.clientApkVersion.collectAsState()
 
     Column {
         Button(
                 onClick = {
-                    isDownloadingMail = true
-                    isDownloadingClient = true
-                    scope.launch {
-                        try {
-                            downloadFile(
-                                    context,
-                                    mailApkUrl,
-                            ) { progress ->
-                                downloadMailProgress = progress
-                            }
-                            mailApkVersion = getApkVersionInfo(context, mailApkFile)
-                            downloadMailStatus = getApkStatus(mailApkFile, mailApkVersion)
-                            if (mailApkVersion != null) appsAvailable.value = true
-                        } catch (e: Exception) {
-                            downloadMailStatus = "Error: ${e.message}"
-                        } finally {
-                            isDownloadingMail = false
-                        }
-                    }
-                    scope.launch {
-                        try {
-                            downloadFile(
-                                    context,
-                                    clientApkUrl,
-                            ) { progress ->
-                                downloadClientProgress = progress
-                            }
-                            clientApkVersion = getApkVersionInfo(context, clientApkFile)
-                            downloadClientStatus = getApkStatus(clientApkFile, clientApkVersion)
-                            if (clientApkVersion != null) appsAvailable.value = true
-                        } catch (e: Exception) {
-                            downloadClientStatus = "Error: ${e.message}"
-                        } finally {
-                            isDownloadingClient = false
-                        }
-                    }
-                }, enabled = !isDownloadingMail && !isDownloadingClient
+                    viewModel.downloadApps()
+                },
+                enabled = downloadMailProgress == 1f && downloadClientProgress == 1f,
         ) {
             Row(
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -194,103 +151,26 @@ fun DownloadButton(mailApkFile: File, clientApkFile: File, appsAvailable: Mutabl
             }
         }
 
-        if (isDownloadingMail) {
+        if (downloadMailProgress < 1f) {
             LinearProgressIndicator(
                     progress = { downloadMailProgress }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
             )
         } else {
             Text(
-                    text = downloadMailStatus,
+                    text = mailApkVersion ?: "",
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (downloadMailStatus.contains("Error")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
             )
         }
 
-        if (isDownloadingClient) {
+        if (downloadClientProgress < 1f) {
             LinearProgressIndicator(
                     progress = { downloadClientProgress }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
             )
         } else {
             Text(
-                    text = downloadClientStatus,
+                    text = clientApkVersion ?: "",
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (downloadClientStatus.contains("Error")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
             )
         }
-    }
-}
-
-suspend fun downloadFile(
-        context: Context, url: String, onProgress: (Float) -> Unit
-): File = withContext(Dispatchers.IO) {
-    var connection: HttpURLConnection? = null
-    try {
-        val fileName = url.substringAfterLast('/')
-        connection = URL(url).openConnection() as HttpURLConnection
-        connection.connect()
-
-        val fileLength = connection.contentLength
-        val inputStream = connection.inputStream
-        val destinationDir = context.getExternalFilesDir(null)
-        val file = File(destinationDir, fileName)
-
-        // Delete the file if it already exists
-        if (file.exists()) {
-            file.delete()
-        }
-
-        // Create parent directories if they don't exist
-        file.parentFile?.mkdirs()
-
-        FileOutputStream(file).use { output ->
-            val buffer = ByteArray(512 * 1024)
-            var downloadedSize = 0
-            var bytesRead: Int
-
-            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                output.write(buffer, 0, bytesRead)
-                downloadedSize += bytesRead
-
-                if (fileLength > 0) {
-                    val progress = downloadedSize.toFloat() / fileLength.toFloat()
-                    withContext(Dispatchers.Main) {
-                        onProgress(progress)
-                    }
-                }
-            }
-
-            output.flush()
-        }
-
-        file
-    } finally {
-        connection?.disconnect()
-    }
-}
-
-fun getApkVersionInfo(context: Context, apkFile: File): String? {
-    if (!apkFile.exists()) {
-        return null
-    }
-    val packageManager = context.packageManager
-    val packageInfo = packageManager.getPackageArchiveInfo(
-            apkFile.absolutePath, PackageManager.GET_ACTIVITIES
-    )
-
-    return if (packageInfo != null) {
-        packageInfo.versionName ?: "Unknown"
-    } else {
-        null
-    }
-}
-
-fun getApkStatus(apkFile: File, versionInfo: String?): String {
-    if (!apkFile.exists()) {
-        return "${apkFile.name} is missing"
-    }
-    return if (versionInfo == null) {
-        "${apkFile.name} is corrupt. Please download again."
-    } else {
-        "${apkFile.name} version $versionInfo"
     }
 }

@@ -59,10 +59,6 @@ fun ServerUploadScreen(
         uploadViewModel: ServerUploadViewModel = viewModel(),
         connectivityViewModel: ConnectivityViewModel = viewModel(),
         settingsViewModel: SettingsViewModel = viewModel(),
-        preferences: SharedPreferences = LocalContext.current.getSharedPreferences(
-                BundleTransportService.BUNDLETRANSPORT_PREFERENCES,
-                Context.MODE_PRIVATE
-        ),
         onToggle: () -> Unit,
 ) {
     val uploadState by uploadViewModel.state.collectAsState()
@@ -142,7 +138,7 @@ fun ServerUploadScreen(
                 }
             }
 
-            BackGroundExchange(preferences)
+            BackGroundExchange(uploadViewModel)
 
             Row(
                     modifier = Modifier
@@ -199,22 +195,15 @@ fun ServerUploadScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BackGroundExchange(preferences: SharedPreferences) {
-    var backgroundPeriod by remember {
-        mutableStateOf(
-                preferences.getInt(
-                        BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE,
-                        0
-                )
-        )
-    }
+private fun BackGroundExchange(viewModel: ServerUploadViewModel) {
+    val backgroundPeriod = viewModel.backgroundExchange.collectAsState()
 
     var expanded by remember { mutableStateOf(false) }
 
-    val exchangeText = if (backgroundPeriod <= 0) {
+    val exchangeText = if (backgroundPeriod.value <= 0) {
         "Disabled"
     } else {
-        "${backgroundPeriod} minute(s)"
+        "${backgroundPeriod.value} minute(s)"
     }
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
         TextField(
@@ -232,26 +221,14 @@ private fun BackGroundExchange(preferences: SharedPreferences) {
         ) {
             DropdownMenuItem(text = { Text("disabled") }, onClick = {
                 expanded = false
-                preferences.edit {
-                    putInt(
-                            BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE,
-                            0
-                    )
-                    backgroundPeriod = 0
-                }
+                viewModel.setBackgroundExchange(0)
             }) // disable background transfers
             for (i in listOf(1, 5, 10, 15, 30, 45, 60, 90, 120)) {
                 DropdownMenuItem(
                         text = { Text("$i minute(s)") },
                         onClick = {
                             expanded = false
-                            preferences.edit {
-                                putInt(
-                                        BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE,
-                                        i
-                                )
-                            }
-                            backgroundPeriod = i
+                            viewModel.setBackgroundExchange(i)
                         }
                 )
             }
