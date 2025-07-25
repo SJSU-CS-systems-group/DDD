@@ -5,6 +5,7 @@ import android.content.Intent
 import android.provider.Settings
 import androidx.core.content.ContextCompat.startActivity
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -33,12 +34,11 @@ class WifiDirectViewModel(
     private val logger = Logger.getLogger(WifiDirectViewModel::class.java.name)
     private val _state = MutableStateFlow(WifiDirectState())
     private val btService by lazy { TransportServiceManager.getService() }
-    private var transportPaths: TransportPaths = TransportPaths(context.getExternalFilesDir(null)?.toPath())
     val state = _state.asStateFlow()
 
 
     init {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             updateGroupInfo()
             processDeviceInfoChange()
 
@@ -58,10 +58,6 @@ class WifiDirectViewModel(
                 updateGroupInfo()
             }
         }
-    }
-
-    fun setTransportPaths(transportPaths: TransportPaths) {
-        this.transportPaths = transportPaths
     }
 
     fun getService(): BundleTransportService? {
