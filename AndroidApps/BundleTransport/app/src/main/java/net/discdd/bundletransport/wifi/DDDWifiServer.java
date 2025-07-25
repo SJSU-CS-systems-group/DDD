@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -155,13 +156,42 @@ public class DDDWifiServer {
                         PackageManager.PERMISSION_GRANTED;
     }
 
+    /**
+     * represents the state of group creation.
+     * if null, no group has been created, otherwise it is the name
+     * of the group being created.
+     *
+     * NOTE: there is some weirdness: the SSID doesn't seem to change
+     *       if the device name changes...
+     */
+    AtomicReference<String> createdGroupName = new AtomicReference<>(null);
     @SuppressLint("MissingPermission")
-    public CompletableActionListener createGroup() {
-        var cal = new CompletableActionListener();
-        if (hasPermission()) {this.wifiP2pManager.createGroup(this.channel, cal);} else {
-            cal.complete(OptionalInt.of(WifiP2pManager.P2P_UNSUPPORTED));
+    public void createGroup() {
+        if (deviceName == null || !deviceName.startsWith("ddd_")) return;
+        if (!hasPermission()) {
+            bts.logWifi(SEVERE, R.string.wifi_direct_no_permission);
+            return;
         }
-        return cal;
+        var groupName = "DIRECT-" + deviceName;
+        var oldGroupName = createdGroupName.get();
+        if (groupName.equals(oldGroupName) || !createdGroupName.compareAndSet(oldGroupName, groupName)) {
+            // Create a group only if we haven't created one yet
+            return;
+        }
+        var cal = new CompletableActionListener();
+        this.wifiP2pManager.createGroup(this.channel, cal);
+        cal.handle((optRc, ex) -> {
+            if (ex != null) {
+                bts.logWifi(SEVERE, ex, R.string.wifi_direct_create_group_failed_e, ex.getMessage());
+                createdGroupName.set(null);
+            } else if (optRc.isPresent()) {
+                bts.logWifi(SEVERE, R.string.wifi_direct_create_group_failed_d, optRc.getAsInt());
+                createdGroupName.set(null);
+            } else {
+                bts.logWifi(INFO, R.string.wifi_direct_create_group_success);
+            }
+            return null;
+        });
     }
 
     /**
@@ -171,7 +201,8 @@ public class DDDWifiServer {
      */
     public CompletableFuture<OptionalInt> removeGroup() {
         var cal = new CompletableActionListener();
-        this.wifiP2pManager.removeGroup(this.channel, cal);
+        if (wifiGroup != null) this.wifiP2pManager.removeGroup(this.channel, cal);
+        else cal.complete(OptionalInt.empty());
         return cal;
     }
 
@@ -181,7 +212,6 @@ public class DDDWifiServer {
                 this.deviceName = wifiP2pDevice.deviceName;
                 // device name changed, so redo the group
                 if (wifiP2pDevice.status == WifiP2pDevice.CONNECTED) removeGroup();
-                if (deviceName.startsWith("ddd_")) createGroup();
                 sendDeviceNameChange();
             }
             var newStatus = switch (wifiP2pDevice.status) {
@@ -276,8 +306,12 @@ public class DDDWifiServer {
                             logger.log(INFO, "WifiDirect enabled");
                             if (hasPermission()) {
                                 wifiP2pManager.requestDeviceInfo(channel, DDDWifiServer.this::processDeviceInfo);
+                                createGroup();
                             }
                         } else {
+                            // WifiDirect is not enabled, so we clear createdGroupName so that the group will
+                            // be recreated when WifiDirect is enabled again
+                            createdGroupName.set(null);
                             logger.log(INFO, "WifiDirect not enabled");
                         }
                         sendStateChange();

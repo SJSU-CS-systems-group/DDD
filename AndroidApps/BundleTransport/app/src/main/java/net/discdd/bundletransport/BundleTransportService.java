@@ -109,6 +109,9 @@ public class BundleTransportService extends Service implements BundleExchangeSer
         return null;
     }
 
+    public void logWifi(Level level, Throwable ex, @StringRes int resId, Object... args) {
+        LogUtil.logUi(getApplicationContext(), logger, UserLogRepository.UserLogType.WIFI, level, ex, resId, args);
+    }
     public void logWifi(Level level, @StringRes int resId, Object... args) {
         LogUtil.logUi(getApplicationContext(), logger, UserLogRepository.UserLogType.WIFI, level, resId, args);
     }
