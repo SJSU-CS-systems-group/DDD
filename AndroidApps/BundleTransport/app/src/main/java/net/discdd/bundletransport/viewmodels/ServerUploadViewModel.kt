@@ -51,10 +51,10 @@ class ServerUploadViewModel(
 
     fun connectServer() {
         val exchangeFuture = TransportServiceManager.getService()?.queueServerExchangeNow()
-            viewModelScope.launch {
-                with (Dispatchers.IO) {
-                    exchangeFuture?.get()
-                    reloadCount()
+        viewModelScope.launch {
+            with(Dispatchers.IO) {
+                exchangeFuture?.get()
+                reloadCount()
             }
         }
     }
@@ -79,7 +79,7 @@ class ServerUploadViewModel(
             sharedPref
                     .edit {
                         putString("domain", state.value.domain)
-                            .putInt("port", state.value.port.toInt())
+                                .putInt("port", state.value.port.toInt())
                     }
             _state.update { it.copy(message = context.getString(R.string.saved)) }
         }
