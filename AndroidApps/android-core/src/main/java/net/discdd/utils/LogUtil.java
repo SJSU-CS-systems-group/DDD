@@ -9,10 +9,22 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class LogUtil {
-    public static void logUi(Context context, Logger logger, UserLogRepository.UserLogType type, Level level, @StringRes int resId, Object... args) {
+    public static void logUi(Context context,
+                             Logger logger,
+                             UserLogRepository.UserLogType type,
+                             Level level,
+                             @StringRes int resId,
+                             Object... args) {
         logUi(context, logger, type, level, null, resId, args);
     }
-    public static void logUi(Context context, Logger logger, UserLogRepository.UserLogType type, Level level, Throwable throwable, @StringRes int resId, Object... args) {
+
+    public static void logUi(Context context,
+                             Logger logger,
+                             UserLogRepository.UserLogType type,
+                             Level level,
+                             Throwable throwable,
+                             @StringRes int resId,
+                             Object... args) {
         var uiString = context.getString(resId, args);
         UserLogRepository.INSTANCE.log(new UserLogRepository.UserLogEntry(type,
                                                                           System.currentTimeMillis(),

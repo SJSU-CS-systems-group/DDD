@@ -116,9 +116,7 @@ public class DDDWifiServer {
         if (wifiP2pManager == null) {
             logger.log(SEVERE, "Cannot get Wi-Fi system service");
         } else {
-            this.channel = this.wifiP2pManager.initialize(this.bts,
-                                                          this.bts.getMainLooper(),
-                                                          this::sendStateChange);
+            this.channel = this.wifiP2pManager.initialize(this.bts, this.bts.getMainLooper(), this::sendStateChange);
             if (channel == null) {
                 logger.log(WARNING, "Cannot initialize Wi-Fi Direct");
             }

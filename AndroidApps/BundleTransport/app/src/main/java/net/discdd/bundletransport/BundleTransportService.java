@@ -97,12 +97,13 @@ public class BundleTransportService extends Service implements BundleExchangeSer
                                                                     transportPaths,
                                                                     host,
                                                                     Integer.toString(port)).doExchange();
-            logExchange(INFO, R.string.deleted_d_bundles_sent_d_d_received_d_d,
-                             exchangeCounts.deleteCount,
-                             exchangeCounts.uploadCount,
-                             exchangeCounts.toUploadCount,
-                             exchangeCounts.downloadCount,
-                             exchangeCounts.toDownloadCount);
+            logExchange(INFO,
+                        R.string.deleted_d_bundles_sent_d_d_received_d_d,
+                        exchangeCounts.deleteCount,
+                        exchangeCounts.uploadCount,
+                        exchangeCounts.toUploadCount,
+                        exchangeCounts.downloadCount,
+                        exchangeCounts.toDownloadCount);
         } catch (Exception e) {
             logExchange(SEVERE, e, R.string.error_during_server_exchange_s, e.getMessage());
         }
@@ -113,10 +114,10 @@ public class BundleTransportService extends Service implements BundleExchangeSer
         LogUtil.logUi(getApplicationContext(), logger, UserLogRepository.UserLogType.WIFI, level, resId, args);
     }
 
-
     void logExchange(Level level, Throwable throwable, @StringRes int resId, Object... args) {
         LogUtil.logUi(getApplicationContext(), logger, EXCHANGE, level, throwable, resId, args);
     }
+
     void logExchange(Level level, @StringRes int resId, Object... args) {
         LogUtil.logUi(getApplicationContext(), logger, EXCHANGE, level, resId, args);
     }
