@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.discdd.AndroidAppConstants
 import net.discdd.bundletransport.R
 import net.discdd.bundletransport.TransportServiceManager
@@ -51,10 +52,26 @@ class ServerUploadViewModel(
 
     fun connectServer() {
         val exchangeFuture = TransportServiceManager.getService()?.queueServerExchangeNow()
-        viewModelScope.launch {
-            with(Dispatchers.IO) {
-                exchangeFuture?.get()
-                reloadCount()
+        if (exchangeFuture == null) {
+            UserLogRepository.log(UserLogRepository.UserLogType.EXCHANGE, "TransportService is not available.", level = Level.SEVERE)
+        } else {
+            viewModelScope.launch {
+                withContext(Dispatchers.IO) {
+                    try {
+                        val message = exchangeFuture.get()
+                        UserLogRepository.log(
+                            UserLogRepository.UserLogType.EXCHANGE,
+                            message
+                        )
+                        reloadCount()
+                    } catch (e: Exception) {
+                        UserLogRepository.log(
+                            UserLogRepository.UserLogType.EXCHANGE,
+                            "Server connection error: ${e.message}",
+                            level = Level.SEVERE
+                        )
+                    }
+                }
             }
         }
     }
