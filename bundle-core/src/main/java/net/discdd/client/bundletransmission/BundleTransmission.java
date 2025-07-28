@@ -229,7 +229,8 @@ public class BundleTransmission {
             }
 
             // these are all out of date, so delete them
-            // TODO: NOT SO FAST!!!!! we aren't breaking out bundles by directory, so we can't do a mass delete link this
+            // TODO: NOT SO FAST!!!!! we aren't breaking out bundles by directory, so we can't do a mass delete link
+            //  this
             //for (var bundle : sentBundles) {
             //    bundle.delete();
             //}
