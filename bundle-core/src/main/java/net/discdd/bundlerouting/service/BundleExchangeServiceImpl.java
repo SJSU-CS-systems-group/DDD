@@ -25,6 +25,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 
+import static java.lang.String.format;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
@@ -55,8 +56,9 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
 
             if (downloadPath == null) {
                 logger.log(SEVERE,
-                           "Could not produce a path for {0} with map {1}",
-                           new Object[] { bundleExchangeName.encryptedBundleId, request.getPublicKeyMap() });
+                           format("Could not produce a path for %s with map %s",
+                                  bundleExchangeName.encryptedBundleId,
+                                  request.getPublicKeyMap()));
                 responseObserver.onError(io.grpc.Status.NOT_FOUND.withDescription("Bundle not found").asException());
                 return;
             }

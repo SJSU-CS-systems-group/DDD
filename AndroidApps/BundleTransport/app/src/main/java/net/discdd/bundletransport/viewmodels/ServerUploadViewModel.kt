@@ -14,12 +14,9 @@ import net.discdd.AndroidAppConstants
 import net.discdd.bundletransport.R
 import net.discdd.bundletransport.TransportServiceManager
 import net.discdd.pathutils.TransportPaths
-import net.discdd.utils.UserLogRepository
-import java.util.Base64
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.logging.Level
 import java.util.logging.Logger
+import androidx.core.content.edit
+import java.util.Base64
 
 data class ServerState(
         val domain: String = "",
@@ -33,7 +30,7 @@ class ServerUploadViewModel(
         application: Application
 ) : AndroidViewModel(application) {
     // this is a truncated version of the transport ID, which is used to identify the transport
-    public val transportID: String
+    val transportID: String
         get() {
             val service = TransportServiceManager.getService()
             return service?.grpcKeys?.grpcKeyPair?.public?.encoded?.let {
@@ -44,7 +41,6 @@ class ServerUploadViewModel(
     private val sharedPref = context.getSharedPreferences("server_endpoint", MODE_PRIVATE)
     private val logger = Logger.getLogger(ServerUploadViewModel::class.java.name)
     private val _state = MutableStateFlow(ServerState())
-    private val executor: ExecutorService = Executors.newFixedThreadPool(2);
     private var transportPaths: TransportPaths = TransportPaths(context.getExternalFilesDir(null)?.toPath())
     val state = _state.asStateFlow()
 
@@ -91,17 +87,17 @@ class ServerUploadViewModel(
             _state.update { current -> current.copy(clientCount = clientCountFiles.toString()) }
             _state.update { current -> current.copy(serverCount = serverCountFiles.toString()) }
         } else {
-            logger.warning("transportPaths or its paths are null when attempting to reload counts");
+            logger.warning("transportPaths or its paths are null when attempting to reload counts")
         }
     }
 
     fun saveDomainPort() {
         viewModelScope.launch {
             sharedPref
-                    .edit()
-                    .putString("domain", state.value.domain)
-                    .putInt("port", state.value.port.toInt())
-                    .apply()
+                    .edit {
+                        putString("domain", state.value.domain)
+                                .putInt("port", state.value.port.toInt())
+                    }
             _state.update { it.copy(message = context.getString(R.string.saved)) }
         }
     }

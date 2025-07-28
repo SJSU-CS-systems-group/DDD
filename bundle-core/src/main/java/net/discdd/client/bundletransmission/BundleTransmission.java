@@ -229,9 +229,11 @@ public class BundleTransmission {
             }
 
             // these are all out of date, so delete them
-            for (var bundle : sentBundles) {
-                bundle.delete();
-            }
+            // TODO: NOT SO FAST!!!!! we aren't breaking out bundles by directory, so we can't do a mass delete link
+            //  this
+            //for (var bundle : sentBundles) {
+            //    bundle.delete();
+            //}
         }
         var newBundleId = bundleSecurity.generateNewBundleId();
         return generateNewBundle(newBundleId);
@@ -342,7 +344,10 @@ public class BundleTransmission {
         }
     }
 
-    public record BundleExchangeCounts(Statuses uploadStatus, Statuses downloadStatus, Exception e) {}
+    public record BundleExchangeCounts(TransportDevice device,
+                                       Statuses uploadStatus,
+                                       Statuses downloadStatus,
+                                       Exception e) {}
 
     private static final int INITIAL_CONNECT_RETRIES = 8;
 
@@ -447,7 +452,7 @@ public class BundleTransmission {
             transmissionException = e;
         }
         channel.shutdownNow();
-        return new BundleExchangeCounts(uploadStatus, downloadStatus, transmissionException);
+        return new BundleExchangeCounts(device, uploadStatus, downloadStatus, transmissionException);
     }
 
     public List<String> getNextBundles() throws InvalidKeyException, GeneralSecurityException {

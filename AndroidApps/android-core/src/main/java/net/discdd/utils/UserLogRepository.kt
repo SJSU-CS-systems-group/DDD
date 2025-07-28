@@ -33,7 +33,7 @@ object UserLogRepository {
         _event.tryEmit(Unit)
     }
 
-    fun log(userLogType: UserLogType, message: String, time: Long = System.currentTimeMillis(), level: Level = Level.INFO) {
+    internal fun log(userLogType: UserLogType, message: String, time: Long = System.currentTimeMillis(), level: Level = Level.INFO) {
         log(UserLogEntry(userLogType, time, message, level))
     }
 
