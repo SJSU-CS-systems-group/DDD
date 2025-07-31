@@ -1,6 +1,6 @@
 package net.discdd.cli;
 
-import net.discdd.client.bundletransmission.BundleTransmission;
+import net.discdd.client.bundletransmission.ClientBundleTransmission;
 import net.discdd.client.bundletransmission.TransportDevice;
 import net.discdd.model.ADU;
 import net.discdd.pathutils.ClientPaths;
@@ -119,8 +119,10 @@ public class LocalAduSendReceive extends StdOutMixin {
 
     ) throws Exception {
         var serverAddress = getAddressPort(rootPath);
-        var clientPaths = new ClientPaths(rootPath);
-        var bundleTransmission = new BundleTransmission(clientPaths, (ADU adu) -> {
+        // we pass nulls for the key files since they are already set up
+        var clientPaths = new ClientPaths(rootPath, null, null,  null);
+        var bundleTransmission = new ClientBundleTransmission(clientPaths,
+                                                              (ADU adu) -> {
             out().println("Received ADU: " + adu);
         });
         var bundleExchangeCounts = bundleTransmission.doExchangeWithTransport(TransportDevice.SERVER_DEVICE,
@@ -146,7 +148,7 @@ public class LocalAduSendReceive extends StdOutMixin {
                     defaultValue = "false", showDefaultValue = CommandLine.Help.Visibility.ALWAYS)
             boolean force) throws ExecutionException {
         try {
-            var clientPaths = new ClientPaths(rootPath);
+            var clientPaths = new ClientPaths(rootPath, null, null, null);
             var sendADUsStorage = new StoreADUs(clientPaths.sendADUsPath);
             for (String aduFile : adus) {
                 var data = aduFile.equals("-") ? System.in.readAllBytes() : Files.readAllBytes(Path.of(aduFile));

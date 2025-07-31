@@ -28,9 +28,9 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
-public class ApplicationDataManager {
+public class ClientApplicationDataManager {
 
-    private static final Logger logger = Logger.getLogger(ApplicationDataManager.class.getName());
+    private static final Logger logger = Logger.getLogger(ClientApplicationDataManager.class.getName());
 
     public final StoreADUs sendADUsStorage;
     public final StoreADUs receiveADUsStorage;
@@ -39,7 +39,7 @@ public class ApplicationDataManager {
 
     final private ClientPaths clientPaths;
 
-    public ApplicationDataManager(ClientPaths clientPaths, Consumer<ADU> aduConsumer) {
+    public ClientApplicationDataManager(ClientPaths clientPaths, Consumer<ADU> aduConsumer) {
         this.clientPaths = clientPaths;
         sendADUsStorage = new StoreADUs(clientPaths.sendADUsPath);
         receiveADUsStorage = new StoreADUs(clientPaths.receiveADUsPath);

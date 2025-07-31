@@ -6,7 +6,7 @@ import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import net.discdd.bundlerouting.RoutingExceptions;
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
-import net.discdd.client.bundletransmission.BundleTransmission;
+import net.discdd.client.bundletransmission.ClientBundleTransmission;
 import net.discdd.grpc.AppDataUnit;
 import net.discdd.grpc.BundleChunk;
 import net.discdd.grpc.BundleDownloadRequest;
@@ -67,7 +67,7 @@ public class BundleClientToBundleServerTest extends End2EndTest {
     private static final Logger logger = Logger.getLogger(BundleClientToBundleServerTest.class.getName());
     @TempDir
     static Path clientTestRoot;
-    static BundleTransmission bundleTransmission;
+    static ClientBundleTransmission bundleTransmission;
     private static BundleExchangeServiceGrpc.BundleExchangeServiceStub stub;
     private static StoreADUs sendStore;
     private static StoreADUs recieveStore;
@@ -82,16 +82,15 @@ public class BundleClientToBundleServerTest extends End2EndTest {
 
     @BeforeAll
     static void setUp() throws Exception {
-        clientPaths = new ClientPaths(clientTestRoot);
-
-        Files.copy(serverIdentityKeyPath, clientPaths.outServerIdentity);
-        Files.copy(serverSignedPreKeyPath, clientPaths.outServerSignedPre);
-        Files.copy(serverRatchetKeyPath, clientPaths.outServerRatchet);
+        clientPaths = new ClientPaths(clientTestRoot,
+                                      Files.readAllBytes(serverIdentityKeyPath),
+                                      Files.readAllBytes(serverSignedPreKeyPath),
+                                      Files.readAllBytes(serverRatchetKeyPath));
 
         sendStore = new StoreADUs(clientPaths.sendADUsPath);
         recieveStore = new StoreADUs(clientPaths.receiveADUsPath);
 
-        bundleTransmission = new BundleTransmission(clientPaths, adu -> {});
+        bundleTransmission = new ClientBundleTransmission(clientPaths, adu -> {});
         var grpcKey = bundleTransmission.getBundleSecurity().getClientGrpcSecurityKey();
         clientId = bundleTransmission.getBundleSecurity().getClientSecurity().getClientID();
         clientKeyPair = grpcKey.grpcKeyPair;

@@ -27,10 +27,10 @@ import androidx.lifecycle.Observer;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import net.discdd.bundleclient.R;
 import net.discdd.bundleclient.service.wifiDirect.DDDWifiDirect;
-import net.discdd.client.bundlesecurity.BundleSecurity;
-import net.discdd.client.bundletransmission.BundleTransmission;
-import net.discdd.client.bundletransmission.BundleTransmission.BundleExchangeCounts;
-import net.discdd.client.bundletransmission.BundleTransmission.Statuses;
+import net.discdd.client.bundlesecurity.ClientBundleSecurity;
+import net.discdd.client.bundletransmission.ClientBundleTransmission;
+import net.discdd.client.bundletransmission.ClientBundleTransmission.BundleExchangeCounts;
+import net.discdd.client.bundletransmission.ClientBundleTransmission.Statuses;
 import net.discdd.client.bundletransmission.TransportDevice;
 import net.discdd.datastore.providers.MessageProvider;
 import net.discdd.model.ADU;
@@ -79,7 +79,7 @@ public class BundleClientService extends Service {
     final private Set<String> insertedAppIds = Collections.synchronizedSet(new HashSet<>());
     ConnectivityManager connectivityManager;
     private DDDWifi dddWifi;
-    private BundleTransmission bundleTransmission;
+    private ClientBundleTransmission bundleTransmission;
     final private Observer<? super DDDWifiEventType> liveDataObserver = this::broadcastWifiEvent;
 
     public BundleClientService() {
@@ -154,7 +154,6 @@ public class BundleClientService extends Service {
         }
 
         try {
-            ClientPaths clientPaths = new ClientPaths(getApplicationContext().getDataDir().toPath());
 
             //Application context
             var resources = getApplicationContext().getResources();
@@ -164,12 +163,16 @@ public class BundleClientService extends Service {
                          resources.openRawResource(net.discdd.android_core.R.raw.server_signed_pre);
                  InputStream inServerRatchet =
                          resources.openRawResource(net.discdd.android_core.R.raw.server_ratchet)) {
-                BundleSecurity.initializeKeyPaths(clientPaths, inServerIdentity, inServerSignedPre, inServerRatchet);
+
+                ClientPaths clientPaths = new ClientPaths(getApplicationContext().getDataDir().toPath(),
+                                                          inServerIdentity.readAllBytes(),
+                                                          inServerSignedPre.readAllBytes(),
+                                                          inServerRatchet.readAllBytes());
+                bundleTransmission = new ClientBundleTransmission(clientPaths, this::processIncomingADU);
             } catch (IOException e) {
                 logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
             }
 
-            bundleTransmission = new BundleTransmission(clientPaths, this::processIncomingADU);
             var dddWifiDirect = new DDDWifiDirect(this);
             this.dddWifi = dddWifiDirect;
             this.dddWifi.getEventLiveData().observeForever(liveDataObserver);
@@ -273,7 +276,7 @@ public class BundleClientService extends Service {
                                                  device.getDescription(),
                                                  statusesToString(currentBundle.uploadStatus()),
                                                  statusesToString(currentBundle.downloadStatus()));
-            if (currentBundle.e() instanceof BundleTransmission.RecencyException) {
+            if (currentBundle.e() instanceof ClientBundleTransmission.RecencyException) {
                 broadcastBundleClientLogEvent(R.string.not_exchanged_recently_s, currentBundle.e().getMessage());
             }
             String text1;
@@ -440,7 +443,7 @@ public class BundleClientService extends Service {
         return completableFuture;
     }
 
-    public BundleTransmission.RecentTransport[] getRecentTransports() {
+    public ClientBundleTransmission.RecentTransport[] getRecentTransports() {
         return bundleTransmission.getRecentTransports();
     }
 
@@ -448,11 +451,11 @@ public class BundleClientService extends Service {
         return dddWifi.isDiscoveryActive();
     }
 
-    public BundleTransmission.RecentTransport getRecentTransport(DDDWifiDevice peer) {
+    public ClientBundleTransmission.RecentTransport getRecentTransport(DDDWifiDevice peer) {
         return Arrays.stream(bundleTransmission.getRecentTransports())
                 .filter(rt -> peer.equals(rt.getDevice()))
                 .findFirst()
-                .orElse(new BundleTransmission.RecentTransport(peer));
+                .orElse(new ClientBundleTransmission.RecentTransport(peer));
     }
 
     public void notifyNewAdu() {
@@ -472,7 +475,7 @@ public class BundleClientService extends Service {
         dddWifi.wifiPermissionGranted();
     }
 
-    public BundleTransmission getBundleTransmission() {
+    public ClientBundleTransmission getBundleTransmission() {
         return bundleTransmission;
     }
 

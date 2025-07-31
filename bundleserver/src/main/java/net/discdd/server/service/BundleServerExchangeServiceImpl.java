@@ -10,7 +10,7 @@ import net.discdd.grpc.GetRecencyBlobResponse;
 import net.discdd.grpc.GrpcService;
 import net.discdd.grpc.PublicKeyMap;
 import net.discdd.grpc.RecencyBlobStatus;
-import net.discdd.server.bundletransmission.BundleTransmission;
+import net.discdd.server.bundletransmission.ServerBundleTransmission;
 import net.discdd.tls.DDDTLSUtil;
 import net.discdd.tls.NettyServerCertificateInterceptor;
 import org.whispersystems.libsignal.InvalidKeyException;
@@ -29,12 +29,12 @@ import static java.util.logging.Level.SEVERE;
 @GrpcService
 public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
     private static final Logger logger = Logger.getLogger(BundleServerExchangeServiceImpl.class.getName());
-    private final BundleTransmission bundleTransmission;
+    private final ServerBundleTransmission bundleTransmission;
     Random random = new Random();
     private Path downloadingFrom;
     private Path uploadingTo;
 
-    public BundleServerExchangeServiceImpl(BundleTransmission bundleTransmission) {
+    public BundleServerExchangeServiceImpl(ServerBundleTransmission bundleTransmission) {
         this.bundleTransmission = bundleTransmission;
     }
 

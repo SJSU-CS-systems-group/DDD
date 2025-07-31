@@ -5,6 +5,7 @@ import net.discdd.utils.Constants;
 import net.discdd.utils.FileUtils;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -67,11 +68,18 @@ public class ClientPaths {
     public final Path grpcSecurityPath;
 
     // initialize key paths
-    public final Path outServerIdentity;
-    public final Path outServerSignedPre;
-    public final Path outServerRatchet;
+    public final Path serverIdentity;
+    public final Path serverSignedPre;
+    public final Path serverRatchet;
 
-    public ClientPaths(Path rootDir) throws IOException {
+    /**
+     * makes sure the keypaths are created in non disruptive manner except for the server keys which will
+     * overwrite existing keys if they are provided. if the keys are null, they will be ignored.
+     */
+    public ClientPaths(Path rootDir,
+                       byte[] serverIdentity,
+                       byte[] serverSignedPre,
+                       byte[] serverRatchet) throws IOException {
         // Bundle generation directory
         bundleGenerationDir = rootDir.resolve(BUNDLE_GENERATION_DIRECTORY);
         toBeBundledDir = rootDir.resolve(TO_BE_BUNDLED_DIRECTORY);
@@ -114,9 +122,12 @@ public class ClientPaths {
         FileUtils.createFileWithDefaultIfNeeded(largestBundleIdReceived, "0".getBytes());
 
         // initialize key paths
-        outServerIdentity = serverKeyPath.resolve(SecurityUtils.SERVER_IDENTITY_KEY);
-        outServerSignedPre = serverKeyPath.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY);
-        outServerRatchet = serverKeyPath.resolve(SecurityUtils.SERVER_RATCHET_KEY);
+        this.serverIdentity = serverKeyPath.resolve(SecurityUtils.SERVER_IDENTITY_KEY);
+        if (serverIdentity != null) Files.write(this.serverIdentity, serverIdentity);
+        this.serverSignedPre = serverKeyPath.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY);
+        if (serverSignedPre != null) Files.write(this.serverSignedPre, serverSignedPre);
+        this.serverRatchet = serverKeyPath.resolve(SecurityUtils.SERVER_RATCHET_KEY);
+        if (serverRatchet != null) Files.write(this.serverRatchet, serverRatchet);
 
         // client routing
         var metaDataPath = rootDir.resolve("BundleRouting");
