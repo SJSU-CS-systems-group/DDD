@@ -19,12 +19,12 @@ import java.nio.file.StandardCopyOption
 
 // APK URLs
 const val mailApkUrl =
-    "https://github.com/SJSU-CS-systems-group/DDD-thunderbird-android/releases/latest/download/ddd-mail.apk"
+        "https://github.com/SJSU-CS-systems-group/DDD-thunderbird-android/releases/latest/download/ddd-mail.apk"
 const val clientApkUrl = "https://github.com/SJSU-CS-systems-group/DDD/releases/latest/download/DDDClient.apk"
 
 class AppShareViewModel(
         val myApplication: Application
-): AndroidViewModel(myApplication) {
+) : AndroidViewModel(myApplication) {
     private val mailApkFile by lazy {
         File(myApplication.getExternalFilesDir(null), "ddd-mail.apk").toPath()
     }
@@ -39,17 +39,17 @@ class AppShareViewModel(
     val mailApkVersion = _mailApkVersion.asStateFlow()
     private var _clientApkVersion = MutableStateFlow<String?>(null)
     val clientApkVersion = _clientApkVersion.asStateFlow()
-    
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
             _mailApkVersion.value = getApkVersionInfo(mailApkFile)
             _clientApkVersion.value = getApkVersionInfo(clientApkFile)
         }
     }
-    
-    
+
+
     private fun downloadFile(
-        url: String, dest: Path, progress: MutableStateFlow<Float>
+            url: String, dest: Path, progress: MutableStateFlow<Float>
     ): String? {
         val fileName = url.substringAfterLast('/')
         try {
@@ -94,7 +94,7 @@ class AppShareViewModel(
             }
             return myApplication.getString(R.string.download_failed, dest.fileName, e.message)
         }
-    } 
+    }
 
     private fun getApkVersionInfo(apkPath: Path): String? {
         if (!Files.exists(apkPath)) {
@@ -102,7 +102,7 @@ class AppShareViewModel(
         }
         val packageManager = myApplication.packageManager
         val packageInfo = packageManager.getPackageArchiveInfo(
-            apkPath.toAbsolutePath().toString(), PackageManager.GET_ACTIVITIES
+                apkPath.toAbsolutePath().toString(), PackageManager.GET_ACTIVITIES
         )
 
         return "${apkPath.fileName} ${packageInfo?.versionName ?: "Error"}"

@@ -58,8 +58,8 @@ class ServerUploadViewModel(
             restoreDomainPort()
             reloadCount()
             _backgroundExchange.value = transportPrefs.getInt(
-                BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE,
-                0
+                    BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE,
+                    0
             )
         }
     }
@@ -102,8 +102,8 @@ class ServerUploadViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             _state.update {
                 it.copy(
-                    domain = sharedPref.getString("domain", "") ?: "",
-                    port = sharedPref.getInt("port", 0).toString()
+                        domain = sharedPref.getString("domain", "") ?: "",
+                        port = sharedPref.getInt("port", 0).toString()
                 )
             }
         }

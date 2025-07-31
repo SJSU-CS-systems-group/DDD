@@ -29,8 +29,8 @@ class StorageViewModel(application: Application) : AndroidViewModel(application)
     private val context get() = getApplication<Application>()
     private val storageManager by lazy {
         StorageManager(
-            context.getExternalFilesDir(null)?.toPath(),
-            retrievePreference().toLong()
+                context.getExternalFilesDir(null)?.toPath(),
+                retrievePreference().toLong()
         )
     }
     private val _state = MutableStateFlow(StorageState())
@@ -99,9 +99,9 @@ class StorageViewModel(application: Application) : AndroidViewModel(application)
     private fun savePreference(value: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             context.getSharedPreferences("SeekBarPrefs", Context.MODE_PRIVATE)
-                .edit {
-                    putLong("seekBarPosition", value)
-                }
+                    .edit {
+                        putLong("seekBarPosition", value)
+                    }
         }
     }
 

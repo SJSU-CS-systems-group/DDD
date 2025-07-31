@@ -46,8 +46,8 @@ import java.net.URL
 
 @Composable
 fun AppShareScreen(
-    wifiViewModel: WifiDirectViewModel = viewModel(),
-    appShareViewModel: AppShareViewModel = viewModel()
+        wifiViewModel: WifiDirectViewModel = viewModel(),
+        appShareViewModel: AppShareViewModel = viewModel()
 ) {
     val url = "http://192.168.49.1:8080"
     // Generate QR code bitmap
