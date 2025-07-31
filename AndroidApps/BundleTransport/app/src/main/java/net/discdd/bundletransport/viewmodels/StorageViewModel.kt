@@ -6,12 +6,14 @@ import android.os.Environment
 import android.os.StatFs
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.discdd.bundletransport.R
 import net.discdd.bundletransport.StorageManager
+import androidx.core.content.edit
 
 data class StorageState(
         val sliderValue: Long = 0,
@@ -25,10 +27,12 @@ data class StorageState(
 class StorageViewModel(application: Application) : AndroidViewModel(application) {
     private val minStorage = 100
     private val context get() = getApplication<Application>()
-    private val storageManager = StorageManager(
-            context.getExternalFilesDir(null)?.toPath(),
-            retrievePreference().toLong()
-    )
+    private val storageManager by lazy {
+        StorageManager(
+                context.getExternalFilesDir(null)?.toPath(),
+                retrievePreference().toLong()
+        )
+    }
     private val _state = MutableStateFlow(StorageState())
     val state = _state.asStateFlow()
 
@@ -37,7 +41,7 @@ class StorageViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private fun updateStorageInfo() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val totalBytes = getTotalBytes()
                 val usedBytes = getUsedBytes()
@@ -66,7 +70,7 @@ class StorageViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun onSetStorageClick() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 storageManager.setUserStoragePreference(_state.value.sliderValue)
                 storageManager.updateStorage()
@@ -93,10 +97,12 @@ class StorageViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private fun savePreference(value: Long) {
-        context.getSharedPreferences("SeekBarPrefs", Context.MODE_PRIVATE)
-                .edit()
-                .putLong("seekBarPosition", value)
-                .apply()
+        viewModelScope.launch(Dispatchers.IO) {
+            context.getSharedPreferences("SeekBarPrefs", Context.MODE_PRIVATE)
+                    .edit {
+                        putLong("seekBarPosition", value)
+                    }
+        }
     }
 
     private fun retrievePreference(): Long {

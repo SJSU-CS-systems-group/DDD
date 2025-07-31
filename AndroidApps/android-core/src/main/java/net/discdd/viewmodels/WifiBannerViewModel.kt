@@ -3,8 +3,11 @@ package net.discdd.viewmodels
 import android.app.Application
 import android.content.Context.MODE_PRIVATE
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /*
 Viewmodels for screens that require functionality to NEARBY_WIFI_DEVICES will extend this class.
@@ -15,19 +18,24 @@ open class WifiBannerViewModel(
         application: Application
 ) : AndroidViewModel(application) {
     protected val context get() = getApplication<Application>()
-    private val sharedPref = context.getSharedPreferences(NET_DISCDD_BUNDLECLIENT_NUM_DENIED, MODE_PRIVATE)
+    private val sharedPref by lazy {
+        context.getSharedPreferences(NET_DISCDD_BUNDLECLIENT_NUM_DENIED, MODE_PRIVATE)
+    }
     private val _numDenied = MutableStateFlow(0)
     val numDenied = _numDenied.asStateFlow()
 
     init {
-        val numDeniedCached = sharedPref.getInt(NET_DISCDD_BUNDLECLIENT_NUM_DENIED, 0)
-        _numDenied.value = numDeniedCached
+        viewModelScope.launch(Dispatchers.IO) {
+            _numDenied.value = sharedPref.getInt(NET_DISCDD_BUNDLECLIENT_NUM_DENIED, 0)
+        }
     }
 
     fun incrementNumDenied() {
-        val newNumDenied = _numDenied.value + 1
-        _numDenied.value = newNumDenied
-        sharedPref.edit().putInt(NET_DISCDD_BUNDLECLIENT_NUM_DENIED, newNumDenied).apply()
+        viewModelScope.launch(Dispatchers.IO) {
+            val newNumDenied = _numDenied.value + 1
+            _numDenied.value = newNumDenied
+            sharedPref.edit().putInt(NET_DISCDD_BUNDLECLIENT_NUM_DENIED, newNumDenied).apply()
+        }
     }
 
     companion object {

@@ -15,6 +15,7 @@ import net.discdd.bundletransport.TransportServiceManager
 import net.discdd.pathutils.TransportPaths
 import java.util.logging.Logger
 import androidx.core.content.edit
+import net.discdd.bundletransport.BundleTransportService
 import java.util.Base64
 
 data class ServerState(
@@ -37,25 +38,37 @@ class ServerUploadViewModel(
             } ?: "Unknown"
         }
     private val context get() = getApplication<Application>()
-    private val sharedPref = context.getSharedPreferences("server_endpoint", MODE_PRIVATE)
+    private val sharedPref by lazy { context.getSharedPreferences("server_endpoint", MODE_PRIVATE) }
+    private val transportPrefs by lazy {
+        context.getSharedPreferences(BundleTransportService.BUNDLETRANSPORT_PREFERENCES, MODE_PRIVATE)
+    }
+
     private val logger = Logger.getLogger(ServerUploadViewModel::class.java.name)
+    private val transportPaths: TransportPaths by lazy {
+        TransportPaths(context.getExternalFilesDir(null)?.toPath())
+    }
     private val _state = MutableStateFlow(ServerState())
-    private var transportPaths: TransportPaths = TransportPaths(context.getExternalFilesDir(null)?.toPath())
     val state = _state.asStateFlow()
+    private val _backgroundExchange = MutableStateFlow(0)
+    val backgroundExchange = _backgroundExchange.asStateFlow()
 
     init {
-        AndroidAppConstants.checkDefaultDomainPortSettings(sharedPref)
-        restoreDomainPort()
-        reloadCount()
+        viewModelScope.launch(Dispatchers.IO) {
+            AndroidAppConstants.checkDefaultDomainPortSettings(sharedPref)
+            restoreDomainPort()
+            reloadCount()
+            _backgroundExchange.value = transportPrefs.getInt(
+                    BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE,
+                    0
+            )
+        }
     }
 
     fun connectServer() {
         val exchangeFuture = TransportServiceManager.getService()?.queueServerExchangeNow()
-        viewModelScope.launch {
-            with(Dispatchers.IO) {
-                exchangeFuture?.get()
-                reloadCount()
-            }
+        viewModelScope.launch(Dispatchers.IO) {
+            exchangeFuture?.get()
+            reloadCount()
         }
     }
 
@@ -75,7 +88,7 @@ class ServerUploadViewModel(
     }
 
     fun saveDomainPort() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             sharedPref
                     .edit {
                         putString("domain", state.value.domain)
@@ -86,11 +99,13 @@ class ServerUploadViewModel(
     }
 
     fun restoreDomainPort() {
-        _state.update {
-            it.copy(
-                    domain = sharedPref.getString("domain", "") ?: "",
-                    port = sharedPref.getInt("port", 0).toString()
-            )
+        viewModelScope.launch(Dispatchers.IO) {
+            _state.update {
+                it.copy(
+                        domain = sharedPref.getString("domain", "") ?: "",
+                        port = sharedPref.getInt("port", 0).toString()
+                )
+            }
         }
     }
 
@@ -104,5 +119,12 @@ class ServerUploadViewModel(
 
     fun clearMessage() {
         _state.update { it.copy(message = null) }
+    }
+
+    fun setBackgroundExchange(value: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _backgroundExchange.value = value
+            transportPrefs.edit { putInt(BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE, value) }
+        }
     }
 }
