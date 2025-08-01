@@ -149,7 +149,7 @@ public class DDDWifiServer {
 
     private boolean hasPermission() {
         return ActivityCompat.checkSelfPermission(this.bts, Manifest.permission.NEARBY_WIFI_DEVICES) ==
-                        PackageManager.PERMISSION_GRANTED;
+                PackageManager.PERMISSION_GRANTED;
     }
 
     /**
