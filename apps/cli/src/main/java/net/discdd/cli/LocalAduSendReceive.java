@@ -120,9 +120,8 @@ public class LocalAduSendReceive extends StdOutMixin {
     ) throws Exception {
         var serverAddress = getAddressPort(rootPath);
         // we pass nulls for the key files since they are already set up
-        var clientPaths = new ClientPaths(rootPath, null, null,  null);
-        var bundleTransmission = new ClientBundleTransmission(clientPaths,
-                                                              (ADU adu) -> {
+        var clientPaths = new ClientPaths(rootPath, null, null, null);
+        var bundleTransmission = new ClientBundleTransmission(clientPaths, (ADU adu) -> {
             out().println("Received ADU: " + adu);
         });
         var bundleExchangeCounts = bundleTransmission.doExchangeWithTransport(TransportDevice.SERVER_DEVICE,

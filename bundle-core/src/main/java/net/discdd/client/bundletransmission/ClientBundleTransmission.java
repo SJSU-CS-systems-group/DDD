@@ -97,9 +97,9 @@ public class ClientBundleTransmission {
     final private ClientRouting clientRouting;
     final private ClientPaths clientPaths;
 
-    public ClientBundleTransmission(ClientPaths clientPaths,
-                                    Consumer<ADU> aduConsumer) throws WindowExceptions.BufferOverflow, IOException,
-            InvalidKeyException, RoutingExceptions.ClientMetaDataFileException, NoSuchAlgorithmException {
+    public ClientBundleTransmission(ClientPaths clientPaths, Consumer<ADU> aduConsumer) throws
+            WindowExceptions.BufferOverflow, IOException, InvalidKeyException,
+            RoutingExceptions.ClientMetaDataFileException, NoSuchAlgorithmException {
         this.clientPaths = clientPaths;
         this.bundleSecurity = new ClientBundleSecurity(clientPaths);
         this.applicationDataManager = new ClientApplicationDataManager(clientPaths, aduConsumer);

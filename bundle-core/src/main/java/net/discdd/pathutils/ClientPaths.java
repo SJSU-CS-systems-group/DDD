@@ -76,10 +76,8 @@ public class ClientPaths {
      * makes sure the keypaths are created in non disruptive manner except for the server keys which will
      * overwrite existing keys if they are provided. if the keys are null, they will be ignored.
      */
-    public ClientPaths(Path rootDir,
-                       byte[] serverIdentity,
-                       byte[] serverSignedPre,
-                       byte[] serverRatchet) throws IOException {
+    public ClientPaths(Path rootDir, byte[] serverIdentity, byte[] serverSignedPre, byte[] serverRatchet) throws
+            IOException {
         // Bundle generation directory
         bundleGenerationDir = rootDir.resolve(BUNDLE_GENERATION_DIRECTORY);
         toBeBundledDir = rootDir.resolve(TO_BE_BUNDLED_DIRECTORY);
