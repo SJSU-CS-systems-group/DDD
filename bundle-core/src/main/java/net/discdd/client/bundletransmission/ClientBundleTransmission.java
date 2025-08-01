@@ -10,10 +10,10 @@ import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
 import net.discdd.bundlesecurity.BundleIDGenerator;
 import net.discdd.bundlesecurity.SecurityUtils;
-import net.discdd.client.applicationdatamanager.ApplicationDataManager;
+import net.discdd.client.applicationdatamanager.ClientApplicationDataManager;
 import net.discdd.client.bundlerouting.ClientBundleGenerator;
 import net.discdd.client.bundlerouting.ClientRouting;
-import net.discdd.client.bundlesecurity.BundleSecurity;
+import net.discdd.client.bundlesecurity.ClientBundleSecurity;
 import net.discdd.client.bundlesecurity.ClientSecurity;
 import net.discdd.grpc.BundleChunk;
 import net.discdd.grpc.BundleDownloadRequest;
@@ -54,6 +54,7 @@ import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.net.Socket;
@@ -81,27 +82,27 @@ import static net.discdd.utils.Constants.GRPC_SHORT_TIMEOUT_MS;
 import static net.discdd.utils.FileUtils.crashReportExists;
 import static net.discdd.utils.FileUtils.readCrashReportFromFile;
 
-public class BundleTransmission {
+public class ClientBundleTransmission {
     public static class RecencyException extends IOException {
         public RecencyException(String message) {
             super(message);
         }
     }
 
-    private static final Logger logger = Logger.getLogger(BundleTransmission.class.getName());
+    private static final Logger logger = Logger.getLogger(ClientBundleTransmission.class.getName());
     private final ExecutorService executorService = Executors.newCachedThreadPool();
-    private final BundleSecurity bundleSecurity;
-    public final ApplicationDataManager applicationDataManager;
+    private final ClientBundleSecurity bundleSecurity;
+    public final ClientApplicationDataManager applicationDataManager;
 
     final private ClientRouting clientRouting;
     final private ClientPaths clientPaths;
 
-    public BundleTransmission(ClientPaths clientPaths, Consumer<ADU> aduConsumer) throws
-            WindowExceptions.BufferOverflow, IOException, InvalidKeyException,
-            RoutingExceptions.ClientMetaDataFileException, NoSuchAlgorithmException {
+    public ClientBundleTransmission(ClientPaths clientPaths,
+                                    Consumer<ADU> aduConsumer) throws WindowExceptions.BufferOverflow, IOException,
+            InvalidKeyException, RoutingExceptions.ClientMetaDataFileException, NoSuchAlgorithmException {
         this.clientPaths = clientPaths;
-        this.bundleSecurity = new BundleSecurity(clientPaths);
-        this.applicationDataManager = new ApplicationDataManager(clientPaths, aduConsumer);
+        this.bundleSecurity = new ClientBundleSecurity(clientPaths);
+        this.applicationDataManager = new ClientApplicationDataManager(clientPaths, aduConsumer);
         this.clientRouting = ClientRouting.initializeInstance(clientPaths);
     }
 
@@ -331,7 +332,7 @@ public class BundleTransmission {
         FileUtils.recursiveDelete(bundle.getSource().toPath());
     }
 
-    public BundleSecurity getBundleSecurity() {
+    public ClientBundleSecurity getBundleSecurity() {
         return this.bundleSecurity;
     }
 

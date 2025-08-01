@@ -3,7 +3,7 @@ package net.discdd.server.bundlerouting;
 import net.discdd.bundlesecurity.BundleIDGenerator;
 import net.discdd.bundlesecurity.InvalidClientIDException;
 import net.discdd.bundlesecurity.ServerSecurity;
-import net.discdd.server.bundletransmission.BundleTransmission;
+import net.discdd.server.bundletransmission.ServerBundleTransmission;
 import net.discdd.server.repository.ServerWindowRepository;
 import net.discdd.server.repository.entity.ServerWindow;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,7 +33,7 @@ public class ServerWindowService {
 
     private ServerWindow getValueFromTable(String clientID) {
         var window = serverwindowrepo.findByClientID(clientID);
-        return window == null ? new ServerWindow(clientID, 1, 1, BundleTransmission.WINDOW_LENGTH) : window;
+        return window == null ? new ServerWindow(clientID, 1, 1, ServerBundleTransmission.WINDOW_LENGTH) : window;
     }
 
     /**

@@ -7,14 +7,11 @@ import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
 import net.discdd.utils.Constants;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.whispersystems.libsignal.InvalidKeyException;
 
-import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
@@ -26,48 +23,11 @@ import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
 @Service
-public class BundleSecurity {
-    private static final Logger logger = Logger.getLogger(BundleSecurity.class.getName());
-    @Value("${bundle-server.application-data-manager.state-manager.bundle-id-next-counter}")
-    private String BUNDLE_ID_NEXT_COUNTER;
+public class ServerBundleSecurity {
+    private static final Logger logger = Logger.getLogger(ServerBundleSecurity.class.getName());
 
     @Autowired
     private ServerSecurity serverSecurity;
-
-    private Long getRecvdBundleIdCounter(String bundleId) {
-        return Long.valueOf(bundleId.split("-")[1]);
-    }
-
-    @PostConstruct
-    private void init() {
-        File bundleIdNextCounter = new File(BUNDLE_ID_NEXT_COUNTER);
-
-        try {
-            bundleIdNextCounter.getParentFile().mkdirs();
-            bundleIdNextCounter.createNewFile();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public String[] encrypt(String toBeEncPath, String encPath, String bundleID, String clientID) {
-        Path bundleDir = Path.of(encPath, bundleID);
-
-        File bundleIdFile = bundleDir.resolve(Constants.BUNDLE_IDENTIFIER_FILE_NAME).toFile();
-        try {
-            Files.write(bundleIdFile.toPath(), bundleID.getBytes());
-        } catch (IOException e1) {
-            e1.printStackTrace();
-        }
-        try {
-            Files.copy(new File(toBeEncPath).toPath(), bundleDir.resolve(bundleID + ".jar"));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        logger.log(INFO, "mock encrypt implementation");
-        return null;
-    }
 
     public Payload decryptPayload(UncompressedBundle uncompressedBundle) {
         logger.log(INFO, "[BundleSecurity] Decrypting payload");

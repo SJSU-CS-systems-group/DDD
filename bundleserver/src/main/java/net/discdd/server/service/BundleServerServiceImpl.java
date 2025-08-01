@@ -10,7 +10,7 @@ import net.discdd.grpc.CrashReportResponse;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.grpc.GrpcService;
 import net.discdd.grpc.Status;
-import net.discdd.server.bundletransmission.BundleTransmission;
+import net.discdd.server.bundletransmission.ServerBundleTransmission;
 import net.discdd.tls.DDDTLSUtil;
 import net.discdd.tls.NettyServerCertificateInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,7 +38,7 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
     private static final Logger logger = Logger.getLogger(BundleServerServiceImpl.class.getName());
 
     @Autowired
-    private BundleTransmission bundleTransmission;
+    private ServerBundleTransmission bundleTransmission;
 
     @PostConstruct
     private void init() {

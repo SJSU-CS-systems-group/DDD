@@ -39,7 +39,7 @@ public class ApplicationDataManagerTest {
 
     @Autowired
     private RegisteredAppAdapterRepository registeredAppAdapterRepository;
-    private ApplicationDataManager applicationDataManager;
+    private ServerApplicationDataManager applicationDataManager;
     @Autowired
     private SentAduDetailsRepository sentAduDetailsRepository;
     @Autowired
@@ -57,17 +57,17 @@ public class ApplicationDataManagerTest {
         registeredAppAdapterRepository.save(new RegisteredAppAdapter("app1", "localhost:88888"));
         bundleServerConfig = new BundleServerConfig();
         bundleServerConfig.getApplicationDataManager().setAppDataSizeLimit(100_000_000L);
-        applicationDataManager = new ApplicationDataManager(new AduStores(tempRootDir),
-                                                            (a, b) -> System.out.println("hello"),
-                                                            sentAduDetailsRepository,
-                                                            bundleMetadataRepository,
-                                                            registeredAppAdapterRepository,
-                                                            clientBundleCountersRepository,
-                                                            bundleServerConfig);
-        var receiveADUsStorageField = ApplicationDataManager.class.getDeclaredField("receiveADUsStorage");
+        applicationDataManager = new ServerApplicationDataManager(new AduStores(tempRootDir),
+                                                                  (a, b) -> System.out.println("hello"),
+                                                                  sentAduDetailsRepository,
+                                                                  bundleMetadataRepository,
+                                                                  registeredAppAdapterRepository,
+                                                                  clientBundleCountersRepository,
+                                                                  bundleServerConfig);
+        var receiveADUsStorageField = ServerApplicationDataManager.class.getDeclaredField("receiveADUsStorage");
         receiveADUsStorageField.setAccessible(true);
         receiveADUsStorage = (StoreADUs) receiveADUsStorageField.get(applicationDataManager);
-        var sendADUsStorageField = ApplicationDataManager.class.getDeclaredField("sendADUsStorage");
+        var sendADUsStorageField = ServerApplicationDataManager.class.getDeclaredField("sendADUsStorage");
         sendADUsStorageField.setAccessible(true);
         sendADUsStorage = (StoreADUs) sendADUsStorageField.get(applicationDataManager);
 

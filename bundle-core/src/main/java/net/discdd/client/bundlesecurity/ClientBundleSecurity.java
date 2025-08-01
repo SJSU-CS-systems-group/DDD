@@ -30,21 +30,18 @@ import java.util.logging.Logger;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
-public class BundleSecurity {
-    private static final Logger logger = Logger.getLogger(BundleSecurity.class.getName());
-    private ClientPaths clientPaths;
+public class ClientBundleSecurity {
+    private static final Logger logger = Logger.getLogger(ClientBundleSecurity.class.getName());
+    final private ClientPaths clientPaths;
     private final ClientWindow clientWindow;
     private final ClientBundleGenerator clientBundleGenerator;
     private final boolean isEncryptionEnabled = true;
     private ClientSecurity client = null;
     private GrpcSecurityKey clientGrpcSecurityKey = null;
-    private int counter = 0;
 
-    public BundleSecurity(ClientPaths clientPaths) throws IOException, InvalidKeyException,
+    public ClientBundleSecurity(ClientPaths clientPaths) throws IOException, InvalidKeyException,
             WindowExceptions.BufferOverflow, NoSuchAlgorithmException {
         this.clientPaths = clientPaths;
-
-        this.counter = Integer.valueOf(Files.readAllLines(clientPaths.bundleIdNextCounter).get(0));
 
         /* Initializing Security Module*/
         client = ClientSecurity.initializeInstance(1, clientPaths);
@@ -57,22 +54,6 @@ public class BundleSecurity {
             logger.log(SEVERE, "Failed to initialize GrpcSecurity for CLIENT", e);
         }
 
-    }
-
-    // TODO: this function makes me sad! it should not be static. We should probably inject BundleSecurity
-    // into Bundle transport so that everything can be set up properly
-    public static void initializeKeyPaths(ClientPaths clientPaths,
-                                          InputStream inServerIdentity,
-                                          InputStream inServerSignedPre,
-                                          InputStream inServerRatchet) throws IOException {
-        Files.copy(inServerIdentity, clientPaths.outServerIdentity, StandardCopyOption.REPLACE_EXISTING);
-        inServerIdentity.close();
-
-        Files.copy(inServerSignedPre, clientPaths.outServerSignedPre, StandardCopyOption.REPLACE_EXISTING);
-        inServerSignedPre.close();
-
-        Files.copy(inServerRatchet, clientPaths.outServerRatchet, StandardCopyOption.REPLACE_EXISTING);
-        inServerRatchet.close();
     }
 
     public void registerLargestBundleIdReceived(String bundleId) throws WindowExceptions.BufferOverflow, IOException,

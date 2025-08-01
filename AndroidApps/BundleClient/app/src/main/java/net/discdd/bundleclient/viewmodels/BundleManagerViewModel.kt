@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.discdd.bundleclient.WifiServiceManager
-import net.discdd.client.bundletransmission.BundleTransmission
+import net.discdd.client.bundletransmission.ClientBundleTransmission
 import java.util.stream.Collectors
 
 data class BundleManagerApp (
@@ -26,19 +26,19 @@ data class BundleManagerState(
 class BundleManagerViewModel(
     application: Application,
 ): AndroidViewModel(application) {
-    var bundleTransmission: BundleTransmission? = null
+    var clientBundleTransmission: ClientBundleTransmission? = null
     private val _state = MutableStateFlow(BundleManagerState())
     val state = _state.asStateFlow()
 
     init {
-        bundleTransmission = WifiServiceManager.getService()?.bundleTransmission
+        clientBundleTransmission = WifiServiceManager.getService()?.bundleTransmission
         refresh()
     }
 
     fun refresh() {
         viewModelScope.launch {
-            val sendADUs = bundleTransmission?.applicationDataManager?.sendADUsStorage
-            val recvADUs = bundleTransmission?.applicationDataManager?.receiveADUsStorage
+            val sendADUs = clientBundleTransmission?.applicationDataManager?.sendADUsStorage
+            val recvADUs = clientBundleTransmission?.applicationDataManager?.receiveADUsStorage
 
             if (sendADUs == null || recvADUs == null) {
                 return@launch

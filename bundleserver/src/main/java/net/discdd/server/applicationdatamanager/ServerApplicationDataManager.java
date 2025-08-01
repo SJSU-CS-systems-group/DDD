@@ -26,8 +26,8 @@ import java.util.logging.Logger;
 import static java.util.logging.Level.INFO;
 
 @Service
-public class ApplicationDataManager {
-    private static final Logger logger = Logger.getLogger(ApplicationDataManager.class.getName());
+public class ServerApplicationDataManager {
+    private static final Logger logger = Logger.getLogger(ServerApplicationDataManager.class.getName());
     private final BundleServerConfig bundleServerConfig;
     private final SentAduDetailsRepository sentAduDetailsRepository;
     private final BundleMetadataRepository bundleMetadataRepository;
@@ -37,13 +37,13 @@ public class ApplicationDataManager {
     private final StoreADUs receiveADUsStorage;
     private final StoreADUs sendADUsStorage;
 
-    public ApplicationDataManager(AduStores aduStores,
-                                  AduDeliveredListener aduDeliveredListener,
-                                  SentAduDetailsRepository sentAduDetailsRepository,
-                                  BundleMetadataRepository bundleMetadataRepository,
-                                  RegisteredAppAdapterRepository registeredAppAdapterRepository,
-                                  ClientBundleCountersRepository clientBundleCountersRepository,
-                                  BundleServerConfig bundleServerConfig) {
+    public ServerApplicationDataManager(AduStores aduStores,
+                                        AduDeliveredListener aduDeliveredListener,
+                                        SentAduDetailsRepository sentAduDetailsRepository,
+                                        BundleMetadataRepository bundleMetadataRepository,
+                                        RegisteredAppAdapterRepository registeredAppAdapterRepository,
+                                        ClientBundleCountersRepository clientBundleCountersRepository,
+                                        BundleServerConfig bundleServerConfig) {
         this.aduDeliveredListener = aduDeliveredListener;
         this.clientBundleCountersRepository = clientBundleCountersRepository;
         this.sentAduDetailsRepository = sentAduDetailsRepository;

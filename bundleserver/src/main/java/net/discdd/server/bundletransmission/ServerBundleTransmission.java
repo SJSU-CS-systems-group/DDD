@@ -14,10 +14,10 @@ import net.discdd.model.Bundle;
 import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
 import net.discdd.model.UncompressedPayload;
-import net.discdd.server.applicationdatamanager.ApplicationDataManager;
+import net.discdd.server.applicationdatamanager.ServerApplicationDataManager;
 import net.discdd.server.bundlerouting.BundleRouting;
 import net.discdd.server.bundlerouting.ServerWindowService;
-import net.discdd.server.bundlesecurity.BundleSecurity;
+import net.discdd.server.bundlesecurity.ServerBundleSecurity;
 import net.discdd.server.config.BundleServerConfig;
 import net.discdd.server.repository.entity.ClientBundleCounters;
 import net.discdd.utils.BundleUtils;
@@ -55,29 +55,28 @@ import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 import static net.discdd.bundlesecurity.SecurityUtils.generateID;
 import static net.discdd.grpc.BundleSenderType.CLIENT;
-import static net.discdd.grpc.BundleSenderType.TRANSPORT;
 
 @EnableAsync
 @Service
-public class BundleTransmission {
+public class ServerBundleTransmission {
 
-    private static final Logger logger = Logger.getLogger(BundleTransmission.class.getName());
+    private static final Logger logger = Logger.getLogger(ServerBundleTransmission.class.getName());
     private final ExecutorService executorService = Executors.newCachedThreadPool();
     public static final int WINDOW_LENGTH = 3;
     private final BundleServerConfig config;
-    private final BundleSecurity bundleSecurity;
-    private final ApplicationDataManager applicationDataManager;
+    private final ServerBundleSecurity bundleSecurity;
+    private final ServerApplicationDataManager applicationDataManager;
     private final BundleRouting bundleRouting;
     private final ServerWindowService serverWindowService;
     private final ServerSecurity serverSecurity;
     SecureRandom secureRandom = new SecureRandom();
 
-    public BundleTransmission(BundleSecurity bundleSecurity,
-                              ApplicationDataManager applicationDataManager,
-                              BundleRouting bundleRouting,
-                              BundleServerConfig config,
-                              ServerWindowService serverWindowService,
-                              ServerSecurity serverSecurity) {
+    public ServerBundleTransmission(ServerBundleSecurity bundleSecurity,
+                                    ServerApplicationDataManager applicationDataManager,
+                                    BundleRouting bundleRouting,
+                                    BundleServerConfig config,
+                                    ServerWindowService serverWindowService,
+                                    ServerSecurity serverSecurity) {
         this.config = config;
         this.bundleSecurity = bundleSecurity;
         this.applicationDataManager = applicationDataManager;
