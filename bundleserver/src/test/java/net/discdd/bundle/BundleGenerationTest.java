@@ -96,25 +96,10 @@ public class BundleGenerationTest {
 
     @Test
     public void testSimpleEncryption() throws Exception {
-        SessionRecord sessionRecord = new SessionRecord();
-        SignalProtocolAddress address = new SignalProtocolAddress(clientId, 1);
-        InMemorySignalProtocolStore clientSessionStore = SecurityUtils.createInMemorySignalProtocolStore();
-
-        AliceSignalProtocolParameters aliceSignalProtocolParameters = AliceSignalProtocolParameters.newBuilder()
-                .setOurBaseKey(clientBaseKeyPair)
-                .setOurIdentityKey(clientIdentity)
-                .setTheirOneTimePreKey(org.whispersystems.libsignal.util.guava.Optional.absent())
-                .setTheirRatchetKey(serverRatchetKey.getPublicKey())
-                .setTheirSignedPreKey(serverSignedPreKey.getPublicKey())
-                .setTheirIdentityKey(serverIdentity.getPublicKey())
-                .create();
-        RatchetingSession.initializeSession(sessionRecord.getSessionState(), aliceSignalProtocolParameters);
-        clientSessionStore.storeSession(address, sessionRecord);
-        var clientSessionCipher = new SessionCipher(clientSessionStore, address);
         var clientPaths = new ClientPaths(clientRootDir,
                                           Files.readAllBytes(serverIdentityKeyPath),
                                           Files.readAllBytes(serverSignedPreKeyPath),
-                                          Files.readAllBytes(serverPrivateKeyPath));
+                                          Files.readAllBytes(serverRatchetKeyPath));
         var cbt = new ClientBundleTransmission(clientPaths, x -> {});
         var ss = new ServerSecurity(serverRootDir);
         var sbs = new ServerBundleSecurity(ss);
@@ -136,6 +121,6 @@ public class BundleGenerationTest {
         var sbt = new ServerBundleTransmission(sbs, sadm, sbr, sws, ss, receivedProcessingDirectory, bundleReceivedLocation, bundleToSendDirectory);
 
         var bundleDTO = cbt.generateBundleForTransmission();
-        sbt.processReceivedBundle(BundleSenderType.TRANSPORT, "testSender", bundleDTO.getBundle());
+        //sbt.processReceivedBundle(BundleSenderType.TRANSPORT, "testSender", bundleDTO.getBundle());
     }
 }

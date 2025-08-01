@@ -54,6 +54,7 @@ public class ServerApplicationDataManager {
         this.registeredAppAdapterRepository = registeredAppAdapterRepository;
         this.sendADUsStorage = aduStores.getSendADUsStorage();
         this.receiveADUsStorage = aduStores.getReceiveADUsStorage();
+        this.appDataSizeLimit = appDataSizeLimit;
     }
 
     public List<String> getRegisteredAppIds() {
