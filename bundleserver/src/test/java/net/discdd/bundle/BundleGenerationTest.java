@@ -1,6 +1,19 @@
-package net.discdd.bundlesecurity;
+package net.discdd.bundle;
 
+import net.discdd.bundlerouting.RoutingExceptions;
+import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
+import net.discdd.bundlesecurity.DDDPEMEncoder;
+import net.discdd.bundlesecurity.SecurityUtils;
+import net.discdd.bundlesecurity.ServerSecurity;
 import net.discdd.client.bundletransmission.ClientBundleTransmission;
+import net.discdd.grpc.BundleSenderType;
+import net.discdd.pathutils.ClientPaths;
+import net.discdd.server.applicationdatamanager.AduStores;
+import net.discdd.server.applicationdatamanager.ServerApplicationDataManager;
+import net.discdd.server.bundlerouting.BundleRouting;
+import net.discdd.server.bundlerouting.ServerWindowService;
+import net.discdd.server.bundlesecurity.ServerBundleSecurity;
+import net.discdd.server.bundletransmission.ServerBundleTransmission;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -20,6 +33,7 @@ import org.whispersystems.libsignal.state.impl.InMemorySignalProtocolStore;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 
 import static net.discdd.bundlesecurity.DDDPEMEncoder.ECPrivateKeyType;
@@ -81,7 +95,7 @@ public class BundleGenerationTest {
     }
 
     @Test
-    public void testSimpleEncryption() throws InvalidKeyException {
+    public void testSimpleEncryption() throws Exception {
         SessionRecord sessionRecord = new SessionRecord();
         SignalProtocolAddress address = new SignalProtocolAddress(clientId, 1);
         InMemorySignalProtocolStore clientSessionStore = SecurityUtils.createInMemorySignalProtocolStore();
@@ -97,6 +111,31 @@ public class BundleGenerationTest {
         RatchetingSession.initializeSession(sessionRecord.getSessionState(), aliceSignalProtocolParameters);
         clientSessionStore.storeSession(address, sessionRecord);
         var clientSessionCipher = new SessionCipher(clientSessionStore, address);
-        var cbt = new ClientBundleTransmission();
+        var clientPaths = new ClientPaths(clientRootDir,
+                                          Files.readAllBytes(serverIdentityKeyPath),
+                                          Files.readAllBytes(serverSignedPreKeyPath),
+                                          Files.readAllBytes(serverPrivateKeyPath));
+        var cbt = new ClientBundleTransmission(clientPaths, x -> {});
+        var ss = new ServerSecurity(serverRootDir);
+        var sbs = new ServerBundleSecurity(ss);
+        var aduStores = new AduStores(serverRootDir);
+        var sadm = new ServerApplicationDataManager(
+                aduStores,
+                (x,y) -> {},
+                new InMemorySentAduDetailsRepository(),
+                new InMemoryBundleMetadataRepository(),
+                new InMemoryRegisteredBundleRepository(),
+                new InMemoryClientBundleCountersRepository(),
+                10000000);
+        var sbr = new BundleRouting(new InMemoryServerRoutingRepository());
+        var sws = new ServerWindowService(new InMemoryServerWindowRepository());
+
+        var receivedProcessingDirectory = serverRootDir.resolve("ReceivedProcessing");
+        var bundleReceivedLocation = serverRootDir.resolve("BundleReceived");
+        var bundleToSendDirectory = serverRootDir.resolve("BundleToSend");
+        var sbt = new ServerBundleTransmission(sbs, sadm, sbr, sws, ss, receivedProcessingDirectory, bundleReceivedLocation, bundleToSendDirectory);
+
+        var bundleDTO = cbt.generateBundleForTransmission();
+        sbt.processReceivedBundle(BundleSenderType.TRANSPORT, "testSender", bundleDTO.getBundle());
     }
 }

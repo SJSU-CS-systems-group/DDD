@@ -18,10 +18,10 @@ import net.discdd.server.applicationdatamanager.ServerApplicationDataManager;
 import net.discdd.server.bundlerouting.BundleRouting;
 import net.discdd.server.bundlerouting.ServerWindowService;
 import net.discdd.server.bundlesecurity.ServerBundleSecurity;
-import net.discdd.server.config.BundleServerConfig;
 import net.discdd.server.repository.entity.ClientBundleCounters;
 import net.discdd.utils.BundleUtils;
 import net.discdd.utils.FileUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
@@ -63,33 +63,43 @@ public class ServerBundleTransmission {
     private static final Logger logger = Logger.getLogger(ServerBundleTransmission.class.getName());
     private final ExecutorService executorService = Executors.newCachedThreadPool();
     public static final int WINDOW_LENGTH = 3;
-    private final BundleServerConfig config;
     private final ServerBundleSecurity bundleSecurity;
     private final ServerApplicationDataManager applicationDataManager;
     private final BundleRouting bundleRouting;
     private final ServerWindowService serverWindowService;
     private final ServerSecurity serverSecurity;
     SecureRandom secureRandom = new SecureRandom();
+    final private Path bundleReceivedLocation;
+    final private Path receivedProcessingDirectory;
+    final private Path bundleToSendDirectory;
 
     public ServerBundleTransmission(ServerBundleSecurity bundleSecurity,
                                     ServerApplicationDataManager applicationDataManager,
                                     BundleRouting bundleRouting,
-                                    BundleServerConfig config,
                                     ServerWindowService serverWindowService,
-                                    ServerSecurity serverSecurity) {
-        this.config = config;
+                                    ServerSecurity serverSecurity,
+                                    @Value("${bundle-server.bundle-transmission.received-processing-directory}")
+                                    Path receivedProcessingDirectory,
+                                    @Value("${bundle-server.bundle-transmission.bundle-received-location}")
+                                    Path bundleReceivedLocation,
+                                    @Value("${bundle-server.bundle-transmission.to-send-directory}")
+                                    Path bundleToSendDirectory
+                                    ) {
         this.bundleSecurity = bundleSecurity;
         this.applicationDataManager = applicationDataManager;
         this.bundleRouting = bundleRouting;
         this.serverWindowService = serverWindowService;
         this.serverSecurity = serverSecurity;
+        this.receivedProcessingDirectory = receivedProcessingDirectory;
+        this.bundleReceivedLocation = bundleReceivedLocation;
+        this.bundleToSendDirectory = bundleToSendDirectory;
     }
 
     public static String bundleSenderToString(BundleSenderType senderType, String senderId) {
         return senderType + " : " + senderId;
     }
 
-    private static Random random = new Random();
+    private static final Random random = new Random();
 
     private String nextRandomString() {
         return Long.toHexString(random.nextLong());
@@ -106,7 +116,7 @@ public class ServerBundleTransmission {
         }
 
         Path bundleRecvProcDir =
-                this.config.getBundleTransmission().getReceivedProcessingDirectory().resolve(nextRandomString());
+                receivedProcessingDirectory.resolve(nextRandomString());
         try {
             Files.createDirectories(bundleRecvProcDir);
 
@@ -204,23 +214,23 @@ public class ServerBundleTransmission {
             return bundleCountersForClient.lastSentBundleId;
         }
 
-        var counts = bundleCountersForClient;
-        if (counts.lastSentBundleCounter > 0 && !applicationDataManager.newDataToSend(counts.lastSentBundleId) &&
-                !applicationDataManager.newAckNeeded(counts.lastSentBundleId)) {
+        if (bundleCountersForClient.lastSentBundleCounter > 0 && !applicationDataManager.newDataToSend(
+                bundleCountersForClient.lastSentBundleId) &&
+                !applicationDataManager.newAckNeeded(bundleCountersForClient.lastSentBundleId)) {
             // Nothing new to send, so lets send the last bundle again.
-            return counts.lastSentBundleId;
+            return bundleCountersForClient.lastSentBundleId;
         }
 
-        var bundleCounter = counts.lastSentBundleCounter + 1;
+        var bundleCounter = bundleCountersForClient.lastSentBundleCounter + 1;
         var encryptedBundleId =
                 serverSecurity.createEncryptedBundleId(clientId, bundleCounter, BundleIDGenerator.DOWNSTREAM);
-        long ackedRecievedBundle = counts.lastReceivedBundleCounter;
+        long ackedRecievedBundle = bundleCountersForClient.lastReceivedBundleCounter;
         applicationDataManager.registerNewBundleId(clientId, encryptedBundleId, bundleCounter, ackedRecievedBundle);
 
         var adus = applicationDataManager.fetchADUsToSend(encryptedBundleId, bundleCounter, 0, clientId);
         PipedInputStream pipedInputStream = new PipedInputStream();
         Future<?> future =
-                BundleUtils.runFuture(executorService, counts.lastReceivedBundleId, null, adus, null, pipedInputStream);
+                BundleUtils.runFuture(executorService, bundleCountersForClient.lastReceivedBundleId, null, adus, null, pipedInputStream);
         try {
             var bundleOutputStream = Files.newOutputStream(getPathForBundleToSend(encryptedBundleId),
                                                            StandardOpenOption.CREATE,
@@ -264,19 +274,11 @@ public class ServerBundleTransmission {
     }
 
     public Path getPathForBundleToSend(String encryptedBundleId) {
-        return getPathToSendDirectory().resolve(encryptedBundleId);
-    }
-
-    public Path getPathToSendDirectory() {
-        return config.getBundleTransmission().getToSendDirectory();
+        return bundleToSendDirectory.resolve(encryptedBundleId);
     }
 
     public Path getPathForBundleToReceive(String randomBundleId) {
-        return getPathForBundleReceiveDirectory().resolve(randomBundleId);
-    }
-
-    private Path getPathForBundleReceiveDirectory() {
-        return config.getBundleTransmission().getBundleReceivedLocation();
+        return bundleReceivedLocation.resolve(randomBundleId);
     }
 
     public BundlesToExchange inventoryBundlesForTransmission(BundleSenderType senderType,

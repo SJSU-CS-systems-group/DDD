@@ -10,6 +10,7 @@ import net.discdd.server.repository.entity.BundleMetadata;
 import net.discdd.server.repository.entity.ClientBundleCounters;
 import net.discdd.server.repository.entity.SentAduDetails;
 import net.discdd.utils.StoreADUs;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -28,7 +29,6 @@ import static java.util.logging.Level.INFO;
 @Service
 public class ServerApplicationDataManager {
     private static final Logger logger = Logger.getLogger(ServerApplicationDataManager.class.getName());
-    private final BundleServerConfig bundleServerConfig;
     private final SentAduDetailsRepository sentAduDetailsRepository;
     private final BundleMetadataRepository bundleMetadataRepository;
     private final RegisteredAppAdapterRepository registeredAppAdapterRepository;
@@ -36,6 +36,7 @@ public class ServerApplicationDataManager {
     AduDeliveredListener aduDeliveredListener;
     private final StoreADUs receiveADUsStorage;
     private final StoreADUs sendADUsStorage;
+    long appDataSizeLimit;
 
     public ServerApplicationDataManager(AduStores aduStores,
                                         AduDeliveredListener aduDeliveredListener,
@@ -43,12 +44,13 @@ public class ServerApplicationDataManager {
                                         BundleMetadataRepository bundleMetadataRepository,
                                         RegisteredAppAdapterRepository registeredAppAdapterRepository,
                                         ClientBundleCountersRepository clientBundleCountersRepository,
-                                        BundleServerConfig bundleServerConfig) {
+                                        @Value("${bundle-server.application-data-manager.app-data-size-limit:10485760}")
+                                        long appDataSizeLimit
+                                        ) {
         this.aduDeliveredListener = aduDeliveredListener;
         this.clientBundleCountersRepository = clientBundleCountersRepository;
         this.sentAduDetailsRepository = sentAduDetailsRepository;
         this.bundleMetadataRepository = bundleMetadataRepository;
-        this.bundleServerConfig = bundleServerConfig;
         this.registeredAppAdapterRepository = registeredAppAdapterRepository;
         this.sendADUsStorage = aduStores.getSendADUsStorage();
         this.receiveADUsStorage = aduStores.getReceiveADUsStorage();
@@ -141,7 +143,7 @@ public class ServerApplicationDataManager {
             IOException {
         List<ADU> adusToSend = new ArrayList<>();
 
-        final long dataSizeLimit = this.bundleServerConfig.getApplicationDataManager().getAppDataSizeLimit();
+        final long dataSizeLimit = appDataSizeLimit;
         var sizeLimiter = new SizeLimiter(dataSizeLimit - initialSize);
         for (String appId : this.getRegisteredAppIds()) {
             var sentAdus = new SentAduDetails();

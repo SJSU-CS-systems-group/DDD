@@ -63,7 +63,7 @@ public class ApplicationDataManagerTest {
                                                                   bundleMetadataRepository,
                                                                   registeredAppAdapterRepository,
                                                                   clientBundleCountersRepository,
-                                                                  bundleServerConfig);
+                                                                  bundleServerConfig.getApplicationDataManager().getAppDataSizeLimit());
         var receiveADUsStorageField = ServerApplicationDataManager.class.getDeclaredField("receiveADUsStorage");
         receiveADUsStorageField.setAccessible(true);
         receiveADUsStorage = (StoreADUs) receiveADUsStorageField.get(applicationDataManager);
