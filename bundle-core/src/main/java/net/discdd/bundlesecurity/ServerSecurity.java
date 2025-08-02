@@ -71,8 +71,7 @@ public class ServerSecurity {
             this.serverRootPath = serverRootPath;
             serverProtocolStore = SecurityUtils.createInMemorySignalProtocolStore();
 
-            String name = DEFAULT_SERVER_NAME;
-            name = SecurityUtils.generateID(ourIdentityKeyPair.getPublicKey().serialize());
+            String name = SecurityUtils.generateID(ourIdentityKeyPair.getPublicKey().serialize());
             ourAddress = new SignalProtocolAddress(name, ServerDeviceID);
             ourOneTimePreKey = Optional.absent();
 

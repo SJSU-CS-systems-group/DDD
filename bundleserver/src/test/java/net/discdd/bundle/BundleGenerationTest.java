@@ -1,7 +1,5 @@
 package net.discdd.bundle;
 
-import net.discdd.bundlerouting.RoutingExceptions;
-import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
 import net.discdd.bundlesecurity.DDDPEMEncoder;
 import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.bundlesecurity.ServerSecurity;
@@ -20,20 +18,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.SessionCipher;
-import org.whispersystems.libsignal.SignalProtocolAddress;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
-import org.whispersystems.libsignal.ratchet.AliceSignalProtocolParameters;
-import org.whispersystems.libsignal.ratchet.RatchetingSession;
-import org.whispersystems.libsignal.state.SessionRecord;
-import org.whispersystems.libsignal.state.impl.InMemorySignalProtocolStore;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 
 import static net.discdd.bundlesecurity.DDDPEMEncoder.ECPrivateKeyType;
@@ -51,47 +41,37 @@ public class BundleGenerationTest {
     private static Path serverPrivatePreKeyPath;
     private static Path serverRatchetKeyPath;
     private static Path serverPrivateRatchetKeyPath;
-    private static IdentityKeyPair clientIdentity;
-    private static ECKeyPair clientBaseKeyPair;
-    private static String clientId;
     private static ECKeyPair serverSignedPreKey;
     private static ECKeyPair serverRatchetKey;
+    private static Path serverKeysDir;
 
     @BeforeAll
     public static void setUp() throws IOException, NoSuchAlgorithmException {
         // setup server keys
-        var keysDir = serverRootDir.resolve(java.nio.file.Path.of("BundleSecurity", "Keys", "Server", "Server_Keys"));
-        Assertions.assertTrue(keysDir.toFile().mkdirs());
-        System.setProperty("bundle-server.keys-dir", keysDir.toString());
+        serverKeysDir = serverRootDir.resolve(Path.of("BundleSecurity", "Keys", "Server", "Server_Keys"));
+        Assertions.assertTrue(serverKeysDir.toFile().mkdirs());
+        System.setProperty("bundle-server.keys-dir", serverKeysDir.toString());
         ECKeyPair keyPair = Curve.generateKeyPair();
         serverIdentity = new IdentityKeyPair(new IdentityKey(keyPair.getPublicKey()), keyPair.getPrivateKey());
         serverSignedPreKey = Curve.generateKeyPair();
         serverRatchetKey = Curve.generateKeyPair();
-        serverIdentityKeyPath = keysDir.resolve(SecurityUtils.SERVER_IDENTITY_KEY);
+        serverIdentityKeyPath = serverKeysDir.resolve(SecurityUtils.SERVER_IDENTITY_KEY);
         Files.writeString(serverIdentityKeyPath,
                           DDDPEMEncoder.encode(serverIdentity.getPublicKey().serialize(), ECPublicKeyType));
-        serverPrivateKeyPath = keysDir.resolve(SecurityUtils.SERVER_IDENTITY_PRIVATE_KEY);
+        serverPrivateKeyPath = serverKeysDir.resolve(SecurityUtils.SERVER_IDENTITY_PRIVATE_KEY);
         Files.writeString(serverPrivateKeyPath, DDDPEMEncoder.encode(serverIdentity.serialize(), ECPrivateKeyType));
-        serverSignedPreKeyPath = keysDir.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY);
+        serverSignedPreKeyPath = serverKeysDir.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY);
         Files.writeString(serverSignedPreKeyPath,
                           DDDPEMEncoder.encode(serverSignedPreKey.getPublicKey().serialize(), ECPublicKeyType));
-        serverPrivatePreKeyPath = keysDir.resolve(SecurityUtils.SERVER_SIGNEDPRE_PRIVATE_KEY);
+        serverPrivatePreKeyPath = serverKeysDir.resolve(SecurityUtils.SERVER_SIGNEDPRE_PRIVATE_KEY);
         Files.writeString(serverPrivatePreKeyPath,
                           DDDPEMEncoder.encode(serverSignedPreKey.getPrivateKey().serialize(), ECPrivateKeyType));
-        serverRatchetKeyPath = keysDir.resolve(SecurityUtils.SERVER_RATCHET_KEY);
+        serverRatchetKeyPath = serverKeysDir.resolve(SecurityUtils.SERVER_RATCHET_KEY);
         Files.writeString(serverRatchetKeyPath,
                           DDDPEMEncoder.encode(serverRatchetKey.getPublicKey().serialize(), ECPublicKeyType));
-        serverPrivateRatchetKeyPath = keysDir.resolve(SecurityUtils.SERVER_RATCHET_PRIVATE_KEY);
+        serverPrivateRatchetKeyPath = serverKeysDir.resolve(SecurityUtils.SERVER_RATCHET_PRIVATE_KEY);
         Files.writeString(serverPrivateRatchetKeyPath,
                           DDDPEMEncoder.encode(serverRatchetKey.getPrivateKey().serialize(), ECPrivateKeyType));
-        // set up the client keys
-        // create the keypairs for the client
-        var clientIdentityPubKeyPair = Curve.generateKeyPair();
-        clientIdentity = new IdentityKeyPair(new IdentityKey(clientIdentityPubKeyPair.getPublicKey()),
-                                             clientIdentityPubKeyPair.getPrivateKey());
-        clientBaseKeyPair = Curve.generateKeyPair();
-        clientId = SecurityUtils.generateID(clientIdentity.getPublicKey().getPublicKey().serialize());
-
     }
 
     @Test
@@ -101,7 +81,7 @@ public class BundleGenerationTest {
                                           Files.readAllBytes(serverSignedPreKeyPath),
                                           Files.readAllBytes(serverRatchetKeyPath));
         var cbt = new ClientBundleTransmission(clientPaths, x -> {});
-        var ss = new ServerSecurity(serverRootDir);
+        var ss = ServerSecurity.getInstance(serverKeysDir.getParent());
         var sbs = new ServerBundleSecurity(ss);
         var aduStores = new AduStores(serverRootDir);
         var sadm = new ServerApplicationDataManager(
@@ -116,11 +96,19 @@ public class BundleGenerationTest {
         var sws = new ServerWindowService(new InMemoryServerWindowRepository());
 
         var receivedProcessingDirectory = serverRootDir.resolve("ReceivedProcessing");
+        Files.createDirectories(receivedProcessingDirectory);
         var bundleReceivedLocation = serverRootDir.resolve("BundleReceived");
+        Files.createDirectories(bundleReceivedLocation);
         var bundleToSendDirectory = serverRootDir.resolve("BundleToSend");
+        Files.createDirectories(bundleToSendDirectory);
         var sbt = new ServerBundleTransmission(sbs, sadm, sbr, sws, ss, receivedProcessingDirectory, bundleReceivedLocation, bundleToSendDirectory);
 
         var bundleDTO = cbt.generateBundleForTransmission();
-        //sbt.processReceivedBundle(BundleSenderType.TRANSPORT, "testSender", bundleDTO.getBundle());
+        sbt.processReceivedBundle(BundleSenderType.TRANSPORT, "testSender", bundleDTO.getBundle());
+        var clientId = cbt.getBundleSecurity().getClientSecurity().getClientID();
+        var bundleId = sbt.generateBundleForClient(clientId);
+        System.out.println(bundleId);
+        var bundlePath = sbt.getPathForBundleToSend(bundleId);
+        Assertions.assertTrue(Files.exists(bundlePath), "Bundle should exist at " + bundlePath);
     }
 }
