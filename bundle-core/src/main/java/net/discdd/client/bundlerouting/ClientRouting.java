@@ -32,7 +32,7 @@ public class ClientRouting {
      * Return:
      * None
      */
-    private ClientRouting(ClientPaths clientPaths) throws IOException, ClientMetaDataFileException {
+    public ClientRouting(ClientPaths clientPaths) throws IOException, ClientMetaDataFileException {
         this.clientPaths = clientPaths;
         ObjectMapper objectMapper = new ObjectMapper();
 
@@ -48,23 +48,6 @@ public class ClientRouting {
         } else {
             objectMapper.writeValue(clientPaths.metadataFile, metadata);
         }
-    }
-
-    public static ClientRouting initializeInstance(ClientPaths clientPaths) throws ClientMetaDataFileException,
-            IOException {
-        if (singleClientRoutingInstance == null) {
-            singleClientRoutingInstance = new ClientRouting(clientPaths);
-        } else {
-            logger.log(INFO, "[BR]: Client Routing Instance already Exists!");
-        }
-        return singleClientRoutingInstance;
-    }
-
-    public static ClientRouting getInstance() {
-        if (singleClientRoutingInstance == null) {
-            throw new IllegalStateException("Client Routing instance has not been initialized!");
-        }
-        return singleClientRoutingInstance;
     }
 
     /* Updates the score for the transport

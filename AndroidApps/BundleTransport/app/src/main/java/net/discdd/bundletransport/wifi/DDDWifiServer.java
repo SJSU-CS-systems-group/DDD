@@ -164,7 +164,7 @@ public class DDDWifiServer {
 
     @SuppressLint("MissingPermission")
     public void createGroup() {
-        if (deviceName == null || !deviceName.startsWith("ddd_")) return;
+        if (deviceName == null) return;
         if (!hasPermission()) {
             bts.logWifi(SEVERE, R.string.wifi_direct_no_permission);
             return;

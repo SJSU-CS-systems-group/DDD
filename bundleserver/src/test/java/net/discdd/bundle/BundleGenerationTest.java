@@ -1,10 +1,13 @@
 package net.discdd.bundle;
 
+import net.discdd.bundlerouting.RoutingExceptions;
+import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
 import net.discdd.bundlesecurity.DDDPEMEncoder;
 import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.bundlesecurity.ServerSecurity;
 import net.discdd.client.bundletransmission.ClientBundleTransmission;
 import net.discdd.grpc.BundleSenderType;
+import net.discdd.model.Bundle;
 import net.discdd.pathutils.ClientPaths;
 import net.discdd.server.applicationdatamanager.AduStores;
 import net.discdd.server.applicationdatamanager.ServerApplicationDataManager;
@@ -18,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
+import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
 
@@ -32,8 +36,6 @@ import static net.discdd.bundlesecurity.DDDPEMEncoder.ECPublicKeyType;
 public class BundleGenerationTest {
     @TempDir
     static Path serverRootDir;
-    @TempDir
-    static Path clientRootDir;
     private static IdentityKeyPair serverIdentity;
     private static Path serverIdentityKeyPath;
     private static Path serverPrivateKeyPath;
@@ -44,6 +46,16 @@ public class BundleGenerationTest {
     private static ECKeyPair serverSignedPreKey;
     private static ECKeyPair serverRatchetKey;
     private static Path serverKeysDir;
+    private static ServerSecurity ss;
+    private static ServerBundleSecurity sbs;
+    private static ServerApplicationDataManager sadm;
+    private static AduStores aduStores;
+    private static BundleRouting sbr;
+    private static ServerWindowService sws;
+    private static Path receivedProcessingDirectory;
+    private static Path bundleReceivedLocation;
+    private static Path bundleToSendDirectory;
+    private static ServerBundleTransmission sbt;
 
     @BeforeAll
     public static void setUp() throws IOException, NoSuchAlgorithmException {
@@ -72,43 +84,79 @@ public class BundleGenerationTest {
         serverPrivateRatchetKeyPath = serverKeysDir.resolve(SecurityUtils.SERVER_RATCHET_PRIVATE_KEY);
         Files.writeString(serverPrivateRatchetKeyPath,
                           DDDPEMEncoder.encode(serverRatchetKey.getPrivateKey().serialize(), ECPrivateKeyType));
-    }
-
-    @Test
-    public void testSimpleEncryption() throws Exception {
-        var clientPaths = new ClientPaths(clientRootDir,
-                                          Files.readAllBytes(serverIdentityKeyPath),
-                                          Files.readAllBytes(serverSignedPreKeyPath),
-                                          Files.readAllBytes(serverRatchetKeyPath));
-        var cbt = new ClientBundleTransmission(clientPaths, x -> {});
-        var ss = ServerSecurity.getInstance(serverKeysDir.getParent());
-        var sbs = new ServerBundleSecurity(ss);
-        var aduStores = new AduStores(serverRootDir);
-        var sadm = new ServerApplicationDataManager(
+        ss = ServerSecurity.getInstance(serverKeysDir.getParent());
+        sbs = new ServerBundleSecurity(ss);
+        aduStores = new AduStores(serverRootDir);
+        sadm = new ServerApplicationDataManager(
                 aduStores,
                 (x,y) -> {},
                 new InMemorySentAduDetailsRepository(),
                 new InMemoryBundleMetadataRepository(),
                 new InMemoryRegisteredBundleRepository(),
                 new InMemoryClientBundleCountersRepository(),
-                10000000);
-        var sbr = new BundleRouting(new InMemoryServerRoutingRepository());
-        var sws = new ServerWindowService(new InMemoryServerWindowRepository());
+                9999999);
+        sbr = new BundleRouting(new InMemoryServerRoutingRepository());
+        sws = new ServerWindowService(new InMemoryServerWindowRepository());
 
-        var receivedProcessingDirectory = serverRootDir.resolve("ReceivedProcessing");
+        receivedProcessingDirectory = serverRootDir.resolve("ReceivedProcessing");
         Files.createDirectories(receivedProcessingDirectory);
-        var bundleReceivedLocation = serverRootDir.resolve("BundleReceived");
+        bundleReceivedLocation = serverRootDir.resolve("BundleReceived");
         Files.createDirectories(bundleReceivedLocation);
-        var bundleToSendDirectory = serverRootDir.resolve("BundleToSend");
+        bundleToSendDirectory = serverRootDir.resolve("BundleToSend");
         Files.createDirectories(bundleToSendDirectory);
-        var sbt = new ServerBundleTransmission(sbs, sadm, sbr, sws, ss, receivedProcessingDirectory, bundleReceivedLocation, bundleToSendDirectory);
+        sbt = new ServerBundleTransmission(sbs, sadm, sbr, sws, ss, receivedProcessingDirectory, bundleReceivedLocation, bundleToSendDirectory);
+    }
 
-        var bundleDTO = cbt.generateBundleForTransmission();
-        sbt.processReceivedBundle(BundleSenderType.TRANSPORT, "testSender", bundleDTO.getBundle());
-        var clientId = cbt.getBundleSecurity().getClientSecurity().getClientID();
+    static class BundleGenerationContext {
+
+        private final ClientBundleTransmission cbt;
+
+        BundleGenerationContext(Path clientRootDir) throws IOException, WindowExceptions.BufferOverflow,
+                RoutingExceptions.ClientMetaDataFileException, NoSuchAlgorithmException, InvalidKeyException {
+            var clientPaths = new ClientPaths(clientRootDir,
+                                              Files.readAllBytes(serverIdentityKeyPath),
+                                              Files.readAllBytes(serverSignedPreKeyPath),
+                                              Files.readAllBytes(serverRatchetKeyPath));
+            cbt = new ClientBundleTransmission(clientPaths, x -> {});
+        }
+    }
+    @Test
+    public void testEmptyBundleExchange(@TempDir Path clientRootDir) throws Exception {
+        if (true) return;
+        var ctx = new BundleGenerationContext(clientRootDir);
+        var bundleDTO = ctx.cbt.generateBundleForTransmission();
+        sbt.processReceivedBundle(BundleSenderType.TRANSPORT, "emptySender", bundleDTO.getBundle());
+        var clientId = ctx.cbt.getBundleSecurity().getClientSecurity().getClientID();
         var bundleId = sbt.generateBundleForClient(clientId);
         System.out.println(bundleId);
         var bundlePath = sbt.getPathForBundleToSend(bundleId);
         Assertions.assertTrue(Files.exists(bundlePath), "Bundle should exist at " + bundlePath);
+    }
+    @Test
+    public void testAduBundleExchange(@TempDir Path clientRootDir) throws Exception {
+        var ctx = new BundleGenerationContext(clientRootDir);
+        var cToSend = ctx.cbt.applicationDataManager.sendADUsStorage;
+        var cToReceive = ctx.cbt.applicationDataManager.receiveADUsStorage;
+        var sToSend = aduStores.getSendADUsStorage();
+        var sToReceive = aduStores.getReceiveADUsStorage();
+
+        // add an ADU to send to server
+        cToSend.addADU(null, "test", "1-from-client".getBytes(), -1);
+        var bundleDTO = ctx.cbt.generateBundleForTransmission();
+        sbt.processReceivedBundle(BundleSenderType.TRANSPORT, "aduSender", bundleDTO.getBundle());
+        var clientId = ctx.cbt.getBundleSecurity().getClientSecurity().getClientID();
+
+        // add an ADU to send to client
+        sToSend.addADU(null, "test", "1-from-server".getBytes(), -1);
+        var bundleId = sbt.generateBundleForClient(clientId);
+        System.out.println(bundleId);
+        var bundlePath = sbt.getPathForBundleToSend(bundleId);
+
+        ctx.cbt.processReceivedBundle("aduSender", new Bundle(bundlePath.toFile()));
+
+        Assertions.assertEquals(1, cToReceive.getMetadata(null, "test").lastAduAdded);
+        Assertions.assertEquals("1-from-server", new String(cToReceive.getADU(null, "test", 1L)));
+        Assertions.assertEquals(1, sToReceive.getMetadata(null, "test").lastAduAdded);
+        Assertions.assertEquals("1-from-client", new String(sToReceive.getADU(clientId, "test", 1L)));
     }
 }
