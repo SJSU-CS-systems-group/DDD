@@ -87,7 +87,8 @@ class ClientUsbViewModel(
     fun usbTransferToClient(context: Context) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                val recencyLocation = usbDirectory?.findFile("recencyBlob.bin")
+                val toClientDir = createIfDoesNotExist(usbDirectory!!, "toClient")
+                val recencyLocation = toClientDir.findFile("recencyBlob.bin")
                 if (recencyLocation == null) {
                     appendMessage("No recency blob found on USB", Color.YELLOW)
                     return@withContext
@@ -100,9 +101,9 @@ class ClientUsbViewModel(
                         appendMessage("Invalid recency blob found on USB", Color.YELLOW)
                         return@withContext
                     }
-                    val toClientDir = createIfDoesNotExist(usbDirectory!!, "toClient")
-                    val devicePath: Path =
-                        rootDir.toPath().parent.resolve("BundleTransmission/bundle-generation/received-processing")
+//                    val devicePath: Path = rootDir.toPath().parent.resolve("BundleTransmission/bundle-generation/received-processing")
+                val devicePath: Path =
+                    rootDir.toPath().parent.resolve("Shared/received-bundles")
                     val filesToTransfer = toClientDir.listFiles()
                     if (filesToTransfer.isEmpty()) {
                         appendMessage("No files found in 'toClient' directory on USB", Color.YELLOW)
@@ -110,23 +111,30 @@ class ClientUsbViewModel(
                     }
                     try {
                         val bundleIds = bundleTransmission!!.getNextBundles()
+                        logger.log(INFO, "Bundle IDs expected: ${bundleIds}")
                         if (bundleIds.isNotEmpty()) {
-                            val bundleId = bundleIds.first()
-                            val bundleFile = toClientDir.findFile(bundleId)
-                            if (bundleFile != null) {
-                                val targetFile = devicePath.resolve(bundleId)
-                                val result = withContext(Dispatchers.IO) {
-                                    Files.newOutputStream(targetFile)?.use { outputStream ->
-                                        context.contentResolver.openInputStream(bundleFile.uri)?.use { inputStream ->
-                                            inputStream.copyTo(outputStream)
-                                            bundleTransmission!!.processReceivedBundle(
-                                                recencyBlob.senderId,
-                                                Bundle(targetFile.toFile())
-                                            )
+                            for (bundleId in bundleIds) {
+                                val bundleFile = toClientDir.findFile(bundleId)
+                                logger.log(INFO, "Target bundle ID: ${bundleId}")
+                                //logger.log(INFO, "toClientDir files: ${toClientDir.listFiles()}")
+                                if (bundleFile != null) {
+                                    val targetFile = devicePath.resolve(bundleId)
+                                    val result = withContext(Dispatchers.IO) {
+                                        Files.newOutputStream(targetFile)?.use { outputStream ->
+                                            context.contentResolver.openInputStream(bundleFile.uri)?.use { inputStream ->
+                                                inputStream.copyTo(outputStream)
+                                                val receivedBundleLocation: Path =
+                                                    rootDir.toPath().parent.resolve("BundleTransmission/bundle-generation/to-send")
+                                                        .resolve(bundleId)
+                                                bundleTransmission!!.processReceivedBundle(
+                                                    recencyBlob.senderId,
+                                                    //Bundle(targetFile.toFile())
+                                                    Bundle(receivedBundleLocation.toFile()))
+                                            }
                                         }
                                     }
+                                    logger.log(INFO, "Transferred file: ${bundleFile.name} of ${result} bytes to ${devicePath}")
                                 }
-                                logger.log(INFO, "Transferred file: ${bundleFile.name} of ${result} bytes to ${devicePath}")
                             }
                         }
                         appendMessage(
