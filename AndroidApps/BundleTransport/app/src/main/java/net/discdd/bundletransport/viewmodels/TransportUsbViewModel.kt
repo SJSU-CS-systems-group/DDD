@@ -27,6 +27,9 @@ class TransportUsbViewModel(
         TransportPaths(application.filesDir.toPath())
     }
 
+    private val anotherTransportPaths by lazy {
+        TransportPaths(application.getExternalFilesDir(null)?.toPath())
+    }
     fun createIfDoesNotExist(parent: DocumentFile, name: String): DocumentFile {
         var child = parent.findFile(name)
         if (child == null || !child.isDirectory) {
@@ -84,7 +87,7 @@ class TransportUsbViewModel(
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 // TODO: Get APK from external? internal? path
-                val sourceDir = transportPaths.toClientPath.toFile()
+                val sourceDir = anotherTransportPaths.toClientPath.toFile()
                 val currentUsbDir = usbDirectory
                 if (currentUsbDir == null) {
                     appendMessage("USB directory is not available", Color.RED)
