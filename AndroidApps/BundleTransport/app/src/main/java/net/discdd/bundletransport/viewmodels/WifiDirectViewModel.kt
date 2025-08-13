@@ -22,7 +22,6 @@ import java.util.concurrent.CompletableFuture
 import java.util.logging.Logger
 
 data class WifiDirectState(
-        val deviceName: String = "",
         val wifiInfo: String = "",
         val wifiStatus: String = "",
         val wifiConnectURL: String? = null,
@@ -68,11 +67,6 @@ class WifiDirectViewModel(
         // NOTE: we aren't using device info here, but be aware that it can be null!
         viewModelScope.launch {
             if (btService == null) return@launch
-
-            val serviceName = btService?.dddWifiServer?.deviceName
-            _state.update {
-                it.copy(deviceName = if (!serviceName.isNullOrBlank()) serviceName else "Unknown")
-            }
 
             val status = btService?.dddWifiServer?.status ?: WifiDirectStatus.FAILED
             _state.update {

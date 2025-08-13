@@ -7,9 +7,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pManager;
+import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
 import androidx.core.app.ActivityCompat;
 import net.discdd.bundletransport.BundleTransportService;
 import net.discdd.bundletransport.R;
@@ -21,6 +23,7 @@ import java.net.NetworkInterface;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -37,12 +40,12 @@ import static java.util.logging.Level.WARNING;
 
 public class DDDWifiServer {
     private static final Logger logger = Logger.getLogger(DDDWifiServer.class.getName());
+    public static final String DDD_NETWORK_NAME = "DIRECT-ddd_transport";
     private final IntentFilter intentFilter = new IntentFilter();
     private final BundleTransportService bts;
     private WifiP2pManager wifiP2pManager;
     private WifiP2pManager.Channel channel;
     private WifiP2pGroup wifiGroup;
-    private String deviceName;
     private WifiDirectBroadcastReceiver receiver;
 
     private WifiDirectStatus status = WifiDirectStatus.UNDEFINED;
@@ -95,10 +98,6 @@ public class DDDWifiServer {
     public void shutdown() {
         unregisterWifiIntentReceiver();
         if (channel != null) channel.close();
-    }
-
-    public String getDeviceName() {
-        return deviceName;
     }
 
     public void sendStateChange() {
@@ -164,19 +163,28 @@ public class DDDWifiServer {
 
     @SuppressLint("MissingPermission")
     public void createGroup() {
-        if (deviceName == null || !deviceName.startsWith("ddd_")) return;
+        if (wifiGroup != null && wifiGroup.getNetworkName().startsWith(DDD_NETWORK_NAME)) return;
         if (!hasPermission()) {
             bts.logWifi(SEVERE, R.string.wifi_direct_no_permission);
             return;
         }
-        var groupName = "DIRECT-" + deviceName;
-        var oldGroupName = createdGroupName.get();
-        if (groupName.equals(oldGroupName) || !createdGroupName.compareAndSet(oldGroupName, groupName)) {
-            // Create a group only if we haven't created one yet
-            return;
+        if (wifiGroup != null) {
+            removeGroup().thenAccept(x -> { innerCreateGroupRunnable(); });
+        } else {
+            innerCreateGroupRunnable();
         }
+    }
+
+    @SuppressLint("MissingPermission")
+    private CompletableActionListener innerCreateGroupRunnable() {
         var cal = new CompletableActionListener();
-        this.wifiP2pManager.createGroup(this.channel, cal);
+        WifiP2pConfig config = new WifiP2pConfig.Builder()
+                .setNetworkName(DDD_NETWORK_NAME)
+                .setPassphrase("ConnectToMe")
+                .setGroupOperatingBand(WifiP2pConfig.GROUP_OWNER_BAND_2GHZ)
+                .enablePersistentMode(true)
+                .build();
+        this.wifiP2pManager.createGroup(this.channel, config, cal);
         cal.handle((optRc, ex) -> {
             if (ex != null) {
                 bts.logWifi(SEVERE, ex, R.string.wifi_direct_create_group_failed_e, ex.getMessage());
@@ -189,8 +197,29 @@ public class DDDWifiServer {
             }
             return null;
         });
-    }
+        var txt = Map.of(
+                "ddd", bts.getBundleServerURL()        // you can filter on this
+        );
 
+        // DNS-SD service info
+        var serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(
+                /* instanceName = */ "DDD",
+                /* serviceType  = */ "_ddd._tcp",
+                /* txtRecord    = */ txt
+        );
+
+        this.wifiP2pManager.addLocalService(channel, serviceInfo, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+            }
+
+            @Override
+            public void onFailure(int reason) {
+                logger.log(SEVERE, "Failed to add local service: " + reason);
+            }
+        });
+        return cal;
+    }
     /**
      * Leave the current WifiDirect Group this device is connected to
      *
@@ -201,17 +230,12 @@ public class DDDWifiServer {
         if (wifiGroup != null) {this.wifiP2pManager.removeGroup(this.channel, cal);} else {
             cal.complete(OptionalInt.empty());
         }
+        this.wifiP2pManager.clearLocalServices(channel, null);
         return cal;
     }
 
     void processDeviceInfo(WifiP2pDevice wifiP2pDevice) {
         if (wifiP2pDevice != null) {
-            if (!wifiP2pDevice.deviceName.equals(deviceName)) {
-                this.deviceName = wifiP2pDevice.deviceName;
-                // device name changed, so redo the group
-                if (wifiP2pDevice.status == WifiP2pDevice.CONNECTED) removeGroup();
-                sendDeviceNameChange();
-            }
             var newStatus = switch (wifiP2pDevice.status) {
                 case WifiP2pDevice.CONNECTED -> WifiDirectStatus.CONNECTED;
                 case WifiP2pDevice.INVITED -> WifiDirectStatus.INVITED;

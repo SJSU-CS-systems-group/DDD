@@ -111,7 +111,9 @@ public class DDDWifiDirect implements DDDWifi {
                             if (newPeerList != null) {
                                 peers = newPeerList.getDeviceList()
                                         .stream()
-                                        .filter(d -> d.deviceName.startsWith("ddd_"))
+                                        // this filter should remove peers that are not transports and some (but not
+                                        // all) wifi direct devices
+                                        .filter(d -> d.isGroupOwner() && !d.deviceName.startsWith("DIRECT-"))
                                         .map(DDDWifiDirectDevice::new)
                                         .collect(Collectors.toList());
                                 var waitingForPeer = awaitingDiscovery.get();
