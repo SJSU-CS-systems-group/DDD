@@ -88,23 +88,7 @@ public class DDDWifiDirect implements DDDWifi {
                 switch (action) {
                     case WIFI_P2P_STATE_CHANGED_ACTION -> {
                         var wifiState = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1);
-                        switch(wifiState) {
-                            case WIFI_P2P_STATE_ENABLED -> {
-                                if (!wifiEnable) {
-                                    // we are switching from disabled to enabled, so discover peers
-                                    startDiscovery();
-                                }
-                                wifiEnable = true;
-                            }
-                            case WIFI_P2P_STATE_DISABLED -> wifiEnable = false;
-                            default -> logger.log(WARNING, "unknown p2p state %d", wifiState);
-                        }
-                        if (wifiEnable) {
-                            if (hasPermission()) {
-                                wifiP2pManager.requestDeviceInfo(wifiChannel, (DDDWifiDirect.this::processDeviceInfo));
-                            }
-                        }
-                        eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_STATE_CHANGED);
+                        processStateChange(wifiState);
                     }
                     case WIFI_P2P_PEERS_CHANGED_ACTION -> {
                         /*
@@ -167,6 +151,26 @@ public class DDDWifiDirect implements DDDWifi {
                 }
             }
         }
+    }
+
+    private void processStateChange(int wifiState) {
+        switch(wifiState) {
+            case WIFI_P2P_STATE_ENABLED -> {
+                if (!wifiEnable) {
+                    // we are switching from disabled to enabled, so discover peers
+                    startDiscovery();
+                }
+                wifiEnable = true;
+            }
+            case WIFI_P2P_STATE_DISABLED -> wifiEnable = false;
+            default -> logger.log(WARNING, "unknown p2p state %d", wifiState);
+        }
+        if (wifiEnable) {
+            if (hasPermission()) {
+                wifiP2pManager.requestDeviceInfo(wifiChannel, (DDDWifiDirect.this::processDeviceInfo));
+            }
+        }
+        eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_STATE_CHANGED);
     }
 
     private void processDeviceInfo(WifiP2pDevice wifiP2pDevice) {
@@ -245,6 +249,7 @@ public class DDDWifiDirect implements DDDWifi {
 
     AtomicBoolean isReceiverRegistered = new AtomicBoolean(false);
     private void registerBroadcastReceiver() {
+        wifiP2pManager.requestP2pState(wifiChannel, this::processStateChange);
         if (isReceiverRegistered.getAndSet(true)) return;
         bundleClientService.registerReceiver(broadcastReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
     }
