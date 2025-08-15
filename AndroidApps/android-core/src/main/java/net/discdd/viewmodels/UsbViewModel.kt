@@ -15,12 +15,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.discdd.UsbConnectionManager
+import net.discdd.utils.UserLogRepository
 
 data class UsbState(
         val filePermissionGranted: Boolean = false,
         val dddDirectoryExists: Boolean = false,
-        val showMessage: String = "", // null means no message
-        val messageColor: Int = Color.BLACK,
+        val shouldEject: Boolean = false,
 )
 
 open class UsbViewModel(
@@ -56,13 +56,7 @@ open class UsbViewModel(
     }
 
     protected fun appendMessage(message: String, color: Int) {
-        viewModelScope.launch {
-            _state.update {
-                val currentLines = it.showMessage.split("\n").takeLast(10)
-                val newLines = (currentLines + message)
-                it.copy(showMessage = newLines.joinToString("\n"), messageColor = color)
-            }
-        }
+        UserLogRepository.log(UserLogRepository.UserLogType.USB, message)
     }
 
     fun promptForDirectoryAccess() {
@@ -95,5 +89,11 @@ open class UsbViewModel(
             it.copy(dddDirectoryExists = usbDirectory != null)
         }
 
+    }
+
+    fun setShouldEject(shouldEject: Boolean) {
+        _state.update {
+            it.copy(shouldEject = shouldEject)
+        }
     }
 }
