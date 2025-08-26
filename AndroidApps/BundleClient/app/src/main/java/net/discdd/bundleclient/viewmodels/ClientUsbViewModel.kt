@@ -126,10 +126,12 @@ class ClientUsbViewModel(
                                                 val receivedBundleLocation: Path =
                                                     rootDir.toPath().parent.resolve("BundleTransmission/bundle-generation/to-send")
                                                         .resolve(bundleId)
+//                                                bundleTransmission!!.processReceivedBundle(
+//                                                    recencyBlob.senderId,
+//                                                    Bundle(receivedBundleLocation.toFile()))
                                                 bundleTransmission!!.processReceivedBundle(
                                                     recencyBlob.senderId,
-                                                    //Bundle(targetFile.toFile())
-                                                    Bundle(receivedBundleLocation.toFile()))
+                                                    Bundle(targetFile.toFile()))
                                             }
                                         }
                                     }
