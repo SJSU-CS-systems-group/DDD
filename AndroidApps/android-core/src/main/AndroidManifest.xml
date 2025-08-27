@@ -13,6 +13,4 @@
     <uses-permission android:name="android.permission.USB_PERMISSION"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="Manifest.permission.POST_NOTIFICATIONS"/>
-
-
 </manifest>
