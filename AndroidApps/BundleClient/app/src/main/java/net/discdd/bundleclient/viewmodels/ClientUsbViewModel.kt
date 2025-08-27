@@ -115,7 +115,6 @@ class ClientUsbViewModel(
                             for (bundleId in bundleIds) {
                                 val bundleFile = toClientDir.findFile(bundleId)
                                 logger.log(INFO, "Target bundle ID: ${bundleId}")
-                                //logger.log(INFO, "toClientDir files: ${toClientDir.listFiles()}")
                                 if (bundleFile != null) {
                                     val targetFile = devicePath.resolve(bundleId)
                                     val result = withContext(Dispatchers.IO) {
