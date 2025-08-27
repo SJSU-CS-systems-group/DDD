@@ -15,6 +15,7 @@ import java.io.IOException
 import java.nio.file.Files
 import java.util.logging.Level.INFO
 import java.util.logging.Logger
+import kotlin.io.path.deleteIfExists
 
 class TransportUsbViewModel(
         application: Application,
@@ -27,6 +28,9 @@ class TransportUsbViewModel(
         TransportPaths(application.filesDir.toPath())
     }
 
+    private val anotherTransportPaths by lazy {
+        TransportPaths(application.getExternalFilesDir(null)?.toPath())
+    }
     fun createIfDoesNotExist(parent: DocumentFile, name: String): DocumentFile {
         var child = parent.findFile(name)
         if (child == null || !child.isDirectory) {
@@ -48,7 +52,7 @@ class TransportUsbViewModel(
                     return@withContext
                 }
                 val sourceDir = createIfDoesNotExist(currentUsbDir, "toServer")
-                val destinationDir = transportPaths.toServerPath
+                val destinationDir = anotherTransportPaths.toServerPath
                 val bundlesToTransfer = sourceDir.listFiles()
                 if (bundlesToTransfer.isEmpty()) {
                     appendMessage("No files found in 'toServer' directory on USB", Color.YELLOW)
@@ -56,6 +60,7 @@ class TransportUsbViewModel(
                 }
                 try {
                     for (bundle in bundlesToTransfer) {
+                        destinationDir.resolve(bundle.name).deleteIfExists()
                         val targetFile = destinationDir.resolve(bundle.name)
                         Files.newOutputStream(targetFile).use { outputStream ->
                             context.contentResolver.openInputStream(bundle.uri).use { inputStream ->
@@ -84,7 +89,7 @@ class TransportUsbViewModel(
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 // TODO: Get APK from external? internal? path
-                val sourceDir = transportPaths.toClientPath.toFile()
+                val sourceDir = anotherTransportPaths.toClientPath.toFile()
                 val currentUsbDir = usbDirectory
                 if (currentUsbDir == null) {
                     appendMessage("USB directory is not available", Color.RED)
@@ -100,13 +105,15 @@ class TransportUsbViewModel(
                 }
                 try {
                     for (bundle in bundlesToTransfer) {
-                        val targetFile = destinationDir.createFile("data/octet", bundle.name)
+                        val targetFile = deleteIfExists(destinationDir, bundle.name)
                         if (targetFile != null) {
-                            context.contentResolver.openOutputStream(targetFile.uri)?.use { outputStream ->
+                            context.contentResolver.openOutputStream(targetFile.uri, "wt")?.use { outputStream ->
                                 Files.newInputStream(bundle.toPath())?.use { inputStream ->
                                     appendMessage("Copying from: ${bundle} to ${targetFile.uri}", Color.RED)
-                                    inputStream.copyTo(outputStream)
-                                }
+                                    val bytesCopied = inputStream.copyTo(outputStream)
+                                    appendMessage("Bytes copied ${bytesCopied}", Color.YELLOW)
+                                } ?: appendMessage("Could not open file", Color.RED)
+                                outputStream.flush()
                             }
                         }
                         logger.log(INFO, "Bundle from transport transferred to usb successfully")
@@ -119,5 +126,14 @@ class TransportUsbViewModel(
                 }
             }
         }
+    }
+
+    fun deleteIfExists(destinationDir: DocumentFile, bundleName: String): DocumentFile? {
+        var targetFile = destinationDir.findFile(bundleName)
+        if (targetFile != null) {
+            targetFile.delete()
+        }
+        targetFile = destinationDir.createFile("data/octet", bundleName)
+        return targetFile
     }
 }
