@@ -47,33 +47,33 @@ fun TransportUsbComponent(
     }
 
     Text(
-        text = textToShow,
-        color = textColor,
-        style = MaterialTheme.typography.bodyLarge,
-        textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth(),
+            text = textToShow,
+            color = textColor,
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
     )
 
     Spacer(modifier = Modifier.height(24.dp))
 
     Button(
-        onClick = onTransferClick,
-        enabled = isUsbConnected && usbState.dddDirectoryExists,
-        modifier = Modifier.fillMaxWidth(0.8f)
+            onClick = onTransferClick,
+            enabled = isUsbConnected && usbState.dddDirectoryExists,
+            modifier = Modifier.fillMaxWidth(0.8f)
     ) {
         Text(
-            text = stringResource(R.string.exchange_usb_data)
+                text = stringResource(R.string.exchange_usb_data)
         )
     }
 
     Spacer(modifier = Modifier.height(16.dp))
 
     Button(
-        onClick = { usbViewModel.promptForDirectoryAccess() },
-        modifier = Modifier.fillMaxWidth(0.8f)
+            onClick = { usbViewModel.promptForDirectoryAccess() },
+            modifier = Modifier.fillMaxWidth(0.8f)
     ) {
         Text(
-            text = stringResource(R.string.reload)
+                text = stringResource(R.string.reload)
         )
     }
 

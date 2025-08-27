@@ -49,21 +49,23 @@ fun <T : UsbViewModel> UsbScreen(
                 }
 
                 AlertDialog(
-                    onDismissRequest = {
-                        ejectUsb()
-                    },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                ejectUsb()
+                        onDismissRequest = {
+                            ejectUsb()
+                        },
+                        confirmButton = {
+                            TextButton(
+                                    onClick = {
+                                        ejectUsb()
+                                    }
+                            ) {
+                                Text("I understand")
                             }
-                        ) {
-                            Text("I understand")
-                        }
-                    },
-                    text = { Text(
-                        "On the next screen, locate the USB storage -> click on three dots to right of storage -> select unmount or eject"
-                    )},
+                        },
+                        text = {
+                            Text(
+                                    "On the next screen, locate the USB storage -> click on three dots to right of storage -> select unmount or eject"
+                            )
+                        },
                 )
             }
             usbExchangeComponent(usbViewModel)

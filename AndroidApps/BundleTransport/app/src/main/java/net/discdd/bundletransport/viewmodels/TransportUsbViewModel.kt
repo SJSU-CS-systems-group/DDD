@@ -31,6 +31,7 @@ class TransportUsbViewModel(
     private val anotherTransportPaths by lazy {
         TransportPaths(application.getExternalFilesDir(null)?.toPath())
     }
+
     fun createIfDoesNotExist(parent: DocumentFile, name: String): DocumentFile {
         var child = parent.findFile(name)
         if (child == null || !child.isDirectory) {
