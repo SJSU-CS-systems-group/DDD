@@ -1,12 +1,11 @@
 package net.discdd.bundleclient.screens
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
@@ -48,6 +47,7 @@ fun WifiDirectScreen(
     val numDenied by viewModel.numDenied.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
+    val ssid by viewModel.ssid.collectAsState()
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -110,6 +110,9 @@ fun WifiDirectScreen(
                     }
                 }
             }
+            val isWifiDirect by remember {
+                derivedStateOf { ssid?.startsWith("DIRECT-") }
+            }
 
             /*
             * The "ClientID" section is the designated easter egg location for BundleClient
@@ -121,6 +124,14 @@ fun WifiDirectScreen(
             )
             Text(text = "Wifi Direct Enabled: ${if (state.dddWifiEnabled) "✅" else "❌"}")
             Text(text = "Status: ${state.connectedStateText}")
+            if (isWifiDirect == true) {
+                Text("You are connected to a Wifi Direct network\n Please change your network to a normal Wifi network to use BundleClient.")
+                Button(
+                    onClick = { openWifiSettings(context) },
+                ) {
+                    Text("Open Wifi Settings")
+                }
+            }
             Text(
                 text = "Discovery Status: ${
                     if (state.discoveryActive) {
@@ -232,6 +243,18 @@ fun PeerItem(
         ) {
             Text(if (peer.isExchangeInProgress) "Exchanging..." else "Exchange")
         }
+    }
+}
+
+fun openWifiSettings(
+    context: Context
+) {
+    try {
+        val intent = Intent(Settings.ACTION_WIFI_SETTINGS)
+        startActivity(context, intent, null)
+    } catch (e: Exception) {
+        val intent = Intent(Settings.ACTION_WIRELESS_SETTINGS)
+        startActivity(context, intent, null)
     }
 }
 
