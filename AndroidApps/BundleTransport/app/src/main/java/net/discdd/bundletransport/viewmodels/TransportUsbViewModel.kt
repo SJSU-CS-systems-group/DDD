@@ -131,7 +131,7 @@ class TransportUsbViewModel(
     fun deleteIfExists(destinationDir: DocumentFile, bundleName: String): DocumentFile? {
         var targetFile = destinationDir.findFile(bundleName)
         if (targetFile != null) {
-            destinationDir.findFile(bundleName)?.delete()
+            targetFile.delete()
         }
         targetFile = destinationDir.createFile("data/octet", bundleName)
         return targetFile
