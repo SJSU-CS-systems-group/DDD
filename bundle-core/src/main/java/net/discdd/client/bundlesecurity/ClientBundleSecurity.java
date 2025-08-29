@@ -45,8 +45,8 @@ public class ClientBundleSecurity {
 
         /* Initializing Security Module*/
         client = ClientSecurity.initializeInstance(1, clientPaths);
-        clientBundleGenerator = ClientBundleGenerator.initializeInstance(client, clientPaths);
-        clientWindow = ClientWindow.initializeInstance(5, client.getClientID(), clientPaths);
+        clientBundleGenerator = new ClientBundleGenerator(client, clientPaths);
+        clientWindow = new ClientWindow(client.getClientID(), clientPaths);
         try {
             this.clientGrpcSecurityKey = new GrpcSecurityKey(clientPaths.grpcSecurityPath, SecurityUtils.CLIENT);
         } catch (IOException | NoSuchAlgorithmException | InvalidAlgorithmParameterException | CertificateException |

@@ -34,7 +34,7 @@ public class ClientWindow {
 
     private final LinkedList<UnencryptedBundleId> windowOfUnencryptedBundleIds = new LinkedList<>();
     private final String clientID;
-    private int windowLength = 10; /* Default Value */
+    private int windowLength = Constants.DEFAULT_WINDOW_SIZE; /* Default Value */
     private final ClientPaths clientPaths;
 
     /* Generates bundleIDs for window slots
@@ -94,7 +94,7 @@ public class ClientWindow {
      * Returns:
      * None
      */
-    private ClientWindow(int length, String clientID, ClientPaths clientPaths) {
+    public ClientWindow(String clientID, ClientPaths clientPaths) {
         this.clientID = clientID;
         this.clientPaths = clientPaths;
 
@@ -102,29 +102,7 @@ public class ClientWindow {
             initializeWindow();
         } catch (IOException e) {
             logger.log(WARNING, "Failed to initialize Window from Disk -- creating new window" + e);
-            if (length > 0) {
-                windowLength = length;
-            } else {
-                logger.log(WARNING, "Invalid window size -- using default size: " + windowLength);
-            }
         }
-    }
-
-    public static ClientWindow initializeInstance(int windowLength, String clientID, ClientPaths clientPaths) throws
-            BufferOverflow, IOException {
-        if (singleClientWindowInstance == null) {
-            singleClientWindowInstance = new ClientWindow(windowLength, clientID, clientPaths);
-        } else {
-            logger.log(INFO, "[WIN]: Client Window Instance is already initialized!");
-        }
-        return singleClientWindowInstance;
-    }
-
-    public static ClientWindow getInstance() {
-        if (singleClientWindowInstance == null) {
-            throw new IllegalStateException("[WIN]: Client Window has not been initialized!");
-        }
-        return singleClientWindowInstance;
     }
 
     /* Updates the window based on the Received bundleID

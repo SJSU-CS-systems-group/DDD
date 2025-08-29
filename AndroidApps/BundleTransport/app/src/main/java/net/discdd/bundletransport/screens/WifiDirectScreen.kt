@@ -78,7 +78,7 @@ fun WifiDirectScreen(
         Column {
             if (wifiState.value) {
                 val nameValid by remember {
-                    derivedStateOf { state.deviceName.startsWith("ddd_") }
+                    derivedStateOf { state.deviceName.startsWith("ddd_") || true }
                 }
 
                 if (!nearbyWifiState.status.isGranted) {

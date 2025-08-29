@@ -24,8 +24,10 @@ public class BundleRouting {
     private static final Logger logger = Logger.getLogger(BundleRouting.class.getName());
     private final String METADATAFILE = "routing.metadata";
 
-    @Autowired
     ServerRoutingRepository serverRoutingRepository;
+    public BundleRouting(ServerRoutingRepository serverRoutingRepository) {
+        this.serverRoutingRepository = serverRoutingRepository;
+    }
 
     public List<String> getClientsForTransportId(String transportId) {
         List<ServerRouting> serverRoutings = serverRoutingRepository.findByServerRoutingIdTransportID(transportId);

@@ -26,7 +26,7 @@ public class ClientBundleGenerator {
 
     private ClientPaths clientPaths;
 
-    private ClientBundleGenerator(ClientSecurity clientSecurity, ClientPaths clientPaths) throws IOException {
+    public ClientBundleGenerator(ClientSecurity clientSecurity, ClientPaths clientPaths) throws IOException {
         this.clientSecurity = clientSecurity;
         this.clientPaths = clientPaths;
 
@@ -41,23 +41,6 @@ public class ClientBundleGenerator {
     private void updateBundleIDFile() throws IOException {
         clientPaths.counterFilePath.getParent().toFile().mkdirs();
         Files.write(clientPaths.counterFilePath, Long.toUnsignedString(currentCounter).getBytes());
-    }
-
-    synchronized public static ClientBundleGenerator initializeInstance(ClientSecurity clientSecurity,
-                                                                        ClientPaths clientPaths) throws IOException {
-        if (singleGeneratorInstance == null) {
-            singleGeneratorInstance = new ClientBundleGenerator(clientSecurity, clientPaths);
-        } else {
-            logger.log(WARNING, "[BR]: Client bundle generator instance is already created!");
-        }
-        return singleGeneratorInstance;
-    }
-
-    synchronized public static ClientBundleGenerator getInstance() throws IllegalStateException {
-        if (singleGeneratorInstance == null) {
-            throw new IllegalStateException("Client Bundle Generator has not been initialized!");
-        }
-        return singleGeneratorInstance;
     }
 
     public String generateBundleID() throws IOException, InvalidKeyException, GeneralSecurityException {

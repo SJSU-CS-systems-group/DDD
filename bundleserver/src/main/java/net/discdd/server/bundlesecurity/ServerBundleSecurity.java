@@ -26,8 +26,11 @@ import static java.util.logging.Level.WARNING;
 public class ServerBundleSecurity {
     private static final Logger logger = Logger.getLogger(ServerBundleSecurity.class.getName());
 
-    @Autowired
     private ServerSecurity serverSecurity;
+
+    public ServerBundleSecurity(ServerSecurity serverSecurity) {
+        this.serverSecurity = serverSecurity;
+    }
 
     public Payload decryptPayload(UncompressedBundle uncompressedBundle) {
         logger.log(INFO, "[BundleSecurity] Decrypting payload");

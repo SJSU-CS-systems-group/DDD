@@ -103,7 +103,7 @@ public class ClientBundleTransmission {
         this.clientPaths = clientPaths;
         this.bundleSecurity = new ClientBundleSecurity(clientPaths);
         this.applicationDataManager = new ClientApplicationDataManager(clientPaths, aduConsumer);
-        this.clientRouting = ClientRouting.initializeInstance(clientPaths);
+        this.clientRouting = new ClientRouting(clientPaths);
     }
 
     public ClientPaths getClientPaths() {
