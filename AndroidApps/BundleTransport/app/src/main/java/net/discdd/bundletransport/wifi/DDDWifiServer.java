@@ -112,6 +112,7 @@ public class DDDWifiServer {
 
     @SuppressLint("MissingPermission")
     public void initialize() {
+        bts.logWifi(INFO, R.string.initializing_wifidirectmanager);
         this.wifiP2pManager = (WifiP2pManager) this.bts.getSystemService(Context.WIFI_P2P_SERVICE);
         if (wifiP2pManager == null) {
             logger.log(SEVERE, "Cannot get Wi-Fi system service");
@@ -127,7 +128,11 @@ public class DDDWifiServer {
         if (hasPermission()) {
             registerWifiIntentReceiver();
             wifiP2pManager.requestDeviceInfo(channel, this::processDeviceInfo);
+            bts.logWifi(INFO, R.string.wifi_direct_initialized);
+        } else {
+            bts.logWifi(SEVERE, R.string.no_permission_for_wi_fi_direct);
         }
+        sendStateChange();
     }
 
     AtomicBoolean intentRegistered = new AtomicBoolean(false);

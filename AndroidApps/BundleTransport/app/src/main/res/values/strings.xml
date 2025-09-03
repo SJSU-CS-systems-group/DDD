@@ -76,4 +76,7 @@
     <string name="wifi_direct_create_group_success">Created WiFi group.</string>
     <string name="download_failed">Download %1$s failed: %2$s</string>
     <string name="could_not_initialize_wifi_direct_s">could not initialize Wifi direct %s</string>
+    <string name="initializing_wifidirectmanager">Initializing WifiDirectManager</string>
+    <string name="wifi_direct_initialized">Wifi Direct initialized</string>
+    <string name="no_permission_for_wi_fi_direct">No permission for Wi-Fi Direct</string>
 </resources>
