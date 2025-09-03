@@ -47,7 +47,7 @@ fun WifiDirectScreen(
     val numDenied by viewModel.numDenied.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
-    val ssid by viewModel.ssid.collectAsState()
+    val validNetwork by viewModel.validNetwork.collectAsState()
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -110,9 +110,6 @@ fun WifiDirectScreen(
                     }
                 }
             }
-            val isWifiDirect by remember {
-                derivedStateOf { ssid?.startsWith("DIRECT-") }
-            }
 
             /*
             * The "ClientID" section is the designated easter egg location for BundleClient
@@ -124,8 +121,9 @@ fun WifiDirectScreen(
             )
             Text(text = "Wifi Direct Enabled: ${if (state.dddWifiEnabled) "✅" else "❌"}")
             Text(text = "Status: ${state.connectedStateText}")
-            if (isWifiDirect == true) {
-                Text("You are connected to a Wifi Direct network\n Please change your network to a normal Wifi network to use BundleClient.")
+            if (!validNetwork) {
+                Text( "You may be connected to Wifi Direct network")
+                Text("Please change your network to a normal Wifi network to use BundleClient")
                 Button(
                     onClick = { openWifiSettings(context) },
                 ) {

@@ -1,18 +1,15 @@
 package net.discdd.bundleclient.viewmodels
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import android.content.IntentFilter
 import android.content.SharedPreferences
-import android.content.pm.PackageManager
 import android.text.format.DateUtils
 import androidx.core.content.edit
 import androidx.lifecycle.viewModelScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -23,13 +20,6 @@ import net.discdd.bundleclient.service.BundleClientServiceBroadcastReceiver
 import net.discdd.bundleclient.service.DDDWifiDevice
 import net.discdd.viewmodels.WifiBannerViewModel
 import java.util.concurrent.CompletableFuture
-import android.net.ConnectivityManager
-import android.net.ConnectivityManager.NetworkCallback
-import android.net.Network
-import android.net.NetworkCapabilities
-import android.net.wifi.WifiInfo
-import android.net.wifi.WifiManager
-import androidx.core.content.ContextCompat
 
 
 data class PeerDevice(
@@ -65,8 +55,8 @@ class WifiDirectViewModel(
 
     private val _state = MutableStateFlow(WifiDirectState())
     val state = _state.asStateFlow()
-    private val _ssid = MutableStateFlow<String?>(null)
-    val ssid: StateFlow<String?> = _ssid
+    private val _validNetwork = MutableStateFlow<Boolean>(true)
+    val validNetwork = _validNetwork.asStateFlow()
 
     private val _backgroundExchange = MutableStateFlow(0)
     val backgroundExchange = _backgroundExchange.asStateFlow()
@@ -160,7 +150,6 @@ class WifiDirectViewModel(
                     connectedStateText = wifiService?.dddWifi?.stateDescription ?: context.getString(R.string.not_connected)
                 )
             }
-            _ssid.value = wifiSsid(context)
         }
     }
 
@@ -195,12 +184,8 @@ class WifiDirectViewModel(
         }
     }
 
-    fun wifiSsid(context: Context): String {
-        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val networkCapability = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
-        val transportInfo = networkCapability?.transportInfo
-        val wifiInfo = transportInfo as WifiInfo
-        return wifiInfo.getSSID();
+    fun setValidNetwork(valid: Boolean) {
+        _validNetwork.value = valid
     }
 
     fun discoverPeers() {
