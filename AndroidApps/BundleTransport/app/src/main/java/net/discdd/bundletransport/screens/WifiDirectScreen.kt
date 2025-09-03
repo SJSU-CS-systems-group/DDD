@@ -25,7 +25,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,9 +52,10 @@ import java.util.concurrent.CompletableFuture
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun WifiDirectScreen(
-        wifiViewModel: WifiDirectViewModel = viewModel(),
-        serviceReadyFuture: CompletableFuture<BundleTransportService>,
-        nearbyWifiState: PermissionState,
+    wifiViewModel: WifiDirectViewModel = viewModel(),
+    serviceReadyFuture: CompletableFuture<BundleTransportService>,
+    nearbyWifiState: PermissionState,
+    locationPermissionState: PermissionState,
 ) {
     val state by wifiViewModel.state.collectAsState()
     val numDenied by wifiViewModel.numDenied.collectAsState()
@@ -77,10 +77,6 @@ fun WifiDirectScreen(
 
         Column {
             if (wifiState.value) {
-                val nameValid by remember {
-                    derivedStateOf { state.deviceName.startsWith("ddd_") }
-                }
-
                 if (!nearbyWifiState.status.isGranted) {
                     WifiPermissionBanner(numDenied, nearbyWifiState) {
                         // if user denies access twice, manual access in settings is required
@@ -95,7 +91,20 @@ fun WifiDirectScreen(
                         }
                     }
                 }
-
+                if (!locationPermissionState.status.isGranted) {
+                    WifiPermissionBanner(numDenied, locationPermissionState) {
+                        // if user denies access twice, manual access in settings is required
+                        if (numDenied >= 2) {
+                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.fromParts("package", context.packageName, null)
+                            }
+                            startActivity(context, intent, null)
+                        } else {
+                            wifiViewModel.incrementNumDenied()
+                            locationPermissionState.launchPermissionRequest()
+                        }
+                    }
+                }
                 Row {
                     Column {
                         Text(
@@ -124,26 +133,6 @@ fun WifiDirectScreen(
                         }
 
                         Text(text = "Wifi Status: ${state.wifiStatus}")
-
-                        // only show the name change button if we don't have a valid device name
-                        // (transports must have device names starting with ddd_)
-                        if (nameValid) {
-                            Text(text = "Device Name: ${state.deviceName}")
-                        } else {
-                            Text(
-                                    text = stringResource(
-                                            R.string.phone_name_must_start_with_ddd_found,
-                                            state.deviceName
-                                    )
-                            )
-
-                            FilledTonalButton(
-                                    onClick = { wifiViewModel.openInfoSettings() },
-                                    modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(stringResource(R.string.change_phone_name))
-                            }
-                        }
                     }
                     state.wifiConnectURL?.let { url ->
                         generateQRCode(url, 500, 500)?.let {
@@ -208,9 +197,11 @@ fun WifiStateObserver(
 @Composable
 fun WifiDirectScreenPreview() {
     val nearbyWifiState = rememberPermissionState(Manifest.permission.NEARBY_WIFI_DEVICES)
+    val locationPermissionState = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
     WifiDirectScreen(
             serviceReadyFuture = CompletableFuture(),
-            nearbyWifiState = nearbyWifiState
+            nearbyWifiState = nearbyWifiState,
+        locationPermissionState = locationPermissionState
     )
 }
 
