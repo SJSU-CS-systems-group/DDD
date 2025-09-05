@@ -150,9 +150,6 @@ public class DDDWifiDirect implements DDDWifi {
                                                conInfo.groupOwnerAddress.getHostAddress()));
                             completeAddressWaiters(conGroup.getOwner(), conInfo.groupOwnerAddress);
                         }
-                        if (group != null && ownerAddress instanceof Inet4Address && ownerAddress.getHostAddress().contains("192.168.49.")) {
-                            eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DIRECT_CONNECTED);
-                        }
                         eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_STATE_CHANGED);
                     }
                     case WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> {
@@ -168,22 +165,6 @@ public class DDDWifiDirect implements DDDWifi {
                 }
             }
         }
-    }
-
-    //might not need
-    private boolean isIpAddressValid(Context context) {
-        ConnectivityManager connectivity = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        LinkProperties linkProperties = connectivity.getLinkProperties(connectivity.getActiveNetwork());
-        for (LinkAddress address : linkProperties.getLinkAddresses()) {
-            InetAddress inet = address.getAddress();
-            if (inet instanceof Inet4Address) {
-                String ipAddress = inet.getHostAddress();
-                if (ipAddress.startsWith("192.168.49.")) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     private void processDeviceInfo(WifiP2pDevice wifiP2pDevice) {
