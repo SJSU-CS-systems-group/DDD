@@ -314,6 +314,8 @@ public class ServerSecurity {
         var output = Files.newOutputStream(decryptedFile, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
         if(client.cipherSession.decrypt(encryptedData, decryptedFile)){
             updateSessionRecord(client);
+        }else{
+            throw new GeneralSecurityException("Could not decrypt the file");
         }
 
         logger.log(FINE, "[ServerSecurity]:Decrypted Size = %d", Files.size(decryptedFile));
