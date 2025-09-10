@@ -150,11 +150,10 @@ public class BundleClientService extends Service {
         return START_STICKY;
     }
 
-    public boolean isNetworkValid(Context context) {
-        ConnectivityManager connectivity = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        LinkProperties linkProperties = connectivity.getLinkProperties(connectivity.getActiveNetwork());
-        for (LinkAddress address : linkProperties.getLinkAddresses()) {
-            if (address != null) {
+    public boolean isNetworkValid() {
+        LinkProperties linkProperties = connectivityManager.getLinkProperties(connectivityManager.getActiveNetwork());
+        if (linkProperties != null && linkProperties.getLinkAddresses() != null) {
+            for (LinkAddress address : linkProperties.getLinkAddresses()) {
                 InetAddress inet = address.getAddress();
                 if (inet instanceof Inet4Address) {
                     String ipAddress = inet.getHostAddress();
@@ -168,7 +167,7 @@ public class BundleClientService extends Service {
     }
 
     private void checkValidNetwork() {
-        if (isNetworkValid(getApplicationContext())) {
+        if (isNetworkValid()) {
             eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_CONNECTED);
         } else {
             eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DISCONNECTED);

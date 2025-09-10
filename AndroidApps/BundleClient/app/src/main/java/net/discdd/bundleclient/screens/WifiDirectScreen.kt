@@ -121,12 +121,14 @@ fun WifiDirectScreen(
             )
             Text(text = "Wifi Direct Enabled: ${if (state.dddWifiEnabled) "✅" else "❌"}")
             Text(text = "Status: ${state.connectedStateText}")
-            if (!validNetwork) {
-                Text( "You may be connected to a Wifi Direct network. Please change your network to a normal Wifi network to use BundleClient.")
-                Button(
-                    onClick = { openWifiSettings(context) },
-                ) {
-                    Text("Open Wifi Settings")
+            validNetwork?.let {
+                if (!it) {
+                    Text( "You may be connected to a Wifi Direct network. Please change your network to a normal Wifi network to use BundleClient.")
+                    Button(
+                        onClick = { openWifiSettings(context) },
+                    ) {
+                        Text("Open Wifi Settings")
+                    }
                 }
             }
             Text(
