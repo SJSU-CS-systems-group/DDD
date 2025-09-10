@@ -133,16 +133,11 @@ public class BundleClientService extends Service {
         processBackgroundExchangeSetting();
         startForeground();
         connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
-        initializeValidNetwork();
 
         networkCallback = new ConnectivityManager.NetworkCallback() {
             @Override
             public void onAvailable(Network network) {
-                if (isNetworkValid(getApplicationContext())) {
-                    eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_CONNECTED);
-                } else {
-                    eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DISCONNECTED);
-                }
+                checkValidNetwork();
             }
 
             @Override
@@ -151,6 +146,7 @@ public class BundleClientService extends Service {
             }
         };
         connectivityManager.registerDefaultNetworkCallback(networkCallback);
+        checkValidNetwork();
         return START_STICKY;
     }
 
@@ -158,27 +154,33 @@ public class BundleClientService extends Service {
         ConnectivityManager connectivity = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         LinkProperties linkProperties = connectivity.getLinkProperties(connectivity.getActiveNetwork());
         for (LinkAddress address : linkProperties.getLinkAddresses()) {
-            InetAddress inet = address.getAddress();
-            if (inet instanceof Inet4Address) {
-                String ipAddress = inet.getHostAddress();
-                if (ipAddress != null && ipAddress.startsWith("192.168.49.")) {
-                    return false;
+            if (address != null) {
+                InetAddress inet = address.getAddress();
+                if (inet instanceof Inet4Address) {
+                    String ipAddress = inet.getHostAddress();
+                    if (ipAddress != null && ipAddress.startsWith("192.168.49.")) {
+                        return false;
+                    }
                 }
             }
         }
         return true;
     }
 
-    private void initializeValidNetwork() {
-        Network activeNetwork = connectivityManager.getActiveNetwork();
-        NetworkCapabilities temp = connectivityManager.getNetworkCapabilities(activeNetwork);
-        if (temp == null || !temp.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+    private void checkValidNetwork() {
+        if (isNetworkValid(getApplicationContext())) {
+            eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_CONNECTED);
+        } else {
             eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DISCONNECTED);
         }
     }
 
     public DDDWifi getDddWifi() {
         return dddWifi;
+    }
+
+    public ConnectivityManager.NetworkCallback getNetworkCallback() {
+        return networkCallback;
     }
 
     private void processBackgroundExchangeSetting() {

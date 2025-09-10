@@ -91,6 +91,15 @@ class BundleClientActivity: ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        var network = connectivityManager.activeNetwork
+        if (network != null) {
+            WifiServiceManager.getService()?.getNetworkCallback()?.onAvailable(network)
+
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
 
