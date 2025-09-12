@@ -156,6 +156,7 @@ public class BundleClientService extends Service {
                 InetAddress inet = address.getAddress();
                 if (inet instanceof Inet4Address) {
                     String ipAddress = inet.getHostAddress();
+                    // checks if we have a 192.168.49.x addresses, which are used by wifi direct
                     if (ipAddress != null && ipAddress.startsWith("192.168.49.")) {
                         return false;
                     }
