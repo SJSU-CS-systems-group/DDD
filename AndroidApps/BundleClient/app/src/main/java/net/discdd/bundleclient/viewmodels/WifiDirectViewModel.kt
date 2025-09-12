@@ -54,7 +54,7 @@ class WifiDirectViewModel(
 
     private val _state = MutableStateFlow(WifiDirectState())
     val state = _state.asStateFlow()
-    private val _validNetwork = MutableStateFlow(wifiService?.dddWifi?.isDddWifiEnabled)
+    private val _validNetwork = MutableStateFlow(true)
     val validNetwork = _validNetwork.asStateFlow()
 
     private val _backgroundExchange = MutableStateFlow(0)

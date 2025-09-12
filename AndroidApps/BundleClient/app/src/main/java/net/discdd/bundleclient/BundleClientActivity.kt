@@ -95,8 +95,8 @@ class BundleClientActivity: ComponentActivity() {
         super.onResume()
         var network = connectivityManager.activeNetwork
         if (network != null) {
+            // checks if wifi is valid when activity resumes
             WifiServiceManager.getService()?.getNetworkCallback()?.onAvailable(network)
-
         }
     }
 

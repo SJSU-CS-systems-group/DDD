@@ -123,11 +123,11 @@ fun WifiDirectScreen(
             Text(text = "Status: ${state.connectedStateText}")
             validNetwork?.let {
                 if (!it) {
-                    Text( "You may be connected to a Wifi Direct network. Please change your network to a normal Wifi network to use BundleClient.")
+                    Text( "Please forget any WiFi networks that start with DIRECT- in your system WiFi settings")
                     Button(
                         onClick = { openWifiSettings(context) },
                     ) {
-                        Text("Open Wifi Settings")
+                        Text("Open WiFi Settings")
                     }
                 }
             }
@@ -252,6 +252,7 @@ fun openWifiSettings(
         val intent = Intent(Settings.ACTION_WIFI_SETTINGS)
         startActivity(context, intent, null)
     } catch (e: Exception) {
+        // in case some devices don't have wifi settings
         val intent = Intent(Settings.ACTION_WIRELESS_SETTINGS)
         startActivity(context, intent, null)
     }
