@@ -21,7 +21,6 @@ import net.discdd.bundleclient.service.DDDWifiDevice
 import net.discdd.viewmodels.WifiBannerViewModel
 import java.util.concurrent.CompletableFuture
 
-
 data class PeerDevice(
     val device: DDDWifiDevice,
     val lastSeen: Long = 0,
