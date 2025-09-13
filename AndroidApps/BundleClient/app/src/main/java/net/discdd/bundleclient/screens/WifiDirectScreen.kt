@@ -1,12 +1,11 @@
 package net.discdd.bundleclient.screens
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
@@ -48,6 +47,7 @@ fun WifiDirectScreen(
     val numDenied by viewModel.numDenied.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
+    val validNetwork by viewModel.validNetwork.collectAsState()
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -121,6 +121,16 @@ fun WifiDirectScreen(
             )
             Text(text = "Wifi Direct Enabled: ${if (state.dddWifiEnabled) "✅" else "❌"}")
             Text(text = "Status: ${state.connectedStateText}")
+            validNetwork?.let {
+                if (!it) {
+                    Text( "Please forget any WiFi networks that start with DIRECT- in your system WiFi settings")
+                    Button(
+                        onClick = { openWifiSettings(context) },
+                    ) {
+                        Text("Open WiFi Settings")
+                    }
+                }
+            }
             Text(
                 text = "Discovery Status: ${
                     if (state.discoveryActive) {
@@ -232,6 +242,19 @@ fun PeerItem(
         ) {
             Text(if (peer.isExchangeInProgress) "Exchanging..." else "Exchange")
         }
+    }
+}
+
+fun openWifiSettings(
+    context: Context
+) {
+    try {
+        val intent = Intent(Settings.ACTION_WIFI_SETTINGS)
+        startActivity(context, intent, null)
+    } catch (e: Exception) {
+        // in case some devices don't have wifi settings
+        val intent = Intent(Settings.ACTION_WIRELESS_SETTINGS)
+        startActivity(context, intent, null)
     }
 }
 
