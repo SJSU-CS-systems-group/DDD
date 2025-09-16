@@ -124,7 +124,7 @@ class AppShareViewModel(
         )
 
         //null is when no signature found
-        if (packageInfo == null) return null
+        if (packageInfo == null) return false
 
         //false is when corrupted signature found
         //true is when signature found
