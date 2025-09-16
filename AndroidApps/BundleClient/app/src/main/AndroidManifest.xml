@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <permission android:name="net.discdd.bundleclient.permission.MESSAGE_PROVIDER_WRITE" android:protectionLevel="normal" />
     <permission android:name="net.discdd.bundleclient.permission.MESSAGE_PROVIDER_READ" android:protectionLevel="normal" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:required="true" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" android:required="true" />
     <uses-feature android:name="android.hardware.usb.host" />
     <uses-feature android:name="android.hardware.wifi.aware" android:required="false" />
     <application
