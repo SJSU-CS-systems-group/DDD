@@ -219,17 +219,17 @@ public class DDDWifiDirect implements DDDWifi {
             registerBroadcastReceiver();
         }
 
-        WifiP2pServiceRequest serviceRequest = WifiP2pDnsSdServiceRequest.newInstance("_discdd._tcp");
+        WifiP2pServiceRequest serviceRequest = WifiP2pDnsSdServiceRequest.newInstance("_ddd._tcp");
 
         wifiP2pManager.addServiceRequest(wifiChannel, serviceRequest, new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
-                logger.log(INFO, "Added service request for _discdd._tcp");
+                logger.log(INFO, "Added service request for _ddd._tcp");
             }
 
             @Override
             public void onFailure(int reason) {
-                logger.log(SEVERE, "Could not register service request for _discdd._tcp rc = " + reason);
+                logger.log(SEVERE, "Could not register service request for _ddd._tcp rc = " + reason);
             }
         });
         WifiP2pManager.DnsSdServiceResponseListener txtResponseListener = (fullDomainName, record, device) -> {
