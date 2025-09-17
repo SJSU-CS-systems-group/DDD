@@ -8,4 +8,13 @@
     <string name="to_settings">Aux paramètres</string>
     <string name="to_settings_text">Pour permettre à notre application de gérer les fichiers liés à l\'application sur cet appareil et votre stockage USB, veuillez basculer "Oui" pour BundleClient dans vos paramètres. Nous vous assurons que seuls les fichiers créés par notre application seront accessibles. La protection de la confidentialité des utilisateurs et le maintien des pratiques éthiques sont nos principales priorités.</string>
     <string name="reload">Recharger</string>
+    <string name="location_action_required">Une action manuelle est requise pour autoriser l\'accès aux appareils à
+        proximité. Pour continuer, cliquez sur « Activer » -> « Autorisations » -> « Localisation » -> « Autoriser ».
+    </string>
+    <string name="generic_location_permission">Une autorisation de localisation est nécessaire pour découvrir et se
+        connecter aux appareils pour les échanges de lots.
+    </string>
+    <string name="urgent_location_permission">L\'accès à votre localisation est essentiel au bon fonctionnement des
+        transports. Veuillez nous autoriser l\'accès pour continuer. Merci.
+    </string>
 </resources>

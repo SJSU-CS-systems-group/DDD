@@ -44,7 +44,7 @@ fun WifiDirectScreen(
     onToggle: () -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
-    val numDenied by viewModel.numDenied.collectAsState()
+    val numDenied by viewModel.numDeniedWifi.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
     val validNetwork by viewModel.validNetwork.collectAsState()
@@ -105,7 +105,7 @@ fun WifiDirectScreen(
                         }
                         startActivity(context, intent, null)
                     } else {
-                        viewModel.incrementNumDenied()
+                        viewModel.incrementNumDeniedWifi()
                         nearbyWifiState.launchPermissionRequest()
                     }
                 }

@@ -21,19 +21,31 @@ open class WifiBannerViewModel(
     private val sharedPref by lazy {
         context.getSharedPreferences(NET_DISCDD_BUNDLECLIENT_NUM_DENIED, MODE_PRIVATE)
     }
-    private val _numDenied = MutableStateFlow(0)
-    val numDenied = _numDenied.asStateFlow()
+    private val _numDeniedWifi = MutableStateFlow(0)
+    val numDeniedWifi = _numDeniedWifi.asStateFlow()
+    private val _numDeniedLocation = MutableStateFlow(0)
+    val numDeniedLocation = _numDeniedLocation.asStateFlow()
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
-            _numDenied.value = sharedPref.getInt(NET_DISCDD_BUNDLECLIENT_NUM_DENIED, 0)
+            _numDeniedWifi.value = sharedPref.getInt(NET_DISCDD_BUNDLECLIENT_NUM_DENIED, 0)
+            _numDeniedLocation.value = sharedPref.getInt(NET_DISCDD_BUNDLECLIENT_NUM_DENIED, 0)
+
         }
     }
 
-    fun incrementNumDenied() {
+    fun incrementNumDeniedWifi() {
         viewModelScope.launch(Dispatchers.IO) {
-            val newNumDenied = _numDenied.value + 1
-            _numDenied.value = newNumDenied
+            val newNumDenied = _numDeniedWifi.value + 1
+            _numDeniedWifi.value = newNumDenied
+            sharedPref.edit().putInt(NET_DISCDD_BUNDLECLIENT_NUM_DENIED, newNumDenied).apply()
+        }
+    }
+
+    fun incrementNumDeniedLocation() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val newNumDenied = _numDeniedLocation.value + 1
+            _numDeniedLocation.value = newNumDenied
             sharedPref.edit().putInt(NET_DISCDD_BUNDLECLIENT_NUM_DENIED, newNumDenied).apply()
         }
     }

@@ -45,6 +45,7 @@ import net.discdd.bundletransport.BundleTransportService
 import net.discdd.bundletransport.R
 import net.discdd.bundletransport.utils.generateQRCode
 import net.discdd.bundletransport.viewmodels.WifiDirectViewModel
+import net.discdd.components.LocationPermissionBanner
 import net.discdd.components.UserLogComponent
 import net.discdd.components.WifiPermissionBanner
 import net.discdd.utils.UserLogRepository
@@ -56,9 +57,11 @@ fun WifiDirectScreen(
         wifiViewModel: WifiDirectViewModel = viewModel(),
         serviceReadyFuture: CompletableFuture<BundleTransportService>,
         nearbyWifiState: PermissionState,
+        locationPermissionState: PermissionState,
 ) {
     val state by wifiViewModel.state.collectAsState()
-    val numDenied by wifiViewModel.numDenied.collectAsState()
+    val numDeniedWifi by wifiViewModel.numDeniedWifi.collectAsState()
+    val numDeniedLocation by wifiViewModel.numDeniedLocation.collectAsState()
     var showConnectedPeersDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
@@ -82,16 +85,31 @@ fun WifiDirectScreen(
                 }
 
                 if (!nearbyWifiState.status.isGranted) {
-                    WifiPermissionBanner(numDenied, nearbyWifiState) {
+                    WifiPermissionBanner(numDeniedWifi, nearbyWifiState) {
                         // if user denies access twice, manual access in settings is required
-                        if (numDenied >= 2) {
+                        if (numDeniedWifi >= 2) {
                             val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                                 data = Uri.fromParts("package", context.packageName, null)
                             }
                             startActivity(context, intent, null)
                         } else {
-                            wifiViewModel.incrementNumDenied()
+                            wifiViewModel.incrementNumDeniedWifi()
                             nearbyWifiState.launchPermissionRequest()
+                        }
+                    }
+                }
+
+                if (!locationPermissionState.status.isGranted) {
+                    LocationPermissionBanner(numDeniedLocation, locationPermissionState) {
+                        // if user denies access twice, manual access in settings is required
+                        if (numDeniedLocation >= 2) {
+                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.fromParts("package", context.packageName, null)
+                            }
+                            startActivity(context, intent, null)
+                        } else {
+                            wifiViewModel.incrementNumDeniedLocation()
+                            locationPermissionState.launchPermissionRequest()
                         }
                     }
                 }
@@ -208,9 +226,11 @@ fun WifiStateObserver(
 @Composable
 fun WifiDirectScreenPreview() {
     val nearbyWifiState = rememberPermissionState(Manifest.permission.NEARBY_WIFI_DEVICES)
+    val locationPermissionState = rememberPermissionState(Manifest.permission.NEARBY_WIFI_DEVICES)
     WifiDirectScreen(
             serviceReadyFuture = CompletableFuture(),
-            nearbyWifiState = nearbyWifiState
+            nearbyWifiState = rememberPermissionState(Manifest.permission.NEARBY_WIFI_DEVICES),
+            locationPermissionState = locationPermissionState
     )
 }
 

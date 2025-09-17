@@ -42,11 +42,11 @@ fun LocationPermissionBanner(
     onEnableClick: () -> Unit,
 ) {
     val textToShow = if (locationPermissionState.status.shouldShowRationale) {
-        stringResource(R.string.urgent_ask_permission)
+        stringResource(R.string.urgent_location_permission)
     } else if (numDenied < 2) {
-        stringResource(R.string.generic_ask_permission)
+        stringResource(R.string.generic_location_permission)
     } else {
-        stringResource(R.string.manual_action_required)
+        stringResource(R.string.location_action_required)
     }
 
     Surface(
@@ -71,7 +71,7 @@ fun LocationPermissionBanner(
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Text(
-                    text = "Enable WiFi Device Connection",
+                    text = "Enable Location Permission",
                     color = contentColor,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Medium
@@ -111,6 +111,6 @@ fun LocationPermissionBanner(
 @Preview(showBackground = true)
 @Composable
 fun LocationPermissionBannerPreview() {
-    val fooState = rememberPermissionState(Manifest.permission.NEARBY_WIFI_DEVICES)
-    WifiPermissionBanner(-1, fooState) {}
+    val fooState = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
+    LocationPermissionBanner(-1, fooState) {}
 }

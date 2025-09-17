@@ -8,4 +8,13 @@
     <string name="to_settings">A la configuración</string>
     <string name="to_settings_text">Para habilitar nuestra aplicación para administrar archivos relacionados con la aplicación en este dispositivo y su almacenamiento USB, alterne "Sí" para BundLeclient en su configuración. Le aseguramos que solo se accederán a los archivos creados por nuestra aplicación. Proteger la privacidad del usuario y mantener las prácticas éticas son nuestras principales prioridades.</string>
     <string name="reload">Recargar</string>
+    <string name="location_action_required">Se requiere una acción manual para otorgar acceso a los dispositivos
+        cercanos. Para continuar, haga clic en \"Habilitar\" -> \"Permisos\" -> \"Ubicación\" -> \"Permitir\"
+    </string>
+    <string name="generic_location_permission">Se necesita permiso de ubicación para crear/conectarse a grupos P2P WiFi
+        y para descubrir dispositivos para intercambios de paquetes.
+    </string>
+    <string name="urgent_location_permission">Acceder a la ubicación es importante para el funcionamiento del
+        transporte. Por favor, concédenos acceso para continuar. Gracias :D
+    </string>
 </resources>
