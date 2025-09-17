@@ -16,6 +16,7 @@ import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+
 // APK URLs
 const val mailApkUrl =
         "https://github.com/SJSU-CS-systems-group/DDD-thunderbird-android/releases/latest/download/ddd-mail.apk"
@@ -119,8 +120,8 @@ class AppShareViewModel(
         }
         val packageManager = myApplication.packageManager
         val packageInfo = packageManager.getPackageArchiveInfo(
-            apkPath.toString(),
-            PackageManager.GET_SIGNING_CERTIFICATES
+                apkPath.toString(),
+                PackageManager.GET_SIGNING_CERTIFICATES
         )
 
         //null is when no signature found
