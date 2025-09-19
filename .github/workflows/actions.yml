@@ -58,7 +58,7 @@ jobs:
             </servers>
           </settings>" > ~/.m2/settings.xml
       - name: Maven install
-        run: mvn -ntp install
+        run: mvn -U -ntp install
 
       - name: Gradle release build
         run: (cd AndroidApps; ./gradlew assembleRelease --parallel)
