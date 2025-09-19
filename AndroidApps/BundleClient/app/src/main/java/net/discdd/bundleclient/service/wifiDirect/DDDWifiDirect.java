@@ -412,7 +412,6 @@ public class DDDWifiDirect implements DDDWifi {
         // we are going to watch for discovery if we don't already see the device in the list of peers.
         var discoveryCF = new AwaitingDiscovery(dev);
         awaitDiscovery(discoveryCF);
-        awaitingDiscovery.set(discoveryCF);
         try {
             // give a bit of time to discover the device we want
             discoveryCF.get(5, TimeUnit.SECONDS);
