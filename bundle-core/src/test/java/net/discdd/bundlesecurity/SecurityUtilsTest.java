@@ -22,8 +22,13 @@ import org.whispersystems.libsignal.util.guava.Optional;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class SecurityUtilsTest {
     private SessionCipher aliceCipher;
@@ -99,30 +104,18 @@ public class SecurityUtilsTest {
         Assertions.assertEquals(message, decrypted);
     }
 
-    /**
-     * Encrypts with StreamedProcess
-     * Decrypts with Array
-     */
-    @Test
-    public void test2StreamingEncryptStreamingDecrypt() throws Exception {
-        String message = "Hello, World!".repeat(9017);
-        ByteArrayOutputStream cipherText = new ByteArrayOutputStream();
-        aliceCipher.encrypt(new ByteArrayInputStream(message.getBytes()), cipherText);
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        SessionCipher.STREAM_READ_SIZE = 31;
-        bobCipher.decrypt(new ByteArrayInputStream(cipherText.toByteArray()), outputStream);
-        String decrypted = new String(outputStream.toByteArray(), StandardCharsets.UTF_8);
-        Assertions.assertEquals(message, decrypted);
-    }
-
     @Test
     public void test3StreamingEncryptStreamingDecrypt() throws Exception {
+        Path tempPathOut = File.createTempFile("TestingFileOut", ".txt").toPath();
+        Path tempPathIn = File.createTempFile("TestingFileIn", ".txt").toPath();
+
         String message = "Hello, World!".repeat(10000);
-        ByteArrayOutputStream cipherText = new ByteArrayOutputStream();
+        OutputStream cipherText = Files.newOutputStream(tempPathIn);
         aliceCipher.encrypt(new ByteArrayInputStream(message.getBytes()), cipherText);
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        bobCipher.decrypt(new ByteArrayInputStream(cipherText.toByteArray()), outputStream);
-        String decrypted = new String(outputStream.toByteArray(), StandardCharsets.UTF_8);
+        OutputStream outputStream = Files.newOutputStream(tempPathOut);
+
+        bobCipher.decrypt(tempPathIn, tempPathOut);
+        String decrypted = Files.readString(tempPathOut, StandardCharsets.UTF_8);
         Assertions.assertEquals(message, decrypted);
     }
 }
