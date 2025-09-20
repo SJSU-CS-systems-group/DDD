@@ -25,12 +25,12 @@ import net.discdd.bundleclient.service.DDDWifi;
 import net.discdd.bundleclient.service.DDDWifiConnection;
 import net.discdd.bundleclient.service.DDDWifiDevice;
 import net.discdd.bundleclient.service.DDDWifiEventType;
-import net.discdd.utils.UserLogRepository;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -60,7 +60,7 @@ public class DDDWifiDirect implements DDDWifi {
     private boolean discoveryActive = false;
     private WifiP2pGroup group;
     private InetAddress ownerAddress;
-    private List<DDDWifiDevice> peers = new ArrayList<>();
+    private List<DDDWifiDevice> peers = new CopyOnWriteArrayList<>();
     final private DDDWifiDirectBroadcastReceiver broadcastReceiver = new DDDWifiDirectBroadcastReceiver();
     private final MutableLiveData<DDDWifiEventType> eventsLiveData = new MutableLiveData<>();
     private String deviceName;
