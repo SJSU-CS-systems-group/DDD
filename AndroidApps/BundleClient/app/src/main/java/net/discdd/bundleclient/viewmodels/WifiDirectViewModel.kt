@@ -54,6 +54,8 @@ class WifiDirectViewModel(
 
     private val _state = MutableStateFlow(WifiDirectState())
     val state = _state.asStateFlow()
+    private val _validNetwork = MutableStateFlow(true)
+    val validNetwork = _validNetwork.asStateFlow()
 
     private val _backgroundExchange = MutableStateFlow(0)
     val backgroundExchange = _backgroundExchange.asStateFlow()
@@ -181,6 +183,9 @@ class WifiDirectViewModel(
         }
     }
 
+    fun setValidNetwork(valid: Boolean) {
+        _validNetwork.value = valid
+    }
 
     fun discoverPeers() {
         viewModelScope.launch {

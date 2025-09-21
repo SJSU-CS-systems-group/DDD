@@ -11,7 +11,7 @@ import java.util.logging.Level
 object UserLogRepository {
     const val MAX_LOG_ENTRIES = 20
 
-    enum class UserLogType { WIFI, EXCHANGE }
+    enum class UserLogType { WIFI, EXCHANGE, USB }
     data class UserLogEntry(val type: UserLogType, val time: Long, val message: String, val level: Level = Level.INFO) {}
 
     private val repositories = mutableMapOf<UserLogType, MutableList<UserLogEntry>>()

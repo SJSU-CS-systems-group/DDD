@@ -39,11 +39,17 @@ class AppShareViewModel(
     val mailApkVersion = _mailApkVersion.asStateFlow()
     private var _clientApkVersion = MutableStateFlow<String?>(null)
     val clientApkVersion = _clientApkVersion.asStateFlow()
+    private var _clientApkSignature = MutableStateFlow<Boolean?>(null)
+    val clientApkSignature = _clientApkSignature.asStateFlow()
+    private var _mailApkSignature = MutableStateFlow<Boolean?>(null)
+    val mailApkSignature = _mailApkSignature.asStateFlow()
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
             _mailApkVersion.value = getApkVersionInfo(mailApkFile)
+            _mailApkSignature.value = checkApkSignature(mailApkFile)
             _clientApkVersion.value = getApkVersionInfo(clientApkFile)
+            _clientApkSignature.value = checkApkSignature(clientApkFile)
         }
     }
 
@@ -106,6 +112,25 @@ class AppShareViewModel(
         )
 
         return "${apkPath.fileName} ${packageInfo?.versionName ?: "Error"}"
+    }
+
+    private fun checkApkSignature(apkPath: Path): Boolean? {
+        if (!Files.exists(apkPath)) {
+            return null
+        }
+        val packageManager = myApplication.packageManager
+        val packageInfo = packageManager.getPackageArchiveInfo(
+                apkPath.toString(),
+                PackageManager.GET_SIGNING_CERTIFICATES
+        )
+
+        //null is when no signature found
+        if (packageInfo == null) return false
+
+        //false is when corrupted signature found
+        //true is when signature found
+        val signingInfo = packageInfo.signingInfo
+        return signingInfo != null
     }
 
     fun downloadApps() {

@@ -1,6 +1,6 @@
 package net.discdd.bundleclient.screens
 
-import android.app.Application
+
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,11 +14,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import net.discdd.UsbConnectionManager
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.viewmodels.ClientUsbViewModel
+import net.discdd.components.UserLogComponent
+import net.discdd.utils.UserLogRepository
 
 @Composable
 fun ClientUsbComponent(
@@ -70,15 +71,5 @@ fun ClientUsbComponent(
         )
     }
 
-    // show message
-    usbState.showMessage?.let { msg ->
-        Spacer(modifier = Modifier.height(24.dp))
-        Text(
-            text = msg,
-            color = Color(usbState.messageColor),
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
+    UserLogComponent(UserLogRepository.UserLogType.USB)
 }
