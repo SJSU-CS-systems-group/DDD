@@ -310,9 +310,9 @@ public class ServerSecurity {
         var clientId = SecurityUtils.getClientID(bundlePath);
         SecurityUtils.ClientSession client = getClientSession(clientId, bundlePath);
 
-        if(client.cipherSession.decrypt(payloadPath.resolve(payloadName), decryptedFile)){
+        if (client.cipherSession.decrypt(payloadPath.resolve(payloadName), decryptedFile)) {
             updateSessionRecord(client);
-        }else{
+        } else {
             throw new GeneralSecurityException("Could not decrypt the file");
         }
 

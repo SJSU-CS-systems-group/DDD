@@ -243,7 +243,7 @@ public class ClientSecurity {
 
         String payloadName = SecurityUtils.PAYLOAD_FILENAME;
 
-        if(cipherSession.decrypt(payloadPath.resolve(payloadName), decryptedFile)){
+        if (cipherSession.decrypt(payloadPath.resolve(payloadName), decryptedFile)) {
             updateSessionRecord();
         }
         logger.log(FINER, "Decrypted Size = %d\n", Files.size(decryptedPath));
