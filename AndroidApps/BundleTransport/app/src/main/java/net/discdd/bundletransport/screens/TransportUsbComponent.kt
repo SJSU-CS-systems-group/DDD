@@ -19,6 +19,8 @@ import androidx.compose.ui.unit.dp
 import net.discdd.UsbConnectionManager
 import net.discdd.bundletransport.R
 import net.discdd.bundletransport.viewmodels.TransportUsbViewModel
+import net.discdd.components.UserLogComponent
+import net.discdd.utils.UserLogRepository
 
 @Composable
 fun TransportUsbComponent(
@@ -75,17 +77,7 @@ fun TransportUsbComponent(
         )
     }
 
-    // show message
-    usbState.showMessage?.let { msg ->
-        Spacer(modifier = Modifier.height(24.dp))
-        Text(
-                text = msg,
-                color = Color(usbState.messageColor),
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-        )
-    }
+    UserLogComponent(UserLogRepository.UserLogType.USB)
 }
 
 @Preview(showBackground = true)

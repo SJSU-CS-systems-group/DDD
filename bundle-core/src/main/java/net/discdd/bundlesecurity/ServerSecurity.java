@@ -310,12 +310,11 @@ public class ServerSecurity {
         var clientId = SecurityUtils.getClientID(bundlePath);
         SecurityUtils.ClientSession client = getClientSession(clientId, bundlePath);
 
-        var encryptedData = Files.newInputStream(payloadPath.resolve(payloadName));
-        var output = Files.newOutputStream(decryptedFile, StandardOpenOption.APPEND, StandardOpenOption.CREATE);
-
-        client.cipherSession.decrypt(encryptedData, output);
-
-        updateSessionRecord(client);
+        if (client.cipherSession.decrypt(payloadPath.resolve(payloadName), decryptedFile)) {
+            updateSessionRecord(client);
+        } else {
+            throw new GeneralSecurityException("Could not decrypt the file");
+        }
 
         logger.log(FINE, "[ServerSecurity]:Decrypted Size = %d", Files.size(decryptedFile));
 

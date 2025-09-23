@@ -11,6 +11,9 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
 import android.net.ConnectivityManager;
+import android.net.LinkAddress;
+import android.net.LinkProperties;
+import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.Uri;
 import android.os.Binder;
@@ -24,6 +27,7 @@ import androidx.annotation.RequiresPermission;
 import androidx.annotation.StringRes;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
+import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import net.discdd.bundleclient.BuildConfig;
@@ -43,6 +47,8 @@ import net.discdd.utils.UserLogRepository;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.Inet4Address;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -80,9 +86,11 @@ public class BundleClientService extends Service {
     // this is used by processIncomingADU to track which appIds have been inserted
     final private Set<String> insertedAppIds = Collections.synchronizedSet(new HashSet<>());
     ConnectivityManager connectivityManager;
+    ConnectivityManager.NetworkCallback networkCallback;
     private DDDWifi dddWifi;
     private ClientBundleTransmission bundleTransmission;
     final private Observer<? super DDDWifiEventType> liveDataObserver = this::broadcastWifiEvent;
+    private MutableLiveData<DDDWifiEventType> eventsLiveData;
 
     public BundleClientService() {
         super();
@@ -124,11 +132,54 @@ public class BundleClientService extends Service {
         processBackgroundExchangeSetting();
         startForeground();
         connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+
+        networkCallback = new ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onAvailable(Network network) {
+                checkValidNetwork();
+            }
+
+            @Override
+            public void onLost(Network network) {
+                eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DISCONNECTED);
+            }
+        };
+        connectivityManager.registerDefaultNetworkCallback(networkCallback);
+        checkValidNetwork();
         return START_STICKY;
+    }
+
+    public boolean isNetworkValid() {
+        LinkProperties linkProperties = connectivityManager.getLinkProperties(connectivityManager.getActiveNetwork());
+        if (linkProperties != null && linkProperties.getLinkAddresses() != null) {
+            for (LinkAddress address : linkProperties.getLinkAddresses()) {
+                InetAddress inet = address.getAddress();
+                if (inet instanceof Inet4Address) {
+                    String ipAddress = inet.getHostAddress();
+                    // checks if we have a 192.168.49.x addresses, which are used by wifi direct
+                    if (ipAddress != null && ipAddress.startsWith("192.168.49.")) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    private void checkValidNetwork() {
+        if (isNetworkValid()) {
+            eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_CONNECTED);
+        } else {
+            eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DISCONNECTED);
+        }
     }
 
     public DDDWifi getDddWifi() {
         return dddWifi;
+    }
+
+    public ConnectivityManager.NetworkCallback getNetworkCallback() {
+        return networkCallback;
     }
 
     private void processBackgroundExchangeSetting() {
@@ -178,6 +229,7 @@ public class BundleClientService extends Service {
             var dddWifiDirect = new DDDWifiDirect(this);
             this.dddWifi = dddWifiDirect;
             this.dddWifi.getEventLiveData().observeForever(liveDataObserver);
+            eventsLiveData = (MutableLiveData<DDDWifiEventType>) dddWifiDirect.getEventLiveData();
             try {
                 dddWifiDirect.initialize();
             } catch (Exception e) {
