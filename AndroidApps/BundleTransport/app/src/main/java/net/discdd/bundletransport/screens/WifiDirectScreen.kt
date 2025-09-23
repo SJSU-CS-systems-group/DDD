@@ -55,7 +55,6 @@ fun WifiDirectScreen(
     wifiViewModel: WifiDirectViewModel = viewModel(),
     serviceReadyFuture: CompletableFuture<BundleTransportService>,
     nearbyWifiState: PermissionState,
-    locationPermissionState: PermissionState,
 ) {
     val state by wifiViewModel.state.collectAsState()
     val numDenied by wifiViewModel.numDenied.collectAsState()
@@ -183,11 +182,9 @@ fun WifiStateObserver(
 @Composable
 fun WifiDirectScreenPreview() {
     val nearbyWifiState = rememberPermissionState(Manifest.permission.NEARBY_WIFI_DEVICES)
-    val locationPermissionState = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
     WifiDirectScreen(
             serviceReadyFuture = CompletableFuture(),
             nearbyWifiState = nearbyWifiState,
-        locationPermissionState = locationPermissionState
     )
 }
 
