@@ -40,7 +40,7 @@ import static java.util.logging.Level.WARNING;
 
 public class DDDWifiServer {
     private static final Logger logger = Logger.getLogger(DDDWifiServer.class.getName());
-    public static final String DDD_NETWORK_NAME = "DIRECT-ddd_transport";
+    public static final String DDD_NETWORK_NAME = "DIRECT-ddd_";
     private final IntentFilter intentFilter = new IntentFilter();
     private final BundleTransportService bts;
     private WifiP2pManager wifiP2pManager;
@@ -168,7 +168,7 @@ public class DDDWifiServer {
 
     @SuppressLint("MissingPermission")
     public void createGroup() {
-        if (wifiGroup != null && wifiGroup.getNetworkName().startsWith(DDD_NETWORK_NAME)) return;
+        if (wifiGroup != null && wifiGroup.getNetworkName().startsWith(DDD_NETWORK_NAME + bts.transportID)) return;
         if (!hasPermission()) {
             bts.logWifi(SEVERE, R.string.wifi_direct_no_permission);
             return;
@@ -184,7 +184,7 @@ public class DDDWifiServer {
     private CompletableActionListener innerCreateGroupRunnable() {
         var cal = new CompletableActionListener();
         WifiP2pConfig config = new WifiP2pConfig.Builder()
-                .setNetworkName(DDD_NETWORK_NAME)
+                .setNetworkName(DDD_NETWORK_NAME + bts.transportID)
                 .setPassphrase("ConnectToMe")
                 .setGroupOperatingBand(WifiP2pConfig.GROUP_OWNER_BAND_2GHZ)
                 .enablePersistentMode(true)

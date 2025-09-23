@@ -90,7 +90,7 @@ class WifiDirectViewModel(
             btService?.dddWifiServer?.networkInfo?.let { ni ->
                 _state.update {
                     it.copy(
-                            wifiInfo = "SSID: ${ni.ssid}\nPassword: ${ni.password}\nAddress: ${ni.inetAddress}\nConnected devices: ${ni.clientList.size}",
+                            wifiInfo = "SSID: ${ni.ssid.substring(0, 15)}\n${ni.ssid.substring(15)}\nPassword: ${ni.password}\nAddress: ${ni.inetAddress}\nConnected devices: ${ni.clientList.size}",
                             wifiConnectURL = "WIFI:T:WPA;S:${ni.ssid};P:${ni.password};;")
                 }
             } ?: _state.update { it.copy(wifiInfo = "WiFi not available", wifiConnectURL = null) }
