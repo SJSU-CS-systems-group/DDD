@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name= "permissions_array">
+        <item>android.permission.ACCESS_NETWORK_STATE</item>
         <item>android.permission.ACCESS_WIFI_STATE</item>
         <item>android.permission.CHANGE_WIFI_STATE</item>
         <item>android.permission.INTERNET</item>
