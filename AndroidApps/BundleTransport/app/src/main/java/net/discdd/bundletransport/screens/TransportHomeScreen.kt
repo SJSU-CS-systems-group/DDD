@@ -96,7 +96,6 @@ fun TransportHomeScreen(
                             WifiDirectScreen(
                                 serviceReadyFuture = TransportServiceManager.serviceReady,
                                 nearbyWifiState = nearbyWifiState,
-                                locationPermissionState = locationPermissionState
                             )
                         }
                 ),
