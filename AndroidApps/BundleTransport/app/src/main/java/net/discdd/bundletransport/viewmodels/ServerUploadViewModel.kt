@@ -33,9 +33,7 @@ class ServerUploadViewModel(
     val transportID: String
         get() {
             val service = TransportServiceManager.getService()
-            return service?.grpcKeys?.grpcKeyPair?.public?.encoded?.let {
-                Base64.getEncoder().encodeToString(it).slice(4..21)
-            } ?: "Unknown"
+            return service?.transportID ?: "Unknown"
         }
     private val context get() = getApplication<Application>()
     private val sharedPref by lazy { context.getSharedPreferences("server_endpoint", MODE_PRIVATE) }
