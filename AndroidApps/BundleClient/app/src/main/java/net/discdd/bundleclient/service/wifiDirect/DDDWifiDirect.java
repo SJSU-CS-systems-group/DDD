@@ -86,32 +86,6 @@ public class DDDWifiDirect implements DDDWifi {
                         var wifiState = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1);
                         processStateChange(wifiState);
                     }
-                    case WIFI_P2P_PEERS_CHANGED_ACTION -> {
-                        /*
-                        // Broadcast intent action indicating that the available peer list has changed.
-                        // This can be sent as a result of peers being found, lost or updated.
-                        try {
-                            var newPeerList = intent.getParcelableExtra(EXTRA_P2P_DEVICE_LIST, WifiP2pDeviceList.class);
-                            if (newPeerList != null) {
-                                peers = newPeerList.getDeviceList()
-                                        .stream()
-                                        // this filter should remove peers that are not transports and some (but not
-                                        // all) wifi direct devices
-                                        .filter(d -> d.isGroupOwner() && !d.deviceName.startsWith("DIRECT-"))
-                                        .map(DDDWifiDirectDevice::new)
-                                        .collect(Collectors.toList());
-                                var waitingForPeer = awaitingDiscovery.get();
-                                if (waitingForPeer != null && peers.contains(waitingForPeer.dev)) {
-                                    waitingForPeer.complete(null);
-                                    awaitingDiscovery.compareAndSet(waitingForPeer, null);
-                                }
-                            }
-                            eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_PEERS_CHANGED);
-                        } catch (SecurityException e) {
-                            logger.log(SEVERE, "SecurityException in requestPeers", e);
-                        }
-*/
-                    }
                     case WIFI_P2P_CONNECTION_CHANGED_ACTION -> {
                         //         Broadcast intent action indicating that the state of Wi-Fi p2p
                         //         connectivity has changed.
@@ -260,7 +234,6 @@ public class DDDWifiDirect implements DDDWifi {
         var cf = new CompletableFuture<Boolean>();
         try {
             peers.clear();
-            //wifiP2pManager.discoverPeers(wifiChannel, new DDDActionListener(cf));
             wifiP2pManager.discoverServices(wifiChannel, new DDDActionListener(cf));
         } catch (SecurityException e) {
             cf.completeExceptionally(e);

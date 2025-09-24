@@ -184,7 +184,7 @@ fun WifiDirectScreenPreview() {
     val nearbyWifiState = rememberPermissionState(Manifest.permission.NEARBY_WIFI_DEVICES)
     WifiDirectScreen(
             serviceReadyFuture = CompletableFuture(),
-            nearbyWifiState = nearbyWifiState,
+            nearbyWifiState = nearbyWifiState
     )
 }
 
