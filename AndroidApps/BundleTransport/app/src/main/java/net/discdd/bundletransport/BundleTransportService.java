@@ -14,6 +14,7 @@ import android.net.TrafficStats;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.StrictMode;
+import android.util.Base64;
 import androidx.annotation.StringRes;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
@@ -65,6 +66,7 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     private final IBinder binder = new TransportWifiDirectServiceBinder();
     private final RpcServer grpcServer = new RpcServer(this);
     public GrpcSecurityKey grpcKeys;
+    public String transportID;
     String host;
     int port;
     ConnectivityManager connectivityManager;
@@ -155,6 +157,9 @@ public class BundleTransportService extends Service implements BundleExchangeSer
                      CertificateException | OperatorCreationException | IOException e) {
                 logExchange(SEVERE, e, R.string.failed_to_initialize_grpcsecurity_s, e.getMessage());
             }
+            transportID = Base64.encodeToString(grpcKeys.grpcKeyPair.getPublic().getEncoded(), Base64.DEFAULT);
+            transportID = transportID.substring(transportID.length() - 20, transportID.length() - 4);
+
             connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
             // BundleTransportService doesn't use LogFragment directly, but we do want our
             // logs to go to its logger
