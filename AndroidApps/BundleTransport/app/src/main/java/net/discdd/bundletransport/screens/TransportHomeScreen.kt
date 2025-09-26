@@ -67,8 +67,11 @@ fun TransportHomeScreen(
     val nearbyWifiState = rememberPermissionState(
             Manifest.permission.NEARBY_WIFI_DEVICES
     )
+    val locationPermissionState = rememberPermissionState(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+      )
     LaunchedEffect(nearbyWifiState.status) {
-        if (nearbyWifiState.status.isGranted) {
+        if (nearbyWifiState.status.isGranted && locationPermissionState.status.isGranted) {
             TransportServiceManager.getService()?.wifiPermissionGranted()
         }
     }
@@ -94,8 +97,8 @@ fun TransportHomeScreen(
                         title = context.getString(R.string.local_wifi),
                         screen = {
                             WifiDirectScreen(
-                                    serviceReadyFuture = TransportServiceManager.serviceReady,
-                                    nearbyWifiState = nearbyWifiState
+                                serviceReadyFuture = TransportServiceManager.serviceReady,
+                                nearbyWifiState = nearbyWifiState
                             )
                         }
                 ),

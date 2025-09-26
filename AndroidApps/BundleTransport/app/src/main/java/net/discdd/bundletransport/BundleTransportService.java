@@ -202,7 +202,12 @@ public class BundleTransportService extends Service implements BundleExchangeSer
             logger.log(SEVERE, "Failed to start foreground service", e);
         }
         dddWifiServer = new DDDWifiServer(this);
-        dddWifiServer.initialize();
+        try {
+            dddWifiServer.initialize();
+        } catch (Exception e) {
+            logWifi(SEVERE, e, R.string.could_not_initialize_wifi_direct_s, e.getMessage());
+            dddWifiServer = null;
+        }
         startHttpServer();
         startRpcServer();
     }
@@ -276,6 +281,10 @@ public class BundleTransportService extends Service implements BundleExchangeSer
 
     public void wifiPermissionGranted() {
         dddWifiServer.wifiPermissionGranted();
+    }
+
+    public String getBundleServerURL() {
+        return host + ":" + port;
     }
 
     public class TransportWifiDirectServiceBinder extends Binder {
