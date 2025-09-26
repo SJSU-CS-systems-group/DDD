@@ -69,7 +69,8 @@ fun AppShareScreen(
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.padding(bottom = 16.dp)
                     )
-                } else if (clientApkSignature!! && mailApkSignature!!) {
+                // } else if (clientApkSignature!! && mailApkSignature!!) {
+                } else {
                     Text(
                             text = "QR code to connect your phone to this transport",
                             style = MaterialTheme.typography.titleMedium,
