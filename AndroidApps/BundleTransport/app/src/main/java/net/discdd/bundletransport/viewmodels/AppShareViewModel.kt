@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import net.discdd.bundletransport.BundleTransportActivity
 import net.discdd.bundletransport.R
 import java.io.File
 import java.io.IOException
@@ -16,6 +17,7 @@ import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.util.logging.Logger
 
 // APK URLs
 const val mailApkUrl =
@@ -25,6 +27,7 @@ const val clientApkUrl = "https://github.com/SJSU-CS-systems-group/DDD/releases/
 class AppShareViewModel(
         val myApplication: Application
 ) : AndroidViewModel(myApplication) {
+    private val logger = Logger.getLogger(AppShareViewModel::class.java.name)
     private val mailApkFile by lazy {
         File(myApplication.getExternalFilesDir(null), "ddd-mail.apk").toPath()
     }
@@ -39,9 +42,9 @@ class AppShareViewModel(
     val mailApkVersion = _mailApkVersion.asStateFlow()
     private var _clientApkVersion = MutableStateFlow<String?>(null)
     val clientApkVersion = _clientApkVersion.asStateFlow()
-    private var _clientApkSignature = MutableStateFlow<Boolean?>(null)
+    private var _clientApkSignature = MutableStateFlow<Boolean?>(false)
     val clientApkSignature = _clientApkSignature.asStateFlow()
-    private var _mailApkSignature = MutableStateFlow<Boolean?>(null)
+    private var _mailApkSignature = MutableStateFlow<Boolean?>(false)
     val mailApkSignature = _mailApkSignature.asStateFlow()
 
     init {
@@ -103,9 +106,12 @@ class AppShareViewModel(
     }
 
     private fun getApkVersionInfo(apkPath: Path): String? {
+        logger.info("getApkVersionInfo was called")
         if (!Files.exists(apkPath)) {
+            logger.warning("An apk doesn't exist for getApkVersionInfo to check!")
             return null
         }
+        logger.warning("An apk DOES exist for getApkVersionInfo to check!")
         val packageManager = myApplication.packageManager
         val packageInfo = packageManager.getPackageArchiveInfo(
                 apkPath.toAbsolutePath().toString(), PackageManager.GET_ACTIVITIES
@@ -116,20 +122,22 @@ class AppShareViewModel(
 
     private fun checkApkSignature(apkPath: Path): Boolean? {
         if (!Files.exists(apkPath)) {
+            logger.warning("checkApkSignature method should've never been called, an apk doesn't exist to be checked!")
             return null
         }
         val packageManager = myApplication.packageManager
         val packageInfo = packageManager.getPackageArchiveInfo(
-                apkPath.toString(),
+                apkPath.toAbsolutePath().toString(),
                 PackageManager.GET_SIGNING_CERTIFICATES
         )
 
         //null is when no signature found
         if (packageInfo == null) return false
-
+        logger.info("signature was found")
         //false is when corrupted signature found
         //true is when signature found
         val signingInfo = packageInfo.signingInfo
+        logger.info("signingInfo: ${signingInfo}")
         return signingInfo != null
     }
 
