@@ -46,7 +46,7 @@ fun AppShareScreen(
     val mailApkSignature by appShareViewModel.mailApkSignature.collectAsState()
     val clientApkVersion by appShareViewModel.clientApkVersion.collectAsState()
     val clientApkSignature by appShareViewModel.clientApkSignature.collectAsState()
-    val appsAvailable = remember { mailApkVersion != null || clientApkVersion != null || mailApkSignature == true || clientApkSignature == true }
+    val appsAvailable = remember { mailApkVersion != null || clientApkVersion != null || mailApkSignature || clientApkSignature }
 
     Surface(color = MaterialTheme.colorScheme.background) {
         Column(

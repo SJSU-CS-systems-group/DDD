@@ -42,9 +42,9 @@ class AppShareViewModel(
     val mailApkVersion = _mailApkVersion.asStateFlow()
     private var _clientApkVersion = MutableStateFlow<String?>(null)
     val clientApkVersion = _clientApkVersion.asStateFlow()
-    private var _clientApkSignature = MutableStateFlow<Boolean?>(false)
+    private var _clientApkSignature = MutableStateFlow<Boolean>(false)
     val clientApkSignature = _clientApkSignature.asStateFlow()
-    private var _mailApkSignature = MutableStateFlow<Boolean?>(false)
+    private var _mailApkSignature = MutableStateFlow<Boolean>(false)
     val mailApkSignature = _mailApkSignature.asStateFlow()
 
     init {
@@ -106,9 +106,8 @@ class AppShareViewModel(
     }
 
     private fun getApkVersionInfo(apkPath: Path): String? {
-        logger.info("getApkVersionInfo was called")
         if (!Files.exists(apkPath)) {
-            logger.warning("An apk doesn't exist for getApkVersionInfo to check!")
+            logger.warning("getApkVersionInfo method should've never been called, an apk doesn't exist to be checked!")
             return null
         }
         logger.warning("An apk DOES exist for getApkVersionInfo to check!")
@@ -120,10 +119,10 @@ class AppShareViewModel(
         return "${apkPath.fileName} ${packageInfo?.versionName ?: "Error"}"
     }
 
-    private fun checkApkSignature(apkPath: Path): Boolean? {
+    private fun checkApkSignature(apkPath: Path): Boolean {
         if (!Files.exists(apkPath)) {
             logger.warning("checkApkSignature method should've never been called, an apk doesn't exist to be checked!")
-            return null
+            return false
         }
         val packageManager = myApplication.packageManager
         val packageInfo = packageManager.getPackageArchiveInfo(
@@ -131,11 +130,7 @@ class AppShareViewModel(
                 PackageManager.GET_SIGNING_CERTIFICATES
         )
 
-        //null is when no signature found
         if (packageInfo == null) return false
-        logger.info("signature was found")
-        //false is when corrupted signature found
-        //true is when signature found
         val signingInfo = packageInfo.signingInfo
         logger.info("signingInfo: ${signingInfo}")
         return signingInfo != null
