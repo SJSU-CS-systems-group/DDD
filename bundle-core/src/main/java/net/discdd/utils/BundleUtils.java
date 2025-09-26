@@ -52,8 +52,8 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 import static net.discdd.bundlesecurity.SecurityUtils.PAYLOAD_DIR;
 import static net.discdd.bundlesecurity.SecurityUtils.PAYLOAD_FILENAME;
-import static net.discdd.bundlesecurity.SecurityUtils.createEncodedPublicKeyBytes;
-import static net.discdd.bundlesecurity.SecurityUtils.createEncryptedEncodedPublicKeyBytes;
+import static net.discdd.bundlesecurity.DDDPEMEncoder.createEncodedPublicKeyBytes;
+import static net.discdd.bundlesecurity.DDDPEMEncoder.createEncryptedEncodedPublicKeyBytes;
 
 public class BundleUtils {
     private static final Logger logger = Logger.getLogger(BundleUtils.class.getName());
