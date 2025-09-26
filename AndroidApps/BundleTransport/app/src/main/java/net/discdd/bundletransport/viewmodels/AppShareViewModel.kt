@@ -8,7 +8,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import net.discdd.bundletransport.BundleTransportActivity
 import net.discdd.bundletransport.R
 import java.io.File
 import java.io.IOException
