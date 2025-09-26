@@ -174,7 +174,7 @@ public class DDDWifiServer {
             return;
         }
         if (wifiGroup != null) {
-            removeGroup().thenAccept(x -> { innerCreateGroupRunnable(); });
+            removeGroup().thenAccept(x -> {innerCreateGroupRunnable();});
         } else {
             innerCreateGroupRunnable();
         }
@@ -183,8 +183,7 @@ public class DDDWifiServer {
     @SuppressLint("MissingPermission")
     private CompletableActionListener innerCreateGroupRunnable() {
         var cal = new CompletableActionListener();
-        WifiP2pConfig config = new WifiP2pConfig.Builder()
-                .setNetworkName(DDD_NETWORK_NAME + bts.transportID)
+        WifiP2pConfig config = new WifiP2pConfig.Builder().setNetworkName(DDD_NETWORK_NAME + bts.transportID)
                 .setPassphrase("ConnectToMe")
                 .setGroupOperatingBand(WifiP2pConfig.GROUP_OWNER_BAND_2GHZ)
                 .enablePersistentMode(true)
@@ -202,16 +201,14 @@ public class DDDWifiServer {
             }
             return null;
         });
-        var txt = Map.of(
-                "ddd", bts.getBundleServerURL()        // you can filter on this
+        var txt = Map.of("ddd", bts.getBundleServerURL()        // you can filter on this
         );
 
         // DNS-SD service info
         var serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(
                 /* instanceName = */ "DDD",
                 /* serviceType  = */ "_ddd._tcp",
-                /* txtRecord    = */ txt
-        );
+                /* txtRecord    = */ txt);
 
         this.wifiP2pManager.addLocalService(channel, serviceInfo, new WifiP2pManager.ActionListener() {
             @Override
@@ -225,6 +222,7 @@ public class DDDWifiServer {
         });
         return cal;
     }
+
     /**
      * Leave the current WifiDirect Group this device is connected to
      *

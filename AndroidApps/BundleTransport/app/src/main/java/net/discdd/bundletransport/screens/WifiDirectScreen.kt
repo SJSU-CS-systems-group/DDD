@@ -52,9 +52,9 @@ import java.util.concurrent.CompletableFuture
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun WifiDirectScreen(
-    wifiViewModel: WifiDirectViewModel = viewModel(),
-    serviceReadyFuture: CompletableFuture<BundleTransportService>,
-    nearbyWifiState: PermissionState,
+        wifiViewModel: WifiDirectViewModel = viewModel(),
+        serviceReadyFuture: CompletableFuture<BundleTransportService>,
+        nearbyWifiState: PermissionState,
 ) {
     val state by wifiViewModel.state.collectAsState()
     val numDenied by wifiViewModel.numDenied.collectAsState()
