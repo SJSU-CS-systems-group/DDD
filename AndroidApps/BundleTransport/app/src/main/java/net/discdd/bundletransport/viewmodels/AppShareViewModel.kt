@@ -129,7 +129,7 @@ class AppShareViewModel(
 
         if (packageInfo == null) return false
         val signingInfo = packageInfo.signingInfo
-        logger.log( Level.FINE, "signingInfo: ${signingInfo}, apk info: ${apkPath.toAbsolutePath()}")
+        logger.log(Level.FINE, "signingInfo: ${signingInfo}, apk info: ${apkPath.toAbsolutePath()}")
         return signingInfo != null
     }
 
