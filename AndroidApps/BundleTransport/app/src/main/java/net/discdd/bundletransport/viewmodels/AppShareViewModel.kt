@@ -17,6 +17,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.logging.Logger
+import java.util.logging.Level;
 
 // APK URLs
 const val mailApkUrl =
@@ -106,7 +107,6 @@ class AppShareViewModel(
 
     private fun getApkVersionInfo(apkPath: Path): String? {
         if (!Files.exists(apkPath)) {
-            logger.warning("getApkVersionInfo method should've never been called, an apk doesn't exist to be checked!")
             return null
         }
         val packageManager = myApplication.packageManager
@@ -119,7 +119,6 @@ class AppShareViewModel(
 
     private fun checkApkSignature(apkPath: Path): Boolean {
         if (!Files.exists(apkPath)) {
-            logger.warning("checkApkSignature method should've never been called, an apk doesn't exist to be checked!")
             return false
         }
         val packageManager = myApplication.packageManager
@@ -130,7 +129,7 @@ class AppShareViewModel(
 
         if (packageInfo == null) return false
         val signingInfo = packageInfo.signingInfo
-        logger.info("signingInfo: ${signingInfo}")
+        logger.log( Level.FINE, "signingInfo: ${signingInfo}, apk info: ${apkPath.toAbsolutePath()}")
         return signingInfo != null
     }
 
