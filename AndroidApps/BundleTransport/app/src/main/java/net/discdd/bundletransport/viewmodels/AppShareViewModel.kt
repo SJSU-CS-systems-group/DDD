@@ -109,7 +109,6 @@ class AppShareViewModel(
             logger.warning("getApkVersionInfo method should've never been called, an apk doesn't exist to be checked!")
             return null
         }
-        logger.warning("An apk DOES exist for getApkVersionInfo to check!")
         val packageManager = myApplication.packageManager
         val packageInfo = packageManager.getPackageArchiveInfo(
                 apkPath.toAbsolutePath().toString(), PackageManager.GET_ACTIVITIES
