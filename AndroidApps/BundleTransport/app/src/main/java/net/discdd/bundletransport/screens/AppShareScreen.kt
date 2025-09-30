@@ -78,7 +78,6 @@ fun AppShareScreen(
                 } else {
                     // we have this little blank text to keep the button in the middle of the screen
                     Text(text = " ")
-                    //Spacer(modifier = Modifier.weight(1f)) - possible fix
                 }
             }
         }
