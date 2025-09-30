@@ -16,7 +16,6 @@ import net.discdd.bundletransport.TransportServiceManager
 import net.discdd.bundletransport.service.DDDWifiServiceEvents
 import net.discdd.bundletransport.wifi.DDDWifiServer
 import net.discdd.bundletransport.wifi.DDDWifiServer.WifiDirectStatus
-import net.discdd.pathutils.TransportPaths
 import net.discdd.viewmodels.WifiBannerViewModel
 import java.util.concurrent.CompletableFuture
 import java.util.logging.Logger

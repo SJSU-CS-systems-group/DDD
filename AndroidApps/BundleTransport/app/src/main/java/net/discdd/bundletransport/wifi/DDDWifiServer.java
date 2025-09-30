@@ -382,6 +382,7 @@ public class DDDWifiServer {
                         }
                         DDDWifiServer.this.wifiGroup = newGroup;
                         sendStateChange();
+                        sendDeviceNameChange();
                     }
                     case WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> processDeviceInfo(intent.getParcelableExtra(
                             WifiP2pManager.EXTRA_WIFI_P2P_DEVICE,
