@@ -37,10 +37,6 @@ fun AppShareScreen(
         appShareViewModel: AppShareViewModel = viewModel()
 ) {
     val url = "http://192.168.49.1:8080"
-    // Generate QR code bitmap
-    val downloadQrBitmap = remember {
-        generateQRCode(url, 300, 300)
-    }
     val wifiConnectURL = wifiViewModel.state.collectAsState().value.wifiConnectURL
     val mailApkVersion by appShareViewModel.mailApkVersion.collectAsState()
     val mailApkSignature by appShareViewModel.mailApkSignature.collectAsState()
@@ -70,19 +66,7 @@ fun AppShareScreen(
                             modifier = Modifier.padding(bottom = 16.dp)
                     )
                 } else {
-                    Text(
-                            text = "QR code to connect your phone to this transport",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(bottom = 16.dp)
-
-                    )
-                    generateQRCode(wifiConnectURL, 200, 200)?.let { wifiQrCodeBitmap ->
-                        Image(
-                                bitmap = wifiQrCodeBitmap.asImageBitmap(),
-                                contentDescription = "QR Code",
-                                modifier = Modifier.size(200.dp)
-                        )
-                    }
+                    QRCodeDisplay("QR code to connect your phone to this transport", wifiConnectURL)
                 }
 
                 // it seems a bit strange to put the button in the middle of the screen, but it separates
@@ -90,28 +74,11 @@ fun AppShareScreen(
                 DownloadButton(appShareViewModel)
 
                 if (appsAvailable) {
-                    Text(
-                            text = "QR code to download DDD client and mail apps",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(bottom = 16.dp)
-                    )
-
-                    downloadQrBitmap?.let {
-                        Image(
-                                bitmap = it.asImageBitmap(),
-                                contentDescription = "QR Code",
-                                modifier = Modifier.size(200.dp)
-                        )
-                    }
-
-                    Text(
-                            text = url,
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(top = 16.dp)
-                    )
+                    QRCodeDisplay("QR code to download DDD client and mail apps", url)
                 } else {
                     // we have this little blank text to keep the button in the middle of the screen
                     Text(text = " ")
+                    //Spacer(modifier = Modifier.weight(1f)) - possible fix
                 }
             }
         }
@@ -161,5 +128,22 @@ fun DownloadButton(viewModel: AppShareViewModel) {
                     style = MaterialTheme.typography.bodySmall,
             )
         }
+    }
+}
+
+@Composable
+fun QRCodeDisplay(instructions: String, contentURL: String) {
+    Text(
+        text = instructions,
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.padding(bottom = 16.dp)
+
+    )
+    generateQRCode(contentURL, 200, 200)?.let { wifiQrCodeBitmap ->
+        Image(
+            bitmap = wifiQrCodeBitmap.asImageBitmap(),
+            contentDescription = "QR Code",
+            modifier = Modifier.size(200.dp)
+        )
     }
 }
