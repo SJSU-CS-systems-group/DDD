@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -105,8 +104,8 @@ public class DDDWifiServer {
                                                               null));
     }
 
-    public void sendDeviceNameChange() {
-        DDDWifiServiceEvents.sendEvent(new DDDWifiServerEvent(DDDWifiServerEventType.DDDWIFISERVER_DEVICENAME_CHANGED,
+    public void sendWifiStatusChange() {
+        DDDWifiServiceEvents.sendEvent(new DDDWifiServerEvent(DDDWifiServerEventType.DDDWIFISERVER_WIFI_STATUS_CHANGED,
                                                               null));
     }
 
@@ -156,16 +155,6 @@ public class DDDWifiServer {
                 PackageManager.PERMISSION_GRANTED;
     }
 
-    /**
-     * represents the state of group creation.
-     * if null, no group has been created, otherwise it is the name
-     * of the group being created.
-     * <p>
-     * NOTE: there is some weirdness: the SSID doesn't seem to change
-     * if the device name changes...
-     */
-    AtomicReference<String> createdGroupName = new AtomicReference<>(null);
-
     @SuppressLint("MissingPermission")
     public void createGroup() {
         if (wifiGroup != null && wifiGroup.getNetworkName().startsWith(DDD_NETWORK_NAME + bts.transportID)) return;
@@ -192,10 +181,8 @@ public class DDDWifiServer {
         cal.handle((optRc, ex) -> {
             if (ex != null) {
                 bts.logWifi(SEVERE, ex, R.string.wifi_direct_create_group_failed_e, ex.getMessage());
-                createdGroupName.set(null);
             } else if (optRc.isPresent()) {
                 bts.logWifi(SEVERE, R.string.wifi_direct_create_group_failed_d, optRc.getAsInt());
-                createdGroupName.set(null);
             } else {
                 bts.logWifi(INFO, R.string.wifi_direct_create_group_success);
             }
@@ -255,7 +242,7 @@ public class DDDWifiServer {
     }
 
     public enum DDDWifiServerEventType {
-        DDDWIFISERVER_NETWORKINFO_CHANGED, DDDWIFISERVER_DEVICENAME_CHANGED
+        DDDWIFISERVER_NETWORKINFO_CHANGED, DDDWIFISERVER_WIFI_STATUS_CHANGED
     }
 
     public static class DDDWifiServerEvent {
@@ -334,9 +321,6 @@ public class DDDWifiServer {
                                 createGroup();
                             }
                         } else {
-                            // WifiDirect is not enabled, so we clear createdGroupName so that the group will
-                            // be recreated when WifiDirect is enabled again
-                            createdGroupName.set(null);
                             logger.log(INFO, "WifiDirect not enabled");
                         }
                         sendStateChange();
@@ -382,7 +366,7 @@ public class DDDWifiServer {
                         }
                         DDDWifiServer.this.wifiGroup = newGroup;
                         sendStateChange();
-                        sendDeviceNameChange();
+                        sendWifiStatusChange();
                     }
                     case WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> processDeviceInfo(intent.getParcelableExtra(
                             WifiP2pManager.EXTRA_WIFI_P2P_DEVICE,

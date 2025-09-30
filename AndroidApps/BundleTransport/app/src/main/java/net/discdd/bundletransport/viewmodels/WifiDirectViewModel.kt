@@ -42,7 +42,7 @@ class WifiDirectViewModel(
 
             DDDWifiServiceEvents.events.collect { event ->
                 when (event.type) {
-                    DDDWifiServer.DDDWifiServerEventType.DDDWIFISERVER_DEVICENAME_CHANGED -> processDeviceInfoChange()
+                    DDDWifiServer.DDDWifiServerEventType.DDDWIFISERVER_WIFI_STATUS_CHANGED -> processDeviceInfoChange()
                     DDDWifiServer.DDDWifiServerEventType.DDDWIFISERVER_NETWORKINFO_CHANGED -> updateGroupInfo()
                 }
             }
