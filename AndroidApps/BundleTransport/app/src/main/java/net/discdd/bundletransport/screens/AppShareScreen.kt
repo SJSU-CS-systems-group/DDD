@@ -42,7 +42,7 @@ fun AppShareScreen(
     val mailApkSignature by appShareViewModel.mailApkSignature.collectAsState()
     val clientApkVersion by appShareViewModel.clientApkVersion.collectAsState()
     val clientApkSignature by appShareViewModel.clientApkSignature.collectAsState()
-    val appsAvailable = remember { mailApkVersion != null || clientApkVersion != null || mailApkSignature || clientApkSignature }
+    val appsAvailable = (mailApkVersion != null) || (clientApkVersion != null) || mailApkSignature || clientApkSignature
 
     Surface(color = MaterialTheme.colorScheme.background) {
         Column(
@@ -89,8 +89,6 @@ fun AppShareScreen(
 fun DownloadButton(viewModel: AppShareViewModel) {
     val downloadMailProgress by viewModel.downloadMailProgress.collectAsState()
     val downloadClientProgress by viewModel.downloadClientProgress.collectAsState()
-    val mailApkVersion by viewModel.mailApkVersion.collectAsState()
-    val clientApkVersion by viewModel.clientApkVersion.collectAsState()
 
     Column {
         Button(
@@ -111,21 +109,11 @@ fun DownloadButton(viewModel: AppShareViewModel) {
             LinearProgressIndicator(
                     progress = { downloadMailProgress }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
             )
-        } else {
-            Text(
-                    text = mailApkVersion ?: "",
-                    style = MaterialTheme.typography.bodySmall,
-            )
         }
 
         if (downloadClientProgress < 1f) {
             LinearProgressIndicator(
                     progress = { downloadClientProgress }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
-            )
-        } else {
-            Text(
-                    text = clientApkVersion ?: "",
-                    style = MaterialTheme.typography.bodySmall,
             )
         }
     }
