@@ -16,8 +16,8 @@ import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.util.logging.Level
 import java.util.logging.Logger
-import java.util.logging.Level;
 
 // APK URLs
 const val mailApkUrl =
@@ -137,10 +137,12 @@ class AppShareViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             _downloadMailProgress.value = 0f
             _mailApkVersion.value = downloadFile(mailApkUrl, mailApkFile, _downloadMailProgress)
+            _downloadMailProgress.value = 1f
         }
         viewModelScope.launch(Dispatchers.IO) {
             _downloadClientProgress.value = 0f
             _clientApkVersion.value = downloadFile(clientApkUrl, clientApkFile, _downloadClientProgress)
+            _downloadClientProgress.value = 1f
         }
     }
 }
