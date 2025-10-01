@@ -5,6 +5,7 @@ import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECKeyPair;
 import org.whispersystems.libsignal.ecc.ECPrivateKey;
 import org.whispersystems.libsignal.ecc.ECPublicKey;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -79,19 +80,19 @@ public class DDDPEMEncoder {
         return Base64.getUrlDecoder().decode(encodedKeyList.get(1));
     }
 
-     public static void createEncodedPublicKeyFile(ECPublicKey publicKey, Path path) throws IOException {
+    public static void createEncodedPublicKeyFile(ECPublicKey publicKey, Path path) throws IOException {
         Files.write(path,
-                 createEncodedPublicKeyBytes(publicKey),
-                 StandardOpenOption.CREATE,
-                 StandardOpenOption.TRUNCATE_EXISTING);
-     }
+                    createEncodedPublicKeyBytes(publicKey),
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING);
+    }
 
-     public static byte[] createEncodedPublicKeyBytes(ECPublicKey publicKey) {
+    public static byte[] createEncodedPublicKeyBytes(ECPublicKey publicKey) {
         return (PUB_KEY_HEADER + "\n" + Base64.getUrlEncoder().encodeToString(publicKey.serialize()) + "\n" +
-            PUB_KEY_FOOTER).getBytes();
-     }
+                PUB_KEY_FOOTER).getBytes();
+    }
 
-     /**
+    /**
      * Create ephemeral public key pair and log it
      * Calculate shared secret from server public key and ephemeral private key and log it
      * Encrypt client public key using shared secret and log it
@@ -105,17 +106,17 @@ public class DDDPEMEncoder {
      * @throws InvalidKeyException
      */
     public static byte[] createEncryptedEncodedPublicKeyBytes(ECPublicKey clientPublicKey,
-        ECPublicKey serverIdentityPublicKey) throws
-        GeneralSecurityException, InvalidKeyException {
+                                                              ECPublicKey serverIdentityPublicKey) throws
+            GeneralSecurityException, InvalidKeyException {
         ECKeyPair ephemeralKeyPair = Curve.generateKeyPair();
         byte[] agreement = Curve.calculateAgreement(serverIdentityPublicKey, ephemeralKeyPair.getPrivateKey());
         String sharedSecret = Base64.getEncoder().encodeToString(agreement);
         String encryptedClientPubKey =
-        encryptAesCbcPkcs5(sharedSecret, Base64.getEncoder().encodeToString(clientPublicKey.serialize()));
+                encryptAesCbcPkcs5(sharedSecret, Base64.getEncoder().encodeToString(clientPublicKey.serialize()));
         return (EC_ENCRYPTED_PUBLIC_KEY_HEADER + "\n" +
-            Base64.getUrlEncoder().encodeToString(encryptedClientPubKey.getBytes()) + "\n" +
-            Base64.getUrlEncoder().encodeToString(ephemeralKeyPair.getPublicKey().serialize()) + "\n" +
-            EC_ENCRYPTED_PUBLIC_KEY_FOOTER).getBytes();
+                Base64.getUrlEncoder().encodeToString(encryptedClientPubKey.getBytes()) + "\n" +
+                Base64.getUrlEncoder().encodeToString(ephemeralKeyPair.getPublicKey().serialize()) + "\n" +
+                EC_ENCRYPTED_PUBLIC_KEY_FOOTER).getBytes();
     }
 
     /**
@@ -131,17 +132,17 @@ public class DDDPEMEncoder {
      * @throws IOException
      * @throws InvalidKeyException
      * @throws NoSuchAlgorithmException
-    */
+     */
     public static String decodeEncryptedPublicKeyfromFile(ECPrivateKey ServerPrivKey, Path clientEncFile) throws
-        IOException, InvalidKeyException, NoSuchAlgorithmException {
+            IOException, InvalidKeyException, NoSuchAlgorithmException {
         List<String> encodedKeyList = Files.readAllLines(clientEncFile);
         if (encodedKeyList.size() != 4) {
             throw (new IOException(
-            "Wrong use of decode encrypted key... this key is probably not encrypted or is an old client... " +
-            "here is the key header: " + encodedKeyList.get(0)));
+                    "Wrong use of decode encrypted key... this key is probably not encrypted or is an old client... " +
+                            "here is the key header: " + encodedKeyList.get(0)));
         }
         if ((encodedKeyList.get(0).equals(EC_ENCRYPTED_PUBLIC_KEY_HEADER)) &&
-            (encodedKeyList.get(3).equals(EC_ENCRYPTED_PUBLIC_KEY_FOOTER))) {
+                (encodedKeyList.get(3).equals(EC_ENCRYPTED_PUBLIC_KEY_FOOTER))) {
             byte[] encryptedClientPublicKey = Base64.getUrlDecoder().decode(encodedKeyList.get(1));
             var ephemeralKeyBytes = Base64.getUrlDecoder().decode(encodedKeyList.get(2));
             ECPublicKey ephemeralPublicKey = Curve.decodePoint(ephemeralKeyBytes, 0);
@@ -155,9 +156,10 @@ public class DDDPEMEncoder {
             }
             String keyInStandardBase64Characters = new String(decryptedClientPubKey);
             keyInStandardBase64Characters = keyInStandardBase64Characters.replace('+', '-').replace('/', '_');
-                return keyInStandardBase64Characters;
+            return keyInStandardBase64Characters;
         } else {
-            throw new InvalidKeyException(String.format("Error: %s has invalid public key header or footer", clientEncFile.getFileName()));
+            throw new InvalidKeyException(String.format("Error: %s has invalid public key header or footer",
+                                                        clientEncFile.getFileName()));
         }
     }
 
@@ -166,28 +168,30 @@ public class DDDPEMEncoder {
 
         if (encodedKeyList.size() != 3) {
             throw new InvalidKeyException(String.format("Error: %s should have three lines: HEADER, KEY, FOOTER",
-            path.getFileName()));
+                                                        path.getFileName()));
         }
 
         if ((encodedKeyList.get(0).equals(PUB_KEY_HEADER)) && (encodedKeyList.get(2).equals(PUB_KEY_FOOTER))) {
             return Base64.getUrlDecoder().decode(encodedKeyList.get(1));
-            } else {
-                throw new InvalidKeyException(String.format("Error: %s has invalid public key header or footer",
-                path.getFileName()));
-            }
+        } else {
+            throw new InvalidKeyException(String.format("Error: %s has invalid public key header or footer",
+                                                        path.getFileName()));
         }
+    }
 
     public static byte[] decodePrivateKeyFromFile(Path path) throws IOException, InvalidKeyException {
         List<String> encodedKeyList = Files.readAllLines(path);
 
         if (encodedKeyList.size() != 3) {
-            throw new InvalidKeyException(String.format("Error: %s should have three lines: HEADER, KEY, FOOTER", path.getFileName()));
-    }
+            throw new InvalidKeyException(String.format("Error: %s should have three lines: HEADER, KEY, FOOTER",
+                                                        path.getFileName()));
+        }
 
-    if (encodedKeyList.get(0).equals(PVT_KEY_HEADER) && encodedKeyList.get(2).equals(PVT_KEY_FOOTER)) {
-        return Base64.getUrlDecoder().decode(encodedKeyList.get(1));
+        if (encodedKeyList.get(0).equals(PVT_KEY_HEADER) && encodedKeyList.get(2).equals(PVT_KEY_FOOTER)) {
+            return Base64.getUrlDecoder().decode(encodedKeyList.get(1));
         } else {
-            throw new InvalidKeyException(String.format("Error: %s has invalid private key header or footer", path.getFileName()));
+            throw new InvalidKeyException(String.format("Error: %s has invalid private key header or footer",
+                                                        path.getFileName()));
         }
     }
 
