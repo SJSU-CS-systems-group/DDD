@@ -30,14 +30,17 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import net.discdd.bundletransport.utils.generateQRCode
 import net.discdd.bundletransport.viewmodels.AppShareViewModel
 import net.discdd.bundletransport.viewmodels.WifiDirectViewModel
+import net.discdd.viewmodels.ConnectivityViewModel
 
 @Composable
 fun AppShareScreen(
         wifiViewModel: WifiDirectViewModel = viewModel(),
-        appShareViewModel: AppShareViewModel = viewModel()
-) {
+        appShareViewModel: AppShareViewModel = viewModel(),
+        connectivityViewModel: ConnectivityViewModel = viewModel(),
+        ) {
     val url = "http://192.168.49.1:8080"
     val wifiConnectURL = wifiViewModel.state.collectAsState().value.wifiConnectURL
+    val connectivityState by connectivityViewModel.state.collectAsState()
     val mailApkVersion by appShareViewModel.mailApkVersion.collectAsState()
     val mailApkSignature by appShareViewModel.mailApkSignature.collectAsState()
     val clientApkVersion by appShareViewModel.clientApkVersion.collectAsState()
@@ -51,13 +54,12 @@ fun AppShareScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Show either download message or QR code
-            if (wifiConnectURL == null) {
+            if (wifiConnectURL == null || !connectivityState.networkConnected) {
                 Text(
-                        text = "Wifi Direct is not available.",
+                        text = "Wifi Direct and/or internet is not available.",
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(bottom = 16.dp)
                 )
-
             } else {
                 if (!appsAvailable) {
                     Text(
@@ -65,19 +67,16 @@ fun AppShareScreen(
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.padding(bottom = 16.dp)
                     )
+                    // it seems a bit strange to put the button in the middle of the screen, but it separates
+                    // the QR codes more and makes them easier to scan
+                    DownloadButton(appShareViewModel)
+                    Text(text = " ")
                 } else {
                     QRCodeDisplay("QR code to connect your phone to this transport", wifiConnectURL)
-                }
-
-                // it seems a bit strange to put the button in the middle of the screen, but it separates
-                // the QR codes more and makes them easier to scan
-                DownloadButton(appShareViewModel)
-
-                if (appsAvailable) {
+                    // it seems a bit strange to put the button in the middle of the screen, but it separates
+                    // the QR codes more and makes them easier to scan
+                    DownloadButton(appShareViewModel)
                     QRCodeDisplay("QR code to download DDD client and mail apps", url)
-                } else {
-                    // we have this little blank text to keep the button in the middle of the screen
-                    Text(text = " ")
                 }
             }
         }
@@ -95,12 +94,13 @@ fun DownloadButton(viewModel: AppShareViewModel) {
                     viewModel.downloadApps()
                 },
                 enabled = downloadMailProgress == 1f && downloadClientProgress == 1f,
+                modifier = Modifier.padding(start = 10.dp, top = 15.dp, end = 15.dp, bottom = 8.dp)
         ) {
             Row(
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Icon(Icons.Default.ArrowDropDown, contentDescription = "Download")
-                Text("Download DDD APKs")
+                Text("Download latest DDD APKs")
             }
         }
 
@@ -130,7 +130,7 @@ fun QRCodeDisplay(instructions: String, contentURL: String) {
         Image(
             bitmap = wifiQrCodeBitmap.asImageBitmap(),
             contentDescription = "QR Code",
-            modifier = Modifier.size(200.dp)
+            modifier = Modifier.size(200.dp).padding(start = 10.dp, top = 5.dp, end = 15.dp, bottom = 8.dp)
         )
     }
 }
