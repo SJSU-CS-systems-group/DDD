@@ -46,7 +46,7 @@ fun AppShareScreen(
     val mailApkSignature by appShareViewModel.mailApkSignature.collectAsState()
     val clientApkVersion by appShareViewModel.clientApkVersion.collectAsState()
     val clientApkSignature by appShareViewModel.clientApkSignature.collectAsState()
-    val appsAvailable = remember { mailApkVersion != null || clientApkVersion != null }
+    val appsAvailable = remember { mailApkVersion != null || clientApkVersion != null || mailApkSignature || clientApkSignature }
 
     Surface(color = MaterialTheme.colorScheme.background) {
         Column(
@@ -69,7 +69,6 @@ fun AppShareScreen(
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.padding(bottom = 16.dp)
                     )
-                    // } else if (clientApkSignature!! && mailApkSignature!!) {
                 } else {
                     Text(
                             text = "QR code to connect your phone to this transport",

@@ -16,6 +16,8 @@ import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.util.logging.Logger
+import java.util.logging.Level;
 
 // APK URLs
 const val mailApkUrl =
@@ -25,6 +27,7 @@ const val clientApkUrl = "https://github.com/SJSU-CS-systems-group/DDD/releases/
 class AppShareViewModel(
         val myApplication: Application
 ) : AndroidViewModel(myApplication) {
+    private val logger = Logger.getLogger(AppShareViewModel::class.java.name)
     private val mailApkFile by lazy {
         File(myApplication.getExternalFilesDir(null), "ddd-mail.apk").toPath()
     }
@@ -39,9 +42,9 @@ class AppShareViewModel(
     val mailApkVersion = _mailApkVersion.asStateFlow()
     private var _clientApkVersion = MutableStateFlow<String?>(null)
     val clientApkVersion = _clientApkVersion.asStateFlow()
-    private var _clientApkSignature = MutableStateFlow<Boolean?>(null)
+    private var _clientApkSignature = MutableStateFlow<Boolean>(false)
     val clientApkSignature = _clientApkSignature.asStateFlow()
-    private var _mailApkSignature = MutableStateFlow<Boolean?>(null)
+    private var _mailApkSignature = MutableStateFlow<Boolean>(false)
     val mailApkSignature = _mailApkSignature.asStateFlow()
 
     init {
@@ -114,22 +117,19 @@ class AppShareViewModel(
         return "${apkPath.fileName} ${packageInfo?.versionName ?: "Error"}"
     }
 
-    private fun checkApkSignature(apkPath: Path): Boolean? {
+    private fun checkApkSignature(apkPath: Path): Boolean {
         if (!Files.exists(apkPath)) {
-            return null
+            return false
         }
         val packageManager = myApplication.packageManager
         val packageInfo = packageManager.getPackageArchiveInfo(
-                apkPath.toString(),
+                apkPath.toAbsolutePath().toString(),
                 PackageManager.GET_SIGNING_CERTIFICATES
         )
 
-        //null is when no signature found
         if (packageInfo == null) return false
-
-        //false is when corrupted signature found
-        //true is when signature found
         val signingInfo = packageInfo.signingInfo
+        logger.log(Level.FINE, "signingInfo: ${signingInfo}, apk info: ${apkPath.toAbsolutePath()}")
         return signingInfo != null
     }
 
