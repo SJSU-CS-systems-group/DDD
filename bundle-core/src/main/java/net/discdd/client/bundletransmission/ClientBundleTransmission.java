@@ -29,7 +29,6 @@ import net.discdd.grpc.Status;
 import net.discdd.model.ADU;
 import net.discdd.model.Acknowledgement;
 import net.discdd.model.Bundle;
-import net.discdd.model.BundleDTO;
 import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
 import net.discdd.model.UncompressedPayload;
@@ -172,7 +171,7 @@ public class ClientBundleTransmission {
         return senderId;
     }
 
-    private BundleDTO generateNewBundle(String bundleId) throws IOException, NoSuchAlgorithmException,
+    private Bundle generateNewBundle(String bundleId) throws IOException, NoSuchAlgorithmException,
             InvalidKeyException {
         Acknowledgement ackRecord = AckRecordUtils.readAckRecordFromFile(clientPaths.ackRecordPath);
         String crashReport = crashReportExists(String.valueOf(clientPaths.crashReportPath)) ?
@@ -209,10 +208,10 @@ public class ClientBundleTransmission {
         } finally {
             future.cancel(true);
         }
-        return new BundleDTO(bundleId, new Bundle(bundleFile.toFile()));
+        return new Bundle(bundleId, bundleFile.toFile());
     }
 
-    public BundleDTO generateBundleForTransmission() throws RoutingExceptions.ClientMetaDataFileException, IOException,
+    public Bundle generateBundleForTransmission() throws RoutingExceptions.ClientMetaDataFileException, IOException,
             InvalidKeyException, GeneralSecurityException {
         // find the latest sent bundle
         var sentBundles = clientPaths.tosendDir.toFile().listFiles();
@@ -226,7 +225,7 @@ public class ClientBundleTransmission {
             // lets check to see if we have gotten new ADUs or a new ack record
             if (clientPaths.ackRecordPath.toFile().lastModified() <= lastBundleSentTimestamp &&
                     !applicationDataManager.hasNewADUs(null, lastBundleSentTimestamp)) {
-                return new BundleDTO(lastSentBundle.getName(), new Bundle(lastSentBundle));
+                return new Bundle(lastSentBundle.getName(), lastSentBundle);
             }
 
             // these are all out of date, so delete them
@@ -463,7 +462,7 @@ public class ClientBundleTransmission {
 
     private Statuses uploadBundle(BundleExchangeServiceGrpc.BundleExchangeServiceStub stub) throws
             RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException, GeneralSecurityException {
-        BundleDTO toSend = generateBundleForTransmission();
+        Bundle toSend = generateBundleForTransmission();
 
         var bundleUploadResponseObserver = new BundleUploadResponseObserver();
 
@@ -478,7 +477,7 @@ public class ClientBundleTransmission {
 
         // upload file as chunk
         logger.log(INFO, "Started upload bundle: " + toSend.getBundleId());
-        try (FileInputStream inputStream = new FileInputStream(toSend.getBundle().getSource())) {
+        try (FileInputStream inputStream = new FileInputStream(toSend.getSource())) {
             int chunkSize = 1000 * 1000 * 4;
             byte[] bytes = new byte[chunkSize];
             int size;
