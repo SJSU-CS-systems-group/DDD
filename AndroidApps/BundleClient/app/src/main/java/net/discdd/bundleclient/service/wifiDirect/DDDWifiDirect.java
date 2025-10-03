@@ -144,25 +144,13 @@ public class DDDWifiDirect implements DDDWifi {
     }
 
     private void processDeviceInfo(WifiP2pDevice wifiP2pDevice) {
-        var infoChanged = false;
         if (wifiP2pDevice != null) {
-            if (!wifiP2pDevice.deviceName.equals(deviceName)) {
-                DDDWifiDirect.this.deviceName = wifiP2pDevice.deviceName;
-                infoChanged = true;
-            }
-            if (wifiP2pDevice.status != status) {
-                DDDWifiDirect.this.status = wifiP2pDevice.status;
-                infoChanged = true;
-            }
+            DDDWifiDirect.this.deviceName = wifiP2pDevice.deviceName;
+            DDDWifiDirect.this.status = wifiP2pDevice.status;
         } else {
-            if (this.status != WifiP2pDevice.UNAVAILABLE) {
-                infoChanged = true;
-                this.status = WifiP2pDevice.UNAVAILABLE;
-            }
+            this.status = WifiP2pDevice.UNAVAILABLE;
         }
-        if (infoChanged) {
-            eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_STATE_CHANGED);
-        }
+        eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_STATE_CHANGED);
     }
 
     public DDDWifiDirect(BundleClientService bundleClientService) {
