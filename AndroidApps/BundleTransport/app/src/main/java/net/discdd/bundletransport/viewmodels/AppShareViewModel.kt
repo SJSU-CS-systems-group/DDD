@@ -46,6 +46,8 @@ class AppShareViewModel(
     val clientApkSignature = _clientApkSignature.asStateFlow()
     private var _mailApkSignature = MutableStateFlow<Boolean>(false)
     val mailApkSignature = _mailApkSignature.asStateFlow()
+    private var _apkDownloadFailed = MutableStateFlow<Boolean>(false)
+    val apkDownloadFailed = _apkDownloadFailed.asStateFlow()
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -95,13 +97,15 @@ class AppShareViewModel(
             }
             connection.disconnect()
             Files.move(tmpPath, dest, StandardCopyOption.REPLACE_EXISTING)
+            _apkDownloadFailed = MutableStateFlow(false)
             return getApkVersionInfo(dest)
         } catch (e: IOException) {
             // Clean up the temporary file if download fails
             if (Files.exists(dest)) {
                 Files.delete(dest)
             }
-            return myApplication.getString(R.string.download_failed, dest.fileName, e.message)
+            _apkDownloadFailed = MutableStateFlow(true)
+            return null
         }
     }
 

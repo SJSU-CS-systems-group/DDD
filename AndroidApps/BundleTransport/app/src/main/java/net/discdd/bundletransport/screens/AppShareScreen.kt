@@ -1,7 +1,6 @@
 package net.discdd.bundletransport.screens
 
-import android.content.Context
-import android.content.pm.PackageManager
+import androidx.compose.material3.AlertDialog
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,10 +17,10 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
@@ -87,6 +86,7 @@ fun AppShareScreen(
 fun DownloadButton(viewModel: AppShareViewModel) {
     val downloadMailProgress by viewModel.downloadMailProgress.collectAsState()
     val downloadClientProgress by viewModel.downloadClientProgress.collectAsState()
+    val downloadFailed by viewModel.apkDownloadFailed.collectAsState()
 
     Column {
         Button(
@@ -113,6 +113,26 @@ fun DownloadButton(viewModel: AppShareViewModel) {
         if (downloadClientProgress < 1f) {
             LinearProgressIndicator(
                     progress = { downloadClientProgress }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+            )
+        }
+
+        if (downloadFailed) {
+            AlertDialog(
+                onDismissRequest = {
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                        }
+                    ) {
+                        Text("I understand")
+                    }
+                },
+                text = {
+                    Text(
+                        "Downloading the APKs failed, please try downloading again."
+                    )
+                },
             )
         }
     }
