@@ -477,7 +477,7 @@ public class ClientBundleTransmission {
 
         // upload file as chunk
         logger.log(INFO, "Started upload bundle: " + toSend.getBundleId());
-        try (FileInputStream inputStream = new FileInputStream(toSend.getBundleId())) {
+        try (FileInputStream inputStream = new FileInputStream(toSend.getSource())) {
             int chunkSize = 1000 * 1000 * 4;
             byte[] bytes = new byte[chunkSize];
             int size;

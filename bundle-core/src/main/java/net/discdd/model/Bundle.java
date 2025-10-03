@@ -19,6 +19,4 @@ public class Bundle {
     public File getSource() {
         return this.source;
     }
-
-    public Bundle getBundle() {return this;}
 }
