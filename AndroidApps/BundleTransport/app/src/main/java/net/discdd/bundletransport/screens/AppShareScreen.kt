@@ -124,7 +124,6 @@ fun QRCodeDisplay(instructions: String, contentURL: String) {
         text = instructions,
         style = MaterialTheme.typography.titleMedium,
         modifier = Modifier.padding(bottom = 16.dp)
-
     )
     generateQRCode(contentURL, 200, 200)?.let { wifiQrCodeBitmap ->
         Image(
