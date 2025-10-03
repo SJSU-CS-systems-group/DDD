@@ -16,8 +16,8 @@ import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.util.logging.Level
 import java.util.logging.Logger
-import java.util.logging.Level;
 
 // APK URLs
 const val mailApkUrl =
@@ -46,6 +46,8 @@ class AppShareViewModel(
     val clientApkSignature = _clientApkSignature.asStateFlow()
     private var _mailApkSignature = MutableStateFlow<Boolean>(false)
     val mailApkSignature = _mailApkSignature.asStateFlow()
+    private var _apkDownloadFailed = MutableStateFlow<Boolean>(false)
+    val apkDownloadFailed = _apkDownloadFailed.asStateFlow()
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -95,13 +97,15 @@ class AppShareViewModel(
             }
             connection.disconnect()
             Files.move(tmpPath, dest, StandardCopyOption.REPLACE_EXISTING)
+            _apkDownloadFailed = MutableStateFlow(false)
             return getApkVersionInfo(dest)
         } catch (e: IOException) {
             // Clean up the temporary file if download fails
             if (Files.exists(dest)) {
                 Files.delete(dest)
             }
-            return myApplication.getString(R.string.download_failed, dest.fileName, e.message)
+            _apkDownloadFailed = MutableStateFlow(true)
+            return null
         }
     }
 
@@ -137,10 +141,12 @@ class AppShareViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             _downloadMailProgress.value = 0f
             _mailApkVersion.value = downloadFile(mailApkUrl, mailApkFile, _downloadMailProgress)
+            _downloadMailProgress.value = 1f
         }
         viewModelScope.launch(Dispatchers.IO) {
             _downloadClientProgress.value = 0f
             _clientApkVersion.value = downloadFile(clientApkUrl, clientApkFile, _downloadClientProgress)
+            _downloadClientProgress.value = 1f
         }
     }
 }
