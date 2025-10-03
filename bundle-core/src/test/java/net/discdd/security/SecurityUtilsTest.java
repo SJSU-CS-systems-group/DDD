@@ -20,8 +20,8 @@ import java.util.logging.Logger;
 
 import static net.discdd.bundlesecurity.SecurityUtils.PUB_KEY_FOOTER;
 import static net.discdd.bundlesecurity.SecurityUtils.PUB_KEY_HEADER;
-import static net.discdd.bundlesecurity.SecurityUtils.createEncryptedEncodedPublicKeyBytes;
-import static net.discdd.bundlesecurity.SecurityUtils.decodeEncryptedPublicKeyfromFile;
+import static net.discdd.bundlesecurity.DDDPEMEncoder.createEncryptedEncodedPublicKeyBytes;
+import static net.discdd.bundlesecurity.DDDPEMEncoder.decodeEncryptedPublicKeyfromFile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class SecurityUtilsTest {

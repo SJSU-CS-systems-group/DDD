@@ -3,6 +3,7 @@ package net.discdd.server.bundletransmission;
 import com.google.protobuf.ByteString;
 import net.discdd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
 import net.discdd.bundlesecurity.BundleIDGenerator;
+import net.discdd.bundlesecurity.DDDPEMEncoder;
 import net.discdd.bundlesecurity.InvalidClientIDException;
 import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.bundlesecurity.ServerSecurity;
@@ -120,7 +121,7 @@ public class ServerBundleTransmission {
                 return;
             }
 
-            String clientIdBase64 = SecurityUtils.decodeEncryptedPublicKeyfromFile(serverSecurity.getSigningKey(),
+            String clientIdBase64 = DDDPEMEncoder.decodeEncryptedPublicKeyfromFile(serverSecurity.getSigningKey(),
                                                                                    uncompressedBundle.getSource()
                                                                                            .toPath()
                                                                                            .resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
