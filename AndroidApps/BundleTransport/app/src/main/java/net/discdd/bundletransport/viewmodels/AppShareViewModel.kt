@@ -8,7 +8,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import net.discdd.bundletransport.R
 import java.io.File
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -97,14 +96,14 @@ class AppShareViewModel(
             }
             connection.disconnect()
             Files.move(tmpPath, dest, StandardCopyOption.REPLACE_EXISTING)
-            _apkDownloadFailed = MutableStateFlow(false)
+            _apkDownloadFailed.value = false
             return getApkVersionInfo(dest)
         } catch (e: IOException) {
             // Clean up the temporary file if download fails
             if (Files.exists(dest)) {
                 Files.delete(dest)
             }
-            _apkDownloadFailed = MutableStateFlow(true)
+            _apkDownloadFailed.value = true
             return null
         }
     }
