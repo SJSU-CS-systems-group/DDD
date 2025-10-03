@@ -57,8 +57,8 @@ class ClientUsbViewModel(
                     return@withContext
                 }
                 logger.log(INFO, "Starting bundle creation...")
-                val bundleDTO = bundleTransmission!!.generateBundleForTransmission()
-                val bundleFile = bundleDTO.bundle.source
+                val bundle = bundleTransmission!!.generateBundleForTransmission()
+                val bundleFile = bundle.source
 
                 var dddServer = createIfDoesNotExist(dddDir, "toServer")
                 val targetFile = dddServer.createFile("data/octet", bundleFile.name)
