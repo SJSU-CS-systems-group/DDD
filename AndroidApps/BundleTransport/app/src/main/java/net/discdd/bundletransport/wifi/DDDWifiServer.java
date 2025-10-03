@@ -111,6 +111,9 @@ public class DDDWifiServer {
 
     @SuppressLint("MissingPermission")
     public void initialize() {
+        this.receiver = new WifiDirectBroadcastReceiver();
+        registerWifiIntentReceiver();
+
         bts.logWifi(INFO, R.string.initializing_wifidirectmanager);
         this.wifiP2pManager = (WifiP2pManager) this.bts.getSystemService(Context.WIFI_P2P_SERVICE);
         if (wifiP2pManager == null) {
@@ -120,18 +123,19 @@ public class DDDWifiServer {
             if (channel == null) {
                 logger.log(WARNING, "Cannot initialize Wi-Fi Direct");
             }
-
         }
 
-        this.receiver = new WifiDirectBroadcastReceiver();
         if (hasPermission()) {
-            registerWifiIntentReceiver();
             wifiP2pManager.requestDeviceInfo(channel, this::processDeviceInfo);
             bts.logWifi(INFO, R.string.wifi_direct_initialized);
+            // make sure android 13 devices create group because their actions
+            // might not be received by WifiDirectBroadcastReceiver
+            createGroup();
         } else {
             bts.logWifi(SEVERE, R.string.no_permission_for_wi_fi_direct);
         }
         sendStateChange();
+        sendWifiStatusChange();
     }
 
     AtomicBoolean intentRegistered = new AtomicBoolean(false);
@@ -182,10 +186,12 @@ public class DDDWifiServer {
             if (ex != null) {
                 bts.logWifi(SEVERE, ex, R.string.wifi_direct_create_group_failed_e, ex.getMessage());
             } else if (optRc.isPresent()) {
-                bts.logWifi(SEVERE, R.string.wifi_direct_create_group_failed_d, optRc.getAsInt());
+                bts.logWifi(INFO, R.string.wifi_direct_create_group_failed_d, optRc.getAsInt());
             } else {
                 bts.logWifi(INFO, R.string.wifi_direct_create_group_success);
             }
+            // make sure android 14/15 devices get existing groups if createGroup fails
+            getGroup();
             return null;
         });
         var txt = Map.of("ddd", bts.getBundleServerURL()        // you can filter on this
@@ -222,6 +228,15 @@ public class DDDWifiServer {
         }
         this.wifiP2pManager.clearLocalServices(channel, null);
         return cal;
+    }
+
+    @SuppressLint("MissingPermission")
+    public void getGroup() {
+        wifiP2pManager.requestGroupInfo(channel, g -> {
+            wifiGroup = g;
+            sendStateChange();
+            bts.logWifi(INFO, R.string.wifi_direct_create_group_success);
+        });
     }
 
     void processDeviceInfo(WifiP2pDevice wifiP2pDevice) {
@@ -283,7 +298,6 @@ public class DDDWifiServer {
 
         @Override
         public void onFailure(int reason) {
-
             complete(OptionalInt.of(reason));
         }
     }
@@ -308,7 +322,7 @@ public class DDDWifiServer {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-            if (action != null) {
+            if (action != null && wifiP2pManager != null) {
                 switch (action) {
                     case WIFI_P2P_STATE_CHANGED_ACTION -> {
                         // Broadcast intent action to indicate whether Wi-Fi p2p is enabled or disabled
