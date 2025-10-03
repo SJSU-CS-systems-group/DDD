@@ -1,5 +1,6 @@
 package net.discdd.server.commands.keygenerator;
 
+import net.discdd.bundlesecurity.DDDPEMEncoder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.whispersystems.libsignal.IdentityKeyPair;
@@ -55,7 +56,7 @@ public class DecodePublicKey implements Callable<Void> {
     }
 
     private byte[] decodeFile() throws IOException, InvalidKeyException {
-        return SecurityUtils.decodePrivateKeyFromFile(storePath.resolve(pvtFilename));
+        return DDDPEMEncoder.decodePrivateKeyFromFile(storePath.resolve(pvtFilename));
     }
 
     private byte[] decodeBase64() {
@@ -67,7 +68,7 @@ public class DecodePublicKey implements Callable<Void> {
     }
 
     private void writeToFile(ECPublicKey pubKey) throws IOException {
-        SecurityUtils.createEncodedPublicKeyFile(pubKey, storePath.resolve(pubFilename));
+        DDDPEMEncoder.createEncodedPublicKeyFile(pubKey, storePath.resolve(pubFilename));
         logger.log(INFO, "Written to file");
     }
 
