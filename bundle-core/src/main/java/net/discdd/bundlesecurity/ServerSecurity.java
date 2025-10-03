@@ -132,13 +132,13 @@ public class ServerSecurity {
      */
     private void loadKeysfromFiles(Path serverKeyPath) throws IOException, InvalidKeyException {
         byte[] identityKey =
-                SecurityUtils.decodePrivateKeyFromFile(serverKeyPath.resolve(SecurityUtils.SERVER_IDENTITY_PRIVATE_KEY));
+                DDDPEMEncoder.decodePrivateKeyFromFile(serverKeyPath.resolve(SecurityUtils.SERVER_IDENTITY_PRIVATE_KEY));
         ourIdentityKeyPair = new IdentityKeyPair(identityKey);
 
         byte[] signedPreKeyPvt =
-                SecurityUtils.decodePrivateKeyFromFile(serverKeyPath.resolve(SecurityUtils.SERVER_SIGNEDPRE_PRIVATE_KEY));
+                DDDPEMEncoder.decodePrivateKeyFromFile(serverKeyPath.resolve(SecurityUtils.SERVER_SIGNEDPRE_PRIVATE_KEY));
         byte[] signedPreKeyPub =
-                SecurityUtils.decodePublicKeyfromFile(serverKeyPath.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY));
+                DDDPEMEncoder.decodePublicKeyfromFile(serverKeyPath.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY));
 
         ECPublicKey signedPreKeyPublicKey = Curve.decodePoint(signedPreKeyPub, 0);
         ECPrivateKey signedPreKeyPrivateKey = Curve.decodePrivatePoint(signedPreKeyPvt);
@@ -146,9 +146,9 @@ public class ServerSecurity {
         ourSignedPreKey = new ECKeyPair(signedPreKeyPublicKey, signedPreKeyPrivateKey);
 
         byte[] ratchetKeyPvt =
-                SecurityUtils.decodePrivateKeyFromFile(serverKeyPath.resolve(SecurityUtils.SERVER_RATCHET_PRIVATE_KEY));
+                DDDPEMEncoder.decodePrivateKeyFromFile(serverKeyPath.resolve(SecurityUtils.SERVER_RATCHET_PRIVATE_KEY));
         byte[] ratchetKeyPub =
-                SecurityUtils.decodePublicKeyfromFile(serverKeyPath.resolve(SecurityUtils.SERVER_RATCHET_KEY));
+                DDDPEMEncoder.decodePublicKeyfromFile(serverKeyPath.resolve(SecurityUtils.SERVER_RATCHET_KEY));
 
         ECPublicKey ratchetKeyPublicKey = Curve.decodePoint(ratchetKeyPub, 0);
         ECPrivateKey ratchetKeyPrivateKey = Curve.decodePrivatePoint(ratchetKeyPvt);
@@ -175,9 +175,9 @@ public class ServerSecurity {
         if (writePvt) {
             writePrivateKeys(path);
         }
-        SecurityUtils.createEncodedPublicKeyFile(ourIdentityKeyPair.getPublicKey().getPublicKey(), serverKeypaths[0]);
-        SecurityUtils.createEncodedPublicKeyFile(ourSignedPreKey.getPublicKey(), serverKeypaths[1]);
-        SecurityUtils.createEncodedPublicKeyFile(ourRatchetKey.getPublicKey(), serverKeypaths[2]);
+        DDDPEMEncoder.createEncodedPublicKeyFile(ourIdentityKeyPair.getPublicKey().getPublicKey(), serverKeypaths[0]);
+        DDDPEMEncoder.createEncodedPublicKeyFile(ourSignedPreKey.getPublicKey(), serverKeypaths[1]);
+        DDDPEMEncoder.createEncodedPublicKeyFile(ourRatchetKey.getPublicKey(), serverKeypaths[2]);
         return serverKeypaths;
     }
 
@@ -200,7 +200,7 @@ public class ServerSecurity {
         byte[] clientIdentityKey;
         try {
             String clientIdentityKeyBase64 =
-                    SecurityUtils.decodeEncryptedPublicKeyfromFile(ourIdentityKeyPair.getPrivateKey(),
+                    DDDPEMEncoder.decodeEncryptedPublicKeyfromFile(ourIdentityKeyPair.getPrivateKey(),
                                                                    path.resolve(CLIENT_IDENTITY_KEY));
             clientIdentityKey = Base64.getUrlDecoder().decode(clientIdentityKeyBase64);
         } catch (NoSuchAlgorithmException e) {
@@ -208,7 +208,7 @@ public class ServerSecurity {
         }
         clientSession.IdentityKey = new IdentityKey(clientIdentityKey, 0);
 
-        byte[] clientBaseKey = SecurityUtils.decodePublicKeyfromFile(path.resolve(CLIENT_BASE_KEY));
+        byte[] clientBaseKey = DDDPEMEncoder.decodePublicKeyfromFile(path.resolve(CLIENT_BASE_KEY));
         clientSession.BaseKey = Curve.decodePoint(clientBaseKey, 0);
     }
 
@@ -401,7 +401,7 @@ public class ServerSecurity {
         ServerSecurity serverSecurityInstance = ServerSecurity.getInstance(bundlePath.getParent());
         ECPrivateKey ServerPrivKey = serverSecurityInstance.getSigningKey();
         var clientIdentityKeyBase64 =
-                SecurityUtils.decodeEncryptedPublicKeyfromFile(ServerPrivKey, bundlePath.resolve(CLIENT_IDENTITY_KEY));
+                DDDPEMEncoder.decodeEncryptedPublicKeyfromFile(ServerPrivKey, bundlePath.resolve(CLIENT_IDENTITY_KEY));
         byte[] clientIdentityKeyBytes = Base64.getUrlDecoder().decode(clientIdentityKeyBase64);
         IdentityKey clientIdentityKey = new IdentityKey(clientIdentityKeyBytes, 0);
 
