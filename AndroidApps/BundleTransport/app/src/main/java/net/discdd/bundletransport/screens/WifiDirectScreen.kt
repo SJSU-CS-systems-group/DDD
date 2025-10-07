@@ -94,7 +94,10 @@ fun WifiDirectScreen(
                     Column {
                         Text(
                                 text = state.wifiInfo,
-                                modifier = Modifier.clickable { showConnectedPeersDialog = true }
+                                modifier = Modifier.clickable {
+                                    showConnectedPeersDialog = true
+                                    wifiViewModel.getService()?.dddWifiServer?.getGroup()
+                                }
                         )
 
                         if (showConnectedPeersDialog) {

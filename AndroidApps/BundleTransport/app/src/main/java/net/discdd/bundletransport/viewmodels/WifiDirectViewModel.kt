@@ -16,7 +16,6 @@ import net.discdd.bundletransport.TransportServiceManager
 import net.discdd.bundletransport.service.DDDWifiServiceEvents
 import net.discdd.bundletransport.wifi.DDDWifiServer
 import net.discdd.bundletransport.wifi.DDDWifiServer.WifiDirectStatus
-import net.discdd.pathutils.TransportPaths
 import net.discdd.viewmodels.WifiBannerViewModel
 import java.util.concurrent.CompletableFuture
 import java.util.logging.Logger
@@ -32,7 +31,7 @@ class WifiDirectViewModel(
 ) : WifiBannerViewModel(application) {
     private val logger = Logger.getLogger(WifiDirectViewModel::class.java.name)
     private val _state = MutableStateFlow(WifiDirectState())
-    private val btService by lazy { TransportServiceManager.getService() }
+    private val btService: BundleTransportService? get() { return TransportServiceManager.getService() }
     val state = _state.asStateFlow()
 
 
@@ -43,7 +42,7 @@ class WifiDirectViewModel(
 
             DDDWifiServiceEvents.events.collect { event ->
                 when (event.type) {
-                    DDDWifiServer.DDDWifiServerEventType.DDDWIFISERVER_DEVICENAME_CHANGED -> processDeviceInfoChange()
+                    DDDWifiServer.DDDWifiServerEventType.DDDWIFISERVER_WIFI_STATUS_CHANGED -> processDeviceInfoChange()
                     DDDWifiServer.DDDWifiServerEventType.DDDWIFISERVER_NETWORKINFO_CHANGED -> updateGroupInfo()
                 }
             }

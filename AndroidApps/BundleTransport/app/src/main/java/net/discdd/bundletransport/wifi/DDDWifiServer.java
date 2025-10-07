@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -105,13 +104,16 @@ public class DDDWifiServer {
                                                               null));
     }
 
-    public void sendDeviceNameChange() {
-        DDDWifiServiceEvents.sendEvent(new DDDWifiServerEvent(DDDWifiServerEventType.DDDWIFISERVER_DEVICENAME_CHANGED,
+    public void sendWifiStatusChange() {
+        DDDWifiServiceEvents.sendEvent(new DDDWifiServerEvent(DDDWifiServerEventType.DDDWIFISERVER_WIFI_STATUS_CHANGED,
                                                               null));
     }
 
     @SuppressLint("MissingPermission")
     public void initialize() {
+        this.receiver = new WifiDirectBroadcastReceiver();
+        registerWifiIntentReceiver();
+
         bts.logWifi(INFO, R.string.initializing_wifidirectmanager);
         this.wifiP2pManager = (WifiP2pManager) this.bts.getSystemService(Context.WIFI_P2P_SERVICE);
         if (wifiP2pManager == null) {
@@ -121,18 +123,19 @@ public class DDDWifiServer {
             if (channel == null) {
                 logger.log(WARNING, "Cannot initialize Wi-Fi Direct");
             }
-
         }
 
-        this.receiver = new WifiDirectBroadcastReceiver();
         if (hasPermission()) {
-            registerWifiIntentReceiver();
             wifiP2pManager.requestDeviceInfo(channel, this::processDeviceInfo);
             bts.logWifi(INFO, R.string.wifi_direct_initialized);
+            // make sure android 13 devices create group because their actions
+            // might not be received by WifiDirectBroadcastReceiver
+            createGroup();
         } else {
             bts.logWifi(SEVERE, R.string.no_permission_for_wi_fi_direct);
         }
         sendStateChange();
+        sendWifiStatusChange();
     }
 
     AtomicBoolean intentRegistered = new AtomicBoolean(false);
@@ -155,16 +158,6 @@ public class DDDWifiServer {
         return ActivityCompat.checkSelfPermission(this.bts, Manifest.permission.NEARBY_WIFI_DEVICES) ==
                 PackageManager.PERMISSION_GRANTED;
     }
-
-    /**
-     * represents the state of group creation.
-     * if null, no group has been created, otherwise it is the name
-     * of the group being created.
-     * <p>
-     * NOTE: there is some weirdness: the SSID doesn't seem to change
-     * if the device name changes...
-     */
-    AtomicReference<String> createdGroupName = new AtomicReference<>(null);
 
     @SuppressLint("MissingPermission")
     public void createGroup() {
@@ -192,13 +185,13 @@ public class DDDWifiServer {
         cal.handle((optRc, ex) -> {
             if (ex != null) {
                 bts.logWifi(SEVERE, ex, R.string.wifi_direct_create_group_failed_e, ex.getMessage());
-                createdGroupName.set(null);
             } else if (optRc.isPresent()) {
-                bts.logWifi(SEVERE, R.string.wifi_direct_create_group_failed_d, optRc.getAsInt());
-                createdGroupName.set(null);
+                bts.logWifi(INFO, R.string.wifi_direct_create_group_failed_d, optRc.getAsInt());
             } else {
                 bts.logWifi(INFO, R.string.wifi_direct_create_group_success);
             }
+            // make sure android 14/15 devices get existing groups if createGroup fails
+            getGroup();
             return null;
         });
         var txt = Map.of("ddd", bts.getBundleServerURL()        // you can filter on this
@@ -237,6 +230,16 @@ public class DDDWifiServer {
         return cal;
     }
 
+    @SuppressLint("MissingPermission")
+    public void getGroup() {
+        wifiP2pManager.requestGroupInfo(channel, g -> {
+            wifiGroup = g;
+            sendStateChange();
+            sendWifiStatusChange();
+            bts.logWifi(INFO, R.string.wifi_direct_get_group_success);
+        });
+    }
+
     void processDeviceInfo(WifiP2pDevice wifiP2pDevice) {
         if (wifiP2pDevice != null) {
             var newStatus = switch (wifiP2pDevice.status) {
@@ -255,7 +258,7 @@ public class DDDWifiServer {
     }
 
     public enum DDDWifiServerEventType {
-        DDDWIFISERVER_NETWORKINFO_CHANGED, DDDWIFISERVER_DEVICENAME_CHANGED
+        DDDWIFISERVER_NETWORKINFO_CHANGED, DDDWIFISERVER_WIFI_STATUS_CHANGED
     }
 
     public static class DDDWifiServerEvent {
@@ -296,7 +299,6 @@ public class DDDWifiServer {
 
         @Override
         public void onFailure(int reason) {
-
             complete(OptionalInt.of(reason));
         }
     }
@@ -321,7 +323,7 @@ public class DDDWifiServer {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-            if (action != null) {
+            if (action != null && wifiP2pManager != null) {
                 switch (action) {
                     case WIFI_P2P_STATE_CHANGED_ACTION -> {
                         // Broadcast intent action to indicate whether Wi-Fi p2p is enabled or disabled
@@ -334,9 +336,6 @@ public class DDDWifiServer {
                                 createGroup();
                             }
                         } else {
-                            // WifiDirect is not enabled, so we clear createdGroupName so that the group will
-                            // be recreated when WifiDirect is enabled again
-                            createdGroupName.set(null);
                             logger.log(INFO, "WifiDirect not enabled");
                         }
                         sendStateChange();
@@ -382,6 +381,7 @@ public class DDDWifiServer {
                         }
                         DDDWifiServer.this.wifiGroup = newGroup;
                         sendStateChange();
+                        sendWifiStatusChange();
                     }
                     case WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> processDeviceInfo(intent.getParcelableExtra(
                             WifiP2pManager.EXTRA_WIFI_P2P_DEVICE,
