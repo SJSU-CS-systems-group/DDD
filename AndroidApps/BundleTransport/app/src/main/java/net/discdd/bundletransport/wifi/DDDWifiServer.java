@@ -235,6 +235,7 @@ public class DDDWifiServer {
         wifiP2pManager.requestGroupInfo(channel, g -> {
             wifiGroup = g;
             sendStateChange();
+            sendWifiStatusChange();
             bts.logWifi(INFO, R.string.wifi_direct_create_group_success);
         });
     }
