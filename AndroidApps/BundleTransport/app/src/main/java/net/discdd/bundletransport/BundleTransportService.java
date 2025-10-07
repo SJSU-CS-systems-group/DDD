@@ -206,7 +206,6 @@ public class BundleTransportService extends Service implements BundleExchangeSer
             dddWifiServer.initialize();
         } catch (Exception e) {
             logWifi(SEVERE, e, R.string.could_not_initialize_wifi_direct_s, e.getMessage());
-            dddWifiServer = null;
         }
         startHttpServer();
         startRpcServer();
@@ -216,7 +215,6 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     public void onDestroy() {
         if (dddWifiServer != null) {
             dddWifiServer.shutdown();
-            dddWifiServer = null;
         }
         stopHttpServer();
         stopRpcServer();
