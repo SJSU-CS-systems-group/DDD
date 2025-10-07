@@ -79,4 +79,5 @@
     <string name="initializing_wifidirectmanager">Initializing WifiDirectManager</string>
     <string name="wifi_direct_initialized">Wifi Direct initialized</string>
     <string name="no_permission_for_wi_fi_direct">No permission for Wi-Fi Direct</string>
+    <string name="wifi_direct_get_group_success">Found existing WiFi group.</string>
 </resources>

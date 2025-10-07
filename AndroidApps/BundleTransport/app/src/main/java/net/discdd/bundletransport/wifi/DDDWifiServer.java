@@ -236,7 +236,7 @@ public class DDDWifiServer {
             wifiGroup = g;
             sendStateChange();
             sendWifiStatusChange();
-            bts.logWifi(INFO, R.string.wifi_direct_create_group_success);
+            bts.logWifi(INFO, R.string.wifi_direct_get_group_success);
         });
     }
 
