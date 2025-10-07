@@ -31,7 +31,10 @@ class WifiDirectViewModel(
 ) : WifiBannerViewModel(application) {
     private val logger = Logger.getLogger(WifiDirectViewModel::class.java.name)
     private val _state = MutableStateFlow(WifiDirectState())
-    private val btService: BundleTransportService? get() { return TransportServiceManager.getService() }
+    private val btService: BundleTransportService?
+        get() {
+            return TransportServiceManager.getService()
+        }
     val state = _state.asStateFlow()
 
 
