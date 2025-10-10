@@ -19,7 +19,6 @@ import net.discdd.grpc.GetRecencyBlobRequest;
 import net.discdd.grpc.PublicKeyMap;
 import net.discdd.grpc.Status;
 import net.discdd.model.Bundle;
-import net.discdd.model.BundleDTO;
 import net.discdd.pathutils.ClientPaths;
 import net.discdd.server.repository.SentAduDetailsRepository;
 import net.discdd.tls.DDDNettyTLS;
@@ -203,7 +202,7 @@ public class BundleClientToBundleServerTest extends End2EndTest {
     private static void sendBundle() throws RoutingExceptions.ClientMetaDataFileException, IOException,
             InvalidKeyException, GeneralSecurityException {
 
-        BundleDTO toSend = bundleTransmission.generateBundleForTransmission();
+        Bundle toSend = bundleTransmission.generateBundleForTransmission();
 
         var bundleUploadResponseObserver = new BundleUploadResponseObserver();
         StreamObserver<BundleUploadRequest> uploadRequestStreamObserver =
@@ -218,7 +217,7 @@ public class BundleClientToBundleServerTest extends End2EndTest {
 
         // upload file as chunk
         logger.log(INFO, "Started file transfer");
-        try (FileInputStream inputStream = new FileInputStream(toSend.getBundle().getSource())) {
+        try (FileInputStream inputStream = new FileInputStream(toSend.getSource())) {
             int chunkSize = 1000 * 1000 * 4;
             byte[] bytes = new byte[chunkSize];
             int size;
