@@ -119,10 +119,12 @@ fun DownloadButton(viewModel: AppShareViewModel) {
         if (downloadFailed) {
             AlertDialog(
                 onDismissRequest = {
+                    viewModel.resetDownloadStatus()
                 },
                 confirmButton = {
                     TextButton(
                         onClick = {
+                            viewModel.resetDownloadStatus()
                         }
                     ) {
                         Text("I understand")

@@ -148,4 +148,8 @@ class AppShareViewModel(
             _downloadClientProgress.value = 1f
         }
     }
+
+    fun resetDownloadStatus() {
+        _apkDownloadFailed.value = false
+    }
 }
