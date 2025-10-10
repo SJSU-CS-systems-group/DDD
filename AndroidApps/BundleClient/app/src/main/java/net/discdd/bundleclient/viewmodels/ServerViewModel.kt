@@ -21,9 +21,14 @@ data class ServerState(
 
 class ServerViewModel(
     application: Application,
-): AndroidViewModel(application) {
+) : AndroidViewModel(application) {
+
     private val context get() = getApplication<Application>()
-    private val sharedPref = context.getSharedPreferences(BundleClientService.NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE)
+    private val sharedPref = context.getSharedPreferences(
+        BundleClientService.NET_DISCDD_BUNDLECLIENT_SETTINGS,
+        MODE_PRIVATE
+    )
+
     private val _state = MutableStateFlow(ServerState())
     val state = _state.asStateFlow()
 
@@ -40,6 +45,7 @@ class ServerViewModel(
     }
 
     fun onPortChanged(port: String) {
+        // keep raw text; validate on save
         _state.update { current -> current.copy(port = port) }
     }
 
@@ -49,7 +55,7 @@ class ServerViewModel(
 
     private fun appendMessage(message: String) {
         _state.update { current ->
-            val currentLines = current.message.split("\n").takeLast(10)
+            val currentLines = current.message.split("\n").takeLast(10).filter { it.isNotBlank() }
             val newLines = (currentLines + message)
             current.copy(message = newLines.joinToString("\n"))
         }
@@ -73,33 +79,53 @@ class ServerViewModel(
                             )
                             _isTransmitting.value = false
                         }
-                        } ?: run {
+                } ?: run {
                     appendMessage(context.getString(R.string.service_not_available))
                     _isTransmitting.value = false
                 }
-            } catch (e : Exception) {
+            } catch (e: Exception) {
                 _isTransmitting.value = false
                 appendMessage(context.getString(R.string.service_not_available))
             }
         }
     }
 
-
     private fun restoreDomainPort() {
-        _state.update { it.copy(
-            domain = sharedPref.getString("domain", "") ?: "",
-            port = sharedPref.getInt("port", 0).toString()
-        ) }
+        val savedDomain = sharedPref.getString("domain", "") ?: ""
+        val savedPortInt = sharedPref.getInt("port", 0)
+        val savedPort = if (savedPortInt > 0) savedPortInt.toString() else ""
+        _state.update { it.copy(domain = savedDomain, port = savedPort) }
     }
 
+    /**
+     * Saves domain/port. This write triggers BundleClientService's
+     * SharedPreferences listener, which resets ClientSecurity + session.
+     */
     fun saveDomainPort() {
         viewModelScope.launch {
+            val domain = state.value.domain.trim()
+            val portStr = state.value.port.trim()
+            val port = portStr.toIntOrNull()
+
+            // Validate before saving to avoid bad prefs and no-op resets
+            if (domain.isEmpty()) {
+                appendMessage(context.getString(R.string.invalid_domain))
+                return@launch
+            }
+            if (port == null || port !in 1..65_535) {
+                appendMessage(context.getString(R.string.invalid_port))
+                return@launch
+            }
+
             sharedPref
                 .edit()
-                .putString("domain", state.value.domain)
-                .putInt("port", state.value.port.toInt())
+                .putString("domain", domain)
+                .putInt("port", port)
                 .apply()
+
+            // Inform the user that the service will handle the reset
             appendMessage(context.getString(R.string.settings_saved))
+            appendMessage(context.getString(R.string.switching_server_will_reset_keys))
         }
     }
 }

@@ -66,7 +66,7 @@ public class ClientSecurity {
 
     private String clientID;
     private ClientPaths clientPaths;
-
+    //Call This Again
     ClientSecurity(int deviceID, ClientPaths clientPaths) throws InvalidKeyException, IOException,
             NoSuchAlgorithmException {
         this.clientPaths = clientPaths;
@@ -99,6 +99,34 @@ public class ClientSecurity {
         // Create Client Cipher
         createCipher();
     }
+
+
+//    public synchronized void switchBundleServer(ClientPaths newPaths, boolean rotateClientIdentity)
+//            throws IOException, InvalidKeyException {
+//        this.clientPaths = newPaths;
+//        InitializeServerKeysFromFiles(newPaths.serverKeyPath);
+//        if (rotateClientIdentity) {
+//            ECKeyPair newId = Curve.generateKeyPair();
+//            this.ourIdentityKeyPair = new IdentityKeyPair(
+//                    new IdentityKey(newId.getPublicKey()), newId.getPrivateKey());
+//            this.ourBaseKey = Curve.generateKeyPair();
+//            this.clientID = SecurityUtils.generateID(
+//                    ourIdentityKeyPair.getPublicKey().getPublicKey().serialize());
+//            this.ourAddress = new SignalProtocolAddress(clientID, deviceID);
+//            writeKeysToFiles(newPaths.clientKeyPath, true);
+//        } else {
+//            writeKeysToFiles(newPaths.clientKeyPath, false);
+//        }
+//
+//        SessionRecord fresh = new SessionRecord();
+//        initializeRatchet(fresh.getSessionState());
+//
+//        this.clientProtocolStore = SecurityUtils.createInMemorySignalProtocolStore();
+//        this.clientProtocolStore.storeSession(this.ourAddress, fresh);
+//
+//        this.cipherSession = new SessionCipher(this.clientProtocolStore, this.ourAddress);
+//        logger.info("[Sec]: Switched to new BundleServer and reset session.");
+//    }
 
     private Path[] writeKeysToFiles(Path path, boolean writePvt) throws IOException {
         /* Create Directory if it does not exist */
