@@ -414,12 +414,12 @@ public class DDDWifiDirect implements DDDWifi {
         }
         // unregister the broadcast receiver
         unregisterBroadcastReceiver();
-        // shutdown looper
-        handlerThread.quit();
         // there is no shutdown for wifiP2pManager
         wifiEnable = false;
         wifiChannel.close();
         wifiChannel = null;
+        // shutdown looper
+        handlerThread.quit();
         eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_STATE_CHANGED);
     }
 

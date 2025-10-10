@@ -122,10 +122,6 @@ public class BundleClientService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
-        if (preferences != null) {
-            // if preferences are initialized, everything else should be too
-            return START_STICKY;
-        }
         preferences = getSharedPreferences(NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE);
         preferences.registerOnSharedPreferenceChangeListener(onSharedPreferenceChangeListener);
         fixedRateSched = new DDDFixedRateScheduler<>(getApplicationContext(), this::exchangeWithTransports);
