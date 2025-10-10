@@ -36,7 +36,7 @@ fun AppShareScreen(
         wifiViewModel: WifiDirectViewModel = viewModel(),
         appShareViewModel: AppShareViewModel = viewModel(),
         connectivityViewModel: ConnectivityViewModel = viewModel(),
-        ) {
+) {
     val url = "http://192.168.49.1:8080"
     val wifiConnectURL = wifiViewModel.state.collectAsState().value.wifiConnectURL
     val connectivityState by connectivityViewModel.state.collectAsState()
@@ -118,23 +118,23 @@ fun DownloadButton(viewModel: AppShareViewModel) {
 
         if (downloadFailed) {
             AlertDialog(
-                onDismissRequest = {
-                    viewModel.resetDownloadStatus()
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            viewModel.resetDownloadStatus()
+                    onDismissRequest = {
+                        viewModel.resetDownloadStatus()
+                    },
+                    confirmButton = {
+                        TextButton(
+                                onClick = {
+                                    viewModel.resetDownloadStatus()
+                                }
+                        ) {
+                            Text("I understand")
                         }
-                    ) {
-                        Text("I understand")
-                    }
-                },
-                text = {
-                    Text(
-                        "Downloading the APKs failed, please try downloading again."
-                    )
-                },
+                    },
+                    text = {
+                        Text(
+                                "Downloading the APKs failed, please try downloading again."
+                        )
+                    },
             )
         }
     }
@@ -143,15 +143,15 @@ fun DownloadButton(viewModel: AppShareViewModel) {
 @Composable
 fun QRCodeDisplay(instructions: String, contentURL: String) {
     Text(
-        text = instructions,
-        style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.padding(bottom = 16.dp)
+            text = instructions,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(bottom = 16.dp)
     )
     generateQRCode(contentURL, 200, 200)?.let { wifiQrCodeBitmap ->
         Image(
-            bitmap = wifiQrCodeBitmap.asImageBitmap(),
-            contentDescription = "QR Code",
-            modifier = Modifier.size(200.dp).padding(start = 10.dp, top = 5.dp, end = 15.dp, bottom = 8.dp)
+                bitmap = wifiQrCodeBitmap.asImageBitmap(),
+                contentDescription = "QR Code",
+                modifier = Modifier.size(200.dp).padding(start = 10.dp, top = 5.dp, end = 15.dp, bottom = 8.dp)
         )
     }
 }
