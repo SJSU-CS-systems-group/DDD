@@ -207,7 +207,6 @@ public class BundleClientService extends Service {
         }
 
         try {
-
             //Application context
             var resources = getApplicationContext().getResources();
             try (InputStream inServerIdentity =
@@ -269,6 +268,7 @@ public class BundleClientService extends Service {
 
     @Override
     public void onDestroy() {
+        instance.stopSelf();
         instance = null;
         if (dddWifi != null) {
             dddWifi.getEventLiveData().removeObserver(liveDataObserver);
@@ -544,6 +544,5 @@ public class BundleClientService extends Service {
     public class BundleClientServiceBinder extends Binder {
         public BundleClientService getService() {return BundleClientService.this;}
     }
-
 
 }
