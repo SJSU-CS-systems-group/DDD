@@ -99,13 +99,6 @@ class WifiDirectViewModel(
         }
     }
 
-    fun openInfoSettings() {
-        val intent = Intent(Settings.ACTION_DEVICE_INFO_SETTINGS).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        startActivity(context, intent, null)
-    }
-
     fun openWifiSettings() {
         val intent = Intent(Settings.ACTION_WIFI_SETTINGS).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
