@@ -180,8 +180,20 @@ public class DDDWifiDirect implements DDDWifi {
 
         WifiP2pManager.DnsSdTxtRecordListener txtResponseListener = (type, txtRecord, device) -> {
             logger.log(INFO, format("DnsSdTxtRecord available: %s %s %s", device.deviceName, device.deviceAddress, txtRecord));
+            boolean peerDiscovered = false;
             var wifiDevice = new DDDWifiDirectDevice(device, txtRecord.get("transportId"));
-            peers.add(wifiDevice);
+            for (DDDWifiDevice peerDevice: peers) {
+                if (peerDevice.getWifiAddress().equals(wifiDevice.getWifiAddress())) {
+                    if (!wifiDevice.getDescription().isEmpty()) {
+                        peers.remove(peerDevice);
+                        peers.add(wifiDevice);
+                    }
+                    peerDiscovered = true;
+                }
+            }
+            if (!peerDiscovered) {
+                peers.add(wifiDevice);
+            }
             checkAwaitingDiscovery();
             eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_PEERS_CHANGED);
         };
