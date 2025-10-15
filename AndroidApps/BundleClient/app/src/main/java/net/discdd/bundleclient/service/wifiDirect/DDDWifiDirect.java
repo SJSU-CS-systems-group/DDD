@@ -195,8 +195,20 @@ public class DDDWifiDirect implements DDDWifi {
                                    fullDomainName,
                                    device.deviceName,
                                    record));
+            boolean peerDiscovered = false;
             var wifiDevice = new DDDWifiDirectDevice(device);
-            peers.add(wifiDevice);
+            for (DDDWifiDevice peerDevice: peers) {
+                if (peerDevice.getWifiAddress().equals(wifiDevice.getWifiAddress())) {
+                    if (!wifiDevice.getDescription().isEmpty()) {
+                        peers.remove(peerDevice);
+                        peers.add(wifiDevice);
+                    }
+                    peerDiscovered = true;
+                }
+            }
+            if (!peerDiscovered) {
+                peers.add(wifiDevice);
+            }
             checkAwaitingDiscovery();
             eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_PEERS_CHANGED);
         };
