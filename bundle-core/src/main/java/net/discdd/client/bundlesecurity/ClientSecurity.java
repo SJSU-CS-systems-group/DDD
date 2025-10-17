@@ -216,6 +216,12 @@ public class ClientSecurity {
 
         return singleClientInstance;
     }
+    /* Be Careuful When you call This  */
+    public static synchronized void resetInstance(int deviceID, ClientPaths clientPaths) throws
+            IOException, NoSuchAlgorithmException, InvalidKeyException {
+        singleClientInstance = null;
+        logger.log(FINE, "[Sec]: Client Security Instance Has been reset!");
+    }
 
     public static synchronized ClientSecurity getInstance() throws IllegalStateException {
         if (singleClientInstance == null) {

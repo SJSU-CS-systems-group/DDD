@@ -39,6 +39,9 @@
     <string name="received">received</string>
     <string name="cannot_transfer_bundle_usb_not_ready_or_directory_not_found">Cannot transfer bundle: USB not ready or directory not found</string>
     <string name="delete_logs">Clear Logs</string>
+    <string name="invalid_domain">Invalid Domain</string>
+    <string name="invalid_port">Invalid Port</string>
+    <string name="switching_server_will_reset_keys">Switching the Server Will Reset all Bundles</string>
     <string name="failed_to_start_discovery_s">Failed to start discovery: %s</string>
     <string name="connecting_to_s">Connecting to %s</string>
     <string name="failed_to_connect_to_s">Failed to connect to %s</string>
