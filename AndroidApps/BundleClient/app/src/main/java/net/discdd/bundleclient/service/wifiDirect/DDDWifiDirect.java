@@ -195,26 +195,34 @@ public class DDDWifiDirect implements DDDWifi {
                                    fullDomainName,
                                    device.deviceName,
                                    record));
-            boolean peerDiscovered = false;
-            var wifiDevice = new DDDWifiDirectDevice(device);
-            for (DDDWifiDevice peerDevice: peers) {
-                if (peerDevice.getWifiAddress().equals(wifiDevice.getWifiAddress())) {
-                    if (!wifiDevice.getDescription().isEmpty()) {
-                        peers.remove(peerDevice);
-                        peers.add(wifiDevice);
-                    }
-                    peerDiscovered = true;
-                }
-            }
-            if (!peerDiscovered) {
-                peers.add(wifiDevice);
-            }
+            discoverPeer(device);
             checkAwaitingDiscovery();
             eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_PEERS_CHANGED);
         };
         wifiP2pManager.setDnsSdResponseListeners(wifiChannel, txtResponseListener, (txtRecord, map, device) -> {
             logger.log(INFO, format("DnsSdService available: %s %s %s", device.deviceName, device.deviceAddress, txtRecord));
         });
+    }
+
+    private DDDWifiDevice discoverPeer(WifiP2pDevice device) {
+        boolean peerDiscovered = false;
+        DDDWifiDevice newDevice = null;
+        var wifiDevice = new DDDWifiDirectDevice(device);
+        for (DDDWifiDevice peerDevice: peers) {
+            if (peerDevice.getWifiAddress().equals(wifiDevice.getWifiAddress())) {
+                newDevice = peerDevice;
+                peerDiscovered = true;
+                if (peerDevice.getDescription().isBlank() && !wifiDevice.getDescription().isBlank()) {
+                    peers.remove(peerDevice);
+                    peers.add(wifiDevice);
+                    newDevice = wifiDevice;
+                }
+            }
+        }
+        if (!peerDiscovered) {
+            peers.add(wifiDevice);
+        }
+        return newDevice;
     }
 
     AtomicBoolean isReceiverRegistered = new AtomicBoolean(false);
@@ -314,7 +322,9 @@ public class DDDWifiDirect implements DDDWifi {
             toComplete = new ArrayList<>(addressFutures);
             addressFutures.clear();
         }
-        var con = new DDDWifiDirectConnection(new DDDWifiDirectDevice(groupOwner), groupOwnerAddress);
+        DDDWifiDirectDevice ownerDevice = (DDDWifiDirectDevice) discoverPeer(groupOwner);
+        //eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_PEERS_CHANGED);
+        var con = new DDDWifiDirectConnection(ownerDevice, groupOwnerAddress);
         toComplete.forEach(cf -> cf.completeWithConnection(con));
     }
 
