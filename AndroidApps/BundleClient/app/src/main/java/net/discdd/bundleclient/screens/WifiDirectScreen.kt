@@ -234,7 +234,7 @@ fun PeerItem(
         TextButton(
             onClick = onItemClick
         ) {
-            Text(text = peer.device.description)
+            Text(text = peer.device.description.ifBlank { peer.device.wifiAddress })
         }
         Button(
             onClick = onExchangeClick,
