@@ -162,7 +162,7 @@ public class DDDWifiServer {
 
     @SuppressLint("MissingPermission")
     public void createGroup() {
-        if (wifiGroup != null && wifiGroup.getNetworkName().startsWith(DDD_NETWORK_NAME + bts.transportID)) return;
+        if (wifiGroup != null && wifiGroup.getNetworkName().startsWith(DDD_NETWORK_NAME + bts.transportId)) return;
         if (!hasPermission()) {
             bts.logWifi(SEVERE, R.string.wifi_direct_no_permission);
             return;
@@ -177,7 +177,7 @@ public class DDDWifiServer {
     @SuppressLint("MissingPermission")
     private CompletableActionListener innerCreateGroupRunnable() {
         var cal = new CompletableActionListener();
-        WifiP2pConfig config = new WifiP2pConfig.Builder().setNetworkName(DDD_NETWORK_NAME + bts.transportID)
+        WifiP2pConfig config = new WifiP2pConfig.Builder().setNetworkName(DDD_NETWORK_NAME + bts.transportId)
                 .setPassphrase("ConnectToMe")
                 .setGroupOperatingBand(WifiP2pConfig.GROUP_OWNER_BAND_2GHZ)
                 .enablePersistentMode(true)
@@ -196,7 +196,7 @@ public class DDDWifiServer {
             return null;
         });
         var txt = Map.of("ddd", bts.getBundleServerURL(),   // you can filter on this
-                "transportID", bts.transportID
+                "transportId", bts.transportId
         );
 
         // DNS-SD service info
