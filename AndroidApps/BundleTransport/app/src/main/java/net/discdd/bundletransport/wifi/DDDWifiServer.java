@@ -195,7 +195,8 @@ public class DDDWifiServer {
             getGroup();
             return null;
         });
-        var txt = Map.of("ddd", bts.getBundleServerURL()        // you can filter on this
+        var txt = Map.of("ddd", bts.getBundleServerURL(),   // you can filter on this
+                "transportID", bts.transportID
         );
 
         // DNS-SD service info
