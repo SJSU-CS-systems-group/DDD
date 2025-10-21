@@ -26,16 +26,18 @@ class ClientUsbViewModel(
     companion object {
         private val logger: Logger = Logger.getLogger(ClientUsbViewModel::class.java.name)
     }
+
     lateinit var rootDir: File
     private val bundleTransmission by lazy {
         val wifiBgService = WifiServiceManager.getService()
         wifiBgService?.bundleTransmission
     }
+
     fun setRoot(dir: File) {
         rootDir = dir
     }
 
-    fun createIfDoesNotExist(parent : DocumentFile, name : String) : DocumentFile {
+    fun createIfDoesNotExist(parent: DocumentFile, name: String): DocumentFile {
         var child = parent.findFile(name)
         if (child == null || !child.isDirectory) {
             child = parent.createDirectory(name)
@@ -43,8 +45,9 @@ class ClientUsbViewModel(
         } else {
             logger.log(INFO, "\'$name\' directory exists")
         }
-        return child ?: throw IOException ("Could not create $name")
+        return child ?: throw IOException("Could not create $name")
     }
+
     fun transferBundleToUsb(context: Context) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
@@ -84,6 +87,7 @@ class ClientUsbViewModel(
             }
         }
     }
+
     fun usbTransferToClient(context: Context) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
@@ -93,56 +97,60 @@ class ClientUsbViewModel(
                     appendMessage("No recency blob found on USB", Color.YELLOW)
                     return@withContext
                 }
-                    val recencyBlob = context.contentResolver.openInputStream(recencyLocation.uri)?.use { inputStream ->
-                        val bytes = inputStream.readAllBytes()
-                        RecencyBlob.parseFrom(bytes)
-                    }
-                    if (recencyBlob == null) {
-                        appendMessage("Invalid recency blob found on USB", Color.YELLOW)
-                        return@withContext
-                    }
+                val recencyBlob = context.contentResolver.openInputStream(recencyLocation.uri)?.use { inputStream ->
+                    val bytes = inputStream.readAllBytes()
+                    RecencyBlob.parseFrom(bytes)
+                }
+                if (recencyBlob == null) {
+                    appendMessage("Invalid recency blob found on USB", Color.YELLOW)
+                    return@withContext
+                }
                 val devicePath: Path =
                     rootDir.toPath().parent.resolve("Shared/received-bundles")
-                    val filesToTransfer = toClientDir.listFiles()
-                    if (filesToTransfer.isEmpty()) {
-                        appendMessage("No files found in 'toClient' directory on USB", Color.YELLOW)
-                        return@withContext
-                    }
-                    try {
-                        val bundleIds = bundleTransmission!!.getNextBundles()
-                        logger.log(INFO, "Bundle IDs expected: ${bundleIds}")
-                        if (bundleIds.isNotEmpty()) {
-                            for (bundleId in bundleIds) {
-                                val bundleFile = toClientDir.findFile(bundleId)
-                                logger.log(INFO, "Target bundle ID: ${bundleId}")
-                                if (bundleFile != null) {
-                                    val targetFile = devicePath.resolve(bundleId)
-                                    val result = withContext(Dispatchers.IO) {
-                                        Files.newOutputStream(targetFile)?.use { outputStream ->
-                                            context.contentResolver.openInputStream(bundleFile.uri)?.use { inputStream ->
-                                                inputStream.copyTo(outputStream)
-                                                val receivedBundleLocation: Path =
-                                                    rootDir.toPath().parent.resolve("BundleTransmission/bundle-generation/to-send")
-                                                        .resolve(bundleId)
-                                                bundleTransmission!!.processReceivedBundle(
-                                                    recencyBlob.senderId,
-                                                    Bundle(targetFile.toFile()))
-                                            }
+                val filesToTransfer = toClientDir.listFiles()
+                if (filesToTransfer.isEmpty()) {
+                    appendMessage("No files found in 'toClient' directory on USB", Color.YELLOW)
+                    return@withContext
+                }
+                try {
+                    val bundleIds = bundleTransmission!!.getNextBundles()
+                    logger.log(INFO, "Bundle IDs expected: ${bundleIds}")
+                    if (bundleIds.isNotEmpty()) {
+                        for (bundleId in bundleIds) {
+                            val bundleFile = toClientDir.findFile(bundleId)
+                            logger.log(INFO, "Target bundle ID: ${bundleId}")
+                            if (bundleFile != null) {
+                                val targetFile = devicePath.resolve(bundleId)
+                                val result = withContext(Dispatchers.IO) {
+                                    Files.newOutputStream(targetFile)?.use { outputStream ->
+                                        context.contentResolver.openInputStream(bundleFile.uri)?.use { inputStream ->
+                                            inputStream.copyTo(outputStream)
+                                            val receivedBundleLocation: Path =
+                                                rootDir.toPath().parent.resolve("BundleTransmission/bundle-generation/to-send")
+                                                    .resolve(bundleId)
+                                            bundleTransmission!!.processReceivedBundle(
+                                                recencyBlob.senderId,
+                                                Bundle(targetFile.toFile())
+                                            )
                                         }
                                     }
-                                    logger.log(INFO, "Transferred file: ${bundleFile.name} of ${result} bytes to ${devicePath}")
                                 }
+                                logger.log(
+                                    INFO,
+                                    "Transferred file: ${bundleFile.name} of ${result} bytes to ${devicePath}"
+                                )
                             }
                         }
-                        appendMessage(
-                            "Bundle transferred from 'toClient' to device received-processing successfully",
-                            Color.GREEN
-                        )
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        appendMessage("Error during USB file transfer: ${e.message}", Color.RED)
                     }
+                    appendMessage(
+                        "Bundle transferred from 'toClient' to device received-processing successfully",
+                        Color.GREEN
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    appendMessage("Error during USB file transfer: ${e.message}", Color.RED)
                 }
             }
         }
     }
+}
