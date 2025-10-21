@@ -112,6 +112,18 @@ class ClientUsbViewModel(
                     appendMessage("No files found in 'toClient' directory on USB", Color.YELLOW)
                     return@withContext
                 }
+
+                if (toClientDir.isDirectory) {
+                    logger.log(INFO, "Is directory");
+                } else {
+                    logger.log(INFO, "Is not directory");
+                }
+
+                for (file in toClientDir.listFiles()) {
+                    logger.log(INFO, "File: ${file.name}")
+                }
+
+
                 try {
                     val bundleIds = bundleTransmission!!.getNextBundles()
                     logger.log(INFO, "Bundle IDs expected: ${bundleIds}")
