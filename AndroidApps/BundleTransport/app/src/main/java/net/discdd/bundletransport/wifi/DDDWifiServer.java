@@ -245,7 +245,6 @@ public class DDDWifiServer {
     void processDeviceInfo(WifiP2pDevice wifiP2pDevice) {
         if (wifiP2pDevice != null) {
             this.deviceName = wifiP2pDevice.deviceName;
-            logger.info("Process device info: " + deviceName + " : " + wifiP2pDevice.deviceAddress);
             var newStatus = switch (wifiP2pDevice.status) {
                 case WifiP2pDevice.CONNECTED -> WifiDirectStatus.CONNECTED;
                 case WifiP2pDevice.INVITED -> WifiDirectStatus.INVITED;
