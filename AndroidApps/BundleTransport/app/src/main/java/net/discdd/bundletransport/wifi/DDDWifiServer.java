@@ -201,7 +201,7 @@ public class DDDWifiServer {
 
         // DNS-SD service info
         var serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(
-                /* instanceName = */ "DDD",
+                /* instanceName = */ "ddd",
                 /* serviceType  = */ "_ddd._tcp",
                 /* txtRecord    = */ txt);
 

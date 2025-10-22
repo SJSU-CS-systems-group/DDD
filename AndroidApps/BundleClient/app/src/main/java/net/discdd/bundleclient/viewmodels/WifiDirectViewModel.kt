@@ -23,6 +23,7 @@ import java.util.concurrent.CompletableFuture
 
 data class PeerDevice(
     val device: DDDWifiDevice,
+    val deviceId: String,
     val lastSeen: Long = 0,
     val lastExchange: Long = 0,
     val recencyTime: Long = 0,
@@ -164,6 +165,7 @@ class WifiDirectViewModel(
                     // Update existing peer
                     currentPeer.copy(
                         device = recentTransport.device as DDDWifiDevice,
+                        deviceId = recentTransport.device.id ?: "unknown",
                         lastSeen = recentTransport.lastSeen,
                         lastExchange = recentTransport.lastExchange,
                         recencyTime = recentTransport.recencyTime
@@ -172,6 +174,7 @@ class WifiDirectViewModel(
                     // Create new peer
                     PeerDevice(
                         device = recentTransport.device as DDDWifiDevice,
+                        deviceId = recentTransport.device.id ?: "unknown",
                         lastSeen = recentTransport.lastSeen,
                         lastExchange = recentTransport.lastExchange,
                         recencyTime = recentTransport.recencyTime
