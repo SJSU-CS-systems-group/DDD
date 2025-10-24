@@ -208,7 +208,6 @@ public class DDDWifiDirect implements DDDWifi {
         var newDevice = new DDDWifiDirectDevice(device, transportId);
 
         for (DDDWifiDevice peerDevice: peers) {
-            if (peerDevice.getId() == null || transportId == null) return;
             if (peerDevice.getId().equals(newDevice.getId())) {
                 peerDiscovered = true;
                 if (peerDevice.getDescription().isBlank() && !newDevice.getDescription().isBlank()) {
