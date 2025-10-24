@@ -38,8 +38,7 @@ class DDDWifiDirectDevice implements DDDWifiDevice {
         return this.getId().hashCode();
     }
 
-    public boolean sameAddressAs(Object o) {
-        if (!(o instanceof DDDWifiDirectDevice owdd)) return false;
-        return this.getWifiAddress().compareTo(((DDDWifiDevice) o).getWifiAddress()) == 0;
+    public boolean sameAddressAs(DDDWifiDevice o) {
+        return this.getWifiAddress().compareTo((o).getWifiAddress()) == 0;
     }
 }
