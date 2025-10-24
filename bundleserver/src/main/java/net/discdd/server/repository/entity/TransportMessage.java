@@ -17,4 +17,10 @@ public class TransportMessage {
      */
     public String message;
 
+    public TransportMessage(String transportId, String message) {
+        this.transportId = transportId;
+        this.message = message;
+    }
+
+
 }
