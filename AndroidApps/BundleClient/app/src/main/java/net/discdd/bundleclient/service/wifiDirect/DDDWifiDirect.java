@@ -180,9 +180,11 @@ public class DDDWifiDirect implements DDDWifi {
 
         WifiP2pManager.DnsSdTxtRecordListener txtResponseListener = (type, txtRecord, device) -> {
             logger.log(INFO, format("DnsSdTxtRecord available: %s %s %s", device.deviceName, device.deviceAddress, txtRecord));
-            discoverPeer(device, txtRecord.get("transportId"));
-            checkAwaitingDiscovery();
-            eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_PEERS_CHANGED);
+            if (txtRecord.get("transportId") != null) {
+                discoverPeer(device, txtRecord.get("transportId"));
+                checkAwaitingDiscovery();
+                eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_PEERS_CHANGED);
+            }
         };
         wifiP2pManager.setDnsSdResponseListeners(wifiChannel, null, txtResponseListener);
 
@@ -201,25 +203,23 @@ public class DDDWifiDirect implements DDDWifi {
         });
     }
 
-    private DDDWifiDevice discoverPeer(WifiP2pDevice device, String transportId) {
+    private void discoverPeer(WifiP2pDevice device, String transportId) {
         boolean peerDiscovered = false;
-        DDDWifiDevice newDevice = null;
-        var wifiDevice = new DDDWifiDirectDevice(device, transportId);
+        var newDevice = new DDDWifiDirectDevice(device, transportId);
+
         for (DDDWifiDevice peerDevice: peers) {
-            if (peerDevice.getId().equals(wifiDevice.getId())) {
-                newDevice = peerDevice;
+            if (peerDevice.getId() == null || transportId == null) return;
+            if (peerDevice.getId().equals(newDevice.getId())) {
                 peerDiscovered = true;
-                if (peerDevice.getDescription().isBlank() && !wifiDevice.getDescription().isBlank()) {
+                if (peerDevice.getDescription().isBlank() && !newDevice.getDescription().isBlank()) {
                     peers.remove(peerDevice);
-                    peers.add(wifiDevice);
-                    newDevice = wifiDevice;
+                    peers.add(newDevice);
                 }
             }
         }
         if (!peerDiscovered) {
-            peers.add(wifiDevice);
+            peers.add(newDevice);
         }
-        return newDevice;
     }
 
     AtomicBoolean isReceiverRegistered = new AtomicBoolean(false);
@@ -297,7 +297,7 @@ public class DDDWifiDirect implements DDDWifi {
          * it will complete exceptionally with a DDDWifiConnectionException.
          */
         void completeWithConnection(DDDWifiDirectConnection con) throws DDDWifiException.DDDWifiConnectionException {
-            if (!device.equals(con.dev)) {
+            if (!device.sameAddressAs(con.dev)) {
                 completeExceptionally(new DDDWifiException.DDDWifiConnectionException(format("connected to %s rather than %s",
                                                                              con.dev.wifiP2pDevice.deviceName,
                                                                              device.wifiP2pDevice.deviceName), null));

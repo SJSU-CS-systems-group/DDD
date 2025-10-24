@@ -16,7 +16,7 @@ public interface DDDWifiDevice extends TransportDevice, Comparable<DDDWifiDevice
 
     @Override
     default int compareTo(DDDWifiDevice o) {
-        return this.getWifiAddress().compareTo(o.getWifiAddress());
+        return this.getId().compareTo(o.getId());
     }
 
 }

@@ -35,6 +35,11 @@ class DDDWifiDirectDevice implements DDDWifiDevice {
 
     @Override
     public int hashCode() {
-        return this.wifiP2pDevice.deviceAddress.hashCode();
+        return this.getId().hashCode();
+    }
+
+    public boolean sameAddressAs(Object o) {
+        if (!(o instanceof DDDWifiDirectDevice owdd)) return false;
+        return this.getWifiAddress().compareTo(((DDDWifiDevice) o).getWifiAddress()) == 0;
     }
 }
