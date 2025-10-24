@@ -92,7 +92,11 @@ public class DDDWifiServer {
         }
         var clientList =
                 wifiGroup.getClientList().stream().map(d -> d.deviceName).collect(Collectors.toUnmodifiableList());
-        return new DDDWifiNetworkInfo(wifiGroup.getNetworkName(), wifiGroup.getPassphrase(), inetAddress, clientList, deviceName);
+        return new DDDWifiNetworkInfo(wifiGroup.getNetworkName(),
+                                      wifiGroup.getPassphrase(),
+                                      inetAddress,
+                                      clientList,
+                                      deviceName);
     }
 
     public void shutdown() {
@@ -196,8 +200,7 @@ public class DDDWifiServer {
             return null;
         });
         var txt = Map.of("ddd", bts.getBundleServerURL(),   // you can filter on this
-                "transportId", bts.transportId
-        );
+                         "transportId", bts.transportId);
 
         // DNS-SD service info
         var serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(
@@ -285,7 +288,11 @@ public class DDDWifiServer {
         public final List<String> clientList;
         public final String deviceName;
 
-        public DDDWifiNetworkInfo(String ssid, String password, InetAddress inetAddress, List<String> clientList, String deviceName) {
+        public DDDWifiNetworkInfo(String ssid,
+                                  String password,
+                                  InetAddress inetAddress,
+                                  List<String> clientList,
+                                  String deviceName) {
             this.ssid = ssid;
             this.password = password;
             this.inetAddress = inetAddress;
