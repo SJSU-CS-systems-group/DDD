@@ -205,7 +205,7 @@ public class DDDWifiDirect implements DDDWifi {
 
     private void discoverPeer(WifiP2pDevice device, String transportId) {
         boolean peerDiscovered = false;
-        var newDevice = new DDDWifiDirectDevice(device, transportId);
+        DDDWifiDevice newDevice = new DDDWifiDirectDevice(device, transportId);
         DDDWifiDevice peerToReplace = null;
 
         for (DDDWifiDevice peerDevice: peers) {
