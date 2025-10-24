@@ -47,5 +47,5 @@
     <string name="not_exchanged_recently_s">Transport has not exchanged with server recently: %s</string>
     <string name="timeout_connecting_to_s">Timeout connecting to %s perhaps not accepting connection?</string>
     <string name="could_not_start_exchange">"Could not start exchange: "</string>
-    <string name="unknown_transportId">"Unknown"
+    <string name="unknown_transportId">"Unknown"</string>
 </resources>
