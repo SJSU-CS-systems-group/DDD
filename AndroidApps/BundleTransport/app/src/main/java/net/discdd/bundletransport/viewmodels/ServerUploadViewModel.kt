@@ -16,7 +16,6 @@ import net.discdd.pathutils.TransportPaths
 import java.util.logging.Logger
 import androidx.core.content.edit
 import net.discdd.bundletransport.BundleTransportService
-import java.util.Base64
 
 data class ServerState(
         val domain: String = "",
@@ -33,7 +32,7 @@ class ServerUploadViewModel(
     val transportID: String
         get() {
             val service = TransportServiceManager.getService()
-            return service?.transportID ?: "Unknown"
+            return service?.transportId ?: "Unknown"
         }
     private val context get() = getApplication<Application>()
     private val sharedPref by lazy { context.getSharedPreferences("server_endpoint", MODE_PRIVATE) }

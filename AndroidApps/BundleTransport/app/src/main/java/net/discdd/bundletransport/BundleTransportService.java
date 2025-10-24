@@ -66,7 +66,7 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     private final IBinder binder = new TransportWifiDirectServiceBinder();
     private final RpcServer grpcServer = new RpcServer(this);
     public GrpcSecurityKey grpcKeys;
-    public String transportID;
+    public String transportId;
     String host;
     int port;
     ConnectivityManager connectivityManager;
@@ -157,8 +157,8 @@ public class BundleTransportService extends Service implements BundleExchangeSer
                      CertificateException | OperatorCreationException | IOException e) {
                 logExchange(SEVERE, e, R.string.failed_to_initialize_grpcsecurity_s, e.getMessage());
             }
-            transportID = Base64.encodeToString(grpcKeys.grpcKeyPair.getPublic().getEncoded(), Base64.DEFAULT);
-            transportID = transportID.substring(transportID.length() - 20, transportID.length() - 4);
+            transportId = Base64.encodeToString(grpcKeys.grpcKeyPair.getPublic().getEncoded(), Base64.DEFAULT);
+            transportId = transportId.substring(transportId.length() - 20, transportId.length() - 4);
 
             connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
             // BundleTransportService doesn't use LogFragment directly, but we do want our

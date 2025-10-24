@@ -46,6 +46,7 @@ public class DDDWifiServer {
     private WifiP2pManager.Channel channel;
     private WifiP2pGroup wifiGroup;
     private WifiDirectBroadcastReceiver receiver;
+    private String deviceName;
 
     private WifiDirectStatus status = WifiDirectStatus.UNDEFINED;
 
@@ -91,7 +92,11 @@ public class DDDWifiServer {
         }
         var clientList =
                 wifiGroup.getClientList().stream().map(d -> d.deviceName).collect(Collectors.toUnmodifiableList());
-        return new DDDWifiNetworkInfo(wifiGroup.getNetworkName(), wifiGroup.getPassphrase(), inetAddress, clientList);
+        return new DDDWifiNetworkInfo(wifiGroup.getNetworkName(),
+                                      wifiGroup.getPassphrase(),
+                                      inetAddress,
+                                      clientList,
+                                      deviceName);
     }
 
     public void shutdown() {
@@ -161,7 +166,7 @@ public class DDDWifiServer {
 
     @SuppressLint("MissingPermission")
     public void createGroup() {
-        if (wifiGroup != null && wifiGroup.getNetworkName().startsWith(DDD_NETWORK_NAME + bts.transportID)) return;
+        if (wifiGroup != null && wifiGroup.getNetworkName().startsWith(DDD_NETWORK_NAME + bts.transportId)) return;
         if (!hasPermission()) {
             bts.logWifi(SEVERE, R.string.wifi_direct_no_permission);
             return;
@@ -176,7 +181,7 @@ public class DDDWifiServer {
     @SuppressLint("MissingPermission")
     private CompletableActionListener innerCreateGroupRunnable() {
         var cal = new CompletableActionListener();
-        WifiP2pConfig config = new WifiP2pConfig.Builder().setNetworkName(DDD_NETWORK_NAME + bts.transportID)
+        WifiP2pConfig config = new WifiP2pConfig.Builder().setNetworkName(DDD_NETWORK_NAME + bts.transportId)
                 .setPassphrase("ConnectToMe")
                 .setGroupOperatingBand(WifiP2pConfig.GROUP_OWNER_BAND_2GHZ)
                 .enablePersistentMode(true)
@@ -194,12 +199,12 @@ public class DDDWifiServer {
             getGroup();
             return null;
         });
-        var txt = Map.of("ddd", bts.getBundleServerURL()        // you can filter on this
-        );
+        var txt = Map.of("ddd", bts.getBundleServerURL(),   // you can filter on this
+                         "transportId", bts.transportId);
 
         // DNS-SD service info
         var serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(
-                /* instanceName = */ "DDD",
+                /* instanceName = */ "ddd",
                 /* serviceType  = */ "_ddd._tcp",
                 /* txtRecord    = */ txt);
 
@@ -242,6 +247,7 @@ public class DDDWifiServer {
 
     void processDeviceInfo(WifiP2pDevice wifiP2pDevice) {
         if (wifiP2pDevice != null) {
+            this.deviceName = wifiP2pDevice.deviceName;
             var newStatus = switch (wifiP2pDevice.status) {
                 case WifiP2pDevice.CONNECTED -> WifiDirectStatus.CONNECTED;
                 case WifiP2pDevice.INVITED -> WifiDirectStatus.INVITED;
@@ -280,12 +286,18 @@ public class DDDWifiServer {
         public final String password;
         public final InetAddress inetAddress;
         public final List<String> clientList;
+        public final String deviceName;
 
-        public DDDWifiNetworkInfo(String ssid, String password, InetAddress inetAddress, List<String> clientList) {
+        public DDDWifiNetworkInfo(String ssid,
+                                  String password,
+                                  InetAddress inetAddress,
+                                  List<String> clientList,
+                                  String deviceName) {
             this.ssid = ssid;
             this.password = password;
             this.inetAddress = inetAddress;
             this.clientList = clientList;
+            this.deviceName = deviceName;
         }
     }
 
