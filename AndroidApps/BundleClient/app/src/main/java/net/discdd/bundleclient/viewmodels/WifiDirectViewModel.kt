@@ -165,7 +165,7 @@ class WifiDirectViewModel(
                     // Update existing peer
                     currentPeer.copy(
                         device = recentTransport.device as DDDWifiDevice,
-                        deviceId = recentTransport.device.id ?: "unknown",
+                        deviceId = recentTransport.device.id ?: context.getString(R.string.unknown_transportId),
                         lastSeen = recentTransport.lastSeen,
                         lastExchange = recentTransport.lastExchange,
                         recencyTime = recentTransport.recencyTime
@@ -174,7 +174,7 @@ class WifiDirectViewModel(
                     // Create new peer
                     PeerDevice(
                         device = recentTransport.device as DDDWifiDevice,
-                        deviceId = recentTransport.device.id ?: "unknown",
+                        deviceId = recentTransport.device.id ?: context.getString(R.string.unknown_transportId),
                         lastSeen = recentTransport.lastSeen,
                         lastExchange = recentTransport.lastExchange,
                         recencyTime = recentTransport.recencyTime

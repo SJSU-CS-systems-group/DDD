@@ -18,6 +18,7 @@ import androidx.annotation.RequiresPermission;
 import androidx.core.app.ActivityCompat;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+import net.discdd.bundleclient.R;
 import net.discdd.bundleclient.service.BundleClientService;
 import net.discdd.bundleclient.service.DDDWifi;
 import net.discdd.bundleclient.service.DDDWifiConnection;
@@ -298,7 +299,8 @@ public class DDDWifiDirect implements DDDWifi {
             toComplete = new ArrayList<>(addressFutures);
             addressFutures.clear();
         }
-        var con = new DDDWifiDirectConnection(new DDDWifiDirectDevice(groupOwner, "unknown"), groupOwnerAddress);
+        var con = new DDDWifiDirectConnection(new DDDWifiDirectDevice(groupOwner, bundleClientService.getApplicationContext()
+                .getString(R.string.unknown_transportId)), groupOwnerAddress);
         toComplete.forEach(cf -> cf.completeWithConnection(con));
     }
 
