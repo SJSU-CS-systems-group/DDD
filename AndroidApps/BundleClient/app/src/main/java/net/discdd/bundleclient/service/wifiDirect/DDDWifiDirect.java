@@ -18,6 +18,7 @@ import androidx.annotation.RequiresPermission;
 import androidx.core.app.ActivityCompat;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+import net.discdd.bundleclient.R;
 import net.discdd.bundleclient.service.BundleClientService;
 import net.discdd.bundleclient.service.DDDWifi;
 import net.discdd.bundleclient.service.DDDWifiConnection;
@@ -177,7 +178,16 @@ public class DDDWifiDirect implements DDDWifi {
             registerBroadcastReceiver();
         }
 
-        WifiP2pServiceRequest serviceRequest = WifiP2pDnsSdServiceRequest.newInstance("_ddd._tcp");
+        WifiP2pManager.DnsSdTxtRecordListener txtResponseListener = (type, txtRecord, device) -> {
+            logger.log(INFO, format("DnsSdTxtRecord available: %s %s %s", device.deviceName, device.deviceAddress, txtRecord));
+            var wifiDevice = new DDDWifiDirectDevice(device, txtRecord.get("transportId"));
+            peers.add(wifiDevice);
+            checkAwaitingDiscovery();
+            eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_PEERS_CHANGED);
+        };
+        wifiP2pManager.setDnsSdResponseListeners(wifiChannel, null, txtResponseListener);
+
+        WifiP2pServiceRequest serviceRequest = WifiP2pDnsSdServiceRequest.newInstance("ddd", "_ddd._tcp");
 
         wifiP2pManager.addServiceRequest(wifiChannel, serviceRequest, new WifiP2pManager.ActionListener() {
             @Override
@@ -189,19 +199,6 @@ public class DDDWifiDirect implements DDDWifi {
             public void onFailure(int reason) {
                 logger.log(SEVERE, "Could not register service request for _ddd._tcp rc = " + reason);
             }
-        });
-        WifiP2pManager.DnsSdServiceResponseListener txtResponseListener = (fullDomainName, record, device) -> {
-            logger.log(INFO, format("DnsSdTxtRecord available: domain %s device %s record %s",
-                                   fullDomainName,
-                                   device.deviceName,
-                                   record));
-            var wifiDevice = new DDDWifiDirectDevice(device);
-            peers.add(wifiDevice);
-            checkAwaitingDiscovery();
-            eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_PEERS_CHANGED);
-        };
-        wifiP2pManager.setDnsSdResponseListeners(wifiChannel, txtResponseListener, (txtRecord, map, device) -> {
-            logger.log(INFO, format("DnsSdService available: %s %s %s", device.deviceName, device.deviceAddress, txtRecord));
         });
     }
 
@@ -302,7 +299,8 @@ public class DDDWifiDirect implements DDDWifi {
             toComplete = new ArrayList<>(addressFutures);
             addressFutures.clear();
         }
-        var con = new DDDWifiDirectConnection(new DDDWifiDirectDevice(groupOwner), groupOwnerAddress);
+        var con = new DDDWifiDirectConnection(new DDDWifiDirectDevice(groupOwner, bundleClientService.getApplicationContext()
+                .getString(R.string.unknown_transportId)), groupOwnerAddress);
         toComplete.forEach(cf -> cf.completeWithConnection(con));
     }
 

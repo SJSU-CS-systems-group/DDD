@@ -5,9 +5,11 @@ import net.discdd.bundleclient.service.DDDWifiDevice;
 
 class DDDWifiDirectDevice implements DDDWifiDevice {
     final public WifiP2pDevice wifiP2pDevice;
+    final public String transportId;
 
-    public DDDWifiDirectDevice(WifiP2pDevice wifiP2pDevice) {
+    public DDDWifiDirectDevice(WifiP2pDevice wifiP2pDevice, String transportId) {
         this.wifiP2pDevice = wifiP2pDevice;
+        this.transportId = transportId;
     }
 
     @Override
@@ -18,6 +20,11 @@ class DDDWifiDirectDevice implements DDDWifiDevice {
     @Override
     public String getDescription() {
         return this.wifiP2pDevice.deviceName;
+    }
+
+    @Override
+    public String getId() {
+        return transportId;
     }
 
     @Override

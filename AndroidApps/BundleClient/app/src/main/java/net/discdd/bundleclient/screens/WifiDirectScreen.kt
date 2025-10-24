@@ -76,6 +76,7 @@ fun WifiDirectScreen(
                 title = { Text(text = peer.device.description) },
                 text = {
                     Column {
+                        Text(text = "TransportId: ${peer.deviceId}")
                         Text(text = "Last seen: ${viewModel.getRelativeTime(peer.lastSeen)}")
                         Text(text = "Last exchange: ${viewModel.getRelativeTime(peer.lastExchange)}")
                         Text(text = "Recency: ${viewModel.getRelativeTime(peer.recencyTime)}")
