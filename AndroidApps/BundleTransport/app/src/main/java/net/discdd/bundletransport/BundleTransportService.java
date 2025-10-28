@@ -166,8 +166,8 @@ public class BundleTransportService extends Service implements BundleExchangeSer
             LogFragment.registerLoggerHandler();
             SharedPreferences sharedPreferences =
                     getSharedPreferences(BUNDLETRANSPORT_PREFERENCES, Context.MODE_PRIVATE);
-            host = sharedPreferences.getString(BUNDLETRANSPORT_HOST_PREFERENCE, "colin.homeofcode.com");
-            port = sharedPreferences.getInt(BUNDLETRANSPORT_PORT_PREFERENCE, 7778);
+            host = sharedPreferences.getString(BUNDLETRANSPORT_HOST_PREFERENCE, BUNDLE_SERVER_DOMAIN);
+            port = sharedPreferences.getInt(BUNDLETRANSPORT_PORT_PREFERENCE, BUNDLE_SERVER_PORT);
             periodicExchangeScheduler = new DDDFixedRateScheduler<>(getApplicationContext(), this::doServerExchange);
             periodicExchangeScheduler.setPeriodInMinutes(sharedPreferences.getInt(BUNDLETRANSPORT_PERIODIC_PREFERENCE,
                                                                                   0));

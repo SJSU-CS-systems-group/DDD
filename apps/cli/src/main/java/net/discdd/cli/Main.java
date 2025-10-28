@@ -7,8 +7,7 @@ import picocli.CommandLine.Command;
                                        EncryptBundle.class,
                                        LocalAduSendReceive.class,
                                        SelfSignedCertCreator.class,
-                                       JavaKeyCreator.class,
-                                       CastToTransport.class}, mixinStandardHelpOptions = true)
+                                       JavaKeyCreator.class }, mixinStandardHelpOptions = true)
 public class Main {
 
     public static void main(String[] args) {
