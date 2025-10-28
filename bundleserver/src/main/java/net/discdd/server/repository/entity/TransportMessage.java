@@ -16,11 +16,4 @@ public class TransportMessage {
      * The message being sent to the transport
      */
     public String message;
-
-    public TransportMessage(String transportId, String message) {
-        this.transportId = transportId;
-        this.message = message;
-    }
-
-
 }
