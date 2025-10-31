@@ -35,7 +35,7 @@ class ServerUploadViewModel(
             return service?.transportId ?: "Unknown"
         }
     private val context get() = getApplication<Application>()
-    private val sharedPref by lazy { context.getSharedPreferences("net.discdd.bundletransport", MODE_PRIVATE) }
+    private val sharedPref by lazy { context.getSharedPreferences(BundleTransportService.BUNDLETRANSPORT_PREFERENCES, MODE_PRIVATE) }
     private val transportPrefs by lazy {
         context.getSharedPreferences(BundleTransportService.BUNDLETRANSPORT_PREFERENCES, MODE_PRIVATE)
     }
