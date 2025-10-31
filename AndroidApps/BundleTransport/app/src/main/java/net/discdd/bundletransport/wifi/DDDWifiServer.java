@@ -16,10 +16,12 @@ import androidx.core.app.ActivityCompat;
 import net.discdd.bundletransport.BundleTransportService;
 import net.discdd.bundletransport.R;
 import net.discdd.bundletransport.service.DDDWifiServiceEvents;
+import net.discdd.grpc.GetRecencyBlobResponse;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -33,6 +35,7 @@ import java.util.stream.Collectors;
 import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION;
 import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION;
 import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION;
+import static java.lang.String.format;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
@@ -199,8 +202,22 @@ public class DDDWifiServer {
             getGroup();
             return null;
         });
+
+        GetRecencyBlobResponse response = null;
+        try {
+            response = bts.getRecencyBlob();
+            logger.log(INFO, format("ServerKey: %s, Signature: %s, Nonce: %s, Time: %s", Base64.getEncoder().encodeToString((response.getServerPublicKey().toByteArray())),
+                    Base64.getEncoder().encodeToString((response.getRecencyBlobSignature().toByteArray())),
+                    response.getRecencyBlob().getNonce(),
+                    response.getRecencyBlob().getBlobTimestamp()));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
         var txt = Map.of("ddd", bts.getBundleServerURL(),   // you can filter on this
-                         "transportId", bts.transportId);
+                         "transportId", bts.transportId,
+                         "recencyBlob", Base64.getEncoder().encodeToString((response.getRecencyBlob().toByteArray()))
+        );
+        logger.log(INFO, "recencyBlob: " + Base64.getEncoder().encodeToString((response.getRecencyBlob().toByteArray())));
 
         // DNS-SD service info
         var serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(
