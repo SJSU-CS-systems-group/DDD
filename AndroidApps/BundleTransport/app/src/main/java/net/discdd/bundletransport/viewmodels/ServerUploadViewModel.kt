@@ -99,7 +99,8 @@ class ServerUploadViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             _state.update {
                 it.copy(
-                        domain = sharedPref.getString(BundleTransportService.BUNDLETRANSPORT_DOMAIN_PREFERENCE, "") ?: "",
+                        domain = sharedPref.getString(BundleTransportService.BUNDLETRANSPORT_DOMAIN_PREFERENCE, "")
+                                ?: "",
                         port = sharedPref.getInt(BundleTransportService.BUNDLETRANSPORT_PORT_PREFERENCE, 0).toString()
                 )
             }
