@@ -35,6 +35,10 @@ class ServerViewModel(
     private val _isTransmitting = MutableStateFlow(false)
     val isTransmitting = _isTransmitting.asStateFlow()
 
+    // Store the last saved values for comparison and reversion
+    private var oldDomain: String = ""
+    private var oldPort: Int = 0
+
     init {
         AndroidAppConstants.checkDefaultDomainPortSettings(sharedPref)
         restoreDomainPort()

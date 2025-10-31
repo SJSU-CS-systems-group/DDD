@@ -158,14 +158,14 @@ fun ServerScreen(
 
 
     ResetKeysWarningDialog(
-        show = showDialog,
+        show = showResetDialog,
         onConfirm = {
             serverViewModel.saveDomainPort()
-            showDialog = false
+            showResetDialog = false
         },
         onDismiss = {
             serverViewModel.revertDomainPortChanges()
-            showDialog = false
+            showResetDialog = false
         }
     )
 }
