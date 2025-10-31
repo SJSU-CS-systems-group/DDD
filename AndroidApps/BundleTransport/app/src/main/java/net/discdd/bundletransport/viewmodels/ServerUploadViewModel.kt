@@ -35,7 +35,7 @@ class ServerUploadViewModel(
             return service?.transportId ?: "Unknown"
         }
     private val context get() = getApplication<Application>()
-    private val sharedPref by lazy { context.getSharedPreferences("server_endpoint", MODE_PRIVATE) }
+    private val sharedPref by lazy { context.getSharedPreferences(BundleTransportService.BUNDLETRANSPORT_PREFERENCES, MODE_PRIVATE) }
     private val transportPrefs by lazy {
         context.getSharedPreferences(BundleTransportService.BUNDLETRANSPORT_PREFERENCES, MODE_PRIVATE)
     }
@@ -88,8 +88,8 @@ class ServerUploadViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             sharedPref
                     .edit {
-                        putString("domain", state.value.domain)
-                                .putInt("port", state.value.port.toInt())
+                        putString(BundleTransportService.BUNDLETRANSPORT_DOMAIN_PREFERENCE, state.value.domain)
+                        putInt(BundleTransportService.BUNDLETRANSPORT_PORT_PREFERENCE, state.value.port.toInt())
                     }
             _state.update { it.copy(message = context.getString(R.string.saved)) }
         }
@@ -99,8 +99,8 @@ class ServerUploadViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             _state.update {
                 it.copy(
-                        domain = sharedPref.getString("domain", "") ?: "",
-                        port = sharedPref.getInt("port", 0).toString()
+                        domain = sharedPref.getString(BundleTransportService.BUNDLETRANSPORT_DOMAIN_PREFERENCE, "") ?: "",
+                        port = sharedPref.getInt(BundleTransportService.BUNDLETRANSPORT_PORT_PREFERENCE, 0).toString()
                 )
             }
         }
