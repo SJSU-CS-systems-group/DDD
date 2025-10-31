@@ -12,6 +12,7 @@ import net.discdd.AndroidAppConstants
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiServiceManager
 import net.discdd.bundleclient.service.BundleClientService
+import net.discdd.client.bundlesecurity.ClientSecurity
 
 data class ServerState(
     val domain: String = "",
@@ -89,10 +90,11 @@ class ServerViewModel(
     }
 
     private fun restoreDomainPort() {
-        val savedDomain = sharedPref.getString("domain", "") ?: ""
-        val savedPortInt = sharedPref.getInt("port", 0)
-        val savedPort = if (savedPortInt > 0) savedPortInt.toString() else ""
-        _state.update { it.copy(domain = savedDomain, port = savedPort) }
+        oldDomain = sharedPref.getString("domain", "") ?: ""
+        oldPort = sharedPref.getInt("port", 0)
+
+        val savedPort = if (oldPort > 0) oldPort.toString() else ""
+        _state.update { it.copy(domain = oldDomain, port = savedPort) }
     }
 
     fun saveDomainPort() {
@@ -101,7 +103,7 @@ class ServerViewModel(
             val portStr = state.value.port.trim()
             val port = portStr.toIntOrNull()
 
-            // Validate before saving to avoid bad prefs and no-op resets
+            // Validate before saving
             if (domain.isEmpty()) {
                 appendMessage(context.getString(R.string.invalid_domain))
                 return@launch
@@ -110,13 +112,32 @@ class ServerViewModel(
                 appendMessage(context.getString(R.string.invalid_port))
                 return@launch
             }
-            sharedPref
-                .edit()
-                .putString("domain", domain)
-                .putInt("port", port)
-                .apply()
-            appendMessage(context.getString(R.string.settings_saved))
-            appendMessage(context.getString(R.string.switching_server_will_reset_keys))
+
+            val domainChanged = oldDomain != domain
+            val portChanged = oldPort != port
+
+            if (domainChanged || portChanged) {
+                sharedPref.edit()
+                    .putString("domain", domain)
+                    .putInt("port", port)
+                    .apply()
+
+                oldDomain = domain
+                oldPort = port
+
+                appendMessage(context.getString(R.string.settings_saved))
+                appendMessage(context.getString(R.string.switching_server_will_reset_keys))
+                ClientSecurity.resetInstance()
+            } else {
+                appendMessage(context.getString(R.string.no_changes_detected))
+            }
         }
+    }
+
+    fun revertDomainPortChanges() {
+        _state.update {
+            it.copy(domain = oldDomain, port = if (oldPort > 0) oldPort.toString() else "")
+        }
+        appendMessage(context.getString(R.string.changes_reverted))
     }
 }

@@ -64,6 +64,7 @@ public class ClientSecurity {
     private SessionCipher cipherSession;
     private SignalProtocolStore clientProtocolStore;
 
+    private int deviceID;
     private String clientID;
     private ClientPaths clientPaths;
 
@@ -95,7 +96,7 @@ public class ClientSecurity {
         clientID = SecurityUtils.generateID(ourIdentityKeyPair.getPublicKey().getPublicKey().serialize());
         ourAddress = new SignalProtocolAddress(clientID, deviceID);
         theirOneTimePreKey = Optional.<ECPublicKey>absent();
-
+        this.deviceID = deviceID;
         // Create Client Cipher
         createCipher();
     }
@@ -216,10 +217,13 @@ public class ClientSecurity {
 
         return singleClientInstance;
     }
-    /* Be Careuful When you call This  */
-    public static synchronized void resetInstance(int deviceID, ClientPaths clientPaths) throws
-            IOException, NoSuchAlgorithmException, InvalidKeyException {
+    /* Be Careful When you call This  */
+    public static synchronized void resetInstance() throws IOException,
+            NoSuchAlgorithmException, InvalidKeyException {
+        var deviceID = singleClientInstance.getDeviceId();
+        var clientPaths = singleClientInstance.getClientPaths();
         singleClientInstance = null;
+        initializeInstance(deviceID, clientPaths);
         logger.log(FINE, "[Sec]: Client Security Instance Has been reset!");
     }
 
@@ -291,7 +295,12 @@ public class ClientSecurity {
     public Path getClientRootPath() {
         return clientPaths.bundleSecurityPath;
     }
-
+    public ClientPaths getClientPaths() {
+        return clientPaths;
+    }
+    public int getDeviceId() {
+        return this.deviceID;
+    }
     public ECPublicKey getServerPublicKey() {
         return theirIdentityKey.getPublicKey();
     }
