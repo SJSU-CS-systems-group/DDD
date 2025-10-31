@@ -52,5 +52,5 @@
     <string name="could_not_start_exchange">"Could not start exchange: "</string>
     <string name="no_changes_detected">No changes detected.</string>
     <string name="changes_reverted">Changes reverted.</string>
-
+    <string name="unknown_transportId">"Unknown"</string>
 </resources>

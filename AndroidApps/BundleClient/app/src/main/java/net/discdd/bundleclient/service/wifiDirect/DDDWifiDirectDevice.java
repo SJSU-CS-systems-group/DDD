@@ -5,9 +5,11 @@ import net.discdd.bundleclient.service.DDDWifiDevice;
 
 class DDDWifiDirectDevice implements DDDWifiDevice {
     final public WifiP2pDevice wifiP2pDevice;
+    final public String transportId;
 
-    public DDDWifiDirectDevice(WifiP2pDevice wifiP2pDevice) {
+    public DDDWifiDirectDevice(WifiP2pDevice wifiP2pDevice, String transportId) {
         this.wifiP2pDevice = wifiP2pDevice;
+        this.transportId = transportId;
     }
 
     @Override
@@ -21,6 +23,11 @@ class DDDWifiDirectDevice implements DDDWifiDevice {
     }
 
     @Override
+    public String getId() {
+        return transportId;
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (!(o instanceof DDDWifiDirectDevice owdd)) return false;
         return this.compareTo(owdd) == 0;
@@ -28,6 +35,10 @@ class DDDWifiDirectDevice implements DDDWifiDevice {
 
     @Override
     public int hashCode() {
-        return this.wifiP2pDevice.deviceName.hashCode() ^ this.wifiP2pDevice.deviceAddress.hashCode();
+        return this.getId().hashCode();
+    }
+
+    public boolean sameAddressAs(DDDWifiDevice o) {
+        return this.getWifiAddress().compareTo((o).getWifiAddress()) == 0;
     }
 }
