@@ -183,7 +183,7 @@ public class DDDWifiDirect implements DDDWifi {
 
         WifiP2pManager.DnsSdTxtRecordListener txtResponseListener = (type, txtRecord, device) -> {
             logger.log(INFO, format("DnsSdTxtRecord available: %s %s %s", device.deviceName, device.deviceAddress, txtRecord));
-            if (txtRecord.get("recencyBlob") != null) {
+            if (txtRecord.containsKey("recencyBlob")) {
                 try {
                     byte[] res = Base64.getDecoder().decode(txtRecord.get("recencyBlob"));
                     GetRecencyBlobResponse response = GetRecencyBlobResponse.parseFrom(res);
@@ -227,7 +227,7 @@ public class DDDWifiDirect implements DDDWifi {
     }
 
     @Override
-    public CompletableFuture<Boolean>startDiscovery() {
+    public CompletableFuture<Boolean> startDiscovery() {
         var cf = new CompletableFuture<Boolean>();
         try {
             peers.clear();
