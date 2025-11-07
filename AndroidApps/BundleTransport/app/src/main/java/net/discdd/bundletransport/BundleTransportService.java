@@ -164,7 +164,6 @@ public class BundleTransportService extends Service implements BundleExchangeSer
             // If the transport paths are already initialized, we don't need to reinitialize them
             return START_STICKY;
         }
-        lastRecencyBlob = GetRecencyBlobResponse.getDefaultInstance();
         executor.submit(() -> {
             this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
             try {

@@ -204,7 +204,9 @@ public class DDDWifiServer {
         });
 
         GetRecencyBlobResponse response = bts.getLastRecencyBlob();
-        /*
+        if (response == null) {
+            response = GetRecencyBlobResponse.getDefaultInstance();
+        }
         try {
             logger.log(INFO, format("ServerKey: %s, Signature: %s, Nonce: %s, Time: %s", Base64.getEncoder().encodeToString((response.getServerPublicKey().toByteArray())),
                     Base64.getEncoder().encodeToString((response.getRecencyBlobSignature().toByteArray())),
@@ -214,7 +216,6 @@ public class DDDWifiServer {
             throw new RuntimeException(e);
         }
 
-         */
         var txt = Map.of("ddd", bts.getBundleServerURL(),   // you can filter on this
                          "transportId", bts.transportId,
                          "recencyBlob", Base64.getEncoder().encodeToString((response.getRecencyBlob().toByteArray()))

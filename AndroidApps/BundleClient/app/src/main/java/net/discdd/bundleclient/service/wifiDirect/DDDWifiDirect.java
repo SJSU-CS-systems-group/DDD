@@ -183,13 +183,16 @@ public class DDDWifiDirect implements DDDWifi {
 
         WifiP2pManager.DnsSdTxtRecordListener txtResponseListener = (type, txtRecord, device) -> {
             logger.log(INFO, format("DnsSdTxtRecord available: %s %s %s", device.deviceName, device.deviceAddress, txtRecord));
-            byte[] res = Base64.getDecoder().decode(txtRecord.get("recencyBlob"));
+            //byte[] res = Base64.getDecoder().decode(txtRecord.get("recencyBlob"));
+            /*
             try {
                 GetRecencyBlobResponse response = GetRecencyBlobResponse.parseFrom(res);
                 logger.log(INFO, format("Received recency blob %s", response.getRecencyBlob().getBlobTimestamp()));
             } catch (InvalidProtocolBufferException e) {
                 throw new RuntimeException(e);
             }
+
+             */
             var wifiDevice = new DDDWifiDirectDevice(device, txtRecord.get("transportId"));
             peers.add(wifiDevice);
             checkAwaitingDiscovery();
