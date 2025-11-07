@@ -43,6 +43,7 @@ import javax.net.ssl.TrustManager;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
@@ -129,6 +130,7 @@ public class BundleTransportService extends Service implements BundleExchangeSer
         } catch (Exception e) {
             logExchange(SEVERE, e, R.string.error_during_server_exchange_s, e.getMessage());
         }
+        updateRecencyBlob();
         return null;
     }
 
@@ -300,8 +302,13 @@ public class BundleTransportService extends Service implements BundleExchangeSer
         return host + ":" + port;
     }
 
-    public void updateRecencyBlob(GetRecencyBlobResponse response) {
-        lastRecencyBlob = response;
+    public void updateRecencyBlob() {
+        var recencyBlobPath = transportPaths.toClientPath.resolve(TransportToBundleServerManager.RECENCY_BLOB_BIN);
+        try (var is = Files.newInputStream(recencyBlobPath)) {
+            lastRecencyBlob = GetRecencyBlobResponse.parseFrom(is);
+        } catch (IOException e) {
+            logger.log(SEVERE, "Failed to read recency blob", e);
+        }
     }
 
     public GetRecencyBlobResponse getLastRecencyBlob() {

@@ -203,10 +203,7 @@ public class DDDWifiServer {
             return null;
         });
 
-        GetRecencyBlobResponse response = bts.getLastRecencyBlob();
-        if (response == null) {
-            response = GetRecencyBlobResponse.getDefaultInstance();
-        }
+        GetRecencyBlobResponse response = bts.getLastRecencyBlob() != null ? bts.getLastRecencyBlob() : GetRecencyBlobResponse.getDefaultInstance();
         try {
             logger.log(INFO, format("ServerKey: %s, Signature: %s, Nonce: %s, Time: %s", Base64.getEncoder().encodeToString((response.getServerPublicKey().toByteArray())),
                     Base64.getEncoder().encodeToString((response.getRecencyBlobSignature().toByteArray())),
@@ -218,9 +215,9 @@ public class DDDWifiServer {
 
         var txt = Map.of("ddd", bts.getBundleServerURL(),   // you can filter on this
                          "transportId", bts.transportId,
-                         "recencyBlob", Base64.getEncoder().encodeToString((response.getRecencyBlob().toByteArray()))
+                         "recencyBlob", Base64.getEncoder().encodeToString(response.toByteArray())
         );
-        logger.log(INFO, "recencyBlob: " + Base64.getEncoder().encodeToString((response.getRecencyBlob().toByteArray())));
+        logger.log(INFO, "recencyBlob: " + Base64.getEncoder().encodeToString(response.toByteArray()));
 
         // DNS-SD service info
         var serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(
