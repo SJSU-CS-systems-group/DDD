@@ -98,6 +98,8 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     private boolean httpServerRunning = false;
     private DDDWifiServer dddWifiServer;
 
+    private GetRecencyBlobResponse lastRecencyBlob;
+
     public Future<Void> queueServerExchangeNow() {
         return periodicExchangeScheduler.callItNow();
     }
@@ -162,6 +164,7 @@ public class BundleTransportService extends Service implements BundleExchangeSer
             // If the transport paths are already initialized, we don't need to reinitialize them
             return START_STICKY;
         }
+        lastRecencyBlob = GetRecencyBlobResponse.getDefaultInstance();
         executor.submit(() -> {
             this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
             try {
@@ -298,27 +301,17 @@ public class BundleTransportService extends Service implements BundleExchangeSer
         return host + ":" + port;
     }
 
+    public void updateRecencyBlob(GetRecencyBlobResponse response) {
+        lastRecencyBlob = response;
+    }
+
+    public GetRecencyBlobResponse getLastRecencyBlob() {
+        return lastRecencyBlob;
+    }
+
     public class TransportWifiDirectServiceBinder extends Binder {
         BundleTransportService getService() {
             return BundleTransportService.this;
         }
-    }
-
-    public GetRecencyBlobResponse getRecencyBlob() throws Exception {
-        var sslClientContext = SSLContext.getInstance("TLS");
-        sslClientContext.init(DDDTLSUtil.getKeyManagerFactory(grpcKeys.grpcKeyPair, grpcKeys.grpcCert)
-                                      .getKeyManagers(),
-                              new TrustManager[] { new DDDX509ExtendedTrustManager(true) },
-                              new SecureRandom());
-
-        ManagedChannel channel = OkHttpChannelBuilder.forAddress(host, port)
-                .hostnameVerifier((host, session) -> true)
-                .useTransportSecurity()
-                .sslSocketFactory(sslClientContext.getSocketFactory())
-                .build();
-        var blockingExchangeStub = BundleExchangeServiceGrpc.newBlockingStub(channel);
-        var recencyBlobReq = GetRecencyBlobRequest.newBuilder().build();
-        return blockingExchangeStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                .getRecencyBlob(recencyBlobReq);
     }
 }

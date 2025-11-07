@@ -50,6 +50,23 @@ public class RpcServer {
             @Override
             protected void onBundleExchangeEvent(BundleExchangeEvent bundleExchangeEvent) {
                 bundleTransportService.onBundleExchangeEvent(bundleExchangeEvent);
+                var recencyBlobReq = GetRecencyBlobRequest.newBuilder().build();
+                getRecencyBlob(recencyBlobReq, new StreamObserver<>() {
+                    @Override
+                    public void onNext(GetRecencyBlobResponse recencyBlobResponse) {
+                        bundleTransportService.updateRecencyBlob(recencyBlobResponse);
+                    }
+
+                    @Override
+                    public void onError(Throwable throwable) {
+                        logger.log(SEVERE, "Error updating recency blob: " + throwable.getMessage());
+                    }
+
+                    @Override
+                    public void onCompleted() {
+                        // No action needed
+                    }
+                });
             }
 
             @Override

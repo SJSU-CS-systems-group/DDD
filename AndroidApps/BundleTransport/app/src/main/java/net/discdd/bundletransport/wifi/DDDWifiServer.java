@@ -203,16 +203,18 @@ public class DDDWifiServer {
             return null;
         });
 
-        GetRecencyBlobResponse response = null;
+        GetRecencyBlobResponse response = bts.getLastRecencyBlob();
+        /*
         try {
-            response = bts.getRecencyBlob();
             logger.log(INFO, format("ServerKey: %s, Signature: %s, Nonce: %s, Time: %s", Base64.getEncoder().encodeToString((response.getServerPublicKey().toByteArray())),
                     Base64.getEncoder().encodeToString((response.getRecencyBlobSignature().toByteArray())),
-                    response.getRecencyBlob().getNonce(),
-                    response.getRecencyBlob().getBlobTimestamp()));
+                                    response.getRecencyBlob().getNonce(),
+                                    response.getRecencyBlob().getBlobTimestamp()));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+
+         */
         var txt = Map.of("ddd", bts.getBundleServerURL(),   // you can filter on this
                          "transportId", bts.transportId,
                          "recencyBlob", Base64.getEncoder().encodeToString((response.getRecencyBlob().toByteArray()))
