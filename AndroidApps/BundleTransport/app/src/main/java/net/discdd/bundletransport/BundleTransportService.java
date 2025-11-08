@@ -18,28 +18,18 @@ import android.util.Base64;
 import androidx.annotation.StringRes;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
-import io.grpc.ManagedChannel;
-import io.grpc.okhttp.OkHttpChannelBuilder;
 import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
 import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.bundletransport.wifi.DDDWifiServer;
-import net.discdd.grpc.BundleExchangeServiceGrpc;
-import net.discdd.grpc.GetRecencyBlobRequest;
 import net.discdd.grpc.GetRecencyBlobResponse;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.screens.LogFragment;
-import net.discdd.tls.DDDTLSUtil;
-import net.discdd.tls.DDDX509ExtendedTrustManager;
 import net.discdd.tls.GrpcSecurityKey;
 import net.discdd.transport.TransportToBundleServerManager;
-import net.discdd.utils.Constants;
 import net.discdd.utils.DDDFixedRateScheduler;
 import net.discdd.utils.LogUtil;
 import net.discdd.utils.UserLogRepository;
 import org.bouncycastle.operator.OperatorCreationException;
-
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
 
 import java.io.File;
 import java.io.IOException;
@@ -47,12 +37,10 @@ import java.nio.file.Files;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
-import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -98,8 +86,6 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     private FileHttpServer httpServer;
     private boolean httpServerRunning = false;
     private DDDWifiServer dddWifiServer;
-
-    private GetRecencyBlobResponse lastRecencyBlob;
 
     public Future<Void> queueServerExchangeNow() {
         return periodicExchangeScheduler.callItNow();
@@ -303,16 +289,14 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     }
 
     public void updateRecencyBlob() {
+        var response = GetRecencyBlobResponse.getDefaultInstance();
         var recencyBlobPath = transportPaths.toClientPath.resolve(TransportToBundleServerManager.RECENCY_BLOB_BIN);
         try (var is = Files.newInputStream(recencyBlobPath)) {
-            lastRecencyBlob = GetRecencyBlobResponse.parseFrom(is);
+            response = GetRecencyBlobResponse.parseFrom(is);
         } catch (IOException e) {
             logger.log(SEVERE, "Failed to read recency blob", e);
         }
-    }
-
-    public GetRecencyBlobResponse getLastRecencyBlob() {
-        return lastRecencyBlob;
+        dddWifiServer.updateRecencyBlob(response);
     }
 
     public class TransportWifiDirectServiceBinder extends Binder {

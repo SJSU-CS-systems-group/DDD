@@ -12,6 +12,9 @@ import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import net.discdd.bundletransport.BundleTransportService;
 import net.discdd.bundletransport.R;
@@ -22,11 +25,14 @@ import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
@@ -50,6 +56,10 @@ public class DDDWifiServer {
     private WifiP2pGroup wifiGroup;
     private WifiDirectBroadcastReceiver receiver;
     private String deviceName;
+    private GetRecencyBlobResponse lastRecencyBlob;
+    private WifiP2pDnsSdServiceInfo serviceInfo;
+    private Map<String, String> txt;
+
 
     private WifiDirectStatus status = WifiDirectStatus.UNDEFINED;
 
@@ -72,6 +82,7 @@ public class DDDWifiServer {
         intentFilter.addAction(WIFI_P2P_CONNECTION_CHANGED_ACTION);
         intentFilter.addAction(WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
         this.bts = bundleTransportService;
+        lastRecencyBlob = GetRecencyBlobResponse.getDefaultInstance();
     }
 
     public DDDWifiNetworkInfo getNetworkInfo() {
@@ -203,24 +214,21 @@ public class DDDWifiServer {
             return null;
         });
 
-        GetRecencyBlobResponse response = bts.getLastRecencyBlob() != null ? bts.getLastRecencyBlob() : GetRecencyBlobResponse.getDefaultInstance();
         try {
-            logger.log(INFO, format("ServerKey: %s, Signature: %s, Nonce: %s, Time: %s", Base64.getEncoder().encodeToString((response.getServerPublicKey().toByteArray())),
-                    Base64.getEncoder().encodeToString((response.getRecencyBlobSignature().toByteArray())),
-                                    response.getRecencyBlob().getNonce(),
-                                    response.getRecencyBlob().getBlobTimestamp()));
+            logger.log(INFO, format("ServerKey: %s, Signature: %s, Nonce: %s, Time: %s", Base64.getEncoder().encodeToString((lastRecencyBlob.getServerPublicKey().toByteArray())),
+                    Base64.getEncoder().encodeToString((lastRecencyBlob.getRecencyBlobSignature().toByteArray())),
+                                    lastRecencyBlob.getRecencyBlob().getNonce(),
+                                    lastRecencyBlob.getRecencyBlob().getBlobTimestamp()));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-
-        var txt = Map.of("ddd", bts.getBundleServerURL(),   // you can filter on this
-                         "transportId", bts.transportId,
-                         "recencyBlob", Base64.getEncoder().encodeToString(response.toByteArray())
-        );
-        logger.log(INFO, "recencyBlob: " + Base64.getEncoder().encodeToString(response.toByteArray()));
+        txt = new HashMap<>();
+        txt.put("ddd", bts.getBundleServerURL());
+        txt.put("transportId", bts.transportId);
+        txt.put("recencyBlob", Base64.getEncoder().encodeToString(lastRecencyBlob.toByteArray()));
 
         // DNS-SD service info
-        var serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(
+        serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(
                 /* instanceName = */ "ddd",
                 /* serviceType  = */ "_ddd._tcp",
                 /* txtRecord    = */ txt);
@@ -278,6 +286,31 @@ public class DDDWifiServer {
                 sendStateChange();
             }
         }
+    }
+
+    @SuppressLint("MissingPermission")
+    public void updateRecencyBlob(GetRecencyBlobResponse recencyBlob) {
+        this.lastRecencyBlob = recencyBlob;
+        int i = Base64.getEncoder().encodeToString(lastRecencyBlob.toByteArray()).length();
+        this.wifiP2pManager.removeLocalService(channel, serviceInfo, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {}
+
+            @Override
+            public void onFailure(int reason) {}
+        });
+        txt.put("recencyBlob", Base64.getEncoder().encodeToString(lastRecencyBlob.toByteArray()));
+        serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(
+                /* instanceName = */ "ddd",
+                /* serviceType  = */ "_ddd._tcp",
+                /* txtRecord    = */ txt);
+        this.wifiP2pManager.addLocalService(channel, serviceInfo, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {}
+
+            @Override
+            public void onFailure(int reason) {}
+        });
     }
 
     public enum DDDWifiServerEventType {
