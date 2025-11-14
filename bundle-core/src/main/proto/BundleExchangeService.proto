@@ -88,7 +88,7 @@ message GetRecencyBlobResponse {
   RecencyBlob recencyBlob = 2;
   bytes recencyBlobSignature = 4;
   bytes serverPublicKey = 3;
-  string message = 5;
+  repeated string message = 5;
 }
 
 service BundleExchangeService {

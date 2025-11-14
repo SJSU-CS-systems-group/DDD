@@ -144,7 +144,9 @@ public class TransportToBundleServerManager {
                                             StandardOpenOption.TRUNCATE_EXISTING)) {
             logger.log(INFO, "Writing blob to " + blobPath);
             recencyBlob.writeTo(os);
-            logger.log(INFO, "This is the message being sent: " + recencyBlob.getMessage());
+            if(!recencyBlob.getMessage().isEmpty()) {
+                logger.log(INFO, "This is the message being sent: " + recencyBlob.getMessage());
+            }
         } catch (IOException e) {
             logger.log(SEVERE, "Failed to write recency blob", e);
         }
