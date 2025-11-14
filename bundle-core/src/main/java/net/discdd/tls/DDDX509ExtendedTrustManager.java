@@ -3,8 +3,11 @@ package net.discdd.tls;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.X509ExtendedTrustManager;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.Base64;
 
 public class DDDX509ExtendedTrustManager extends X509ExtendedTrustManager {
     private final boolean singleCert;
@@ -31,7 +34,12 @@ public class DDDX509ExtendedTrustManager extends X509ExtendedTrustManager {
             throw new CertificateException("Only Ed25519 certificates are accepted not " + algorithm);
         }
         var expectedCN = "CN=" + DDDTLSUtil.publicKeyToName(cert.getPublicKey());
-        var actualCN = cert.getSubjectX500Principal().getName();
+        var actualCN = cert.getSubjectX500Principal().getName().substring(3); // skip "CN="
+        try {
+            actualCN = "CN=" + Base64.getUrlEncoder().encodeToString(MessageDigest.getInstance("SHA-1").digest(actualCN.getBytes(StandardCharsets.UTF_8)));
+        } catch (Exception e) {
+            throw new CertificateException("SHA-1 algorithm not found", e);
+        }
         if (!actualCN.equals(expectedCN)) {
             throw new CertificateException("Subject name does not match public key: " + actualCN + " != " + expectedCN);
         }

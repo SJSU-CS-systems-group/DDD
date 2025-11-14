@@ -20,6 +20,7 @@ import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PublicKey;
@@ -35,11 +36,22 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Date;
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.SEVERE;
 
 public class DDDTLSUtil {
+
+    static public Logger logger = Logger.getLogger(DDDTLSUtil.class.getName());
     public static String publicKeyToName(PublicKey key) {
         var edKey = (ECPublicKey) key;
-        return new String(Base64.getUrlEncoder().encode(edKey.getEncoded())).replace("=", "");
+        try {
+            return Base64.getUrlEncoder().encodeToString(MessageDigest.getInstance("SHA-1").digest(edKey.getEncoded()));
+        } catch (NoSuchAlgorithmException e) {
+            logger.log(SEVERE, "SHA-1 algorithm not found. Exiting", e);
+            System.exit(2);
+            return null;
+        }
     }
 
     public static KeyPair generateKeyPair() throws NoSuchAlgorithmException, NoSuchProviderException,

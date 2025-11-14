@@ -293,10 +293,10 @@ public class BundleTransportService extends Service implements BundleExchangeSer
         var recencyBlobPath = transportPaths.toClientPath.resolve(TransportToBundleServerManager.RECENCY_BLOB_BIN);
         try (var is = Files.newInputStream(recencyBlobPath)) {
             response = GetRecencyBlobResponse.parseFrom(is);
+            dddWifiServer.updateRecencyBlob(response);
         } catch (IOException e) {
             logger.log(SEVERE, "Failed to read recency blob", e);
         }
-        dddWifiServer.updateRecencyBlob(response);
     }
 
     public class TransportWifiDirectServiceBinder extends Binder {
