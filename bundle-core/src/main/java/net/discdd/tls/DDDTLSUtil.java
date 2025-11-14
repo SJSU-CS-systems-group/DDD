@@ -20,7 +20,6 @@ import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PublicKey;
@@ -41,6 +40,7 @@ import java.util.logging.Logger;
 public class DDDTLSUtil {
 
     static public Logger logger = Logger.getLogger(DDDTLSUtil.class.getName());
+
     public static String publicKeyToName(PublicKey key) {
         var edKey = (ECPublicKey) key;
         return new String(Base64.getUrlEncoder().encode(edKey.getEncoded())).replace("=", "");

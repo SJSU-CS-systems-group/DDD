@@ -12,7 +12,6 @@ import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
-
 import androidx.core.app.ActivityCompat;
 import net.discdd.bundletransport.BundleTransportService;
 import net.discdd.bundletransport.R;
@@ -288,9 +287,12 @@ public class DDDWifiServer {
     public void updateRecencyBlob(GetRecencyBlobResponse recencyBlob) {
         if (serviceInfo == null || txt == null) {
             return;
+        } else if (Base64.getEncoder().encodeToString(recencyBlob.toByteArray()).length() > 255) {
+            logger.log(WARNING, "Recency blob too large to update in Wi-Fi Direct service TXT record, size: " +
+                    Base64.getEncoder().encodeToString(recencyBlob.toByteArray()).length());
+            return;
         }
         this.lastRecencyBlob = recencyBlob;
-        int i = Base64.getEncoder().encodeToString(lastRecencyBlob.toByteArray()).length();
         this.wifiP2pManager.removeLocalService(channel, serviceInfo, new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {}
