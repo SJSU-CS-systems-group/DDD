@@ -53,7 +53,7 @@ fun ServerScreen(
     val isTransmitting by serverViewModel.isTransmitting.collectAsState()
     // Dialog state to confirm key reset
     var showResetDialog by remember { mutableStateOf(false) }
-
+    val scrollState = rememberScrollState()
     // Input validation
     val isValidPort = serverState.port.toIntOrNull()?.let { it in 1..65_535 } == true
     var enableConnectBtn by remember { mutableStateOf(false) }
