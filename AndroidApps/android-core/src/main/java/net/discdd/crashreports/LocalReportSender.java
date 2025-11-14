@@ -44,6 +44,7 @@ public class LocalReportSender implements ReportSender {
             logger.log(INFO, "We are writing crash report to transport device external storage");
         } else {
             logger.log(INFO, "We will stop trying to write a crash report to device");
+            return;
         }
         File logFile = new File(String.valueOf(rootDir), "crash_report.txt");
         try {
