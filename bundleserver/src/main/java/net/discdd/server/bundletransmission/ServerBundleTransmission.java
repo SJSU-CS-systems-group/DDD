@@ -258,7 +258,6 @@ public class ServerBundleTransmission {
         byte[] publicKeyBytes = this.bundleSecurity.getIdentityPublicKey();
         return GetRecencyBlobResponse.newBuilder()
                 .setStatus(RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS)
-                .setMessage("this is a test for the message")
                 .setRecencyBlob(blob)
                 .setRecencyBlobSignature(ByteString.copyFrom(signature))
                 .setServerPublicKey(ByteString.copyFrom(publicKeyBytes))

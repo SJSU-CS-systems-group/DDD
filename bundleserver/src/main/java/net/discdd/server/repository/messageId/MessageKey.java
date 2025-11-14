@@ -1,20 +1,18 @@
 package net.discdd.server.repository.messageId;
 
 import jakarta.persistence.Embeddable;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 
 @Embeddable
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class MessageKey implements Serializable {
-
-    private int transportId;
-    private int messageNumber;
-    public MessageKey() {}
-
-    public MessageKey(int transportId, int messageNumber) {
-        this.transportId = transportId;
-        this.messageNumber = messageNumber;
-    }
-
+    private long transportId;
+    private long messageNumber;
 }
 

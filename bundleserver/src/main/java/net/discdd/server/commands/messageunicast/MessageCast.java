@@ -2,6 +2,8 @@ package net.discdd.server.commands.messageunicast;
 
 import net.discdd.server.repository.TransportMessageRepository;
 import net.discdd.server.repository.entity.TransportMessage;
+import net.discdd.server.repository.messageId.MessageKey;
+import net.discdd.server.service.TransportMessageService;
 import org.springframework.stereotype.Component;
 import picocli.CommandLine;
 
@@ -9,57 +11,90 @@ import java.util.concurrent.Callable;
 
 @CommandLine.Command(
         name = "message-transport",
-        description = "Manage transport messages by their transportId",
-        mixinStandardHelpOptions = true
+        description = "Manage transport messages by transportId",
+        mixinStandardHelpOptions = true,
+        subcommands = { CommandLine.HelpCommand.class }
 )
 @Component
 public class MessageCast implements Callable<Integer> {
 
-    private final TransportMessageRepository transportMessageRepository;
+    private final TransportMessageRepository repo;
+    private final TransportMessageService service;
 
-    public MessageCast(TransportMessageRepository transportMessageRepository) {
-        this.transportMessageRepository = transportMessageRepository;
+    public MessageCast(TransportMessageRepository repo, TransportMessageService service) {
+        this.repo = repo;
+        this.service = service;
     }
-
-    @CommandLine.Command(name = "list", description = "List all transport messages")
+    @CommandLine.Command(
+            name = "list",
+            description = "List all transport messages"
+    )
     int list() {
         System.out.println("Transport Messages:");
-        transportMessageRepository.findAll()
-                .forEach(m -> System.out.println(m.messageId + " -> " + m.message));
+        repo.findAll().forEach(m -> {
+            MessageKey key = m.messageKey;
+            System.out.printf(
+                    "transportId=%d, messageNumber=%d | %s%n",
+                    key.getTransportId(),
+                    key.getMessageNumber(),
+                    m.message
+            );
+        });
         return 0;
     }
 
-    @CommandLine.Command(name = "update", description = "Add or update a transport message by transportId")
-    int update(
-            @CommandLine.Parameters(index = "0", description = "The transportId to add or update")
-            String transportId,
-            @CommandLine.Parameters(index = "1", description = "The message to associate with the transportId")
-            String message
+    @CommandLine.Command(
+            name = "add",
+            description = "Add a new message to a transportId"
+    )
+    int add(
+            @CommandLine.Parameters(index = "0", description = "Transport ID")
+            int transportId,
+
+            @CommandLine.Parameters(index = "1", description = "Message text")
+            String messageText
     ) {
-        transportMessageRepository.save(new TransportMessage(transportId, message));
-        System.out.printf("Transport message updated: %s -> %s%n", transportId, message);
+        TransportMessage msg = service.createMessage(transportId, messageText);
+
+        System.out.printf(
+                "Created message: transportId=%d, messageNumber=%d%n",
+                msg.messageKey.getTransportId(),
+                msg.messageKey.getMessageNumber()
+        );
+
         return 0;
     }
 
-    @CommandLine.Command(name = "delete", description = "Delete a transport message by transportId")
+    @CommandLine.Command(
+            name = "delete",
+            description = "Delete a message with transportId and messageNumber"
+    )
     int delete(
-            @CommandLine.Parameters(index = "0", description = "The transportId to delete")
-            String transportId
-    ) {
+            @CommandLine.Parameters(index = "0", description = "Transport ID")
+            long transportId,
 
-        if (!transportMessageRepository.existsById(transportId)) {
-            System.err.println("Transport message not found: " + transportId);
+            @CommandLine.Parameters(index = "1", description = "Message number")
+            long messageNumber
+    ) {
+        MessageKey key = new MessageKey(transportId, messageNumber);
+
+        if (!repo.existsById(key)) {
+            System.err.println("Message not found: " + key);
             return 1;
         }
 
-        transportMessageRepository.deleteById(transportId);
-        System.out.printf("Transport message deleted: %s%n", transportId);
+        repo.deleteById(key);
+        System.out.printf(
+                "Deleted message: transportId=%d, messageNumber=%d%n",
+                transportId,
+                messageNumber
+        );
         return 0;
     }
 
     @Override
-    public Integer call() throws Exception {
-        System.out.println("Use --help to see available subcommands (list, update, delete)");
-        return 1;
+    public Integer call() {
+        System.out.println("Use subcommands: list, add, delete");
+        return 0;
     }
 }
