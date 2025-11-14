@@ -3,11 +3,8 @@ package net.discdd.tls;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.X509ExtendedTrustManager;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.Base64;
 
 public class DDDX509ExtendedTrustManager extends X509ExtendedTrustManager {
     private final boolean singleCert;

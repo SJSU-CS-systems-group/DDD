@@ -13,8 +13,6 @@ import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import net.discdd.bundletransport.BundleTransportService;
 import net.discdd.bundletransport.R;
@@ -25,14 +23,12 @@ import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Base64;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
@@ -290,6 +286,9 @@ public class DDDWifiServer {
 
     @SuppressLint("MissingPermission")
     public void updateRecencyBlob(GetRecencyBlobResponse recencyBlob) {
+        if (serviceInfo == null || txt == null) {
+            return;
+        }
         this.lastRecencyBlob = recencyBlob;
         int i = Base64.getEncoder().encodeToString(lastRecencyBlob.toByteArray()).length();
         this.wifiP2pManager.removeLocalService(channel, serviceInfo, new WifiP2pManager.ActionListener() {

@@ -24,9 +24,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.MessageDigest;
@@ -34,12 +32,12 @@ import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 import java.util.Base64;
-import java.util.List;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 import static net.discdd.bundlesecurity.DDDPEMEncoder.decodeEncryptedPublicKeyfromFile;
 import static net.discdd.bundlesecurity.DDDPEMEncoder.decodePublicKeyfromFile;
 
@@ -100,8 +98,7 @@ public class SecurityUtils {
      * Returns:
      * The generated ID as a string
      */
-    public static String generateID(Path publicKeyPath) throws IOException, InvalidKeyException,
-            NoSuchAlgorithmException {
+    public static String generateID(Path publicKeyPath) throws IOException, InvalidKeyException {
         byte[] publicKey = decodePublicKeyfromFile(publicKeyPath);
         return generateID(publicKey);
     }
@@ -113,11 +110,17 @@ public class SecurityUtils {
      * Returns:
      * The generated ID as a string
      */
-    public static String generateID(byte[] publicKey) throws NoSuchAlgorithmException {
-        return Base64.getUrlEncoder().encodeToString(MessageDigest.getInstance("SHA-1").digest(publicKey));
+    public static String generateID(byte[] publicKey) {
+        try {
+            return Base64.getUrlEncoder().encodeToString(MessageDigest.getInstance("SHA-1").digest(publicKey));
+        } catch (NoSuchAlgorithmException e) {
+            logger.log(SEVERE, "SHA-1 algorithm not found. Exiting", e);
+            System.exit(2);
+            return null;
+        }
     }
 
-    public static String generateID(String publicKeyBase64) throws NoSuchAlgorithmException {
+    public static String generateID(String publicKeyBase64) {
         byte[] publicKeyBytes = Base64.getUrlDecoder().decode(publicKeyBase64);
         return generateID(publicKeyBytes);
     }
