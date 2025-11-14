@@ -217,9 +217,9 @@ public class ClientSecurity {
 
         return singleClientInstance;
     }
+
     /* Be Careful When you call This  */
-    public static synchronized void resetInstance() throws IOException,
-            NoSuchAlgorithmException, InvalidKeyException {
+    public static synchronized void resetInstance() throws IOException, NoSuchAlgorithmException, InvalidKeyException {
         var deviceID = singleClientInstance.getDeviceId();
         var clientPaths = singleClientInstance.getClientPaths();
         singleClientInstance = null;
@@ -295,12 +295,15 @@ public class ClientSecurity {
     public Path getClientRootPath() {
         return clientPaths.bundleSecurityPath;
     }
+
     public ClientPaths getClientPaths() {
         return clientPaths;
     }
+
     public int getDeviceId() {
         return this.deviceID;
     }
+
     public ECPublicKey getServerPublicKey() {
         return theirIdentityKey.getPublicKey();
     }

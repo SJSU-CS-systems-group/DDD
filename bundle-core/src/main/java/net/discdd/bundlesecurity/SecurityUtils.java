@@ -223,6 +223,7 @@ public class SecurityUtils {
             return destDir.getAbsolutePath();
         }
     }
+
     public static class ClientSession {
         public SignalProtocolAddress clientProtocolAddress;
         public IdentityKey IdentityKey;
