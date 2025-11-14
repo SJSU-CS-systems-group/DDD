@@ -39,7 +39,4 @@
     <string name="received">отриманий</string>
     <string name="cannot_transfer_bundle_usb_not_ready_or_directory_not_found">Не вдається перенести пакет: USB не готовий або каталог не знайдено</string>
     <string name="delete_logs">Чіткі журнали</string>
-    <string name="invalid_domain">Invalid Domain</string>
-    <string name="invalid_port">Invalid Port</string>
-    <string name="switching_server_will_reset_keys">Switching the Server Will Reset all Bundles</string>
 </resources>

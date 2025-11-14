@@ -80,6 +80,7 @@ fun ServerScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(scrollState)
                 .padding(16.dp)
                 .pointerInput(Unit) {
                     detectTapGestures()

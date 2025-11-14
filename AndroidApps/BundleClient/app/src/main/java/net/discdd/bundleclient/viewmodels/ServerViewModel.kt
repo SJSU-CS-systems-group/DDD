@@ -131,7 +131,12 @@ class ServerViewModel(
 
                 appendMessage(context.getString(R.string.settings_saved))
                 appendMessage(context.getString(R.string.switching_server_will_reset_keys))
-                ClientSecurity.resetInstance()
+                try {
+                    ClientSecurity.resetInstance()
+                }catch(e : Exception) {
+                    revertDomainPortChanges()
+                    appendMessage("Error Changing  Resetting ClientSecurity")
+                }
             } else {
                 appendMessage(context.getString(R.string.no_changes_detected))
             }
