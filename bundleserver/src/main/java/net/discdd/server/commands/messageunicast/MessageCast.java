@@ -17,7 +17,7 @@ public class MessageCast implements Callable<Integer> {
 
     private final TransportMessageRepository transportMessageRepository;
 
-    MessageCast(TransportMessageRepository transportMessageRepository) {
+    public MessageCast(TransportMessageRepository transportMessageRepository) {
         this.transportMessageRepository = transportMessageRepository;
     }
 
@@ -25,7 +25,7 @@ public class MessageCast implements Callable<Integer> {
     int list() {
         System.out.println("Transport Messages:");
         transportMessageRepository.findAll()
-                .forEach(m -> System.out.println(m.transportId + " -> " + m.message));
+                .forEach(m -> System.out.println(m.messageId + " -> " + m.message));
         return 0;
     }
 
@@ -46,13 +46,16 @@ public class MessageCast implements Callable<Integer> {
             @CommandLine.Parameters(index = "0", description = "The transportId to delete")
             String transportId
     ) {
+
+        if (!transportMessageRepository.existsById(transportId)) {
+            System.err.println("Transport message not found: " + transportId);
+            return 1;
+        }
+
         transportMessageRepository.deleteById(transportId);
         System.out.printf("Transport message deleted: %s%n", transportId);
         return 0;
     }
-
-    @CommandLine.Parameters(arity = "1", index = "0", hidden = true)
-    String command;
 
     @Override
     public Integer call() throws Exception {
