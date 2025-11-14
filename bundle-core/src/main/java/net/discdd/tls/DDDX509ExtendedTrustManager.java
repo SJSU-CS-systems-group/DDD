@@ -34,12 +34,7 @@ public class DDDX509ExtendedTrustManager extends X509ExtendedTrustManager {
             throw new CertificateException("Only Ed25519 certificates are accepted not " + algorithm);
         }
         var expectedCN = "CN=" + DDDTLSUtil.publicKeyToName(cert.getPublicKey());
-        var actualCN = cert.getSubjectX500Principal().getName().substring(3); // skip "CN="
-        try {
-            actualCN = "CN=" + Base64.getUrlEncoder().encodeToString(MessageDigest.getInstance("SHA-1").digest(actualCN.getBytes(StandardCharsets.UTF_8)));
-        } catch (Exception e) {
-            throw new CertificateException("SHA-1 algorithm not found", e);
-        }
+        var actualCN = cert.getSubjectX500Principal().getName();
         if (!actualCN.equals(expectedCN)) {
             throw new CertificateException("Subject name does not match public key: " + actualCN + " != " + expectedCN);
         }
