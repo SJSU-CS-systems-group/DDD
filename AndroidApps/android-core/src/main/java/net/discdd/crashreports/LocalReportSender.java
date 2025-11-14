@@ -31,7 +31,7 @@ public class LocalReportSender implements ReportSender {
         config = coreConfiguration;
     }
 
-    @Override
+    @Override //might crash reports not be working on transports at all???
     public void send(Context context, CrashReportData errorContent) throws ReportSenderException {
         Path rootDir = context.getApplicationContext().getDataDir().toPath();
         logger.log(INFO, "root directory for acra class " + rootDir);
@@ -39,9 +39,11 @@ public class LocalReportSender implements ReportSender {
         if (clientDestDir.toFile().exists()) {
             logger.log(INFO, "We are writing crash report to client device internal storage");
             rootDir = clientDestDir;
-        } else {
+        } else if (context.getApplicationContext().getExternalFilesDir(null).exists()) {
             rootDir = context.getApplicationContext().getExternalFilesDir(null).toPath();
             logger.log(INFO, "We are writing crash report to transport device external storage");
+        } else {
+            logger.log(INFO, "We will stop trying to write a crash report to device");
         }
         File logFile = new File(String.valueOf(rootDir), "crash_report.txt");
         try {
