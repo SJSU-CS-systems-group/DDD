@@ -32,3 +32,21 @@ service BundleServerService {
   rpc bundleInventory(BundleInventoryRequest) returns (BundleInventoryResponse) {}
   rpc crashReports(CrashReportRequest) returns (CrashReportResponse) {}
 }
+
+message CheckMessagesRequest {
+  int64 lastMessageId = 1;
+}
+
+message ServerMessage {
+  int64 messageId = 1;
+  string date = 2;
+  string message = 3;
+}
+
+message CheckMessagesResponse {
+  repeated ServerMessage serverMessage = 1;
+}
+
+service MessagesService {
+  rpc messages(CheckMessagesRequest) returns (CheckMessagesResponse) {}
+}
