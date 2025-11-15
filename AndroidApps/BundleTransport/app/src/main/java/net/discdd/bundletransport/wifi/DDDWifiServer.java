@@ -285,11 +285,12 @@ public class DDDWifiServer {
 
     @SuppressLint("MissingPermission")
     public void updateRecencyBlob(GetRecencyBlobResponse recencyBlob) {
+        var encodedBlob = Base64.getEncoder().encodeToString(recencyBlob.toByteArray());
         if (serviceInfo == null || txt == null) {
             return;
-        } else if (Base64.getEncoder().encodeToString(recencyBlob.toByteArray()).length() > 255) {
+        } else if (encodedBlob.length() > 255) {
             logger.log(WARNING, "Recency blob too large to update in Wi-Fi Direct service TXT record, size: " +
-                    Base64.getEncoder().encodeToString(recencyBlob.toByteArray()).length());
+                    encodedBlob.length());
             return;
         }
         this.lastRecencyBlob = recencyBlob;
@@ -300,7 +301,7 @@ public class DDDWifiServer {
             @Override
             public void onFailure(int reason) {}
         });
-        txt.put("recencyBlob", Base64.getEncoder().encodeToString(lastRecencyBlob.toByteArray()));
+        txt.put("recencyBlob", encodedBlob);
         serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(
                 /* instanceName = */ "ddd",
                 /* serviceType  = */ "_ddd._tcp",

@@ -35,12 +35,8 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Date;
-import java.util.logging.Logger;
 
 public class DDDTLSUtil {
-
-    static public Logger logger = Logger.getLogger(DDDTLSUtil.class.getName());
-
     public static String publicKeyToName(PublicKey key) {
         var edKey = (ECPublicKey) key;
         return new String(Base64.getUrlEncoder().encode(edKey.getEncoded())).replace("=", "");
