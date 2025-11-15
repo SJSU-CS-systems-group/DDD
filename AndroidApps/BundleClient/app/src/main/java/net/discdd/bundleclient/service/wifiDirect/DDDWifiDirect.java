@@ -214,6 +214,27 @@ public class DDDWifiDirect implements DDDWifi {
         });
     }
 
+    private void discoverPeer(WifiP2pDevice device, String transportId) {
+        boolean peerDiscovered = false;
+        DDDWifiDevice newDevice = new DDDWifiDirectDevice(device, transportId);
+        DDDWifiDevice peerToReplace = null;
+
+        for (DDDWifiDevice peerDevice: peers) {
+            if (peerDevice.getId().equals(newDevice.getId())) {
+                peerDiscovered = true;
+                if (peerDevice.getDescription().isBlank() && !newDevice.getDescription().isBlank()) {
+                    peerToReplace = peerDevice;
+                }
+            }
+        }
+        if (!peerDiscovered) {
+            peers.add(newDevice);
+        } else if (peerToReplace != null) {
+            peers.remove(peerToReplace);
+            peers.add(newDevice);
+        }
+    }
+
     AtomicBoolean isReceiverRegistered = new AtomicBoolean(false);
     private void registerBroadcastReceiver() {
         wifiP2pManager.requestP2pState(wifiChannel, this::processStateChange);
@@ -289,7 +310,7 @@ public class DDDWifiDirect implements DDDWifi {
          * it will complete exceptionally with a DDDWifiConnectionException.
          */
         void completeWithConnection(DDDWifiDirectConnection con) throws DDDWifiException.DDDWifiConnectionException {
-            if (!device.equals(con.dev)) {
+            if (!device.sameAddressAs(con.dev)) {
                 completeExceptionally(new DDDWifiException.DDDWifiConnectionException(format("connected to %s rather than %s",
                                                                              con.dev.wifiP2pDevice.deviceName,
                                                                              device.wifiP2pDevice.deviceName), null));

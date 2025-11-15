@@ -1,5 +1,6 @@
 package net.discdd.bundlesecurity;
 
+import net.discdd.client.bundlesecurity.ClientSecurity;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.SessionCipher;
 import org.whispersystems.libsignal.*;

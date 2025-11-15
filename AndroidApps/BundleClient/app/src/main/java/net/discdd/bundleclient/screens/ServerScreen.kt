@@ -32,6 +32,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -50,15 +51,27 @@ fun ServerScreen(
     val showEasterEgg by settingsViewModel.showEasterEgg.collectAsState()
     val connectivityState by connectivityViewModel.state.collectAsState()
     val isTransmitting by serverViewModel.isTransmitting.collectAsState()
+    // Dialog state to confirm key reset
+    var showResetDialog by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
+    // Input validation
+    val isValidPort = serverState.port.toIntOrNull()?.let { it in 1..65_535 } == true
     var enableConnectBtn by remember { mutableStateOf(false) }
-    val focusManager = LocalFocusManager.current
 
     LaunchedEffect(serverState.domain, serverState.port, connectivityState.networkConnected) {
-        val enable = serverState.domain.isNotEmpty() && serverState.port.isNotEmpty() && connectivityState.networkConnected
+        val enable = serverState.domain.isNotBlank() &&
+                isValidPort &&
+                connectivityState.networkConnected
         enableConnectBtn = enable
     }
 
-    val scrollState = rememberScrollState()
+    // Small helper that the Save button uses
+    fun onSaveServerTapped() {
+        // Only prompt if values look valid; otherwise do nothing
+        if (serverState.domain.isNotBlank() && isValidPort) {
+            showResetDialog = true
+        }
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -70,9 +83,7 @@ fun ServerScreen(
                 .verticalScroll(scrollState)
                 .padding(16.dp)
                 .pointerInput(Unit) {
-                    detectTapGestures(onTap = {
-                        focusManager.clearFocus()
-                    })
+                    detectTapGestures()
                 },
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -84,21 +95,34 @@ fun ServerScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(8.dp),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = ImeAction.Done,
+                        keyboardType = KeyboardType.Uri
+                    ),
+                    singleLine = true
                 )
                 OutlinedTextField(
                     value = serverState.port,
                     onValueChange = { serverViewModel.onPortChanged(it) },
-                    label = { Text("Port Input") },
+                    isError = serverState.port.isNotBlank() && !isValidPort,
+                    label = { Text("Port") },
+                    supportingText = {
+                        if (serverState.port.isNotBlank() && !isValidPort) {
+                            Text("Enter a valid port 1–65535")
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(8.dp),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = ImeAction.Done,
+                        keyboardType = KeyboardType.Number
+                    ),
+                    singleLine = true
                 )
                 FilledTonalButton(
-                    onClick = {
-                        serverViewModel.saveDomainPort()
-                    },
+                    enabled = serverState.domain.isNotBlank() && isValidPort,
+                    onClick = { onSaveServerTapped() },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Save Domain and Port")
@@ -107,9 +131,7 @@ fun ServerScreen(
 
             FilledTonalButton(
                 enabled = !isTransmitting && enableConnectBtn,
-                onClick = {
-                    serverViewModel.connectServer()
-                },
+                onClick = { serverViewModel.connectServer() },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Connect to Bundle Server")
@@ -132,9 +154,49 @@ fun ServerScreen(
                     }
                 }
             }
-
         }
     }
+
+
+    ResetKeysWarningDialog(
+        show = showResetDialog,
+        onConfirm = {
+            serverViewModel.saveDomainPort()
+            showResetDialog = false
+        },
+        onDismiss = {
+            serverViewModel.revertDomainPortChanges()
+            showResetDialog = false
+        }
+    )
+}
+
+@Composable
+private fun ResetKeysWarningDialog(
+    show: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    if (!show) return
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Switch server?") },
+        text = {
+            Text(
+                "Switching servers will lose all previously sent Bundles"
+            )
+        },
+        confirmButton = {
+            androidx.compose.material3.FilledTonalButton(onClick = onConfirm) {
+                Text("Switch & Reset Keys")
+            }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Preview(showBackground = true)
