@@ -18,15 +18,18 @@ import androidx.annotation.RequiresPermission;
 import androidx.core.app.ActivityCompat;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+import com.google.protobuf.InvalidProtocolBufferException;
 import net.discdd.bundleclient.R;
 import net.discdd.bundleclient.service.BundleClientService;
 import net.discdd.bundleclient.service.DDDWifi;
 import net.discdd.bundleclient.service.DDDWifiConnection;
 import net.discdd.bundleclient.service.DDDWifiDevice;
 import net.discdd.bundleclient.service.DDDWifiEventType;
+import net.discdd.grpc.GetRecencyBlobResponse;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -180,11 +183,20 @@ public class DDDWifiDirect implements DDDWifi {
 
         WifiP2pManager.DnsSdTxtRecordListener txtResponseListener = (type, txtRecord, device) -> {
             logger.log(INFO, format("DnsSdTxtRecord available: %s %s %s", device.deviceName, device.deviceAddress, txtRecord));
-            if (txtRecord.get("transportId") != null) {
-                discoverPeer(device, txtRecord.get("transportId"));
-                checkAwaitingDiscovery();
-                eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_PEERS_CHANGED);
+            if (txtRecord.containsKey("recencyBlob")) {
+                try {
+                    byte[] res = Base64.getDecoder().decode(txtRecord.get("recencyBlob"));
+                    GetRecencyBlobResponse response = GetRecencyBlobResponse.parseFrom(res);
+                    logger.log(INFO, format("Received recency blob %s", response.getRecencyBlob().getBlobTimestamp()));
+                } catch (InvalidProtocolBufferException e) {
+                    logger.log(WARNING, "Could not parse recency blob from txt record.", e);
+                    return;
+                }
             }
+            var wifiDevice = new DDDWifiDirectDevice(device, txtRecord.get("transportId"));
+            peers.add(wifiDevice);
+            checkAwaitingDiscovery();
+            eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_PEERS_CHANGED);
         };
         wifiP2pManager.setDnsSdResponseListeners(wifiChannel, null, txtResponseListener);
 
