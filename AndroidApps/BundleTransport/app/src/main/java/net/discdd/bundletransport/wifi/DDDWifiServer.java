@@ -16,11 +16,14 @@ import androidx.core.app.ActivityCompat;
 import net.discdd.bundletransport.BundleTransportService;
 import net.discdd.bundletransport.R;
 import net.discdd.bundletransport.service.DDDWifiServiceEvents;
+import net.discdd.grpc.GetRecencyBlobResponse;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.util.Base64;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +36,7 @@ import java.util.stream.Collectors;
 import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION;
 import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION;
 import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION;
+import static java.lang.String.format;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
@@ -47,6 +51,10 @@ public class DDDWifiServer {
     private WifiP2pGroup wifiGroup;
     private WifiDirectBroadcastReceiver receiver;
     private String deviceName;
+    private GetRecencyBlobResponse lastRecencyBlob;
+    private WifiP2pDnsSdServiceInfo serviceInfo;
+    private Map<String, String> txt;
+
 
     private WifiDirectStatus status = WifiDirectStatus.UNDEFINED;
 
@@ -69,6 +77,7 @@ public class DDDWifiServer {
         intentFilter.addAction(WIFI_P2P_CONNECTION_CHANGED_ACTION);
         intentFilter.addAction(WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
         this.bts = bundleTransportService;
+        lastRecencyBlob = GetRecencyBlobResponse.getDefaultInstance();
     }
 
     public DDDWifiNetworkInfo getNetworkInfo() {
@@ -199,11 +208,22 @@ public class DDDWifiServer {
             getGroup();
             return null;
         });
-        var txt = Map.of("ddd", bts.getBundleServerURL(),   // you can filter on this
-                         "transportId", bts.transportId);
+
+        try {
+            logger.log(INFO, format("ServerKey: %s, Signature: %s, Nonce: %s, Time: %s", Base64.getEncoder().encodeToString((lastRecencyBlob.getServerPublicKey().toByteArray())),
+                    Base64.getEncoder().encodeToString((lastRecencyBlob.getRecencyBlobSignature().toByteArray())),
+                                    lastRecencyBlob.getRecencyBlob().getNonce(),
+                                    lastRecencyBlob.getRecencyBlob().getBlobTimestamp()));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        txt = new HashMap<>();
+        txt.put("ddd", bts.getBundleServerURL());
+        txt.put("transportId", bts.transportId);
+        txt.put("recencyBlob", Base64.getEncoder().encodeToString(lastRecencyBlob.toByteArray()));
 
         // DNS-SD service info
-        var serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(
+        serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(
                 /* instanceName = */ "ddd",
                 /* serviceType  = */ "_ddd._tcp",
                 /* txtRecord    = */ txt);
@@ -261,6 +281,38 @@ public class DDDWifiServer {
                 sendStateChange();
             }
         }
+    }
+
+    @SuppressLint("MissingPermission")
+    public void updateRecencyBlob(GetRecencyBlobResponse recencyBlob) {
+        var encodedBlob = Base64.getEncoder().encodeToString(recencyBlob.toByteArray());
+        if (serviceInfo == null || txt == null) {
+            return;
+        } else if (encodedBlob.length() > 255) {
+            logger.log(WARNING, "Recency blob too large to update in Wi-Fi Direct service TXT record, size: " +
+                    encodedBlob.length());
+            return;
+        }
+        this.lastRecencyBlob = recencyBlob;
+        this.wifiP2pManager.removeLocalService(channel, serviceInfo, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {}
+
+            @Override
+            public void onFailure(int reason) {}
+        });
+        txt.put("recencyBlob", encodedBlob);
+        serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(
+                /* instanceName = */ "ddd",
+                /* serviceType  = */ "_ddd._tcp",
+                /* txtRecord    = */ txt);
+        this.wifiP2pManager.addLocalService(channel, serviceInfo, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {}
+
+            @Override
+            public void onFailure(int reason) {}
+        });
     }
 
     public enum DDDWifiServerEventType {
