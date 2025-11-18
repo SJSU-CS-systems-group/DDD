@@ -54,7 +54,7 @@ class ClientUsbViewModel(
         rootDir = dir
     }
 
-    fun createIfDoesNotExist(parent: DocumentFile, name: String): DocumentFile {
+    fun createIfDoesNotExist(parent : DocumentFile, name : String) : DocumentFile {
         var child = parent.findFile(name)
         if (child == null || !child.isDirectory) {
             child = parent.createDirectory(name)
@@ -62,7 +62,7 @@ class ClientUsbViewModel(
         } else {
             logger.log(INFO, "\'$name\' directory exists")
         }
-        return child ?: throw IOException("Could not create $name")
+        return child ?: throw IOException ("Could not create $name")
     }
 
     fun transferBundleToUsb(context: Context) {
