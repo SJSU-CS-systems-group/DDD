@@ -55,7 +55,6 @@ public class DDDWifiServer {
     private WifiP2pDnsSdServiceInfo serviceInfo;
     private Map<String, String> txt;
 
-
     private WifiDirectStatus status = WifiDirectStatus.UNDEFINED;
 
     @SuppressLint("MissingPermission")
@@ -210,10 +209,13 @@ public class DDDWifiServer {
         });
 
         try {
-            logger.log(INFO, format("ServerKey: %s, Signature: %s, Nonce: %s, Time: %s", Base64.getEncoder().encodeToString((lastRecencyBlob.getServerPublicKey().toByteArray())),
-                    Base64.getEncoder().encodeToString((lastRecencyBlob.getRecencyBlobSignature().toByteArray())),
-                                    lastRecencyBlob.getRecencyBlob().getNonce(),
-                                    lastRecencyBlob.getRecencyBlob().getBlobTimestamp()));
+            logger.log(INFO,
+                       format("ServerKey: %s, Signature: %s, Nonce: %s, Time: %s",
+                              Base64.getEncoder().encodeToString((lastRecencyBlob.getServerPublicKey().toByteArray())),
+                              Base64.getEncoder()
+                                      .encodeToString((lastRecencyBlob.getRecencyBlobSignature().toByteArray())),
+                              lastRecencyBlob.getRecencyBlob().getNonce(),
+                              lastRecencyBlob.getRecencyBlob().getBlobTimestamp()));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -289,8 +291,9 @@ public class DDDWifiServer {
         if (serviceInfo == null || txt == null) {
             return;
         } else if (encodedBlob.length() > 255) {
-            logger.log(WARNING, "Recency blob too large to update in Wi-Fi Direct service TXT record, size: " +
-                    encodedBlob.length());
+            logger.log(WARNING,
+                       "Recency blob too large to update in Wi-Fi Direct service TXT record, size: " +
+                               encodedBlob.length());
             return;
         }
         this.lastRecencyBlob = recencyBlob;
