@@ -189,7 +189,8 @@ public class DDDWifiDirect implements DDDWifi {
                     GetRecencyBlobResponse response = GetRecencyBlobResponse.parseFrom(res);
                     logger.log(INFO, format("Received recency blob %s", response.getRecencyBlob().getBlobTimestamp()));
                 } catch (InvalidProtocolBufferException e) {
-                    throw new RuntimeException(e);
+                    logger.log(WARNING, "Could not parse recency blob from txt record.", e);
+                    return;
                 }
             }
             var wifiDevice = new DDDWifiDirectDevice(device, txtRecord.get("transportId"));
