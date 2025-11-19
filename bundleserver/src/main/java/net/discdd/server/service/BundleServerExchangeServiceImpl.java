@@ -17,7 +17,6 @@ import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.ecc.Curve;
 
 import java.nio.file.Path;
-import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
 import java.util.Base64;
 import java.util.Random;
@@ -71,7 +70,7 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
                         throw new SecurityException("Signature verification failed");
                     }
                     senderId = SecurityUtils.generateID(clientPubKey.serialize());
-                } catch (InvalidKeyException | NoSuchAlgorithmException e) {
+                } catch (InvalidKeyException e) {
                     logger.log(SEVERE, "Problem verifying signature", e);
                     throw new SecurityException("Signature verification failed: " + e.getMessage());
                 }
@@ -122,7 +121,7 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
     public void getRecencyBlob(GetRecencyBlobRequest request, StreamObserver<GetRecencyBlobResponse> responseObserver) {
         GetRecencyBlobResponse recencyBlob = null;
         X509Certificate clientCert = NettyServerCertificateInterceptor.CLIENT_CERTIFICATE_KEY.get(Context.current());
-        String senderId = DDDTLSUtil.publicKeyToName(clientCert.getPublicKey());
+        String senderId = SecurityUtils.generateID(clientCert.getPublicKey().getEncoded());
 
         try {
             recencyBlob = bundleTransmission.getRecencyBlob(senderId);
