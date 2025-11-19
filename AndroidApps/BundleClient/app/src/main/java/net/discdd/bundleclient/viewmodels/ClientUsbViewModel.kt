@@ -129,7 +129,8 @@ class ClientUsbViewModel(
                         appendMessage("Invalid recency blob found on USB", Color.YELLOW)
                         return@withContext
                     }
-                    val devicePath: Path = rootDir.toPath().parent.resolve("Shared/received-bundles")
+                    val devicePath: Path =
+                        rootDir.toPath().parent.resolve("Shared/received-bundles")
                     val filesToTransfer = toClientDir.listFiles()
                     if (filesToTransfer.isEmpty()) {
                         appendMessage("No files found in 'toClient' directory on USB", Color.YELLOW)
