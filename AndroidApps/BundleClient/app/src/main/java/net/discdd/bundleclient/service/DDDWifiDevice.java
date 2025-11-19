@@ -1,6 +1,8 @@
 package net.discdd.bundleclient.service;
 
+import android.net.wifi.p2p.WifiP2pDevice;
 import net.discdd.client.bundletransmission.TransportDevice;
+import net.discdd.grpc.GetRecencyBlobResponse;
 
 public interface DDDWifiDevice extends TransportDevice, Comparable<DDDWifiDevice> {
 
@@ -13,6 +15,12 @@ public interface DDDWifiDevice extends TransportDevice, Comparable<DDDWifiDevice
     String getWifiAddress();
 
     String getDescription();
+
+    GetRecencyBlobResponse getRecencyBlob();
+
+    void setRecencyBlob(GetRecencyBlobResponse recencyBlob);
+
+    void setWifiP2pDevice(WifiP2pDevice wifiP2pDevice);
 
     @Override
     default int compareTo(DDDWifiDevice o) {

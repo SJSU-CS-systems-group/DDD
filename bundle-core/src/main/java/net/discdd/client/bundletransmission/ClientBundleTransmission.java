@@ -252,9 +252,15 @@ public class ClientBundleTransmission {
         private long lastSeen;
         /* @param recencyTime time from the last recencyBlob received */
         private long recencyTime;
+        /* @param recencyBlobResponse the latest recencyBlobResponse received */
+        private GetRecencyBlobResponse recencyBlobResponse;
 
         public RecentTransport(TransportDevice device) {
             this.device = device;
+        }
+        public RecentTransport(TransportDevice device, GetRecencyBlobResponse recencyBlobResponse) {
+            this.device = device;
+            this.recencyBlobResponse = recencyBlobResponse;
         }
     }
 
@@ -272,11 +278,12 @@ public class ClientBundleTransmission {
         }
     }
 
-    public void processDiscoveredPeer(TransportDevice device) {
+    public void processDiscoveredPeer(TransportDevice device, GetRecencyBlobResponse response) {
         synchronized (recentTransports) {
             RecentTransport recentTransport = recentTransports.computeIfAbsent(device, RecentTransport::new);
             recentTransport.device = device;
             recentTransport.lastSeen = System.currentTimeMillis();
+            recentTransport.recencyBlobResponse = response;
         }
     }
 

@@ -192,9 +192,10 @@ public class DDDWifiDirect implements DDDWifi {
                     logger.log(WARNING, "Could not parse recency blob from txt record.", e);
                     return;
                 }
+                discoverPeer(device, txtRecord.get("transportId"), txtRecord.get("recencyBlob"));
+            } else {
+                discoverPeer(device, txtRecord.get("transportId"), "");
             }
-            var wifiDevice = new DDDWifiDirectDevice(device, txtRecord.get("transportId"));
-            peers.add(wifiDevice);
             checkAwaitingDiscovery();
             eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_PEERS_CHANGED);
         };
@@ -215,24 +216,29 @@ public class DDDWifiDirect implements DDDWifi {
         });
     }
 
-    private void discoverPeer(WifiP2pDevice device, String transportId) {
+    private void discoverPeer(WifiP2pDevice device, String transportId, String encodedBlob) {
         boolean peerDiscovered = false;
-        DDDWifiDevice newDevice = new DDDWifiDirectDevice(device, transportId);
-        DDDWifiDevice peerToReplace = null;
+        GetRecencyBlobResponse recencyBlobResponse;
+
+        try {
+            recencyBlobResponse = GetRecencyBlobResponse.parseFrom(Base64.getDecoder().decode(encodedBlob));
+        } catch (InvalidProtocolBufferException e) {
+            logger.log(WARNING, format("Ignoring peer %s %s because recency blob failed to decode.", device.deviceName, transportId));
+            return;
+        }
 
         for (DDDWifiDevice peerDevice: peers) {
-            if (peerDevice.getId().equals(newDevice.getId())) {
+            if (peerDevice.getId().equals(transportId)) {
                 peerDiscovered = true;
-                if (peerDevice.getDescription().isBlank() && !newDevice.getDescription().isBlank()) {
-                    peerToReplace = peerDevice;
+                peerDevice.setRecencyBlob(recencyBlobResponse);
+                if (peerDevice.getDescription().isBlank() && !device.deviceName.isBlank()) {
+                    peerDevice.setWifiP2pDevice(device);
                 }
+                startDiscovery();
             }
         }
         if (!peerDiscovered) {
-            peers.add(newDevice);
-        } else if (peerToReplace != null) {
-            peers.remove(peerToReplace);
-            peers.add(newDevice);
+            peers.add(new DDDWifiDirectDevice(device, transportId, recencyBlobResponse));
         }
     }
 
@@ -334,7 +340,7 @@ public class DDDWifiDirect implements DDDWifi {
             addressFutures.clear();
         }
         var con = new DDDWifiDirectConnection(new DDDWifiDirectDevice(groupOwner, bundleClientService.getApplicationContext()
-                .getString(R.string.unknown_transportId)), groupOwnerAddress);
+                .getString(R.string.unknown_transportId), null), groupOwnerAddress);
         toComplete.forEach(cf -> cf.completeWithConnection(con));
     }
 

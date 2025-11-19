@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
@@ -12,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -231,6 +233,7 @@ fun PeerItem(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+            .background(color = if (peer.hasNewData) Color.Transparent else Color.Gray.copy(alpha = 0.3F))
     ) {
         TextButton(
             onClick = onItemClick
@@ -241,7 +244,7 @@ fun PeerItem(
             onClick = onExchangeClick,
             enabled = !peer.isExchangeInProgress,
         ) {
-            Text(if (peer.isExchangeInProgress) "Exchanging..." else "Exchange")
+            Text(if (peer.isExchangeInProgress) "Exchanging..." else if (peer.hasNewData) "Exchange" else "Exchange (No new data)" )
         }
     }
 }

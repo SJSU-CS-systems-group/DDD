@@ -18,6 +18,7 @@ import net.discdd.bundleclient.WifiServiceManager
 import net.discdd.bundleclient.service.BundleClientService
 import net.discdd.bundleclient.service.BundleClientServiceBroadcastReceiver
 import net.discdd.bundleclient.service.DDDWifiDevice
+import net.discdd.client.bundletransmission.ClientBundleTransmission
 import net.discdd.viewmodels.WifiBannerViewModel
 import java.util.concurrent.CompletableFuture
 
@@ -28,6 +29,7 @@ data class PeerDevice(
     val lastExchange: Long = 0,
     val recencyTime: Long = 0,
     val isExchangeInProgress: Boolean = false,
+    val hasNewData: Boolean = true
 )
 
 data class WifiDirectState(
@@ -161,6 +163,7 @@ class WifiDirectViewModel(
 
             val updatedPeers = recentTransports.map { recentTransport ->
                 val currentPeer = currentPeersMap[recentTransport.device]
+                val hasNewData = doesTransportHaveNewData(recentTransport)
                 if (currentPeer != null) {
                     // Update existing peer
                     currentPeer.copy(
@@ -168,7 +171,8 @@ class WifiDirectViewModel(
                         deviceId = recentTransport.device.id ?: context.getString(R.string.unknown_transportId),
                         lastSeen = recentTransport.lastSeen,
                         lastExchange = recentTransport.lastExchange,
-                        recencyTime = recentTransport.recencyTime
+                        recencyTime = recentTransport.recencyTime,
+                        hasNewData = hasNewData
                     )
                 } else {
                     // Create new peer
@@ -177,7 +181,8 @@ class WifiDirectViewModel(
                         deviceId = recentTransport.device.id ?: context.getString(R.string.unknown_transportId),
                         lastSeen = recentTransport.lastSeen,
                         lastExchange = recentTransport.lastExchange,
-                        recencyTime = recentTransport.recencyTime
+                        recencyTime = recentTransport.recencyTime,
+                        hasNewData = hasNewData
                     )
                 }
             }.toList()
@@ -196,9 +201,17 @@ class WifiDirectViewModel(
         }
     }
 
-
     fun setBackgroundExchange(value: Int) {
         // we set up a collector in the init that will save this value to SharedPreferences
         _backgroundExchange.value = value
+    }
+
+    fun doesTransportHaveNewData(transport: ClientBundleTransmission.RecentTransport): Boolean {
+        val recencyBlobResponse = transport.recencyBlobResponse
+        if (transport.lastExchange == 0L) {
+            return true
+        }
+        val timeSinceServerExchange = recencyBlobResponse.recencyBlob.blobTimestamp.compareTo(transport.lastExchange)
+        return timeSinceServerExchange > 0
     }
 }

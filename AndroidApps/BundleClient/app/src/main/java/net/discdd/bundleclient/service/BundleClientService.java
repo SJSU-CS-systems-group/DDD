@@ -39,6 +39,7 @@ import net.discdd.client.bundletransmission.ClientBundleTransmission.BundleExcha
 import net.discdd.client.bundletransmission.ClientBundleTransmission.Statuses;
 import net.discdd.client.bundletransmission.TransportDevice;
 import net.discdd.datastore.providers.MessageProvider;
+import net.discdd.grpc.GetRecencyBlobResponse;
 import net.discdd.model.ADU;
 import net.discdd.pathutils.ClientPaths;
 import net.discdd.utils.DDDFixedRateScheduler;
@@ -509,7 +510,7 @@ public class BundleClientService extends Service {
         return Arrays.stream(bundleTransmission.getRecentTransports())
                 .filter(rt -> peer.equals(rt.getDevice()))
                 .findFirst()
-                .orElse(new ClientBundleTransmission.RecentTransport(peer));
+                .orElse(new ClientBundleTransmission.RecentTransport(peer, GetRecencyBlobResponse.getDefaultInstance()));
     }
 
     public void notifyNewAdu() {
@@ -519,7 +520,7 @@ public class BundleClientService extends Service {
     }
 
     public void peersUpdated() {
-        dddWifi.listDevices().forEach(bundleTransmission::processDiscoveredPeer);
+        dddWifi.listDevices().forEach(device -> bundleTransmission.processDiscoveredPeer(device, device.getRecencyBlob()));
         // expire peers that haven't been seen for a minute
         long expirationTime = System.currentTimeMillis() - 60 * 1000;
         bundleTransmission.expireNotSeenPeers(expirationTime);

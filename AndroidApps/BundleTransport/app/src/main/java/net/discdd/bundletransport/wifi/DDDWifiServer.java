@@ -229,17 +229,6 @@ public class DDDWifiServer {
                 /* instanceName = */ "ddd",
                 /* serviceType  = */ "_ddd._tcp",
                 /* txtRecord    = */ txt);
-
-        this.wifiP2pManager.addLocalService(channel, serviceInfo, new WifiP2pManager.ActionListener() {
-            @Override
-            public void onSuccess() {
-            }
-
-            @Override
-            public void onFailure(int reason) {
-                logger.log(SEVERE, "Failed to add local service: " + reason);
-            }
-        });
         return cal;
     }
 
