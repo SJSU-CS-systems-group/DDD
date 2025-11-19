@@ -147,26 +147,24 @@ class ClientUsbViewModel(
                                     val targetFile = devicePath.resolve(bundleId)
                                     val result = withContext(Dispatchers.IO) {
                                         Files.newOutputStream(targetFile)?.use { outputStream ->
-                                            context.contentResolver.openInputStream(bundleFile.uri)
-                                                ?.use { inputStream ->
-                                                    inputStream.copyTo(outputStream)
-                                                    val receivedBundleLocation: Path =
-                                                        rootDir.toPath().parent.resolve("BundleTransmission/bundle-generation/to-send")
-                                                            .resolve(bundleId)
-                                                    bundleTransmission!!.processReceivedBundle(
-                                                        recencyBlob.senderId, Bundle(targetFile.toFile())
-                                                    )
-                                                }
+                                            context.contentResolver.openInputStream(bundleFile.uri)?.use { inputStream ->
+                                                inputStream.copyTo(outputStream)
+                                                val receivedBundleLocation: Path =
+                                                    rootDir.toPath().parent.resolve("BundleTransmission/bundle-generation/to-send")
+                                                        .resolve(bundleId)
+                                                bundleTransmission!!.processReceivedBundle(
+                                                    recencyBlob.senderId,
+                                                    Bundle(targetFile.toFile()))
+                                            }
                                         }
                                     }
-                                    logger.log(
-                                        INFO, "Transferred file: ${bundleFile.name} of ${result} bytes to ${devicePath}"
-                                    )
+                                    logger.log(INFO, "Transferred file: ${bundleFile.name} of ${result} bytes to ${devicePath}")
                                 }
                             }
                         }
                         appendMessage(
-                            "Bundle transferred from 'toClient' to device received-processing successfully", Color.GREEN
+                            "Bundle transferred from 'toClient' to device received-processing successfully",
+                            Color.GREEN
                         )
                     } catch (e: Exception) {
                         e.printStackTrace()
