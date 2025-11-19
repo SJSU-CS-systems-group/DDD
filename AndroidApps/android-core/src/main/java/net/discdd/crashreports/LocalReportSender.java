@@ -31,17 +31,12 @@ public class LocalReportSender implements ReportSender {
         config = coreConfiguration;
     }
 
-    @Override //might crash reports not be working on transports at all???
+    @Override
     public void send(Context context, CrashReportData errorContent) throws ReportSenderException {
-        Path rootDir = context.getApplicationContext().getDataDir().toPath();
-        logger.log(INFO, "root directory for acra class " + rootDir);
-        Path clientDestDir = rootDir.resolve("to-be-bundled");
-        if (clientDestDir.toFile().exists()) {
-            logger.log(INFO, "We are writing crash report to client device internal storage");
-            rootDir = clientDestDir;
-        } else if (context.getApplicationContext().getExternalFilesDir(null).exists()) {
-            rootDir = context.getApplicationContext().getExternalFilesDir(null).toPath();
-            logger.log(INFO, "We are writing crash report to transport device external storage");
+        Path rootDir = context.getApplicationContext().getDataDir().toPath().resolve("to-be-bundled");
+        logger.log(INFO, "Directory where acra will send reports to: " + rootDir);
+        if (rootDir.toFile().exists()) {
+            logger.log(INFO, "We are writing crash report to this devices internal storage");
         } else {
             logger.log(INFO, "We will stop trying to write a crash report to device");
             return;
