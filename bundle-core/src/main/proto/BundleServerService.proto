@@ -31,7 +31,7 @@ message CrashReportResponse {
 service BundleServerService {
   rpc bundleInventory(BundleInventoryRequest) returns (BundleInventoryResponse) {}
   rpc crashReports(CrashReportRequest) returns (CrashReportResponse) {}
-  rpc fetchMessages(CheckMessagesRequest) returns (CheckMessagesResponse) {}
+  rpc checkMessages(CheckMessagesRequest) returns (CheckMessagesResponse) {}
 }
 
 message CheckMessagesRequest {
