@@ -230,6 +230,7 @@ public class DDDWifiServer {
                 /* serviceType  = */ "_ddd._tcp",
                 /* txtRecord    = */ txt);
         this.wifiP2pManager.addLocalService(channel, serviceInfo, null);
+        logger.info("Added local service with updated recency blob.");
         return cal;
     }
 
@@ -294,6 +295,7 @@ public class DDDWifiServer {
                 /* serviceType  = */ "_ddd._tcp",
                 /* txtRecord    = */ txt);
         this.wifiP2pManager.addLocalService(channel, serviceInfo, null);
+        logger.info("Added local service with updated recency blob.");
     }
 
     public enum DDDWifiServerEventType {
