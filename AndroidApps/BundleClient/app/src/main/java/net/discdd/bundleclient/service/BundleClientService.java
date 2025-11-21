@@ -294,7 +294,7 @@ public class BundleClientService extends Service {
         }
         var recentTransports = bundleTransmission.getRecentTransports();
         for (var transport : recentTransports) {
-            if (transport.getDevice() instanceof DDDWifiDevice) {
+            if (transport.getDevice() instanceof DDDWifiDevice && ClientBundleTransmission.doesTransportHaveNewData(transport)) {
                 var bc = exchangeWith((DDDWifiDevice) transport.getDevice());
                 exchangeCounts.add(bc);
                 logger.log(INFO,

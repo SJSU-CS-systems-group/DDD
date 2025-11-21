@@ -163,7 +163,7 @@ class WifiDirectViewModel(
 
             val updatedPeers = recentTransports.map { recentTransport ->
                 val currentPeer = currentPeersMap[recentTransport.device]
-                val hasNewData = doesTransportHaveNewData(recentTransport)
+                val hasNewData = ClientBundleTransmission.doesTransportHaveNewData(recentTransport)
                 if (currentPeer != null) {
                     // Update existing peer
                     currentPeer.copy(
@@ -204,14 +204,5 @@ class WifiDirectViewModel(
     fun setBackgroundExchange(value: Int) {
         // we set up a collector in the init that will save this value to SharedPreferences
         _backgroundExchange.value = value
-    }
-
-    fun doesTransportHaveNewData(transport: ClientBundleTransmission.RecentTransport): Boolean {
-        val recencyBlobResponse = transport.recencyBlobResponse
-        if (transport.lastExchange == 0L) {
-            return true
-        }
-        val timeSinceServerExchange = recencyBlobResponse.recencyBlob.blobTimestamp.compareTo(transport.lastExchange)
-        return timeSinceServerExchange > 0
     }
 }

@@ -266,6 +266,13 @@ public class ClientBundleTransmission {
 
     final private HashMap<TransportDevice, RecentTransport> recentTransports = new HashMap<>();
 
+    public static boolean doesTransportHaveNewData(RecentTransport transport) {
+        if (transport.lastExchange == 0L) {
+            return true;
+        }
+        return transport.recencyBlobResponse.getRecencyBlob().getBlobTimestamp() > transport.lastExchange;
+    }
+
     public RecentTransport[] getRecentTransports() {
         synchronized (recentTransports) {
             return recentTransports.values().toArray(new RecentTransport[0]);
