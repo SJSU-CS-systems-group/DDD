@@ -239,9 +239,12 @@ fun PeerItem(
         }
         Button(
             onClick = onExchangeClick,
-            enabled = !peer.isExchangeInProgress,
+            enabled = !peer.isExchangeInProgress && peer.hasNewData,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (peer.hasNewData) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+            )
         ) {
-            Text(if (peer.isExchangeInProgress) "Exchanging..." else "Exchange")
+            Text(if (peer.isExchangeInProgress) "Exchanging..." else if (peer.hasNewData) "Exchange" else "Exchanged (No new data)" )
         }
     }
 }
