@@ -33,7 +33,6 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import net.discdd.bundleclient.BuildConfig;
 import net.discdd.bundleclient.R;
 import net.discdd.bundleclient.service.wifiDirect.DDDWifiDirect;
-import net.discdd.client.bundlesecurity.ClientBundleSecurity;
 import net.discdd.client.bundletransmission.ClientBundleTransmission;
 import net.discdd.client.bundletransmission.ClientBundleTransmission.BundleExchangeCounts;
 import net.discdd.client.bundletransmission.ClientBundleTransmission.Statuses;

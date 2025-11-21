@@ -229,6 +229,16 @@ public class DDDWifiServer {
                 /* instanceName = */ "ddd",
                 /* serviceType  = */ "_ddd._tcp",
                 /* txtRecord    = */ txt);
+        this.wifiP2pManager.addLocalService(channel, serviceInfo, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+            }
+
+            @Override
+            public void onFailure(int reason) {
+                logger.log(SEVERE, "Failed to add local service: " + reason);
+            }
+        });
         return cal;
     }
 
@@ -387,7 +397,7 @@ public class DDDWifiServer {
                         var state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1);
                         if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
                             logger.log(INFO, "WifiDirect enabled");
-                            if (hasPermission()) {
+                            if (hasPermission() && channel != null) {
                                 wifiP2pManager.requestDeviceInfo(channel, DDDWifiServer.this::processDeviceInfo);
                                 createGroup();
                             }

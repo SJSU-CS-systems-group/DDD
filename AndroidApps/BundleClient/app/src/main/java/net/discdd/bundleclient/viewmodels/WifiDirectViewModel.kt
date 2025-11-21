@@ -117,7 +117,10 @@ class WifiDirectViewModel(
     private fun updatePeerExchangeStatus(device: DDDWifiDevice, inProgress: Boolean) {
         val updatedPeers = _state.value.peers.map { peer ->
             if (peer.device == device) {
-                peer.copy(isExchangeInProgress = inProgress)
+                peer.copy(
+                    isExchangeInProgress = inProgress,
+                    hasNewData = false
+                )
             } else {
                 peer
             }
