@@ -53,7 +53,7 @@ fun AppShareScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Show either download message or QR code
-            if (wifiConnectURL == null || !connectivityState.networkConnected) {
+            if (wifiConnectURL == null && !connectivityState.networkConnected) {
                 Text(
                         text = "Wifi Direct and/or internet is not available.",
                         style = MaterialTheme.typography.titleMedium,
@@ -71,7 +71,9 @@ fun AppShareScreen(
                     DownloadButton(appShareViewModel)
                     Text(text = " ")
                 } else {
-                    QRCodeDisplay("QR code to connect your phone to this transport", wifiConnectURL)
+                    wifiConnectURL?.also {
+                        QRCodeDisplay("QR code to connect your phone to this transport", it)
+                    }
                     // it seems a bit strange to put the button in the middle of the screen, but it separates
                     // the QR codes more and makes them easier to scan
                     DownloadButton(appShareViewModel)
