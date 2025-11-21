@@ -11,9 +11,7 @@ import java.util.concurrent.Callable;
 
 @CommandLine.Command(
         name = "message-transport",
-        description = "Manage transport messages by transportId",
-        mixinStandardHelpOptions = true,
-        subcommands = { CommandLine.HelpCommand.class }
+        description = "Manage transport messages by transportId"
 )
 @Component
 public class MessageCast implements Callable<Integer> {
