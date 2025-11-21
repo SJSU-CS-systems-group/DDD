@@ -258,6 +258,7 @@ public class ClientBundleTransmission {
         public RecentTransport(TransportDevice device) {
             this.device = device;
         }
+
         public RecentTransport(TransportDevice device, GetRecencyBlobResponse recencyBlobResponse) {
             this.device = device;
             this.recencyBlobResponse = recencyBlobResponse;
