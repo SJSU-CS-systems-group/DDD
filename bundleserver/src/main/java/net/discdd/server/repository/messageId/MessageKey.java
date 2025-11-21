@@ -12,7 +12,7 @@ import java.io.Serializable;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MessageKey implements Serializable {
-    private long transportId;
+    private String transportId;
     private long messageNumber;
 }
 

@@ -18,7 +18,7 @@ public class TransportMessageService {
     }
 
     @Transactional
-    public TransportMessage createMessage(int transportId, String messageText) {
+    public TransportMessage createMessage(String transportId, String messageText) {
         Long max = repo.findMaxMessageNumber(transportId);
         long next = (max == null ? 1L : max + 1);
 

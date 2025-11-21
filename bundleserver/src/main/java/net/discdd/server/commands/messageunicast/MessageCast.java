@@ -23,16 +23,25 @@ public class MessageCast implements Callable<Integer> {
         this.repo = repo;
         this.service = service;
     }
+
+    @CommandLine.Parameters(arity = "1", index = "0", hidden = true)
+    String ignoredConfigFile;
+
     @CommandLine.Command(
             name = "list",
             description = "List all transport messages"
     )
     int list() {
+        if(repo.count() == 0) {
+            System.out.println("There are no messages in the table");
+            return 0;
+        }
+
         System.out.println("Transport Messages:");
         repo.findAll().forEach(m -> {
             MessageKey key = m.messageKey;
             System.out.printf(
-                    "transportId=%d, messageNumber=%d | %s%n",
+                    "transportId=%s, messageNumber=%d | %s%n",
                     key.getTransportId(),
                     key.getMessageNumber(),
                     m.message
@@ -47,7 +56,7 @@ public class MessageCast implements Callable<Integer> {
     )
     int add(
             @CommandLine.Parameters(index = "0", description = "Transport ID")
-            int transportId,
+            String transportId,
 
             @CommandLine.Parameters(index = "1", description = "Message text")
             String messageText
@@ -55,9 +64,11 @@ public class MessageCast implements Callable<Integer> {
         TransportMessage msg = service.createMessage(transportId, messageText);
 
         System.out.printf(
-                "Created message: transportId=%d, messageNumber=%d%n",
+                "Created message: transportId=%s, messageNumber=%d, message=%s, messageDate=%s%n",
                 msg.messageKey.getTransportId(),
-                msg.messageKey.getMessageNumber()
+                msg.messageKey.getMessageNumber(),
+                msg.message,
+                msg.messageDate.toString()
         );
 
         return 0;
@@ -69,7 +80,7 @@ public class MessageCast implements Callable<Integer> {
     )
     int delete(
             @CommandLine.Parameters(index = "0", description = "Transport ID")
-            long transportId,
+            String transportId,
 
             @CommandLine.Parameters(index = "1", description = "Message number")
             long messageNumber
@@ -83,10 +94,28 @@ public class MessageCast implements Callable<Integer> {
 
         repo.deleteById(key);
         System.out.printf(
-                "Deleted message: transportId=%d, messageNumber=%d%n",
+                "Deleted message: transportId=%s, messageNumber=%d%n",
                 transportId,
                 messageNumber
         );
+        return 0;
+    }
+
+    @CommandLine.Command(
+            name = "delete-all",
+            description = "Delete all transport messages"
+    )
+    int deleteAll() {
+        long count = repo.count();
+
+        if (count == 0) {
+            System.out.println("No messages to delete.");
+            return 0;
+        }
+
+        repo.deleteAll();
+        System.out.printf("Deleted %d messages.%n", count);
+
         return 0;
     }
 

@@ -9,6 +9,6 @@ import org.springframework.data.repository.query.Param;
 public interface TransportMessageRepository extends CrudRepository<TransportMessage, MessageKey> {
 
     @Query("SELECT MAX(t.messageKey.messageNumber) FROM TransportMessage t WHERE t.messageKey.transportId = :transportId")
-    Long findMaxMessageNumber(@Param("transportId") long transportId);
+    Long findMaxMessageNumber(@Param("transportId") String transportId);
 
 }
