@@ -62,8 +62,7 @@ class ServerMessagesViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun deleteById(messageId: Int) {
-        repository.markRead(messageId)
-        repository.insertAll(sampleMessages())
+        repository.deleteById(messageId)
     }
 
     /*

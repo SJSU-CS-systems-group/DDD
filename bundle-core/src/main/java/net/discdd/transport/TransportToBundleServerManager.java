@@ -143,8 +143,7 @@ public class TransportToBundleServerManager {
         try (var os = Files.newOutputStream(blobPath,
                                             StandardOpenOption.CREATE,
                                             StandardOpenOption.TRUNCATE_EXISTING)) {
-            logger.log(INFO, "aaaWriting blob to " + blobPath);
-            logger.log(INFO, "This is the message being sent:  " + message);
+            logger.log(INFO, "Writing blob to " + blobPath);
             recencyBlob.writeTo(os);
         } catch (IOException e) {
             logger.log(SEVERE, "Failed to write recency blob", e);
