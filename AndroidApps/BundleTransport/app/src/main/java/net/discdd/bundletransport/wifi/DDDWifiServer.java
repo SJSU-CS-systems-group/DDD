@@ -229,17 +229,8 @@ public class DDDWifiServer {
                 /* instanceName = */ "ddd",
                 /* serviceType  = */ "_ddd._tcp",
                 /* txtRecord    = */ txt);
-
-        this.wifiP2pManager.addLocalService(channel, serviceInfo, new WifiP2pManager.ActionListener() {
-            @Override
-            public void onSuccess() {
-            }
-
-            @Override
-            public void onFailure(int reason) {
-                logger.log(SEVERE, "Failed to add local service: " + reason);
-            }
-        });
+        this.wifiP2pManager.addLocalService(channel, serviceInfo, null);
+        logger.info("Added local service with updated recency blob.");
         return cal;
     }
 
@@ -297,25 +288,14 @@ public class DDDWifiServer {
             return;
         }
         this.lastRecencyBlob = recencyBlob;
-        this.wifiP2pManager.removeLocalService(channel, serviceInfo, new WifiP2pManager.ActionListener() {
-            @Override
-            public void onSuccess() {}
-
-            @Override
-            public void onFailure(int reason) {}
-        });
+        this.wifiP2pManager.removeLocalService(channel, serviceInfo, null);
         txt.put("recencyBlob", encodedBlob);
         serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(
                 /* instanceName = */ "ddd",
                 /* serviceType  = */ "_ddd._tcp",
                 /* txtRecord    = */ txt);
-        this.wifiP2pManager.addLocalService(channel, serviceInfo, new WifiP2pManager.ActionListener() {
-            @Override
-            public void onSuccess() {}
-
-            @Override
-            public void onFailure(int reason) {}
-        });
+        this.wifiP2pManager.addLocalService(channel, serviceInfo, null);
+        logger.info("Added local service with updated recency blob.");
     }
 
     public enum DDDWifiServerEventType {
@@ -398,7 +378,7 @@ public class DDDWifiServer {
                         var state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1);
                         if (state == WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
                             logger.log(INFO, "WifiDirect enabled");
-                            if (hasPermission()) {
+                            if (hasPermission() && channel != null) {
                                 wifiP2pManager.requestDeviceInfo(channel, DDDWifiServer.this::processDeviceInfo);
                                 createGroup();
                             }

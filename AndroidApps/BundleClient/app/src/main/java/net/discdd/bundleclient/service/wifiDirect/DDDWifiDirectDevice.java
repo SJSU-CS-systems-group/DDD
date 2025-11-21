@@ -2,14 +2,17 @@ package net.discdd.bundleclient.service.wifiDirect;
 
 import android.net.wifi.p2p.WifiP2pDevice;
 import net.discdd.bundleclient.service.DDDWifiDevice;
+import net.discdd.grpc.GetRecencyBlobResponse;
 
 class DDDWifiDirectDevice implements DDDWifiDevice {
-    final public WifiP2pDevice wifiP2pDevice;
+    public WifiP2pDevice wifiP2pDevice;
     final public String transportId;
+    public GetRecencyBlobResponse recencyBlob;
 
-    public DDDWifiDirectDevice(WifiP2pDevice wifiP2pDevice, String transportId) {
+    public DDDWifiDirectDevice(WifiP2pDevice wifiP2pDevice, String transportId, GetRecencyBlobResponse recencyBlob) {
         this.wifiP2pDevice = wifiP2pDevice;
         this.transportId = transportId;
+        this.recencyBlob = recencyBlob;
     }
 
     @Override
@@ -28,6 +31,11 @@ class DDDWifiDirectDevice implements DDDWifiDevice {
     }
 
     @Override
+    public GetRecencyBlobResponse getRecencyBlob() {
+        return (recencyBlob == null) ? GetRecencyBlobResponse.getDefaultInstance() : recencyBlob;
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (!(o instanceof DDDWifiDirectDevice owdd)) return false;
         return this.compareTo(owdd) == 0;
@@ -36,6 +44,15 @@ class DDDWifiDirectDevice implements DDDWifiDevice {
     @Override
     public int hashCode() {
         return this.getId().hashCode();
+    }
+
+    @Override
+    public void setWifiP2pDevice(WifiP2pDevice wifiP2pDevice) {
+        this.wifiP2pDevice = wifiP2pDevice;
+    }
+    @Override
+    public void setRecencyBlob(GetRecencyBlobResponse recencyBlob) {
+        this.recencyBlob = recencyBlob;
     }
 
     public boolean sameAddressAs(DDDWifiDevice o) {
