@@ -139,10 +139,12 @@ public class TransportToBundleServerManager {
         var recencyBlob = blockingExchangeStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                 .getRecencyBlob(recencyBlobReq);
         Path blobPath = fromServerPath.resolve(RECENCY_BLOB_BIN);
+        String message = recencyBlob.getMessage();
         try (var os = Files.newOutputStream(blobPath,
                                             StandardOpenOption.CREATE,
                                             StandardOpenOption.TRUNCATE_EXISTING)) {
-            logger.log(INFO, "Writing blob to " + blobPath);
+            logger.log(INFO, "aaaWriting blob to " + blobPath);
+            logger.log(INFO, "This is the message being sent:  " + message);
             recencyBlob.writeTo(os);
         } catch (IOException e) {
             logger.log(SEVERE, "Failed to write recency blob", e);

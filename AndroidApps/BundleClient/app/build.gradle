@@ -31,6 +31,7 @@ android {
 
     compileSdk 34
 
+
     defaultConfig {
         applicationId "net.discdd.bundleclient"
         minSdk 33 // Required at least 34 for JDK 17 -> enable BufferedInputStream transferTo in BundleCore

@@ -1,0 +1,360 @@
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/build.gradle:38: Warning: Not targeting the latest versions of Android; compatibility modes apply. Consider testing and updating this version. Consult the android.os.Build.VERSION_CODES javadoc for details. [OldTargetApi]
+        targetSdk 34
+        ~~~~~~~~~~~~
+
+   Explanation for issues of type "OldTargetApi":
+   When your application runs on a version of Android that is more recent than
+   your targetSdkVersion specifies that it has been tested with, various
+   compatibility modes kick in. This ensures that your application continues
+   to work, but it may look out of place. For example, if the targetSdkVersion
+   is less than 14, your app may get an option button in the UI.
+
+   To fix this issue, set the targetSdkVersion to the highest available value.
+   Then test your app to make sure everything works correctly. You may want to
+   consult the compatibility notes to see what changes apply to each version
+   you are adding support for:
+   https://developer.android.com/reference/android/os/Build.VERSION_CODES.html
+   as well as follow this guide:
+   https://developer.android.com/distribute/best-practices/develop/target-sdk.
+   html
+
+   https://developer.android.com/distribute/best-practices/develop/target-sdk.html
+
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/build.gradle:79: Warning: A newer version of androidx.core:core-ktx than 1.12.0 is available: 1.17.0 [GradleDependency]
+    implementation 'androidx.core:core-ktx:1.12.0'
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/build.gradle:80: Warning: A newer version of androidx.test:core than 1.6.1 is available: 1.7.0 [GradleDependency]
+    implementation 'androidx.test:core:1.6.1'
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/build.gradle:81: Warning: A newer version of androidx.test.ext:junit than 1.2.1 is available: 1.3.0 [GradleDependency]
+    implementation 'androidx.test.ext:junit:1.2.1'
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/build.gradle:85: Warning: A newer version of androidx.work:work-runtime than 2.7.0 is available: 2.10.5 [GradleDependency]
+    implementation "androidx.work:work-runtime:$work_version"
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/build.gradle:87: Warning: A newer version of androidx.appcompat:appcompat than 1.3.1 is available: 1.7.1 [GradleDependency]
+    implementation 'androidx.appcompat:appcompat:1.3.1'
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/build.gradle:88: Warning: A newer version of com.google.android.material:material than 1.4.0 is available: 1.13.0 [GradleDependency]
+    implementation 'com.google.android.material:material:1.4.0'
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/build.gradle:89: Warning: A newer version of androidx.constraintlayout:constraintlayout than 2.1.1 is available: 2.2.1 [GradleDependency]
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.1'
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/build.gradle:90: Warning: A newer version of androidx.lifecycle:lifecycle-common-java8 than 2.3.1 is available: 2.9.4 [GradleDependency]
+    implementation 'androidx.lifecycle:lifecycle-common-java8:2.3.1'
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/build.gradle:91: Warning: A newer version of androidx.test.ext:junit than 1.1.3 is available: 1.3.0 [GradleDependency]
+    androidTestImplementation 'androidx.test.ext:junit:1.1.3'
+                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/build.gradle:92: Warning: A newer version of androidx.test.espresso:espresso-core than 3.4.0 is available: 3.7.0 [GradleDependency]
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
+                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/build.gradle:97: Warning: A newer version of com.google.code.gson:gson than 2.8.7 is available: 2.11.0 [GradleDependency]
+    implementation 'com.google.code.gson:gson:2.8.7'
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/build.gradle:98: Warning: A newer version of commons-io:commons-io than 2.4 is available: 2.13.0 [GradleDependency]
+    implementation group: 'commons-io', name: 'commons-io', version: '2.4'
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/build.gradle:101: Warning: A newer version of com.fasterxml.jackson.core:jackson-databind than 2.8.9 is available: 2.14.2 [GradleDependency]
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.8.9'
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/build.gradle:102: Warning: A newer version of com.google.guava:guava than 30.1.1-jre is available: 33.2.1-jre [GradleDependency]
+    implementation 'com.google.guava:guava:30.1.1-jre'
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/build.gradle:105: Warning: A newer version of androidx.test.ext:junit than 1.2.1 is available: 1.3.0 [GradleDependency]
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/build.gradle:106: Warning: A newer version of androidx.test.espresso:espresso-core than 3.6.1 is available: 3.7.0 [GradleDependency]
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
+                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/build.gradle:107: Warning: A newer version of androidx.test.espresso:espresso-intents than 3.6.1 is available: 3.7.0 [GradleDependency]
+    androidTestImplementation 'androidx.test.espresso:espresso-intents:3.6.1'
+                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/build.gradle:125: Warning: A newer version of androidx.compose:compose-bom than 2025.02.00 is available: 2025.10.00 [GradleDependency]
+    var composeBom = platform("androidx.compose:compose-bom:2025.02.00")
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/build.gradle:125: Warning: A newer version of androidx.compose:compose-bom than 2025.02.00 is available: 2025.10.00 [GradleDependency]
+    var composeBom = platform("androidx.compose:compose-bom:2025.02.00")
+                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/build.gradle:131: Warning: A newer version of androidx.activity:activity-compose than 1.9.0 is available: 1.11.0 [GradleDependency]
+    implementation("androidx.activity:activity-compose:1.9.0")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/build.gradle:132: Warning: A newer version of androidx.lifecycle:lifecycle-viewmodel-compose than 2.8.7 is available: 2.9.4 [GradleDependency]
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "GradleDependency":
+   This detector looks for usages of libraries where the version you are using
+   is not the current stable release. Using older versions is fine, and there
+   are cases where you deliberately want to stick with an older version.
+   However, you may simply not be aware that a more recent version is
+   available, and that is what this lint check helps find.
+
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/java/net/discdd/bundleclient/viewmodels/ServerViewModel.kt:68: Error: Format string 'upload_status' is not a valid format string so it should not be passed to String.format [StringFormatInvalid]
+                                context.getString(
+                                ^
+    /Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values-ar/strings.xml:25: This definition does not require arguments
+
+   Explanation for issues of type "StringFormatInvalid":
+   If a string contains a '%' character, then the string may be a formatting
+   string which will be passed to String.format from Java code to replace each
+   '%' occurrence with specific values.
+
+   This lint warning checks for two related problems:
+   (1) Formatting strings that are invalid, meaning that String.format will
+   throw exceptions at runtime when attempting to use the format string.
+   (2) Strings containing '%' that are not formatting strings getting passed
+   to a String.format call. In this case the '%' will need to be escaped as
+   '%%'.
+
+   NOTE: Not all Strings which look like formatting strings are intended for
+   use by String.format; for example, they may contain date formats intended
+   for android.text.format.Time#format(). Lint cannot always figure out that a
+   String is a date format, so you may get false warnings in those scenarios.
+   See the suppress help topic for information on how to suppress errors in
+   that case.
+
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values/strings.xml:42: Error: "failed_to_start_discovery_s" is not translated in "ar" (Arabic), "uk" (Ukrainian), "fr" (French), "es" (Spanish) [MissingTranslation]
+    <string name="failed_to_start_discovery_s">Failed to start discovery: %s</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values/strings.xml:43: Error: "connecting_to_s" is not translated in "ar" (Arabic), "uk" (Ukrainian), "fr" (French), "es" (Spanish) [MissingTranslation]
+    <string name="connecting_to_s">Connecting to %s</string>
+            ~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values/strings.xml:44: Error: "failed_to_connect_to_s" is not translated in "ar" (Arabic), "uk" (Ukrainian), "fr" (French), "es" (Spanish) [MissingTranslation]
+    <string name="failed_to_connect_to_s">Failed to connect to %s</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values/strings.xml:45: Error: "connected_to_s_s" is not translated in "ar" (Arabic), "uk" (Ukrainian), "fr" (French), "es" (Spanish) [MissingTranslation]
+    <string name="connected_to_s_s">Connected to %s (%s)</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values/strings.xml:46: Error: "s_upload_s_download_s" is not translated in "ar" (Arabic), "uk" (Ukrainian), "fr" (French), "es" (Spanish) [MissingTranslation]
+    <string name="s_upload_s_download_s">%s upload: %s download: %s</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values/strings.xml:47: Error: "not_exchanged_recently_s" is not translated in "ar" (Arabic), "uk" (Ukrainian), "fr" (French), "es" (Spanish) [MissingTranslation]
+    <string name="not_exchanged_recently_s">Transport has not exchanged with server recently: %s</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values/strings.xml:48: Error: "timeout_connecting_to_s" is not translated in "ar" (Arabic), "uk" (Ukrainian), "fr" (French), "es" (Spanish) [MissingTranslation]
+    <string name="timeout_connecting_to_s">Timeout connecting to %s perhaps not accepting connection?</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values/strings.xml:49: Error: "could_not_start_exchange" is not translated in "ar" (Arabic), "uk" (Ukrainian), "fr" (French), "es" (Spanish) [MissingTranslation]
+    <string name="could_not_start_exchange">"Could not start exchange: "</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "MissingTranslation":
+   If an application has more than one locale, then all the strings declared
+   in one language should also be translated in all other languages.
+
+   If the string should not be translated, you can add the attribute
+   translatable="false" on the <string> element, or you can define all your
+   non-translatable strings in a resource file called donottranslate.xml. Or,
+   you can ignore the issue with a tools:ignore="MissingTranslation"
+   attribute.
+
+   You can tell lint (and other tools) which language is the default language
+   in your res/values/ folder by specifying tools:locale="languageCode" for
+   the root <resources> element in your resource file. (The tools prefix
+   refers to the namespace declaration http://schemas.android.com/tools.)
+
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values-ar/strings.xml:32: Warning: The resource string "service_name" is marked as translatable="false", but is translated to "ar" (Arabic) here [Untranslatable]
+    <string name="service_name" translatable="false">DDD</string>
+                                ~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values-es/strings.xml:32: Warning: The resource string "service_name" is marked as translatable="false", but is translated to "es" (Spanish) here [Untranslatable]
+    <string name="service_name" translatable="false">Ddd</string>
+                                ~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values-fr/strings.xml:32: Warning: The resource string "service_name" is marked as translatable="false", but is translated to "fr" (French) here [Untranslatable]
+    <string name="service_name" translatable="false">DDD</string>
+                                ~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values-uk/strings.xml:32: Warning: The resource string "service_name" is marked as translatable="false", but is translated to "uk" (Ukrainian) here [Untranslatable]
+    <string name="service_name" translatable="false">DDD</string>
+                                ~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "Untranslatable":
+   Strings can be marked with translatable=false to indicate that they are not
+   intended to be translated, but are present in the resource file for other
+   purposes (for example for non-display strings that should vary by some
+   other configuration qualifier such as screen size or API level).
+
+   There are cases where translators accidentally translate these strings
+   anyway, and lint will flag these occurrences with this lint check.
+
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values-ar/strings.xml:25: Warning: Inconsistent number of arguments in formatting string upload_status; found both 0 here and 2 in values/strings.xml [StringFormatCount]
+    <string name="upload_status">حالة التحميل: ٪ 1 $ s ، تنزيل الحالة: ٪ 2 $ s</string>
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    /Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values/strings.xml:25: Conflicting number of arguments (2) here
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values-fr/strings.xml:25: Warning: Inconsistent number of arguments in formatting string upload_status; found both 0 here and 2 in values/strings.xml [StringFormatCount]
+    <string name="upload_status">Statut de téléchargement:%1$s, statut de téléchargement:% 2 $ S</string>
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    /Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values/strings.xml:25: Conflicting number of arguments (2) here
+
+   Explanation for issues of type "StringFormatCount":
+   When a formatted string takes arguments, it usually needs to reference the
+   same arguments in all translations (or all arguments if there are no
+   translations.
+
+   There are cases where this is not the case, so this issue is a warning
+   rather than an error by default. However, this usually happens when a
+   language is not translated or updated correctly.
+
+/Users/jon/.gradle/caches/modules-2/files-2.1/org.bouncycastle/bcpkix-jdk15to18/1.78/e22f1524ef263f6c1837238d67c005dde7301d15/bcpkix-jdk15to18-1.78.jar: Warning: checkServerTrusted is empty, which could cause insecure network traffic due to trusting arbitrary TLS/SSL certificates presented by peers [TrustAllX509TrustManager]
+/Users/jon/.gradle/caches/modules-2/files-2.1/com.distrimind.bouncycastle/pkix/1.77/751fab3412006265c1768428caf0bfe77a18d277/pkix-1.77.jar: Warning: checkServerTrusted is empty, which could cause insecure network traffic due to trusting arbitrary TLS/SSL certificates presented by peers [TrustAllX509TrustManager]
+
+   Explanation for issues of type "TrustAllX509TrustManager":
+   This check looks for X509TrustManager implementations whose
+   checkServerTrusted or checkClientTrusted methods do nothing (thus trusting
+   any certificate chain) which could result in insecure network traffic
+   caused by trusting arbitrary TLS/SSL certificates presented by peers.
+
+   https://goo.gle/TrustAllX509TrustManager
+
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/AndroidManifest.xml:30: Warning: Exported content providers can provide access to potentially sensitive data [ExportedContentProvider]
+        <provider
+         ~~~~~~~~
+
+   Explanation for issues of type "ExportedContentProvider":
+   Content providers are exported by default and any application on the system
+   can potentially use them to read and write data. If the content provider
+   provides access to sensitive data, it should be protected by specifying
+   export=false in the manifest or by protecting it with a permission that can
+   be granted to other applications.
+
+   https://goo.gle/ExportedContentProvider
+
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/java/net/discdd/datastore/sqlite/DBHelper.java:47: Warning: This Cursor should be freed up after use with #close() [Recycle]
+        Cursor cursor = DB.rawQuery("select * from MessageTable where receiver=? and appName=?",
+                           ~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/java/net/discdd/datastore/sqlite/DBHelper.java:63: Warning: This Cursor should be freed up after use with #close() [Recycle]
+        Cursor cursor = DB.rawQuery("select * from MessageTable where receiver=? and appName=?",
+                           ~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/java/net/discdd/bundleclient/FileUtils.java:230: Warning: This Cursor should be freed up after use with #close() [Recycle]
+        Cursor returnCursor = contentResolver.query(returnUri, null, null, null, null);
+                                              ~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/java/net/discdd/bundleclient/FileUtils.java:269: Warning: This Cursor should be freed up after use with #close() [Recycle]
+        Cursor returnCursor = context.getContentResolver().query(returnUri, null, null, null, null);
+                                                           ~~~~~
+
+   Explanation for issues of type "Recycle":
+   Many resources, such as TypedArrays, VelocityTrackers, etc., should be
+   recycled (with a recycle() call) after use. This lint check looks for
+   missing recycle() calls.
+
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/java/net/discdd/bundleclient/FileUtils.java:47: Warning: Unnecessary; SDK_INT is always >= 33 [ObsoleteSdkInt]
+        final boolean isKitKat = Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT;
+                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/java/net/discdd/bundleclient/FileUtils.java:68: Warning: Unnecessary; SDK_INT is always >= 33 [ObsoleteSdkInt]
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/java/net/discdd/bundleclient/FileUtils.java:111: Warning: Unnecessary;` Build.VERSION.SDK_INT >= Build.VERSION_CODES.O` is never true here [ObsoleteSdkInt]
+                    final boolean isOreo = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O;
+                                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/java/net/discdd/bundleclient/FileUtils.java:161: Warning: Unnecessary; SDK_INT is never < 33 [ObsoleteSdkInt]
+            if (Build.VERSION.SDK_INT == Build.VERSION_CODES.N) {
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "ObsoleteSdkInt":
+   This check flags version checks that are not necessary, because the
+   minSdkVersion (or surrounding known API level) is already at least as high
+   as the version checked for.
+
+   Similarly, it also looks for resources in -vNN folders, such as values-v14
+   where the version qualifier is less than or equal to the minSdkVersion,
+   where the contents should be merged into the best folder.
+
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/drawable/bundleclient_icon.xml:7: Warning: Very long vector path (813 characters), which is bad for performance. Considering reducing precision, removing minor details or rasterizing vector. [VectorPath]
+      android:pathData="m15.98,15.26v83.78,21.21c0,2.08 -1.01,6.44 0.67,8.16 1.31,1.34 4.69,0.85 6.53,0.85h17.01c24.35,0 51.95,-0.35 69.96,-15.91C137.39,89.82 134.59,38.7 97.78,22.32 73.61,11.56 42.51,15.26 15.98,15.26m16.36,94.92c15.7,0 33.2,1.1 46.46,-7.17C101.36,88.92 102.48,54.21 78.14,40.76 64.56,33.26 47.95,34.35 32.34,34.35V26.39c19.18,0 41.48,-2.34 58.24,6.92 27.03,14.94 27.24,58.48 2.62,75.1 -12.33,8.32 -29.76,9.72 -45.15,9.72 -3.45,0 -11.87,1.25 -14.66,-0.55 -2.02,-1.3 -1.05,-5.55 -1.05,-7.41m1.31,-9.01v-4.77c9.45,0 19.66,0.08 27.48,-4.97C75.18,82.34 75.06,61.34 59.82,53.1 51.98,48.86 42.66,49.2 33.65,49.2v-5.83c11.93,0 25.59,-1.55 35.99,4.27 17.58,9.84 16.94,38.78 0,48.8 -10.32,6.1 -23.97,4.73 -35.99,4.73m0,-11.14V55.56c6.6,0 14.56,-0.79 20.28,2.47 9.76,5.55 10.49,22.17 1.2,28.33 -6.07,4.02 -14.11,3.67 -21.48,3.67z"
+                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "VectorPath":
+   Using long vector paths is bad for performance. There are several ways to
+   make the pathData shorter:
+   * Using less precision
+   * Removing some minor details
+   * Using the Android Studio vector conversion tool
+   * Rasterizing the image (converting to PNG)
+
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values/strings.xml:18: Warning: The resource R.string.connected_to_transport appears to be unused [UnusedResources]
+    <string name="connected_to_transport">Connected to transport</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values/strings.xml:30: Warning: The resource R.string.to_settings_text appears to be unused [UnusedResources]
+    <string name="to_settings_text">To enable our app to manage app-related files on this device and your USB storage, please toggle \"Yes\" for BundleClient in your settings. We assure you that only files created by our app will be accessed. Protecting user privacy and maintaining ethical practices are our top priorities.</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values/strings.xml:31: Warning: The resource R.string.subscribe appears to be unused [UnusedResources]
+    <string name="subscribe">Subscribe</string>
+            ~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values/strings.xml:32: Warning: The resource R.string.service_name appears to be unused [UnusedResources]
+    <string name="service_name" translatable="false">DDD</string>
+            ~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values/strings.xml:33: Warning: The resource R.string.unsubscribe appears to be unused [UnusedResources]
+    <string name="unsubscribe">Unsubscribe</string>
+            ~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values/strings.xml:34: Warning: The resource R.string.unknown_error appears to be unused [UnusedResources]
+    <string name="unknown_error">Unknown error</string>
+            ~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values/strings.xml:35: Warning: The resource R.string.turn_on_notifications appears to be unused [UnusedResources]
+    <string name="turn_on_notifications">Turn on notifications</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values/strings.xml:36: Warning: The resource R.string.close_bottom_sheet appears to be unused [UnusedResources]
+    <string name="close_bottom_sheet">Close bottom sheet</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values/strings.xml:37: Warning: The resource R.string.wifi_aware_tab appears to be unused [UnusedResources]
+    <string name="wifi_aware_tab">Wifi Aware</string>
+            ~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values/strings.xml:38: Warning: The resource R.string.sent appears to be unused [UnusedResources]
+    <string name="sent">"sent: "</string>
+            ~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values/strings.xml:39: Warning: The resource R.string.received appears to be unused [UnusedResources]
+    <string name="received">received</string>
+            ~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "UnusedResources":
+   Unused resources make applications larger and slow down builds.
+
+
+   The unused resource check can ignore tests. If you want to include
+   resources that are only referenced from tests, consider packaging them in a
+   test source set instead.
+
+   You can include test sources in the unused resource check by setting the
+   system property lint.unused-resources.include-tests =true, and to exclude
+   them (usually for performance reasons), use
+   lint.unused-resources.exclude-tests =true.
+   ,
+
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values-ar/strings.xml:24: Warning: Replace "..." with ellipsis character (…, &#8230;) ? [TypographyEllipsis]
+    <string name="connecting_to_server">الاتصال بالخادم ...</string>
+                                        ~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values-es/strings.xml:24: Warning: Replace "..." with ellipsis character (…, &#8230;) ? [TypographyEllipsis]
+    <string name="connecting_to_server">Conectarse al servidor ...</string>
+                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values-fr/strings.xml:24: Warning: Replace "..." with ellipsis character (…, &#8230;) ? [TypographyEllipsis]
+    <string name="connecting_to_server">Connexion au serveur ...</string>
+                                        ~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values-uk/strings.xml:24: Warning: Replace "..." with ellipsis character (…, &#8230;) ? [TypographyEllipsis]
+    <string name="connecting_to_server">Підключення до сервера ...</string>
+                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values/strings.xml:24: Warning: Replace "..." with ellipsis character (…, &#8230;) ? [TypographyEllipsis]
+    <string name="connecting_to_server">Connecting to server...</string>
+                                        ~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values-ar/strings.xml:27: Warning: Replace "..." with ellipsis character (…, &#8230;) ? [TypographyEllipsis]
+    <string name="initiating_bundle_exchange">بدء تبادل الحزمة ...</string>
+                                              ~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values-es/strings.xml:27: Warning: Replace "..." with ellipsis character (…, &#8230;) ? [TypographyEllipsis]
+    <string name="initiating_bundle_exchange">Iniciar el intercambio de paquetes ...</string>
+                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values-fr/strings.xml:27: Warning: Replace "..." with ellipsis character (…, &#8230;) ? [TypographyEllipsis]
+    <string name="initiating_bundle_exchange">Échange de bundle initiant ...</string>
+                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values-uk/strings.xml:27: Warning: Replace "..." with ellipsis character (…, &#8230;) ? [TypographyEllipsis]
+    <string name="initiating_bundle_exchange">Ініціювання обміну пакету ...</string>
+                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/jon/Desktop/DDD/DDD/AndroidApps/BundleClient/app/src/main/res/values/strings.xml:27: Warning: Replace "..." with ellipsis character (…, &#8230;) ? [TypographyEllipsis]
+    <string name="initiating_bundle_exchange">Initiating Bundle Exchange...</string>
+                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "TypographyEllipsis":
+   You can replace the string "..." with a dedicated ellipsis character,
+   ellipsis character (u2026, &#8230;). This can help make the text more
+   readable.
+
+   https://en.wikipedia.org/wiki/Ellipsis
+
+9 errors, 61 warnings

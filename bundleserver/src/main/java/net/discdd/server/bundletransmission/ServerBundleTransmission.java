@@ -261,6 +261,7 @@ public class ServerBundleTransmission {
                 .setRecencyBlob(blob)
                 .setRecencyBlobSignature(ByteString.copyFrom(signature))
                 .setServerPublicKey(ByteString.copyFrom(publicKeyBytes))
+                .setMessage("this is a test for the message")
                 .build();
     }
 

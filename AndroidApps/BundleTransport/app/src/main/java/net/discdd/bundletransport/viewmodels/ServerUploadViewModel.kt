@@ -42,7 +42,7 @@ class ServerUploadViewModel(
 
     private val logger = Logger.getLogger(ServerUploadViewModel::class.java.name)
     private val transportPaths: TransportPaths by lazy {
-        TransportPaths(context.getExternalFilesDir(null)?.toPath())
+        TransportPaths(context.getExternalFilesDir(null)?.toPath() ?: context.filesDir?.toPath())
     }
     private val _state = MutableStateFlow(ServerState())
     val state = _state.asStateFlow()
@@ -88,7 +88,7 @@ class ServerUploadViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             sharedPref
                     .edit {
-                        putString(BundleTransportService.BUNDLETRANSPORT_DOMAIN_PREFERENCE, state.value.domain)
+                        putString(BundleTransportService.BUNDLETRANSPORT_HOST_PREFERENCE, state.value.domain)
                         putInt(BundleTransportService.BUNDLETRANSPORT_PORT_PREFERENCE, state.value.port.toInt())
                     }
             _state.update { it.copy(message = context.getString(R.string.saved)) }
@@ -99,7 +99,7 @@ class ServerUploadViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             _state.update {
                 it.copy(
-                        domain = sharedPref.getString(BundleTransportService.BUNDLETRANSPORT_DOMAIN_PREFERENCE, "")
+                        domain = sharedPref.getString(BundleTransportService.BUNDLETRANSPORT_HOST_PREFERENCE, "")
                                 ?: "",
                         port = sharedPref.getInt(BundleTransportService.BUNDLETRANSPORT_PORT_PREFERENCE, 0).toString()
                 )

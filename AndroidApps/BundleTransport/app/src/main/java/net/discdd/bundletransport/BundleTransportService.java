@@ -61,7 +61,7 @@ import static net.discdd.utils.UserLogRepository.UserLogType.EXCHANGE;
 public class BundleTransportService extends Service implements BundleExchangeServiceImpl.BundleExchangeEventListener {
     ExecutorService executor = Executors.newCachedThreadPool();
     public static final String BUNDLETRANSPORT_PREFERENCES = "net.discdd.bundletransport";
-    public static final String BUNDLETRANSPORT_DOMAIN_PREFERENCE = "domain";
+    public static final String BUNDLETRANSPORT_HOST_PREFERENCE = "host";
     public static final String BUNDLETRANSPORT_PORT_PREFERENCE = "port";
     public static final String BUNDLETRANSPORT_PERIODIC_PREFERENCE = "periodicExchangeInMinutes";
     private static final Logger logger = Logger.getLogger(BundleTransportService.class.getName());
@@ -70,14 +70,16 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     public GrpcSecurityKey grpcKeys;
     public String transportId;
     String host;
-    int port;
+            //= "jay.homeofcode.com";
+    int port = 7778;
     ConnectivityManager connectivityManager;
     private TransportPaths transportPaths;
     private DDDFixedRateScheduler<Void> periodicExchangeScheduler;
     final private SharedPreferences.OnSharedPreferenceChangeListener preferenceChangeListener =
             (sharedPreferences, key) -> {
                 switch (key) {
-                    case BUNDLETRANSPORT_DOMAIN_PREFERENCE -> host = sharedPreferences.getString(key, "");
+                    case BUNDLETRANSPORT_HOST_PREFERENCE -> host = sharedPreferences.getString(key, "jay.homeofcode.com");
+                            //"jay.homeofcode.com";
                     case BUNDLETRANSPORT_PORT_PREFERENCE -> port = sharedPreferences.getInt(key, 0);
                     case BUNDLETRANSPORT_PERIODIC_PREFERENCE ->
                             periodicExchangeScheduler.setPeriodInMinutes(sharedPreferences.getInt(key, 0));
@@ -169,8 +171,10 @@ public class BundleTransportService extends Service implements BundleExchangeSer
             LogFragment.registerLoggerHandler();
             SharedPreferences sharedPreferences =
                     getSharedPreferences(BUNDLETRANSPORT_PREFERENCES, Context.MODE_PRIVATE);
-            host = sharedPreferences.getString(BUNDLETRANSPORT_DOMAIN_PREFERENCE, BUNDLE_SERVER_DOMAIN);
-            port = sharedPreferences.getInt(BUNDLETRANSPORT_PORT_PREFERENCE, BUNDLE_SERVER_PORT);
+            host = "jay.homeofcode.com";
+                    // "ravlykmail.com";
+                    //
+            port = 7778;
             periodicExchangeScheduler = new DDDFixedRateScheduler<>(getApplicationContext(), this::doServerExchange);
             periodicExchangeScheduler.setPeriodInMinutes(sharedPreferences.getInt(BUNDLETRANSPORT_PERIODIC_PREFERENCE,
                                                                                   0));

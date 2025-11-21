@@ -73,6 +73,7 @@
     <string name="wifi_direct_no_permission">Cannot create WiFi group. Permissions have not been granted.</string>
     <string name="wifi_direct_create_group_failed_e">Failed to create WiFi group: %s</string>
     <string name="wifi_direct_create_group_failed_d">Could not create WiFi group. error = %d</string>
+    <string name="wifi_direct_create_group_success_busy_s">Created WiFi group (busy): %s</string>
     <string name="wifi_direct_create_group_success">Created WiFi group.</string>
     <string name="download_failed">Download %1$s failed: %2$s</string>
     <string name="could_not_initialize_wifi_direct_s">could not initialize Wifi direct %s</string>
