@@ -244,7 +244,7 @@ fun PeerItem(
                 containerColor = if (peer.hasNewData) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
             )
         ) {
-            Text(if (peer.isExchangeInProgress) "Exchanging..." else if (peer.hasNewData) "Exchange" else "Exchange (No new data)" )
+            Text(if (peer.isExchangeInProgress) "Exchanging..." else if (peer.hasNewData) "Exchange" else "Exchanged (No new data)" )
         }
     }
 }

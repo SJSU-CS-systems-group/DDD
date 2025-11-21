@@ -229,16 +229,7 @@ public class DDDWifiServer {
                 /* instanceName = */ "ddd",
                 /* serviceType  = */ "_ddd._tcp",
                 /* txtRecord    = */ txt);
-        this.wifiP2pManager.addLocalService(channel, serviceInfo, new WifiP2pManager.ActionListener() {
-            @Override
-            public void onSuccess() {
-            }
-
-            @Override
-            public void onFailure(int reason) {
-                logger.log(SEVERE, "Failed to add local service: " + reason);
-            }
-        });
+        this.wifiP2pManager.addLocalService(channel, serviceInfo, null);
         return cal;
     }
 
@@ -296,25 +287,13 @@ public class DDDWifiServer {
             return;
         }
         this.lastRecencyBlob = recencyBlob;
-        this.wifiP2pManager.removeLocalService(channel, serviceInfo, new WifiP2pManager.ActionListener() {
-            @Override
-            public void onSuccess() {}
-
-            @Override
-            public void onFailure(int reason) {}
-        });
+        this.wifiP2pManager.removeLocalService(channel, serviceInfo, null);
         txt.put("recencyBlob", encodedBlob);
         serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(
                 /* instanceName = */ "ddd",
                 /* serviceType  = */ "_ddd._tcp",
                 /* txtRecord    = */ txt);
-        this.wifiP2pManager.addLocalService(channel, serviceInfo, new WifiP2pManager.ActionListener() {
-            @Override
-            public void onSuccess() {}
-
-            @Override
-            public void onFailure(int reason) {}
-        });
+        this.wifiP2pManager.addLocalService(channel, serviceInfo, null);
     }
 
     public enum DDDWifiServerEventType {

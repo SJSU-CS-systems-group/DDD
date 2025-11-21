@@ -46,9 +46,11 @@ class DDDWifiDirectDevice implements DDDWifiDevice {
         return this.getId().hashCode();
     }
 
+    @Override
     public void setWifiP2pDevice(WifiP2pDevice wifiP2pDevice) {
         this.wifiP2pDevice = wifiP2pDevice;
     }
+    @Override
     public void setRecencyBlob(GetRecencyBlobResponse recencyBlob) {
         this.recencyBlob = recencyBlob;
     }
