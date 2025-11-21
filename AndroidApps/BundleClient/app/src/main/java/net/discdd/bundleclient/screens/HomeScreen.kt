@@ -126,7 +126,6 @@ fun HomeScreen(
                     ClientUsbComponent(viewModel) {
                         viewModel.transferBundleToUsb(currentContext)
                         viewModel.usbTransferToClient(currentContext)
-                        viewModel.setShouldEject(true)
                     }
                 }
             }

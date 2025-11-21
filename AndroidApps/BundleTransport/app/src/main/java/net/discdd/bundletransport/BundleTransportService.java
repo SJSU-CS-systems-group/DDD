@@ -21,6 +21,7 @@ import androidx.core.app.ServiceCompat;
 import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
 import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.bundletransport.wifi.DDDWifiServer;
+import net.discdd.grpc.GetRecencyBlobResponse;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.screens.LogFragment;
 import net.discdd.tls.GrpcSecurityKey;
@@ -32,6 +33,7 @@ import org.bouncycastle.operator.OperatorCreationException;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
@@ -114,6 +116,7 @@ public class BundleTransportService extends Service implements BundleExchangeSer
         } catch (Exception e) {
             logExchange(SEVERE, e, R.string.error_during_server_exchange_s, e.getMessage());
         }
+        updateRecencyBlob();
         return null;
     }
 
@@ -283,6 +286,17 @@ public class BundleTransportService extends Service implements BundleExchangeSer
 
     public String getBundleServerURL() {
         return host + ":" + port;
+    }
+
+    public void updateRecencyBlob() {
+        var response = GetRecencyBlobResponse.getDefaultInstance();
+        var recencyBlobPath = transportPaths.toClientPath.resolve(TransportToBundleServerManager.RECENCY_BLOB_BIN);
+        try (var is = Files.newInputStream(recencyBlobPath)) {
+            response = GetRecencyBlobResponse.parseFrom(is);
+            dddWifiServer.updateRecencyBlob(response);
+        } catch (IOException e) {
+            logger.log(SEVERE, "Failed to read recency blob", e);
+        }
     }
 
     public class TransportWifiDirectServiceBinder extends Binder {

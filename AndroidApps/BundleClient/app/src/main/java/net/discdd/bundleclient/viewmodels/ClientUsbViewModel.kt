@@ -6,8 +6,11 @@ import android.graphics.Color
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.update
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiServiceManager
 import net.discdd.grpc.RecencyBlob
@@ -27,10 +30,26 @@ class ClientUsbViewModel(
         private val logger: Logger = Logger.getLogger(ClientUsbViewModel::class.java.name)
     }
     lateinit var rootDir: File
+    private val _transferringToUsb = MutableStateFlow(true)
+    private val _transferringToClient = MutableStateFlow(true)
+
     private val bundleTransmission by lazy {
         val wifiBgService = WifiServiceManager.getService()
         wifiBgService?.bundleTransmission
     }
+
+    init {
+        viewModelScope.launch {
+            combine(_transferringToUsb, _transferringToClient) { usb, client ->
+                !usb && !client
+            }.collect { bothComplete ->
+                if (bothComplete) {
+                    setShouldEject(true)
+                }
+            }
+        }
+    }
+
     fun setRoot(dir: File) {
         rootDir = dir
     }
@@ -45,54 +64,63 @@ class ClientUsbViewModel(
         }
         return child ?: throw IOException ("Could not create $name")
     }
+
     fun transferBundleToUsb(context: Context) {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                val dddDir = usbDirectory
-                if (!state.value.dddDirectoryExists || dddDir == null || bundleTransmission == null) {
-                    appendMessage(
-                        context.getString(R.string.cannot_transfer_bundle_usb_not_ready_or_directory_not_found),
-                        Color.RED
-                    )
-                    return@withContext
-                }
-                logger.log(INFO, "Starting bundle creation...")
-                val bundle = bundleTransmission!!.generateBundleForTransmission()
-                val bundleFile = bundle.source
+            try {
+                setTransferringToUsbState(true)
+                withContext(Dispatchers.IO) {
+                    val dddDir = usbDirectory
+                    if (!state.value.dddDirectoryExists || dddDir == null || bundleTransmission == null) {
+                        appendMessage(
+                            context.getString(R.string.cannot_transfer_bundle_usb_not_ready_or_directory_not_found),
+                            Color.RED
+                        )
+                        return@withContext
+                    }
+                    logger.log(INFO, "Starting bundle creation...")
+                    val bundle = bundleTransmission!!.generateBundleForTransmission()
+                    val bundleFile = bundle.source
 
-                var dddServer = createIfDoesNotExist(dddDir, "toServer")
-                val targetFile = dddServer.createFile("data/octet", bundleFile.name)
-                if (targetFile == null) {
-                    appendMessage("Error creating target file in USB directory", Color.RED)
-                    return@withContext
-                }
-
-
-                try {
-                    context.contentResolver.openOutputStream(targetFile.uri)?.use { outputStream ->
-                        bundleFile.inputStream().use { inputStream ->
-                            inputStream.copyTo(outputStream)
-                        }
+                    var dddServer = createIfDoesNotExist(dddDir, "toServer")
+                    val targetFile = dddServer.createFile("data/octet", bundleFile.name)
+                    if (targetFile == null) {
+                        appendMessage("Error creating target file in USB directory", Color.RED)
+                        return@withContext
                     }
 
-                    logger.log(INFO, "Bundle creation and transfer successful")
-                    appendMessage("Bundle created and transferred to USB", Color.GREEN)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    appendMessage("Error creating or transferring bundle: ${e.message}", Color.RED)
+
+                    try {
+                        context.contentResolver.openOutputStream(targetFile.uri)?.use { outputStream ->
+                            bundleFile.inputStream().use { inputStream ->
+                                inputStream.copyTo(outputStream)
+                            }
+                        }
+
+                        logger.log(INFO, "Bundle creation and transfer successful")
+                        appendMessage("Bundle created and transferred to USB", Color.GREEN)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        appendMessage("Error creating or transferring bundle: ${e.message}", Color.RED)
+                    }
                 }
+            } finally {
+                setTransferringToUsbState(false)
             }
         }
     }
+
     fun usbTransferToClient(context: Context) {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                val toClientDir = createIfDoesNotExist(usbDirectory!!, "toClient")
-                val recencyLocation = toClientDir.findFile("recencyBlob.bin")
-                if (recencyLocation == null) {
-                    appendMessage("No recency blob found on USB", Color.YELLOW)
-                    return@withContext
-                }
+            try {
+                setTransferringToClientState(true)
+                withContext(Dispatchers.IO) {
+                    val toClientDir = createIfDoesNotExist(usbDirectory!!, "toClient")
+                    val recencyLocation = toClientDir.findFile("recencyBlob.bin")
+                    if (recencyLocation == null) {
+                        appendMessage("No recency blob found on USB", Color.YELLOW)
+                        return@withContext
+                    }
                     val recencyBlob = context.contentResolver.openInputStream(recencyLocation.uri)?.use { inputStream ->
                         val bytes = inputStream.readAllBytes()
                         RecencyBlob.parseFrom(bytes)
@@ -101,8 +129,8 @@ class ClientUsbViewModel(
                         appendMessage("Invalid recency blob found on USB", Color.YELLOW)
                         return@withContext
                     }
-                val devicePath: Path =
-                    rootDir.toPath().parent.resolve("Shared/received-bundles")
+                    val devicePath: Path =
+                        rootDir.toPath().parent.resolve("Shared/received-bundles")
                     val filesToTransfer = toClientDir.listFiles()
                     if (filesToTransfer.isEmpty()) {
                         appendMessage("No files found in 'toClient' directory on USB", Color.YELLOW)
@@ -143,6 +171,21 @@ class ClientUsbViewModel(
                         appendMessage("Error during USB file transfer: ${e.message}", Color.RED)
                     }
                 }
+            } finally {
+                setTransferringToClientState(false)
             }
         }
     }
+
+    private fun setTransferringToClientState(status : Boolean) {
+        _transferringToClient.update {
+            status
+        }
+    }
+
+    private fun setTransferringToUsbState(status : Boolean) {
+        _transferringToUsb.update {
+            status
+        }
+    }
+}
