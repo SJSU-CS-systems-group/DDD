@@ -139,7 +139,6 @@ public class TransportToBundleServerManager {
         var recencyBlob = blockingExchangeStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                 .getRecencyBlob(recencyBlobReq);
         Path blobPath = fromServerPath.resolve(RECENCY_BLOB_BIN);
-        String message = recencyBlob.getMessage();
         try (var os = Files.newOutputStream(blobPath,
                                             StandardOpenOption.CREATE,
                                             StandardOpenOption.TRUNCATE_EXISTING)) {

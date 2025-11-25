@@ -3,13 +3,9 @@ package net.discdd.bundletransport.viewmodels
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.discdd.bundletransport.utils.ServerMessage
 import net.discdd.bundletransport.utils.ServerMessageRepository
@@ -44,48 +40,23 @@ fun sampleMessages(): List<ServerMessage> {
     )
 }
 
-//TODO:
-//refresh
+//TODO: refresh
 class ServerMessagesViewModel(app: Application) : AndroidViewModel(app) {
     private val repository = ServerMessageRepository(app)
     val messages: LiveData<List<ServerMessage>> = repository.getAllServerMessages()
 
     init {
-        //for sample messages!! do not push to main!!
+        //for sample messages
         viewModelScope.launch(Dispatchers.IO) {
             repository.seedSampleMessages(sampleMessages())
         }
     }
 
-    fun markRead(messageId: Int) {
+    fun markRead(messageId: Long) {
         repository.markRead(messageId)
     }
 
-    fun deleteById(messageId: Int) {
+    fun deleteById(messageId: Long) {
         repository.deleteById(messageId)
     }
-
-    /*
-    //private val _notifs = MutableStateFlow(sampleNotifs())
-    //val notifs = _notifs.asStateFlow()
-
-    init {
-        //insert messages into repo
-    }
-
-    fun markRead(id: String) {
-        _notifs.update { currentList ->
-            currentList.map { notif ->
-                if (notif.id == id && !notif.read) notif.copy(read = true) else notif
-            }
-        }
-    }
-    fun refresh() {
-
-    }
-    fun deleteNotif(id: String) {
-        _notifs.update { currentList ->
-            currentList.filterNot{it.id == id}
-        }
-    } */
 }

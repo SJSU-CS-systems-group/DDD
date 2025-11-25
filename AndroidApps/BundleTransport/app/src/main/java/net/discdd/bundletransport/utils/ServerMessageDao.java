@@ -20,10 +20,10 @@ public interface ServerMessageDao {
     LiveData<List<ServerMessage>> getAllServerMessages();
 
     @Query("UPDATE ServerMessages SET read = 1 WHERE messageId = :messageId")
-    void markRead(int messageId);
+    void markRead(long messageId);
 
     @Query("DELETE FROM ServerMessages WHERE messageId = :messageId")
-    void deleteById(int messageId);
+    void deleteById(long messageId);
 
     @Query("SELECT COUNT(*) FROM ServerMessages")
     int count();

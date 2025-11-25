@@ -2,7 +2,6 @@ package net.discdd.bundletransport.utils;
 
 import android.app.Application;
 import androidx.lifecycle.LiveData;
-import androidx.room.Room;
 
 import java.util.List;
 
@@ -30,13 +29,13 @@ public class ServerMessageRepository {
         });
     }
 
-    public void markRead(int messageId) {
+    public void markRead(long messageId) {
         AppDatabase.databaseWriteExecutor.execute(() -> {
             serverMessageDao.markRead(messageId);
         });
     }
 
-    public void deleteById(int messageId) {
+    public void deleteById(long messageId) {
         AppDatabase.databaseWriteExecutor.execute(() -> {
             serverMessageDao.deleteById(messageId);
         });

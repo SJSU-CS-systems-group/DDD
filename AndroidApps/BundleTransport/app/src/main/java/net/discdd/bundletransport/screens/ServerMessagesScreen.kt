@@ -1,6 +1,5 @@
 package net.discdd.bundletransport.screens
 
-import android.text.format.DateUtils
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.runtime.Composable
@@ -17,18 +16,15 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import kotlinx.coroutines.delay
 import net.discdd.bundletransport.utils.ServerMessage
 import net.discdd.bundletransport.utils.rememberNoFlingSwipeToDismissBoxState
 import net.discdd.bundletransport.viewmodels.ServerMessagesViewModel
@@ -138,7 +134,6 @@ fun ServerMessagesScreen(
 
     //Popup when notif is clicked
     dialogFor?.let { notif ->
-        val ctx = LocalContext.current
         val whenText = notif.date
         Dialog(onDismissRequest = { dialogFor = null }) {
             Surface(
@@ -198,21 +193,4 @@ private fun NotifCard(
             }
         }
     }
-}
-
-//Update time text on notif card ("_m ago")
-@Composable
-private fun RelativeTimeText(sentAtMillis: Long) {
-    var now by remember { mutableStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(sentAtMillis) {
-        while (true) {
-            val nowMs = System.currentTimeMillis()
-            val msToNextMinute = 60_000 - (nowMs % 60_000)
-            delay(msToNextMinute.coerceIn(500L, 60_000L))
-            now = System.currentTimeMillis()
-        }
-    }
-
-    val mins = ((now - sentAtMillis) / 60_000L).coerceAtLeast(0)
-    Text("$mins m ago", style = MaterialTheme.typography.labelMedium)
 }
