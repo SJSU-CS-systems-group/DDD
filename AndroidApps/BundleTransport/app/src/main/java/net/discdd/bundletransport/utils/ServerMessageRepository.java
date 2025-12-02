@@ -18,31 +18,31 @@ public class ServerMessageRepository {
     }
 
     public void insert(ServerMessage serverMessage) {
-        AppDatabase.databaseWriteExecutor.execute(() -> {
+        AppDatabase.runOnDatabaseExecutor(() -> {
             serverMessageDao.insert(serverMessage);
         });
     }
 
     public void insertAll(List<ServerMessage> serverMessages) {
-        AppDatabase.databaseWriteExecutor.execute(() -> {
+        AppDatabase.runOnDatabaseExecutor(() -> {
             serverMessageDao.insertAll(serverMessages);
         });
     }
 
     public void markRead(long messageId) {
-        AppDatabase.databaseWriteExecutor.execute(() -> {
+        AppDatabase.runOnDatabaseExecutor(() -> {
             serverMessageDao.markRead(messageId);
         });
     }
 
     public void deleteById(long messageId) {
-        AppDatabase.databaseWriteExecutor.execute(() -> {
+        AppDatabase.runOnDatabaseExecutor(() -> {
             serverMessageDao.deleteById(messageId);
         });
     }
 
     public void seedSampleMessages(List<ServerMessage> sampleMessages) {
-        AppDatabase.databaseWriteExecutor.execute(() -> {
+        AppDatabase.runOnDatabaseExecutor(() -> {
             if(serverMessageDao.count() == 0) {
                 serverMessageDao.insertAll(sampleMessages);
             }

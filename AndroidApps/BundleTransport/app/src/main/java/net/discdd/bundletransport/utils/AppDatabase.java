@@ -26,6 +26,9 @@ public abstract class AppDatabase extends RoomDatabase {
         }
         return INSTANCE;
     }
-    static final ExecutorService databaseWriteExecutor = Executors.newFixedThreadPool(NUMBER_OF_THREADS);
+    private static final ExecutorService databaseWriteExecutor = Executors.newFixedThreadPool(NUMBER_OF_THREADS);
+    public static void runOnDatabaseExecutor(Runnable task) {
+        databaseWriteExecutor.execute(task);
+    }
     public abstract ServerMessageDao serverMessageDao();
 }
