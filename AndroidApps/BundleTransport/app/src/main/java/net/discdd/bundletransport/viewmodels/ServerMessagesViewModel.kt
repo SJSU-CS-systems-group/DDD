@@ -16,26 +16,26 @@ fun sampleMessages(): List<ServerMessage> {
             messageId = 1
             date = "11/17/25"
             message = "test #1"
-            read = false
+            isRead = false
         },
         ServerMessage().apply {
             messageId = 2
             date = "11/17/25"
             message = "test #2"
-            read = false
+            isRead = false
         },
         ServerMessage().apply {
             messageId = 3
             date = "11/17/25"
             message =
                 "hello this is a test notification for a really long notification hello hello testing one two three hello hi"
-            read = false
+            isRead = false
         },
         ServerMessage().apply {
             messageId = 4
             date = "11/17/25"
             message = "لجمل الطويلة · جمل طويلة · عقوبات طويلة · أحكام سجن طويلة · عقوبات مطولة"
-            read = false
+            isRead = false
         }
     )
 }
@@ -53,10 +53,14 @@ class ServerMessagesViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun markRead(messageId: Long) {
-        repository.markRead(messageId)
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.markRead(messageId)
+        }
     }
 
     fun deleteById(messageId: Long) {
-        repository.deleteById(messageId)
+        viewModelScope.launch(Dispatchers.IO){
+            repository.deleteById(messageId)
+        }
     }
 }

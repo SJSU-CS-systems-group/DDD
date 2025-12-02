@@ -34,11 +34,11 @@ fun ServerMessagesScreen(
     viewModel: ServerMessagesViewModel = viewModel(),
     onRefresh: () -> Unit = { }
 ) {
-    val notifs by viewModel.messages.observeAsState(emptyList())
-    val unreadCount = notifs.count {!it.read}
+    val notifications by viewModel.messages.observeAsState(emptyList())
+    val unreadCount = notifications.count {!it.isRead}
     var dialogFor by remember { mutableStateOf<ServerMessage?>(null) }
 
-        if(notifs.isEmpty()) {
+        if(notifications.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("No notifications yet.")
             }
@@ -71,14 +71,14 @@ fun ServerMessagesScreen(
                         }
                     }
                 }
-                items(notifs, key = { it.messageId }) { notif ->
+                items(notifications, key = { it.messageId }) { notification ->
                     val dismissState = rememberNoFlingSwipeToDismissBoxState(
-                        positionalThreshold = { it * 0.55f },//deleting feels weird, will prob change
+                        positionalThreshold = { it * 0.55f }, //change 0.55f to change threshold
                         confirmValueChange = {
                             val swiped = it == SwipeToDismissBoxValue.StartToEnd
                                       || it == SwipeToDismissBoxValue.EndToStart
                             if(swiped) {
-                                viewModel.deleteById(notif.messageId)
+                                viewModel.deleteById(notification.messageId)
                                 true
                             }
                             else false
@@ -119,11 +119,11 @@ fun ServerMessagesScreen(
                         content = {
                             //Notif card
                             NotifCard(
-                                notif = notif,
+                                notif = notification,
                                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                                 onCardClick = {
-                                    viewModel.markRead(notif.messageId)
-                                    dialogFor = notif
+                                    viewModel.markRead(notification.messageId)
+                                    dialogFor = notification
                                 }
                             )
                         }
@@ -167,7 +167,7 @@ private fun NotifCard(
 ) {
     val container by animateColorAsState(
         targetValue =
-            if (!notif.read) MaterialTheme.colorScheme.secondaryContainer
+            if (!notif.isRead) MaterialTheme.colorScheme.secondaryContainer
             else MaterialTheme.colorScheme.surfaceVariant
     )
     Card(
