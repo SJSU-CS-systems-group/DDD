@@ -100,9 +100,6 @@ class BundleClientActivity: ComponentActivity() {
 
         setContent {
             ComposableTheme {
-                // Determine if banner should show on startup.
-                // 'remember' ensures this value persists across recompositions,
-                // but since this is onCreate, it effectively runs once per app launch/activity recreation.
                 val shouldShowBanner = remember {
                     !isK9Installed()
                 }
@@ -112,8 +109,6 @@ class BundleClientActivity: ComponentActivity() {
                         K9IsMissingBanner(message = "Please install K9-Mail and Relaunch!")
                     }
 
-                    // This Box takes up all remaining vertical space (weight 1f).
-                    // This ensures the HomeScreen is pushed down but still fills the rest of the screen.
                     Box(modifier = Modifier.weight(1f)) {
                         HomeScreen()
                     }
