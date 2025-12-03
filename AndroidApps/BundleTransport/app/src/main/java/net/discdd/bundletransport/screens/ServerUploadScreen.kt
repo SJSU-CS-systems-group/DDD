@@ -1,7 +1,5 @@
 package net.discdd.bundletransport.screens
 
-import android.content.Context
-import android.content.SharedPreferences
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -10,10 +8,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,22 +38,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.edit
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
-import net.discdd.bundletransport.BundleTransportService
+import net.discdd.bundletransport.viewmodels.RecencyBlobStatus
 import net.discdd.bundletransport.viewmodels.ServerUploadViewModel
 import net.discdd.components.EasterEgg
 import net.discdd.components.UserLogComponent
 import net.discdd.utils.UserLogRepository
 import net.discdd.viewmodels.ConnectivityViewModel
 import net.discdd.viewmodels.SettingsViewModel
+import kotlin.time.Duration
 
 @Composable
 fun ServerUploadScreen(
@@ -94,6 +94,12 @@ fun ServerUploadScreen(
                         },
                 verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+
+            val recencyBlobStatus = uploadState.recencyBlobStatus
+            if (recencyBlobStatus != RecencyBlobStatus.Fresh) {
+                RecencyBlobStatusBanner(uploadViewModel)
+            }
+
             Text(
                     text = "TransportId: ${uploadViewModel.transportID}",
             )
@@ -232,6 +238,60 @@ private fun BackGroundExchange(viewModel: ServerUploadViewModel) {
                         }
                 )
             }
+        }
+    }
+}
+
+private fun formatCompact(d: Duration): String {
+    val days = d.inWholeDays
+    if (days >= 1) return "${days}d"
+    val hrs = d.inWholeHours
+    if (hrs >= 1) return "${hrs}h"
+    val mins = d.inWholeMinutes
+    if (mins >= 1) return "${mins}m"
+    return "${d.inWholeSeconds}s"
+}
+
+@Composable
+private fun RecencyBlobStatusBanner(viewModel : ServerUploadViewModel) {
+    val background = MaterialTheme.colorScheme.primaryContainer
+    val contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+
+    val title : String
+    val content : String
+
+    val uploadState by viewModel.state.collectAsState()
+    val recencyBlobStatus = uploadState.recencyBlobStatus
+
+    when (recencyBlobStatus) {
+        is RecencyBlobStatus.Fresh -> {
+            return
+        }
+        is RecencyBlobStatus.Missing -> {
+            title = "Recency Blob is missing"
+            content = "Recency Blob file is missing"
+        }
+        is RecencyBlobStatus.Outdated -> {
+            title = "Recency blob is outdated"
+            content = "Last updated ${formatCompact(recencyBlobStatus.age)} ago."
+        }
+    }
+
+    Surface(color = background, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth().padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.LocationOn, contentDescription = null, tint = contentColor)
+                Spacer(Modifier.width(12.dp))
+                Text(title, color = contentColor, style = MaterialTheme.typography.titleMedium)
+            }
+            Spacer(Modifier.height(8.dp))
+            Text (
+                text = content,
+                color = contentColor,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(start = 36.dp)
+            )
+
         }
     }
 }
