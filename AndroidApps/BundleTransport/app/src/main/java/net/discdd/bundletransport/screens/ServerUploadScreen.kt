@@ -264,10 +264,12 @@ private fun RecencyBlobStatusBanner(recencyBlobStatus: RecencyBlobStatus) {
         is RecencyBlobStatus.Fresh -> {
             return
         }
+
         is RecencyBlobStatus.Missing -> {
             title = stringResource(R.string.title_recency_blob_banner_missing)
             content = stringResource(R.string.content_recency_blob_banner_missing);
         }
+
         is RecencyBlobStatus.Outdated -> {
             title = stringResource(R.string.title_recency_blob_banner_outdated)
             content = String.format(stringResource(R.string.content_recency_blob_banner_outdated_s), formatCompact(recencyBlobStatus.age))
@@ -282,11 +284,11 @@ private fun RecencyBlobStatusBanner(recencyBlobStatus: RecencyBlobStatus) {
                 Text(title, color = contentColor, style = MaterialTheme.typography.titleMedium)
             }
             Spacer(Modifier.height(8.dp))
-            Text (
-                text = content,
-                color = contentColor,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(start = 36.dp)
+            Text(
+                    text = content,
+                    color = contentColor,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(start = 36.dp)
             )
 
         }
