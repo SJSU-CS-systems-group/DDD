@@ -15,14 +15,28 @@ import net.discdd.bundletransport.TransportServiceManager
 import net.discdd.pathutils.TransportPaths
 import java.util.logging.Logger
 import androidx.core.content.edit
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.withContext
 import net.discdd.bundletransport.BundleTransportService
+import java.io.File
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.milliseconds
 
+
+sealed interface RecencyBlobStatus {
+    data object Fresh : RecencyBlobStatus
+    data object Missing : RecencyBlobStatus
+    data class Outdated(val age: Duration) : RecencyBlobStatus
+}
 data class ServerState(
         val domain: String = "",
         val port: String = "",
         val message: String? = "",
         val clientCount: String = "0",
-        val serverCount: String = "0"
+        val serverCount: String = "0",
+        val recencyBlobStatus: RecencyBlobStatus = RecencyBlobStatus.Missing
 )
 
 class ServerUploadViewModel(
@@ -34,6 +48,7 @@ class ServerUploadViewModel(
             val service = TransportServiceManager.getService()
             return service?.transportId ?: "Unknown"
         }
+    private val RECENCY_BLOB_AGE_THRESHOLD = 24.hours
     private val context get() = getApplication<Application>()
     private val sharedPref by lazy { context.getSharedPreferences(BundleTransportService.BUNDLETRANSPORT_PREFERENCES, MODE_PRIVATE) }
     private val transportPrefs by lazy {
@@ -59,6 +74,13 @@ class ServerUploadViewModel(
                     0
             )
         }
+
+        viewModelScope.launch {
+            while (isActive) {
+                updateRecencyBlobStatus()
+                delay(30_000)
+            }
+        }
     }
 
     fun connectServer() {
@@ -66,7 +88,31 @@ class ServerUploadViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             exchangeFuture?.get()
             reloadCount()
+            updateRecencyBlobStatus()
         }
+    }
+
+    fun updateRecencyBlobStatus() {
+        viewModelScope.launch {
+            val status = withContext(Dispatchers.IO) {
+                val clientDir = context.getExternalFilesDir("BundleTransmission/client")
+                val file = File(clientDir, "recencyBlob.bin")
+
+                if (!file.exists()) {
+                    RecencyBlobStatus.Missing
+                } else {
+                    val fileLastModified = System.currentTimeMillis() - file.lastModified()
+                    if (fileLastModified > RECENCY_BLOB_AGE_THRESHOLD.inWholeMilliseconds) {
+                        RecencyBlobStatus.Outdated(fileLastModified.milliseconds)
+                    } else {
+                        RecencyBlobStatus.Fresh
+                    }
+                }
+            }
+
+            onRecencyBlobStatusChanged(status)
+        }
+
     }
 
     fun reloadCount() {
@@ -113,6 +159,10 @@ class ServerUploadViewModel(
 
     fun onPortChanged(port: String) {
         _state.update { current -> current.copy(port = port) }
+    }
+
+    fun onRecencyBlobStatusChanged(recencyBlobStatus: RecencyBlobStatus) {
+        _state.update{ current -> current.copy(recencyBlobStatus = recencyBlobStatus) }
     }
 
     fun clearMessage() {

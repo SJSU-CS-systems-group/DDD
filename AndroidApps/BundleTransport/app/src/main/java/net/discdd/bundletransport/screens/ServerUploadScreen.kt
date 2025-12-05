@@ -1,7 +1,5 @@
 package net.discdd.bundletransport.screens
 
-import android.content.Context
-import android.content.SharedPreferences
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -10,11 +8,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -37,22 +38,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.edit
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
-import net.discdd.bundletransport.BundleTransportService
+import net.discdd.bundletransport.viewmodels.RecencyBlobStatus
 import net.discdd.bundletransport.viewmodels.ServerUploadViewModel
 import net.discdd.components.EasterEgg
 import net.discdd.components.UserLogComponent
 import net.discdd.utils.UserLogRepository
 import net.discdd.viewmodels.ConnectivityViewModel
 import net.discdd.viewmodels.SettingsViewModel
+import kotlin.time.Duration
+import net.discdd.bundletransport.R
 
 @Composable
 fun ServerUploadScreen(
@@ -94,6 +96,10 @@ fun ServerUploadScreen(
                         },
                 verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+
+            val recencyBlobStatus = uploadState.recencyBlobStatus
+            RecencyBlobStatusBanner(recencyBlobStatus)
+
             Text(
                     text = "TransportId: ${uploadViewModel.transportID}",
             )
@@ -232,6 +238,57 @@ private fun BackGroundExchange(viewModel: ServerUploadViewModel) {
                         }
                 )
             }
+        }
+    }
+}
+
+private fun formatCompact(d: Duration): String {
+    val days = d.inWholeDays
+    if (days >= 1) return "${days}d"
+    val hrs = d.inWholeHours
+    if (hrs >= 1) return "${hrs}h"
+    val mins = d.inWholeMinutes
+    if (mins >= 1) return "${mins}m"
+    return "${d.inWholeSeconds}s"
+}
+
+@Composable
+private fun RecencyBlobStatusBanner(recencyBlobStatus: RecencyBlobStatus) {
+    val background = MaterialTheme.colorScheme.primaryContainer
+    val contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+
+    val title: String
+    val content: String
+
+    when (recencyBlobStatus) {
+        is RecencyBlobStatus.Fresh -> {
+            return
+        }
+        is RecencyBlobStatus.Missing -> {
+            title = stringResource(R.string.title_recency_blob_banner_missing)
+            content = stringResource(R.string.content_recency_blob_banner_missing);
+        }
+        is RecencyBlobStatus.Outdated -> {
+            title = stringResource(R.string.title_recency_blob_banner_outdated)
+            content = String.format(stringResource(R.string.content_recency_blob_banner_outdated_s), formatCompact(recencyBlobStatus.age))
+        }
+    }
+
+    Surface(color = background, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth().padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Warning, contentDescription = null, tint = contentColor)
+                Spacer(Modifier.width(12.dp))
+                Text(title, color = contentColor, style = MaterialTheme.typography.titleMedium)
+            }
+            Spacer(Modifier.height(8.dp))
+            Text (
+                text = content,
+                color = contentColor,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(start = 36.dp)
+            )
+
         }
     }
 }
