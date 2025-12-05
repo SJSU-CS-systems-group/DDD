@@ -30,6 +30,8 @@ import net.discdd.bundletransport.utils.generateQRCode
 import net.discdd.bundletransport.viewmodels.AppShareViewModel
 import net.discdd.bundletransport.viewmodels.WifiDirectViewModel
 import net.discdd.viewmodels.ConnectivityViewModel
+import java.net.Inet4Address
+import java.net.NetworkInterface
 
 @Composable
 fun AppShareScreen(
@@ -53,7 +55,7 @@ fun AppShareScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Show either download message or QR code
-            if (wifiConnectURL == null && !connectivityState.networkConnected) {
+            if ((wifiConnectURL == null && !connectivityState.networkConnected) || !isNetworkValid()) {
                 Text(
                         text = "Wifi Direct and/or internet is not available.",
                         style = MaterialTheme.typography.titleMedium,
@@ -156,4 +158,29 @@ fun QRCodeDisplay(instructions: String, contentURL: String) {
                 modifier = Modifier.size(200.dp).padding(start = 10.dp, top = 5.dp, end = 15.dp, bottom = 8.dp)
         )
     }
+}
+
+fun isNetworkValid(): Boolean {
+    val ip = getWifiDirectIp()
+    return ip != null
+}
+
+fun getWifiDirectIp(): String? {
+    try {
+        val interfaces = NetworkInterface.getNetworkInterfaces()
+        for (intf in interfaces) {
+            val addresses = intf.inetAddresses
+            for (addr in addresses) {
+                if (addr is Inet4Address && !addr.isLoopbackAddress) {
+                    // Check if IP is in the typical Wi-Fi Direct subnet
+                    if (addr.hostAddress.startsWith("192.168.49.")) {
+                        return addr.hostAddress
+                    }
+                }
+            }
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+    return null
 }
