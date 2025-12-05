@@ -32,6 +32,7 @@ import net.discdd.bundletransport.viewmodels.WifiDirectViewModel
 import net.discdd.viewmodels.ConnectivityViewModel
 import java.net.Inet4Address
 import java.net.NetworkInterface
+import android.util.Log
 
 @Composable
 fun AppShareScreen(
@@ -180,7 +181,7 @@ fun getWifiDirectIp(): String? {
             }
         }
     } catch (e: Exception) {
-        e.printStackTrace()
+        Log.e("WifiDirect", "Error getting Wi-Fi Direct IP", e)
     }
     return null
 }
