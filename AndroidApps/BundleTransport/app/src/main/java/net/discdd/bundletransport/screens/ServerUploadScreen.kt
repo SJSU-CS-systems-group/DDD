@@ -14,8 +14,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -39,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -53,6 +54,7 @@ import net.discdd.utils.UserLogRepository
 import net.discdd.viewmodels.ConnectivityViewModel
 import net.discdd.viewmodels.SettingsViewModel
 import kotlin.time.Duration
+import net.discdd.bundletransport.R
 
 @Composable
 fun ServerUploadScreen(
@@ -96,9 +98,7 @@ fun ServerUploadScreen(
         ) {
 
             val recencyBlobStatus = uploadState.recencyBlobStatus
-            if (recencyBlobStatus != RecencyBlobStatus.Fresh) {
-                RecencyBlobStatusBanner(uploadViewModel)
-            }
+            RecencyBlobStatusBanner(recencyBlobStatus)
 
             Text(
                     text = "TransportId: ${uploadViewModel.transportID}",
@@ -253,34 +253,31 @@ private fun formatCompact(d: Duration): String {
 }
 
 @Composable
-private fun RecencyBlobStatusBanner(viewModel : ServerUploadViewModel) {
+private fun RecencyBlobStatusBanner(recencyBlobStatus: RecencyBlobStatus) {
     val background = MaterialTheme.colorScheme.primaryContainer
     val contentColor = MaterialTheme.colorScheme.onPrimaryContainer
 
-    val title : String
-    val content : String
-
-    val uploadState by viewModel.state.collectAsState()
-    val recencyBlobStatus = uploadState.recencyBlobStatus
+    val title: String
+    val content: String
 
     when (recencyBlobStatus) {
         is RecencyBlobStatus.Fresh -> {
             return
         }
         is RecencyBlobStatus.Missing -> {
-            title = "Recency Blob is missing"
-            content = "Recency Blob file is missing"
+            title = stringResource(R.string.title_recency_blob_banner_missing)
+            content = stringResource(R.string.content_recency_blob_banner_missing);
         }
         is RecencyBlobStatus.Outdated -> {
-            title = "Recency blob is outdated"
-            content = "Last updated ${formatCompact(recencyBlobStatus.age)} ago."
+            title = stringResource(R.string.title_recency_blob_banner_outdated)
+            content = String.format(stringResource(R.string.content_recency_blob_banner_outdated_s), formatCompact(recencyBlobStatus.age))
         }
     }
 
     Surface(color = background, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.LocationOn, contentDescription = null, tint = contentColor)
+                Icon(Icons.Default.Warning, contentDescription = null, tint = contentColor)
                 Spacer(Modifier.width(12.dp))
                 Text(title, color = contentColor, style = MaterialTheme.typography.titleMedium)
             }
