@@ -208,7 +208,7 @@
 
 /Users/rafanquader/Developer/DDD/AndroidApps/BundleClient/app/src/main/AndroidManifest.xml:30: Warning: Exported content providers can provide access to potentially sensitive data [ExportedContentProvider]
         <provider
-         ~~~~~~~~
+            android:exported="false"
 
    Explanation for issues of type "ExportedContentProvider":
    Content providers are exported by default and any application on the system
