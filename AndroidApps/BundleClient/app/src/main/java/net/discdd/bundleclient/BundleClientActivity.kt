@@ -9,17 +9,6 @@ import android.os.storage.StorageManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
-import net.discdd.UsbConnectionManager
-import net.discdd.bundleclient.screens.HomeScreen
-import net.discdd.bundleclient.service.BundleClientService
-import net.discdd.bundleclient.viewmodels.ClientUsbViewModel
-import net.discdd.screens.LogFragment
-import net.discdd.theme.ComposableTheme
-import java.util.logging.Level.WARNING
-import java.util.logging.Logger
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +23,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import net.discdd.UsbConnectionManager
+import net.discdd.bundleclient.screens.HomeScreen
+import net.discdd.bundleclient.service.BundleClientService
+import net.discdd.bundleclient.viewmodels.ClientUsbViewModel
+import net.discdd.screens.LogFragment
+import net.discdd.theme.ComposableTheme
+import java.util.logging.Level.WARNING
+import java.util.logging.Logger
 
 class BundleClientActivity: ComponentActivity() {
     private lateinit var serviceIntent: Intent
