@@ -30,6 +30,7 @@ sealed interface RecencyBlobStatus {
     data object Missing : RecencyBlobStatus
     data class Outdated(val age: Duration) : RecencyBlobStatus
 }
+
 data class ServerState(
         val domain: String = "",
         val port: String = "",
@@ -162,7 +163,7 @@ class ServerUploadViewModel(
     }
 
     fun onRecencyBlobStatusChanged(recencyBlobStatus: RecencyBlobStatus) {
-        _state.update{ current -> current.copy(recencyBlobStatus = recencyBlobStatus) }
+        _state.update { current -> current.copy(recencyBlobStatus = recencyBlobStatus) }
     }
 
     fun clearMessage() {
