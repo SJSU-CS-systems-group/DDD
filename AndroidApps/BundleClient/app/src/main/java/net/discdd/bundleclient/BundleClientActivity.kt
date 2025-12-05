@@ -106,7 +106,7 @@ class BundleClientActivity: ComponentActivity() {
 
                 Column(modifier = Modifier.fillMaxSize()) {
                     if (shouldShowBanner) {
-                        K9IsMissingBanner(message = "Please install K9-Mail and Relaunch!")
+                        K9IsMissingBanner(message = getString(R.string.k9_missing_banner_message))
                     }
 
                     Box(modifier = Modifier.weight(1f)) {
