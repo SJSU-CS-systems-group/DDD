@@ -73,7 +73,7 @@ fun AppShareScreen(
                     // the QR codes more and makes them easier to scan
                     DownloadButton(appShareViewModel)
                     Text(text = " ")
-                } else if(isNetworkValid()) {
+                } else if (isNetworkValid()) {
                     wifiConnectURL?.also {
                         QRCodeDisplay("QR code to connect your phone to this transport", it)
                     }
