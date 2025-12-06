@@ -62,13 +62,7 @@ fun AppShareScreen(
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(bottom = 16.dp)
                 )
-            } else if (!isNetworkValid()) {
-                Text(
-                    text = "Invalid Wifi Direct IP",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-            } else {
+            } else if (isNetworkValid()) {
                 if (!appsAvailable) {
                     Text(
                             text = "Download APK files first to enable app sharing",
