@@ -56,11 +56,17 @@ fun AppShareScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Show either download message or QR code
-            if ((wifiConnectURL == null && !connectivityState.networkConnected) || !isNetworkValid()) {
+            if (wifiConnectURL == null && !connectivityState.networkConnected) {
                 Text(
                         text = "Wifi Direct and internet are not available.",
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(bottom = 16.dp)
+                )
+            } else if (!isNetworkValid()) {
+                Text(
+                    text = "Invalid Wifi Direct IP",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 16.dp)
                 )
             } else {
                 if (!appsAvailable) {
