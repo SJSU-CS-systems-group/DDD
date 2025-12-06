@@ -62,7 +62,7 @@ fun AppShareScreen(
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(bottom = 16.dp)
                 )
-            } else if (isNetworkValid()) {
+            } else {
                 if (!appsAvailable) {
                     Text(
                             text = "Download APK files first to enable app sharing",
@@ -73,7 +73,7 @@ fun AppShareScreen(
                     // the QR codes more and makes them easier to scan
                     DownloadButton(appShareViewModel)
                     Text(text = " ")
-                } else {
+                } else if(isNetworkValid()) {
                     wifiConnectURL?.also {
                         QRCodeDisplay("QR code to connect your phone to this transport", it)
                     }
