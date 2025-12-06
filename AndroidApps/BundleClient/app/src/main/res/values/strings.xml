@@ -53,4 +53,5 @@
     <string name="no_changes_detected">No changes detected.</string>
     <string name="changes_reverted">Changes reverted.</string>
     <string name="unknown_transportId">"Unknown"</string>
+    <string name="k9_missing_banner_message">"Please install K9-Mail and Relaunch!"</string>
 </resources>
