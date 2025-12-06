@@ -30,6 +30,9 @@ import net.discdd.bundletransport.utils.generateQRCode
 import net.discdd.bundletransport.viewmodels.AppShareViewModel
 import net.discdd.bundletransport.viewmodels.WifiDirectViewModel
 import net.discdd.viewmodels.ConnectivityViewModel
+import java.net.Inet4Address
+import java.net.NetworkInterface
+import android.util.Log
 
 @Composable
 fun AppShareScreen(
@@ -53,9 +56,9 @@ fun AppShareScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Show either download message or QR code
-            if (wifiConnectURL == null || !connectivityState.networkConnected) {
+            if (wifiConnectURL == null && !connectivityState.networkConnected) {
                 Text(
-                        text = "Wifi Direct and/or internet is not available.",
+                        text = "Wifi Direct and internet are not available.",
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(bottom = 16.dp)
                 )
@@ -70,8 +73,10 @@ fun AppShareScreen(
                     // the QR codes more and makes them easier to scan
                     DownloadButton(appShareViewModel)
                     Text(text = " ")
-                } else {
-                    QRCodeDisplay("QR code to connect your phone to this transport", wifiConnectURL)
+                } else if (isNetworkValid()) {
+                    wifiConnectURL?.also {
+                        QRCodeDisplay("QR code to connect your phone to this transport", it)
+                    }
                     // it seems a bit strange to put the button in the middle of the screen, but it separates
                     // the QR codes more and makes them easier to scan
                     DownloadButton(appShareViewModel)
@@ -154,4 +159,29 @@ fun QRCodeDisplay(instructions: String, contentURL: String) {
                 modifier = Modifier.size(200.dp).padding(start = 10.dp, top = 5.dp, end = 15.dp, bottom = 8.dp)
         )
     }
+}
+
+fun isNetworkValid(): Boolean {
+    val ip = getWifiDirectIp()
+    return ip != null
+}
+
+fun getWifiDirectIp(): String? {
+    try {
+        val interfaces = NetworkInterface.getNetworkInterfaces()
+        for (intf in interfaces) {
+            val addresses = intf.inetAddresses
+            for (addr in addresses) {
+                if (addr is Inet4Address && !addr.isLoopbackAddress) {
+                    // Check if IP is in the typical Wi-Fi Direct subnet
+                    if (addr.hostAddress.startsWith("192.168.49.")) {
+                        return addr.hostAddress
+                    }
+                }
+            }
+        }
+    } catch (e: Exception) {
+        Log.e("WifiDirect", "Error getting Wi-Fi Direct IP", e)
+    }
+    return null
 }
