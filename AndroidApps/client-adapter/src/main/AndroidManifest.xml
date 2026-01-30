@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <queries>
-        <provider android:authorities="net.discdd.provider.datastoreprovider" />
+        <provider android:authorities="net.discdd.provider.datastoreprovider"/>
     </queries>
 </manifest>

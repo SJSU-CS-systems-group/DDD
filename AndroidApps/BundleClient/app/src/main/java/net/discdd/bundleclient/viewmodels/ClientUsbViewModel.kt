@@ -7,10 +7,10 @@ import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiServiceManager
 import net.discdd.grpc.RecencyBlob
@@ -29,6 +29,7 @@ class ClientUsbViewModel(
     companion object {
         private val logger: Logger = Logger.getLogger(ClientUsbViewModel::class.java.name)
     }
+
     lateinit var rootDir: File
     private val _transferringToUsb = MutableStateFlow(true)
     private val _transferringToClient = MutableStateFlow(true)
@@ -54,7 +55,7 @@ class ClientUsbViewModel(
         rootDir = dir
     }
 
-    fun createIfDoesNotExist(parent : DocumentFile, name : String) : DocumentFile {
+    fun createIfDoesNotExist(parent: DocumentFile, name: String): DocumentFile {
         var child = parent.findFile(name)
         if (child == null || !child.isDirectory) {
             child = parent.createDirectory(name)
@@ -62,7 +63,7 @@ class ClientUsbViewModel(
         } else {
             logger.log(INFO, "\'$name\' directory exists")
         }
-        return child ?: throw IOException ("Could not create $name")
+        return child ?: throw IOException("Could not create $name")
     }
 
     fun transferBundleToUsb(context: Context) {
@@ -88,7 +89,6 @@ class ClientUsbViewModel(
                         appendMessage("Error creating target file in USB directory", Color.RED)
                         return@withContext
                     }
-
 
                     try {
                         context.contentResolver.openOutputStream(targetFile.uri)?.use { outputStream ->
@@ -138,27 +138,32 @@ class ClientUsbViewModel(
                     }
                     try {
                         val bundleIds = bundleTransmission!!.getNextBundles()
-                        logger.log(INFO, "Bundle IDs expected: ${bundleIds}")
+                        logger.log(INFO, "Bundle IDs expected: $bundleIds")
                         if (bundleIds.isNotEmpty()) {
                             for (bundleId in bundleIds) {
                                 val bundleFile = toClientDir.findFile(bundleId)
-                                logger.log(INFO, "Target bundle ID: ${bundleId}")
+                                logger.log(INFO, "Target bundle ID: $bundleId")
                                 if (bundleFile != null) {
                                     val targetFile = devicePath.resolve(bundleId)
                                     val result = withContext(Dispatchers.IO) {
                                         Files.newOutputStream(targetFile)?.use { outputStream ->
-                                            context.contentResolver.openInputStream(bundleFile.uri)?.use { inputStream ->
-                                                inputStream.copyTo(outputStream)
-                                                val receivedBundleLocation: Path =
-                                                    rootDir.toPath().parent.resolve("BundleTransmission/bundle-generation/to-send")
-                                                        .resolve(bundleId)
-                                                bundleTransmission!!.processReceivedBundle(
-                                                    recencyBlob.senderId,
-                                                    Bundle(targetFile.toFile()))
-                                            }
+                                            context.contentResolver.openInputStream(bundleFile.uri)
+                                                ?.use { inputStream ->
+                                                    inputStream.copyTo(outputStream)
+                                                    val receivedBundleLocation: Path =
+                                                        rootDir.toPath().parent.resolve("BundleTransmission/bundle-generation/to-send")
+                                                            .resolve(bundleId)
+                                                    bundleTransmission!!.processReceivedBundle(
+                                                        recencyBlob.senderId,
+                                                        Bundle(targetFile.toFile())
+                                                    )
+                                                }
                                         }
                                     }
-                                    logger.log(INFO, "Transferred file: ${bundleFile.name} of ${result} bytes to ${devicePath}")
+                                    logger.log(
+                                        INFO,
+                                        "Transferred file: ${bundleFile.name} of $result bytes to $devicePath"
+                                    )
                                 }
                             }
                         }
@@ -177,13 +182,13 @@ class ClientUsbViewModel(
         }
     }
 
-    private fun setTransferringToClientState(status : Boolean) {
+    private fun setTransferringToClientState(status: Boolean) {
         _transferringToClient.update {
             status
         }
     }
 
-    private fun setTransferringToUsbState(status : Boolean) {
+    private fun setTransferringToUsbState(status: Boolean) {
         _transferringToUsb.update {
             status
         }

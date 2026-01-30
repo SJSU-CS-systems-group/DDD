@@ -1,6 +1,41 @@
 package net.discdd.server.bundletransmission;
 
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
+import static net.discdd.bundlesecurity.SecurityUtils.generateID;
+import static net.discdd.grpc.BundleSenderType.CLIENT;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.PipedInputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.security.GeneralSecurityException;
+import java.security.SecureRandom;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.logging.Logger;
+
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.InvalidMessageException;
+
 import com.google.protobuf.ByteString;
+
 import net.discdd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
 import net.discdd.bundlesecurity.BundleIDGenerator;
 import net.discdd.bundlesecurity.DDDPEMEncoder;
@@ -23,47 +58,15 @@ import net.discdd.server.config.BundleServerConfig;
 import net.discdd.server.repository.entity.ClientBundleCounters;
 import net.discdd.utils.BundleUtils;
 import net.discdd.utils.FileUtils;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.EnableAsync;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.InvalidMessageException;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.PipedInputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.security.GeneralSecurityException;
-import java.security.SecureRandom;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.logging.Logger;
-
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
-import static net.discdd.bundlesecurity.SecurityUtils.generateID;
-import static net.discdd.grpc.BundleSenderType.CLIENT;
 
 @EnableAsync
 @Service
 public class ServerBundleTransmission {
 
-    private static final Logger logger = Logger.getLogger(ServerBundleTransmission.class.getName());
-    private final ExecutorService executorService = Executors.newCachedThreadPool();
     public static final int WINDOW_LENGTH = 3;
+    private static final Logger logger = Logger.getLogger(ServerBundleTransmission.class.getName());
+    private static Random random = new Random();
+    private final ExecutorService executorService = Executors.newCachedThreadPool();
     private final BundleServerConfig config;
     private final ServerBundleSecurity bundleSecurity;
     private final ServerApplicationDataManager applicationDataManager;
@@ -90,8 +93,6 @@ public class ServerBundleTransmission {
         return senderType + " : " + senderId;
     }
 
-    private static Random random = new Random();
-
     private String nextRandomString() {
         return Long.toHexString(random.nextLong());
     }
@@ -100,20 +101,23 @@ public class ServerBundleTransmission {
     @Transactional
     public void processReceivedBundle(BundleSenderType senderType, String senderId, Bundle bundle) throws Exception {
         logger.log(INFO,
-                   "Processing received bundle: " + bundle.getSource().getName() + " from " +
-                           bundleSenderToString(senderType, senderId));
+                   "Processing received bundle: " + bundle.getSource().getName() + " from " + bundleSenderToString(
+                                                                                                                   senderType,
+                                                                                                                   senderId));
         if (!bundle.getSource().exists() || bundle.getSource().length() == 0) {
             return;
         }
 
-        Path bundleRecvProcDir =
-                this.config.getBundleTransmission().getReceivedProcessingDirectory().resolve(nextRandomString());
+        Path bundleRecvProcDir = this.config.getBundleTransmission()
+                .getReceivedProcessingDirectory()
+                .resolve(nextRandomString());
         try {
             Files.createDirectories(bundleRecvProcDir);
 
             UncompressedBundle uncompressedBundle = BundleUtils.extractBundle(bundle, bundleRecvProcDir);
-            String serverIdReceived =
-                    generateID(uncompressedBundle.getSource().toPath().resolve(SecurityUtils.SERVER_IDENTITY_KEY));
+            String serverIdReceived = generateID(uncompressedBundle.getSource()
+                    .toPath()
+                    .resolve(SecurityUtils.SERVER_IDENTITY_KEY));
             if (!bundleSecurity.bundleServerIdMatchesCurrentServer(serverIdReceived)) {
                 logger.log(WARNING,
                            "Received bundle's serverIdentity didn't match with current server, " +
@@ -128,9 +132,8 @@ public class ServerBundleTransmission {
             String clientId = generateID(clientIdBase64);
             var counters = this.applicationDataManager.getBundleCountersForClient(clientId);
 
-            var receivedBundleCounter =
-                    this.bundleSecurity.getCounterFromBundlePath(uncompressedBundle.getSource().toPath(),
-                                                                 BundleIDGenerator.UPSTREAM);
+            var receivedBundleCounter = this.bundleSecurity.getCounterFromBundlePath(uncompressedBundle.getSource()
+                    .toPath(), BundleIDGenerator.UPSTREAM);
 
             if (receivedBundleCounter <= counters.lastReceivedBundleCounter) {
                 logger.log(WARNING,
@@ -144,8 +147,9 @@ public class ServerBundleTransmission {
                 throw new Exception("Payload is null");
             }
 
-            UncompressedPayload uncompressedPayload =
-                    BundleUtils.extractPayload(payload, uncompressedBundle.getSource().toPath());
+            UncompressedPayload uncompressedPayload = BundleUtils.extractPayload(payload,
+                                                                                 uncompressedBundle.getSource()
+                                                                                         .toPath());
             logger.log(FINE, "[BundleTransmission] extracted payload from uncompressed bundle");
 
             if (!"HB".equals(uncompressedPayload.getAckRecord().getBundleId())) {
@@ -178,8 +182,9 @@ public class ServerBundleTransmission {
             this.processReceivedBundle(senderType, senderId, bundle);
         } catch (Exception e) {
             logger.log(SEVERE,
-                       "[BundleTransmission] Failed to process received bundle from: " +
-                               bundleSenderToString(senderType, senderId),
+                       "[BundleTransmission] Failed to process received bundle from: " + bundleSenderToString(
+                                                                                                              senderType,
+                                                                                                              senderId),
                        e);
         } finally {
             FileUtils.recursiveDelete(bundle.getSource().toPath());
@@ -213,15 +218,20 @@ public class ServerBundleTransmission {
         }
 
         var bundleCounter = counts.lastSentBundleCounter + 1;
-        var encryptedBundleId =
-                serverSecurity.createEncryptedBundleId(clientId, bundleCounter, BundleIDGenerator.DOWNSTREAM);
+        var encryptedBundleId = serverSecurity.createEncryptedBundleId(clientId,
+                                                                       bundleCounter,
+                                                                       BundleIDGenerator.DOWNSTREAM);
         long ackedRecievedBundle = counts.lastReceivedBundleCounter;
         applicationDataManager.registerNewBundleId(clientId, encryptedBundleId, bundleCounter, ackedRecievedBundle);
 
         var adus = applicationDataManager.fetchADUsToSend(encryptedBundleId, bundleCounter, 0, clientId);
         PipedInputStream pipedInputStream = new PipedInputStream();
-        Future<?> future =
-                BundleUtils.runFuture(executorService, counts.lastReceivedBundleId, null, adus, null, pipedInputStream);
+        Future<?> future = BundleUtils.runFuture(executorService,
+                                                 counts.lastReceivedBundleId,
+                                                 null,
+                                                 adus,
+                                                 null,
+                                                 pipedInputStream);
         try {
             var bundleOutputStream = Files.newOutputStream(getPathForBundleToSend(encryptedBundleId),
                                                            StandardOpenOption.CREATE,
@@ -268,9 +278,7 @@ public class ServerBundleTransmission {
         return getPathToSendDirectory().resolve(encryptedBundleId);
     }
 
-    public Path getPathToSendDirectory() {
-        return config.getBundleTransmission().getToSendDirectory();
-    }
+    public Path getPathToSendDirectory() { return config.getBundleTransmission().getToSendDirectory(); }
 
     public Path getPathForBundleToReceive(String randomBundleId) {
         return getPathForBundleReceiveDirectory().resolve(randomBundleId);
@@ -284,8 +292,8 @@ public class ServerBundleTransmission {
                                                              String senderId,
                                                              Set<String> bundleIdsPresent) {
         List<String> clientIds = CLIENT == senderType ?
-                                 Collections.singletonList(senderId) :
-                                 this.bundleRouting.getClientsForTransportId(senderId);
+                Collections.singletonList(senderId) :
+                this.bundleRouting.getClientsForTransportId(senderId);
 
         logger.log(SEVERE,
                    "[BundleTransmission] Found " + clientIds.size() + " reachable from the sender: " +

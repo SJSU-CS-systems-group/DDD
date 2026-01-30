@@ -13,7 +13,7 @@ import java.util.logging.LogRecord
 import java.util.logging.Logger
 
 data class LogState(
-        val logMessages: List<String> = emptyList()
+    val logMessages: List<String> = emptyList()
 )
 
 class LogViewModel : ViewModel() {
@@ -46,7 +46,7 @@ class LogViewModel : ViewModel() {
                         val loggerNameParts = logRecord.loggerName.split(".")
                         val loggerName = loggerNameParts.lastOrNull() ?: logRecord.loggerName
                         if (logRecords.size > 100) logRecords.removeFirst()
-                        val entry = "[${loggerName}] ${logRecord.message}"
+                        val entry = "[$loggerName] ${logRecord.message}"
                         logRecords.add(entry)
                     }
 

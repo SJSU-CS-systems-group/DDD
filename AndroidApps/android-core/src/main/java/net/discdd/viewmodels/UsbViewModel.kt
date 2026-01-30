@@ -18,13 +18,13 @@ import net.discdd.UsbConnectionManager
 import net.discdd.utils.UserLogRepository
 
 data class UsbState(
-        val filePermissionGranted: Boolean = false,
-        val dddDirectoryExists: Boolean = false,
-        val shouldEject: Boolean = false,
+    val filePermissionGranted: Boolean = false,
+    val dddDirectoryExists: Boolean = false,
+    val shouldEject: Boolean = false,
 )
 
 open class UsbViewModel(
-        application: Application
+    application: Application
 ) : AndroidViewModel(application) {
     private val usbDirName = "ddd_transport"
     protected val storageManager by lazy {
@@ -38,7 +38,6 @@ open class UsbViewModel(
     // this is used to signal the activity to prompt the user for directory access
     private val _requestDirectoryAccess = MutableLiveData<Unit>()
     val requestDirectoryAccess: LiveData<Unit> get() = _requestDirectoryAccess
-
 
     init {
         viewModelScope.launch {
@@ -62,7 +61,6 @@ open class UsbViewModel(
     fun promptForDirectoryAccess() {
         _requestDirectoryAccess.value = Unit
     }
-
 
     fun openedURI(context: Context, uri: Uri?) {
         val treeDocFile = uri?.let {
@@ -88,7 +86,6 @@ open class UsbViewModel(
         _state.update {
             it.copy(dddDirectoryExists = usbDirectory != null)
         }
-
     }
 
     fun setShouldEject(shouldEject: Boolean) {

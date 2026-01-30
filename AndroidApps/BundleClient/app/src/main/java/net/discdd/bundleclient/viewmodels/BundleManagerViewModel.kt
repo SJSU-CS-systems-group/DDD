@@ -11,7 +11,7 @@ import net.discdd.bundleclient.WifiServiceManager
 import net.discdd.client.bundletransmission.ClientBundleTransmission
 import java.util.stream.Collectors
 
-data class BundleManagerApp (
+data class BundleManagerApp(
     val name: String,
     val lastOut: Long,
     val ackedOut: Long,
@@ -25,7 +25,7 @@ data class BundleManagerState(
 
 class BundleManagerViewModel(
     application: Application,
-): AndroidViewModel(application) {
+) : AndroidViewModel(application) {
     var clientBundleTransmission: ClientBundleTransmission? = null
     private val _state = MutableStateFlow(BundleManagerState())
     val state = _state.asStateFlow()
@@ -63,4 +63,3 @@ class BundleManagerViewModel(
         }
     }
 }
-

@@ -2,23 +2,23 @@ package net.discdd.viewmodels
 
 import android.app.Application
 import android.content.Context.MODE_PRIVATE
+import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import androidx.core.content.edit
 
 class SettingsViewModel(
-        application: Application
+    application: Application
 ) : AndroidViewModel(application) {
     private val context get() = getApplication<Application>()
     private val sharedPref by lazy {
         context.getSharedPreferences(NET_DISCDD_VIEWMODELS_PREFS, MODE_PRIVATE)
     }
 
-    private val _firstOpen = MutableStateFlow<Boolean>(true);
+    private val _firstOpen = MutableStateFlow<Boolean>(true)
     val firstOpen = _firstOpen.asStateFlow()
 
     private val _showEasterEgg = MutableStateFlow(false)

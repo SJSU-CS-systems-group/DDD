@@ -5,19 +5,19 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-
 import androidx.annotation.Nullable;
 
 public class DBHelper extends SQLiteOpenHelper {
 
-    public DBHelper(@Nullable Context context) {
+    public DBHelper(@Nullable
+    Context context) {
         super(context, "messages.db", null, 1);
     }
 
     @Override
     public void onCreate(SQLiteDatabase sqLiteDatabase) {
         sqLiteDatabase.execSQL(
-                "create Table MessageTable(messageID INT, receiver TEXT, message TEXT, appName TEXT, status TEXT)");
+                               "create Table MessageTable(messageID INT, receiver TEXT, message TEXT, appName TEXT, status TEXT)");
     }
 
     @Override
@@ -47,7 +47,9 @@ public class DBHelper extends SQLiteOpenHelper {
         Cursor cursor = DB.rawQuery("select * from MessageTable where receiver=? and appName=?",
                                     new String[] { receiver, appName });
         if (cursor.getCount() > 0) {
-            long results = DB.update("MessageTable", contentValues, "receiver=? and appName=?",
+            long results = DB.update("MessageTable",
+                                     contentValues,
+                                     "receiver=? and appName=?",
                                      new String[] { receiver, appName });
             return results != -1;
         }

@@ -16,32 +16,31 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-
 @Composable
 fun ScrollingColumn(
-        showActionButton: Boolean = false,
-        onActionClick: () -> Unit = {},
-        content: @Composable () -> Unit,
+    showActionButton: Boolean = false,
+    onActionClick: () -> Unit = {},
+    content: @Composable () -> Unit,
 ) {
     val scrollState = rememberScrollState()
     Box {
         Column(
-                modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(scrollState)
-                        .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(scrollState)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             content()
         }
         if (showActionButton) {
             FloatingActionButton(
-                    onClick = { onActionClick() },
-                    modifier = Modifier.align(Alignment.BottomEnd)
+                onClick = { onActionClick() },
+                modifier = Modifier.align(Alignment.BottomEnd)
             ) {
                 Icon(
-                        imageVector = Icons.Default.Delete,
-                        "Delete Logs",
+                    imageVector = Icons.Default.Delete,
+                    "Delete Logs",
                 )
             }
         }

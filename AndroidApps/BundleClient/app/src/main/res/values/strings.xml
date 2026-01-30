@@ -17,7 +17,9 @@
     <string name="not_connected">Not connected</string>
     <string name="connected_to_transport">Connected to transport</string>
     <string name="refresh_peers">Refresh Peers</string>
-    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">USB was connected, but /DDD_transport directory was not detected\n</string>
+    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">USB was connected, but /DDD_transport
+        directory was not detected\n
+    </string>
     <string name="never">Never</string>
     <string name="usb_connection_detected">USB connection detected</string>
     <string name="settings_saved">Settings saved</string>
@@ -27,7 +29,10 @@
     <string name="initiating_bundle_exchange">Initiating Bundle Exchange...</string>
     <string name="exchanging_with_transport">Exchanging with Transport</string>
     <string name="reload">Reload</string>
-    <string name="to_settings_text">To enable our app to manage app-related files on this device and your USB storage, please toggle \"Yes\" for BundleClient in your settings. We assure you that only files created by our app will be accessed. Protecting user privacy and maintaining ethical practices are our top priorities.</string>
+    <string name="to_settings_text">To enable our app to manage app-related files on this device and your USB storage,
+        please toggle \"Yes\" for BundleClient in your settings. We assure you that only files created by our app will
+        be accessed. Protecting user privacy and maintaining ethical practices are our top priorities.
+    </string>
     <string name="subscribe">Subscribe</string>
     <string name="service_name" translatable="false">DDD</string>
     <string name="unsubscribe">Unsubscribe</string>
@@ -37,7 +42,9 @@
     <string name="wifi_aware_tab">Wifi Aware</string>
     <string name="sent">"sent: "</string>
     <string name="received">received</string>
-    <string name="cannot_transfer_bundle_usb_not_ready_or_directory_not_found">Cannot transfer bundle: USB not ready or directory not found</string>
+    <string name="cannot_transfer_bundle_usb_not_ready_or_directory_not_found">Cannot transfer bundle: USB not ready or
+        directory not found
+    </string>
     <string name="delete_logs">Clear Logs</string>
     <string name="invalid_domain">Invalid Domain</string>
     <string name="invalid_port">Invalid Port</string>

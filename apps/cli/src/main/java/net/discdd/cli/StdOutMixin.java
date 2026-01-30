@@ -1,8 +1,8 @@
 package net.discdd.cli;
 
-import picocli.CommandLine;
-
 import java.io.PrintWriter;
+
+import picocli.CommandLine;
 
 public class StdOutMixin {
     @CommandLine.Spec

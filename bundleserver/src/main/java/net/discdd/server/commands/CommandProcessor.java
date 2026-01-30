@@ -1,14 +1,15 @@
 package net.discdd.server.commands;
 
-import org.reflections.Reflections;
-import picocli.CommandLine.Command;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
 
 import java.util.Map;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.WARNING;
+import org.reflections.Reflections;
+
+import picocli.CommandLine.Command;
 
 /**
  * Preprocessor to figure out if we are being called with a command

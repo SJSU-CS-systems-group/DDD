@@ -1,12 +1,10 @@
 package net.discdd.security;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import org.whispersystems.libsignal.IdentityKey;
-import org.whispersystems.libsignal.IdentityKeyPair;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.ecc.Curve;
-import org.whispersystems.libsignal.ecc.ECKeyPair;
+import static net.discdd.bundlesecurity.DDDPEMEncoder.createEncryptedEncodedPublicKeyBytes;
+import static net.discdd.bundlesecurity.DDDPEMEncoder.decodeEncryptedPublicKeyfromFile;
+import static net.discdd.bundlesecurity.SecurityUtils.PUB_KEY_FOOTER;
+import static net.discdd.bundlesecurity.SecurityUtils.PUB_KEY_HEADER;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -18,11 +16,13 @@ import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static net.discdd.bundlesecurity.SecurityUtils.PUB_KEY_FOOTER;
-import static net.discdd.bundlesecurity.SecurityUtils.PUB_KEY_HEADER;
-import static net.discdd.bundlesecurity.DDDPEMEncoder.createEncryptedEncodedPublicKeyBytes;
-import static net.discdd.bundlesecurity.DDDPEMEncoder.decodeEncryptedPublicKeyfromFile;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.whispersystems.libsignal.IdentityKey;
+import org.whispersystems.libsignal.IdentityKeyPair;
+import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.ecc.Curve;
+import org.whispersystems.libsignal.ecc.ECKeyPair;
 
 public class SecurityUtilsTest {
     private static final Logger logger = Logger.getLogger(SecurityUtilsTest.class.getName());
@@ -37,8 +37,8 @@ public class SecurityUtilsTest {
     }
 
     @Test
-    void testSecurityUtilsTest(@TempDir Path tempDir) throws IOException, GeneralSecurityException,
-            InvalidKeyException {
+    void testSecurityUtilsTest(@TempDir
+    Path tempDir) throws IOException, GeneralSecurityException, InvalidKeyException {
         //create a pair of client public and private identity keys
         ECKeyPair clientIdentityKeyPair = Curve.generateKeyPair();
         IdentityKeyPair clientKeyPair = new IdentityKeyPair(new IdentityKey(clientIdentityKeyPair.getPublicKey()),
@@ -46,9 +46,8 @@ public class SecurityUtilsTest {
         //store client public key in tempDir/Client_Keys
         Path clientTempDirPath = tempDir.resolve("Client_Keys");
         Files.createDirectories(clientTempDirPath);
-        byte[] clientPubBytes = (PUB_KEY_HEADER + "\n" +
-                Base64.getUrlEncoder().encodeToString(clientKeyPair.getPublicKey().serialize()) + "\n" +
-                PUB_KEY_FOOTER).getBytes();
+        byte[] clientPubBytes = (PUB_KEY_HEADER + "\n" + Base64.getUrlEncoder()
+                .encodeToString(clientKeyPair.getPublicKey().serialize()) + "\n" + PUB_KEY_FOOTER).getBytes();
         Files.write(clientTempDirPath.resolve("clientIdentity.pub"),
                     clientPubBytes,
                     StandardOpenOption.CREATE,

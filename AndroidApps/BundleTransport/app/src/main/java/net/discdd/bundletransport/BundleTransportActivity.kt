@@ -31,14 +31,15 @@ class BundleTransportActivity : ComponentActivity() {
         LogFragment.registerLoggerHandler()
 
         var usbViewModel: TransportUsbViewModel = ViewModelProvider(this)[TransportUsbViewModel::class.java]
-        val openDocumentTreeLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == RESULT_OK) {
-                usbViewModel.openedURI(applicationContext, result.data?.data)
-                logger.info("Selected URI: ${result.data?.data}")
-            } else {
-                logger.warning("Directory selection canceled")
+        val openDocumentTreeLauncher =
+            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+                if (result.resultCode == RESULT_OK) {
+                    usbViewModel.openedURI(applicationContext, result.data?.data)
+                    logger.info("Selected URI: ${result.data?.data}")
+                } else {
+                    logger.warning("Directory selection canceled")
+                }
             }
-        }
 
         usbViewModel.requestDirectoryAccess.observe(this) {
             val storageManager = getSystemService(STORAGE_SERVICE) as StorageManager
@@ -81,7 +82,8 @@ class BundleTransportActivity : ComponentActivity() {
         super.onDestroy()
 
         if (sharedPreferences.getInt(BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE, 0) <= 0 &&
-                serviceIntent != null) {
+            serviceIntent != null
+        ) {
             stopService(serviceIntent)
         }
 

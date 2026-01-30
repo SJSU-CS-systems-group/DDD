@@ -1,11 +1,12 @@
 package net.discdd.server;
 
-import net.discdd.server.config.BundleServerConfig;
+import java.io.File;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
+import net.discdd.server.config.BundleServerConfig;
 
 @Component
 public class StartupRunner implements CommandLineRunner {
@@ -22,25 +23,30 @@ public class StartupRunner implements CommandLineRunner {
     private void setUpFileStore() {
         File bundleReceivedDir = this.bundleStoreConfig.getBundleTransmission().getBundleReceivedLocation().toFile();
         bundleReceivedDir.mkdirs();
-        File bundleGenerationDir =
-                this.bundleStoreConfig.getBundleTransmission().getBundleGenerationDirectory().toFile();
+        File bundleGenerationDir = this.bundleStoreConfig.getBundleTransmission()
+                .getBundleGenerationDirectory()
+                .toFile();
         bundleGenerationDir.mkdirs();
         File toBeBundledDir = this.bundleStoreConfig.getBundleTransmission().getToBeBundledDirectory().toFile();
         toBeBundledDir.mkdirs();
         File tosendDir = this.bundleStoreConfig.getBundleTransmission().getToSendDirectory().toFile();
         tosendDir.mkdirs();
-        File receivedProcessingDir =
-                this.bundleStoreConfig.getBundleTransmission().getReceivedProcessingDirectory().toFile();
+        File receivedProcessingDir = this.bundleStoreConfig.getBundleTransmission()
+                .getReceivedProcessingDirectory()
+                .toFile();
         receivedProcessingDir.mkdirs();
 
-        File unCompressedPayloadDir =
-                this.bundleStoreConfig.getBundleTransmission().getUncompressedPayloadDirectory().toFile();
+        File unCompressedPayloadDir = this.bundleStoreConfig.getBundleTransmission()
+                .getUncompressedPayloadDirectory()
+                .toFile();
         unCompressedPayloadDir.mkdirs();
-        File compressedPayloadDir =
-                this.bundleStoreConfig.getBundleTransmission().getCompressedPayloadDirectory().toFile();
+        File compressedPayloadDir = this.bundleStoreConfig.getBundleTransmission()
+                .getCompressedPayloadDirectory()
+                .toFile();
         compressedPayloadDir.mkdirs();
-        File encryptedPayloadDir =
-                this.bundleStoreConfig.getBundleTransmission().getEncryptedPayloadDirectory().toFile();
+        File encryptedPayloadDir = this.bundleStoreConfig.getBundleTransmission()
+                .getEncryptedPayloadDirectory()
+                .toFile();
         encryptedPayloadDir.mkdirs();
     }
 }

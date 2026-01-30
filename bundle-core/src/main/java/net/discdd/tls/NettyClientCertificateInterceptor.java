@@ -1,5 +1,12 @@
 package net.discdd.tls;
 
+import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
+import java.util.concurrent.CompletableFuture;
+
+import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLSession;
+
 import io.grpc.CallOptions;
 import io.grpc.Channel;
 import io.grpc.ClientCall;
@@ -11,15 +18,9 @@ import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
 import io.grpc.stub.AbstractStub;
 
-import javax.net.ssl.SSLPeerUnverifiedException;
-import javax.net.ssl.SSLSession;
-import java.security.cert.Certificate;
-import java.security.cert.X509Certificate;
-import java.util.concurrent.CompletableFuture;
-
 public class NettyClientCertificateInterceptor implements ClientInterceptor {
-    public static final CallOptions.Key<CompletableFuture<X509Certificate>> SERVER_CERTIFICATE_OPTION =
-            CallOptions.Key.create("server-certificate");
+    public static final CallOptions.Key<CompletableFuture<X509Certificate>> SERVER_CERTIFICATE_OPTION = CallOptions.Key
+            .create("server-certificate");
 
     public static <T extends AbstractStub<T>> T createServerCertificateOption(T stub,
                                                                               CompletableFuture<X509Certificate> certCompletion) {

@@ -46,6 +46,7 @@ you want to make sure the certificate is renewed automatically.
 do that by creating the following file in /etc/cron.daily/certbot:
 
 /etc/cron.daily/certbot:
+
 ```bash
 #!/bin/bash
 certbot renew > /home/ddd/cert.renew.log 2>&1
@@ -69,16 +70,18 @@ configure it as an "internet site" with the system mail name set to `canary.ravl
 
 edit `/etc/postfix/main.cf` and `/etc/postfix/master.cf` to make the following changes:
 
-the changes to `main.cf` are about configuring TLS, setting the hostname (remember to change canary.ravlykmail.com to your domain name),
+the changes to `main.cf` are about configuring TLS, setting the hostname (remember to change canary.ravlykmail.com to
+your domain name),
 and restricting the interfaces and protocols postfix listens on and uses.
 all incoming mail will be from the k9 server running on the same machine, so we don't need to listen on all interfaces,
 and we don't want to allow external servers to use us as a relay.
 the provider we are using doesn't have PTR records for IPv6 addresses, so we will disable IPv6 in postfix.
 you can change to all if IPv6 works for you.
 
-**NOTE: the 
+**NOTE: the
 
 `/etc/postfix/main.cf`
+
 ```
 @@ -24,8 +24,8 @@ compatibility_level = 3.6
  
@@ -119,6 +122,7 @@ k9 will then forward the mail to postfix on port 2525 for delivery.
 (k9's configuration file sets this port with the `smtp.relay.port` property.)
 
 `/etc/postfix/master.cf`
+
 ```
 @@ -9,7 +9,7 @@
  # service type  private unpriv  chroot  wakeup  maxproc command + args
@@ -144,7 +148,8 @@ sudo systemctl enable postfix
     ```
     adduser --disabled-password --shell /bin/bash --gecos "discdd account" ddd
     ```
-* give the user `ddd` with password `MYSQL_PASSWORD` (make it different from other passwords you use!) access to the mysql database.
+* give the user `ddd` with password `MYSQL_PASSWORD` (make it different from other passwords you use!) access to the
+  mysql database.
     ```
     # mysql -u root
     CREATE USER 'ddd'@'localhost' IDENTIFIED BY 'MYSQL_PASSWORD';
@@ -159,6 +164,7 @@ sudo systemctl enable postfix
 create the following `99-ddd-services` file in `/etc/sudoers.d/`:
 
 `/etc/sudoers.d/99-ddd-services`:
+
 ```bash
 ddd ALL=(ALL) NOPASSWD: /bin/systemctl restart bundleserver
 ddd ALL=(ALL) NOPASSWD: /bin/systemctl restart k9
@@ -182,7 +188,8 @@ sudo su - ddd
 
 ### set up the maven settings.xml with your github credentials
 
-create a `.m2` directory in your home directory if it doesn't exist ( `mkdir -p ~/.m2` ) , and add a `~/.m2/settings.xml` file with the following content:
+create a `.m2` directory in your home directory if it doesn't exist ( `mkdir -p ~/.m2` ) , and add a
+`~/.m2/settings.xml` file with the following content:
 
 ```xml
 <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
@@ -202,7 +209,9 @@ create a `.m2` directory in your home directory if it doesn't exist ( `mkdir -p 
 you can use https://github.com/settings/tokens/new to generate a GITHUB_TOKEN _WITH_PACKAGE_READ_ACCESS.
 if you make a classic token, you need to select the `read:packages` scope.
 
-***NOTE***: if you get an error that looks like the below, you need to fix the token (either the value or the permissions it has) in your `settings.xml` file.
+***NOTE***: if you get an error that looks like the below, you need to fix the token (either the value or the
+permissions it has) in your `settings.xml` file.
+
 ```
 [ERROR] Failed to execute goal org.apache.maven.plugins:maven-dependency-plugin:2.8:get (default-cli) on project DDD: Couldn't download artifact: Missing:
 ```
@@ -229,6 +238,7 @@ this will build both the BundleServer and K9 (email) server jar files.
 in the ddd home directory directory, create a `systemd` directory with following service files:
 
 `systemd/bundleserver.service`:
+
 ```ini
 [Unit]
 Description=DDD Bundle Server
@@ -246,6 +256,7 @@ WantedBy=multi-user.target
 ```
 
 `systemd/k9.service`:
+
 ```ini
 [Unit]
 Description=K9 Mail Service Adapter
@@ -277,6 +288,7 @@ sudo systemctl enable /home/ddd/systemd/k9.service
 ### create the configuration files
 
 `systemd/bundleserver.cfg`:
+
 ```properties
 bundle-server.bundle-store-root = /home/ddd/bundleserver-data
 spring.datasource.username = ddd
@@ -285,6 +297,7 @@ serviceadapter.datacheck.interval = 30s
 ```
 
 `systemd/k9.cfg`:
+
 ```properties
 spring.datasource.username=ddd
 spring.datasource.password=MYSQL_PASSWORD
@@ -303,12 +316,15 @@ mkdir -p ~/bundleserver-data/BundleSecurity/Keys/Server
 mkdir -p ~/k9-data
 ```
 
-YOU MUST NOW COPY THE SERVER KEYS TO `~/bundleserver-data/BundleSecurity/Keys/Server` HOW YOU GET THOSE KEYS IS OUTSIDE THE SCOPE OF THIS DOCUMENT.
+YOU MUST NOW COPY THE SERVER KEYS TO `~/bundleserver-data/BundleSecurity/Keys/Server` HOW YOU GET THOSE KEYS IS OUTSIDE
+THE SCOPE OF THIS DOCUMENT.
+
 ## set up the deployment script
 
 create a `deploy.sh` script in the `systemd` directory with the following content:
 
 `systemd/deploy.sh`:
+
 ```bash
 #!/bin/bash
 set -e

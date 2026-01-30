@@ -2,28 +2,27 @@ package net.discdd.bundletransport.viewmodels
 
 import android.app.Application
 import android.content.Context.MODE_PRIVATE
+import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.discdd.AndroidAppConstants
+import net.discdd.bundletransport.BundleTransportService
 import net.discdd.bundletransport.R
 import net.discdd.bundletransport.TransportServiceManager
 import net.discdd.pathutils.TransportPaths
-import java.util.logging.Logger
-import androidx.core.content.edit
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.withContext
-import net.discdd.bundletransport.BundleTransportService
 import java.io.File
+import java.util.logging.Logger
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
-
 
 sealed interface RecencyBlobStatus {
     data object Fresh : RecencyBlobStatus
@@ -32,16 +31,16 @@ sealed interface RecencyBlobStatus {
 }
 
 data class ServerState(
-        val domain: String = "",
-        val port: String = "",
-        val message: String? = "",
-        val clientCount: String = "0",
-        val serverCount: String = "0",
-        val recencyBlobStatus: RecencyBlobStatus = RecencyBlobStatus.Missing
+    val domain: String = "",
+    val port: String = "",
+    val message: String? = "",
+    val clientCount: String = "0",
+    val serverCount: String = "0",
+    val recencyBlobStatus: RecencyBlobStatus = RecencyBlobStatus.Missing
 )
 
 class ServerUploadViewModel(
-        application: Application
+    application: Application
 ) : AndroidViewModel(application) {
     // this is a truncated version of the transport ID, which is used to identify the transport
     val transportID: String
@@ -51,7 +50,12 @@ class ServerUploadViewModel(
         }
     private val RECENCY_BLOB_AGE_THRESHOLD = 24.hours
     private val context get() = getApplication<Application>()
-    private val sharedPref by lazy { context.getSharedPreferences(BundleTransportService.BUNDLETRANSPORT_PREFERENCES, MODE_PRIVATE) }
+    private val sharedPref by lazy {
+        context.getSharedPreferences(
+            BundleTransportService.BUNDLETRANSPORT_PREFERENCES,
+            MODE_PRIVATE
+        )
+    }
     private val transportPrefs by lazy {
         context.getSharedPreferences(BundleTransportService.BUNDLETRANSPORT_PREFERENCES, MODE_PRIVATE)
     }
@@ -71,8 +75,8 @@ class ServerUploadViewModel(
             restoreDomainPort()
             reloadCount()
             _backgroundExchange.value = transportPrefs.getInt(
-                    BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE,
-                    0
+                BundleTransportService.BUNDLETRANSPORT_PERIODIC_PREFERENCE,
+                0
             )
         }
 
@@ -113,7 +117,6 @@ class ServerUploadViewModel(
 
             onRecencyBlobStatusChanged(status)
         }
-
     }
 
     fun reloadCount() {
@@ -134,10 +137,10 @@ class ServerUploadViewModel(
     fun saveDomainPort() {
         viewModelScope.launch(Dispatchers.IO) {
             sharedPref
-                    .edit {
-                        putString(BundleTransportService.BUNDLETRANSPORT_DOMAIN_PREFERENCE, state.value.domain)
-                        putInt(BundleTransportService.BUNDLETRANSPORT_PORT_PREFERENCE, state.value.port.toInt())
-                    }
+                .edit {
+                    putString(BundleTransportService.BUNDLETRANSPORT_DOMAIN_PREFERENCE, state.value.domain)
+                    putInt(BundleTransportService.BUNDLETRANSPORT_PORT_PREFERENCE, state.value.port.toInt())
+                }
             _state.update { it.copy(message = context.getString(R.string.saved)) }
         }
     }
@@ -146,9 +149,9 @@ class ServerUploadViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             _state.update {
                 it.copy(
-                        domain = sharedPref.getString(BundleTransportService.BUNDLETRANSPORT_DOMAIN_PREFERENCE, "")
-                                ?: "",
-                        port = sharedPref.getInt(BundleTransportService.BUNDLETRANSPORT_PORT_PREFERENCE, 0).toString()
+                    domain = sharedPref.getString(BundleTransportService.BUNDLETRANSPORT_DOMAIN_PREFERENCE, "")
+                        ?: "",
+                    port = sharedPref.getInt(BundleTransportService.BUNDLETRANSPORT_PORT_PREFERENCE, 0).toString()
                 )
             }
         }

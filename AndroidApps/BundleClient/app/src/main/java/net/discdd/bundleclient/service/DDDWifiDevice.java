@@ -1,8 +1,9 @@
 package net.discdd.bundleclient.service;
 
-import android.net.wifi.p2p.WifiP2pDevice;
 import net.discdd.client.bundletransmission.TransportDevice;
 import net.discdd.grpc.GetRecencyBlobResponse;
+
+import android.net.wifi.p2p.WifiP2pDevice;
 
 public interface DDDWifiDevice extends TransportDevice, Comparable<DDDWifiDevice> {
 

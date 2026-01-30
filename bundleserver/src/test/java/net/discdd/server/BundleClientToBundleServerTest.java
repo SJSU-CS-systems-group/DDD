@@ -1,9 +1,44 @@
 package net.discdd.server;
 
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
+import static net.discdd.client.bundletransmission.TransportDevice.FAKE_DEVICE;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.security.GeneralSecurityException;
+import java.security.KeyPair;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
+
+import javax.net.ssl.SSLException;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.io.TempDir;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.whispersystems.libsignal.InvalidKeyException;
+
 import com.google.protobuf.ByteString;
-import io.grpc.ManagedChannel;
-import io.grpc.StatusRuntimeException;
-import io.grpc.stub.StreamObserver;
+
 import net.discdd.bundlerouting.RoutingExceptions;
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
 import net.discdd.client.bundletransmission.ClientBundleTransmission;
@@ -24,45 +59,16 @@ import net.discdd.server.repository.SentAduDetailsRepository;
 import net.discdd.tls.DDDNettyTLS;
 import net.discdd.utils.Constants;
 import net.discdd.utils.StoreADUs;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
-import org.junit.jupiter.api.io.TempDir;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.whispersystems.libsignal.InvalidKeyException;
 
-import javax.net.ssl.SSLException;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.security.GeneralSecurityException;
-import java.security.KeyPair;
-import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
-
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
-import static net.discdd.client.bundletransmission.TransportDevice.FAKE_DEVICE;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import io.grpc.ManagedChannel;
+import io.grpc.StatusRuntimeException;
+import io.grpc.stub.StreamObserver;
 
 @SpringBootTest(classes = { BundleServerApplication.class, End2EndTest.End2EndTestInitializer.class })
 @TestMethodOrder(MethodOrderer.MethodName.class)
 public class BundleClientToBundleServerTest extends End2EndTest {
+    public static final int ADU_UPLOAD_SIZE = 10000;
+    public static final int ADU_UPLOAD_COUNT = 4;
     private static final Logger logger = Logger.getLogger(BundleClientToBundleServerTest.class.getName());
     @TempDir
     static Path clientTestRoot;
@@ -75,7 +81,7 @@ public class BundleClientToBundleServerTest extends End2EndTest {
     private static ClientPaths clientPaths;
     private static KeyPair clientKeyPair;
     private static X509Certificate clientCert;
-
+    Random random = new Random(13 /* seed for deterministic testing */);
     @Autowired
     private SentAduDetailsRepository sentAduDetailsRepository;
 
@@ -94,6 +100,92 @@ public class BundleClientToBundleServerTest extends End2EndTest {
         clientId = bundleTransmission.getBundleSecurity().getClientSecurity().getClientID();
         clientKeyPair = grpcKey.grpcKeyPair;
         clientCert = grpcKey.grpcCert;
+    }
+
+    // send the bundle the same way the client does. we should move this code into bundle transmission so we are really
+    // testing the exact code that the client is using
+    private static void sendBundle() throws RoutingExceptions.ClientMetaDataFileException, IOException,
+            InvalidKeyException, GeneralSecurityException {
+
+        Bundle toSend = bundleTransmission.generateBundleForTransmission();
+
+        var bundleUploadResponseObserver = new BundleUploadResponseObserver();
+        StreamObserver<BundleUploadRequest> uploadRequestStreamObserver = stub.withDeadlineAfter(
+                                                                                                 Constants.GRPC_LONG_TIMEOUT_MS,
+                                                                                                 TimeUnit.MILLISECONDS)
+                .uploadBundle(bundleUploadResponseObserver);
+
+        uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder()
+                .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId(toSend.getBundleId()).build())
+                .build());
+
+        // upload file as chunk
+        logger.log(INFO, "Started file transfer");
+        try (FileInputStream inputStream = new FileInputStream(toSend.getSource())) {
+            int chunkSize = 1000 * 1000 * 4;
+            byte[] bytes = new byte[chunkSize];
+            int size;
+            while ((size = inputStream.read(bytes)) != -1) {
+                var uploadRequest = BundleUploadRequest.newBuilder()
+                        .setChunk(BundleChunk.newBuilder().setChunk(ByteString.copyFrom(bytes, 0, size)).build())
+                        .build();
+                uploadRequestStreamObserver.onNext(uploadRequest);
+            }
+        }
+        uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder()
+                .setSenderType(BundleSenderType.CLIENT)
+                .build());
+        uploadRequestStreamObserver.onCompleted();
+        logger.log(INFO, "Completed file transfer");
+        bundleUploadResponseObserver.waitForCompletion(Constants.GRPC_LONG_TIMEOUT_MS);
+        Assertions.assertTrue(bundleUploadResponseObserver.completed,
+                              () -> bundleUploadResponseObserver.throwable.getMessage());
+        assertEquals(Status.SUCCESS, bundleUploadResponseObserver.bundleUploadResponse.getStatus());
+    }
+
+    private static List<String> receiveBundle() throws Exception {
+        var bundleRequests = bundleTransmission.getBundleSecurity()
+                .getClientWindow()
+                .getWindow(bundleTransmission.getBundleSecurity().getClientSecurity());
+        var clientId = bundleTransmission.getBundleSecurity().getClientSecurity().getClientID();
+        var clientSecurity = bundleTransmission.getBundleSecurity().getClientSecurity();
+        var bundleSecurity = bundleTransmission.getBundleSecurity();
+        var receivedBundles = new ArrayList<String>();
+        for (String bundle : bundleRequests) {
+            PublicKeyMap publicKeyMap = PublicKeyMap.newBuilder()
+                    .setClientPub(ByteString.copyFrom(clientSecurity.getClientIdentityPublicKey().serialize()))
+                    .setSignedTLSPub(ByteString.copyFrom(clientSecurity.getSignedTLSPub(bundleSecurity
+                            .getClientGrpcSecurityKey().grpcKeyPair.getPublic())))
+                    .build();
+
+            var downloadRequest = BundleDownloadRequest.newBuilder()
+                    .setSenderType(BundleSenderType.CLIENT)
+                    .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId(bundle).build())
+                    .setPublicKeyMap(publicKeyMap)
+                    .build();
+
+            logger.log(INFO, "Downloading file: " + bundle);
+            var responses = blockingStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                    .downloadBundle(downloadRequest);
+
+            try {
+                Path receivedBundleLocation = clientTestRoot.resolve("BundleTransmission/bundle-generation/to-send")
+                        .resolve(bundle);
+                final OutputStream fileOutputStream = Files.newOutputStream(receivedBundleLocation,
+                                                                            StandardOpenOption.CREATE,
+                                                                            StandardOpenOption.TRUNCATE_EXISTING);
+
+                while (responses.hasNext()) {
+                    var response = responses.next();
+                    fileOutputStream.write(response.getChunk().getChunk().toByteArray());
+                }
+                bundleTransmission.processReceivedBundle(clientId, new Bundle(receivedBundleLocation.toFile()));
+                receivedBundles.add(downloadRequest.getBundleId().getEncryptedId());
+            } catch (StatusRuntimeException e) {
+                logger.log(SEVERE, "Receive bundle failed " + channel, e);
+            }
+        }
+        return receivedBundles;
     }
 
     @BeforeEach
@@ -118,10 +210,6 @@ public class BundleClientToBundleServerTest extends End2EndTest {
         assertEquals(0, recieveStore.getADUs(null, TEST_APPID).count());
 
     }
-
-    Random random = new Random(13 /* seed for deterministic testing */);
-    public static final int ADU_UPLOAD_SIZE = 10000;
-    public static final int ADU_UPLOAD_COUNT = 4;
 
     @Test
     void test3UploadBundleWithADUs() throws Exception {
@@ -155,12 +243,9 @@ public class BundleClientToBundleServerTest extends End2EndTest {
             }
 
             rsp.onNext(ExchangeADUsResponse.newBuilder()
-                               .setLastADUIdReceived(1)
-                               .addAdus(AppDataUnit.newBuilder()
-                                                .setAduId(1)
-                                                .setData(ByteString.copyFromUtf8("SA1"))
-                                                .build())
-                               .build());
+                    .setLastADUIdReceived(1)
+                    .addAdus(AppDataUnit.newBuilder().setAduId(1).setData(ByteString.copyFromUtf8("SA1")).build())
+                    .build());
             rsp.onCompleted();
         });
         checkReceivedFiles(clientId, Set.of());
@@ -195,91 +280,5 @@ public class BundleClientToBundleServerTest extends End2EndTest {
                 .setRecencyBlob(rsp.getRecencyBlob().toBuilder().setBlobTimestamp(System.currentTimeMillis() - 100_000))
                 .build();
         Assertions.assertThrows(IOException.class, () -> bundleTransmission.processRecencyBlob(FAKE_DEVICE, oldBlob));
-    }
-
-    // send the bundle the same way the client does. we should move this code into bundle transmission so we are really
-    // testing the exact code that the client is using
-    private static void sendBundle() throws RoutingExceptions.ClientMetaDataFileException, IOException,
-            InvalidKeyException, GeneralSecurityException {
-
-        Bundle toSend = bundleTransmission.generateBundleForTransmission();
-
-        var bundleUploadResponseObserver = new BundleUploadResponseObserver();
-        StreamObserver<BundleUploadRequest> uploadRequestStreamObserver =
-                stub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                        .uploadBundle(bundleUploadResponseObserver);
-
-        uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder()
-                                                   .setBundleId(EncryptedBundleId.newBuilder()
-                                                                        .setEncryptedId(toSend.getBundleId())
-                                                                        .build())
-                                                   .build());
-
-        // upload file as chunk
-        logger.log(INFO, "Started file transfer");
-        try (FileInputStream inputStream = new FileInputStream(toSend.getSource())) {
-            int chunkSize = 1000 * 1000 * 4;
-            byte[] bytes = new byte[chunkSize];
-            int size;
-            while ((size = inputStream.read(bytes)) != -1) {
-                var uploadRequest = BundleUploadRequest.newBuilder()
-                        .setChunk(BundleChunk.newBuilder().setChunk(ByteString.copyFrom(bytes, 0, size)).build())
-                        .build();
-                uploadRequestStreamObserver.onNext(uploadRequest);
-            }
-        }
-        uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder()
-                                                   .setSenderType(BundleSenderType.CLIENT)
-                                                   .build());
-        uploadRequestStreamObserver.onCompleted();
-        logger.log(INFO, "Completed file transfer");
-        bundleUploadResponseObserver.waitForCompletion(Constants.GRPC_LONG_TIMEOUT_MS);
-        Assertions.assertTrue(bundleUploadResponseObserver.completed,
-                              () -> bundleUploadResponseObserver.throwable.getMessage());
-        assertEquals(Status.SUCCESS, bundleUploadResponseObserver.bundleUploadResponse.getStatus());
-    }
-
-    private static List<String> receiveBundle() throws Exception {
-        var bundleRequests = bundleTransmission.getBundleSecurity()
-                .getClientWindow()
-                .getWindow(bundleTransmission.getBundleSecurity().getClientSecurity());
-        var clientId = bundleTransmission.getBundleSecurity().getClientSecurity().getClientID();
-        var clientSecurity = bundleTransmission.getBundleSecurity().getClientSecurity();
-        var bundleSecurity = bundleTransmission.getBundleSecurity();
-        var receivedBundles = new ArrayList<String>();
-        for (String bundle : bundleRequests) {
-            PublicKeyMap publicKeyMap = PublicKeyMap.newBuilder()
-                    .setClientPub(ByteString.copyFrom(clientSecurity.getClientIdentityPublicKey().serialize()))
-                    .setSignedTLSPub(ByteString.copyFrom(clientSecurity.getSignedTLSPub(bundleSecurity.getClientGrpcSecurityKey().grpcKeyPair.getPublic())))
-                    .build();
-
-            var downloadRequest = BundleDownloadRequest.newBuilder()
-                    .setSenderType(BundleSenderType.CLIENT)
-                    .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId(bundle).build())
-                    .setPublicKeyMap(publicKeyMap)
-                    .build();
-
-            logger.log(INFO, "Downloading file: " + bundle);
-            var responses = blockingStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                    .downloadBundle(downloadRequest);
-
-            try {
-                Path receivedBundleLocation =
-                        clientTestRoot.resolve("BundleTransmission/bundle-generation/to-send").resolve(bundle);
-                final OutputStream fileOutputStream = Files.newOutputStream(receivedBundleLocation,
-                                                                            StandardOpenOption.CREATE,
-                                                                            StandardOpenOption.TRUNCATE_EXISTING);
-
-                while (responses.hasNext()) {
-                    var response = responses.next();
-                    fileOutputStream.write(response.getChunk().getChunk().toByteArray());
-                }
-                bundleTransmission.processReceivedBundle(clientId, new Bundle(receivedBundleLocation.toFile()));
-                receivedBundles.add(downloadRequest.getBundleId().getEncryptedId());
-            } catch (StatusRuntimeException e) {
-                logger.log(SEVERE, "Receive bundle failed " + channel, e);
-            }
-        }
-        return receivedBundles;
     }
 }

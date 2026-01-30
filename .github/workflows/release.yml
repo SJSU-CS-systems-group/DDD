@@ -57,11 +57,11 @@ jobs:
       - name: Get version name
         id: version
         run: |
-              VERSION_NAME=$(grep appVersionName AndroidApps/build.gradle | sed "s/.*'\(.*\)'.*/\1/")
-              VERSION_NAME=${VERSION_NAME%%_*}
-              VERSION_NAME="${VERSION_NAME}_$(git rev-parse --short HEAD)"
-              sed -i "s/appVersionName \?= \?['\"].*['\"]/appVersionName = '${VERSION_NAME}'/" AndroidApps/build.gradle
-              echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_OUTPUT
+          VERSION_NAME=$(grep appVersionName AndroidApps/build.gradle | sed "s/.*'\(.*\)'.*/\1/")
+          VERSION_NAME=${VERSION_NAME%%_*}
+          VERSION_NAME="${VERSION_NAME}_$(git rev-parse --short HEAD)"
+          sed -i "s/appVersionName \?= \?['\"].*['\"]/appVersionName = '${VERSION_NAME}'/" AndroidApps/build.gradle
+          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -71,10 +71,10 @@ jobs:
           draft: false
           prerelease: false
           files: |
-                DDDClient.aab
-                DDDClient.apk
-                DDDTransport.aab
-                DDDTransport.apk
+            DDDClient.aab
+            DDDClient.apk
+            DDDTransport.aab
+            DDDTransport.apk
         env:
-              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

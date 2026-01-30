@@ -23,7 +23,8 @@ sudo docker run -it \
 ```
 
 go to https://github.com/SJSU-CS-systems-group/DDD/settings/actions/runners and create a new runner.
-use the token from the ./config.sh line in the example script you see as TOKEN_FROM_GITHUB_NEW_RUNNER in the script below.
+use the token from the ./config.sh line in the example script you see as TOKEN_FROM_GITHUB_NEW_RUNNER in the script
+below.
 
 in the bash shell of the docker container, do the following:
 
@@ -33,7 +34,6 @@ cd actions-runner
 ```
 
 we now need to delete and rerun the container to use the default entry point:
-
 
 ```
 sudo docker stop gha-android-runner

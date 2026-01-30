@@ -1,12 +1,12 @@
 package net.discdd.server.service;
 
+import java.util.concurrent.Executor;
+import java.util.logging.Logger;
+
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.concurrent.Executor;
-import java.util.logging.Logger;
 
 /**
  * This crazy code is used to execute gRPC calls in a transactional context.

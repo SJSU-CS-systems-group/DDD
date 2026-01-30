@@ -1,19 +1,21 @@
 package net.discdd.app.cli;
 
-import com.github.stefanbirkner.systemlambda.SystemLambda;
-import net.discdd.cli.EncryptBundle;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.junit.jupiter.MockitoExtension;
-import picocli.CommandLine;
+import static net.discdd.app.cli.TestUtils.escapeBackslash;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
-import static net.discdd.app.cli.TestUtils.escapeBackslash;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import com.github.stefanbirkner.systemlambda.SystemLambda;
+
+import net.discdd.cli.EncryptBundle;
+
+import picocli.CommandLine;
 
 @ExtendWith(MockitoExtension.class)
 class EncryptBundleTest {
@@ -36,8 +38,8 @@ class EncryptBundleTest {
     }
 
     void noTestEncryptBundle() throws Exception {
-        appProps = TestUtils.createResource(
-                "bundle-server.bundle-store-root = " + escapeBackslash(baseDirPath + File.separator));
+        appProps = TestUtils.createResource("bundle-server.bundle-store-root = " + escapeBackslash(baseDirPath +
+                File.separator));
         String expectedOutput = "Encrypting bundle\n" + "Finished encrypting\n";
         StringBuilder sb = new StringBuilder();
         String errText = SystemLambda.tapSystemErr(() -> {

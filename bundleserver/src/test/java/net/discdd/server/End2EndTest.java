@@ -1,45 +1,8 @@
 package net.discdd.server;
 
-import io.grpc.stub.StreamObserver;
-import net.discdd.bundlesecurity.BundleIDGenerator;
-import net.discdd.bundlesecurity.DDDPEMEncoder;
-import net.discdd.bundlesecurity.SecurityUtils;
-import net.discdd.grpc.ExchangeADUsRequest;
-import net.discdd.grpc.ExchangeADUsResponse;
-import net.discdd.grpc.PendingDataCheckRequest;
-import net.discdd.grpc.PendingDataCheckResponse;
-import net.discdd.grpc.ServiceAdapterServiceGrpc;
-import net.discdd.model.ADU;
-import net.discdd.server.repository.RegisteredAppAdapterRepository;
-import net.discdd.server.repository.entity.RegisteredAppAdapter;
-import net.discdd.tls.DDDNettyTLS;
-import net.discdd.tls.DDDTLSUtil;
-import net.discdd.utils.BundleUtils;
-import org.bouncycastle.operator.OperatorCreationException;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.io.TempDir;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import org.whispersystems.libsignal.IdentityKey;
-import org.whispersystems.libsignal.IdentityKeyPair;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.InvalidMessageException;
-import org.whispersystems.libsignal.SessionCipher;
-import org.whispersystems.libsignal.SignalProtocolAddress;
-import org.whispersystems.libsignal.ecc.Curve;
-import org.whispersystems.libsignal.ecc.ECKeyPair;
-import org.whispersystems.libsignal.ratchet.AliceSignalProtocolParameters;
-import org.whispersystems.libsignal.ratchet.RatchetingSession;
-import org.whispersystems.libsignal.state.SessionRecord;
-import org.whispersystems.libsignal.state.impl.InMemorySignalProtocolStore;
+import static net.discdd.bundlesecurity.DDDPEMEncoder.ECPrivateKeyType;
+import static net.discdd.bundlesecurity.DDDPEMEncoder.ECPublicKeyType;
 
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -66,8 +29,48 @@ import java.util.function.BiConsumer;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-import static net.discdd.bundlesecurity.DDDPEMEncoder.ECPrivateKeyType;
-import static net.discdd.bundlesecurity.DDDPEMEncoder.ECPublicKeyType;
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+
+import org.bouncycastle.operator.OperatorCreationException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.io.TempDir;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.whispersystems.libsignal.IdentityKey;
+import org.whispersystems.libsignal.IdentityKeyPair;
+import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.InvalidMessageException;
+import org.whispersystems.libsignal.SessionCipher;
+import org.whispersystems.libsignal.SignalProtocolAddress;
+import org.whispersystems.libsignal.ecc.Curve;
+import org.whispersystems.libsignal.ecc.ECKeyPair;
+import org.whispersystems.libsignal.ratchet.AliceSignalProtocolParameters;
+import org.whispersystems.libsignal.ratchet.RatchetingSession;
+import org.whispersystems.libsignal.state.SessionRecord;
+import org.whispersystems.libsignal.state.impl.InMemorySignalProtocolStore;
+
+import net.discdd.bundlesecurity.BundleIDGenerator;
+import net.discdd.bundlesecurity.DDDPEMEncoder;
+import net.discdd.bundlesecurity.SecurityUtils;
+import net.discdd.grpc.ExchangeADUsRequest;
+import net.discdd.grpc.ExchangeADUsResponse;
+import net.discdd.grpc.PendingDataCheckRequest;
+import net.discdd.grpc.PendingDataCheckResponse;
+import net.discdd.grpc.ServiceAdapterServiceGrpc;
+import net.discdd.model.ADU;
+import net.discdd.server.repository.RegisteredAppAdapterRepository;
+import net.discdd.server.repository.entity.RegisteredAppAdapter;
+import net.discdd.tls.DDDNettyTLS;
+import net.discdd.tls.DDDTLSUtil;
+import net.discdd.utils.BundleUtils;
+
+import io.grpc.stub.StreamObserver;
 
 public class End2EndTest {
     public static final String TEST_APPID = "testAppId";
@@ -170,8 +173,8 @@ public class End2EndTest {
     protected static String encryptBundleID(String bundleID) throws InvalidKeyException,
             InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException,
             NoSuchAlgorithmException, InvalidKeySpecException, BadPaddingException, java.security.InvalidKeyException {
-        byte[] agreement =
-                Curve.calculateAgreement(serverIdentity.getPublicKey().getPublicKey(), clientIdentity.getPrivateKey());
+        byte[] agreement = Curve.calculateAgreement(serverIdentity.getPublicKey().getPublicKey(),
+                                                    clientIdentity.getPrivateKey());
 
         String secretKey = Base64.getUrlEncoder().encodeToString(agreement);
 
@@ -179,12 +182,10 @@ public class End2EndTest {
 
     }
 
-    protected static Path createBundleForAdus(List<Long> aduIds,
-                                              String clientId,
-                                              int bundleCount,
-                                              Path targetDir) throws IOException, NoSuchAlgorithmException,
-            InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException,
-            InvalidKeySpecException, BadPaddingException, java.security.InvalidKeyException {
+    protected static Path createBundleForAdus(List<Long> aduIds, String clientId, int bundleCount, Path targetDir)
+            throws IOException, NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException,
+            NoSuchPaddingException, IllegalBlockSizeException, InvalidKeySpecException, BadPaddingException,
+            java.security.InvalidKeyException {
 
         var baos = new ByteArrayOutputStream();
         var adus = aduIds.stream().map(aduId -> {
@@ -209,8 +210,8 @@ public class End2EndTest {
                                             StandardOpenOption.CREATE,
                                             StandardOpenOption.TRUNCATE_EXISTING)) {
             BundleUtils.encryptPayloadAndCreateBundle((inputStream, outputStream) -> clientSessionCipher.encrypt(
-                                                              inputStream,
-                                                              outputStream),
+                                                                                                                 inputStream,
+                                                                                                                 outputStream),
                                                       clientIdentity.getPublicKey().getPublicKey(),
                                                       baseKeyPair.getPublicKey(),
                                                       serverIdentity.getPublicKey().getPublicKey(),
@@ -313,8 +314,8 @@ public class End2EndTest {
         ConcurrentHashMap<String, String> clientsWithData = new ConcurrentHashMap<>();
         ArrayBlockingQueue<AdapterRequestResponse> incomingRequests = new ArrayBlockingQueue<>(1);
 
-        public void handleRequest(BiConsumer<ExchangeADUsRequest, StreamObserver<ExchangeADUsResponse>> handler) throws
-                InterruptedException {
+        public void handleRequest(BiConsumer<ExchangeADUsRequest, StreamObserver<ExchangeADUsResponse>> handler)
+                throws InterruptedException {
             var handlerFuture = incomingRequests.poll(30, TimeUnit.SECONDS);
             if (handlerFuture == null) throw new IllegalStateException("No request received");
             handler.accept(handlerFuture.request, handlerFuture.response);
@@ -323,8 +324,9 @@ public class End2EndTest {
         @Override
         public void pendingDataCheck(PendingDataCheckRequest request,
                                      StreamObserver<PendingDataCheckResponse> responseObserver) {
-            PendingDataCheckResponse pendingClients =
-                    PendingDataCheckResponse.newBuilder().addAllClientId(clientsWithData.keySet()).build();
+            PendingDataCheckResponse pendingClients = PendingDataCheckResponse.newBuilder()
+                    .addAllClientId(clientsWithData.keySet())
+                    .build();
             logger.info("Returning from pendingDataCheck: " + pendingClients);
             responseObserver.onNext(pendingClients);
             responseObserver.onCompleted();

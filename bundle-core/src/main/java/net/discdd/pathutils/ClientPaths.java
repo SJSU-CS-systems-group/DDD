@@ -1,34 +1,24 @@
 package net.discdd.pathutils;
 
-import net.discdd.bundlesecurity.SecurityUtils;
-import net.discdd.utils.Constants;
-import net.discdd.utils.FileUtils;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import net.discdd.bundlesecurity.SecurityUtils;
+import net.discdd.utils.Constants;
+import net.discdd.utils.FileUtils;
+
 public class ClientPaths {
-    // client security
-    public final Path sessionStorePath;
-    public final Path clientKeyPath;
     // client window
     public static final String CLIENT_WINDOW_SUBDIR = "ClientWindow";
+    public static final Long APP_DATA_SIZE_LIMIT = 1000000000L;
+    public static final Long BUNDLE_SIZE_LIMIT = 100_000_000L;
     private static final String WINDOW_FILE = "clientWindow.csv";
-    public final Path clientWindowDataPath;
-    public final Path dbFile;
-
-    // client bundle generator
-    public final Path counterFilePath;
-    public final java.io.File metadataFile;
-
     // client routing
     private static final String METADATAFILE = "routing.metadata";
-
     // BundleSecurity directory
     private static final String BUNDLE_ID_NEXT_COUNTER = "Shared/DB/BUNDLE_ID_NEXT_COUNTER.txt";
-
     /* Bundle generation directory */
     private static final String BUNDLE_GENERATION_DIRECTORY = "BundleTransmission/bundle-generation";
     private static final String TO_BE_BUNDLED_DIRECTORY = "to-be-bundled";
@@ -41,10 +31,14 @@ public class ClientPaths {
     private static final String RECEIVED_BUNDLES_DIRECTORY = "Shared/received-bundles";
     private static final String SENT_BUNDLE_DETAILS = "Shared/DB/SENT_BUNDLE_DETAILS.json";
     private static final String LAST_SENT_BUNDLE_STRUCTURE = "Shared/DB/LAST_SENT_BUNDLE_STRUCTURE.json";
-
-    public static final Long APP_DATA_SIZE_LIMIT = 1000000000L;
-    public static final Long BUNDLE_SIZE_LIMIT = 100_000_000L;
-
+    // client security
+    public final Path sessionStorePath;
+    public final Path clientKeyPath;
+    public final Path clientWindowDataPath;
+    public final Path dbFile;
+    // client bundle generator
+    public final Path counterFilePath;
+    public final java.io.File metadataFile;
     public final Path ackRecordPath;
     public final Path crashReportPath;
     public final Path tosendDir;
@@ -76,8 +70,8 @@ public class ClientPaths {
      * makes sure the keypaths are created in non disruptive manner except for the server keys which will
      * overwrite existing keys if they are provided. if the keys are null, they will be ignored.
      */
-    public ClientPaths(Path rootDir, byte[] serverIdentity, byte[] serverSignedPre, byte[] serverRatchet) throws
-            IOException {
+    public ClientPaths(Path rootDir, byte[] serverIdentity, byte[] serverSignedPre, byte[] serverRatchet)
+            throws IOException {
         // Bundle generation directory
         bundleGenerationDir = rootDir.resolve(BUNDLE_GENERATION_DIRECTORY);
         toBeBundledDir = rootDir.resolve(TO_BE_BUNDLED_DIRECTORY);

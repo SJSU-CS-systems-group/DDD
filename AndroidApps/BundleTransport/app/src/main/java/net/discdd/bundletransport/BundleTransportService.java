@@ -1,5 +1,38 @@
 package net.discdd.bundletransport;
 
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static net.discdd.AndroidAppConstants.BUNDLE_SERVER_DOMAIN;
+import static net.discdd.AndroidAppConstants.BUNDLE_SERVER_PORT;
+import static net.discdd.utils.UserLogRepository.UserLogType.EXCHANGE;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.cert.CertificateException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import org.bouncycastle.operator.OperatorCreationException;
+
+import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
+import net.discdd.bundlesecurity.SecurityUtils;
+import net.discdd.bundletransport.wifi.DDDWifiServer;
+import net.discdd.grpc.GetRecencyBlobResponse;
+import net.discdd.pathutils.TransportPaths;
+import net.discdd.screens.LogFragment;
+import net.discdd.tls.GrpcSecurityKey;
+import net.discdd.transport.TransportToBundleServerManager;
+import net.discdd.utils.DDDFixedRateScheduler;
+import net.discdd.utils.LogUtil;
+import net.discdd.utils.UserLogRepository;
+
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -18,37 +51,6 @@ import android.util.Base64;
 import androidx.annotation.StringRes;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
-import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
-import net.discdd.bundlesecurity.SecurityUtils;
-import net.discdd.bundletransport.wifi.DDDWifiServer;
-import net.discdd.grpc.GetRecencyBlobResponse;
-import net.discdd.pathutils.TransportPaths;
-import net.discdd.screens.LogFragment;
-import net.discdd.tls.GrpcSecurityKey;
-import net.discdd.transport.TransportToBundleServerManager;
-import net.discdd.utils.DDDFixedRateScheduler;
-import net.discdd.utils.LogUtil;
-import net.discdd.utils.UserLogRepository;
-import org.bouncycastle.operator.OperatorCreationException;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.cert.CertificateException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static net.discdd.AndroidAppConstants.BUNDLE_SERVER_DOMAIN;
-import static net.discdd.AndroidAppConstants.BUNDLE_SERVER_PORT;
-import static net.discdd.utils.UserLogRepository.UserLogType.EXCHANGE;
 
 /**
  * This service handles the Wifi Direct group and the gRPC server.
@@ -59,7 +61,6 @@ import static net.discdd.utils.UserLogRepository.UserLogType.EXCHANGE;
  * returns a reference to this service.
  */
 public class BundleTransportService extends Service implements BundleExchangeServiceImpl.BundleExchangeEventListener {
-    ExecutorService executor = Executors.newCachedThreadPool();
     public static final String BUNDLETRANSPORT_PREFERENCES = "net.discdd.bundletransport";
     public static final String BUNDLETRANSPORT_DOMAIN_PREFERENCE = "domain";
     public static final String BUNDLETRANSPORT_PORT_PREFERENCE = "port";
@@ -69,20 +70,21 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     private final RpcServer grpcServer = new RpcServer(this);
     public GrpcSecurityKey grpcKeys;
     public String transportId;
+    ExecutorService executor = Executors.newCachedThreadPool();
     String host;
     int port;
     ConnectivityManager connectivityManager;
     private TransportPaths transportPaths;
     private DDDFixedRateScheduler<Void> periodicExchangeScheduler;
-    final private SharedPreferences.OnSharedPreferenceChangeListener preferenceChangeListener =
-            (sharedPreferences, key) -> {
-                switch (key) {
-                    case BUNDLETRANSPORT_DOMAIN_PREFERENCE -> host = sharedPreferences.getString(key, "");
-                    case BUNDLETRANSPORT_PORT_PREFERENCE -> port = sharedPreferences.getInt(key, 0);
-                    case BUNDLETRANSPORT_PERIODIC_PREFERENCE ->
-                            periodicExchangeScheduler.setPeriodInMinutes(sharedPreferences.getInt(key, 0));
-                }
-            };
+    final private SharedPreferences.OnSharedPreferenceChangeListener preferenceChangeListener = (sharedPreferences,
+                                                                                                 key) -> {
+        switch (key) {
+            case BUNDLETRANSPORT_DOMAIN_PREFERENCE -> host = sharedPreferences.getString(key, "");
+            case BUNDLETRANSPORT_PORT_PREFERENCE -> port = sharedPreferences.getInt(key, 0);
+            case BUNDLETRANSPORT_PERIODIC_PREFERENCE -> periodicExchangeScheduler.setPeriodInMinutes(sharedPreferences
+                    .getInt(key, 0));
+        }
+    };
     private FileHttpServer httpServer;
     private boolean httpServerRunning = false;
     private DDDWifiServer dddWifiServer;
@@ -94,8 +96,8 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     private Void doServerExchange() {
         var activeNetwork = connectivityManager.getActiveNetwork();
         var caps = activeNetwork == null ? null : connectivityManager.getNetworkCapabilities(activeNetwork);
-        if (caps == null || !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) ||
-                !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
+        if (caps == null || !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) || !caps.hasCapability(
+                                                                                                                    NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
             logExchange(INFO, R.string.no_internet_connection_available_skipping_server_exchange);
             return null;
         }
@@ -120,19 +122,23 @@ public class BundleTransportService extends Service implements BundleExchangeSer
         return null;
     }
 
-    public void logWifi(Level level, Throwable ex, @StringRes int resId, Object... args) {
+    public void logWifi(Level level, Throwable ex, @StringRes
+    int resId, Object... args) {
         LogUtil.logUi(getApplicationContext(), logger, UserLogRepository.UserLogType.WIFI, level, ex, resId, args);
     }
 
-    public void logWifi(Level level, @StringRes int resId, Object... args) {
+    public void logWifi(Level level, @StringRes
+    int resId, Object... args) {
         LogUtil.logUi(getApplicationContext(), logger, UserLogRepository.UserLogType.WIFI, level, resId, args);
     }
 
-    void logExchange(Level level, Throwable throwable, @StringRes int resId, Object... args) {
+    void logExchange(Level level, Throwable throwable, @StringRes
+    int resId, Object... args) {
         LogUtil.logUi(getApplicationContext(), logger, EXCHANGE, level, throwable, resId, args);
     }
 
-    void logExchange(Level level, @StringRes int resId, Object... args) {
+    void logExchange(Level level, @StringRes
+    int resId, Object... args) {
         LogUtil.logUi(getApplicationContext(), logger, EXCHANGE, level, resId, args);
     }
 
@@ -167,8 +173,8 @@ public class BundleTransportService extends Service implements BundleExchangeSer
             // BundleTransportService doesn't use LogFragment directly, but we do want our
             // logs to go to its logger
             LogFragment.registerLoggerHandler();
-            SharedPreferences sharedPreferences =
-                    getSharedPreferences(BUNDLETRANSPORT_PREFERENCES, Context.MODE_PRIVATE);
+            SharedPreferences sharedPreferences = getSharedPreferences(BUNDLETRANSPORT_PREFERENCES,
+                                                                       Context.MODE_PRIVATE);
             host = sharedPreferences.getString(BUNDLETRANSPORT_DOMAIN_PREFERENCE, BUNDLE_SERVER_DOMAIN);
             port = sharedPreferences.getInt(BUNDLETRANSPORT_PORT_PREFERENCE, BUNDLE_SERVER_PORT);
             periodicExchangeScheduler = new DDDFixedRateScheduler<>(getApplicationContext(), this::doServerExchange);
@@ -197,9 +203,9 @@ public class BundleTransportService extends Service implements BundleExchangeSer
             NotificationManager notificationManager = getSystemService(NotificationManager.class);
             notificationManager.createNotificationChannel(channel);
 
-            Notification notification =
-                    new NotificationCompat.Builder(this, "DDD-Transport").setContentTitle("DDD Bundle Transport")
-                            .build();
+            Notification notification = new NotificationCompat.Builder(this, "DDD-Transport").setContentTitle(
+                                                                                                              "DDD Bundle Transport")
+                    .build();
             int type = ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC;
             ServiceCompat.startForeground(this, 1, notification, type);
         } catch (Exception e) {
@@ -274,20 +280,15 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     }
 
     @Override
-    public void onBundleExchangeEvent(BundleExchangeServiceImpl.BundleExchangeEvent exchangeEvent) {
-    }
+    public void onBundleExchangeEvent(BundleExchangeServiceImpl.BundleExchangeEvent exchangeEvent) {}
 
-    public DDDWifiServer getDddWifiServer() {
-        return dddWifiServer;
-    }
+    public DDDWifiServer getDddWifiServer() { return dddWifiServer; }
 
     public void wifiPermissionGranted() {
         dddWifiServer.wifiPermissionGranted();
     }
 
-    public String getBundleServerURL() {
-        return host + ":" + port;
-    }
+    public String getBundleServerURL() { return host + ":" + port; }
 
     public void updateRecencyBlob() {
         var response = GetRecencyBlobResponse.getDefaultInstance();
@@ -301,8 +302,6 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     }
 
     public class TransportWifiDirectServiceBinder extends Binder {
-        BundleTransportService getService() {
-            return BundleTransportService.this;
-        }
+        BundleTransportService getService() { return BundleTransportService.this; }
     }
 }

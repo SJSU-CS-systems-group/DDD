@@ -1,14 +1,6 @@
 package net.discdd.crashreports;
 
-import android.content.Context;
-
-import com.google.auto.service.AutoService;
-import org.acra.config.CoreConfiguration;
-import org.acra.data.CrashReportData;
-import org.acra.sender.ReportSender;
-import org.acra.sender.ReportSenderException;
-import org.acra.sender.ReportSenderFactory;
-import org.jetbrains.annotations.NotNull;
+import static java.util.logging.Level.INFO;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -19,12 +11,20 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.INFO;
+import org.acra.config.CoreConfiguration;
+import org.acra.data.CrashReportData;
+import org.acra.sender.ReportSender;
+import org.acra.sender.ReportSenderException;
+import org.acra.sender.ReportSenderFactory;
+import org.jetbrains.annotations.NotNull;
+
+import com.google.auto.service.AutoService;
+
+import android.content.Context;
 
 public class LocalReportSender implements ReportSender {
-    private static final Logger logger = Logger.getLogger(LocalReportSender.class.getName());
     static final int MAX_AMOUNT_REPORTS = 5;
-
+    private static final Logger logger = Logger.getLogger(LocalReportSender.class.getName());
     CoreConfiguration config;
 
     public LocalReportSender(CoreConfiguration coreConfiguration) {
@@ -111,7 +111,9 @@ public class LocalReportSender implements ReportSender {
     public static class MySenderFactory implements ReportSenderFactory {
         @NotNull
         @Override
-        public ReportSender create(@NotNull Context context, @NotNull CoreConfiguration coreConfiguration) {
+        public ReportSender create(@NotNull
+        Context context, @NotNull
+        CoreConfiguration coreConfiguration) {
             return new LocalReportSender(coreConfiguration);
         }
     }

@@ -1,7 +1,24 @@
 package net.discdd.bundlesecurity;
 
-import lombok.NonNull;
-import net.discdd.bundlesecurity.SecurityUtils.ClientSession;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.SEVERE;
+import static net.discdd.bundlesecurity.SecurityUtils.CLIENT_BASE_KEY;
+import static net.discdd.bundlesecurity.SecurityUtils.CLIENT_IDENTITY_KEY;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+import java.security.GeneralSecurityException;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.logging.Logger;
+
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
@@ -22,24 +39,9 @@ import org.whispersystems.libsignal.state.SessionState;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.util.guava.Optional;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
-import java.security.GeneralSecurityException;
-import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.logging.Logger;
+import net.discdd.bundlesecurity.SecurityUtils.ClientSession;
 
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.SEVERE;
-import static net.discdd.bundlesecurity.SecurityUtils.CLIENT_BASE_KEY;
-import static net.discdd.bundlesecurity.SecurityUtils.CLIENT_IDENTITY_KEY;
+import lombok.NonNull;
 
 public class ServerSecurity {
 
@@ -83,12 +85,11 @@ public class ServerSecurity {
 
             e.printStackTrace();
             logger.log(SEVERE,
-                       String.format(
-                               "Error loading server keys. Ensure the following key files exist in your application" +
-                                       ".yml's " + "{bundle-server.bundle-security.server-serverkeys-path} path: %s\n" +
-                                       "server_identity.pub, serverIdentity.pvt, server_signed_pre.pub, " +
-                                       "serverSignedPreKey.pvt, " + "server_ratchet.pub, serverRatchetKey.pvt\n",
-                               serverKeyPath));
+                       String.format("Error loading server keys. Ensure the following key files exist in your application" +
+                               ".yml's " + "{bundle-server.bundle-security.server-serverkeys-path} path: %s\n" +
+                               "server_identity.pub, serverIdentity.pvt, server_signed_pre.pub, " +
+                               "serverSignedPreKey.pvt, " + "server_ratchet.pub, serverRatchetKey.pvt\n",
+                                     serverKeyPath));
             throw new RuntimeException("Bad keys");
         }
         //     try {
@@ -131,24 +132,24 @@ public class ServerSecurity {
      *      InvalidKeyException:    Thrown if the file has an invalid key
      */
     private void loadKeysfromFiles(Path serverKeyPath) throws IOException, InvalidKeyException {
-        byte[] identityKey =
-                DDDPEMEncoder.decodePrivateKeyFromFile(serverKeyPath.resolve(SecurityUtils.SERVER_IDENTITY_PRIVATE_KEY));
+        byte[] identityKey = DDDPEMEncoder.decodePrivateKeyFromFile(serverKeyPath.resolve(
+                                                                                          SecurityUtils.SERVER_IDENTITY_PRIVATE_KEY));
         ourIdentityKeyPair = new IdentityKeyPair(identityKey);
 
-        byte[] signedPreKeyPvt =
-                DDDPEMEncoder.decodePrivateKeyFromFile(serverKeyPath.resolve(SecurityUtils.SERVER_SIGNEDPRE_PRIVATE_KEY));
-        byte[] signedPreKeyPub =
-                DDDPEMEncoder.decodePublicKeyfromFile(serverKeyPath.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY));
+        byte[] signedPreKeyPvt = DDDPEMEncoder.decodePrivateKeyFromFile(serverKeyPath.resolve(
+                                                                                              SecurityUtils.SERVER_SIGNEDPRE_PRIVATE_KEY));
+        byte[] signedPreKeyPub = DDDPEMEncoder.decodePublicKeyfromFile(serverKeyPath.resolve(
+                                                                                             SecurityUtils.SERVER_SIGNED_PRE_KEY));
 
         ECPublicKey signedPreKeyPublicKey = Curve.decodePoint(signedPreKeyPub, 0);
         ECPrivateKey signedPreKeyPrivateKey = Curve.decodePrivatePoint(signedPreKeyPvt);
 
         ourSignedPreKey = new ECKeyPair(signedPreKeyPublicKey, signedPreKeyPrivateKey);
 
-        byte[] ratchetKeyPvt =
-                DDDPEMEncoder.decodePrivateKeyFromFile(serverKeyPath.resolve(SecurityUtils.SERVER_RATCHET_PRIVATE_KEY));
-        byte[] ratchetKeyPub =
-                DDDPEMEncoder.decodePublicKeyfromFile(serverKeyPath.resolve(SecurityUtils.SERVER_RATCHET_KEY));
+        byte[] ratchetKeyPvt = DDDPEMEncoder.decodePrivateKeyFromFile(serverKeyPath.resolve(
+                                                                                            SecurityUtils.SERVER_RATCHET_PRIVATE_KEY));
+        byte[] ratchetKeyPub = DDDPEMEncoder.decodePublicKeyfromFile(serverKeyPath.resolve(
+                                                                                           SecurityUtils.SERVER_RATCHET_KEY));
 
         ECPublicKey ratchetKeyPublicKey = Curve.decodePoint(ratchetKeyPub, 0);
         ECPrivateKey ratchetKeyPrivateKey = Curve.decodePrivatePoint(ratchetKeyPvt);
@@ -199,9 +200,8 @@ public class ServerSecurity {
             InvalidKeyException {
         byte[] clientIdentityKey;
         try {
-            String clientIdentityKeyBase64 =
-                    DDDPEMEncoder.decodeEncryptedPublicKeyfromFile(ourIdentityKeyPair.getPrivateKey(),
-                                                                   path.resolve(CLIENT_IDENTITY_KEY));
+            String clientIdentityKeyBase64 = DDDPEMEncoder.decodeEncryptedPublicKeyfromFile(ourIdentityKeyPair
+                    .getPrivateKey(), path.resolve(CLIENT_IDENTITY_KEY));
             clientIdentityKey = Base64.getUrlDecoder().decode(clientIdentityKeyBase64);
         } catch (NoSuchAlgorithmException e) {
             throw new InvalidKeyException("No such algorithm", e);
@@ -212,8 +212,8 @@ public class ServerSecurity {
         clientSession.BaseKey = Curve.decodePoint(clientBaseKey, 0);
     }
 
-    private void initializeRatchet(SessionState serverSessionState, ClientSession clientSession) throws
-            InvalidKeyException {
+    private void initializeRatchet(SessionState serverSessionState, ClientSession clientSession)
+            throws InvalidKeyException {
         BobSignalProtocolParameters parameters = BobSignalProtocolParameters.newBuilder()
                 .setOurRatchetKey(ourRatchetKey)
                 .setOurSignedPreKey(ourSignedPreKey)
@@ -269,8 +269,8 @@ public class ServerSecurity {
     }
 
     private String getsharedSecret(ClientSession client) throws InvalidKeyException {
-        byte[] agreement =
-                Curve.calculateAgreement(client.IdentityKey.getPublicKey(), ourIdentityKeyPair.getPrivateKey());
+        byte[] agreement = Curve.calculateAgreement(client.IdentityKey.getPublicKey(),
+                                                    ourIdentityKeyPair.getPrivateKey());
         String secretKey = Base64.getUrlEncoder().encodeToString(agreement);
         return secretKey;
     }
@@ -288,8 +288,8 @@ public class ServerSecurity {
             throw new InvalidClientIDException("Failed to get client [" + clientID + "]", null);
         }
 
-        byte[] agreement =
-                Curve.calculateAgreement(client.IdentityKey.getPublicKey(), ourIdentityKeyPair.getPrivateKey());
+        byte[] agreement = Curve.calculateAgreement(client.IdentityKey.getPublicKey(),
+                                                    ourIdentityKeyPair.getPrivateKey());
         String secretKey = Base64.getUrlEncoder().encodeToString(agreement);
         return secretKey;
     }
@@ -348,8 +348,8 @@ public class ServerSecurity {
         return SecurityUtils.encryptAesCbcPkcs5(sharedSecret, bundleID);
     }
 
-    public String createEncryptedBundleId(String clientId, long bundleCounter, boolean downstream) throws
-            InvalidClientIDException, GeneralSecurityException, InvalidKeyException, IOException {
+    public String createEncryptedBundleId(String clientId, long bundleCounter, boolean downstream)
+            throws InvalidClientIDException, GeneralSecurityException, InvalidKeyException, IOException {
         var bundleId = BundleIDGenerator.generateBundleID(clientId, bundleCounter, downstream);
         return encryptBundleID(bundleId, clientId);
     }
@@ -384,13 +384,9 @@ public class ServerSecurity {
         return new String(bundleIDBytes, StandardCharsets.UTF_8);
     }
 
-    public Path getServerRootPath() {
-        return serverRootPath;
-    }
+    public Path getServerRootPath() { return serverRootPath; }
 
-    public Path getClientRootPath() {
-        return clientRootPath;
-    }
+    public Path getClientRootPath() { return clientRootPath; }
 
     public long getCounterFromBundlePath(Path bundlePath, boolean direction) throws IOException, InvalidKeyException,
             GeneralSecurityException {
@@ -400,15 +396,16 @@ public class ServerSecurity {
 
         ServerSecurity serverSecurityInstance = ServerSecurity.getInstance(bundlePath.getParent());
         ECPrivateKey ServerPrivKey = serverSecurityInstance.getSigningKey();
-        var clientIdentityKeyBase64 =
-                DDDPEMEncoder.decodeEncryptedPublicKeyfromFile(ServerPrivKey, bundlePath.resolve(CLIENT_IDENTITY_KEY));
+        var clientIdentityKeyBase64 = DDDPEMEncoder.decodeEncryptedPublicKeyfromFile(ServerPrivKey,
+                                                                                     bundlePath.resolve(
+                                                                                                        CLIENT_IDENTITY_KEY));
         byte[] clientIdentityKeyBytes = Base64.getUrlDecoder().decode(clientIdentityKeyBase64);
         IdentityKey clientIdentityKey = new IdentityKey(clientIdentityKeyBytes, 0);
 
         String sharedSecret = getsharedSecret(clientIdentityKey.getPublicKey());
 
-        byte[] bundleIDbytes =
-                SecurityUtils.decryptAesCbcPkcs5(sharedSecret, new String(encryptedBundleID, StandardCharsets.UTF_8));
+        byte[] bundleIDbytes = SecurityUtils.decryptAesCbcPkcs5(sharedSecret,
+                                                                new String(encryptedBundleID, StandardCharsets.UTF_8));
 
         receivedBundleID = new String(bundleIDbytes, StandardCharsets.UTF_8);
         return BundleIDGenerator.getCounterFromBundleID(receivedBundleID, direction);
@@ -418,9 +415,7 @@ public class ServerSecurity {
         return SecurityUtils.generateID(ourIdentityKeyPair.getPublicKey().serialize());
     }
 
-    public IdentityKey getIdentityPublicKey() {
-        return ourIdentityKeyPair.getPublicKey();
-    }
+    public IdentityKey getIdentityPublicKey() { return ourIdentityKeyPair.getPublicKey(); }
 
     public ECPublicKey getClientIdentityPublicKey(String clientId) throws IOException, InvalidKeyException {
         return getClientSession(clientId, null).IdentityKey.getPublicKey();
@@ -430,7 +425,5 @@ public class ServerSecurity {
         return getClientSession(clientId, null).BaseKey;
     }
 
-    public ECPrivateKey getSigningKey() {
-        return ourIdentityKeyPair.getPrivateKey();
-    }
+    public ECPrivateKey getSigningKey() { return ourIdentityKeyPair.getPrivateKey(); }
 }

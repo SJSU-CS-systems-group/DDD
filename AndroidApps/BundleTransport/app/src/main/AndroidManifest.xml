@@ -1,27 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools" >
+>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
-        android:name="net.discdd.crashreports.AcraApp"
-        android:icon="@drawable/bundletransport_icon"
-        android:label="@string/app_name"
-        android:roundIcon="@drawable/bundletransport_icon"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.DayNight" >
+            android:name="net.discdd.crashreports.AcraApp"
+            android:icon="@drawable/bundletransport_icon"
+            android:label="@string/app_name"
+            android:roundIcon="@drawable/bundletransport_icon"
+            android:supportsRtl="true"
+            android:theme="@style/Theme.AppCompat.DayNight">
         <service
-            android:name=".BundleTransportService"
-            android:enabled="true"
+                android:name=".BundleTransportService"
+                android:enabled="true"
                 android:foregroundServiceType="dataSync"
-            android:exported="false" >
+                android:exported="false">
         </service>
 
         <activity
-            android:name=".BundleTransportActivity"
-            android:exported="true" >
+                android:name=".BundleTransportActivity"
+                android:exported="true">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
     </application>

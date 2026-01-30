@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.os.Environment
 import android.os.StatFs
+import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -13,15 +14,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.discdd.bundletransport.R
 import net.discdd.bundletransport.StorageManager
-import androidx.core.content.edit
 
 data class StorageState(
-        val sliderValue: Long = 0,
-        val freeSpace: Long = 0L,
-        val usedSpace: Long = 0L,
-        val totalBytes: Long = 100L,
-        val actualStorageValue: Long = 100L,
-        val showMessage: String? = null
+    val sliderValue: Long = 0,
+    val freeSpace: Long = 0L,
+    val usedSpace: Long = 0L,
+    val totalBytes: Long = 100L,
+    val actualStorageValue: Long = 100L,
+    val showMessage: String? = null
 )
 
 class StorageViewModel(application: Application) : AndroidViewModel(application) {
@@ -29,8 +29,8 @@ class StorageViewModel(application: Application) : AndroidViewModel(application)
     private val context get() = getApplication<Application>()
     private val storageManager by lazy {
         StorageManager(
-                context.getExternalFilesDir(null)?.toPath(),
-                retrievePreference().toLong()
+            context.getExternalFilesDir(null)?.toPath(),
+            retrievePreference().toLong()
         )
     }
     private val _state = MutableStateFlow(StorageState())
@@ -47,10 +47,10 @@ class StorageViewModel(application: Application) : AndroidViewModel(application)
                 val usedBytes = getUsedBytes()
                 _state.update {
                     it.copy(
-                            usedSpace = usedBytes,
-                            freeSpace = totalBytes - usedBytes,
-                            totalBytes = totalBytes,
-                            actualStorageValue = minStorage + it.sliderValue
+                        usedSpace = usedBytes,
+                        freeSpace = totalBytes - usedBytes,
+                        totalBytes = totalBytes,
+                        actualStorageValue = minStorage + it.sliderValue
                     )
                 }
             } catch (e: Exception) {
@@ -62,9 +62,9 @@ class StorageViewModel(application: Application) : AndroidViewModel(application)
     fun onSliderValueChange(value: Long) {
         _state.update {
             it.copy(
-                    sliderValue = value,
-                    actualStorageValue = minStorage + value,
-                    showMessage = context.getString(R.string.apply_changes)
+                sliderValue = value,
+                actualStorageValue = minStorage + value,
+                showMessage = context.getString(R.string.apply_changes)
             )
         }
     }
@@ -99,20 +99,20 @@ class StorageViewModel(application: Application) : AndroidViewModel(application)
     private fun savePreference(value: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             context.getSharedPreferences("SeekBarPrefs", Context.MODE_PRIVATE)
-                    .edit {
-                        putLong("seekBarPosition", value)
-                    }
+                .edit {
+                    putLong("seekBarPosition", value)
+                }
         }
     }
 
     private fun retrievePreference(): Long {
         return context.getSharedPreferences("SeekBarPrefs", Context.MODE_PRIVATE)
-                .getLong("seekBarPosition", 0)
+            .getLong("seekBarPosition", 0)
     }
 
     private fun getTotalBytes(): Long {
         return StatFs(Environment.getExternalStorageDirectory().path)
-                .totalBytes
-                .div(1024 * 1024)
+            .totalBytes
+            .div(1024 * 1024)
     }
 }

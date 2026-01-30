@@ -1,12 +1,9 @@
 package net.discdd.client.applicationdatamanager;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.reflect.TypeToken;
-import net.discdd.model.ADU;
-import net.discdd.pathutils.ClientPaths;
-import net.discdd.utils.StoreADUs;
-import net.discdd.utils.StreamExt;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 import java.io.File;
 import java.io.FileReader;
@@ -23,10 +20,14 @@ import java.util.function.Predicate;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
+
+import net.discdd.model.ADU;
+import net.discdd.pathutils.ClientPaths;
+import net.discdd.utils.StoreADUs;
+import net.discdd.utils.StreamExt;
 
 public class ClientApplicationDataManager {
 
@@ -148,20 +149,6 @@ public class ClientApplicationDataManager {
         return sendADUsStorage.hasNewADUs(clientId, lastBundleSentTimestamp);
     }
 
-    static class SizeLimiter implements Predicate<Long> {
-        long remaining;
-
-        SizeLimiter(long dataSizeLimit) {
-            remaining = dataSizeLimit;
-        }
-
-        @Override
-        public boolean test(Long size) {
-            remaining -= size;
-            return remaining >= 0;
-        }
-    }
-
     private Map<String, Map<String, Long>> getSentBundleDetails() {
         Gson gson = new Gson();
         Map<String, Map<String, Long>> ret = new HashMap<>();
@@ -175,5 +162,19 @@ public class ClientApplicationDataManager {
             logger.log(SEVERE, "Failed to read sent bundle details", e);
         }
         return ret;
+    }
+
+    static class SizeLimiter implements Predicate<Long> {
+        long remaining;
+
+        SizeLimiter(long dataSizeLimit) {
+            remaining = dataSizeLimit;
+        }
+
+        @Override
+        public boolean test(Long size) {
+            remaining -= size;
+            return remaining >= 0;
+        }
     }
 }

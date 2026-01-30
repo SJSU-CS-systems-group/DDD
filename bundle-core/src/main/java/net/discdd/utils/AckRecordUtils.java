@@ -1,13 +1,13 @@
 package net.discdd.utils;
 
-import net.discdd.model.Acknowledgement;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import net.discdd.model.Acknowledgement;
 
 public class AckRecordUtils {
     private static final Logger logger = Logger.getLogger(AckRecordUtils.class.getName());

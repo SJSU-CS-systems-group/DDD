@@ -1,22 +1,12 @@
 package net.discdd.bundletransport.wifi;
 
-import android.Manifest;
-import android.annotation.SuppressLint;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.pm.PackageManager;
-import android.net.wifi.p2p.WifiP2pConfig;
-import android.net.wifi.p2p.WifiP2pDevice;
-import android.net.wifi.p2p.WifiP2pGroup;
-import android.net.wifi.p2p.WifiP2pManager;
-import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
-import androidx.core.app.ActivityCompat;
-import net.discdd.bundletransport.BundleTransportService;
-import net.discdd.bundletransport.R;
-import net.discdd.bundletransport.service.DDDWifiServiceEvents;
-import net.discdd.grpc.GetRecencyBlobResponse;
+import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION;
+import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION;
+import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION;
+import static java.lang.String.format;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -33,19 +23,31 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION;
-import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION;
-import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION;
-import static java.lang.String.format;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
+import net.discdd.bundletransport.BundleTransportService;
+import net.discdd.bundletransport.R;
+import net.discdd.bundletransport.service.DDDWifiServiceEvents;
+import net.discdd.grpc.GetRecencyBlobResponse;
+
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.pm.PackageManager;
+import android.net.wifi.p2p.WifiP2pConfig;
+import android.net.wifi.p2p.WifiP2pDevice;
+import android.net.wifi.p2p.WifiP2pGroup;
+import android.net.wifi.p2p.WifiP2pManager;
+import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
+import androidx.core.app.ActivityCompat;
 
 public class DDDWifiServer {
-    private static final Logger logger = Logger.getLogger(DDDWifiServer.class.getName());
     public static final String DDD_NETWORK_NAME = "DIRECT-ddd_";
+    private static final Logger logger = Logger.getLogger(DDDWifiServer.class.getName());
     private final IntentFilter intentFilter = new IntentFilter();
     private final BundleTransportService bts;
+    AtomicBoolean intentRegistered = new AtomicBoolean(false);
     private WifiP2pManager wifiP2pManager;
     private WifiP2pManager.Channel channel;
     private WifiP2pGroup wifiGroup;
@@ -54,8 +56,15 @@ public class DDDWifiServer {
     private GetRecencyBlobResponse lastRecencyBlob;
     private WifiP2pDnsSdServiceInfo serviceInfo;
     private Map<String, String> txt;
-
     private WifiDirectStatus status = WifiDirectStatus.UNDEFINED;
+
+    public DDDWifiServer(BundleTransportService bundleTransportService) {
+        intentFilter.addAction(WIFI_P2P_STATE_CHANGED_ACTION);
+        intentFilter.addAction(WIFI_P2P_CONNECTION_CHANGED_ACTION);
+        intentFilter.addAction(WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
+        this.bts = bundleTransportService;
+        lastRecencyBlob = GetRecencyBlobResponse.getDefaultInstance();
+    }
 
     @SuppressLint("MissingPermission")
     public void wifiPermissionGranted() {
@@ -69,16 +78,6 @@ public class DDDWifiServer {
         }
     }
 
-    public enum WifiDirectStatus {FAILED, INVITED, AVAILABLE, UNAVAILABLE, UNDEFINED, CONNECTED}
-
-    public DDDWifiServer(BundleTransportService bundleTransportService) {
-        intentFilter.addAction(WIFI_P2P_STATE_CHANGED_ACTION);
-        intentFilter.addAction(WIFI_P2P_CONNECTION_CHANGED_ACTION);
-        intentFilter.addAction(WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
-        this.bts = bundleTransportService;
-        lastRecencyBlob = GetRecencyBlobResponse.getDefaultInstance();
-    }
-
     public DDDWifiNetworkInfo getNetworkInfo() {
         if (wifiGroup == null) {
             return null;
@@ -88,18 +87,20 @@ public class DDDWifiServer {
         try {
             var ni = NetworkInterface.getByName(wifiGroup.getInterface());
             inetAddress = ni == null ?
-                          null :
-                          Collections.list(ni.getInetAddresses())
-                                  .stream()
-                                  .filter(a -> a instanceof Inet4Address)
-                                  .findFirst()
-                                  .orElse(null);
+                    null :
+                    Collections.list(ni.getInetAddresses())
+                            .stream()
+                            .filter(a -> a instanceof Inet4Address)
+                            .findFirst()
+                            .orElse(null);
         } catch (Exception e) {
             logger.severe("Error getting network interface: " + e.getMessage());
             inetAddress = null;
         }
-        var clientList =
-                wifiGroup.getClientList().stream().map(d -> d.deviceName).collect(Collectors.toUnmodifiableList());
+        var clientList = wifiGroup.getClientList()
+                .stream()
+                .map(d -> d.deviceName)
+                .collect(Collectors.toUnmodifiableList());
         return new DDDWifiNetworkInfo(wifiGroup.getNetworkName(),
                                       wifiGroup.getPassphrase(),
                                       inetAddress,
@@ -151,8 +152,6 @@ public class DDDWifiServer {
         sendWifiStatusChange();
     }
 
-    AtomicBoolean intentRegistered = new AtomicBoolean(false);
-
     public void unregisterWifiIntentReceiver() {
         if (!intentRegistered.getAndSet(false)) return;
         bts.unregisterReceiver(receiver);
@@ -163,9 +162,7 @@ public class DDDWifiServer {
         bts.registerReceiver(receiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
     }
 
-    public WifiDirectStatus getStatus() {
-        return status;
-    }
+    public WifiDirectStatus getStatus() { return status; }
 
     private boolean hasPermission() {
         return ActivityCompat.checkSelfPermission(this.bts, Manifest.permission.NEARBY_WIFI_DEVICES) ==
@@ -180,7 +177,9 @@ public class DDDWifiServer {
             return;
         }
         if (wifiGroup != null) {
-            removeGroup().thenAccept(x -> {innerCreateGroupRunnable();});
+            removeGroup().thenAccept(x -> {
+                innerCreateGroupRunnable();
+            });
         } else {
             innerCreateGroupRunnable();
         }
@@ -225,10 +224,9 @@ public class DDDWifiServer {
         txt.put("recencyBlob", Base64.getEncoder().encodeToString(lastRecencyBlob.toByteArray()));
 
         // DNS-SD service info
-        serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(
-                /* instanceName = */ "ddd",
-                /* serviceType  = */ "_ddd._tcp",
-                /* txtRecord    = */ txt);
+        serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(/* instanceName = */ "ddd",
+                                                          /* serviceType  = */ "_ddd._tcp",
+                                                          /* txtRecord    = */ txt);
         this.wifiP2pManager.addLocalService(channel, serviceInfo, null);
         logger.info("Added local service with updated recency blob.");
         return cal;
@@ -241,7 +239,9 @@ public class DDDWifiServer {
      */
     public CompletableFuture<OptionalInt> removeGroup() {
         var cal = new CompletableActionListener();
-        if (wifiGroup != null) {this.wifiP2pManager.removeGroup(this.channel, cal);} else {
+        if (wifiGroup != null) {
+            this.wifiP2pManager.removeGroup(this.channel, cal);
+        } else {
             cal.complete(OptionalInt.empty());
         }
         this.wifiP2pManager.clearLocalServices(channel, null);
@@ -283,19 +283,22 @@ public class DDDWifiServer {
             return;
         } else if (encodedBlob.length() > 255) {
             logger.log(WARNING,
-                       "Recency blob too large to update in Wi-Fi Direct service TXT record, size: " +
-                               encodedBlob.length());
+                       "Recency blob too large to update in Wi-Fi Direct service TXT record, size: " + encodedBlob
+                               .length());
             return;
         }
         this.lastRecencyBlob = recencyBlob;
         this.wifiP2pManager.removeLocalService(channel, serviceInfo, null);
         txt.put("recencyBlob", encodedBlob);
-        serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(
-                /* instanceName = */ "ddd",
-                /* serviceType  = */ "_ddd._tcp",
-                /* txtRecord    = */ txt);
+        serviceInfo = WifiP2pDnsSdServiceInfo.newInstance(/* instanceName = */ "ddd",
+                                                          /* serviceType  = */ "_ddd._tcp",
+                                                          /* txtRecord    = */ txt);
         this.wifiP2pManager.addLocalService(channel, serviceInfo, null);
         logger.info("Added local service with updated recency blob.");
+    }
+
+    public enum WifiDirectStatus {
+        FAILED, INVITED, AVAILABLE, UNAVAILABLE, UNDEFINED, CONNECTED
     }
 
     public enum DDDWifiServerEventType {
@@ -336,8 +339,8 @@ public class DDDWifiServer {
         }
     }
 
-    public static class CompletableActionListener extends CompletableFuture<OptionalInt>
-            implements WifiP2pManager.ActionListener {
+    public static class CompletableActionListener extends CompletableFuture<OptionalInt> implements
+            WifiP2pManager.ActionListener {
 
         @Override
         public void onSuccess() {
@@ -395,8 +398,8 @@ public class DDDWifiServer {
                         //         EXTRA_WIFI_P2P_GROUP provides the details of the group and
                         //         may contain a null
                         var oldGroup = DDDWifiServer.this.wifiGroup;
-                        var newGroup =
-                                intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP, WifiP2pGroup.class);
+                        var newGroup = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP,
+                                                                 WifiP2pGroup.class);
 
                         if (newGroup == null) {
                             if (oldGroup != null) {
@@ -412,11 +415,11 @@ public class DDDWifiServer {
                                     .collect(Collectors.toSet());
                             var origNewClientList = new HashSet<>(newClientList);
                             var oldClientList = oldGroup == null ?
-                                                Collections.<String>emptySet() :
-                                                oldGroup.getClientList()
-                                                        .stream()
-                                                        .map(w -> w.deviceName)
-                                                        .collect(Collectors.toSet());
+                                    Collections.<String>emptySet() :
+                                    oldGroup.getClientList()
+                                            .stream()
+                                            .map(w -> w.deviceName)
+                                            .collect(Collectors.toSet());
                             newClientList.removeAll(oldClientList);
                             oldClientList.removeAll(origNewClientList);
                             if (!newClientList.isEmpty()) {
@@ -431,8 +434,8 @@ public class DDDWifiServer {
                         sendWifiStatusChange();
                     }
                     case WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> processDeviceInfo(intent.getParcelableExtra(
-                            WifiP2pManager.EXTRA_WIFI_P2P_DEVICE,
-                            WifiP2pDevice.class));
+                                                                                                            WifiP2pManager.EXTRA_WIFI_P2P_DEVICE,
+                                                                                                            WifiP2pDevice.class));
                 }
             }
         }

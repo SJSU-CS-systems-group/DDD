@@ -1,14 +1,15 @@
 package net.discdd.bundlerouting.service;
 
-import io.grpc.stub.StreamObserver;
-import net.discdd.grpc.BundleUploadResponse;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
 
 import java.util.Calendar;
 import java.util.Date;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.WARNING;
+import net.discdd.grpc.BundleUploadResponse;
+
+import io.grpc.stub.StreamObserver;
 
 public class BundleUploadResponseObserver implements StreamObserver<BundleUploadResponse> {
     private static final Logger logger = Logger.getLogger(BundleUploadResponseObserver.class.getName());

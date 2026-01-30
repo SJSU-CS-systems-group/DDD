@@ -15,7 +15,9 @@
     <string name="change_phone_name">Change Phone Name</string>
     <string name="interactions_with_bundleclients">Interactions with BundleClients</string>
     <string name="wifi_transport_not_active">Wifi Transport not active</string>
-    <string name="wifi_transport_not_active_group_info_null">Wifi Transport not active: Group info is null, check that Wifi is enabled</string>
+    <string name="wifi_transport_not_active_group_info_null">Wifi Transport not active: Group info is null, check that
+        Wifi is enabled
+    </string>
     <string name="connected">Connected</string>
     <string name="invited">Invited</string>
     <string name="failed">Failed</string>
@@ -29,9 +31,14 @@
     <string name="check_permissions_and_that_wifi_is_enabled">Check Permissions and that Wifi is enabled</string>
     <string name="no_usb_connection_detected">No USB connection detected</string>
     <string name="usb_connection_detected">USB connection detected</string>
-    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">USB was connected but DDD transport directory was not detected</string>
+    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">USB was connected but DDD transport
+        directory was not detected
+    </string>
     <string name="exchange_usb_data">Exchange USB Data</string>
-    <string name="to_settings_text">To enable our app to manage app-related files on this device and your USB storage, please toggle \"Yes\" for BundleTransport in your settings. We assure you that only files created by our app will be accessed. Protecting user privacy and maintaining ethical practices are our top priorities.</string>
+    <string name="to_settings_text">To enable our app to manage app-related files on this device and your USB storage,
+        please toggle \"Yes\" for BundleTransport in your settings. We assure you that only files created by our app
+        will be accessed. Protecting user privacy and maintaining ethical practices are our top priorities.
+    </string>
     <string name="error_updating_storage_info">Error updating storage info</string>
     <string name="apply_changes">Click Set Storage to apply changes</string>
     <string name="storage_updated">Storage updated</string>

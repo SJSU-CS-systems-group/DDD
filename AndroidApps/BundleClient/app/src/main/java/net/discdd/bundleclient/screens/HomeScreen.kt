@@ -1,8 +1,6 @@
 package net.discdd.bundleclient.screens
 
 import android.Manifest
-import android.content.Intent
-import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
@@ -30,7 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat.startActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -40,9 +36,9 @@ import net.discdd.UsbConnectionManager
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiServiceManager
 import net.discdd.bundleclient.viewmodels.ClientUsbViewModel
-import net.discdd.screens.LogScreen
 import net.discdd.components.NotificationBottomSheet
 import net.discdd.screens.BugReportScreen
+import net.discdd.screens.LogScreen
 import net.discdd.screens.PermissionScreen
 import net.discdd.screens.UsbScreen
 import net.discdd.viewmodels.SettingsViewModel
@@ -63,7 +59,8 @@ fun HomeScreen(
     val firstOpen by viewModel.firstOpen.collectAsState()
     val showEasterEgg by viewModel.showEasterEgg.collectAsState()
     val nearbyWifiState = rememberPermissionState(Manifest.permission.NEARBY_WIFI_DEVICES)
-    val notificationState = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS,
+    val notificationState = rememberPermissionState(
+        Manifest.permission.POST_NOTIFICATIONS,
         onPermissionResult = {
             viewModel.onFirstOpen()
         }
@@ -102,9 +99,9 @@ fun HomeScreen(
     )
 
     /*
-    * adminTabs are features that should only be shown to developers
-    * these features can be toggled by interacting with the Easter Egg
-    */
+     * adminTabs are features that should only be shown to developers
+     * these features can be toggled by interacting with the Easter Egg
+     */
     val adminTabs = listOf(
         TabItem(
             title = context.getString(R.string.logs_tab),
@@ -147,7 +144,7 @@ fun HomeScreen(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        val pagerState = rememberPagerState() { tabItems.size }
+        val pagerState = rememberPagerState { tabItems.size }
         val selectedTabIndex by remember {
             derivedStateOf { pagerState.currentPage }
         }

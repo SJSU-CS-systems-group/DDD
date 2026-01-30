@@ -1,13 +1,9 @@
 package net.discdd.bundleclient;
 
-import androidx.annotation.NonNull;
-import androidx.lifecycle.Lifecycle;
-import androidx.lifecycle.LifecycleObserver;
-import androidx.test.core.app.ApplicationProvider;
-import androidx.test.ext.junit.runners.AndroidJUnit4;
-
-import net.discdd.adapter.DDDClientAdapter;
-import net.discdd.datastore.providers.MessageProvider;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -16,10 +12,14 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
+import net.discdd.adapter.DDDClientAdapter;
+import net.discdd.datastore.providers.MessageProvider;
+
+import androidx.annotation.NonNull;
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.LifecycleObserver;
+import androidx.test.core.app.ApplicationProvider;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 @RunWith(AndroidJUnit4.class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -27,20 +27,22 @@ public class MessageProviderTest {
 
     public static final Lifecycle NULL_LIFECYCLE = new Lifecycle() {
         @Override
-        public void addObserver(@NonNull LifecycleObserver lifecycleObserver) {}
+        public void addObserver(@NonNull
+        LifecycleObserver lifecycleObserver) {}
 
         @Override
-        public void removeObserver(@NonNull LifecycleObserver lifecycleObserver) {}
+        public void removeObserver(@NonNull
+        LifecycleObserver lifecycleObserver) {}
 
         @NonNull
         @Override
-        public State getCurrentState() {return null;}
+        public State getCurrentState() { return null; }
     };
+    private final String smallData = "Small Data";
+    private final String bigData = "Big Data".repeat(1024 * 1024);
+    DDDClientAdapter adapter;
     private Path sendADUStorePath;
     private Path receiveADUStorePath;
-    private final String smallData = "Small Data";
-    private final String  bigData = "Big Data".repeat(1024 * 1024);
-    DDDClientAdapter adapter;
 
     @Before
     public void setUp() throws IOException {
@@ -49,8 +51,16 @@ public class MessageProviderTest {
         adapter = new DDDClientAdapter(ApplicationProvider.getApplicationContext(), null);
         // access the private sendADUsStorage and receiveADUsStorage fields in messageProvider
         String appId = ApplicationProvider.getApplicationContext().getPackageName();
-        sendADUStorePath = ApplicationProvider.getApplicationContext().getDataDir().toPath().resolve("send").resolve(appId);
-        receiveADUStorePath = ApplicationProvider.getApplicationContext().getDataDir().toPath().resolve("receive").resolve(appId);
+        sendADUStorePath = ApplicationProvider.getApplicationContext()
+                .getDataDir()
+                .toPath()
+                .resolve("send")
+                .resolve(appId);
+        receiveADUStorePath = ApplicationProvider.getApplicationContext()
+                .getDataDir()
+                .toPath()
+                .resolve("receive")
+                .resolve(appId);
         Files.createDirectories(receiveADUStorePath);
     }
 

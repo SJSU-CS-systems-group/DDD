@@ -1,8 +1,10 @@
 package net.discdd.utils;
 
-import com.google.gson.Gson;
-import net.discdd.model.ADU;
-import net.discdd.model.Metadata;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.FINEST;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -23,16 +25,14 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.FINEST;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
+import com.google.gson.Gson;
+
+import net.discdd.model.ADU;
+import net.discdd.model.Metadata;
 
 public class StoreADUs {
     public static final String METADATA_FILENAME = "metadata.json";
     private static final Path METADATA_PATH = Paths.get(METADATA_FILENAME);
-    public Path rootFolder;
     private static final Logger logger = Logger.getLogger(StoreADUs.class.getName());
     /**
      * Listeners that will be notified when a new ADU is added.
@@ -40,6 +40,7 @@ public class StoreADUs {
      * When a new ADU is added, all listeners will be notified with the appId of added ADUs.
      */
     public final Set<Consumer<String>> additionListeners = Collections.synchronizedSet(new HashSet<>());
+    public Path rootFolder;
 
     public StoreADUs(Path rootFolder) {
         logger.log(FINEST, "ADU rootFolder: " + rootFolder);
@@ -117,20 +118,7 @@ public class StoreADUs {
         }
     }
 
-    public record ClientApp(String clientId, String appId) implements Comparable<ClientApp> {
-        @Override
-        public int compareTo(ClientApp o) {
-            int clientIdComparison = this.clientId.compareTo(o.clientId);
-            if (clientIdComparison != 0) {
-                return clientIdComparison;
-            }
-            return this.appId.compareTo(o.appId);
-        }
-    }
-
-    public Stream<ClientApp> getAllClientApps() {
-        return getAllClientApps(false);
-    }
+    public Stream<ClientApp> getAllClientApps() { return getAllClientApps(false); }
 
     /**
      * Get all client applications in the store.
@@ -169,8 +157,6 @@ public class StoreADUs {
             return Stream.empty();
         }
     }
-
-    public record AduIdData(String id, byte[] data) {}
 
     public List<AduIdData> getAllAppIdAndData(String appId) throws IOException {
         getMetadata(null, appId);
@@ -278,11 +264,11 @@ public class StoreADUs {
      * @param finished if null or true, the ADU will not be written to again. (If the aduId was given as a negative
      *                 number, it will be set to the last ADU ID added and the file will be moved to the new location.)
      * @return the file where the ADU was written, or null if the ADU was skipped because the id is less
-     * than or equal to the last deleted ADU ID.
+     *         than or equal to the last deleted ADU ID.
      * @throws IOException if there is an error writing the ADU to the file system
      */
-    public File addADU(String clientId, String appId, byte[] data, long aduId, long offset, Boolean finished) throws
-            IOException {
+    public File addADU(String clientId, String appId, byte[] data, long aduId, long offset, Boolean finished)
+            throws IOException {
         var appFolder = getAppFolder(clientId, appId);
         Metadata metadata = getMetadata(clientId, appId);
         var lastAduDeleted = metadata.lastAduDeleted;
@@ -330,4 +316,17 @@ public class StoreADUs {
         }
         return aduPath.toFile();
     }
+
+    public record ClientApp(String clientId, String appId) implements Comparable<ClientApp> {
+        @Override
+        public int compareTo(ClientApp o) {
+            int clientIdComparison = this.clientId.compareTo(o.clientId);
+            if (clientIdComparison != 0) {
+                return clientIdComparison;
+            }
+            return this.appId.compareTo(o.appId);
+        }
+    }
+
+    public record AduIdData(String id, byte[] data) {}
 }

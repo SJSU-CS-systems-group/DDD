@@ -1,5 +1,38 @@
 package net.discdd.bundleclient.service.wifiDirect;
 
+import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION;
+import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_DISCOVERY_CHANGED_ACTION;
+import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION;
+import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION;
+import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_STATE_DISABLED;
+import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_STATE_ENABLED;
+import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION;
+import static java.lang.String.format;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
+
+import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Logger;
+
+import com.google.protobuf.InvalidProtocolBufferException;
+
+import net.discdd.bundleclient.R;
+import net.discdd.bundleclient.service.BundleClientService;
+import net.discdd.bundleclient.service.DDDWifi;
+import net.discdd.bundleclient.service.DDDWifiConnection;
+import net.discdd.bundleclient.service.DDDWifiDevice;
+import net.discdd.bundleclient.service.DDDWifiEventType;
+import net.discdd.grpc.GetRecencyBlobResponse;
+
 import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -18,59 +51,39 @@ import androidx.annotation.RequiresPermission;
 import androidx.core.app.ActivityCompat;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
-import com.google.protobuf.InvalidProtocolBufferException;
-import net.discdd.bundleclient.R;
-import net.discdd.bundleclient.service.BundleClientService;
-import net.discdd.bundleclient.service.DDDWifi;
-import net.discdd.bundleclient.service.DDDWifiConnection;
-import net.discdd.bundleclient.service.DDDWifiDevice;
-import net.discdd.bundleclient.service.DDDWifiEventType;
-import net.discdd.grpc.GetRecencyBlobResponse;
-
-import java.net.InetAddress;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.logging.Logger;
-
-import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION;
-import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_DISCOVERY_CHANGED_ACTION;
-import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION;
-import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION;
-import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_STATE_DISABLED;
-import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_STATE_ENABLED;
-import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION;
-import static java.lang.String.format;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
 
 public class DDDWifiDirect implements DDDWifi {
     private static final Logger logger = Logger.getLogger(DDDWifiDirect.class.getName());
+    final private static String[] STATUS_STRINGS = { "CONNECTED", "INVITED", "FAILED", "AVAILABLE", "UNAVAILABLE" };
     final private BundleClientService bundleClientService;
     private final IntentFilter intentFilter;
     private final WifiP2pManager wifiP2pManager;
+    final private DDDWifiDirectBroadcastReceiver broadcastReceiver = new DDDWifiDirectBroadcastReceiver();
+    private final MutableLiveData<DDDWifiEventType> eventsLiveData = new MutableLiveData<>();
+    final private List<DDDWifiDirectCompletableConnection> addressFutures = new ArrayList<>();
+    AtomicBoolean isReceiverRegistered = new AtomicBoolean(false);
     private HandlerThread handlerThread;
     private WifiP2pManager.Channel wifiChannel;
     private boolean discoveryActive = false;
     private WifiP2pGroup group;
     private InetAddress ownerAddress;
     private List<DDDWifiDevice> peers = new CopyOnWriteArrayList<>();
-    final private DDDWifiDirectBroadcastReceiver broadcastReceiver = new DDDWifiDirectBroadcastReceiver();
-    private final MutableLiveData<DDDWifiEventType> eventsLiveData = new MutableLiveData<>();
     private String deviceName;
-    final private static String[] STATUS_STRINGS = {"CONNECTED",
-                                                    "INVITED",
-                                                    "FAILED",
-                                                    "AVAILABLE",
-                                                    "UNAVAILABLE"};
     private int status = WifiP2pDevice.UNAVAILABLE;
     private boolean wifiEnable;
+    private AtomicReference<AwaitingDiscovery> awaitingDiscovery = new AtomicReference<>(null);
+
+    public DDDWifiDirect(BundleClientService bundleClientService) {
+        this.bundleClientService = bundleClientService;
+        var intentFilter = new IntentFilter();
+        intentFilter.addAction(WIFI_P2P_STATE_CHANGED_ACTION);
+        intentFilter.addAction(WIFI_P2P_PEERS_CHANGED_ACTION);
+        intentFilter.addAction(WIFI_P2P_CONNECTION_CHANGED_ACTION);
+        intentFilter.addAction(WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
+        intentFilter.addAction(WIFI_P2P_DISCOVERY_CHANGED_ACTION);
+        this.intentFilter = intentFilter;
+        this.wifiP2pManager = (WifiP2pManager) bundleClientService.getSystemService(Context.WIFI_P2P_SERVICE);
+    }
 
     private boolean hasPermission() {
         int nearbyWifiPermissionCheck = ActivityCompat.checkSelfPermission(bundleClientService.getApplicationContext(),
@@ -78,57 +91,8 @@ public class DDDWifiDirect implements DDDWifi {
         return nearbyWifiPermissionCheck == PackageManager.PERMISSION_GRANTED;
     }
 
-    private class DDDWifiDirectBroadcastReceiver extends BroadcastReceiver {
-        @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION,
-                                      Manifest.permission.NEARBY_WIFI_DEVICES })
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-            if (action != null) {
-                switch (action) {
-                    case WIFI_P2P_STATE_CHANGED_ACTION -> {
-                        var wifiState = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1);
-                        processStateChange(wifiState);
-                    }
-                    case WIFI_P2P_CONNECTION_CHANGED_ACTION -> {
-                        //         Broadcast intent action indicating that the state of Wi-Fi p2p
-                        //         connectivity has changed.
-                        //         EXTRA_WIFI_P2P_INFO provides the p2p connection info in the form of a
-                        //         WifiP2pInfo object.
-                        //         EXTRA_WIFI_P2P_GROUP provides the details of the group and
-                        //         may contain a null
-                        var conInfo = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_INFO, WifiP2pInfo.class);
-                        var conGroup =
-                                intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP, WifiP2pGroup.class);
-                        DDDWifiDirect.this.group = conGroup;
-                        logger.info(format("connected to %s", group == null ? "noone" : group.getOwner().deviceName));
-                        DDDWifiDirect.this.ownerAddress = conInfo.groupOwnerAddress;
-                        // if we got an address, let all the completions waiting for an address know about it.
-                        if (conInfo.groupOwnerAddress != null) {
-                            logger.info(format("Got connect to %s with address %s",
-                                               conGroup.getOwner().deviceName,
-                                               conInfo.groupOwnerAddress.getHostAddress()));
-                            completeAddressWaiters(conGroup.getOwner(), conInfo.groupOwnerAddress);
-                        }
-                        eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_STATE_CHANGED);
-                    }
-                    case WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> {
-                        WifiP2pDevice wifiP2pDevice = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE,
-                                                                    WifiP2pDevice.class);
-                        processDeviceInfo(wifiP2pDevice);
-                    }
-                    case WIFI_P2P_DISCOVERY_CHANGED_ACTION -> {
-                        int discoveryState = intent.getIntExtra(WifiP2pManager.EXTRA_DISCOVERY_STATE, -1);
-                        discoveryActive = discoveryState == WifiP2pManager.WIFI_P2P_DISCOVERY_STARTED;
-                        eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DISCOVERY_CHANGED);
-                    }
-                }
-            }
-        }
-    }
-
     private void processStateChange(int wifiState) {
-        switch(wifiState) {
+        switch (wifiState) {
             case WIFI_P2P_STATE_ENABLED -> {
                 if (!wifiEnable) {
                     // we are switching from disabled to enabled, so discover peers
@@ -157,18 +121,6 @@ public class DDDWifiDirect implements DDDWifi {
         eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_STATE_CHANGED);
     }
 
-    public DDDWifiDirect(BundleClientService bundleClientService) {
-        this.bundleClientService = bundleClientService;
-        var intentFilter = new IntentFilter();
-        intentFilter.addAction(WIFI_P2P_STATE_CHANGED_ACTION);
-        intentFilter.addAction(WIFI_P2P_PEERS_CHANGED_ACTION);
-        intentFilter.addAction(WIFI_P2P_CONNECTION_CHANGED_ACTION);
-        intentFilter.addAction(WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
-        intentFilter.addAction(WIFI_P2P_DISCOVERY_CHANGED_ACTION);
-        this.intentFilter = intentFilter;
-        this.wifiP2pManager = (WifiP2pManager) bundleClientService.getSystemService(Context.WIFI_P2P_SERVICE);
-    }
-
     public void initialize() {
         if (wifiChannel != null) {
             logger.severe("Calling initialize on an initialized channel. Ignoring.");
@@ -176,7 +128,9 @@ public class DDDWifiDirect implements DDDWifi {
         }
         this.handlerThread = new HandlerThread("WifiP2PHandlerThread");
         this.handlerThread.start();
-        this.wifiChannel = wifiP2pManager.initialize(bundleClientService, handlerThread.getLooper(), () -> logger.warning("Framework lost. Ignoring"));
+        this.wifiChannel = wifiP2pManager.initialize(bundleClientService,
+                                                     handlerThread.getLooper(),
+                                                     () -> logger.warning("Framework lost. Ignoring"));
         if (hasPermission()) {
             registerBroadcastReceiver();
         }
@@ -221,11 +175,14 @@ public class DDDWifiDirect implements DDDWifi {
         try {
             recencyBlobResponse = GetRecencyBlobResponse.parseFrom(Base64.getDecoder().decode(encodedBlob));
         } catch (InvalidProtocolBufferException e) {
-            logger.log(WARNING, format("Ignoring peer %s %s because recency blob failed to decode.", device.deviceName, transportId));
+            logger.log(WARNING,
+                       format("Ignoring peer %s %s because recency blob failed to decode.",
+                              device.deviceName,
+                              transportId));
             return;
         }
 
-        for (DDDWifiDevice peerDevice: peers) {
+        for (DDDWifiDevice peerDevice : peers) {
             if (peerDevice.getId().equals(transportId)) {
                 peerDiscovered = true;
                 peerDevice.setRecencyBlob(recencyBlobResponse);
@@ -241,7 +198,6 @@ public class DDDWifiDirect implements DDDWifi {
         }
     }
 
-    AtomicBoolean isReceiverRegistered = new AtomicBoolean(false);
     private void registerBroadcastReceiver() {
         wifiP2pManager.requestP2pState(wifiChannel, this::processStateChange);
         if (isReceiverRegistered.getAndSet(true)) return;
@@ -266,9 +222,7 @@ public class DDDWifiDirect implements DDDWifi {
     }
 
     @Override
-    public boolean isDiscoveryActive() {
-        return discoveryActive;
-    }
+    public boolean isDiscoveryActive() { return discoveryActive; }
 
     @Override
     public String getStateDescription() {
@@ -299,38 +253,7 @@ public class DDDWifiDirect implements DDDWifi {
     }
 
     @Override
-    public boolean isDddWifiEnabled() {
-        return wifiEnable;
-    }
-
-    static private class DDDWifiDirectCompletableConnection extends CompletableFuture<DDDWifiConnection> {
-        private final DDDWifiDirectDevice device;
-
-        DDDWifiDirectCompletableConnection(DDDWifiDirectDevice device) {
-            this.device = device;
-        }
-
-        /**
-         * completes the waiting futures with the given connection.
-         * if the connection doesn't match the device the completable future was created for,
-         * it will complete exceptionally with a DDDWifiConnectionException.
-         */
-        void completeWithConnection(DDDWifiDirectConnection con) throws DDDWifiException.DDDWifiConnectionException {
-            if (!device.sameAddressAs(con.dev)) {
-                completeExceptionally(new DDDWifiException.DDDWifiConnectionException(format("connected to %s rather than %s",
-                                                                             con.dev.wifiP2pDevice.deviceName,
-                                                                             device.wifiP2pDevice.deviceName), null));
-            } else {
-                complete(con);
-            }
-        }
-    }
-
-    static private class ConnectionWaiter {
-        private DDDWifiDirectConnection connection;
-        CompletableFuture<Void> completableFuture;
-    }
-    final private List<DDDWifiDirectCompletableConnection> addressFutures = new ArrayList<>();
+    public boolean isDddWifiEnabled() { return wifiEnable; }
 
     private void completeAddressWaiters(WifiP2pDevice groupOwner, InetAddress groupOwnerAddress) {
         ArrayList<DDDWifiDirectCompletableConnection> toComplete;
@@ -338,8 +261,10 @@ public class DDDWifiDirect implements DDDWifi {
             toComplete = new ArrayList<>(addressFutures);
             addressFutures.clear();
         }
-        var con = new DDDWifiDirectConnection(new DDDWifiDirectDevice(groupOwner, bundleClientService.getApplicationContext()
-                .getString(R.string.unknown_transportId), null), groupOwnerAddress);
+        var con = new DDDWifiDirectConnection(new DDDWifiDirectDevice(groupOwner,
+                                                                      bundleClientService.getApplicationContext()
+                                                                              .getString(R.string.unknown_transportId),
+                                                                      null), groupOwnerAddress);
         toComplete.forEach(cf -> cf.completeWithConnection(con));
     }
 
@@ -366,17 +291,6 @@ public class DDDWifiDirect implements DDDWifi {
         logger.log(INFO, format("addAddressWaiter: waiting for connection to %s", dev.getDescription()));
         return cf;
     }
-
-    static class AwaitingDiscovery extends CompletableFuture<Void> {
-        final DDDWifiDevice dev;
-
-        AwaitingDiscovery(DDDWifiDevice dev) {
-            super();
-            this.dev = dev;
-        }
-    }
-
-    private AtomicReference<AwaitingDiscovery> awaitingDiscovery = new AtomicReference<>(null);
 
     private void checkAwaitingDiscovery() {
         var waitingForPeer = awaitingDiscovery.get();
@@ -421,8 +335,12 @@ public class DDDWifiDirect implements DDDWifi {
             cf.completeExceptionally(e);
         }
         return cf.thenCompose(connectionStarted -> {
-            logger.log(INFO, format("connectTo: connection started to %s: %b", dev.getDescription(), connectionStarted));
-            if (!connectionStarted) throw new DDDWifiException.DDDWifiConnectionException("Failed to start connection to " + dev.getDescription(), null);
+            logger.log(INFO,
+                       format("connectTo: connection started to %s: %b", dev.getDescription(), connectionStarted));
+            if (!connectionStarted) {
+                throw new DDDWifiException.DDDWifiConnectionException("Failed to start connection to " + dev
+                        .getDescription(), null);
+            }
             return addAddressWaiter(directDev);
         });
     }
@@ -461,15 +379,100 @@ public class DDDWifiDirect implements DDDWifi {
     }
 
     @Override
-    public LiveData<DDDWifiEventType> getEventLiveData() {
-        return eventsLiveData;
-    }
+    public LiveData<DDDWifiEventType> getEventLiveData() { return eventsLiveData; }
 
     @Override
     public void wifiPermissionGranted() {
         // reregister the receivers with the new permissions
         unregisterBroadcastReceiver();
         registerBroadcastReceiver();
+    }
+
+    static private class DDDWifiDirectCompletableConnection extends CompletableFuture<DDDWifiConnection> {
+        private final DDDWifiDirectDevice device;
+
+        DDDWifiDirectCompletableConnection(DDDWifiDirectDevice device) {
+            this.device = device;
+        }
+
+        /**
+         * completes the waiting futures with the given connection.
+         * if the connection doesn't match the device the completable future was created for,
+         * it will complete exceptionally with a DDDWifiConnectionException.
+         */
+        void completeWithConnection(DDDWifiDirectConnection con) throws DDDWifiException.DDDWifiConnectionException {
+            if (!device.sameAddressAs(con.dev)) {
+                completeExceptionally(new DDDWifiException.DDDWifiConnectionException(format("connected to %s rather than %s",
+                                                                                             con.dev.wifiP2pDevice.deviceName,
+                                                                                             device.wifiP2pDevice.deviceName),
+                                                                                      null));
+            } else {
+                complete(con);
+            }
+        }
+    }
+
+    static private class ConnectionWaiter {
+        CompletableFuture<Void> completableFuture;
+        private DDDWifiDirectConnection connection;
+    }
+
+    static class AwaitingDiscovery extends CompletableFuture<Void> {
+        final DDDWifiDevice dev;
+
+        AwaitingDiscovery(DDDWifiDevice dev) {
+            super();
+            this.dev = dev;
+        }
+    }
+
+    private class DDDWifiDirectBroadcastReceiver extends BroadcastReceiver {
+        @RequiresPermission(allOf = { Manifest.permission.ACCESS_FINE_LOCATION,
+                                      Manifest.permission.NEARBY_WIFI_DEVICES })
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (action != null) {
+                switch (action) {
+                    case WIFI_P2P_STATE_CHANGED_ACTION -> {
+                        var wifiState = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1);
+                        processStateChange(wifiState);
+                    }
+                    case WIFI_P2P_CONNECTION_CHANGED_ACTION -> {
+                        //         Broadcast intent action indicating that the state of Wi-Fi p2p
+                        //         connectivity has changed.
+                        //         EXTRA_WIFI_P2P_INFO provides the p2p connection info in the form of a
+                        //         WifiP2pInfo object.
+                        //         EXTRA_WIFI_P2P_GROUP provides the details of the group and
+                        //         may contain a null
+                        var conInfo = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_INFO, WifiP2pInfo.class);
+                        var conGroup = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_GROUP,
+                                                                 WifiP2pGroup.class);
+                        DDDWifiDirect.this.group = conGroup;
+                        logger.info(format("connected to %s", group == null ? "noone" : group.getOwner().deviceName));
+                        DDDWifiDirect.this.ownerAddress = conInfo.groupOwnerAddress;
+                        // if we got an address, let all the completions waiting for an address know about it.
+                        if (conInfo.groupOwnerAddress != null) {
+                            logger.info(format("Got connect to %s with address %s",
+                                               conGroup.getOwner().deviceName,
+                                               conInfo.groupOwnerAddress.getHostAddress()));
+                            completeAddressWaiters(conGroup.getOwner(), conInfo.groupOwnerAddress);
+                        }
+                        eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_STATE_CHANGED);
+                    }
+                    case WIFI_P2P_THIS_DEVICE_CHANGED_ACTION -> {
+                        WifiP2pDevice wifiP2pDevice = intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE,
+                                                                                WifiP2pDevice.class);
+                        processDeviceInfo(wifiP2pDevice);
+                    }
+                    case WIFI_P2P_DISCOVERY_CHANGED_ACTION -> {
+                        int discoveryState = intent.getIntExtra(WifiP2pManager.EXTRA_DISCOVERY_STATE, -1);
+                        discoveryActive = discoveryState == WifiP2pManager.WIFI_P2P_DISCOVERY_STARTED;
+                        eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DISCOVERY_CHANGED);
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -488,4 +491,5 @@ class DDDActionListener implements WifiP2pManager.ActionListener {
     @Override
     public void onFailure(int reason) {
         cf.complete(Boolean.FALSE);
-    }}
+    }
+}

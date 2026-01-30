@@ -1,10 +1,50 @@
 package net.discdd.client.bundletransmission;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
+import static net.discdd.utils.Constants.GRPC_LONG_TIMEOUT_MS;
+import static net.discdd.utils.Constants.GRPC_SHORT_TIMEOUT_MS;
+import static net.discdd.utils.FileUtils.crashReportExists;
+import static net.discdd.utils.FileUtils.readCrashReportFromFile;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PipedInputStream;
+import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.security.GeneralSecurityException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.function.Consumer;
+import java.util.logging.Logger;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+
+import org.whispersystems.libsignal.DuplicateMessageException;
+import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.InvalidMessageException;
+import org.whispersystems.libsignal.NoSessionException;
+import org.whispersystems.libsignal.ecc.Curve;
+
 import com.google.protobuf.ByteString;
-import io.grpc.StatusRuntimeException;
-import io.grpc.okhttp.OkHttpChannelBuilder;
-import io.grpc.stub.StreamObserver;
-import lombok.Getter;
+
 import net.discdd.bundlerouting.RoutingExceptions;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
@@ -38,66 +78,24 @@ import net.discdd.tls.DDDX509ExtendedTrustManager;
 import net.discdd.utils.AckRecordUtils;
 import net.discdd.utils.BundleUtils;
 import net.discdd.utils.FileUtils;
-import org.whispersystems.libsignal.DuplicateMessageException;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.InvalidMessageException;
-import org.whispersystems.libsignal.NoSessionException;
-import org.whispersystems.libsignal.ecc.Curve;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PipedInputStream;
-import java.net.Socket;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.security.GeneralSecurityException;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.function.Consumer;
-import java.util.logging.Logger;
-
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
-import static net.discdd.utils.Constants.GRPC_LONG_TIMEOUT_MS;
-import static net.discdd.utils.Constants.GRPC_SHORT_TIMEOUT_MS;
-import static net.discdd.utils.FileUtils.crashReportExists;
-import static net.discdd.utils.FileUtils.readCrashReportFromFile;
+import io.grpc.StatusRuntimeException;
+import io.grpc.okhttp.OkHttpChannelBuilder;
+import io.grpc.stub.StreamObserver;
+import lombok.Getter;
 
 public class ClientBundleTransmission {
-    public static class RecencyException extends IOException {
-        public RecencyException(String message) {
-            super(message);
-        }
-    }
-
     private static final Logger logger = Logger.getLogger(ClientBundleTransmission.class.getName());
+    private static final int INITIAL_CONNECT_RETRIES = 8;
+    public final ClientApplicationDataManager applicationDataManager;
     private final ExecutorService executorService = Executors.newCachedThreadPool();
     private final ClientBundleSecurity bundleSecurity;
-    public final ClientApplicationDataManager applicationDataManager;
-
     final private ClientRouting clientRouting;
     final private ClientPaths clientPaths;
+    final private HashMap<TransportDevice, RecentTransport> recentTransports = new HashMap<>();
 
-    public ClientBundleTransmission(ClientPaths clientPaths, Consumer<ADU> aduConsumer) throws
-            WindowExceptions.BufferOverflow, IOException, InvalidKeyException,
+    public ClientBundleTransmission(ClientPaths clientPaths, Consumer<ADU> aduConsumer)
+            throws WindowExceptions.BufferOverflow, IOException, InvalidKeyException,
             RoutingExceptions.ClientMetaDataFileException, NoSuchAlgorithmException {
         this.clientPaths = clientPaths;
         this.bundleSecurity = new ClientBundleSecurity(clientPaths);
@@ -105,14 +103,20 @@ public class ClientBundleTransmission {
         this.clientRouting = ClientRouting.initializeInstance(clientPaths);
     }
 
-    public ClientPaths getClientPaths() {
-        return clientPaths;
+    public static String bundleSenderToString(String senderId) {
+        return senderId;
     }
+
+    public static boolean doesTransportHaveNewData(RecentTransport transport) {
+        return transport.recencyBlobResponse.getRecencyBlob().getBlobTimestamp() > transport.lastExchange;
+    }
+
+    public ClientPaths getClientPaths() { return clientPaths; }
 
     public void registerBundleId(String bundleId) throws IOException, WindowExceptions.BufferOverflow,
             GeneralSecurityException, InvalidKeyException {
-        try (BufferedWriter bufferedWriter =
-                     new BufferedWriter(new FileWriter(clientPaths.largestBundleIdReceived.toFile()))) {
+        try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(clientPaths.largestBundleIdReceived
+                .toFile()))) {
             bufferedWriter.write(bundleId);
         }
 
@@ -122,8 +126,8 @@ public class ClientBundleTransmission {
 
     private String getLargestBundleIdReceived() throws IOException {
         String bundleId = "";
-        try (BufferedReader bufferedReader =
-                     new BufferedReader(new FileReader(clientPaths.largestBundleIdReceived.toFile()))) {
+        try (BufferedReader bufferedReader = new BufferedReader(new FileReader(clientPaths.largestBundleIdReceived
+                .toFile()))) {
             String line;
             while ((line = bufferedReader.readLine()) != null) {
                 bundleId = line.trim();
@@ -146,16 +150,17 @@ public class ClientBundleTransmission {
 
         ClientBundleGenerator clientBundleGenerator = this.bundleSecurity.getClientBundleGenerator();
         boolean isLatestBundleId = (!largestBundleIdReceived.isEmpty() && clientBundleGenerator.compareBundleIDs(
-                bundleId,
-                largestBundleIdReceived,
-                BundleIDGenerator.DOWNSTREAM) == 1);
+                                                                                                                 bundleId,
+                                                                                                                 largestBundleIdReceived,
+                                                                                                                 BundleIDGenerator.DOWNSTREAM) ==
+                1);
 
         if (!isLatestBundleId) {
             return;
         }
 
-        UncompressedPayload uncompressedPayload =
-                BundleUtils.extractPayload(payload, uncompressedBundle.getSource().toPath());
+        UncompressedPayload uncompressedPayload = BundleUtils.extractPayload(payload,
+                                                                             uncompressedBundle.getSource().toPath());
 
         AckRecordUtils.writeAckRecordToFile(new Acknowledgement(bundleId), clientPaths.ackRecordPath);
         this.registerBundleId(bundleId);
@@ -167,16 +172,12 @@ public class ClientBundleTransmission {
         deleteSentBundle(bundle);
     }
 
-    public static String bundleSenderToString(String senderId) {
-        return senderId;
-    }
-
     private Bundle generateNewBundle(String bundleId) throws IOException, NoSuchAlgorithmException,
             InvalidKeyException {
         Acknowledgement ackRecord = AckRecordUtils.readAckRecordFromFile(clientPaths.ackRecordPath);
         String crashReport = crashReportExists(String.valueOf(clientPaths.crashReportPath)) ?
-                             readCrashReportFromFile(clientPaths.crashReportPath) :
-                             null;
+                readCrashReportFromFile(clientPaths.crashReportPath) :
+                null;
         List<ADU> adus = this.applicationDataManager.fetchADUsToSend(clientPaths.BUNDLE_SIZE_LIMIT, null);
         var routingData = clientRouting.bundleMetaData();
 
@@ -193,8 +194,9 @@ public class ClientBundleTransmission {
         try {
             ClientSecurity clientSecurity = bundleSecurity.getClientSecurity();
 
-            OutputStream os =
-                    Files.newOutputStream(bundleFile, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            OutputStream os = Files.newOutputStream(bundleFile,
+                                                    StandardOpenOption.CREATE,
+                                                    StandardOpenOption.TRUNCATE_EXISTING);
             BundleUtils.encryptPayloadAndCreateBundle(clientSecurity::encrypt,
                                                       clientSecurity.getClientIdentityPublicKey(),
                                                       clientSecurity.getClientBaseKeyPairPublicKey(),
@@ -223,8 +225,8 @@ public class ClientBundleTransmission {
             var lastBundleSentTimestamp = lastSentBundle.lastModified();
 
             // lets check to see if we have gotten new ADUs or a new ack record
-            if (clientPaths.ackRecordPath.toFile().lastModified() <= lastBundleSentTimestamp &&
-                    !applicationDataManager.hasNewADUs(null, lastBundleSentTimestamp)) {
+            if (clientPaths.ackRecordPath.toFile().lastModified() <= lastBundleSentTimestamp && !applicationDataManager
+                    .hasNewADUs(null, lastBundleSentTimestamp)) {
                 return new Bundle(lastSentBundle.getName(), lastSentBundle);
             }
 
@@ -237,38 +239,6 @@ public class ClientBundleTransmission {
         }
         var newBundleId = bundleSecurity.generateNewBundleId();
         return generateNewBundle(newBundleId);
-    }
-
-    /**
-     * Used to track in memory recently seen transports.
-     * All times are in milliseconds since epoch.
-     */
-    @Getter
-    public static class RecentTransport {
-        private TransportDevice device;
-        /* @param lastExchange time of last bundle exchange */
-        private long lastExchange;
-        /* @param lastSeen time of last device discovery */
-        private long lastSeen;
-        /* @param recencyTime time from the last recencyBlob received */
-        private long recencyTime;
-        /* @param recencyBlobResponse the latest recencyBlobResponse received */
-        private GetRecencyBlobResponse recencyBlobResponse;
-
-        public RecentTransport(TransportDevice device) {
-            this.device = device;
-        }
-
-        public RecentTransport(TransportDevice device, GetRecencyBlobResponse recencyBlobResponse) {
-            this.device = device;
-            this.recencyBlobResponse = recencyBlobResponse;
-        }
-    }
-
-    final private HashMap<TransportDevice, RecentTransport> recentTransports = new HashMap<>();
-
-    public static boolean doesTransportHaveNewData(RecentTransport transport) {
-        return transport.recencyBlobResponse.getRecencyBlob().getBlobTimestamp() > transport.lastExchange;
     }
 
     public RecentTransport[] getRecentTransports() {
@@ -309,8 +279,8 @@ public class ClientBundleTransmission {
     }
 
     // returns true if the blob is more recent than previously seen
-    public boolean processRecencyBlob(TransportDevice device, GetRecencyBlobResponse recencyBlobResponse) throws
-            IOException, InvalidKeyException {
+    public boolean processRecencyBlob(TransportDevice device, GetRecencyBlobResponse recencyBlobResponse)
+            throws IOException, InvalidKeyException {
         // first make sure the data is valid
         if (recencyBlobResponse.getStatus() != RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS) {
             throw new RecencyException("Recency request failed");
@@ -343,25 +313,7 @@ public class ClientBundleTransmission {
         FileUtils.recursiveDelete(bundle.getSource().toPath());
     }
 
-    public ClientBundleSecurity getBundleSecurity() {
-        return this.bundleSecurity;
-    }
-
-    public enum Statuses {
-        FAILED, EMPTY, COMPLETE;
-
-        @Override
-        public String toString() {
-            return name().toLowerCase();
-        }
-    }
-
-    public record BundleExchangeCounts(TransportDevice device,
-                                       Statuses uploadStatus,
-                                       Statuses downloadStatus,
-                                       Exception e) {}
-
-    private static final int INITIAL_CONNECT_RETRIES = 8;
+    public ClientBundleSecurity getBundleSecurity() { return this.bundleSecurity; }
 
     private boolean isServerRunning(String transportAddress, int port) {
         for (var tries = 0; tries < INITIAL_CONNECT_RETRIES; tries++) {
@@ -395,7 +347,7 @@ public class ClientBundleTransmission {
         var trustManager = new DDDX509ExtendedTrustManager(true);
         sslClientContext.init(DDDTLSUtil.getKeyManagerFactory(bundleSecurity.getClientGrpcSecurityKey().grpcKeyPair,
                                                               bundleSecurity.getClientGrpcSecurityKey().grpcCert)
-                                      .getKeyManagers(), new TrustManager[] { trustManager }, new SecureRandom());
+                .getKeyManagers(), new TrustManager[] { trustManager }, new SecureRandom());
 
         var channel = OkHttpChannelBuilder.forAddress(transportAddress, port)
                 .hostnameVerifier((host, session) -> true)
@@ -430,16 +382,14 @@ public class ClientBundleTransmission {
                 var bundleRequests = getNextBundles();
                 PublicKeyMap publicKeyMap = PublicKeyMap.newBuilder()
                         .setClientPub(ByteString.copyFrom(clientSecurity.getClientIdentityPublicKey().serialize()))
-                        .setSignedTLSPub(ByteString.copyFrom(clientSecurity.getSignedTLSPub(bundleSecurity.getClientGrpcSecurityKey().grpcKeyPair.getPublic())))
+                        .setSignedTLSPub(ByteString.copyFrom(clientSecurity.getSignedTLSPub(bundleSecurity
+                                .getClientGrpcSecurityKey().grpcKeyPair.getPublic())))
                         .build();
                 // we don't include the public key map if we are connecting to a transport, since we only authenticate
                 // ourselves to BundleServers not transports
                 var bundlesDownloaded = connectingToTransport ?
-                                        downloadBundles(bundleRequests, BundleSenderType.CLIENT, blockingStub, null) :
-                                        downloadBundles(bundleRequests,
-                                                        BundleSenderType.CLIENT,
-                                                        blockingStub,
-                                                        publicKeyMap);
+                        downloadBundles(bundleRequests, BundleSenderType.CLIENT, blockingStub, null) :
+                        downloadBundles(bundleRequests, BundleSenderType.CLIENT, blockingStub, publicKeyMap);
 
                 try {
                     if (bundlesDownloaded == null) {
@@ -472,20 +422,20 @@ public class ClientBundleTransmission {
         return bundleSecurity.getClientWindow().getWindow(clientSecurity);
     }
 
-    private Statuses uploadBundle(BundleExchangeServiceGrpc.BundleExchangeServiceStub stub) throws
-            RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException, GeneralSecurityException {
+    private Statuses uploadBundle(BundleExchangeServiceGrpc.BundleExchangeServiceStub stub)
+            throws RoutingExceptions.ClientMetaDataFileException, IOException, InvalidKeyException,
+            GeneralSecurityException {
         Bundle toSend = generateBundleForTransmission();
 
         var bundleUploadResponseObserver = new BundleUploadResponseObserver();
 
-        StreamObserver<BundleUploadRequest> uploadRequestStreamObserver =
-                stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, MILLISECONDS).uploadBundle(bundleUploadResponseObserver);
+        StreamObserver<BundleUploadRequest> uploadRequestStreamObserver = stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS,
+                                                                                                 MILLISECONDS)
+                .uploadBundle(bundleUploadResponseObserver);
 
         uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder()
-                                                   .setBundleId(EncryptedBundleId.newBuilder()
-                                                                        .setEncryptedId(toSend.getBundleId())
-                                                                        .build())
-                                                   .build());
+                .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId(toSend.getBundleId()).build())
+                .build());
 
         // upload file as chunk
         logger.log(INFO, "Started upload bundle: " + toSend.getBundleId());
@@ -501,8 +451,8 @@ public class ClientBundleTransmission {
             }
         }
         uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder()
-                                                   .setSenderType(BundleSenderType.CLIENT)
-                                                   .build());
+                .setSenderType(BundleSenderType.CLIENT)
+                .build());
         uploadRequestStreamObserver.onCompleted();
         bundleUploadResponseObserver.waitForCompletion(GRPC_LONG_TIMEOUT_MS);
 
@@ -513,8 +463,8 @@ public class ClientBundleTransmission {
             return Statuses.FAILED;
         }
         return bundleUploadResponseObserver.bundleUploadResponse.getStatus() == Status.SUCCESS ?
-               Statuses.COMPLETE :
-               Statuses.EMPTY;
+                Statuses.COMPLETE :
+                Statuses.EMPTY;
     }
 
     private Path downloadBundles(List<String> bundleRequests,
@@ -571,5 +521,50 @@ public class ClientBundleTransmission {
         }
         return null;
     }
-}
 
+    public enum Statuses {
+        FAILED, EMPTY, COMPLETE;
+
+        @Override
+        public String toString() {
+            return name().toLowerCase();
+        }
+    }
+
+    public static class RecencyException extends IOException {
+        public RecencyException(String message) {
+            super(message);
+        }
+    }
+
+    /**
+     * Used to track in memory recently seen transports.
+     * All times are in milliseconds since epoch.
+     */
+    @Getter
+    public static class RecentTransport {
+        private TransportDevice device;
+        /* @param lastExchange time of last bundle exchange */
+        private long lastExchange;
+        /* @param lastSeen time of last device discovery */
+        private long lastSeen;
+        /* @param recencyTime time from the last recencyBlob received */
+        private long recencyTime;
+        /* @param recencyBlobResponse the latest recencyBlobResponse received */
+        private GetRecencyBlobResponse recencyBlobResponse;
+
+        public RecentTransport(TransportDevice device) {
+            this.device = device;
+        }
+
+        public RecentTransport(TransportDevice device, GetRecencyBlobResponse recencyBlobResponse) {
+            this.device = device;
+            this.recencyBlobResponse = recencyBlobResponse;
+        }
+    }
+
+    public record BundleExchangeCounts(TransportDevice device,
+                                       Statuses uploadStatus,
+                                       Statuses downloadStatus,
+                                       Exception e) {}
+}

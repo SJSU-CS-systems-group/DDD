@@ -1,21 +1,12 @@
 package net.discdd.utils;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonIOException;
-import com.google.gson.JsonSyntaxException;
-import com.google.gson.reflect.TypeToken;
-import net.discdd.bundlesecurity.SecurityUtils;
-import net.discdd.model.ADU;
-import net.discdd.model.Acknowledgement;
-import net.discdd.model.Bundle;
-import net.discdd.model.EncryptedPayload;
-import net.discdd.model.Payload;
-import net.discdd.model.UncompressedBundle;
-import net.discdd.model.UncompressedPayload;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.InvalidMessageException;
-import org.whispersystems.libsignal.ecc.ECPublicKey;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+import static net.discdd.bundlesecurity.DDDPEMEncoder.createEncodedPublicKeyBytes;
+import static net.discdd.bundlesecurity.DDDPEMEncoder.createEncryptedEncodedPublicKeyBytes;
+import static net.discdd.bundlesecurity.SecurityUtils.PAYLOAD_DIR;
+import static net.discdd.bundlesecurity.SecurityUtils.PAYLOAD_FILENAME;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -47,13 +38,24 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.WARNING;
-import static net.discdd.bundlesecurity.SecurityUtils.PAYLOAD_DIR;
-import static net.discdd.bundlesecurity.SecurityUtils.PAYLOAD_FILENAME;
-import static net.discdd.bundlesecurity.DDDPEMEncoder.createEncodedPublicKeyBytes;
-import static net.discdd.bundlesecurity.DDDPEMEncoder.createEncryptedEncodedPublicKeyBytes;
+import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.InvalidMessageException;
+import org.whispersystems.libsignal.ecc.ECPublicKey;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonIOException;
+import com.google.gson.JsonSyntaxException;
+import com.google.gson.reflect.TypeToken;
+
+import net.discdd.bundlesecurity.SecurityUtils;
+import net.discdd.model.ADU;
+import net.discdd.model.Acknowledgement;
+import net.discdd.model.Bundle;
+import net.discdd.model.EncryptedPayload;
+import net.discdd.model.Payload;
+import net.discdd.model.UncompressedBundle;
+import net.discdd.model.UncompressedPayload;
 
 public class BundleUtils {
     private static final Logger logger = Logger.getLogger(BundleUtils.class.getName());
@@ -68,7 +70,10 @@ public class BundleUtils {
         File[] payloads = extractedBundlePath.resolve("payloads").toFile().listFiles();
         EncryptedPayload encryptedPayload = new EncryptedPayload(null, payloads[0]);
         return new UncompressedBundle( // TODO get encryption header, payload signature and get bundle id from BS
-                                       null, extractedBundlePath.toFile(), null, encryptedPayload);
+                                      null,
+                                      extractedBundlePath.toFile(),
+                                      null,
+                                      encryptedPayload);
     }
 
     public static UncompressedPayload extractPayload(Payload payload, Path extractDirPath) throws IOException {
@@ -393,11 +398,6 @@ public class BundleUtils {
         return future;
     }
 
-    public interface Encrypter {
-        void encrypt(InputStream payload, OutputStream outputStream) throws IOException, NoSuchAlgorithmException,
-                InvalidKeyException, InvalidMessageException;
-    }
-
     public static void checkIdClean(String s) {
         // [a-zA-Z0-9+-] matches alphanumeric characters or + or -
         Pattern p = Pattern.compile(stringToMatch);
@@ -406,5 +406,10 @@ public class BundleUtils {
             logger.log(WARNING, "Invalid ID: " + s);
             throw new InvalidParameterException("Not URL Encoded");
         }
+    }
+
+    public interface Encrypter {
+        void encrypt(InputStream payload, OutputStream outputStream) throws IOException, NoSuchAlgorithmException,
+                InvalidKeyException, InvalidMessageException;
     }
 }

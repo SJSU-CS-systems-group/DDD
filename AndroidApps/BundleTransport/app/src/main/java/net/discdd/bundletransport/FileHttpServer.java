@@ -1,14 +1,14 @@
 package net.discdd.bundletransport;
 
-import fi.iki.elonen.NanoHTTPD;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
+import fi.iki.elonen.NanoHTTPD;
 
 public class FileHttpServer extends NanoHTTPD {
     private static final Logger logger = Logger.getLogger(FileHttpServer.class.getName());
@@ -42,29 +42,29 @@ public class FileHttpServer extends NanoHTTPD {
             // Serve a simple HTML index page
             StringBuilder html = new StringBuilder();
             html.append("""
-                                <html><head>
-                                <meta charset="UTF-8">
-                                <meta name="viewport" content="width=device-width, initial-scale=1">
-                                <title>DDD App Share</title>
-                                 <style>
-                                    body {
-                                      font-family: sans-serif;
-                                      font-size: 1.7rem;
-                                      line-height: 1.5;
-                                    }
-                                    h1 {
-                                      font-size: 2rem;
-                                      margin-bottom: 0.5rem;
-                                    }
-                                    ul {
-                                      padding-left: 1.2rem;
-                                      line-height: 1.7;
-                                    }
-                                  </style>
-                                <body>
-                                <h1>DDD App Share</h1>
-                                <p>Available apps:</p>
-                                <ul>""");
+                    <html><head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                    <title>DDD App Share</title>
+                     <style>
+                        body {
+                          font-family: sans-serif;
+                          font-size: 1.7rem;
+                          line-height: 1.5;
+                        }
+                        h1 {
+                          font-size: 2rem;
+                          margin-bottom: 0.5rem;
+                        }
+                        ul {
+                          padding-left: 1.2rem;
+                          line-height: 1.7;
+                        }
+                      </style>
+                    <body>
+                    <h1>DDD App Share</h1>
+                    <p>Available apps:</p>
+                    <ul>""");
             File mailApk = new File(filesDir, "ddd-mail.apk");
             File clientApk = new File(filesDir, "DDDClient.apk");
 

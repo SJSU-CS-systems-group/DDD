@@ -1,5 +1,41 @@
 package net.discdd.bundleclient.service;
 
+import static java.lang.String.format;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
+import static net.discdd.utils.Constants.GRPC_LONG_TIMEOUT_MS;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.logging.Logger;
+
+import net.discdd.bundleclient.BuildConfig;
+import net.discdd.bundleclient.R;
+import net.discdd.bundleclient.service.wifiDirect.DDDWifiDirect;
+import net.discdd.client.bundletransmission.ClientBundleTransmission;
+import net.discdd.client.bundletransmission.ClientBundleTransmission.BundleExchangeCounts;
+import net.discdd.client.bundletransmission.ClientBundleTransmission.Statuses;
+import net.discdd.client.bundletransmission.TransportDevice;
+import net.discdd.datastore.providers.MessageProvider;
+import net.discdd.grpc.GetRecencyBlobResponse;
+import net.discdd.model.ADU;
+import net.discdd.pathutils.ClientPaths;
+import net.discdd.utils.DDDFixedRateScheduler;
+import net.discdd.utils.LogUtil;
+import net.discdd.utils.UserLogRepository;
+
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Notification;
@@ -30,41 +66,6 @@ import androidx.core.app.ServiceCompat;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import net.discdd.bundleclient.BuildConfig;
-import net.discdd.bundleclient.R;
-import net.discdd.bundleclient.service.wifiDirect.DDDWifiDirect;
-import net.discdd.client.bundletransmission.ClientBundleTransmission;
-import net.discdd.client.bundletransmission.ClientBundleTransmission.BundleExchangeCounts;
-import net.discdd.client.bundletransmission.ClientBundleTransmission.Statuses;
-import net.discdd.client.bundletransmission.TransportDevice;
-import net.discdd.datastore.providers.MessageProvider;
-import net.discdd.grpc.GetRecencyBlobResponse;
-import net.discdd.model.ADU;
-import net.discdd.pathutils.ClientPaths;
-import net.discdd.utils.DDDFixedRateScheduler;
-import net.discdd.utils.LogUtil;
-import net.discdd.utils.UserLogRepository;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.logging.Logger;
-
-import static java.lang.String.format;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
-import static net.discdd.utils.Constants.GRPC_LONG_TIMEOUT_MS;
 
 // the service is usually formatting messages for the log rather than users, so don't complain about locales
 @SuppressLint("DefaultLocale")
@@ -79,7 +80,6 @@ public class BundleClientService extends Service {
     public static BundleClientService instance;
     private static SharedPreferences preferences;
     private final IBinder binder = new BundleClientServiceBinder();
-    private DDDFixedRateScheduler<BundleExchangeCounts[]> fixedRateSched;
     // per https://developer.android.com/reference/android/content/SharedPreferences the listener needs
     // to be a strong reference
     final private SharedPreferences.OnSharedPreferenceChangeListener onSharedPreferenceChangeListener;
@@ -87,6 +87,7 @@ public class BundleClientService extends Service {
     final private Set<String> insertedAppIds = Collections.synchronizedSet(new HashSet<>());
     ConnectivityManager connectivityManager;
     ConnectivityManager.NetworkCallback networkCallback;
+    private DDDFixedRateScheduler<BundleExchangeCounts[]> fixedRateSched;
     private DDDWifi dddWifi;
     private ClientBundleTransmission bundleTransmission;
     final private Observer<? super DDDWifiEventType> liveDataObserver = this::broadcastWifiEvent;
@@ -170,13 +171,9 @@ public class BundleClientService extends Service {
         }
     }
 
-    public DDDWifi getDddWifi() {
-        return dddWifi;
-    }
+    public DDDWifi getDddWifi() { return dddWifi; }
 
-    public ConnectivityManager.NetworkCallback getNetworkCallback() {
-        return networkCallback;
-    }
+    public ConnectivityManager.NetworkCallback getNetworkCallback() { return networkCallback; }
 
     private void processBackgroundExchangeSetting() {
         var backgroundExchange = getBackgroundExchangeSetting(preferences);
@@ -187,15 +184,17 @@ public class BundleClientService extends Service {
     @SuppressLint("MissingPermission")
     private void startForeground() {
         try {
-            NotificationChannel channel =
-                    new NotificationChannel("DDD-Client", "DDD Bundle Client", NotificationManager.IMPORTANCE_HIGH);
+            NotificationChannel channel = new NotificationChannel("DDD-Client",
+                                                                  "DDD Bundle Client",
+                                                                  NotificationManager.IMPORTANCE_HIGH);
             channel.setDescription("DDD Client Service");
 
             var notificationManager = getSystemService(NotificationManager.class);
             notificationManager.createNotificationChannel(channel);
 
-            Notification notification =
-                    new NotificationCompat.Builder(this, "DDD-Client").setContentTitle("DDD Bundle Client").build();
+            Notification notification = new NotificationCompat.Builder(this, "DDD-Client").setContentTitle(
+                                                                                                           "DDD Bundle Client")
+                    .build();
             int type = ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC;
             ServiceCompat.startForeground(this, 1, notification, type);
         } catch (Exception e) {
@@ -205,12 +204,12 @@ public class BundleClientService extends Service {
         try {
             //Application context
             var resources = getApplicationContext().getResources();
-            try (InputStream inServerIdentity =
-                         resources.openRawResource(net.discdd.android_core.R.raw.server_identity);
-                 InputStream inServerSignedPre =
-                         resources.openRawResource(net.discdd.android_core.R.raw.server_signed_pre);
-                 InputStream inServerRatchet =
-                         resources.openRawResource(net.discdd.android_core.R.raw.server_ratchet)) {
+            try (InputStream inServerIdentity = resources.openRawResource(
+                                                                          net.discdd.android_core.R.raw.server_identity);
+                 InputStream inServerSignedPre = resources.openRawResource(
+                                                                           net.discdd.android_core.R.raw.server_signed_pre);
+                 InputStream inServerRatchet = resources.openRawResource(
+                                                                         net.discdd.android_core.R.raw.server_ratchet)) {
 
                 ClientPaths clientPaths = new ClientPaths(getApplicationContext().getDataDir().toPath(),
                                                           inServerIdentity.readAllBytes(),
@@ -293,7 +292,8 @@ public class BundleClientService extends Service {
         }
         var recentTransports = bundleTransmission.getRecentTransports();
         for (var transport : recentTransports) {
-            if (transport.getDevice() instanceof DDDWifiDevice && ClientBundleTransmission.doesTransportHaveNewData(transport)) {
+            if (transport.getDevice() instanceof DDDWifiDevice && ClientBundleTransmission.doesTransportHaveNewData(
+                                                                                                                    transport)) {
                 var bc = exchangeWith((DDDWifiDevice) transport.getDevice());
                 exchangeCounts.add(bc);
                 logger.log(INFO,
@@ -321,15 +321,15 @@ public class BundleClientService extends Service {
                 return failedExchangeCounts(device);
             }
             var addr = connection.getAddresses().get(0);
-            broadcastBundleClientLogEvent(R.string.connected_to_s_s,
-                                                 device.getDescription(),
-                                                 addr.getHostAddress());
-            BundleExchangeCounts currentBundle =
-                    bundleTransmission.doExchangeWithTransport(device, addr.getHostAddress(), 7777, true);
+            broadcastBundleClientLogEvent(R.string.connected_to_s_s, device.getDescription(), addr.getHostAddress());
+            BundleExchangeCounts currentBundle = bundleTransmission.doExchangeWithTransport(device,
+                                                                                            addr.getHostAddress(),
+                                                                                            7777,
+                                                                                            true);
             broadcastBundleClientLogEvent(R.string.s_upload_s_download_s,
-                                                 device.getDescription(),
-                                                 statusesToString(currentBundle.uploadStatus()),
-                                                 statusesToString(currentBundle.downloadStatus()));
+                                          device.getDescription(),
+                                          statusesToString(currentBundle.uploadStatus()),
+                                          statusesToString(currentBundle.downloadStatus()));
             if (currentBundle.e() instanceof ClientBundleTransmission.RecencyException) {
                 broadcastBundleClientLogEvent(R.string.not_exchanged_recently_s, currentBundle.e().getMessage());
             }
@@ -384,7 +384,8 @@ public class BundleClientService extends Service {
         };
     }
 
-    private void broadcastBundleClientLogEvent(@StringRes int resId, Object... args) {
+    private void broadcastBundleClientLogEvent(@StringRes
+    int resId, Object... args) {
         LogUtil.logUi(getApplicationContext(), logger, UserLogRepository.UserLogType.WIFI, INFO, resId, args);
     }
 
@@ -411,9 +412,7 @@ public class BundleClientService extends Service {
         LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
     }
 
-    public String getClientId() {
-        return bundleTransmission.getBundleSecurity().getClientSecurity().getClientID();
-    }
+    public String getClientId() { return bundleTransmission.getBundleSecurity().getClientSecurity().getClientID(); }
 
     public void discoverPeers() {
         dddWifi.startDiscovery();
@@ -423,17 +422,18 @@ public class BundleClientService extends Service {
     @SuppressLint("NotificationPermission")
     public CompletableFuture<BundleExchangeCounts> initiateExchange(DDDWifiDevice device) {
         var completableFuture = new CompletableFuture<BundleExchangeCounts>();
-        NotificationChannel channel =
-                new NotificationChannel("DDD-Exchange", "DDD Bundle Client", NotificationManager.IMPORTANCE_HIGH);
+        NotificationChannel channel = new NotificationChannel("DDD-Exchange",
+                                                              "DDD Bundle Client",
+                                                              NotificationManager.IMPORTANCE_HIGH);
         channel.setDescription("Initiating Bundle Exchange...");
 
-        NotificationCompat.Builder builder =
-                new NotificationCompat.Builder(this, "DDD-Client").setSmallIcon(R.drawable.bundleclient_icon)
-                        .setContentTitle(getString(R.string.exchanging_with_transport))
-                        .setContentText(getString(R.string.initiating_bundle_exchange))
-                        .setPriority(NotificationCompat.PRIORITY_HIGH)
-                        .setAutoCancel(false)
-                        .setOngoing(true);
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "DDD-Client").setSmallIcon(
+                                                                                                             R.drawable.bundleclient_icon)
+                .setContentTitle(getString(R.string.exchanging_with_transport))
+                .setContentText(getString(R.string.initiating_bundle_exchange))
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(false)
+                .setOngoing(true);
 
         NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         notificationManager.notify(1002, builder.build());
@@ -464,8 +464,8 @@ public class BundleClientService extends Service {
         var activeNetwork = connectivityManager.getActiveNetwork();
         var caps = activeNetwork == null ? null : connectivityManager.getNetworkCapabilities(activeNetwork);
         var FAILED_EXCHANGE_COUNTS = failedExchangeCounts(TransportDevice.SERVER_DEVICE);
-        if (caps == null || !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) ||
-                !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
+        if (caps == null || !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) || !caps.hasCapability(
+                                                                                                                    NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
             logger.info("Not connected to the internet, skipping server exchange");
             completableFuture.complete(FAILED_EXCHANGE_COUNTS);
             return completableFuture;
@@ -501,15 +501,14 @@ public class BundleClientService extends Service {
         return bundleTransmission.getRecentTransports();
     }
 
-    public boolean isDiscoveryActive() {
-        return dddWifi.isDiscoveryActive();
-    }
+    public boolean isDiscoveryActive() { return dddWifi.isDiscoveryActive(); }
 
     public ClientBundleTransmission.RecentTransport getRecentTransport(DDDWifiDevice peer) {
         return Arrays.stream(bundleTransmission.getRecentTransports())
                 .filter(rt -> peer.equals(rt.getDevice()))
                 .findFirst()
-                .orElse(new ClientBundleTransmission.RecentTransport(peer, GetRecencyBlobResponse.getDefaultInstance()));
+                .orElse(new ClientBundleTransmission.RecentTransport(peer,
+                                                                     GetRecencyBlobResponse.getDefaultInstance()));
     }
 
     public void notifyNewAdu() {
@@ -519,7 +518,8 @@ public class BundleClientService extends Service {
     }
 
     public void peersUpdated() {
-        dddWifi.listDevices().forEach(device -> bundleTransmission.processDiscoveredPeer(device, device.getRecencyBlob()));
+        dddWifi.listDevices()
+                .forEach(device -> bundleTransmission.processDiscoveredPeer(device, device.getRecencyBlob()));
         // expire peers that haven't been seen for a minute
         long expirationTime = System.currentTimeMillis() - 60 * 1000;
         bundleTransmission.expireNotSeenPeers(expirationTime);
@@ -529,16 +529,14 @@ public class BundleClientService extends Service {
         dddWifi.wifiPermissionGranted();
     }
 
-    public ClientBundleTransmission getBundleTransmission() {
-        return bundleTransmission;
-    }
+    public ClientBundleTransmission getBundleTransmission() { return bundleTransmission; }
 
     public enum BundleClientTransmissionEventType {
         WIFI_DIRECT_CLIENT_EXCHANGE_STARTED, WIFI_DIRECT_CLIENT_EXCHANGE_FINISHED
     }
 
     public class BundleClientServiceBinder extends Binder {
-        public BundleClientService getService() {return BundleClientService.this;}
+        public BundleClientService getService() { return BundleClientService.this; }
     }
 
 }

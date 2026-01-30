@@ -1,11 +1,23 @@
 <resources>
-    <string name="manual_action_required">Se requiere una acción manual para otorgar acceso a dispositivos cercanos. Para continuar, haga clic en \'Habilitar\' -&gt; \'Permisos\' -&gt; \'Dispositivos cercanos\' -&gt; \'Permitir\'&gt;</string>
-    <string name="generic_ask_permission">Este permiso es necesario para descubrir y conectarse a dispositivos cercanos para transferencias de archivos.</string>
-    <string name="urgent_ask_permission">Obtener acceso a dispositivos cercanos es importante para la funcionalidad de transporte. Por favor, otorguemos acceso para continuar. Gracias: D</string>
+    <string name="manual_action_required">Se requiere una acción manual para otorgar acceso a dispositivos cercanos.
+        Para continuar, haga clic en \'Habilitar\' -&gt; \'Permisos\' -&gt; \'Dispositivos cercanos\' -&gt; \'Permitir\'&gt;
+    </string>
+    <string name="generic_ask_permission">Este permiso es necesario para descubrir y conectarse a dispositivos cercanos
+        para transferencias de archivos.
+    </string>
+    <string name="urgent_ask_permission">Obtener acceso a dispositivos cercanos es importante para la funcionalidad de
+        transporte. Por favor, otorguemos acceso para continuar. Gracias: D
+    </string>
     <string name="close_bottom_sheet">Cerrar la hoja inferior</string>
     <string name="turn_on_notifications">Activar las notificaciones</string>
-    <string name="ask_notification_desc">No se pierda mensajes importantes como el progreso de la carga de paquetes y la actividad de la aplicación</string>
+    <string name="ask_notification_desc">No se pierda mensajes importantes como el progreso de la carga de paquetes y la
+        actividad de la aplicación
+    </string>
     <string name="to_settings">A la configuración</string>
-    <string name="to_settings_text">Para habilitar nuestra aplicación para administrar archivos relacionados con la aplicación en este dispositivo y su almacenamiento USB, alterne "Sí" para BundLeclient en su configuración. Le aseguramos que solo se accederán a los archivos creados por nuestra aplicación. Proteger la privacidad del usuario y mantener las prácticas éticas son nuestras principales prioridades.</string>
+    <string name="to_settings_text">Para habilitar nuestra aplicación para administrar archivos relacionados con la
+        aplicación en este dispositivo y su almacenamiento USB, alterne "Sí" para BundLeclient en su configuración. Le
+        aseguramos que solo se accederán a los archivos creados por nuestra aplicación. Proteger la privacidad del
+        usuario y mantener las prácticas éticas son nuestras principales prioridades.
+    </string>
     <string name="reload">Recargar</string>
 </resources>

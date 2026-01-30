@@ -1,30 +1,30 @@
 package net.discdd.server.commands.bundlesecurity;
 
-import net.discdd.bundlesecurity.SecurityUtils;
-import net.discdd.bundlesecurity.ServerSecurity;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-import picocli.CommandLine;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
 
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.concurrent.Callable;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.WARNING;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import net.discdd.bundlesecurity.SecurityUtils;
+import net.discdd.bundlesecurity.ServerSecurity;
+
+import picocli.CommandLine;
 
 @Component
 @CommandLine.Command(name = "decrypt-bundle", description = "Decrypt bundle")
 public class DecryptBundle implements Callable<Void> {
     private static final Logger logger = Logger.getLogger(DecryptBundle.class.getName());
-    @Value("${bundle-server.bundle-transmission.received-processing-directory}")
-    private String receivedProcessingDir;
-
     @CommandLine.Parameters(arity = "1", index = "0")
     String command;
-
+    @Value("${bundle-server.bundle-transmission.received-processing-directory}")
+    private String receivedProcessingDir;
     @CommandLine.Option(names = "--bundle", required = true, description = "Bundle file path")
     private String bundlePath;
 

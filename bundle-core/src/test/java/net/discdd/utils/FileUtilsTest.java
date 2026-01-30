@@ -1,15 +1,16 @@
 package net.discdd.utils;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
 public class FileUtilsTest {
     @Test
-    void testRecursiveDelete(@TempDir Path tempDir) throws IOException {
+    void testRecursiveDelete(@TempDir
+    Path tempDir) throws IOException {
         Files.createDirectories(tempDir.resolve("a/a/c"));
         Files.createDirectories(tempDir.resolve("a/b/c"));
         Files.createDirectories(tempDir.resolve("a/c/c"));

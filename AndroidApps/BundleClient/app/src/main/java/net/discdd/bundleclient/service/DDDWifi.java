@@ -1,9 +1,9 @@
 package net.discdd.bundleclient.service;
 
-import androidx.lifecycle.LiveData;
-
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+
+import androidx.lifecycle.LiveData;
 
 public interface DDDWifi {
     CompletableFuture<Boolean> startDiscovery();

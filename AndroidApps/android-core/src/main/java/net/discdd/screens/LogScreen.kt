@@ -39,9 +39,9 @@ class LogFragment : Fragment() {
     }
 
     override fun onCreateView(
-            inflater: LayoutInflater,
-            container: ViewGroup?,
-            savedInstanceState: Bundle?
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
     ): View {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
@@ -56,42 +56,42 @@ class LogFragment : Fragment() {
 
 @Composable
 fun LogScreen(
-        viewModel: LogViewModel = viewModel()
+    viewModel: LogViewModel = viewModel()
 ) {
     Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
     ) {
         val state by viewModel.state.collectAsState()
 
         Box(
-                modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
         ) {
             LazyColumn(
-                    modifier = Modifier
-                            .fillMaxSize()
-                            .padding(bottom = 80.dp)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 80.dp)
             ) {
                 items(state.logMessages) { logMessage ->
                     Text(
-                            text = logMessage,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(vertical = 2.dp)
+                        text = logMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(vertical = 2.dp)
                     )
                 }
             }
 
             FloatingActionButton(
-                    onClick = { viewModel.refreshLogMsgs() },
-                    modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(16.dp)
+                onClick = { viewModel.refreshLogMsgs() },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
             ) {
                 Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = "Refresh Logs"
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Refresh Logs"
                 )
             }
         }

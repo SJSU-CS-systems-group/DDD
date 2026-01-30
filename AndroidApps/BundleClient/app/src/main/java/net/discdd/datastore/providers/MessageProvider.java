@@ -6,32 +6,30 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
+import java.io.IOException;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.logging.Logger;
+
+import net.discdd.bundleclient.service.BundleClientService;
+import net.discdd.client.bundlesecurity.ClientSecurity;
+import net.discdd.utils.StoreADUs;
+
 import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
 import android.os.Binder;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import net.discdd.bundleclient.service.BundleClientService;
-import net.discdd.client.bundlesecurity.ClientSecurity;
-import net.discdd.utils.StoreADUs;
-
-import java.io.IOException;
-import java.nio.file.Paths;
-import java.util.List;
-import java.util.logging.Logger;
-
 public class MessageProvider extends ContentProvider {
 
-    private static final Logger logger = Logger.getLogger(MessageProvider.class.getName());
     public static final String PROVIDER_NAME = "net.discdd.provider.datastoreprovider";
-    public static final Uri URL = Uri.parse("content://" +  PROVIDER_NAME + "/messages");
-    public static final int MAX_ADU_SIZE = 512*1024;
-
+    public static final Uri URL = Uri.parse("content://" + PROVIDER_NAME + "/messages");
+    public static final int MAX_ADU_SIZE = 512 * 1024;
+    private static final Logger logger = Logger.getLogger(MessageProvider.class.getName());
     private StoreADUs sendADUsStorage;
     private StoreADUs receiveADUsStorage;
 
@@ -54,6 +52,7 @@ public class MessageProvider extends ContentProvider {
         }
         throw new SecurityException("not on the list!");
     }
+
     @Override
     public boolean onCreate() {
         var appRootDataDir = Paths.get(getContext().getApplicationInfo().dataDir);
@@ -64,10 +63,12 @@ public class MessageProvider extends ContentProvider {
 
     @Nullable
     @Override
-    public Cursor query(
-            @NonNull Uri uri,
-            @Nullable String[] projection,
-            @Nullable String selection, @Nullable String[] selectionArgs, @Nullable String sortOrder) {
+    public Cursor query(@NonNull
+    Uri uri, @Nullable
+    String[] projection, @Nullable
+    String selection, @Nullable
+    String[] selectionArgs, @Nullable
+    String sortOrder) {
         checkCallerAppId();
 
         MatrixCursor cursor = new MatrixCursor(new String[] { "data", "id", "offset", "exception" });
@@ -92,12 +93,10 @@ public class MessageProvider extends ContentProvider {
                         assert selectionArgs != null;
                         long aduId = Long.parseLong(selectionArgs[0]);
                         long offset = selectionArgs.length > 1 ? Long.parseLong(selectionArgs[1]) : 0;
-                        // make sure we get the data before we call new row, so that we don't get a partial row if an exception happens
-                        byte[] aduData =
-                                receiveADUsStorage.getADU(null, appId, aduId, offset, MAX_ADU_SIZE);
-                        cursor.newRow().add("data", aduData)
-                                .add("id", aduId)
-                                .add("offset", offset);
+                        // make sure we get the data before we call new row, so that we don't get a partial row if an
+                        // exception happens
+                        byte[] aduData = receiveADUsStorage.getADU(null, appId, aduId, offset, MAX_ADU_SIZE);
+                        cursor.newRow().add("data", aduData).add("id", aduId).add("offset", offset);
                         return cursor;
                     }
                     default -> {
@@ -107,7 +106,7 @@ public class MessageProvider extends ContentProvider {
                 }
             } else {
                 List<StoreADUs.AduIdData> datalist = receiveADUsStorage.getAllAppIdAndData(appId);
-                for (StoreADUs.AduIdData adu: datalist) {
+                for (StoreADUs.AduIdData adu : datalist) {
                     cursor.newRow().add("data", new String(adu.data())).add("id", adu.id());
                 }
             }
@@ -120,13 +119,16 @@ public class MessageProvider extends ContentProvider {
 
     @Nullable
     @Override
-    public String getType(@NonNull Uri uri) {
+    public String getType(@NonNull
+    Uri uri) {
         return "vnd.android.cursor.dir/messages";
     }
 
     @Nullable
     @Override
-    public Uri insert(@NonNull Uri uri, @Nullable ContentValues contentValues) {
+    public Uri insert(@NonNull
+    Uri uri, @Nullable
+    ContentValues contentValues) {
         checkCallerAppId();
         try {
             String appName = getCallerAppId();
@@ -135,9 +137,14 @@ public class MessageProvider extends ContentProvider {
             Boolean finished = contentValues.getAsBoolean("finished");
             Long aduId = contentValues.getAsLong("aduId");
 
-            logger.log(INFO, format("%s inserting: %s bytes, at %s, %s is finished", appName, data.length, offset, finished));
-            var rspUri = fromFile(sendADUsStorage.addADU(null, appName, data,
-                                                   aduId == null ? -1 : aduId, offset == null ? 0 : offset, finished));
+            logger.log(INFO,
+                       format("%s inserting: %s bytes, at %s, %s is finished", appName, data.length, offset, finished));
+            var rspUri = fromFile(sendADUsStorage.addADU(null,
+                                                         appName,
+                                                         data,
+                                                         aduId == null ? -1 : aduId,
+                                                         offset == null ? 0 : offset,
+                                                         finished));
             var service = BundleClientService.instance;
             if (service != null) {
                 service.notifyNewAdu();
@@ -150,7 +157,10 @@ public class MessageProvider extends ContentProvider {
     }
 
     @Override
-    public int delete(@NonNull Uri uri, @Nullable String selection, @Nullable String[] selectionArgs) {
+    public int delete(@NonNull
+    Uri uri, @Nullable
+    String selection, @Nullable
+    String[] selectionArgs) {
         String appName;
         checkCallerAppId();
 
@@ -174,9 +184,11 @@ public class MessageProvider extends ContentProvider {
     }
 
     @Override
-    public int update(
-            @NonNull Uri uri,
-            @Nullable ContentValues contentValues, @Nullable String selection, @Nullable String[] selectionArgs) {
+    public int update(@NonNull
+    Uri uri, @Nullable
+    ContentValues contentValues, @Nullable
+    String selection, @Nullable
+    String[] selectionArgs) {
         int rowsUpdated = 0;
         checkCallerAppId();
         // TODO: implement update if necessary

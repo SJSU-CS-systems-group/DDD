@@ -13,13 +13,9 @@ public class Acknowledgement {
         this.size = bundleId.getBytes().length;
     }
 
-    public String getBundleId() {
-        return this.bundleId;
-    }
+    public String getBundleId() { return this.bundleId; }
 
-    public long getSize() {
-        return this.size;
-    }
+    public long getSize() { return this.size; }
 
     @Override
     public int hashCode() {

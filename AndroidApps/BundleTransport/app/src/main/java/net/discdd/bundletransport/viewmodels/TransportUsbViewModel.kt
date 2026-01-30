@@ -18,7 +18,7 @@ import java.util.logging.Logger
 import kotlin.io.path.deleteIfExists
 
 class TransportUsbViewModel(
-        application: Application,
+    application: Application,
 ) : UsbViewModel(application) {
     companion object {
         private val logger: Logger = Logger.getLogger(TransportUsbViewModel::class.java.name)
@@ -110,9 +110,9 @@ class TransportUsbViewModel(
                         if (targetFile != null) {
                             context.contentResolver.openOutputStream(targetFile.uri, "wt")?.use { outputStream ->
                                 Files.newInputStream(bundle.toPath())?.use { inputStream ->
-                                    appendMessage("Copying from: ${bundle} to ${targetFile.uri}", Color.RED)
+                                    appendMessage("Copying from: $bundle to ${targetFile.uri}", Color.RED)
                                     val bytesCopied = inputStream.copyTo(outputStream)
-                                    appendMessage("Bytes copied ${bytesCopied}", Color.YELLOW)
+                                    appendMessage("Bytes copied $bytesCopied", Color.YELLOW)
                                 } ?: appendMessage("Could not open file", Color.RED)
                                 outputStream.flush()
                             }

@@ -2,7 +2,7 @@ name: Build Modules
 
 on:
   pull_request:
-    branches: [main]
+    branches: [ main ]
 
 permissions:
   packages: read
@@ -26,6 +26,12 @@ jobs:
               </server>
             </servers>
           </settings>" > ~/.m2/settings.xml
+
+      - name: Gradle spotless
+        run: ./gradlew spotlessApply
+
+      - name: Maven spotless
+        run: mvn spotless:apply
 
       - name: Maven install
         run: mvn -U -ntp install

@@ -133,7 +133,7 @@ class ServerViewModel(
                 appendMessage(context.getString(R.string.switching_server_will_reset_keys))
                 try {
                     ClientSecurity.resetInstance()
-                }catch(e : Exception) {
+                } catch (e: Exception) {
                     revertDomainPortChanges()
                     appendMessage("Error Changing  Resetting ClientSecurity")
                 }

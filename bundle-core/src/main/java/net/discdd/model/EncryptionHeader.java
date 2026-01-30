@@ -1,10 +1,10 @@
 package net.discdd.model;
 
+import java.io.File;
+
 import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
-
-import java.io.File;
 
 @Data
 @Getter

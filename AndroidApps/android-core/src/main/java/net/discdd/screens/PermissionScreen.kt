@@ -35,8 +35,8 @@ import net.discdd.viewmodels.PermissionsViewModel
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun PermissionScreen(
-        viewModel: PermissionsViewModel = viewModel(),
-        runtimePermissions: List<PermissionState>,
+    viewModel: PermissionsViewModel = viewModel(),
+    runtimePermissions: List<PermissionState>,
 ) {
     val permissionItems by viewModel.permissionItems.collectAsState()
     val context = LocalContext.current
@@ -47,19 +47,19 @@ fun PermissionScreen(
     }
 
     Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
     ) {
         LazyColumn(
-                modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize()
         ) {
             items(permissionItems) { itemData ->
                 PermissionItem(
-                        permissionItem = itemData,
-                        onClick = {},
-                        onCheckPermission = {
-                            viewModel.checkPermission(itemData.permissionName, activity)
-                        }
+                    permissionItem = itemData,
+                    onClick = {},
+                    onCheckPermission = {
+                        viewModel.checkPermission(itemData.permissionName, activity)
+                    }
                 )
             }
         }
@@ -68,15 +68,15 @@ fun PermissionScreen(
 
 @Composable
 fun PermissionItem(
-        permissionItem: PermissionItemData,
-        onClick: () -> Unit,
-        onCheckPermission: () -> Unit
+    permissionItem: PermissionItemData,
+    onClick: () -> Unit,
+    onCheckPermission: () -> Unit
 ) {
     val context = LocalContext.current
     val resId = context.resources.getIdentifier(
-            permissionItem.permissionName,
-            "string",
-            context.packageName
+        permissionItem.permissionName,
+        "string",
+        context.packageName
     )
     val permissionText = if (resId == 0) permissionItem.permissionName else stringResource(id = resId)
 
@@ -85,22 +85,22 @@ fun PermissionItem(
     }
 
     Row(
-            modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onClick() }
-                    .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Checkbox(
-                checked = permissionItem.isBoxChecked,
-                onCheckedChange = null
+            checked = permissionItem.isBoxChecked,
+            onCheckedChange = null
         )
 
         Spacer(modifier = Modifier.width(16.dp))
 
         Text(
-                text = permissionText,
-                style = MaterialTheme.typography.bodyLarge
+            text = permissionText,
+            style = MaterialTheme.typography.bodyLarge
         )
     }
 }

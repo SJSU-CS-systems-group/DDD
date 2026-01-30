@@ -1,9 +1,14 @@
 package net.discdd.grpc;
 
-import io.grpc.BindableService;
-import io.grpc.Server;
-import net.discdd.tls.DDDNettyTLS;
-import net.discdd.tls.GrpcSecurityKey;
+import static java.util.logging.Level.INFO;
+
+import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
+
+import javax.annotation.PreDestroy;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,29 +16,27 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PreDestroy;
-import java.util.List;
-import java.util.concurrent.Executor;
-import java.util.logging.Logger;
-import java.util.stream.Collectors;
+import net.discdd.tls.DDDNettyTLS;
+import net.discdd.tls.GrpcSecurityKey;
 
-import static java.util.logging.Level.INFO;
+import io.grpc.BindableService;
+import io.grpc.Server;
 
 @Service
 public class GrpcServerRunner implements CommandLineRunner {
     private static final Logger logger = Logger.getLogger(GrpcServerRunner.class.getName());
     static List<BindableService> services;
+    private final GrpcSecurityKey grpcSecurityKey;
+    private final Executor executor;
     @Autowired
     ApplicationContext context;
     int BUNDLE_SERVER_PORT;
     private Server server;
-    private final GrpcSecurityKey grpcSecurityKey;
     private Thread awaitThread;
-    private final Executor executor;
 
-    public GrpcServerRunner(@Value("${ssl-grpc.server.port}") int port,
-                            GrpcSecurityKey grpcSecurityKey,
-                            @Qualifier("grpcExecutor") Executor executor) {
+    public GrpcServerRunner(@Value("${ssl-grpc.server.port}")
+    int port, GrpcSecurityKey grpcSecurityKey, @Qualifier("grpcExecutor")
+    Executor executor) {
         BUNDLE_SERVER_PORT = port;
         this.grpcSecurityKey = grpcSecurityKey;
         this.executor = executor;

@@ -1,14 +1,28 @@
 package net.discdd.client.bundlesecurity;
 
-import net.discdd.bundlesecurity.DDDPEMEncoder;
-import net.discdd.bundlesecurity.SecurityUtils;
-import net.discdd.pathutils.ClientPaths;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
+
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.GeneralSecurityException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.util.Base64;
+import java.util.logging.Logger;
+
 import org.whispersystems.libsignal.DuplicateMessageException;
 import org.whispersystems.libsignal.IdentityKey;
 import org.whispersystems.libsignal.IdentityKeyPair;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.InvalidMessageException;
-import org.whispersystems.libsignal.LegacyMessageException;
 import org.whispersystems.libsignal.NoSessionException;
 import org.whispersystems.libsignal.SessionCipher;
 import org.whispersystems.libsignal.SignalProtocolAddress;
@@ -23,26 +37,9 @@ import org.whispersystems.libsignal.state.SessionState;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.util.guava.Optional;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.security.GeneralSecurityException;
-import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
-import java.util.Base64;
-import java.util.logging.Logger;
-
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.FINER;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
+import net.discdd.bundlesecurity.DDDPEMEncoder;
+import net.discdd.bundlesecurity.SecurityUtils;
+import net.discdd.pathutils.ClientPaths;
 
 public class ClientSecurity {
 
@@ -101,6 +98,34 @@ public class ClientSecurity {
         createCipher();
     }
 
+    /* Initialize or get previous client Security Instance */
+    public static synchronized ClientSecurity initializeInstance(int deviceID, ClientPaths clientPaths)
+            throws IOException, NoSuchAlgorithmException, InvalidKeyException {
+        if (singleClientInstance == null) {
+            singleClientInstance = new ClientSecurity(deviceID, clientPaths);
+        } else {
+            logger.log(FINE, "[Sec]: Client Security Instance is already initialized!");
+        }
+
+        return singleClientInstance;
+    }
+
+    /* Be Careful When you call This  */
+    public static synchronized void resetInstance() throws IOException, NoSuchAlgorithmException, InvalidKeyException {
+        var deviceID = singleClientInstance.getDeviceId();
+        var clientPaths = singleClientInstance.getClientPaths();
+        singleClientInstance = null;
+        initializeInstance(deviceID, clientPaths);
+        logger.log(FINE, "[Sec]: Client Security Instance Has been reset!");
+    }
+
+    public static synchronized ClientSecurity getInstance() throws IllegalStateException {
+        if (singleClientInstance == null) {
+            throw new IllegalStateException("[Sec]: Client Security Session is not initialized!");
+        }
+        return singleClientInstance;
+    }
+
     private Path[] writeKeysToFiles(Path path, boolean writePvt) throws IOException {
         /* Create Directory if it does not exist */
         path.toFile().mkdirs();
@@ -121,8 +146,8 @@ public class ClientSecurity {
 
     private void loadKeysfromFiles(Path clientKeyPath) throws IOException, InvalidKeyException {
         byte[] identityKeyPvt = Files.readAllBytes(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_PRIVATE_KEY));
-        byte[] identityKeyPub =
-                DDDPEMEncoder.decodePublicKeyfromFile(clientKeyPath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
+        byte[] identityKeyPub = DDDPEMEncoder.decodePublicKeyfromFile(clientKeyPath.resolve(
+                                                                                            SecurityUtils.CLIENT_IDENTITY_KEY));
 
         IdentityKey identityPublicKey = new IdentityKey(identityKeyPub, 0);
         ECPrivateKey identityPrivateKey = Curve.decodePrivatePoint(identityKeyPvt);
@@ -139,17 +164,19 @@ public class ClientSecurity {
     }
 
     private void InitializeServerKeysFromFiles(Path path) throws InvalidKeyException, IOException {
-        byte[] serverIdentityKey =
-                DDDPEMEncoder.decodePublicKeyfromFile(path.resolve(SecurityUtils.SERVER_IDENTITY_KEY));
+        byte[] serverIdentityKey = DDDPEMEncoder.decodePublicKeyfromFile(path.resolve(
+                                                                                      SecurityUtils.SERVER_IDENTITY_KEY));
         theirIdentityKey = new IdentityKey(serverIdentityKey, 0);
 
-        byte[] serverSignedPreKey =
-                DDDPEMEncoder.decodePublicKeyfromFile(path.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY));
+        byte[] serverSignedPreKey = DDDPEMEncoder.decodePublicKeyfromFile(path.resolve(
+                                                                                       SecurityUtils.SERVER_SIGNED_PRE_KEY));
         theirSignedPreKey = Curve.decodePoint(serverSignedPreKey, 0);
 
         byte[] serverRatchetKey = DDDPEMEncoder.decodePublicKeyfromFile(path.resolve(SecurityUtils.SERVER_RATCHET_KEY));
         theirRatchetKey = Curve.decodePoint(serverRatchetKey, 0);
     }
+
+    /* Encrypts and creates a file for the BundleID */
 
     private void initializeRatchet(SessionState clientSessionState) throws InvalidKeyException {
         AliceSignalProtocolParameters parameters = AliceSignalProtocolParameters.newBuilder()
@@ -162,6 +189,8 @@ public class ClientSecurity {
                 .create();
         RatchetingSession.initializeSession(clientSessionState, parameters);
     }
+
+    /* Add Headers (Identity, Base Key & Bundle ID) to Bundle Path */
 
     private void updateSessionRecord() {
         try (FileOutputStream stream = new FileOutputStream(clientPaths.sessionStorePath.toString())) {
@@ -191,47 +220,15 @@ public class ClientSecurity {
         updateSessionRecord();
     }
 
-    /* Encrypts and creates a file for the BundleID */
-
     /* Encrypts the given bundleID
      */
     public String encryptBundleID(String bundleID) throws GeneralSecurityException, InvalidKeyException {
-        byte[] agreement =
-                Curve.calculateAgreement(theirIdentityKey.getPublicKey(), ourIdentityKeyPair.getPrivateKey());
+        byte[] agreement = Curve.calculateAgreement(theirIdentityKey.getPublicKey(),
+                                                    ourIdentityKeyPair.getPrivateKey());
 
         String secretKey = Base64.getUrlEncoder().encodeToString(agreement);
 
         return SecurityUtils.encryptAesCbcPkcs5(secretKey, bundleID);
-    }
-
-    /* Add Headers (Identity, Base Key & Bundle ID) to Bundle Path */
-
-    /* Initialize or get previous client Security Instance */
-    public static synchronized ClientSecurity initializeInstance(int deviceID, ClientPaths clientPaths) throws
-            IOException, NoSuchAlgorithmException, InvalidKeyException {
-        if (singleClientInstance == null) {
-            singleClientInstance = new ClientSecurity(deviceID, clientPaths);
-        } else {
-            logger.log(FINE, "[Sec]: Client Security Instance is already initialized!");
-        }
-
-        return singleClientInstance;
-    }
-
-    /* Be Careful When you call This  */
-    public static synchronized void resetInstance() throws IOException, NoSuchAlgorithmException, InvalidKeyException {
-        var deviceID = singleClientInstance.getDeviceId();
-        var clientPaths = singleClientInstance.getClientPaths();
-        singleClientInstance = null;
-        initializeInstance(deviceID, clientPaths);
-        logger.log(FINE, "[Sec]: Client Security Instance Has been reset!");
-    }
-
-    public static synchronized ClientSecurity getInstance() throws IllegalStateException {
-        if (singleClientInstance == null) {
-            throw new IllegalStateException("[Sec]: Client Security Session is not initialized!");
-        }
-        return singleClientInstance;
     }
 
     /* Encrypts File */
@@ -283,36 +280,22 @@ public class ClientSecurity {
         return SecurityUtils.signMessageRaw(pubKey.getEncoded(), ourIdentityKeyPair.getPrivateKey());
     }
 
-    public String getClientID() {
-        return this.clientID;
-    }
+    public String getClientID() { return this.clientID; }
 
     public String getBundleIDFromFile(Path bundlePath) throws IOException {
         byte[] bundleIDBytes = Files.readAllBytes(bundlePath.resolve(SecurityUtils.BUNDLEID_FILENAME));
         return new String(bundleIDBytes, StandardCharsets.UTF_8);
     }
 
-    public Path getClientRootPath() {
-        return clientPaths.bundleSecurityPath;
-    }
+    public Path getClientRootPath() { return clientPaths.bundleSecurityPath; }
 
-    public ClientPaths getClientPaths() {
-        return clientPaths;
-    }
+    public ClientPaths getClientPaths() { return clientPaths; }
 
-    public int getDeviceId() {
-        return this.deviceID;
-    }
+    public int getDeviceId() { return this.deviceID; }
 
-    public ECPublicKey getServerPublicKey() {
-        return theirIdentityKey.getPublicKey();
-    }
+    public ECPublicKey getServerPublicKey() { return theirIdentityKey.getPublicKey(); }
 
-    public ECPublicKey getClientIdentityPublicKey() {
-        return ourIdentityKeyPair.getPublicKey().getPublicKey();
-    }
+    public ECPublicKey getClientIdentityPublicKey() { return ourIdentityKeyPair.getPublicKey().getPublicKey(); }
 
-    public ECPublicKey getClientBaseKeyPairPublicKey() {
-        return ourBaseKey.getPublicKey();
-    }
+    public ECPublicKey getClientBaseKeyPairPublicKey() { return ourBaseKey.getPublicKey(); }
 }

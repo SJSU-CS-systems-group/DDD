@@ -1,14 +1,5 @@
 package net.discdd.tls;
 
-import net.discdd.bundlesecurity.DDDPEMEncoder;
-import org.bouncycastle.cert.X509v3CertificateBuilder;
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
-import org.bouncycastle.operator.OperatorCreationException;
-import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
-import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder;
-
-import javax.net.ssl.KeyManagerFactory;
-import javax.security.auth.x500.X500Principal;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigInteger;
@@ -35,6 +26,17 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Date;
+
+import javax.net.ssl.KeyManagerFactory;
+import javax.security.auth.x500.X500Principal;
+
+import org.bouncycastle.cert.X509v3CertificateBuilder;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.operator.OperatorCreationException;
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
+import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder;
+
+import net.discdd.bundlesecurity.DDDPEMEncoder;
 
 public class DDDTLSUtil {
     public static String publicKeyToName(PublicKey key) {
@@ -75,12 +77,11 @@ public class DDDTLSUtil {
         return new KeyPair(keyFactory.generatePublic(publicKeySpec), keyFactory.generatePrivate(privateKeySpec));
     }
 
-    public static X509Certificate getSelfSignedCertificate(KeyPair pair, String commonName) throws
-            OperatorCreationException, CertificateException {
+    public static X509Certificate getSelfSignedCertificate(KeyPair pair, String commonName)
+            throws OperatorCreationException, CertificateException {
         var csrSigner = new JcaContentSignerBuilder("SHA256withECDSA").build(pair.getPrivate());
-        var csr =
-                new JcaPKCS10CertificationRequestBuilder(new X500Principal("CN=" + commonName), pair.getPublic()).build(
-                        csrSigner);
+        var csr = new JcaPKCS10CertificationRequestBuilder(new X500Principal("CN=" + commonName), pair.getPublic())
+                .build(csrSigner);
         var start = Date.from(Instant.now().minus(365, ChronoUnit.DAYS));
         var end = Date.from(Instant.now().plus(365, ChronoUnit.DAYS));
         var cert = new X509v3CertificateBuilder(csr.getSubject(),

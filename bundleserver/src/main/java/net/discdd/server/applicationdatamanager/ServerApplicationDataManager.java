@@ -1,16 +1,6 @@
 package net.discdd.server.applicationdatamanager;
 
-import net.discdd.model.ADU;
-import net.discdd.server.config.BundleServerConfig;
-import net.discdd.server.repository.BundleMetadataRepository;
-import net.discdd.server.repository.ClientBundleCountersRepository;
-import net.discdd.server.repository.RegisteredAppAdapterRepository;
-import net.discdd.server.repository.SentAduDetailsRepository;
-import net.discdd.server.repository.entity.BundleMetadata;
-import net.discdd.server.repository.entity.ClientBundleCounters;
-import net.discdd.server.repository.entity.SentAduDetails;
-import net.discdd.utils.StoreADUs;
-import org.springframework.stereotype.Service;
+import static java.util.logging.Level.INFO;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -23,7 +13,18 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.INFO;
+import org.springframework.stereotype.Service;
+
+import net.discdd.model.ADU;
+import net.discdd.server.config.BundleServerConfig;
+import net.discdd.server.repository.BundleMetadataRepository;
+import net.discdd.server.repository.ClientBundleCountersRepository;
+import net.discdd.server.repository.RegisteredAppAdapterRepository;
+import net.discdd.server.repository.SentAduDetailsRepository;
+import net.discdd.server.repository.entity.BundleMetadata;
+import net.discdd.server.repository.entity.ClientBundleCounters;
+import net.discdd.server.repository.entity.SentAduDetails;
+import net.discdd.utils.StoreADUs;
 
 @Service
 public class ServerApplicationDataManager {
@@ -33,9 +34,9 @@ public class ServerApplicationDataManager {
     private final BundleMetadataRepository bundleMetadataRepository;
     private final RegisteredAppAdapterRepository registeredAppAdapterRepository;
     private final ClientBundleCountersRepository clientBundleCountersRepository;
-    AduDeliveredListener aduDeliveredListener;
     private final StoreADUs receiveADUsStorage;
     private final StoreADUs sendADUsStorage;
+    AduDeliveredListener aduDeliveredListener;
 
     public ServerApplicationDataManager(AduStores aduStores,
                                         AduDeliveredListener aduDeliveredListener,
@@ -81,8 +82,8 @@ public class ServerApplicationDataManager {
                            " corresponding to client " + clientId);
     }
 
-    public void storeReceivedADUs(String clientId, String bundleId, long receivedBundleCounter, List<ADU> adus) throws
-            IOException {
+    public void storeReceivedADUs(String clientId, String bundleId, long receivedBundleCounter, List<ADU> adus)
+            throws IOException {
         logger.log(INFO, "[ApplicationDataManager] Store ADUs");
 
         updateLastReceivedCounter(clientId, receivedBundleCounter, bundleId);
@@ -123,22 +124,8 @@ public class ServerApplicationDataManager {
         }
     }
 
-    static class SizeLimiter implements Predicate<Long> {
-        long remaining;
-
-        SizeLimiter(long dataSizeLimit) {
-            remaining = dataSizeLimit;
-        }
-
-        @Override
-        public boolean test(Long size) {
-            remaining -= size;
-            return remaining >= 0;
-        }
-    }
-
-    public List<ADU> fetchADUsToSend(String bundleId, long bundleCounter, long initialSize, String clientId) throws
-            IOException {
+    public List<ADU> fetchADUsToSend(String bundleId, long bundleCounter, long initialSize, String clientId)
+            throws IOException {
         List<ADU> adusToSend = new ArrayList<>();
 
         final long dataSizeLimit = this.bundleServerConfig.getApplicationDataManager().getAppDataSizeLimit();
@@ -203,5 +190,19 @@ public class ServerApplicationDataManager {
 
     public interface AduDeliveredListener {
         void onAduDelivered(String clientId, Set<String> appId);
+    }
+
+    static class SizeLimiter implements Predicate<Long> {
+        long remaining;
+
+        SizeLimiter(long dataSizeLimit) {
+            remaining = dataSizeLimit;
+        }
+
+        @Override
+        public boolean test(Long size) {
+            remaining -= size;
+            return remaining >= 0;
+        }
     }
 }

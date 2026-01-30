@@ -1,7 +1,36 @@
 package net.discdd.app.k9.service;
 
+import static java.lang.String.format;
+import static net.discdd.app.k9.K9DDDAdapter.MAX_RECIPIENTS;
+import static net.discdd.app.k9.K9DDDAdapter.MAX_RECV_DATA_SIZE;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+
+import org.apache.james.jspf.impl.DefaultSPF;
+import org.simplejavamail.api.email.config.DkimConfig;
+import org.simplejavamail.api.mailer.config.TransportStrategy;
+import org.simplejavamail.email.EmailBuilder;
+import org.simplejavamail.mailer.MailerBuilder;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.stereotype.Service;
+
 import net.discdd.app.k9.K9DDDAdapter;
 import net.discdd.app.k9.repository.K9ClientIdToEmailMappingRepository;
 import net.discdd.utils.StoreADUs;
@@ -16,33 +45,6 @@ import net.mailific.server.session.SessionState;
 import net.mailific.server.session.SmtpSession;
 import net.mailific.server.session.StandardStates;
 import net.mailific.server.session.Transition;
-import org.apache.james.jspf.impl.DefaultSPF;
-import org.simplejavamail.api.email.config.DkimConfig;
-import org.simplejavamail.api.mailer.config.TransportStrategy;
-import org.simplejavamail.email.EmailBuilder;
-import org.simplejavamail.mailer.MailerBuilder;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
-import org.springframework.boot.SpringApplication;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.stereotype.Service;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import static java.lang.String.format;
-import static net.discdd.app.k9.K9DDDAdapter.MAX_RECIPIENTS;
-import static net.discdd.app.k9.K9DDDAdapter.MAX_RECV_DATA_SIZE;
 
 @Service
 public class EmailService implements ApplicationRunner {
@@ -59,14 +61,15 @@ public class EmailService implements ApplicationRunner {
     private final K9ClientIdToEmailMappingRepository clientToEmailRepository;
     private final StoreADUs storeADUs;
 
-    EmailService(@Value("${smtp.relay.host}") String relayHost,
-                 @Value("${smtp.relay.port}") int relayPort,
-                 @Value("${smtp.localDomain}") String localDomain,
-                 @Value("${smtp.localPort}") int localPort,
-                 @Value("${smtp.dkim.keyFile:#{null}}") String keyFile,
-                 @Value("${smtp.tls.cert:#{null}}") String tlsCert,
-                 @Value("${smtp.tls.private:#{null}}") String tlsPrivate,
-                 @Value("${smtp.tls.privatePassword:#{null}}") String tlsPrivatePassword,
+    EmailService(@Value("${smtp.relay.host}")
+    String relayHost, @Value("${smtp.relay.port}")
+    int relayPort, @Value("${smtp.localDomain}")
+    String localDomain, @Value("${smtp.localPort}")
+    int localPort, @Value("${smtp.dkim.keyFile:#{null}}")
+    String keyFile, @Value("${smtp.tls.cert:#{null}}")
+    String tlsCert, @Value("${smtp.tls.private:#{null}}")
+    String tlsPrivate, @Value("${smtp.tls.privatePassword:#{null}}")
+    String tlsPrivatePassword,
                  K9ClientIdToEmailMappingRepository clientToEmailRepository,
                  StoreADUs storeADUs,
                  ConfigurableApplicationContext context) throws IOException {
@@ -82,9 +85,11 @@ public class EmailService implements ApplicationRunner {
         this.storeADUs = storeADUs;
         if (keyFile != null) {
             var privateKey = Base64.getDecoder().decode(unPEM(Files.readString(Path.of(keyFile))));
-            var dkimBuilder =
-                    DkimConfig.builder().excludedHeadersFromDkimDefaultSigningList("From", "Subject") // default is none
-                            .dkimPrivateKeyData(privateKey).dkimSigningDomain(localDomain).dkimSelector("mail");
+            var dkimBuilder = DkimConfig.builder()
+                    .excludedHeadersFromDkimDefaultSigningList("From", "Subject") // default is none
+                    .dkimPrivateKeyData(privateKey)
+                    .dkimSigningDomain(localDomain)
+                    .dkimSelector("mail");
             dkim = dkimBuilder.useLengthParam(true) // default is false
                     .headerCanonicalization(DkimConfig.Canonicalization.SIMPLE) // default is RELAXED
                     .bodyCanonicalization(DkimConfig.Canonicalization.SIMPLE) // default is RELAXED
@@ -145,10 +150,9 @@ public class EmailService implements ApplicationRunner {
             var tlsCertFile = new File(tlsCert);
             var tlsPrivateFile = new File(tlsPrivate);
             if (!tlsCertFile.canRead() || !tlsPrivateFile.canRead()) {
-                logger.severe(format(
-                        "Both the TLS certificate file (%s) and private key file (%s) must exist and be readable",
-                        tlsCert,
-                        tlsPrivate));
+                logger.severe(format("Both the TLS certificate file (%s) and private key file (%s) must exist and be readable",
+                                     tlsCert,
+                                     tlsPrivate));
                 SpringApplication.exit(context, () -> 2);
                 return;
             }
@@ -221,8 +225,8 @@ public class EmailService implements ApplicationRunner {
 
                 // No TLS private key, so we assume an SMTP proxy is going to send us a proxy command
                 var ipAddress = tlsPrivate == null ?
-                                (String) session.getProperty(ProxyCommand.SESSION_CLIENTIP_PROPERTY) :
-                                session.getRemoteAddress().getAddress().getHostAddress();
+                        (String) session.getProperty(ProxyCommand.SESSION_CLIENTIP_PROPERTY) :
+                        session.getRemoteAddress().getAddress().getHostAddress();
 
                 try {
                     var result = spfValidator.checkSPF(ipAddress, from, ehloHost);

@@ -1,8 +1,34 @@
 package net.discdd.app.k9;
 
-import com.google.protobuf.ByteString;
-import io.grpc.stub.StreamObserver;
+import static java.lang.String.format;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Properties;
+import java.util.Random;
+import java.util.logging.Logger;
+
+import jakarta.mail.MessagingException;
+import jakarta.mail.Session;
 import jakarta.mail.internet.AddressException;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeMessage;
+
+import org.jetbrains.annotations.Nullable;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import com.google.protobuf.ByteString;
+
 import net.discdd.app.k9.common.ControlAdu;
 import net.discdd.app.k9.repository.K9ClientIdToEmailMappingRepository;
 import net.discdd.app.k9.repository.entity.K9ClientIdToEmailMapping;
@@ -17,42 +43,19 @@ import net.discdd.grpc.PendingDataCheckResponse;
 import net.discdd.grpc.ServiceAdapterServiceGrpc;
 import net.discdd.model.ADU;
 import net.discdd.utils.StoreADUs;
-import org.jetbrains.annotations.Nullable;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.Session;
-import jakarta.mail.internet.InternetAddress;
-import jakarta.mail.internet.MimeMessage;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Properties;
-import java.util.Random;
-import java.util.logging.Logger;
-
-import static java.lang.String.format;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
+import io.grpc.stub.StreamObserver;
 
 @GrpcService
 public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServiceImplBase {
 
-    static final Logger logger = Logger.getLogger(K9DDDAdapter.class.getName());
     public static final int MAX_RECIPIENTS = 5;
     // yahoo and gmail are 25M and MS is 20M
     public static final int MAX_DATA_SIZE = 1024 * 1024 * 20;
     // we will allow extermin incoming mails that are 25% more than MAX_DATA_SIZE
     public static final int MAX_RECV_DATA_SIZE = (int) (MAX_DATA_SIZE * 1.25);
     public static final String APP_ID = "net.discdd.k9";
+    static final Logger logger = Logger.getLogger(K9DDDAdapter.class.getName());
     private final Random rand = new Random();
     private final StoreADUs sendADUsStorage;
     private final PasswordEncoder passwordEncoder;
@@ -143,9 +146,8 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         }).orElse(null);
     }
 
-    private MimeMessage createBounceMessage(Session session,
-                                            StringBuilder bouncedMessage,
-                                            byte[] originalMessage) throws MessagingException {
+    private MimeMessage createBounceMessage(Session session, StringBuilder bouncedMessage, byte[] originalMessage)
+            throws MessagingException {
         MimeMessage bounceMessage = new MimeMessage(session);
 
         // Set bounce message headers
@@ -154,11 +156,11 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
 
         // Create the bounce message content
         String bounceText = String.format("""
-                                                  Your message could not be delivered.
-                                                                                                    
-                                                  Reason: %s
-                                                                                                    
-                                                  Original message: %s""",
+                Your message could not be delivered.
+
+                Reason: %s
+
+                Original message: %s""",
                                           bouncedMessage,
                                           new String(originalMessage, 0, Math.min(1024, originalMessage.length)));
         bounceMessage.setText(bounceText);
@@ -216,18 +218,15 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         }
     }
 
-    private char getRandNum() {
-        return (char) ('0' + rand.nextInt(10));
-    }
+    private char getRandNum() { return (char) ('0' + rand.nextInt(10)); }
 
-    private char getRandChar() {
-        return (char) ('a' + rand.nextInt(26));
-    }
+    private char getRandChar() { return (char) ('a' + rand.nextInt(26)); }
 
     private void processRegisterAdus(ControlAdu.RegisterControlAdu adu, String clientId) throws IOException {
         String message = null;
-        if (!isLowerCaseASCII(adu.prefix()) || !isLowerCaseASCII(adu.suffix()) || adu.prefix().length() > 10 ||
-                adu.prefix().length() < 3 || adu.suffix().length() > 10 || adu.suffix().length() < 3) {
+        if (!isLowerCaseASCII(adu.prefix()) || !isLowerCaseASCII(adu.suffix()) || adu.prefix().length() > 10 || adu
+                .prefix()
+                .length() < 3 || adu.suffix().length() > 10 || adu.suffix().length() < 3) {
             message = "Prefix and suffix must be 3 to 10 lower case ASCII characters only.";
         }
         int tries = 0;
@@ -252,9 +251,8 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
             clientToEmailRepository.save(currentRecord);
         }
         while (message == null) {
-            var email =
-                    adu.prefix() + getRandNum() + getRandChar() + getRandChar() + getRandNum() + adu.suffix() + '@' +
-                            emailService.localDomain;
+            var email = adu.prefix() + getRandNum() + getRandChar() + getRandChar() + getRandNum() + adu.suffix() +
+                    '@' + emailService.localDomain;
             if (!clientToEmailRepository.existsById(email)) {
                 K9ClientIdToEmailMapping entity = new K9ClientIdToEmailMapping(email, clientId, hashedPassword);
                 clientToEmailRepository.save(entity);
@@ -351,18 +349,18 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
                 long aduId = adu.getADUId();
                 var data = sendADUsStorage.getADU(clientId, APP_ID, aduId);
                 dataListToReturn.add(AppDataUnit.newBuilder()
-                                             .setData(ByteString.copyFrom(data))
-                                             .setAduId(aduId)
-                                             .build());
+                        .setData(ByteString.copyFrom(data))
+                        .setAduId(aduId)
+                        .build());
             }
         } catch (Exception e) {
             logger.log(SEVERE, "Error while building response data for clientId: " + clientId, e);
         }
 
         responseObserver.onNext(ExchangeADUsResponse.newBuilder()
-                                        .addAllAdus(dataListToReturn)
-                                        .setLastADUIdReceived(lastProcessedADUId)
-                                        .build());
+                .addAllAdus(dataListToReturn)
+                .setLastADUIdReceived(lastProcessedADUId)
+                .build());
 
         responseObserver.onCompleted();
     }
@@ -373,8 +371,8 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         List<String> pendingClients = new ArrayList<>();
 
         sendADUsStorage.getAllClientApps()
-                .filter(s -> sendADUsStorage.getLastADUIdAdded(s.clientId(), s.appId()) >
-                        sendADUsStorage.getLastADUIdDeleted(s.clientId(), s.appId()))
+                .filter(s -> sendADUsStorage.getLastADUIdAdded(s.clientId(), s.appId()) > sendADUsStorage
+                        .getLastADUIdDeleted(s.clientId(), s.appId()))
                 .map(StoreADUs.ClientApp::clientId)
                 .forEach(pendingClients::add);
 

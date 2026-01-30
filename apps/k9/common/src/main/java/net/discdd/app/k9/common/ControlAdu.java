@@ -137,9 +137,13 @@ public class ControlAdu {
             super(properties);
         }
 
-        public String email() {return properties.getProperty("email");}
+        public String email() {
+            return properties.getProperty("email");
+        }
 
-        public String password() {return properties.getProperty("password");}
+        public String password() {
+            return properties.getProperty("password");
+        }
     }
 
     public static class LoginAckControlAdu extends ControlAdu implements EmailAck {
@@ -147,11 +151,17 @@ public class ControlAdu {
             super(properties);
         }
 
-        public String email() {return properties.getProperty("email");}
+        public String email() {
+            return properties.getProperty("email");
+        }
 
-        public boolean success() {return Boolean.parseBoolean(properties.getProperty("success"));}
+        public boolean success() {
+            return Boolean.parseBoolean(properties.getProperty("success"));
+        }
 
-        public String message() {return properties.getProperty("message");}
+        public String message() {
+            return properties.getProperty("message");
+        }
     }
 
     public static class RegisterControlAdu extends ControlAdu {
@@ -159,11 +169,17 @@ public class ControlAdu {
             super(properties);
         }
 
-        public String prefix() {return properties.getProperty("prefix");}
+        public String prefix() {
+            return properties.getProperty("prefix");
+        }
 
-        public String suffix() {return properties.getProperty("suffix");}
+        public String suffix() {
+            return properties.getProperty("suffix");
+        }
 
-        public String password() {return properties.getProperty("password");}
+        public String password() {
+            return properties.getProperty("password");
+        }
     }
 
     public static class RegisterAckControlAdu extends ControlAdu implements EmailAck {
@@ -171,11 +187,17 @@ public class ControlAdu {
             super(properties);
         }
 
-        public String email() {return properties.getProperty("email");}
+        public String email() {
+            return properties.getProperty("email");
+        }
 
-        public boolean success() {return Boolean.parseBoolean(properties.getProperty("success"));}
+        public boolean success() {
+            return Boolean.parseBoolean(properties.getProperty("success"));
+        }
 
-        public String message() {return properties.getProperty("message");}
+        public String message() {
+            return properties.getProperty("message");
+        }
     }
 
     public static class WhoAmIControlAdu extends ControlAdu {
@@ -195,13 +217,19 @@ public class ControlAdu {
         }
 
         @Override
-        public String email() {return properties.getProperty("email");}
+        public String email() {
+            return properties.getProperty("email");
+        }
 
         @Override
-        public boolean success() {return Boolean.parseBoolean(properties.getProperty("success"));}
+        public boolean success() {
+            return Boolean.parseBoolean(properties.getProperty("success"));
+        }
 
         @Override
-        public String message() {return properties.getProperty("message");}
+        public String message() {
+            return properties.getProperty("message");
+        }
     }
 
 }

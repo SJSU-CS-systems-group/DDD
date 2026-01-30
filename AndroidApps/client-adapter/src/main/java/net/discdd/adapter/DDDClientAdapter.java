@@ -1,16 +1,6 @@
 package net.discdd.adapter;
 
-import android.content.BroadcastReceiver;
-import android.content.ContentResolver;
-import android.content.ContentValues;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.database.ContentObserver;
-import android.net.Uri;
-
-import android.util.Log;
-import androidx.annotation.NonNull;
+import static java.lang.String.format;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,23 +9,30 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static java.lang.String.format;
+import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
+import android.content.ContentValues;
+import android.content.Context;
+import android.content.Intent;
+import android.database.ContentObserver;
+import android.net.Uri;
+import android.util.Log;
+import androidx.annotation.NonNull;
 
 public class DDDClientAdapter extends BroadcastReceiver {
     public static final String PROVIDER_NAME = "net.discdd.provider.datastoreprovider";
     public static final Uri PROVIDER_URI;
+    public static final int MAX_ADU_SIZE = 512 * 1024;
 
     static {
         PROVIDER_URI = Uri.parse(format("content://%s/messages", PROVIDER_NAME));
     }
 
-    public static final int MAX_ADU_SIZE = 512 * 1024;
-
     final Context context;
     private final ContentResolver resolver;
-    private ContentObserver contentObserver = null;
-    public long aduId = -1;
     private final Runnable onAdusReceived;
+    public long aduId = -1;
+    private ContentObserver contentObserver = null;
     private boolean registered = false;
 
     /**
@@ -64,7 +61,8 @@ public class DDDClientAdapter extends BroadcastReceiver {
                 }
 
                 @Override
-                public void onChange(boolean selfChange, @NonNull Uri uri) {
+                public void onChange(boolean selfChange, @NonNull
+                Uri uri) {
                     Log.i("DDDClientAdapter", "ContentObserver onChange called for URI: " + uri);
                     onAdusReceived.run();
                 }
@@ -103,7 +101,7 @@ public class DDDClientAdapter extends BroadcastReceiver {
      * THIS IS NOT THREADSAFE! THE APPLICATION MUST ENSURE THAT IT ONLY CREATES ONE ADU AT A TIME.
      *
      * @return an OutputStream to send an ADU to BundleClient. The OutputStream must be closed before the ADU is
-     * processed by the BundleClient. After closing the aduId in the MessageProviderOutputStream will be set.
+     *         processed by the BundleClient. After closing the aduId in the MessageProviderOutputStream will be set.
      */
     public MessageProviderOutputStream createAduToSend() {
         return new MessageProviderOutputStream();
@@ -241,10 +239,10 @@ public class DDDClientAdapter extends BroadcastReceiver {
     }
 
     public class MessageProviderInputStream extends InputStream {
+        final private long aduId;
         private byte[] data;
         private long nextReadOffset = 0;
         private int dataOffset = 0;
-        final private long aduId;
         private boolean finished;
 
         public MessageProviderInputStream(long aduId) throws IOException {

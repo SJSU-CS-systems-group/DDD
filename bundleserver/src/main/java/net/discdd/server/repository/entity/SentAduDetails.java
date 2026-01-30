@@ -1,12 +1,14 @@
 package net.discdd.server.repository.entity;
 
+import java.util.UUID;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import lombok.NoArgsConstructor;
+
 import org.hibernate.annotations.UuidGenerator;
 
-import java.util.UUID;
+import lombok.NoArgsConstructor;
 
 @Entity
 @NoArgsConstructor

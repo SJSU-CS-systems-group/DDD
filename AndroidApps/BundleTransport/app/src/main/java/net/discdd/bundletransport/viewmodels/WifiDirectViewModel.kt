@@ -21,13 +21,13 @@ import java.util.concurrent.CompletableFuture
 import java.util.logging.Logger
 
 data class WifiDirectState(
-        val wifiInfo: String = "",
-        val wifiStatus: String = "",
-        val wifiConnectURL: String? = null,
+    val wifiInfo: String = "",
+    val wifiStatus: String = "",
+    val wifiConnectURL: String? = null,
 )
 
 class WifiDirectViewModel(
-        application: Application
+    application: Application
 ) : WifiBannerViewModel(application) {
     private val logger = Logger.getLogger(WifiDirectViewModel::class.java.name)
     private val _state = MutableStateFlow(WifiDirectState())
@@ -36,7 +36,6 @@ class WifiDirectViewModel(
             return TransportServiceManager.getService()
         }
     val state = _state.asStateFlow()
-
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -73,17 +72,16 @@ class WifiDirectViewModel(
             val status = btService?.dddWifiServer?.status ?: WifiDirectStatus.FAILED
             _state.update {
                 it.copy(
-                        wifiStatus = when (status) {
-                            WifiDirectStatus.UNDEFINED -> context.getString(R.string.check_permissions_and_that_wifi_is_enabled)
-                            WifiDirectStatus.CONNECTED -> context.getString(R.string.connected)
-                            WifiDirectStatus.INVITED -> context.getString(R.string.invited)
-                            WifiDirectStatus.FAILED -> context.getString(R.string.failed)
-                            WifiDirectStatus.AVAILABLE -> context.getString(R.string.available)
-                            WifiDirectStatus.UNAVAILABLE -> context.getString(R.string.unavailable)
-                        }
+                    wifiStatus = when (status) {
+                        WifiDirectStatus.UNDEFINED -> context.getString(R.string.check_permissions_and_that_wifi_is_enabled)
+                        WifiDirectStatus.CONNECTED -> context.getString(R.string.connected)
+                        WifiDirectStatus.INVITED -> context.getString(R.string.invited)
+                        WifiDirectStatus.FAILED -> context.getString(R.string.failed)
+                        WifiDirectStatus.AVAILABLE -> context.getString(R.string.available)
+                        WifiDirectStatus.UNAVAILABLE -> context.getString(R.string.unavailable)
+                    }
                 )
             }
-
         }
     }
 
@@ -92,8 +90,14 @@ class WifiDirectViewModel(
             btService?.dddWifiServer?.networkInfo?.let { ni ->
                 _state.update {
                     it.copy(
-                            wifiInfo = "Device name: ${ni.deviceName}\nSSID: ${ni.ssid.substring(0, 15)}\n${ni.ssid.substring(15)}\nPassword: ${ni.password}\nAddress: ${ni.inetAddress}\nConnected devices: ${ni.clientList.size}",
-                            wifiConnectURL = "WIFI:T:WPA;S:${ni.ssid};P:${ni.password};;")
+                        wifiInfo = "Device name: ${ni.deviceName}\nSSID: ${
+                            ni.ssid.substring(
+                                0,
+                                15
+                            )
+                        }\n${ni.ssid.substring(15)}\nPassword: ${ni.password}\nAddress: ${ni.inetAddress}\nConnected devices: ${ni.clientList.size}",
+                        wifiConnectURL = "WIFI:T:WPA;S:${ni.ssid};P:${ni.password};;"
+                    )
                 }
             } ?: _state.update { it.copy(wifiInfo = "WiFi not available", wifiConnectURL = null) }
         }

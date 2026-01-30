@@ -1,10 +1,10 @@
 package net.discdd.bundlesecurity;
 
-import com.google.common.primitives.Bytes;
-
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Base64;
+
+import com.google.common.primitives.Bytes;
 
 public class BundleIDGenerator {
     public static final boolean UPSTREAM = true;
