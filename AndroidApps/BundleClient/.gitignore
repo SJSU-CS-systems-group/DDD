@@ -11,3 +11,5 @@
 local.properties
 *.hprof
 /app/build
+/src/stdout
+/app/stdout
