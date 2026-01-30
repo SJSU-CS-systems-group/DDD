@@ -11,18 +11,16 @@ import java.util.concurrent.Executors;
 @Database(entities = { ServerMessage.class}, version = 1)
 public abstract class AppDatabase extends RoomDatabase {
     private static final int NUMBER_OF_THREADS = 1;
-    private static volatile AppDatabase INSTANCE;
-    public static AppDatabase getInstance(Context context) {
-        if(INSTANCE == null) {
-            synchronized (AppDatabase.class) {
-                if(INSTANCE == null) {
-                    INSTANCE = Room.databaseBuilder(
-                            context.getApplicationContext(),
-                            AppDatabase.class,
-                            "ServerMessages"
-                    ).build();
-                }
-            }
+    private static AppDatabase INSTANCE;
+    public static synchronized AppDatabase getInstance(Context context) {
+        if (INSTANCE == null) {
+            INSTANCE = Room.databaseBuilder(
+                    context.getApplicationContext(),
+                    AppDatabase.class,
+                    "ServerMessages"
+            )
+            .fallbackToDestructiveMigration()
+            .build();
         }
         return INSTANCE;
     }
