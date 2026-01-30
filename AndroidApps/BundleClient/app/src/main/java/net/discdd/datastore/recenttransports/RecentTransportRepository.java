@@ -1,4 +1,4 @@
-package net.discdd.client.bundletransmission;
+package net.discdd.datastore.recenttransports;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;

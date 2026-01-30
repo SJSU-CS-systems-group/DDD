@@ -1,4 +1,4 @@
-package net.discdd.client.bundletransmission;
+package net.discdd.datastore.recenttransports;
 
 import androidx.room.Dao;
 import androidx.room.Delete;

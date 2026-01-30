@@ -93,61 +93,25 @@ public class ClientBundleTransmission {
 
     final private ClientRouting clientRouting;
     final private ClientPaths clientPaths;
-    private RecentTransportRepository repository;
+    final private TransportRecordManager transportRecordManager;
 
-    public ClientBundleTransmission(ClientPaths clientPaths, Consumer<ADU> aduConsumer) throws
+    public ClientBundleTransmission(ClientPaths clientPaths, Consumer<ADU> aduConsumer,
+            HashMap<TransportDevice, TransportRecord> recentTransports) throws
             WindowExceptions.BufferOverflow, IOException, InvalidKeyException,
             RoutingExceptions.ClientMetaDataFileException, NoSuchAlgorithmException {
         this.clientPaths = clientPaths;
         this.bundleSecurity = new ClientBundleSecurity(clientPaths);
         this.applicationDataManager = new ClientApplicationDataManager(clientPaths, aduConsumer);
         this.clientRouting = ClientRouting.initializeInstance(clientPaths);
-    }
-
-    /**
-     * Set the repository for persistent storage of recent transports.
-     * When set, persisted transports are loaded automatically.
-     */
-    public void setRepository(RecentTransportRepository repository) {
-        this.repository = repository;
-        if (repository != null) {
-            loadPersistedTransports();
-        }
-    }
-
-    /**
-     * Load previously persisted transports from the database.
-     * Called automatically when repository is set.
-     */
-    private void loadPersistedTransports() {
-        if (repository == null) return;
-        try {
-            var persisted = repository.loadAll();
-            synchronized (recentTransports) {
-                for (var transport : persisted) {
-                    // Create a placeholder device that will be replaced when actually discovered
-                    var placeholderDevice = new TransportDevice() {
-                        @Override
-                        public String getDescription() {
-                            return transport.getDescription();
-                        }
-                        @Override
-                        public String getId() {
-                            return transport.getTransportId();
-                        }
-                    };
-                    transport.setDevice(placeholderDevice);
-                    recentTransports.put(placeholderDevice, transport);
-                }
-            }
-            logger.log(INFO, "Loaded " + persisted.size() + " persisted transports");
-        } catch (Exception e) {
-            logger.log(WARNING, "Failed to load persisted transports", e);
-        }
+        this.transportRecordManager = new TransportRecordManager(recentTransports);
     }
 
     public ClientPaths getClientPaths() {
         return clientPaths;
+    }
+
+    public TransportRecordManager getTransportRecordManager() {
+        return transportRecordManager;
     }
 
     public void registerBundleId(String bundleId) throws IOException, WindowExceptions.BufferOverflow,
@@ -268,74 +232,9 @@ public class ClientBundleTransmission {
                     !applicationDataManager.hasNewADUs(null, lastBundleSentTimestamp)) {
                 return new Bundle(lastSentBundle.getName(), lastSentBundle);
             }
-
-            // these are all out of date, so delete them
-            // TODO: NOT SO FAST!!!!! we aren't breaking out bundles by directory, so we can't do a mass delete link
-            //  this
-            //for (var bundle : sentBundles) {
-            //    bundle.delete();
-            //}
         }
         var newBundleId = bundleSecurity.generateNewBundleId();
         return generateNewBundle(newBundleId);
-    }
-
-    final private HashMap<TransportDevice, RecentTransport> recentTransports = new HashMap<>();
-
-    public static boolean doesTransportHaveNewData(RecentTransport transport) {
-        return transport.getRecencyBlobResponse().getRecencyBlob().getBlobTimestamp() > transport.getLastExchange();
-    }
-
-    public RecentTransport[] getRecentTransports() {
-        synchronized (recentTransports) {
-            return recentTransports.values().toArray(new RecentTransport[0]);
-        }
-    }
-
-    public RecentTransport getRecentTransport(TransportDevice device) {
-        synchronized (recentTransports) {
-            return recentTransports.get(device);
-        }
-    }
-
-    public void processDiscoveredPeer(TransportDevice device, GetRecencyBlobResponse response) {
-        synchronized (recentTransports) {
-            RecentTransport recentTransport = recentTransports.computeIfAbsent(device, RecentTransport::new);
-            recentTransport.setDevice(device);
-            recentTransport.setDescription(device.getDescription());
-            recentTransport.setLastSeen(System.currentTimeMillis());
-            recentTransport.setRecencyBlobResponse(response);
-
-            // Persist the update
-            if (repository != null) {
-                repository.save(recentTransport);
-            }
-        }
-    }
-
-    public void timestampExchangeWithTransport(TransportDevice device) {
-        if (device == TransportDevice.SERVER_DEVICE) return;
-        synchronized (recentTransports) {
-            RecentTransport recentTransport = recentTransports.computeIfAbsent(device, RecentTransport::new);
-            var now = System.currentTimeMillis();
-            recentTransport.setLastExchange(now);
-            recentTransport.setLastSeen(now);
-
-            // Persist the update
-            if (repository != null) {
-                repository.updateExchangeTimestamp(device.getId(), now);
-            }
-        }
-    }
-
-    public void expireNotSeenPeers(long expirationTime) {
-        synchronized (recentTransports) {
-            recentTransports.values().removeIf(transport -> transport.getLastSeen() < expirationTime);
-        }
-        // Also delete from database
-        if (repository != null) {
-            repository.deleteExpired(expirationTime);
-        }
     }
 
     // returns true if the blob is more recent than previously seen
@@ -359,10 +258,11 @@ public class ClientBundleTransmission {
                                               recencyBlobResponse.getRecencyBlobSignature().toByteArray())) {
             throw new RecencyException("Recency blob signature verification failed");
         }
+        var recentTransports = transportRecordManager.getRecentTransportsMap();
         synchronized (recentTransports) {
-            RecentTransport recentTransport = recentTransports.computeIfAbsent(device, RecentTransport::new);
-            if (recencyBlob.getBlobTimestamp() > recentTransport.getRecencyTime()) {
-                recentTransport.setRecencyTime(recencyBlob.getBlobTimestamp());
+            TransportRecord record = recentTransports.computeIfAbsent(device, TransportRecord::new);
+            if (recencyBlob.getBlobTimestamp() > record.getRecencyTime()) {
+                record.setRecencyTime(recencyBlob.getBlobTimestamp());
                 return true;
             }
             return false;
@@ -455,7 +355,7 @@ public class ClientBundleTransmission {
                     logger.log(INFO, "Recency blob processed for " + transportSenderId);
                 }
 
-                timestampExchangeWithTransport(device);
+                transportRecordManager.timestampExchangeWithTransport(device);
                 var clientSecurity = bundleSecurity.getClientSecurity();
                 var bundleRequests = getNextBundles();
                 PublicKeyMap publicKeyMap = PublicKeyMap.newBuilder()
@@ -602,4 +502,3 @@ public class ClientBundleTransmission {
         return null;
     }
 }
-

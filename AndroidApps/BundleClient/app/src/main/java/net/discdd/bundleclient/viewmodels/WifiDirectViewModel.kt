@@ -18,7 +18,7 @@ import net.discdd.bundleclient.WifiServiceManager
 import net.discdd.bundleclient.service.BundleClientService
 import net.discdd.bundleclient.service.BundleClientServiceBroadcastReceiver
 import net.discdd.bundleclient.service.DDDWifiDevice
-import net.discdd.client.bundletransmission.ClientBundleTransmission
+import net.discdd.datastore.recenttransports.RecentTransportManager
 import net.discdd.viewmodels.WifiBannerViewModel
 import java.util.concurrent.CompletableFuture
 
@@ -166,7 +166,7 @@ class WifiDirectViewModel(
 
             val updatedPeers = recentTransports.map { recentTransport ->
                 val currentPeer = currentPeersMap[recentTransport.device]
-                val hasNewData = ClientBundleTransmission.doesTransportHaveNewData(recentTransport)
+                val hasNewData = RecentTransportManager.doesTransportHaveNewData(recentTransport)
                 if (currentPeer != null) {
                     // Update existing peer
                     currentPeer.copy(

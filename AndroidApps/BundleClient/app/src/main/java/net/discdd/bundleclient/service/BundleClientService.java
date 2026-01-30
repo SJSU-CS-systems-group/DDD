@@ -37,9 +37,9 @@ import net.discdd.client.bundletransmission.ClientBundleTransmission;
 import net.discdd.client.bundletransmission.ClientBundleTransmission.BundleExchangeCounts;
 import net.discdd.client.bundletransmission.ClientBundleTransmission.Statuses;
 import net.discdd.client.bundletransmission.TransportDevice;
-import net.discdd.client.bundletransmission.RecentTransport;
-import net.discdd.bundleclient.db.RecentTransportDatabase;
-import net.discdd.client.bundletransmission.RecentTransportRepository;
+import net.discdd.client.bundletransmission.TransportRecord;
+import net.discdd.client.bundletransmission.TransportRecordManager;
+import net.discdd.datastore.recenttransports.RecentTransportManager;
 import net.discdd.datastore.providers.MessageProvider;
 import net.discdd.grpc.GetRecencyBlobResponse;
 import net.discdd.model.ADU;
@@ -94,6 +94,8 @@ public class BundleClientService extends Service {
     private ClientBundleTransmission bundleTransmission;
     final private Observer<? super DDDWifiEventType> liveDataObserver = this::broadcastWifiEvent;
     private MutableLiveData<DDDWifiEventType> eventsLiveData;
+    private TransportRecord[] recentTransports;
+    private RecentTransportManager transportManager;
 
     public BundleClientService() {
         super();
@@ -207,6 +209,7 @@ public class BundleClientService extends Service {
 
         try {
             //Application context
+            transportManager = new RecentTransportManager(getApplicationContext());
             var resources = getApplicationContext().getResources();
             try (InputStream inServerIdentity =
                          resources.openRawResource(net.discdd.android_core.R.raw.server_identity);
@@ -219,12 +222,7 @@ public class BundleClientService extends Service {
                                                           inServerIdentity.readAllBytes(),
                                                           inServerSignedPre.readAllBytes(),
                                                           inServerRatchet.readAllBytes());
-                bundleTransmission = new ClientBundleTransmission(clientPaths, this::processIncomingADU);
-
-                // Initialize Room database and repository for persistent transport storage
-                var database = RecentTransportDatabase.getInstance(getApplicationContext());
-                var repository = new RecentTransportRepository(database.recentTransportDao());
-                bundleTransmission.setRepository(repository);
+                bundleTransmission = new ClientBundleTransmission(clientPaths, this::processIncomingADU, transportManager.getRecentTransportsMap());
             } catch (IOException e) {
                 logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
             }
@@ -299,9 +297,9 @@ public class BundleClientService extends Service {
             broadcastBundleClientLogEvent(R.string.failed_to_start_discovery_s, e.getMessage());
             // not the end of the world, we can still try
         }
-        var recentTransports = bundleTransmission.getRecentTransports();
+        recentTransports = transportManager.getRecentTransports();
         for (var transport : recentTransports) {
-            if (transport.getDevice() instanceof DDDWifiDevice && ClientBundleTransmission.doesTransportHaveNewData(transport)) {
+            if (transport.getDevice() instanceof DDDWifiDevice && TransportRecordManager.doesTransportHaveNewData(transport)) {
                 var bc = exchangeWith((DDDWifiDevice) transport.getDevice());
                 exchangeCounts.add(bc);
                 logger.log(INFO,
@@ -505,19 +503,23 @@ public class BundleClientService extends Service {
         return completableFuture;
     }
 
-    public RecentTransport[] getRecentTransports() {
-        return bundleTransmission.getRecentTransports();
+    public TransportRecord[] getRecentTransports() {
+        return transportManager.getRecentTransports();
+    }
+
+    public RecentTransportManager getRecentTransportManager() {
+        return transportManager;
     }
 
     public boolean isDiscoveryActive() {
         return dddWifi.isDiscoveryActive();
     }
 
-    public RecentTransport getRecentTransport(DDDWifiDevice peer) {
-        return Arrays.stream(bundleTransmission.getRecentTransports())
+    public TransportRecord getRecentTransport(DDDWifiDevice peer) {
+        return Arrays.stream(transportManager.getRecentTransports())
                 .filter(rt -> peer.equals(rt.getDevice()))
                 .findFirst()
-                .orElse(new RecentTransport(peer, GetRecencyBlobResponse.getDefaultInstance()));
+                .orElse(new TransportRecord(peer, GetRecencyBlobResponse.getDefaultInstance()));
     }
 
     public void notifyNewAdu() {
@@ -527,10 +529,10 @@ public class BundleClientService extends Service {
     }
 
     public void peersUpdated() {
-        dddWifi.listDevices().forEach(device -> bundleTransmission.processDiscoveredPeer(device, device.getRecencyBlob()));
+        dddWifi.listDevices().forEach(device -> transportManager.processDiscoveredPeer(device, device.getRecencyBlob()));
         // expire peers that haven't been seen for a minute
         long expirationTime = System.currentTimeMillis() - 60 * 1000;
-        bundleTransmission.expireNotSeenPeers(expirationTime);
+        transportManager.expireNotSeenPeers(expirationTime);
     }
 
     public void wifiPermissionGranted() {

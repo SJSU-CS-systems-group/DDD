@@ -2,6 +2,7 @@ package net.discdd.cli;
 
 import net.discdd.client.bundletransmission.ClientBundleTransmission;
 import net.discdd.client.bundletransmission.TransportDevice;
+import net.discdd.client.bundletransmission.TransportRecord;
 import net.discdd.model.ADU;
 import net.discdd.pathutils.ClientPaths;
 import net.discdd.utils.StoreADUs;
@@ -17,6 +18,7 @@ import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.HashMap;
 import java.util.List;
 
 import static java.lang.String.format;
@@ -123,7 +125,7 @@ public class LocalAduSendReceive extends StdOutMixin {
         var clientPaths = new ClientPaths(rootPath, null, null, null);
         var bundleTransmission = new ClientBundleTransmission(clientPaths, (ADU adu) -> {
             out().println("Received ADU: " + adu);
-        });
+        }, new HashMap<TransportDevice, TransportRecord>());
         var bundleExchangeCounts = bundleTransmission.doExchangeWithTransport(TransportDevice.SERVER_DEVICE,
                                                                               serverAddress.getHostName(),
                                                                               serverAddress.getPort(),
