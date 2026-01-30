@@ -243,32 +243,32 @@ public class ClientBundleTransmission {
      * Used to track in memory recently seen transports.
      * All times are in milliseconds since epoch.
      */
-    @Getter
-    public static class RecentTransport {
-        private TransportDevice device;
-        /* @param lastExchange time of last bundle exchange */
-        private long lastExchange;
-        /* @param lastSeen time of last device discovery */
-        private long lastSeen;
-        /* @param recencyTime time from the last recencyBlob received */
-        private long recencyTime;
-        /* @param recencyBlobResponse the latest recencyBlobResponse received */
-        private GetRecencyBlobResponse recencyBlobResponse;
-
-        public RecentTransport(TransportDevice device) {
-            this.device = device;
-        }
-
-        public RecentTransport(TransportDevice device, GetRecencyBlobResponse recencyBlobResponse) {
-            this.device = device;
-            this.recencyBlobResponse = recencyBlobResponse;
-        }
-    }
+//    @Getter
+//    public static class RecentTransport {
+//        private TransportDevice device;
+//        /* @param lastExchange time of last bundle exchange */
+//        private long lastExchange;
+//        /* @param lastSeen time of last device discovery */
+//        private long lastSeen;
+//        /* @param recencyTime time from the last recencyBlob received */
+//        private long recencyTime;
+//        /* @param recencyBlobResponse the latest recencyBlobResponse received */
+//        private GetRecencyBlobResponse recencyBlobResponse;
+//
+//        public RecentTransport(TransportDevice device) {
+//            this.device = device;
+//        }
+//
+//        public RecentTransport(TransportDevice device, GetRecencyBlobResponse recencyBlobResponse) {
+//            this.device = device;
+//            this.recencyBlobResponse = recencyBlobResponse;
+//        }
+//    }
 
     final private HashMap<TransportDevice, RecentTransport> recentTransports = new HashMap<>();
 
     public static boolean doesTransportHaveNewData(RecentTransport transport) {
-        return transport.recencyBlobResponse.getRecencyBlob().getBlobTimestamp() > transport.lastExchange;
+        return transport.getRecencyBlobResponse().getRecencyBlob().getBlobTimestamp() > transport.getLastExchange();
     }
 
     public RecentTransport[] getRecentTransports() {
@@ -286,9 +286,9 @@ public class ClientBundleTransmission {
     public void processDiscoveredPeer(TransportDevice device, GetRecencyBlobResponse response) {
         synchronized (recentTransports) {
             RecentTransport recentTransport = recentTransports.computeIfAbsent(device, RecentTransport::new);
-            recentTransport.device = device;
-            recentTransport.lastSeen = System.currentTimeMillis();
-            recentTransport.recencyBlobResponse = response;
+            recentTransport.setDevice(device);
+            recentTransport.setLastSeen(System.currentTimeMillis());
+            recentTransport.setRecencyBlobResponse(response);
         }
     }
 
@@ -297,8 +297,8 @@ public class ClientBundleTransmission {
         synchronized (recentTransports) {
             RecentTransport recentTransport = recentTransports.computeIfAbsent(device, RecentTransport::new);
             var now = System.currentTimeMillis();
-            recentTransport.lastExchange = now;
-            recentTransport.lastSeen = now;
+            recentTransport.setLastExchange(now);
+            recentTransport.setLastSeen(now);
         }
     }
 
@@ -331,8 +331,8 @@ public class ClientBundleTransmission {
         }
         synchronized (recentTransports) {
             RecentTransport recentTransport = recentTransports.computeIfAbsent(device, RecentTransport::new);
-            if (recencyBlob.getBlobTimestamp() > recentTransport.recencyTime) {
-                recentTransport.recencyTime = recencyBlob.getBlobTimestamp();
+            if (recencyBlob.getBlobTimestamp() > recentTransport.getRecencyTime()) {
+                recentTransport.setRecencyTime(recencyBlob.getBlobTimestamp());
                 return true;
             }
             return false;

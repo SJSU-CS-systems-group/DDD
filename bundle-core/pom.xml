@@ -36,6 +36,16 @@
                 <enabled>false</enabled>
             </snapshots>
         </repository>
+        <repository>
+            <id>google</id>
+            <url>https://maven.google.com</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -113,6 +123,18 @@
             <artifactId>curve25519-java</artifactId>
             <version>0.2.4</version>
             <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>androidx.room</groupId>
+            <artifactId>room-runtime</artifactId>
+            <version>2.6.1</version>
+            <type>aar</type>
+        </dependency>
+        <dependency>
+            <groupId>androidx.room</groupId>
+            <artifactId>room-compiler</artifactId>
+            <version>2.6.1</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 </project>
