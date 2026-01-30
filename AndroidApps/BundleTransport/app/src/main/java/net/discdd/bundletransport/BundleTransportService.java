@@ -182,6 +182,7 @@ public class BundleTransportService extends Service implements BundleExchangeSer
             logger.log(INFO,
                        "Started " + BundleTransportService.class.getName() + " with flags " + flags + " and startId " +
                                startId);
+            updateRecencyBlob();
         });
         return START_STICKY;
     }

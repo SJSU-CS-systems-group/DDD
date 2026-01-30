@@ -20,6 +20,20 @@ import net.discdd.screens.LogFragment
 import net.discdd.theme.ComposableTheme
 import java.util.logging.Level.WARNING
 import java.util.logging.Logger
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 
 class BundleClientActivity: ComponentActivity() {
     private lateinit var serviceIntent: Intent
@@ -86,8 +100,46 @@ class BundleClientActivity: ComponentActivity() {
 
         setContent {
             ComposableTheme {
-                HomeScreen()
+                val shouldShowBanner = remember {
+                    !isK9Installed()
+                }
+
+                Column(modifier = Modifier.fillMaxSize()) {
+                    if (shouldShowBanner) {
+                        K9IsMissingBanner(message = getString(R.string.k9_missing_banner_message))
+                    }
+
+                    Box(modifier = Modifier.weight(1f)) {
+                        HomeScreen()
+                    }
+                }
             }
+        }
+    }
+
+    private fun isK9Installed(): Boolean {
+        return try {
+            packageManager.getPackageInfo("net.discdd.mail", 0)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    @Composable
+    private fun K9IsMissingBanner(message: String) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFFFFF3CD)) // Light yellow warning color
+                .padding(vertical = 12.dp, horizontal = 16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = message,
+                color = Color(0xFF664D03), // Darker text for contrast
+                textAlign = TextAlign.Center
+            )
         }
     }
 
