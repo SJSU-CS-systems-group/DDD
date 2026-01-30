@@ -142,7 +142,7 @@ fun ServerMessagesScreen(
             ) {
                 Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Notification", style = MaterialTheme.typography.titleLarge)
-                    Text(dialogFor!!.message, style = MaterialTheme.typography.bodyLarge)
+                    Text(notif.message, style = MaterialTheme.typography.bodyLarge)
 
                     Text(
                         "Sent: $whenText",
@@ -181,12 +181,12 @@ private fun NotifCard(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = notif.message,
-                   modifier = Modifier
-                        .weight(15f),
+                    modifier = Modifier
+                       .weight(1f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.width(8.dp))
                 Text(
                     text = notif.date
                 )
