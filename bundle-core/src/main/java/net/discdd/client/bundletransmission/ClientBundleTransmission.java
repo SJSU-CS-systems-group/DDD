@@ -4,7 +4,6 @@ import com.google.protobuf.ByteString;
 import io.grpc.StatusRuntimeException;
 import io.grpc.okhttp.OkHttpChannelBuilder;
 import io.grpc.stub.StreamObserver;
-import lombok.Getter;
 import net.discdd.bundlerouting.RoutingExceptions;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
@@ -53,7 +52,6 @@ import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.net.Socket;
@@ -95,6 +93,7 @@ public class ClientBundleTransmission {
 
     final private ClientRouting clientRouting;
     final private ClientPaths clientPaths;
+    private RecentTransportRepository repository;
 
     public ClientBundleTransmission(ClientPaths clientPaths, Consumer<ADU> aduConsumer) throws
             WindowExceptions.BufferOverflow, IOException, InvalidKeyException,
@@ -103,6 +102,48 @@ public class ClientBundleTransmission {
         this.bundleSecurity = new ClientBundleSecurity(clientPaths);
         this.applicationDataManager = new ClientApplicationDataManager(clientPaths, aduConsumer);
         this.clientRouting = ClientRouting.initializeInstance(clientPaths);
+    }
+
+    /**
+     * Set the repository for persistent storage of recent transports.
+     * When set, persisted transports are loaded automatically.
+     */
+    public void setRepository(RecentTransportRepository repository) {
+        this.repository = repository;
+        if (repository != null) {
+            loadPersistedTransports();
+        }
+    }
+
+    /**
+     * Load previously persisted transports from the database.
+     * Called automatically when repository is set.
+     */
+    private void loadPersistedTransports() {
+        if (repository == null) return;
+        try {
+            var persisted = repository.loadAll();
+            synchronized (recentTransports) {
+                for (var transport : persisted) {
+                    // Create a placeholder device that will be replaced when actually discovered
+                    var placeholderDevice = new TransportDevice() {
+                        @Override
+                        public String getDescription() {
+                            return transport.getDescription();
+                        }
+                        @Override
+                        public String getId() {
+                            return transport.getTransportId();
+                        }
+                    };
+                    transport.setDevice(placeholderDevice);
+                    recentTransports.put(placeholderDevice, transport);
+                }
+            }
+            logger.log(INFO, "Loaded " + persisted.size() + " persisted transports");
+        } catch (Exception e) {
+            logger.log(WARNING, "Failed to load persisted transports", e);
+        }
     }
 
     public ClientPaths getClientPaths() {
@@ -239,32 +280,6 @@ public class ClientBundleTransmission {
         return generateNewBundle(newBundleId);
     }
 
-    /**
-     * Used to track in memory recently seen transports.
-     * All times are in milliseconds since epoch.
-     */
-//    @Getter
-//    public static class RecentTransport {
-//        private TransportDevice device;
-//        /* @param lastExchange time of last bundle exchange */
-//        private long lastExchange;
-//        /* @param lastSeen time of last device discovery */
-//        private long lastSeen;
-//        /* @param recencyTime time from the last recencyBlob received */
-//        private long recencyTime;
-//        /* @param recencyBlobResponse the latest recencyBlobResponse received */
-//        private GetRecencyBlobResponse recencyBlobResponse;
-//
-//        public RecentTransport(TransportDevice device) {
-//            this.device = device;
-//        }
-//
-//        public RecentTransport(TransportDevice device, GetRecencyBlobResponse recencyBlobResponse) {
-//            this.device = device;
-//            this.recencyBlobResponse = recencyBlobResponse;
-//        }
-//    }
-
     final private HashMap<TransportDevice, RecentTransport> recentTransports = new HashMap<>();
 
     public static boolean doesTransportHaveNewData(RecentTransport transport) {
@@ -287,8 +302,14 @@ public class ClientBundleTransmission {
         synchronized (recentTransports) {
             RecentTransport recentTransport = recentTransports.computeIfAbsent(device, RecentTransport::new);
             recentTransport.setDevice(device);
+            recentTransport.setDescription(device.getDescription());
             recentTransport.setLastSeen(System.currentTimeMillis());
             recentTransport.setRecencyBlobResponse(response);
+
+            // Persist the update
+            if (repository != null) {
+                repository.save(recentTransport);
+            }
         }
     }
 
@@ -299,12 +320,21 @@ public class ClientBundleTransmission {
             var now = System.currentTimeMillis();
             recentTransport.setLastExchange(now);
             recentTransport.setLastSeen(now);
+
+            // Persist the update
+            if (repository != null) {
+                repository.updateExchangeTimestamp(device.getId(), now);
+            }
         }
     }
 
     public void expireNotSeenPeers(long expirationTime) {
         synchronized (recentTransports) {
             recentTransports.values().removeIf(transport -> transport.getLastSeen() < expirationTime);
+        }
+        // Also delete from database
+        if (repository != null) {
+            repository.deleteExpired(expirationTime);
         }
     }
 

@@ -36,8 +36,10 @@ import net.discdd.bundleclient.service.wifiDirect.DDDWifiDirect;
 import net.discdd.client.bundletransmission.ClientBundleTransmission;
 import net.discdd.client.bundletransmission.ClientBundleTransmission.BundleExchangeCounts;
 import net.discdd.client.bundletransmission.ClientBundleTransmission.Statuses;
-import net.discdd.client.bundletransmission.RecentTransport;
 import net.discdd.client.bundletransmission.TransportDevice;
+import net.discdd.client.bundletransmission.RecentTransport;
+import net.discdd.bundleclient.db.RecentTransportDatabase;
+import net.discdd.client.bundletransmission.RecentTransportRepository;
 import net.discdd.datastore.providers.MessageProvider;
 import net.discdd.grpc.GetRecencyBlobResponse;
 import net.discdd.model.ADU;
@@ -218,6 +220,11 @@ public class BundleClientService extends Service {
                                                           inServerSignedPre.readAllBytes(),
                                                           inServerRatchet.readAllBytes());
                 bundleTransmission = new ClientBundleTransmission(clientPaths, this::processIncomingADU);
+
+                // Initialize Room database and repository for persistent transport storage
+                var database = RecentTransportDatabase.getInstance(getApplicationContext());
+                var repository = new RecentTransportRepository(database.recentTransportDao());
+                bundleTransmission.setRepository(repository);
             } catch (IOException e) {
                 logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
             }
