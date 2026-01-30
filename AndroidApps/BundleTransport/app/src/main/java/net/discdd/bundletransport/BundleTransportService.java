@@ -77,7 +77,8 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     final private SharedPreferences.OnSharedPreferenceChangeListener preferenceChangeListener =
             (sharedPreferences, key) -> {
                 switch (key) {
-                    case BUNDLETRANSPORT_DOMAIN_PREFERENCE -> host = sharedPreferences.getString(key, "");                    case BUNDLETRANSPORT_PORT_PREFERENCE -> port = sharedPreferences.getInt(key, 0);
+                    case BUNDLETRANSPORT_DOMAIN_PREFERENCE -> host = sharedPreferences.getString(key, "");
+                    case BUNDLETRANSPORT_PORT_PREFERENCE -> port = sharedPreferences.getInt(key, 0);
                     case BUNDLETRANSPORT_PERIODIC_PREFERENCE ->
                             periodicExchangeScheduler.setPeriodInMinutes(sharedPreferences.getInt(key, 0));
                 }

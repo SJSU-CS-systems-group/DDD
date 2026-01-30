@@ -10,7 +10,7 @@ import java.util.List;
 
 @Dao
 public interface ServerMessageDao {
-    @Insert
+    @Upsert
     void insert(ServerMessage serverMessage);
 
     @Upsert
