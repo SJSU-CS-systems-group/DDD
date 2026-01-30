@@ -188,8 +188,7 @@ public class ServerApplicationDataManager {
         details.forEach(d -> lastAdus.put(d.appId, d.aduIdRangeEnd));
         return registeredAppAdapterRepository.findAllAppIds().stream().anyMatch(app -> {
             var lastStoredAdu = sendADUsStorage.getLastADUIdAdded(clientId, app);
-            var lastDeletedAdu = sendADUsStorage.getLastADUIdDeleted(clientId, app);
-            return lastStoredAdu > Math.max(lastAdus.getOrDefault(app, 0L), lastDeletedAdu);
+            return lastStoredAdu > lastAdus.getOrDefault(app, 0L);
         });
     }
 
