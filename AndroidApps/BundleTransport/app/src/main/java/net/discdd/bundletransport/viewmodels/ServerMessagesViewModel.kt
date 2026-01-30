@@ -13,7 +13,7 @@ import net.discdd.bundletransport.utils.ServerMessageRepository
 import java.time.LocalDateTime
 
 fun sampleMessages(): List<ServerMessage> {
-    return listOf (
+    return listOf(
         ServerMessage().apply {
             messageId = 1
             date = LocalDateTime.of(2025, 11, 17, 10, 0)
@@ -42,7 +42,7 @@ class ServerMessagesViewModel(app: Application) : AndroidViewModel(app) {
     val messages: LiveData<List<ServerMessage>> = repository.getAllServerMessages()
 
     init {
-       if(BuildConfig.DEBUG) { //sample messages
+       if (BuildConfig.DEBUG) { //sample messages
             viewModelScope.launch(Dispatchers.IO) {
                 repository.seedSampleMessages(sampleMessages())
             }
@@ -56,7 +56,7 @@ class ServerMessagesViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun deleteById(messageId: Long) {
-        viewModelScope.launch(Dispatchers.IO){
+        viewModelScope.launch(Dispatchers.IO) {
             repository.deleteById(messageId)
         }
     }

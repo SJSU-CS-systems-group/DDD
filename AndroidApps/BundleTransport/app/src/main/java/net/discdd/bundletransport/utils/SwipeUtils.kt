@@ -13,7 +13,7 @@ fun rememberNoFlingSwipeToDismissBoxState(
     confirmValueChange: (SwipeToDismissBoxValue) -> Boolean = { true },
     positionalThreshold: (totalDistance: Float) -> Float =
         SwipeToDismissBoxDefaults.positionalThreshold,
-):  SwipeToDismissBoxState {
+): SwipeToDismissBoxState {
     val density = Density(Float.POSITIVE_INFINITY) //prevents notification dismissal by flinging
     return rememberSaveable(
         saver = SwipeToDismissBoxState.Saver(

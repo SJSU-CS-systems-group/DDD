@@ -38,7 +38,7 @@ fun ServerMessagesScreen(
     val unreadCount = notifications.count {!it.isRead}
     var dialogFor by remember { mutableStateOf<ServerMessage?>(null) }
 
-        if(notifications.isEmpty()) {
+        if (notifications.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("No notifications yet.")
             }
@@ -77,7 +77,7 @@ fun ServerMessagesScreen(
                         confirmValueChange = {
                             val swiped = it == SwipeToDismissBoxValue.StartToEnd
                                       || it == SwipeToDismissBoxValue.EndToStart
-                            if(swiped) {
+                            if (swiped) {
                                 viewModel.deleteById(notification.messageId)
                                 true
                             }
@@ -179,6 +179,13 @@ private fun NotifCard(
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (!notif.isRead) {
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(8.dp)
+                    ) {}
+                }
                 Text(
                     text = notif.message,
                     modifier = Modifier
