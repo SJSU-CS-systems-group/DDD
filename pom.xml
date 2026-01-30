@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <properties>
-        <lombok.version>1.18.32</lombok.version>
+        <lombok.version>1.18.36</lombok.version>
         <protobuf-plugin.version>3.4.2</protobuf-plugin.version>
         <!-- careful! this version must be compatible with io.grpc -->
         <protobuf.version>4.31.1</protobuf.version>
@@ -156,6 +156,21 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <!-- maven-compiler-plugin with Lombok annotation processor -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.14.0</version>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
             </plugin>
 
         </plugins>
