@@ -3,11 +3,13 @@ package net.discdd.bundletransport.utils;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 
+import java.time.LocalDateTime;
+
 @Entity(tableName = "ServerMessages")
 public class ServerMessage {
     @PrimaryKey(autoGenerate = false)
     private long messageId;
-    private String date;
+    private LocalDateTime date;
     private String message;
     private boolean read;
 
@@ -17,10 +19,10 @@ public class ServerMessage {
     public void setMessageId(long messageId) {
         this.messageId = messageId;
     }
-    public String getDate() {
+    public LocalDateTime getDate() {
         return date;
     }
-    public void setDate(String date) {
+    public void setDate(LocalDateTime date) {
         this.date = date;
     }
     public String getMessage() {

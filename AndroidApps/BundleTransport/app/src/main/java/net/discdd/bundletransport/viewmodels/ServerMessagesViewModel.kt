@@ -9,32 +9,27 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import net.discdd.bundletransport.utils.ServerMessage
 import net.discdd.bundletransport.utils.ServerMessageRepository
+import java.time.LocalDateTime
 
 fun sampleMessages(): List<ServerMessage> {
     return listOf (
         ServerMessage().apply {
             messageId = 1
-            date = "11/17/25"
+            date = LocalDateTime.of(2025, 11, 17, 10, 0)
             message = "test #1"
             isRead = false
         },
         ServerMessage().apply {
             messageId = 2
-            date = "11/17/25"
+            date = LocalDateTime.of(2025, 11, 17, 10, 0)
             message = "test #2"
             isRead = false
         },
         ServerMessage().apply {
             messageId = 3
-            date = "11/17/25"
+            date = LocalDateTime.of(2025, 11, 17, 10, 0)
             message =
                 "hello this is a test notification for a really long notification hello hello testing one two three hello hi"
-            isRead = false
-        },
-        ServerMessage().apply {
-            messageId = 4
-            date = "11/17/25"
-            message = "لجمل الطويلة · جمل طويلة · عقوبات طويلة · أحكام سجن طويلة · عقوبات مطولة"
             isRead = false
         }
     )

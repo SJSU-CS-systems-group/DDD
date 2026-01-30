@@ -188,7 +188,7 @@ private fun NotifCard(
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = notif.date
+                    text = notif.date.toString()
                 )
             }
         }
