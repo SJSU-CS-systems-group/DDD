@@ -16,7 +16,7 @@ public interface ServerMessageDao {
     @Upsert
     void insertAll(List<ServerMessage> serverMessages);
 
-    @Query("SELECT * FROM ServerMessages")
+    @Query("SELECT * FROM ServerMessages ORDER BY date DESC")
     LiveData<List<ServerMessage>> getAllServerMessages();
 
     @Query("UPDATE ServerMessages SET read = 1 WHERE messageId = :messageId")
