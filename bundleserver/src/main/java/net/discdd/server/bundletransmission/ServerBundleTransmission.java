@@ -222,8 +222,9 @@ public class ServerBundleTransmission {
         PipedInputStream pipedInputStream = new PipedInputStream();
         Future<?> future =
                 BundleUtils.runFuture(executorService, counts.lastReceivedBundleId, null, adus, null, pipedInputStream);
+        Files.createDirectories(getClientSendDirectory(clientId));
         try {
-            var bundleOutputStream = Files.newOutputStream(getPathForBundleToSend(encryptedBundleId),
+            var bundleOutputStream = Files.newOutputStream(getPathForBundleToSend(clientId, encryptedBundleId),
                                                            StandardOpenOption.CREATE,
                                                            StandardOpenOption.TRUNCATE_EXISTING);
             BundleUtils.encryptPayloadAndCreateBundle((inputStream, outputStream) -> serverSecurity.encrypt(clientId,
@@ -241,9 +242,10 @@ public class ServerBundleTransmission {
         } finally {
             future.cancel(true);
         }
+        cleanupOldBundles(clientId, encryptedBundleId);
         logger.log(INFO,
                    "Bundle generated for client " + clientId + " with ID: " + encryptedBundleId + " in " +
-                           getPathForBundleToSend(encryptedBundleId));
+                           getPathForBundleToSend(clientId, encryptedBundleId));
         return encryptedBundleId;
     }
 
@@ -264,12 +266,41 @@ public class ServerBundleTransmission {
                 .build();
     }
 
+    public Path getClientSendDirectory(String clientId) {
+        return config.getBundleTransmission().getToSendDirectory().resolve(clientId);
+    }
+
+    public Path getPathForBundleToSend(String clientId, String encryptedBundleId) {
+        return getClientSendDirectory(clientId).resolve(encryptedBundleId);
+    }
+
     public Path getPathForBundleToSend(String encryptedBundleId) {
-        return getPathToSendDirectory().resolve(encryptedBundleId);
+        var clientId = applicationDataManager.getClientIdForBundle(encryptedBundleId);
+        if (clientId != null) {
+            var perClientPath = getPathForBundleToSend(clientId, encryptedBundleId);
+            if (Files.exists(perClientPath)) {
+                return perClientPath;
+            }
+        }
+        // Fallback: flat directory (backward compat for pre-existing bundles)
+        return config.getBundleTransmission().getToSendDirectory().resolve(encryptedBundleId);
     }
 
     public Path getPathToSendDirectory() {
         return config.getBundleTransmission().getToSendDirectory();
+    }
+
+    private void cleanupOldBundles(String clientId, String currentBundleId) {
+        var clientDir = getClientSendDirectory(clientId);
+        var files = clientDir.toFile().listFiles();
+        if (files != null) {
+            for (var f : files) {
+                if (!f.getName().equals(currentBundleId)) {
+                    logger.log(INFO, "Deleting old bundle " + f.getName() + " for client " + clientId);
+                    f.delete();
+                }
+            }
+        }
     }
 
     public Path getPathForBundleToReceive(String randomBundleId) {
