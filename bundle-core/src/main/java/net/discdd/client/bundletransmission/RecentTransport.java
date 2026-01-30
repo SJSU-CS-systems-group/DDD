@@ -15,13 +15,13 @@ import net.discdd.grpc.GetRecencyBlobResponse;
  */
 @Entity(tableName = "RecentTransports")
 public class RecentTransport {
-    @PrimaryKey @NonNull @Getter
-    final private String transportId;
+    @PrimaryKey
+    public String transportId;
 
     @Getter @Setter
     private String description;
-    @Getter @Setter
 
+    @Getter @Setter
     private long lastExchange;
 
     @Getter @Setter
@@ -59,12 +59,20 @@ public class RecentTransport {
         setRecencyBlobResponse(recencyBlobResponse);
     }
 
+    public void setTransportId(@NonNull String transportId) {
+        this.transportId = transportId;
+    }
+
+    public String getTransportId() {
+        return transportId;
+    }
+
     public GetRecencyBlobResponse getRecencyBlobResponse() {
         if (recencyBlobResponse == null && recencyBlobBytes != null && recencyBlobBytes.length > 0) {
             try {
                 recencyBlobResponse = GetRecencyBlobResponse.parseFrom(recencyBlobBytes);
             } catch (InvalidProtocolBufferException e) {
-                // Return null on parse error
+                return null;
             }
         }
         return recencyBlobResponse;

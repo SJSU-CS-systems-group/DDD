@@ -2,6 +2,7 @@ plugins {
     id 'com.android.application'
     id "com.google.protobuf" version '0.9.0'
     id 'org.jetbrains.kotlin.android'
+    id "com.google.devtools.ksp" version "1.9.25-1.0.20"
 }
 
 def osName = System.getProperty("os.name").toLowerCase()
@@ -119,6 +120,11 @@ dependencies {
     //annotation to load sender onto acra config
     annotationProcessor("com.google.auto.service:auto-service:1.1.1")
     compileOnly("com.google.auto.service:auto-service-annotations:1.1.1")
+
+    // Room database
+    def room_version = "2.6.1"
+    implementation "androidx.room:room-runtime:$room_version"
+    ksp "androidx.room:room-compiler:$room_version"
 
     // Compose migration
     var composeBom = platform("androidx.compose:compose-bom:2025.02.00")
