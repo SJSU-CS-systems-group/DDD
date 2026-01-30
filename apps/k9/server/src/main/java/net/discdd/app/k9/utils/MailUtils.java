@@ -1,10 +1,6 @@
 package net.discdd.app.k9.utils;
 
-import jakarta.mail.Address;
-import jakarta.mail.MessagingException;
-import jakarta.mail.Session;
-import jakarta.mail.internet.InternetAddress;
-import jakarta.mail.internet.MimeMessage;
+import static java.util.logging.Level.SEVERE;
 
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -12,7 +8,11 @@ import java.util.List;
 import java.util.Properties;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.SEVERE;
+import jakarta.mail.Address;
+import jakarta.mail.MessagingException;
+import jakarta.mail.Session;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeMessage;
 
 public class MailUtils {
     final static Logger logger = Logger.getLogger(MailUtils.class.getName());

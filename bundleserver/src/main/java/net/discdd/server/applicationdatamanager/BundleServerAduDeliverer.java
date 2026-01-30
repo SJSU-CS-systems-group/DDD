@@ -1,21 +1,8 @@
 package net.discdd.server.applicationdatamanager;
 
-import com.google.protobuf.ByteString;
-import io.grpc.netty.GrpcSslContexts;
-import io.grpc.netty.NettyChannelBuilder;
-import net.discdd.grpc.AppDataUnit;
-import net.discdd.grpc.ExchangeADUsRequest;
-import net.discdd.grpc.PendingDataCheckRequest;
-import net.discdd.grpc.ServiceAdapterServiceGrpc;
-import net.discdd.server.repository.RegisteredAppAdapterRepository;
-import net.discdd.tls.DDDX509ExtendedTrustManager;
-import net.discdd.tls.GrpcSecurityKey;
-import net.discdd.utils.StoreADUs;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 
-import javax.annotation.PostConstruct;
-import javax.net.ssl.SSLException;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.Set;
@@ -26,8 +13,25 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
+import javax.annotation.PostConstruct;
+import javax.net.ssl.SSLException;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import com.google.protobuf.ByteString;
+
+import net.discdd.grpc.AppDataUnit;
+import net.discdd.grpc.ExchangeADUsRequest;
+import net.discdd.grpc.PendingDataCheckRequest;
+import net.discdd.grpc.ServiceAdapterServiceGrpc;
+import net.discdd.server.repository.RegisteredAppAdapterRepository;
+import net.discdd.tls.DDDX509ExtendedTrustManager;
+import net.discdd.tls.GrpcSecurityKey;
+import net.discdd.utils.StoreADUs;
+
+import io.grpc.netty.GrpcSslContexts;
+import io.grpc.netty.NettyChannelBuilder;
 
 /**
  * Remember that this class has a different concept of "send" and "receive" folders than the original code.
@@ -49,11 +53,14 @@ public class BundleServerAduDeliverer implements ServerApplicationDataManager.Ad
     private final Duration revalidateAppSpinDelay;
     private final long grpcTimeout = 20_000 /* milliseconds */;
     private final GrpcSecurityKey serverGrpcSecurityKey;
+    private long lastRevalidateAppsMs;
 
     BundleServerAduDeliverer(AduStores aduStores,
                              RegisteredAppAdapterRepository registeredAppAdapterRepository,
-                             @Value("${serviceadapter.datacheck.interval}") Duration dataCheckInterval,
-                             @Value("${serviceadapter.revalidate-delay:5s}") Duration revalidateAppSpinDelay,
+                             @Value("${serviceadapter.datacheck.interval}")
+                             Duration dataCheckInterval,
+                             @Value("${serviceadapter.revalidate-delay:5s}")
+                             Duration revalidateAppSpinDelay,
                              GrpcSecurityKey serverGrpcSecurityKey) {
         this.sendFolder = aduStores.getSendADUsStorage();
         this.receiveFolder = aduStores.getReceiveADUsStorage();
@@ -62,8 +69,6 @@ public class BundleServerAduDeliverer implements ServerApplicationDataManager.Ad
         this.revalidateAppSpinDelay = revalidateAppSpinDelay;
         this.serverGrpcSecurityKey = serverGrpcSecurityKey;
     }
-
-    private long lastRevalidateAppsMs;
 
     // Synchronized because we want this to be an atomic operation
     synchronized private void revalidateApps(boolean forceRevalidation) {
@@ -129,8 +134,8 @@ public class BundleServerAduDeliverer implements ServerApplicationDataManager.Ad
                 logger.log(INFO, "Pending clients for " + appId + " " + checkResponse.getClientIdList());
             } catch (Throwable e) {
                 logger.log(SEVERE,
-                           "Failed to check for pending data for " + appId + " at " +
-                                   appState.stub.getChannel().authority(),
+                           "Failed to check for pending data for " + appId + " at " + appState.stub.getChannel()
+                                   .authority(),
                            e);
             }
         });
@@ -178,19 +183,19 @@ public class BundleServerAduDeliverer implements ServerApplicationDataManager.Ad
             }
 
             logger.log(INFO,
-                       "Sending " + appData.getAdusCount() + " ADUs" +
-                               (appData.getAdusCount() > 0 ? " from ADU id " + appData.getAdus(0).getAduId() : "") +
-                               " to " + appId + " for " + clientId + " on " + appState.stub.getChannel().authority());
+                       "Sending " + appData.getAdusCount() + " ADUs" + (appData.getAdusCount() > 0 ?
+                               " from ADU id " + appData.getAdus(0).getAduId() :
+                               "") + " to " + appId + " for " + clientId + " on " + appState.stub.getChannel()
+                                       .authority());
 
-            var recvData =
-                    appState.stub.withDeadlineAfter(grpcTimeout, TimeUnit.MILLISECONDS).exchangeADUs(appData.build());
+            var recvData = appState.stub.withDeadlineAfter(grpcTimeout, TimeUnit.MILLISECONDS)
+                    .exchangeADUs(appData.build());
             receiveFolder.deleteAllFilesUpTo(clientId, appId, lastAduIdSent);
             logger.log(INFO,
                        "Receiving " + recvData.getAdusList().size() + " ADUs" + (recvData.getAdusList().size() > 0 ?
-                                                                                 " from ADU id " + recvData.getAdus(0)
-                                                                                         .getAduId() :
-                                                                                 "") + " to " + appId + " for " +
-                               clientId + " on " + appState.stub.getChannel().authority());
+                               " from ADU id " + recvData.getAdus(0).getAduId() :
+                               "") + " to " + appId + " for " + clientId + " on " + appState.stub.getChannel()
+                                       .authority());
             for (var dataUnit : recvData.getAdusList()) {
                 sendFolder.addADU(clientId, appId, dataUnit.getData().toByteArray(), dataUnit.getAduId());
             }

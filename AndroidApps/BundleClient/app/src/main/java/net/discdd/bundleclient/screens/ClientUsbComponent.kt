@@ -1,6 +1,5 @@
 package net.discdd.bundleclient.screens
 
-
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -33,8 +32,10 @@ fun ClientUsbComponent(
         text = when {
             isUsbConnected && usbState.dddDirectoryExists ->
                 stringResource(R.string.usb_connection_detected)
+
             isUsbConnected && !usbState.dddDirectoryExists ->
                 stringResource(R.string.usb_was_connected_but_ddd_transport_directory_was_not_detected)
+
             else ->
                 stringResource(R.string.no_usb_connection_detected)
         },

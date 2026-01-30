@@ -2,9 +2,10 @@ package net.discdd.server.repository;
 
 import java.util.List;
 
-import net.discdd.server.repository.entity.SentAduDetails;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
+
+import net.discdd.server.repository.entity.SentAduDetails;
 
 @Repository
 public interface SentAduDetailsRepository extends CrudRepository<SentAduDetails, String> {

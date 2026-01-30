@@ -1,10 +1,29 @@
 package net.discdd.transport;
 
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+
 import com.google.protobuf.ByteString;
-import io.grpc.ManagedChannel;
-import io.grpc.StatusRuntimeException;
-import io.grpc.okhttp.OkHttpChannelBuilder;
-import io.grpc.stub.StreamObserver;
+
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
 import net.discdd.grpc.BundleChunk;
 import net.discdd.grpc.BundleDownloadRequest;
@@ -24,31 +43,15 @@ import net.discdd.tls.DDDX509ExtendedTrustManager;
 import net.discdd.tls.GrpcSecurityKey;
 import net.discdd.utils.Constants;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
+import io.grpc.ManagedChannel;
+import io.grpc.StatusRuntimeException;
+import io.grpc.okhttp.OkHttpChannelBuilder;
+import io.grpc.stub.StreamObserver;
 
 public class TransportToBundleServerManager {
 
-    private static final Logger logger = Logger.getLogger(TransportToBundleServerManager.class.getName());
     public static final String RECENCY_BLOB_BIN = "recencyBlob.bin";
+    private static final Logger logger = Logger.getLogger(TransportToBundleServerManager.class.getName());
     private final Path fromClientPath;
     private final Path fromServerPath;
     private final Path crashReportsPath;
@@ -68,21 +71,13 @@ public class TransportToBundleServerManager {
         this.crashReportsPath = transportPaths.crashReportPath;
     }
 
-    public static class ExchangeResult {
-        public int uploadCount = 0; // the count actually uploaded
-        public int toUploadCount = 0; // the count we were supposed to upload
-        public int downloadCount = 0;
-        public int toDownloadCount = 0;
-        public int deleteCount = 0;
-    }
-
     public ExchangeResult doExchange() throws Exception {
         ManagedChannel channel = null;
         ExchangeResult exchangeResult = new ExchangeResult();
         try {
             var sslClientContext = SSLContext.getInstance("TLS");
             sslClientContext.init(DDDTLSUtil.getKeyManagerFactory(grpcSecurityKey.grpcKeyPair, grpcSecurityKey.grpcCert)
-                                          .getKeyManagers(),
+                    .getKeyManagers(),
                                   new TrustManager[] { new DDDX509ExtendedTrustManager(true) },
                                   new SecureRandom());
 
@@ -102,23 +97,22 @@ public class TransportToBundleServerManager {
             if (crashReportsPath.toFile().exists()) {
                 var collectedCrashes = bsStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                         .crashReports(CrashReportRequest.newBuilder()
-                                              .setCrashReportData(ByteString.copyFrom(Files.readAllBytes(
-                                                      crashReportsPath)))
-                                              .build());
+                                .setCrashReportData(ByteString.copyFrom(Files.readAllBytes(crashReportsPath)))
+                                .build());
             }
             var inventoryResponse = bsStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     .bundleInventory(BundleInventoryRequest.newBuilder()
-                                             .addAllBundlesFromClientsOnTransport(bundlesFromClients)
-                                             .addAllBundlesFromServerOnTransport(bundlesFromServer)
-                                             .build());
+                            .addAllBundlesFromClientsOnTransport(bundlesFromClients)
+                            .addAllBundlesFromServerOnTransport(bundlesFromServer)
+                            .build());
 
             exchangeResult.downloadCount = inventoryResponse.getBundlesToDeleteCount();
             processDeleteBundles(inventoryResponse.getBundlesToDeleteList());
             exchangeResult.toUploadCount = inventoryResponse.getBundlesToUploadCount();
             exchangeResult.uploadCount = processUploadBundles(inventoryResponse.getBundlesToUploadList(), exchangeStub);
             exchangeResult.toDownloadCount = inventoryResponse.getBundlesToDownloadCount();
-            exchangeResult.downloadCount =
-                    processDownloadBundles(inventoryResponse.getBundlesToDownloadList(), exchangeStub);
+            exchangeResult.downloadCount = processDownloadBundles(inventoryResponse.getBundlesToDownloadList(),
+                                                                  exchangeStub);
             processRecencyBlob(blockingExchangeStub);
 
             logger.log(INFO, "Connect server completed");
@@ -160,38 +154,38 @@ public class TransportToBundleServerManager {
                 var completion = new CompletableFuture<Boolean>();
                 exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                         .downloadBundle(BundleDownloadRequest.newBuilder()
-                                                .setBundleId(toReceive)
-                                                .setSenderType(BundleSenderType.TRANSPORT)
-                                                .build(), new StreamObserver<>() {
-                            @Override
-                            public void onNext(BundleDownloadResponse value) {
-                                try {
-                                    os.write(value.getChunk().getChunk().toByteArray());
-                                } catch (IOException e) {
-                                    onError(e);
-                                }
-                            }
-
-                            @Override
-                            public void onError(Throwable t) {
-                                var level = SEVERE;
-                                if (t instanceof StatusRuntimeException sre) {
-                                    if (sre.getStatus().getCode() == io.grpc.Status.Code.NOT_FOUND) {
-                                        // this is not an unexpected error, since we probe for bundles that we
-                                        // hope are there
-                                        level = Level.FINE;
+                                .setBundleId(toReceive)
+                                .setSenderType(BundleSenderType.TRANSPORT)
+                                .build(), new StreamObserver<>() {
+                                    @Override
+                                    public void onNext(BundleDownloadResponse value) {
+                                        try {
+                                            os.write(value.getChunk().getChunk().toByteArray());
+                                        } catch (IOException e) {
+                                            onError(e);
+                                        }
                                     }
-                                }
-                                logger.log(level, "Failed to download file: " + path, t);
-                                completion.completeExceptionally(t);
-                            }
 
-                            @Override
-                            public void onCompleted() {
-                                logger.log(INFO, "Downloaded " + path);
-                                completion.complete(true);
-                            }
-                        });
+                                    @Override
+                                    public void onError(Throwable t) {
+                                        var level = SEVERE;
+                                        if (t instanceof StatusRuntimeException sre) {
+                                            if (sre.getStatus().getCode() == io.grpc.Status.Code.NOT_FOUND) {
+                                                // this is not an unexpected error, since we probe for bundles that we
+                                                // hope are there
+                                                level = Level.FINE;
+                                            }
+                                        }
+                                        logger.log(level, "Failed to download file: " + path, t);
+                                        completion.completeExceptionally(t);
+                                    }
+
+                                    @Override
+                                    public void onCompleted() {
+                                        logger.log(INFO, "Downloaded " + path);
+                                        completion.complete(true);
+                                    }
+                                });
 
                 completion.get(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS);
                 downloadCount++;
@@ -210,12 +204,12 @@ public class TransportToBundleServerManager {
             StreamObserver<BundleUploadResponse> responseObserver = null;
             try (var is = Files.newInputStream(path, StandardOpenOption.READ)) {
                 responseObserver = new BundleUploadResponseObserver();
-                var uploadRequestStreamObserver =
-                        exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                                .uploadBundle(responseObserver);
+                var uploadRequestStreamObserver = exchangeStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS,
+                                                                                 TimeUnit.MILLISECONDS)
+                        .uploadBundle(responseObserver);
                 uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder()
-                                                           .setSenderType(BundleSenderType.TRANSPORT)
-                                                           .build());
+                        .setSenderType(BundleSenderType.TRANSPORT)
+                        .build());
                 uploadRequestStreamObserver.onNext(BundleUploadRequest.newBuilder().setBundleId(toSend).build());
                 byte[] data = new byte[1024 * 1024];
                 int rc;
@@ -259,5 +253,13 @@ public class TransportToBundleServerManager {
             }
         }
         return listOfBundleIds;
+    }
+
+    public static class ExchangeResult {
+        public int uploadCount = 0; // the count actually uploaded
+        public int toUploadCount = 0; // the count we were supposed to upload
+        public int downloadCount = 0;
+        public int toDownloadCount = 0;
+        public int deleteCount = 0;
     }
 }

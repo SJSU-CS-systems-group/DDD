@@ -1,20 +1,10 @@
 package net.discdd.server;
 
-import io.grpc.ManagedChannel;
-import net.discdd.bundlesecurity.SecurityUtils;
-import net.discdd.grpc.BundleExchangeServiceGrpc;
-import net.discdd.grpc.EncryptedBundleId;
-import net.discdd.pathutils.TransportPaths;
-import net.discdd.tls.DDDNettyTLS;
-import net.discdd.tls.GrpcSecurityKey;
-import net.discdd.transport.TransportToBundleServerManager;
-import org.bouncycastle.operator.OperatorCreationException;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
-import org.springframework.boot.test.context.SpringBootTest;
+import static net.discdd.transport.TransportToBundleServerManager.RECENCY_BLOB_BIN;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -30,11 +20,23 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.logging.Logger;
 
-import static net.discdd.transport.TransportToBundleServerManager.RECENCY_BLOB_BIN;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.bouncycastle.operator.OperatorCreationException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.springframework.boot.test.context.SpringBootTest;
+
+import net.discdd.bundlesecurity.SecurityUtils;
+import net.discdd.grpc.BundleExchangeServiceGrpc;
+import net.discdd.grpc.EncryptedBundleId;
+import net.discdd.pathutils.TransportPaths;
+import net.discdd.tls.DDDNettyTLS;
+import net.discdd.tls.GrpcSecurityKey;
+import net.discdd.transport.TransportToBundleServerManager;
+
+import io.grpc.ManagedChannel;
 
 @SpringBootTest(classes = { BundleServerApplication.class, End2EndTest.End2EndTestInitializer.class })
 @TestMethodOrder(MethodOrderer.MethodName.class)
@@ -87,7 +89,8 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
 
     private void recursiveDelete(Path path) throws IOException {
         if (Files.exists(path)) {
-            Files.walk(path).sorted(Comparator.reverseOrder()) // Delete files before directories
+            Files.walk(path)
+                    .sorted(Comparator.reverseOrder()) // Delete files before directories
                     .forEach(file -> {
                         try {
                             Files.deleteIfExists(file);
@@ -159,13 +162,13 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
         Files.createFile(toServerPath.resolve("bundle1"));
         Files.createFile(toServerPath.resolve("bundle2"));
         Files.createFile(toServerPath.resolve("bundle3"));
-        Method populateListFromPath =
-                TransportToBundleServerManager.class.getDeclaredMethod("populateListFromPath", Path.class);
+        Method populateListFromPath = TransportToBundleServerManager.class.getDeclaredMethod("populateListFromPath",
+                                                                                             Path.class);
         populateListFromPath.setAccessible(true);
 
         // Retrieve the bundles from the client
-        List<EncryptedBundleId> bundlesToUpload =
-                (List<EncryptedBundleId>) populateListFromPath.invoke(manager, toServerPath);
+        List<EncryptedBundleId> bundlesToUpload = (List<EncryptedBundleId>) populateListFromPath.invoke(manager,
+                                                                                                        toServerPath);
 
         // Assert that bundles are successfully added to /server path
         assertEquals(3, bundlesToUpload.size(), "The number of bundles should be 3.");
@@ -196,13 +199,13 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
         Files.createFile(toClientPath.resolve("bundle1"));
         Files.createFile(toClientPath.resolve("bundle2"));
         Files.createFile(toClientPath.resolve("bundle3"));
-        Method populateListFromPath =
-                TransportToBundleServerManager.class.getDeclaredMethod("populateListFromPath", Path.class);
+        Method populateListFromPath = TransportToBundleServerManager.class.getDeclaredMethod("populateListFromPath",
+                                                                                             Path.class);
         populateListFromPath.setAccessible(true);
 
         // Retrieve the bundles from the server
-        List<EncryptedBundleId> bundlesToDownload =
-                (List<EncryptedBundleId>) populateListFromPath.invoke(manager, toClientPath);
+        List<EncryptedBundleId> bundlesToDownload = (List<EncryptedBundleId>) populateListFromPath.invoke(manager,
+                                                                                                          toClientPath);
 
         // Assert that bundles are successfully created
         assertEquals(3, bundlesToDownload.size(), "The number of bundles should be 3.");
@@ -232,11 +235,11 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
         Files.createFile(toSendDir.resolve("bundle2"));
         Files.createFile(toSendDir.resolve("bundle3"));
 
-        Method populateListFromPath =
-                TransportToBundleServerManager.class.getDeclaredMethod("populateListFromPath", Path.class);
+        Method populateListFromPath = TransportToBundleServerManager.class.getDeclaredMethod("populateListFromPath",
+                                                                                             Path.class);
         populateListFromPath.setAccessible(true);
-        List<EncryptedBundleId> bundlesToDownload =
-                (List<EncryptedBundleId>) populateListFromPath.invoke(manager, toSendDir);
+        List<EncryptedBundleId> bundlesToDownload = (List<EncryptedBundleId>) populateListFromPath.invoke(manager,
+                                                                                                          toSendDir);
 
         Method processDownloadBundles = TransportToBundleServerManager.class.getDeclaredMethod("processDownloadBundles",
                                                                                                List.class,
@@ -260,20 +263,20 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
         Files.createFile(toClientPath.resolve("bundle1"));
         Files.createFile(toClientPath.resolve("bundle2"));
         Files.createFile(toClientPath.resolve("bundle3"));
-        Method populateListFromPath =
-                TransportToBundleServerManager.class.getDeclaredMethod("populateListFromPath", Path.class);
+        Method populateListFromPath = TransportToBundleServerManager.class.getDeclaredMethod("populateListFromPath",
+                                                                                             Path.class);
         populateListFromPath.setAccessible(true);
 
         // Retrieve the bundles from the server
-        List<EncryptedBundleId> bundlesToDelete =
-                (List<EncryptedBundleId>) populateListFromPath.invoke(manager, toClientPath);
+        List<EncryptedBundleId> bundlesToDelete = (List<EncryptedBundleId>) populateListFromPath.invoke(manager,
+                                                                                                        toClientPath);
 
         // Assert that bundles are successfully added to /client path
         assertEquals(3, bundlesToDelete.size(), "The number of bundles should be 3.");
 
         // Prepare to delete bundles
-        Method processDeleteBundles =
-                TransportToBundleServerManager.class.getDeclaredMethod("processDeleteBundles", List.class);
+        Method processDeleteBundles = TransportToBundleServerManager.class.getDeclaredMethod("processDeleteBundles",
+                                                                                             List.class);
         processDeleteBundles.setAccessible(true);
 
         // Delete all bundles
@@ -289,13 +292,13 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
     @Test
     void testUploadNonExistentBundle() throws InvocationTargetException, IllegalAccessException, IOException,
             NoSuchMethodException {
-        Method populateListFromPath =
-                TransportToBundleServerManager.class.getDeclaredMethod("populateListFromPath", Path.class);
+        Method populateListFromPath = TransportToBundleServerManager.class.getDeclaredMethod("populateListFromPath",
+                                                                                             Path.class);
         populateListFromPath.setAccessible(true);
 
         // Retrieve the bundles from the empty directory
-        List<EncryptedBundleId> bundlesToUpload =
-                (List<EncryptedBundleId>) populateListFromPath.invoke(manager, toServerPath);
+        List<EncryptedBundleId> bundlesToUpload = (List<EncryptedBundleId>) populateListFromPath.invoke(manager,
+                                                                                                        toServerPath);
         assertTrue(bundlesToUpload.isEmpty(), "The list of bundles should be empty.");
 
         // Attempt to upload bundles
@@ -312,13 +315,13 @@ public class BundleTransportToBundleServerTest extends End2EndTest {
     @Test
     void testDownloadNonExistentBundle() throws NoSuchMethodException, InvocationTargetException,
             IllegalAccessException, IOException {
-        Method populateListFromPath =
-                TransportToBundleServerManager.class.getDeclaredMethod("populateListFromPath", Path.class);
+        Method populateListFromPath = TransportToBundleServerManager.class.getDeclaredMethod("populateListFromPath",
+                                                                                             Path.class);
         populateListFromPath.setAccessible(true);
 
         // Retrieve the bundles from the empty directory
-        List<EncryptedBundleId> bundlesToDownload =
-                (List<EncryptedBundleId>) populateListFromPath.invoke(manager, toClientPath);
+        List<EncryptedBundleId> bundlesToDownload = (List<EncryptedBundleId>) populateListFromPath.invoke(manager,
+                                                                                                          toClientPath);
         assertTrue(bundlesToDownload.isEmpty(), "The list of bundles should be empty.");
 
         // Attempt to download bundles

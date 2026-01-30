@@ -6,12 +6,12 @@ package net.discdd.client.bundletransmission;
  * of Android.
  */
 public interface TransportDevice {
+    static TransportDevice SERVER_DEVICE = new FakeDevice("Server");
+    static TransportDevice FAKE_DEVICE = new FakeDevice("Fake");
+
     String getDescription();
 
     String getId();
-
-    static TransportDevice SERVER_DEVICE = new FakeDevice("Server");
-    static TransportDevice FAKE_DEVICE = new FakeDevice("Fake");
 }
 
 class FakeDevice implements TransportDevice {
@@ -22,12 +22,8 @@ class FakeDevice implements TransportDevice {
     }
 
     @Override
-    public String getDescription() {
-        return description;
-    }
+    public String getDescription() { return description; }
 
     @Override
-    public String getId() {
-        return description;
-    }
+    public String getId() { return description; }
 }

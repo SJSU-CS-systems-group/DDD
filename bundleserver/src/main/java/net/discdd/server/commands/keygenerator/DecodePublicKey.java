@@ -1,16 +1,8 @@
 package net.discdd.server.commands.keygenerator;
 
-import net.discdd.bundlesecurity.DDDPEMEncoder;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-import org.whispersystems.libsignal.IdentityKeyPair;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.ecc.ECPublicKey;
-
-import net.discdd.bundlesecurity.SecurityUtils;
-import picocli.CommandLine;
-import picocli.CommandLine.Option;
-import picocli.CommandLine.Parameters;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -19,36 +11,36 @@ import java.util.Base64;
 import java.util.concurrent.Callable;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import org.whispersystems.libsignal.IdentityKeyPair;
+import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.ecc.ECPublicKey;
+
+import net.discdd.bundlesecurity.DDDPEMEncoder;
+
+import picocli.CommandLine;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 
 @Component
 @CommandLine.Command(name = "decode-pub-key", description = "Decode public key given private key")
 public class DecodePublicKey implements Callable<Void> {
     private static final Logger logger = Logger.getLogger(DecodePublicKey.class.getName());
-
-    @Value("${bundle-server.bundle-security.server-serverkeys-path}")
-    private void setStorePath(String storePath) {
-        this.storePath = Paths.get(storePath);
-    }
-
-    private Path storePath;
-
     @Parameters(arity = "1", index = "0")
     String command;
-
+    private Path storePath;
     @Option(names = "-pvtin-file", description = "Private key file name")
     private String pvtFilename;
-
     @Option(names = "-pvtin-base64", description = "Private key base64")
     private String pvtbase64;
-
     @Option(names = "-pvtin-raw", description = "Private key raw")
     private String pvtraw;
-
     @Option(names = "-pubout", description = "Public key file name")
     private String pubFilename;
+
+    @Value("${bundle-server.bundle-security.server-serverkeys-path}")
+    private void setStorePath(String storePath) { this.storePath = Paths.get(storePath); }
 
     private ECPublicKey extractPublicKey(byte[] privateKey) throws InvalidKeyException {
         IdentityKeyPair identityKeyPair = new IdentityKeyPair(privateKey);

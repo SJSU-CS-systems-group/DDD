@@ -1,33 +1,35 @@
 package net.discdd.grpc;
 
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
+
+import java.util.logging.Logger;
+
+import javax.net.ssl.SSLException;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import net.discdd.tls.DDDX509ExtendedTrustManager;
+import net.discdd.tls.GrpcSecurityKey;
+import net.discdd.tls.NettyClientCertificateInterceptor;
+
 import io.grpc.ConnectivityState;
 import io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.NettyChannelBuilder;
 import io.netty.handler.ssl.SslContext;
-import net.discdd.tls.DDDTLSUtil;
-import net.discdd.tls.DDDX509ExtendedTrustManager;
-import net.discdd.tls.GrpcSecurityKey;
-import net.discdd.tls.NettyClientCertificateInterceptor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
-import javax.net.ssl.SSLException;
-import java.util.logging.Logger;
-
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
 
 @Service
 public class AdapterRegisterService {
     private static final Logger logger = Logger.getLogger(AdapterRegisterService.class.getName());
     private GrpcSecurityKey grpcSecurityKey;
 
-    public AdapterRegisterService(@Value("${bundle-server.url}") String bundleServerURL,
-                                  @Value("${my.grpc.url}") String myGrpcUrl,
-                                  @Value("${spring.application.name}") String appName,
-                                  @Value("${adapter-server.root-dir}") String rootDir,
-                                  GrpcSecurityKey grpcSecurityKey) {
+    public AdapterRegisterService(@Value("${bundle-server.url}")
+    String bundleServerURL, @Value("${my.grpc.url}")
+    String myGrpcUrl, @Value("${spring.application.name}")
+    String appName, @Value("${adapter-server.root-dir}")
+    String rootDir, GrpcSecurityKey grpcSecurityKey) {
         this.grpcSecurityKey = grpcSecurityKey;
         registerWithBundleServer(bundleServerURL, myGrpcUrl, rootDir, appName);
     }
@@ -63,9 +65,9 @@ public class AdapterRegisterService {
             } else {
                 var rsp = ServiceAdapterRegistryServiceGrpc.newBlockingStub(managedChannel)
                         .checkAdapterRegistration(ConnectionData.newBuilder()
-                                                          .setAppName(appName)
-                                                          .setUrl(myGrpcUrl)
-                                                          .build());
+                                .setAppName(appName)
+                                .setUrl(myGrpcUrl)
+                                .build());
 
                 if (rsp.getCode() != 0) {
                     logger.log(WARNING,

@@ -17,7 +17,9 @@
     <string name="not_connected">No conectado</string>
     <string name="connected_to_transport">Conectado al transporte</string>
     <string name="refresh_peers">Actualizar sus compañeros</string>
-    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">USB estaba conectado, pero el directorio /DDD_TRANSPORT no se detectó%n</string>
+    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">USB estaba conectado, pero el
+        directorio /DDD_TRANSPORT no se detectó%n
+    </string>
     <string name="never">Nunca</string>
     <string name="usb_connection_detected">Conexión USB detectada</string>
     <string name="settings_saved">Configuración guardada</string>
@@ -27,7 +29,11 @@
     <string name="initiating_bundle_exchange">Iniciar el intercambio de paquetes ...</string>
     <string name="exchanging_with_transport">Intercambio con transporte</string>
     <string name="reload">Recargar</string>
-    <string name="to_settings_text">Para habilitar nuestra aplicación para administrar archivos relacionados con la aplicación en este dispositivo y su almacenamiento USB, alterne \ "Sí \" para Bundleclient en su configuración. Le aseguramos que solo se accederán a los archivos creados por nuestra aplicación. Proteger la privacidad del usuario y mantener las prácticas éticas son nuestras principales prioridades.</string>
+    <string name="to_settings_text">Para habilitar nuestra aplicación para administrar archivos relacionados con la
+        aplicación en este dispositivo y su almacenamiento USB, alterne \ "Sí \" para Bundleclient en su configuración.
+        Le aseguramos que solo se accederán a los archivos creados por nuestra aplicación. Proteger la privacidad del
+        usuario y mantener las prácticas éticas son nuestras principales prioridades.
+    </string>
     <string name="subscribe">Suscribir</string>
     <string name="service_name" translatable="false">Ddd</string>
     <string name="unsubscribe">Cancelar la suscripción</string>
@@ -37,6 +43,8 @@
     <string name="wifi_aware_tab">Wifi consciente</string>
     <string name="sent">"enviado: "</string>
     <string name="received">recibió</string>
-    <string name="cannot_transfer_bundle_usb_not_ready_or_directory_not_found">No se puede transferir el paquete: USB no listo o directorio no encontrado</string>
+    <string name="cannot_transfer_bundle_usb_not_ready_or_directory_not_found">No se puede transferir el paquete: USB no
+        listo o directorio no encontrado
+    </string>
     <string name="delete_logs">Borrar registros</string>
 </resources>

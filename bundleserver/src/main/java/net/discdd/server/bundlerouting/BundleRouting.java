@@ -1,12 +1,6 @@
 package net.discdd.server.bundlerouting;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import net.discdd.bundlerouting.RoutingExceptions;
-import net.discdd.server.repository.ServerRoutingRepository;
-import net.discdd.server.repository.entity.ServerRouting;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+import static java.util.logging.Level.FINE;
 
 import java.nio.file.Path;
 import java.sql.SQLException;
@@ -16,8 +10,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.WARNING;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import net.discdd.bundlerouting.RoutingExceptions;
+import net.discdd.server.repository.ServerRoutingRepository;
+import net.discdd.server.repository.entity.ServerRouting;
 
 @Service
 public class BundleRouting {
@@ -41,9 +42,8 @@ public class BundleRouting {
     private void updateEntry(String transportID, String clientID, long score) {
         logger.log(FINE, String.format("Updating %s : %s mapping in serverRoutingRepository", transportID, clientID));
         if (null == transportID) return;
-        ServerRouting serverRouting =
-                serverRoutingRepository.findByServerRoutingIdClientIDAndServerRoutingIdTransportID(clientID,
-                                                                                                   transportID);
+        ServerRouting serverRouting = serverRoutingRepository
+                .findByServerRoutingIdClientIDAndServerRoutingIdTransportID(clientID, transportID);
         if (null == serverRouting) {
             serverRouting = new ServerRouting(transportID, clientID, String.valueOf(score));
         } else {
@@ -56,8 +56,8 @@ public class BundleRouting {
     /*
      * payloadPath: path of received payload where routing metadata file exists
      */
-    public void processClientMetaData(Path payloadPath, String transportID, String clientID) throws
-            RoutingExceptions.ClientMetaDataFileException, SQLException {
+    public void processClientMetaData(Path payloadPath, String transportID, String clientID)
+            throws RoutingExceptions.ClientMetaDataFileException, SQLException {
         logger.log(FINE, "processing client metadata, for transportId: " + transportID, ",clientID: " + clientID);
         var clientMetaDataPath = payloadPath.resolve(METADATAFILE);
         HashMap<String, Long> clientMap = null;

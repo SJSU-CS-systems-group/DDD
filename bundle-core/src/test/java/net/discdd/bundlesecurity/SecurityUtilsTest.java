@@ -1,5 +1,12 @@
 package net.discdd.bundlesecurity;
 
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,22 +27,12 @@ import org.whispersystems.libsignal.state.SessionState;
 import org.whispersystems.libsignal.state.SignalProtocolStore;
 import org.whispersystems.libsignal.util.guava.Optional;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStream;
-import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-
 public class SecurityUtilsTest {
     private SessionCipher aliceCipher;
     private SessionCipher bobCipher;
 
-    private void initializeSessionsV3(SessionState aliceSessionState, SessionState bobSessionState) throws
-            InvalidKeyException {
+    private void initializeSessionsV3(SessionState aliceSessionState, SessionState bobSessionState)
+            throws InvalidKeyException {
         ECKeyPair aliceIdentityKeyPair = Curve.generateKeyPair();
         IdentityKeyPair aliceIdentityKey = new IdentityKeyPair(new IdentityKey(aliceIdentityKeyPair.getPublicKey()),
                                                                aliceIdentityKeyPair.getPrivateKey());

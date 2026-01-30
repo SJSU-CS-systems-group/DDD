@@ -1,16 +1,17 @@
 package net.discdd.config;
 
-import net.discdd.bundlesecurity.SecurityUtils;
-import net.discdd.tls.GrpcSecurityKey;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 
 import java.nio.file.Path;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import net.discdd.bundlesecurity.SecurityUtils;
+import net.discdd.tls.GrpcSecurityKey;
 
 @Configuration
 public class GrpcSecurityConfig {

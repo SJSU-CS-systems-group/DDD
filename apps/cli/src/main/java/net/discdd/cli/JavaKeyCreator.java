@@ -1,10 +1,11 @@
 package net.discdd.cli;
 
-import net.discdd.tls.DDDTLSUtil;
-import picocli.CommandLine;
-
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
+
+import net.discdd.tls.DDDTLSUtil;
+
+import picocli.CommandLine;
 
 @CommandLine.Command(name = "create-java-key", description = "Create a java key pair")
 

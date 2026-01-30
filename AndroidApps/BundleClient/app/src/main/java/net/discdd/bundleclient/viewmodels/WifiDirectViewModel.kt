@@ -44,10 +44,10 @@ data class WifiDirectState(
 
 class WifiDirectViewModel(
     application: Application,
-): WifiBannerViewModel(application) {
+) : WifiBannerViewModel(application) {
     private val preferences: SharedPreferences = getApplication<Application>().getSharedPreferences(
-    BundleClientService.NET_DISCDD_BUNDLECLIENT_SETTINGS,
-    Context.MODE_PRIVATE
+        BundleClientService.NET_DISCDD_BUNDLECLIENT_SETTINGS,
+        Context.MODE_PRIVATE
     )
     private val bundleClientServiceBroadcastReceiver = BundleClientServiceBroadcastReceiver().apply {
         setViewModel(this@WifiDirectViewModel)
@@ -66,12 +66,17 @@ class WifiDirectViewModel(
     init {
         _backgroundExchange.value = BundleClientService.getBackgroundExchangeSetting(preferences)
         intentFilter.addAction(BundleClientService.NET_DISCDD_BUNDLECLIENT_WIFI_ACTION)
-            viewModelScope.launch {
-                _backgroundExchange.collect { value ->
-                    // Replace with your SharedPreferences instance
-                    preferences.edit {putInt(BundleClientService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE, value)}
+        viewModelScope.launch {
+            _backgroundExchange.collect { value ->
+                // Replace with your SharedPreferences instance
+                preferences.edit {
+                    putInt(
+                        BundleClientService.NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE,
+                        value
+                    )
                 }
             }
+        }
     }
 
     fun initialize(serviceReadyFuture: CompletableFuture<BundleClientService>) {
@@ -97,7 +102,6 @@ class WifiDirectViewModel(
             recencyTime = peer?.recencyTime ?: 0,
         )
         _state.update { it.copy(dialogPeer = updatedPeer) }
-
     }
 
     fun dismissDialog() {
@@ -130,7 +134,8 @@ class WifiDirectViewModel(
 
     fun getRelativeTime(time: Long): String {
         if (time == 0L) return context.getString(R.string.never)
-        return DateUtils.getRelativeTimeSpanString(time, System.currentTimeMillis(), DateUtils.SECOND_IN_MILLIS).toString()
+        return DateUtils.getRelativeTimeSpanString(time, System.currentTimeMillis(), DateUtils.SECOND_IN_MILLIS)
+            .toString()
     }
 
     fun registerBroadcastReceiver() {
@@ -150,9 +155,11 @@ class WifiDirectViewModel(
     fun updateState() {
         viewModelScope.launch {
             _state.update {
-                it.copy(discoveryActive = wifiService?.isDiscoveryActive ?: false,
+                it.copy(
+                    discoveryActive = wifiService?.isDiscoveryActive ?: false,
                     dddWifiEnabled = (wifiService?.dddWifi?.isDddWifiEnabled ?: false),
-                    connectedStateText = wifiService?.dddWifi?.stateDescription ?: context.getString(R.string.not_connected)
+                    connectedStateText = wifiService?.dddWifi?.stateDescription
+                        ?: context.getString(R.string.not_connected)
                 )
             }
         }

@@ -1,12 +1,13 @@
 package net.discdd.server.repository;
 
-import net.discdd.server.repository.entity.ServerRouting;
-import net.discdd.server.repository.compositeId.ServerRoutingId;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
+import net.discdd.server.repository.compositeId.ServerRoutingId;
+import net.discdd.server.repository.entity.ServerRouting;
 
 @Repository
 public interface ServerRoutingRepository extends CrudRepository<ServerRouting, ServerRoutingId> {

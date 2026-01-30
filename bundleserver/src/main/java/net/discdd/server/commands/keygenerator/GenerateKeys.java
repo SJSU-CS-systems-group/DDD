@@ -1,14 +1,8 @@
 package net.discdd.server.commands.keygenerator;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-import org.whispersystems.libsignal.IdentityKey;
-import org.whispersystems.libsignal.IdentityKeyPair;
-import org.whispersystems.libsignal.ecc.Curve;
-import org.whispersystems.libsignal.ecc.ECKeyPair;
-import picocli.CommandLine;
-import picocli.CommandLine.Option;
-import picocli.CommandLine.Parameters;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -17,9 +11,16 @@ import java.util.Base64;
 import java.util.concurrent.Callable;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import org.whispersystems.libsignal.IdentityKey;
+import org.whispersystems.libsignal.IdentityKeyPair;
+import org.whispersystems.libsignal.ecc.Curve;
+import org.whispersystems.libsignal.ecc.ECKeyPair;
+
+import picocli.CommandLine;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 
 @Component
 @CommandLine.Command(name = "generate-keys", description = "Generate pair of EC keys")
@@ -29,16 +30,12 @@ public class GenerateKeys implements Callable<Void> {
     private final String PUB_KEY_FOOTER = "-----END EC PUBLIC KEY-----";
     private final String PVT_KEY_HEADER = "-----BEGIN EC PRIVATE KEY-----";
     private final String PVT_KEY_FOOTER = "-----END EC PRIVATE KEY-----";
-
-    @Value("${bundle-server.bundle-security.server-serverkeys-path}")
-    private String storePath;
-
-    private String base64PrivateKey;
-    private String base64PublicKey;
-
     @Parameters(arity = "1", index = "0")
     String command;
-
+    @Value("${bundle-server.bundle-security.server-serverkeys-path}")
+    private String storePath;
+    private String base64PrivateKey;
+    private String base64PublicKey;
     @Option(names = "-type", defaultValue = "identity", description = "Type of key pair: identity, ratchet, signedpre")
     private String type;
 
@@ -53,12 +50,12 @@ public class GenerateKeys implements Callable<Void> {
         ECKeyPair keyPair = Curve.generateKeyPair();
 
         if (type.toLowerCase().equals("identity")) {
-            IdentityKeyPair identityKeyPair =
-                    new IdentityKeyPair(new IdentityKey(keyPair.getPublicKey()), keyPair.getPrivateKey());
+            IdentityKeyPair identityKeyPair = new IdentityKeyPair(new IdentityKey(keyPair.getPublicKey()),
+                                                                  keyPair.getPrivateKey());
 
             base64PrivateKey = Base64.getUrlEncoder().encodeToString(identityKeyPair.serialize());
-            base64PublicKey =
-                    Base64.getUrlEncoder().encodeToString(identityKeyPair.getPublicKey().getPublicKey().serialize());
+            base64PublicKey = Base64.getUrlEncoder()
+                    .encodeToString(identityKeyPair.getPublicKey().getPublicKey().serialize());
         } else {
             base64PrivateKey = Base64.getUrlEncoder().encodeToString(keyPair.getPrivateKey().serialize());
             base64PublicKey = Base64.getUrlEncoder().encodeToString(keyPair.getPublicKey().serialize());
@@ -115,8 +112,8 @@ public class GenerateKeys implements Callable<Void> {
     }
 
     private void validInputs() throws IllegalArgumentException {
-        if (!type.toLowerCase().equals("identity") && !type.toLowerCase().equals("ratchet") &&
-                !type.toLowerCase().equals("signedpre")) {
+        if (!type.toLowerCase().equals("identity") && !type.toLowerCase().equals("ratchet") && !type.toLowerCase()
+                .equals("signedpre")) {
             throw new IllegalArgumentException("Type must be one of the following: identity, ratchet, signedpre");
         }
     }

@@ -1,11 +1,9 @@
 package net.discdd.client.bundlerouting;
 
-import net.discdd.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
-import net.discdd.bundlesecurity.BundleIDGenerator;
-import net.discdd.client.bundlesecurity.ClientSecurity;
-import net.discdd.pathutils.ClientPaths;
-import net.discdd.utils.Constants;
-import org.whispersystems.libsignal.InvalidKeyException;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -17,25 +15,65 @@ import java.util.Locale;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
+import org.whispersystems.libsignal.InvalidKeyException;
+
+import net.discdd.bundlerouting.WindowUtils.WindowExceptions.BufferOverflow;
+import net.discdd.bundlesecurity.BundleIDGenerator;
+import net.discdd.client.bundlesecurity.ClientSecurity;
+import net.discdd.pathutils.ClientPaths;
+import net.discdd.utils.Constants;
 
 // TODO: I'm not sure if this class is worthwhile. We can easily generate a sequence of needed
-//       encryptedBundleIds on the fly.
+// encryptedBundleIds on the fly.
 public class ClientWindow {
 
     private static final Logger logger = Logger.getLogger(ClientWindow.class.getName());
 
     static private ClientWindow singleClientWindowInstance = null;
-
-    record UnencryptedBundleId(String bundleId, long bundleCounter) {}
-
     private final LinkedList<UnencryptedBundleId> windowOfUnencryptedBundleIds = new LinkedList<>();
     private final String clientID;
-    private int windowLength = 10; /* Default Value */
     private final ClientPaths clientPaths;
+    private int windowLength = 10; /* Default Value */
+    /* Allocate and Initialize Window with provided size
+     * Uses default size(10) if provided size is <= 0
+     * Parameter:
+     * size:    Size of window
+     * Returns:
+     * None
+     */
+
+    private ClientWindow(int length, String clientID, ClientPaths clientPaths) {
+        this.clientID = clientID;
+        this.clientPaths = clientPaths;
+
+        try {
+            initializeWindow();
+        } catch (IOException e) {
+            logger.log(WARNING, "Failed to initialize Window from Disk -- creating new window" + e);
+            if (length > 0) {
+                windowLength = length;
+            } else {
+                logger.log(WARNING, "Invalid window size -- using default size: " + windowLength);
+            }
+        }
+    }
+
+    public static ClientWindow initializeInstance(int windowLength, String clientID, ClientPaths clientPaths)
+            throws BufferOverflow, IOException {
+        if (singleClientWindowInstance == null) {
+            singleClientWindowInstance = new ClientWindow(windowLength, clientID, clientPaths);
+        } else {
+            logger.log(INFO, "[WIN]: Client Window Instance is already initialized!");
+        }
+        return singleClientWindowInstance;
+    }
+
+    public static ClientWindow getInstance() {
+        if (singleClientWindowInstance == null) {
+            throw new IllegalStateException("[WIN]: Client Window has not been initialized!");
+        }
+        return singleClientWindowInstance;
+    }
 
     /* Generates bundleIDs for window slots
      * Parameter:
@@ -87,46 +125,6 @@ public class ClientWindow {
         fillWindow(start, (int) (end - start + 1));
     }
 
-    /* Allocate and Initialize Window with provided size
-     * Uses default size(10) if provided size is <= 0
-     * Parameter:
-     * size:    Size of window
-     * Returns:
-     * None
-     */
-    private ClientWindow(int length, String clientID, ClientPaths clientPaths) {
-        this.clientID = clientID;
-        this.clientPaths = clientPaths;
-
-        try {
-            initializeWindow();
-        } catch (IOException e) {
-            logger.log(WARNING, "Failed to initialize Window from Disk -- creating new window" + e);
-            if (length > 0) {
-                windowLength = length;
-            } else {
-                logger.log(WARNING, "Invalid window size -- using default size: " + windowLength);
-            }
-        }
-    }
-
-    public static ClientWindow initializeInstance(int windowLength, String clientID, ClientPaths clientPaths) throws
-            BufferOverflow, IOException {
-        if (singleClientWindowInstance == null) {
-            singleClientWindowInstance = new ClientWindow(windowLength, clientID, clientPaths);
-        } else {
-            logger.log(INFO, "[WIN]: Client Window Instance is already initialized!");
-        }
-        return singleClientWindowInstance;
-    }
-
-    public static ClientWindow getInstance() {
-        if (singleClientWindowInstance == null) {
-            throw new IllegalStateException("[WIN]: Client Window has not been initialized!");
-        }
-        return singleClientWindowInstance;
-    }
-
     /* Updates the window based on the Received bundleID
      * Parameters:
      * bundleID    : BundleID (encrypted)
@@ -172,4 +170,6 @@ public class ClientWindow {
             return null;
         }).collect(Collectors.toList());
     }
+
+    record UnencryptedBundleId(String bundleId, long bundleCounter) {}
 }

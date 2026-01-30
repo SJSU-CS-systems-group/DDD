@@ -1,8 +1,5 @@
 package net.discdd.cli;
 
-import net.discdd.tls.DDDTLSUtil;
-import picocli.CommandLine;
-
 import java.io.IOException;
 import java.nio.file.Path;
 import java.security.KeyPair;
@@ -10,6 +7,10 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.concurrent.Callable;
+
+import net.discdd.tls.DDDTLSUtil;
+
+import picocli.CommandLine;
 
 @CommandLine.Command(name = "create-cert", description = "Create a self-signed certificate")
 public class SelfSignedCertCreator implements Callable<Void> {

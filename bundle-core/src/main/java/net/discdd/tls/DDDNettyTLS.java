@@ -1,5 +1,13 @@
 package net.discdd.tls;
 
+import java.security.KeyPair;
+import java.security.cert.X509Certificate;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.function.Function;
+
+import javax.net.ssl.SSLException;
+
 import io.grpc.BindableService;
 import io.grpc.ManagedChannel;
 import io.grpc.Server;
@@ -10,24 +18,17 @@ import io.grpc.stub.AbstractBlockingStub;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslContextBuilder;
 
-import javax.net.ssl.SSLException;
-import java.security.KeyPair;
-import java.security.cert.X509Certificate;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
-import java.util.function.Function;
-
 public class DDDNettyTLS {
     public static Server createGrpcServer(Executor executor,
                                           KeyPair serverKeyPair,
                                           X509Certificate serverCert,
                                           int port,
                                           BindableService... services) throws SSLException {
-        var sslServerContext =
-                GrpcSslContexts.configure(SslContextBuilder.forServer(serverKeyPair.getPrivate(), serverCert))
-                        .clientAuth(ClientAuth.REQUIRE)
-                        .trustManager(new DDDX509ExtendedTrustManager(false))
-                        .build();
+        var sslServerContext = GrpcSslContexts.configure(SslContextBuilder.forServer(serverKeyPair.getPrivate(),
+                                                                                     serverCert))
+                .clientAuth(ClientAuth.REQUIRE)
+                .trustManager(new DDDX509ExtendedTrustManager(false))
+                .build();
         var serviceBuilder = NettyServerBuilder.forPort(port)
                 .sslContext(sslServerContext)
                 .maxInboundMessageSize(53 * 1024 * 1024); // 53 MB
@@ -39,14 +40,12 @@ public class DDDNettyTLS {
         return serviceBuilder.build();
     }
 
-    record NettyStubWithCertificate<T>(T stub, CompletableFuture<X509Certificate> certificate) {}
-
     public static <T extends AbstractBlockingStub<T>> NettyStubWithCertificate<T> createGrpcStubWithCertificate(Function<ManagedChannel, T> maker,
                                                                                                                 KeyPair clientKeyPair,
                                                                                                                 String host,
                                                                                                                 int port,
-                                                                                                                X509Certificate clientCert) throws
-            SSLException {
+                                                                                                                X509Certificate clientCert)
+            throws SSLException {
         var sslClientContext = GrpcSslContexts.forClient()
                 .keyManager(clientKeyPair.getPrivate(), clientCert)
                 .trustManager(new DDDX509ExtendedTrustManager(true))
@@ -74,4 +73,6 @@ public class DDDNettyTLS {
 
         return NettyChannelBuilder.forAddress(host, port).useTransportSecurity().sslContext(sslClientContext).build();
     }
+
+    record NettyStubWithCertificate<T>(T stub, CompletableFuture<X509Certificate> certificate) {}
 }

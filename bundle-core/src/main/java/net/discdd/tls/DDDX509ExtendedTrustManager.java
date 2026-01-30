@@ -1,13 +1,15 @@
 package net.discdd.tls;
 
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.X509ExtendedTrustManager;
 import java.net.Socket;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.X509ExtendedTrustManager;
+
 public class DDDX509ExtendedTrustManager extends X509ExtendedTrustManager {
     private final boolean singleCert;
+    private X509Certificate checkedCert = null;
 
     /**
      * Creates a new DDDX509ExtendedTrustManager that will pin itself to the first certificate it finds.
@@ -42,33 +44,29 @@ public class DDDX509ExtendedTrustManager extends X509ExtendedTrustManager {
         checkedCert = cert;
     }
 
-    private X509Certificate checkedCert = null;
-
-    public X509Certificate getCheckedCert() {
-        return checkedCert;
-    }
+    public X509Certificate getCheckedCert() { return checkedCert; }
 
     @Override
-    public void checkClientTrusted(X509Certificate[] chain, String authType, Socket socket) throws
-            CertificateException {
+    public void checkClientTrusted(X509Certificate[] chain, String authType, Socket socket)
+            throws CertificateException {
         checkCertificate(chain, authType);
     }
 
     @Override
-    public void checkServerTrusted(X509Certificate[] chain, String authType, Socket socket) throws
-            CertificateException {
+    public void checkServerTrusted(X509Certificate[] chain, String authType, Socket socket)
+            throws CertificateException {
         checkCertificate(chain, authType);
     }
 
     @Override
-    public void checkClientTrusted(X509Certificate[] chain, String authType, SSLEngine engine) throws
-            CertificateException {
+    public void checkClientTrusted(X509Certificate[] chain, String authType, SSLEngine engine)
+            throws CertificateException {
         checkCertificate(chain, authType);
     }
 
     @Override
-    public void checkServerTrusted(X509Certificate[] chain, String authType, SSLEngine engine) throws
-            CertificateException {
+    public void checkServerTrusted(X509Certificate[] chain, String authType, SSLEngine engine)
+            throws CertificateException {
         checkCertificate(chain, authType);
     }
 
@@ -83,7 +81,5 @@ public class DDDX509ExtendedTrustManager extends X509ExtendedTrustManager {
     }
 
     @Override
-    public X509Certificate[] getAcceptedIssuers() {
-        return new X509Certificate[0];
-    }
+    public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
 }

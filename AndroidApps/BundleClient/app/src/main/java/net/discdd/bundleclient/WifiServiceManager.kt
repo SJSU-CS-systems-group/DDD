@@ -15,18 +15,18 @@ object WifiServiceManager {
     private lateinit var connection: ServiceConnection
 
     fun initializeConnection(activity: BundleClientActivity) {
-         connection = object : ServiceConnection {
+        connection = object : ServiceConnection {
             override fun onServiceConnected(className: ComponentName, service: IBinder) {
                 val binder = service as BundleClientService.BundleClientServiceBinder
                 setService(binder.service)
                 serviceReady.complete(binder.service)
             }
+
             override fun onServiceDisconnected(arg0: ComponentName) {
                 clearService()
             }
         }
     }
-
 
     fun setService(service: BundleClientService?) {
         logger.info("Setting WifiService reference: ${service != null}")

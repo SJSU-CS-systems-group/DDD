@@ -11,11 +11,7 @@ public class Payload {
         this.source = source;
     }
 
-    public String getBundleId() {
-        return this.bundleId;
-    }
+    public String getBundleId() { return this.bundleId; }
 
-    public File getSource() {
-        return this.source;
-    }
+    public File getSource() { return this.source; }
 }

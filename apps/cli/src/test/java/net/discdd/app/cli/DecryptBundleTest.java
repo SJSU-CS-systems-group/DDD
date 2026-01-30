@@ -1,19 +1,14 @@
 package net.discdd.app.cli;
 
-import com.github.stefanbirkner.systemlambda.SystemLambda;
-import net.discdd.cli.DecryptBundle;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.junit.jupiter.MockitoExtension;
-import picocli.CommandLine;
+import static net.discdd.app.cli.TestUtils.escapeBackslash;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
-import static net.discdd.app.cli.TestUtils.escapeBackslash;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 public class DecryptBundleTest {
@@ -37,7 +32,7 @@ public class DecryptBundleTest {
         //creates temp directories
         baseDirPath = String.valueOf(TestUtils.makeDecryptsTempDirs());
         //create appProps
-        appProps = TestUtils.createResource(
-                "bundle-server.bundle-store-root = " + escapeBackslash(baseDirPath + File.separator));
+        appProps = TestUtils.createResource("bundle-server.bundle-store-root = " + escapeBackslash(baseDirPath +
+                File.separator));
     }
 }

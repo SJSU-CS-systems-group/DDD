@@ -11,7 +11,8 @@ import java.io.File
 import java.io.FileWriter
 import java.nio.file.Path
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 import java.util.logging.Level.INFO
 import java.util.logging.Logger
 
@@ -67,7 +68,7 @@ class BugReportViewModel : ViewModel() {
                 clientDestDir
             } else {
                 val externalDir = context.applicationContext.getExternalFilesDir(null)?.toPath()
-                        ?: throw IllegalStateException("External files directory is null")
+                    ?: throw IllegalStateException("External files directory is null")
                 logger.log(INFO, "Writing bug report to transport device external storage")
                 externalDir
             }
@@ -80,7 +81,8 @@ class BugReportViewModel : ViewModel() {
             // Create timestamp for the bug report
             val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
 
-            val reportContent = "=== Bug Report - $timestamp ===\n$bugReport\n\n=== System Logs ===\n${logMessages.joinToString("\n")}\n\n"
+            val reportContent =
+                "=== Bug Report - $timestamp ===\n$bugReport\n\n=== System Logs ===\n${logMessages.joinToString("\n")}\n\n"
 
             // appends to file (or creates if doesn't exist)
             FileWriter(logFile, true).use { writer ->

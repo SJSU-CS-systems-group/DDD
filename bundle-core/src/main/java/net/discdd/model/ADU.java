@@ -2,16 +2,12 @@ package net.discdd.model;
 
 import java.io.File;
 import java.util.Objects;
-import java.lang.Comparable;
 
 public class ADU implements Comparable<ADU> {
 
-    private File source;
-
     private final String appId;
-
     private final long aduId;
-
+    private File source;
     private long size;
 
     private String clientId;
@@ -31,33 +27,19 @@ public class ADU implements Comparable<ADU> {
         this.size = size;
     }
 
-    public File getSource() {
-        return this.source;
-    }
+    public File getSource() { return this.source; }
 
-    public long getSize() {
-        return this.size;
-    }
+    public void setSource(File source) { this.source = source; }
 
-    public String getAppId() {
-        return this.appId;
-    }
+    public long getSize() { return this.size; }
 
-    public long getADUId() {
-        return this.aduId;
-    }
+    public void setSize(long size) { this.size = size; }
 
-    public String getClientId() {
-        return this.clientId;
-    }
+    public String getAppId() { return this.appId; }
 
-    public void setSource(File source) {
-        this.source = source;
-    }
+    public long getADUId() { return this.aduId; }
 
-    public void setSize(long size) {
-        this.size = size;
-    }
+    public String getClientId() { return this.clientId; }
 
     @Override
     public int hashCode() {

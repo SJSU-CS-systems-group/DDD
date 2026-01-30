@@ -13,7 +13,9 @@ Our first target application is email.
   the apps will have a client component and a server component (called the ServiceAdapter).
 
 # First application
-our first target application is email and we have modified K9 (the opensource android email client) to work with DDD: https://github.com/SJSU-CS-systems-group/DDD-thunderbird-android
+
+our first target application is email and we have modified K9 (the opensource android email client) to work with
+DDD: https://github.com/SJSU-CS-systems-group/DDD-thunderbird-android
 
 # Building
 
@@ -21,7 +23,8 @@ the server apps are build with maven, and the android apps are built with gradle
 we recommend using intellij and android studio for development.
 check out this repo directly into the relevant IDE. the IDE will automatically recognize the gradle and maven projects.
 
-**for the Android apps, you will first need to run maven install to get the bundle-core library into your local maven repository.**
+**for the Android apps, you will first need to run maven install to get the bundle-core library into your local maven
+repository.**
 
 # Languages
 

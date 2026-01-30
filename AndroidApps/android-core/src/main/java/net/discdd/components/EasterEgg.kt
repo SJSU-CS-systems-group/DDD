@@ -17,30 +17,30 @@ the onToggle lambda function is invoked.
  */
 @Composable
 fun EasterEgg(
-        content: @Composable () -> Unit,
-        onToggle: () -> Unit
+    content: @Composable () -> Unit,
+    onToggle: () -> Unit
 ) {
     var clickTimes by remember { mutableStateOf<List<Long>>(emptyList()) }
     val interactionSource = remember { MutableInteractionSource() }
 
     Box(
-            modifier = Modifier
-                    .clickable(
-                            interactionSource = interactionSource,
-                            indication = null // conceals ripple effect
-                    ) {
-                        val now = System.currentTimeMillis()
-                        clickTimes = (clickTimes + now)
-                                .filter { now - it <= 3000 }
-                                .takeLast(7)
-                        if (clickTimes.size == 7) {
-                            val timeDiff = clickTimes.last() - clickTimes.first()
-                            if (timeDiff <= 3000) {
-                                onToggle()
-                                clickTimes = emptyList()
-                            }
-                        }
+        modifier = Modifier
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null // conceals ripple effect
+            ) {
+                val now = System.currentTimeMillis()
+                clickTimes = (clickTimes + now)
+                    .filter { now - it <= 3000 }
+                    .takeLast(7)
+                if (clickTimes.size == 7) {
+                    val timeDiff = clickTimes.last() - clickTimes.first()
+                    if (timeDiff <= 3000) {
+                        onToggle()
+                        clickTimes = emptyList()
                     }
+                }
+            }
     ) {
         content()
     }

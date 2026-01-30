@@ -1,12 +1,13 @@
 package net.discdd.bundleclient.service.wifiDirect;
 
-import android.net.wifi.p2p.WifiP2pDevice;
 import net.discdd.bundleclient.service.DDDWifiDevice;
 import net.discdd.grpc.GetRecencyBlobResponse;
 
+import android.net.wifi.p2p.WifiP2pDevice;
+
 class DDDWifiDirectDevice implements DDDWifiDevice {
-    public WifiP2pDevice wifiP2pDevice;
     final public String transportId;
+    public WifiP2pDevice wifiP2pDevice;
     public GetRecencyBlobResponse recencyBlob;
 
     public DDDWifiDirectDevice(WifiP2pDevice wifiP2pDevice, String transportId, GetRecencyBlobResponse recencyBlob) {
@@ -16,24 +17,21 @@ class DDDWifiDirectDevice implements DDDWifiDevice {
     }
 
     @Override
-    public String getWifiAddress() {
-        return wifiP2pDevice.deviceAddress;
-    }
+    public String getWifiAddress() { return wifiP2pDevice.deviceAddress; }
 
     @Override
-    public String getDescription() {
-        return this.wifiP2pDevice.deviceName;
-    }
+    public String getDescription() { return this.wifiP2pDevice.deviceName; }
 
     @Override
-    public String getId() {
-        return transportId;
-    }
+    public String getId() { return transportId; }
 
     @Override
     public GetRecencyBlobResponse getRecencyBlob() {
         return (recencyBlob == null) ? GetRecencyBlobResponse.getDefaultInstance() : recencyBlob;
     }
+
+    @Override
+    public void setRecencyBlob(GetRecencyBlobResponse recencyBlob) { this.recencyBlob = recencyBlob; }
 
     @Override
     public boolean equals(Object o) {
@@ -47,13 +45,7 @@ class DDDWifiDirectDevice implements DDDWifiDevice {
     }
 
     @Override
-    public void setWifiP2pDevice(WifiP2pDevice wifiP2pDevice) {
-        this.wifiP2pDevice = wifiP2pDevice;
-    }
-    @Override
-    public void setRecencyBlob(GetRecencyBlobResponse recencyBlob) {
-        this.recencyBlob = recencyBlob;
-    }
+    public void setWifiP2pDevice(WifiP2pDevice wifiP2pDevice) { this.wifiP2pDevice = wifiP2pDevice; }
 
     public boolean sameAddressAs(DDDWifiDevice o) {
         return this.getWifiAddress().compareTo((o).getWifiAddress()) == 0;

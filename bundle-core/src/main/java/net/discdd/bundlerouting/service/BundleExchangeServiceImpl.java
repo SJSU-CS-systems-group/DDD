@@ -1,17 +1,8 @@
 package net.discdd.bundlerouting.service;
 
-import com.google.protobuf.ByteString;
-import io.grpc.stub.StreamObserver;
-import net.discdd.grpc.BundleChunk;
-import net.discdd.grpc.BundleDownloadRequest;
-import net.discdd.grpc.BundleDownloadResponse;
-import net.discdd.grpc.BundleExchangeServiceGrpc;
-import net.discdd.grpc.BundleSenderType;
-import net.discdd.grpc.BundleUploadRequest;
-import net.discdd.grpc.BundleUploadResponse;
-import net.discdd.grpc.PublicKeyMap;
-import net.discdd.grpc.Status;
-import net.discdd.utils.BundleUtils;
+import static java.lang.String.format;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,9 +16,20 @@ import java.nio.file.StandardOpenOption;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 
-import static java.lang.String.format;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
+import com.google.protobuf.ByteString;
+
+import net.discdd.grpc.BundleChunk;
+import net.discdd.grpc.BundleDownloadRequest;
+import net.discdd.grpc.BundleDownloadResponse;
+import net.discdd.grpc.BundleExchangeServiceGrpc;
+import net.discdd.grpc.BundleSenderType;
+import net.discdd.grpc.BundleUploadRequest;
+import net.discdd.grpc.BundleUploadResponse;
+import net.discdd.grpc.PublicKeyMap;
+import net.discdd.grpc.Status;
+import net.discdd.utils.BundleUtils;
+
+import io.grpc.stub.StreamObserver;
 
 public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrpc.BundleExchangeServiceImplBase {
     private static final Logger logger = Logger.getLogger(BundleExchangeServiceImpl.class.getName());
@@ -51,8 +53,8 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
 
         try {
             Path downloadPath = request.hasPublicKeyMap() ?
-                                pathProducer(bundleExchangeName, request.getSenderType(), request.getPublicKeyMap()) :
-                                pathProducer(bundleExchangeName, request.getSenderType(), null);
+                    pathProducer(bundleExchangeName, request.getSenderType(), request.getPublicKeyMap()) :
+                    pathProducer(bundleExchangeName, request.getSenderType(), null);
 
             if (downloadPath == null) {
                 logger.log(SEVERE,
@@ -66,10 +68,8 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
             try (InputStream is = Files.newInputStream(downloadPath, StandardOpenOption.READ)) {
                 transferToStream(is,
                                  bytes -> responseObserver.onNext(BundleDownloadResponse.newBuilder()
-                                                                          .setChunk(BundleChunk.newBuilder()
-                                                                                            .setChunk(bytes)
-                                                                                            .build())
-                                                                          .build()));
+                                         .setChunk(BundleChunk.newBuilder().setChunk(bytes).build())
+                                         .build()));
             }
             logger.log(INFO, "Complete " + request.getBundleId().getEncryptedId());
             responseObserver.onCompleted();
@@ -132,16 +132,16 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
             try {
                 if (bundleUploadRequest.hasBundleId()) {
                     logger.log(INFO,
-                               "Received request to upload file to: " +
-                                       bundleUploadRequest.getBundleId().getEncryptedId());
-                    bundleExchangeName =
-                            new BundleExchangeName(bundleUploadRequest.getBundleId().getEncryptedId(), false);
+                               "Received request to upload file to: " + bundleUploadRequest.getBundleId()
+                                       .getEncryptedId());
+                    bundleExchangeName = new BundleExchangeName(bundleUploadRequest.getBundleId().getEncryptedId(),
+                                                                false);
 
                     path = pathProducer(bundleExchangeName, bundleSenderType, null);
                     try {
                         if (path == null) {
-                            throw new IOException(
-                                    "Could not produce a path for " + bundleExchangeName.encryptedBundleId);
+                            throw new IOException("Could not produce a path for " +
+                                    bundleExchangeName.encryptedBundleId);
                         }
                         writer = Files.newOutputStream(path,
                                                        StandardOpenOption.CREATE,

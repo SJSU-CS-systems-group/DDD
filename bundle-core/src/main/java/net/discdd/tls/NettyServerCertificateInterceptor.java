@@ -1,5 +1,10 @@
 package net.discdd.tls;
 
+import java.security.cert.X509Certificate;
+
+import javax.net.ssl.ExtendedSSLSession;
+import javax.net.ssl.SSLPeerUnverifiedException;
+
 import io.grpc.Context;
 import io.grpc.Contexts;
 import io.grpc.Grpc;
@@ -7,10 +12,6 @@ import io.grpc.Metadata;
 import io.grpc.ServerCall;
 import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
-
-import javax.net.ssl.ExtendedSSLSession;
-import javax.net.ssl.SSLPeerUnverifiedException;
-import java.security.cert.X509Certificate;
 
 public class NettyServerCertificateInterceptor implements ServerInterceptor {
     public static final Context.Key<X509Certificate> CLIENT_CERTIFICATE_KEY = Context.key("client-certificate");

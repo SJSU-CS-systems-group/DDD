@@ -17,7 +17,9 @@
     <string name="not_connected">Не підключений</string>
     <string name="connected_to_transport">Підключений до транспорту</string>
     <string name="refresh_peers">Оновити однолітки</string>
-    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">USB був підключений, але /DDD_TRANSPORT Каталог не був виявлений%n</string>
+    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">USB був підключений, але
+        /DDD_TRANSPORT Каталог не був виявлений%n
+    </string>
     <string name="never">Ніколи</string>
     <string name="usb_connection_detected">Виявлено USB -з\'єднання</string>
     <string name="settings_saved">Збережено налаштування</string>
@@ -27,7 +29,11 @@
     <string name="initiating_bundle_exchange">Ініціювання обміну пакету ...</string>
     <string name="exchanging_with_transport">Обмін з транспортом</string>
     <string name="reload">Перезавантажувати</string>
-    <string name="to_settings_text">Щоб дозволити нашому додатку керувати файлами, пов\'язаними з додатками на цьому пристрої, та на вашому USB-сховищі, будь ласка, перемикайте \ "так \" для Bundleclient у своїх налаштуваннях. Ми запевняємо вас, що доступні лише файли, створені нашим додатком. Захист конфіденційності користувачів та підтримання етичних практик - наші основні пріоритети.</string>
+    <string name="to_settings_text">Щоб дозволити нашому додатку керувати файлами, пов\'язаними з додатками на цьому
+        пристрої, та на вашому USB-сховищі, будь ласка, перемикайте \ "так \" для Bundleclient у своїх налаштуваннях. Ми
+        запевняємо вас, що доступні лише файли, створені нашим додатком. Захист конфіденційності користувачів та
+        підтримання етичних практик - наші основні пріоритети.
+    </string>
     <string name="subscribe">Підписатися</string>
     <string name="service_name" translatable="false">DDD</string>
     <string name="unsubscribe">Скасувати підписку</string>
@@ -37,6 +43,8 @@
     <string name="wifi_aware_tab">Wifi усвідомлює</string>
     <string name="sent">"Надіслано:"</string>
     <string name="received">отриманий</string>
-    <string name="cannot_transfer_bundle_usb_not_ready_or_directory_not_found">Не вдається перенести пакет: USB не готовий або каталог не знайдено</string>
+    <string name="cannot_transfer_bundle_usb_not_ready_or_directory_not_found">Не вдається перенести пакет: USB не
+        готовий або каталог не знайдено
+    </string>
     <string name="delete_logs">Чіткі журнали</string>
 </resources>

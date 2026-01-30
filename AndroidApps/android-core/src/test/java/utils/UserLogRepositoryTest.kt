@@ -23,5 +23,4 @@ class UserLogRepositoryTest {
             Assert.assertEquals(WIFI, logEntry.type)
         }
     }
-
 }

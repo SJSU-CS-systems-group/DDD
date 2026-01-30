@@ -1,7 +1,23 @@
 package net.discdd.server.service;
 
-import io.grpc.Context;
-import io.grpc.stub.StreamObserver;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
+
+import javax.annotation.PostConstruct;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+
 import net.discdd.grpc.BundleInventoryRequest;
 import net.discdd.grpc.BundleInventoryResponse;
 import net.discdd.grpc.BundleServerServiceGrpc;
@@ -13,32 +29,22 @@ import net.discdd.grpc.Status;
 import net.discdd.server.bundletransmission.ServerBundleTransmission;
 import net.discdd.tls.DDDTLSUtil;
 import net.discdd.tls.NettyServerCertificateInterceptor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 
-import javax.annotation.PostConstruct;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
-import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.logging.Logger;
-import java.util.stream.Collectors;
-
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
+import io.grpc.Context;
+import io.grpc.stub.StreamObserver;
 
 @GrpcService
 public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServerServiceImplBase {
+    private static final Logger logger = Logger.getLogger(BundleServerServiceImpl.class.getName());
     private String ReceiveDir;
     private String SendDir;
     private String crashDir;
-    private static final Logger logger = Logger.getLogger(BundleServerServiceImpl.class.getName());
-
     @Autowired
     private ServerBundleTransmission bundleTransmission;
+
+    private static String bundleListToString(List<EncryptedBundleId> bundleList) {
+        return bundleList.stream().map(EncryptedBundleId::getEncryptedId).collect(Collectors.joining(","));
+    }
 
     @PostConstruct
     private void init() {
@@ -100,10 +106,6 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
                                   bundleListToString(inventoryResponse.getBundlesToUploadList())));
         responseObserver.onNext(inventoryResponse);
         responseObserver.onCompleted();
-    }
-
-    private static String bundleListToString(List<EncryptedBundleId> bundleList) {
-        return bundleList.stream().map(EncryptedBundleId::getEncryptedId).collect(Collectors.joining(","));
     }
 
     @Override

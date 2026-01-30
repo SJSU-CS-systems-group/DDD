@@ -15,7 +15,9 @@
     <string name="change_phone_name">Змінити ім\'я телефону</string>
     <string name="interactions_with_bundleclients">Взаємодія з Bundleclients</string>
     <string name="wifi_transport_not_active">Wi -Fi Transport не активний</string>
-    <string name="wifi_transport_not_active_group_info_null">Wi -Fi Transport Не активний: Інформація про групу нульова, перевірте, чи включений Wi -Fi</string>
+    <string name="wifi_transport_not_active_group_info_null">Wi -Fi Transport Не активний: Інформація про групу нульова,
+        перевірте, чи включений Wi -Fi
+    </string>
     <string name="connected">З\'єднаний</string>
     <string name="invited">Запрошений</string>
     <string name="failed">Провалився</string>
@@ -29,9 +31,15 @@
     <string name="check_permissions_and_that_wifi_is_enabled">Перевірте дозволи і що Wi -Fi увімкнено</string>
     <string name="no_usb_connection_detected">Не виявлено USB -з\'єднання</string>
     <string name="usb_connection_detected">Виявлено USB -з\'єднання</string>
-    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">USB був підключений, але транспортний довідник DDD не був виявлений</string>
+    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">USB був підключений, але транспортний
+        довідник DDD не був виявлений
+    </string>
     <string name="exchange_usb_data">Обмін USB -даних</string>
-    <string name="to_settings_text">Щоб дозволити нашому додатку керувати файлами, пов\'язаними з додатками на цьому пристрої, та на вашому USB-сховищі, будь ласка, перемикайте \ "так \" для Bundletransport у своїх налаштуваннях. Ми запевняємо вас, що доступні лише файли, створені нашим додатком. Захист конфіденційності користувачів та підтримання етичних практик - наші основні пріоритети.</string>
+    <string name="to_settings_text">Щоб дозволити нашому додатку керувати файлами, пов\'язаними з додатками на цьому
+        пристрої, та на вашому USB-сховищі, будь ласка, перемикайте \ "так \" для Bundletransport у своїх налаштуваннях.
+        Ми запевняємо вас, що доступні лише файли, створені нашим додатком. Захист конфіденційності користувачів та
+        підтримання етичних практик - наші основні пріоритети.
+    </string>
     <string name="error_updating_storage_info">Помилка оновлення інформації про зберігання</string>
     <string name="apply_changes">Клацніть Встановити сховище, щоб застосувати зміни</string>
     <string name="storage_updated">Зберігання оновлено</string>

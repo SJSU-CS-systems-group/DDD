@@ -1,14 +1,15 @@
 package net.discdd.server.config;
 
-import net.discdd.bundlesecurity.ServerSecurity;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.SEVERE;
+
+import java.util.logging.Logger;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.logging.Logger;
-
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.SEVERE;
+import net.discdd.bundlesecurity.ServerSecurity;
 
 @Configuration
 public class ServerSecurityConfig {

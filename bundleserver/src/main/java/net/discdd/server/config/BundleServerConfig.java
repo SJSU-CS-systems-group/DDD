@@ -1,11 +1,12 @@
 package net.discdd.server.config;
 
-import lombok.Getter;
-import lombok.Setter;
+import java.nio.file.Path;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
-import java.nio.file.Path;
+import lombok.Getter;
+import lombok.Setter;
 
 @Component
 @ConfigurationProperties("bundle-server")

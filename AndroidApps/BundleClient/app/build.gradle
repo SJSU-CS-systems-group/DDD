@@ -61,7 +61,7 @@ android {
             excludes += ['META-INF/*', 'META-INF/*/*', 'LICENSE-BouncyCastle', 'META-INF/versions/9/OSGI-INF/MANIFEST.MF']
         }
         resources {
-            excludes += ['META-INF/*', 'META-INF/*/*', 'LICENSE-BouncyCastle','META-INF/versions/9/OSGI-INF/MANIFEST.MF']
+            excludes += ['META-INF/*', 'META-INF/*/*', 'LICENSE-BouncyCastle', 'META-INF/versions/9/OSGI-INF/MANIFEST.MF']
         }
     }
     kotlinOptions {

@@ -1,6 +1,11 @@
 package net.discdd.screens
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -9,7 +14,10 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
@@ -19,7 +27,7 @@ import net.discdd.viewmodels.BugReportViewModel
 
 @Composable
 fun BugReportScreen(
-        viewModel: BugReportViewModel = viewModel()
+    viewModel: BugReportViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val bugReportText by viewModel.bugReportText.collectAsState()
@@ -34,32 +42,32 @@ fun BugReportScreen(
     }
 
     Column(
-            modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-                text = "Please describe the bug you encountered. \nYou can describe what happened, what you expected, and/or steps to reproduce.",
-                style = MaterialTheme.typography.bodyMedium,
+            text = "Please describe the bug you encountered. \nYou can describe what happened, what you expected, and/or steps to reproduce.",
+            style = MaterialTheme.typography.bodyMedium,
         )
         OutlinedTextField(
-                value = bugReportText,
-                onValueChange = viewModel::updateBugReportText,
-                label = { Text("Bug Description") },
-                modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                enabled = !isSubmitting
+            value = bugReportText,
+            onValueChange = viewModel::updateBugReportText,
+            label = { Text("Bug Description") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            enabled = !isSubmitting
         )
         Button(
-                onClick = { viewModel.submitBugReport(context) },
-                modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                enabled = !isSubmitting && bugReportText.isNotBlank()
+            onClick = { viewModel.submitBugReport(context) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            enabled = !isSubmitting && bugReportText.isNotBlank()
         ) {
             if (isSubmitting) {
                 Text("Submitting...")
@@ -69,12 +77,12 @@ fun BugReportScreen(
         }
         submitResult?.let { result ->
             Card(
-                    modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                        text = result,
-                        modifier = Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.bodyMedium
+                    text = result,
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
         }

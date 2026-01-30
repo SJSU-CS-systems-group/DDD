@@ -19,6 +19,40 @@ buildscript {
     }
 }
 
+plugins {
+    id 'com.diffplug.spotless' version '6.25.0' apply false
+}
+
+// Apply Spotless to all subprojects
+subprojects {
+    apply plugin: 'com.diffplug.spotless'
+
+    spotless {
+        java {
+            target 'src/*/java/**/*.java'
+            // Import ordering matching IntelliJ settings (no wildcards)
+            importOrder('java', 'javax', 'jakarta', 'org', 'com', 'net')
+            removeUnusedImports()
+            // Eclipse formatter using exported IntelliJ code style
+            eclipse().configFile("${rootProject.projectDir}/../eclipse-formatter.xml")
+        }
+        kotlin {
+            target 'src/*/kotlin/**/*.kt', 'src/*/java/**/*.kt'
+            ktlint('1.1.1').editorConfigOverride([
+                    // Disable rules that conflict with Compose conventions or existing code style
+                    'ktlint_standard_function-naming'                   : 'disabled',
+                    'ktlint_standard_value-argument-comment'            : 'disabled',
+                    'ktlint_standard_value-parameter-comment'           : 'disabled',
+                    'ktlint_standard_max-line-length'                   : 'disabled',
+                    'ktlint_standard_trailing-comma-on-call-site'       : 'disabled',
+                    'ktlint_standard_trailing-comma-on-declaration-site': 'disabled',
+                    'ktlint_standard_package-name'                      : 'disabled',
+                    'ktlint_standard_property-naming'                   : 'disabled',
+            ])
+        }
+    }
+}
+
 allprojects {
     repositories {
         google()

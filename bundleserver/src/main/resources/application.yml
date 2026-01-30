@@ -2,7 +2,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-#    show-sql: true # uncomment to show sql commands being executed
+    #    show-sql: true # uncomment to show sql commands being executed
     database-platform: org.hibernate.dialect.MySQL8Dialect
     generate-ddl: true
     properties:
@@ -16,8 +16,8 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/dtn_server_db?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC
-#    username: <mySQL username>
-#    password: <mySQL password>
+    #    username: <mySQL username>
+    #    password: <mySQL password>
     db-name: dtn_server_db
 
 serviceadapter:
@@ -30,7 +30,7 @@ ssl-grpc:
 server:
   port: 8081
 bundle-server:
-#  bundle-store-root: <add directory path containing key files in external properties file>
+  #  bundle-store-root: <add directory path containing key files in external properties file>
   bundle-store-shared: "${bundle-server.bundle-store-root}Shared"
   registered-app-ids: "${bundle-server.bundle-store-root}Shared/REGISTERED_APP_IDS.txt"
   bundle-transmission:

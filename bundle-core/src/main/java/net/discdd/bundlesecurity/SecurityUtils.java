@@ -1,25 +1,10 @@
 package net.discdd.bundlesecurity;
 
-import net.discdd.client.bundlesecurity.ClientSecurity;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.SessionCipher;
-import org.whispersystems.libsignal.*;
-import org.whispersystems.libsignal.ecc.ECKeyPair;
-import org.whispersystems.libsignal.ecc.Curve;
-import org.whispersystems.libsignal.ecc.ECPrivateKey;
-import org.whispersystems.libsignal.ecc.ECPublicKey;
-import org.whispersystems.libsignal.state.impl.InMemorySignalProtocolStore;
-import org.whispersystems.libsignal.util.KeyHelper;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static net.discdd.bundlesecurity.DDDPEMEncoder.decodeEncryptedPublicKeyfromFile;
+import static net.discdd.bundlesecurity.DDDPEMEncoder.decodePublicKeyfromFile;
 
-import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.PBEKeySpec;
-import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -37,10 +22,27 @@ import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static net.discdd.bundlesecurity.DDDPEMEncoder.decodeEncryptedPublicKeyfromFile;
-import static net.discdd.bundlesecurity.DDDPEMEncoder.decodePublicKeyfromFile;
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
+
+import org.whispersystems.libsignal.IdentityKey;
+import org.whispersystems.libsignal.IdentityKeyPair;
+import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.SessionCipher;
+import org.whispersystems.libsignal.SignalProtocolAddress;
+import org.whispersystems.libsignal.ecc.Curve;
+import org.whispersystems.libsignal.ecc.ECKeyPair;
+import org.whispersystems.libsignal.ecc.ECPrivateKey;
+import org.whispersystems.libsignal.ecc.ECPublicKey;
+import org.whispersystems.libsignal.state.impl.InMemorySignalProtocolStore;
+import org.whispersystems.libsignal.util.KeyHelper;
 
 public class SecurityUtils {
     public static final String PAYLOAD_FILENAME = "payload";
@@ -135,8 +137,8 @@ public class SecurityUtils {
         return new InMemorySignalProtocolStore(tIdentityKeyPair, KeyHelper.generateRegistrationId(false));
     }
 
-    public static boolean verifySignatureRaw(byte[] message, ECPublicKey publicKey, byte[] signature) throws
-            InvalidKeyException {
+    public static boolean verifySignatureRaw(byte[] message, ECPublicKey publicKey, byte[] signature)
+            throws InvalidKeyException {
         return Curve.verifySignature(publicKey, message, signature);
     }
 
@@ -233,8 +235,6 @@ public class SecurityUtils {
         public ECPublicKey BaseKey;
         public SessionCipher cipherSession;
 
-        public String getClientID() {
-            return this.clientProtocolAddress.getName();
-        }
+        public String getClientID() { return this.clientProtocolAddress.getName(); }
     }
 }

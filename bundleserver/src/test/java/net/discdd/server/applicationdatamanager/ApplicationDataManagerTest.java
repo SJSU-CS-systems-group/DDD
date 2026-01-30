@@ -1,14 +1,10 @@
 package net.discdd.server.applicationdatamanager;
 
-import net.discdd.model.ADU;
-import net.discdd.server.config.BundleServerConfig;
-import net.discdd.server.repository.BundleMetadataRepository;
-import net.discdd.server.repository.ClientBundleCountersRepository;
-import net.discdd.server.repository.RegisteredAppAdapterRepository;
-import net.discdd.server.repository.SentAduDetailsRepository;
-import net.discdd.server.repository.entity.RegisteredAppAdapter;
-import net.discdd.server.service.GrpcExecutor;
-import net.discdd.utils.StoreADUs;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -18,10 +14,15 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
+import net.discdd.model.ADU;
+import net.discdd.server.config.BundleServerConfig;
+import net.discdd.server.repository.BundleMetadataRepository;
+import net.discdd.server.repository.ClientBundleCountersRepository;
+import net.discdd.server.repository.RegisteredAppAdapterRepository;
+import net.discdd.server.repository.SentAduDetailsRepository;
+import net.discdd.server.repository.entity.RegisteredAppAdapter;
+import net.discdd.server.service.GrpcExecutor;
+import net.discdd.utils.StoreADUs;
 
 /**
  * Also, these tests use H2 database for testing
@@ -31,12 +32,8 @@ import java.util.ArrayList;
 public class ApplicationDataManagerTest {
     @TempDir
     static Path tempDir;
-
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("bundle-server.bundle-store-root", () -> tempDir.toString());
-    }
-
+    @TempDir
+    Path tempRootDir;
     @Autowired
     private RegisteredAppAdapterRepository registeredAppAdapterRepository;
     private ServerApplicationDataManager applicationDataManager;
@@ -49,8 +46,11 @@ public class ApplicationDataManagerTest {
     private BundleServerConfig bundleServerConfig; // = mock(BundleServerConfig.class);
     private StoreADUs receiveADUsStorage;
     private StoreADUs sendADUsStorage;
-    @TempDir
-    Path tempRootDir;
+
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        registry.add("bundle-server.bundle-store-root", () -> tempDir.toString());
+    }
 
     @Test
     public void testEverything() throws Exception {

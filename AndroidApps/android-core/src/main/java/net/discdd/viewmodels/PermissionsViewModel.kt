@@ -1,14 +1,10 @@
-package net.discdd.viewmodels;
+package net.discdd.viewmodels
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.app.Application
-import android.content.Context
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
@@ -18,17 +14,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.discdd.android_core.R
-import java.util.function.Consumer
-import java.util.logging.Level
-import java.util.logging.Logger
 
 data class PermissionItemData(
-        var isBoxChecked: Boolean,
-        var permissionName: String
+    var isBoxChecked: Boolean,
+    var permissionName: String
 )
 
 class PermissionsViewModel(
-        application: Application,
+    application: Application,
 ) : AndroidViewModel(application) {
     private val context get() = getApplication<Application>()
     private val _permissionItems = MutableStateFlow<List<PermissionItemData>>(emptyList())
@@ -40,8 +33,8 @@ class PermissionsViewModel(
     init {
         _permissionItems.value = requiredPermissions.map { permission ->
             PermissionItemData(
-                    isBoxChecked = false,
-                    permissionName = permission
+                isBoxChecked = false,
+                permissionName = permission
             )
         }
     }
@@ -52,13 +45,13 @@ class PermissionsViewModel(
             val currentPermissions = currentItems.map { it.permissionName }
 
             val newItems = runtimePermissions
-                    .filter { permState -> permState.permission !in currentPermissions }
-                    .map { permState ->
-                        PermissionItemData(
-                                isBoxChecked = permState.status.isGranted,
-                                permissionName = permState.permission
-                        )
-                    }
+                .filter { permState -> permState.permission !in currentPermissions }
+                .map { permState ->
+                    PermissionItemData(
+                        isBoxChecked = permState.status.isGranted,
+                        permissionName = permState.permission
+                    )
+                }
 
             currentItems + newItems
         }
@@ -67,8 +60,11 @@ class PermissionsViewModel(
     private fun updatePermissionItem(permission: String, isGranted: Boolean) {
         _permissionItems.update { currentItems ->
             currentItems.map { item ->
-                if (item.permissionName == permission) item.copy(isBoxChecked = isGranted)
-                else item
+                if (item.permissionName == permission) {
+                    item.copy(isBoxChecked = isGranted)
+                } else {
+                    item
+                }
             }
         }
     }

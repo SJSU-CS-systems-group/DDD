@@ -1,13 +1,11 @@
 package net.discdd.server;
 
-import io.leego.banana.Ansi;
-import io.leego.banana.BananaUtils;
-import io.leego.banana.Font;
-import lombok.extern.slf4j.Slf4j;
-import net.discdd.config.GrpcSecurityConfig;
-import net.discdd.grpc.GrpcServerRunner;
-import net.discdd.server.commands.CommandProcessor;
-import net.discdd.server.commands.bundleuploader.BundleUploader;
+import static java.util.logging.Level.SEVERE;
+
+import java.io.File;
+import java.util.Arrays;
+import java.util.logging.Logger;
+
 import org.springframework.boot.Banner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.WebApplicationType;
@@ -20,11 +18,15 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
-import java.io.File;
-import java.util.Arrays;
-import java.util.logging.Logger;
+import net.discdd.config.GrpcSecurityConfig;
+import net.discdd.grpc.GrpcServerRunner;
+import net.discdd.server.commands.CommandProcessor;
+import net.discdd.server.commands.bundleuploader.BundleUploader;
 
-import static java.util.logging.Level.SEVERE;
+import io.leego.banana.Ansi;
+import io.leego.banana.BananaUtils;
+import io.leego.banana.Font;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @SpringBootApplication

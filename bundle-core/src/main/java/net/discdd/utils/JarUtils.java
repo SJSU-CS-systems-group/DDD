@@ -5,7 +5,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
@@ -29,8 +28,8 @@ public class JarUtils {
         return checkSum;
     }
 
-    private static void addFilesToJar(File file, JarOutputStream jarOutputStream, String path, Manifest manifest) throws
-            IOException {
+    private static void addFilesToJar(File file, JarOutputStream jarOutputStream, String path, Manifest manifest)
+            throws IOException {
         // If the file is a directory, recursively add its contents to the JAR output stream
         if (file.isDirectory()) {
             File[] files = file.listFiles();

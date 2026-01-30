@@ -1,7 +1,26 @@
 package net.discdd.server;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.KeyPair;
+import java.security.cert.X509Certificate;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.logging.Logger;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.io.TempDir;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.DynamicPropertySource;
+
 import com.google.protobuf.ByteString;
-import io.grpc.stub.StreamObserver;
+
 import net.discdd.grpc.AppDataUnit;
 import net.discdd.grpc.BundleChunk;
 import net.discdd.grpc.BundleExchangeServiceGrpc;
@@ -13,24 +32,8 @@ import net.discdd.grpc.ExchangeADUsResponse;
 import net.discdd.grpc.Status;
 import net.discdd.tls.DDDNettyTLS;
 import net.discdd.tls.DDDTLSUtil;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
-import org.junit.jupiter.api.io.TempDir;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.DynamicPropertySource;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.security.KeyPair;
-import java.security.cert.X509Certificate;
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.logging.Logger;
+import io.grpc.stub.StreamObserver;
 
 @SpringBootTest(classes = { BundleServerApplication.class, End2EndTest.End2EndTestInitializer.class })
 @TestMethodOrder(MethodOrderer.MethodName.class)
@@ -59,7 +62,8 @@ public class ADUEnd2EndTest extends End2EndTest {
     void test1ContextLoads() {}
 
     @Test
-    void test2UploadBundle(@TempDir Path bundleDir) throws Throwable {
+    void test2UploadBundle(@TempDir
+    Path bundleDir) throws Throwable {
         var adus = List.of(1L, 2L, 3L);
         Path bundleJarPath = createBundleForAdus(adus, clientId, 1, bundleDir);
         sendBundle(bundleJarPath);
@@ -78,12 +82,9 @@ public class ADUEnd2EndTest extends End2EndTest {
                 Assertions.assertEquals("ADU" + adus.get(i), req.getAdus(i).getData().toStringUtf8());
             }
             rsp.onNext(ExchangeADUsResponse.newBuilder()
-                               .setLastADUIdReceived(3)
-                               .addAdus(AppDataUnit.newBuilder()
-                                                .setAduId(1)
-                                                .setData(ByteString.copyFromUtf8("SA1"))
-                                                .build())
-                               .build());
+                    .setLastADUIdReceived(3)
+                    .addAdus(AppDataUnit.newBuilder().setAduId(1).setData(ByteString.copyFromUtf8("SA1")).build())
+                    .build());
             rsp.onCompleted();
         });
 
@@ -93,7 +94,8 @@ public class ADUEnd2EndTest extends End2EndTest {
     }
 
     @Test
-    void test3UploadMoreBundle(@TempDir Path bundleDir) throws Throwable {
+    void test3UploadMoreBundle(@TempDir
+    Path bundleDir) throws Throwable {
         var adus = List.of(3L, 4L, 5L, 6L);
 
         Path bundleJarPath = createBundleForAdus(adus, clientId, 2, bundleDir);
@@ -116,12 +118,9 @@ public class ADUEnd2EndTest extends End2EndTest {
                 Assertions.assertEquals(i, req.getAdus(i - 4).getAduId());
             }
             rsp.onNext(ExchangeADUsResponse.newBuilder()
-                               .setLastADUIdReceived(6)
-                               .addAdus(AppDataUnit.newBuilder()
-                                                .setAduId(2)
-                                                .setData(ByteString.copyFromUtf8("SA2"))
-                                                .build())
-                               .build());
+                    .setLastADUIdReceived(6)
+                    .addAdus(AppDataUnit.newBuilder().setAduId(2).setData(ByteString.copyFromUtf8("SA2")).build())
+                    .build());
             rsp.onCompleted();
         });
         checkToSendFiles(clientId, new HashSet<>(List.of("1", "2")));
@@ -135,12 +134,9 @@ public class ADUEnd2EndTest extends End2EndTest {
             Assertions.assertEquals(clientId, req.getClientId());
             Assertions.assertEquals(0, req.getAdusCount());
             rsp.onNext(ExchangeADUsResponse.newBuilder()
-                               .setLastADUIdReceived(6)
-                               .addAdus(AppDataUnit.newBuilder()
-                                                .setAduId(3)
-                                                .setData(ByteString.copyFromUtf8("SA3"))
-                                                .build())
-                               .build());
+                    .setLastADUIdReceived(6)
+                    .addAdus(AppDataUnit.newBuilder().setAduId(3).setData(ByteString.copyFromUtf8("SA3")).build())
+                    .build());
             rsp.onCompleted();
         });
         checkToSendFiles(clientId, new HashSet<>(List.of("1", "2", "3")));
@@ -158,18 +154,19 @@ public class ADUEnd2EndTest extends End2EndTest {
             var request = stub.uploadBundle(response);
             var allBytes = Files.readAllBytes(bundleJarPath);
             var firstByteString = ByteString.copyFrom(allBytes, 0, allBytes.length / 2);
-            var secondByteString =
-                    ByteString.copyFrom(allBytes, allBytes.length / 2, allBytes.length - allBytes.length / 2);
+            var secondByteString = ByteString.copyFrom(allBytes,
+                                                       allBytes.length / 2,
+                                                       allBytes.length - allBytes.length / 2);
             request.onNext(BundleUploadRequest.newBuilder().setSenderType(BundleSenderType.CLIENT).build());
             request.onNext(BundleUploadRequest.newBuilder()
-                                   .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId("8675309").build())
-                                   .build());
+                    .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId("8675309").build())
+                    .build());
             request.onNext(BundleUploadRequest.newBuilder()
-                                   .setChunk(BundleChunk.newBuilder().setChunk(firstByteString).build())
-                                   .build());
+                    .setChunk(BundleChunk.newBuilder().setChunk(firstByteString).build())
+                    .build());
             request.onNext(BundleUploadRequest.newBuilder()
-                                   .setChunk(BundleChunk.newBuilder().setChunk(secondByteString).build())
-                                   .build());
+                    .setChunk(BundleChunk.newBuilder().setChunk(secondByteString).build())
+                    .build());
             request.onCompleted();
 
             // let's see if it worked...

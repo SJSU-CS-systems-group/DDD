@@ -52,9 +52,9 @@ import java.util.concurrent.CompletableFuture
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun WifiDirectScreen(
-        wifiViewModel: WifiDirectViewModel = viewModel(),
-        serviceReadyFuture: CompletableFuture<BundleTransportService>,
-        nearbyWifiState: PermissionState,
+    wifiViewModel: WifiDirectViewModel = viewModel(),
+    serviceReadyFuture: CompletableFuture<BundleTransportService>,
+    nearbyWifiState: PermissionState,
 ) {
     val state by wifiViewModel.state.collectAsState()
     val numDenied by wifiViewModel.numDenied.collectAsState()
@@ -67,8 +67,8 @@ fun WifiDirectScreen(
     }
 
     Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
     ) {
         LaunchedEffect(Unit) {
             wifiViewModel.initialize(serviceReadyFuture)
@@ -93,30 +93,30 @@ fun WifiDirectScreen(
                 Row {
                     Column {
                         Text(
-                                text = state.wifiInfo,
-                                modifier = Modifier.clickable {
-                                    showConnectedPeersDialog = true
-                                    wifiViewModel.getService()?.dddWifiServer?.getGroup()
-                                }
+                            text = state.wifiInfo,
+                            modifier = Modifier.clickable {
+                                showConnectedPeersDialog = true
+                                wifiViewModel.getService()?.dddWifiServer?.getGroup()
+                            }
                         )
 
                         if (showConnectedPeersDialog) {
                             val connectedPeers = wifiViewModel.getService()?.dddWifiServer
-                                    ?.networkInfo?.clientList ?: emptyList<String>()
+                                ?.networkInfo?.clientList ?: emptyList<String>()
 
                             AlertDialog(
-                                    title = { Text(text = stringResource(R.string.connected_devices)) },
-                                    text = { Text(text = connectedPeers.toTypedArray().joinToString(", ")) },
-                                    onDismissRequest = { showConnectedPeersDialog = false },
-                                    confirmButton = {
-                                        TextButton(
-                                                onClick = {
-                                                    showConnectedPeersDialog = false
-                                                }
-                                        ) {
-                                            Text(stringResource(R.string.dismiss))
+                                title = { Text(text = stringResource(R.string.connected_devices)) },
+                                text = { Text(text = connectedPeers.toTypedArray().joinToString(", ")) },
+                                onDismissRequest = { showConnectedPeersDialog = false },
+                                confirmButton = {
+                                    TextButton(
+                                        onClick = {
+                                            showConnectedPeersDialog = false
                                         }
+                                    ) {
+                                        Text(stringResource(R.string.dismiss))
                                     }
+                                }
                             )
                         }
 
@@ -125,21 +125,23 @@ fun WifiDirectScreen(
                     state.wifiConnectURL?.let { url ->
                         generateQRCode(url, 500, 500)?.let {
                             Image(
-                                    bitmap = it.asImageBitmap(),
-                                    contentDescription = "QR Code",
-                                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                                bitmap = it.asImageBitmap(),
+                                contentDescription = "QR Code",
+                                modifier = Modifier.weight(1f).fillMaxWidth(),
                             )
                         }
                     }
                 }
             } else {
-                Text(text = stringResource(
+                Text(
+                    text = stringResource(
                         R.string.Wifi_disabled
-                ))
+                    )
+                )
 
                 FilledTonalButton(
-                        onClick = { wifiViewModel.openWifiSettings() },
-                        modifier = Modifier.fillMaxWidth()
+                    onClick = { wifiViewModel.openWifiSettings() },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Open Wifi Settings")
                 }
@@ -152,7 +154,7 @@ fun WifiDirectScreen(
 
 @Composable
 fun WifiStateObserver(
-        onWifiStateChanged: (Boolean) -> Unit
+    onWifiStateChanged: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
 
@@ -161,8 +163,8 @@ fun WifiStateObserver(
             override fun onReceive(ctx: Context?, intent: Intent?) {
                 if (intent?.action == WifiManager.WIFI_STATE_CHANGED_ACTION) {
                     val state = intent.getIntExtra(
-                            WifiManager.EXTRA_WIFI_STATE,
-                            WifiManager.WIFI_STATE_UNKNOWN
+                        WifiManager.EXTRA_WIFI_STATE,
+                        WifiManager.WIFI_STATE_UNKNOWN
                     )
                     onWifiStateChanged(state == WifiManager.WIFI_STATE_ENABLED)
                 }
@@ -179,15 +181,13 @@ fun WifiStateObserver(
     }
 }
 
-
 @Preview(showBackground = true)
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun WifiDirectScreenPreview() {
     val nearbyWifiState = rememberPermissionState(Manifest.permission.NEARBY_WIFI_DEVICES)
     WifiDirectScreen(
-            serviceReadyFuture = CompletableFuture(),
-            nearbyWifiState = nearbyWifiState
+        serviceReadyFuture = CompletableFuture(),
+        nearbyWifiState = nearbyWifiState
     )
 }
-

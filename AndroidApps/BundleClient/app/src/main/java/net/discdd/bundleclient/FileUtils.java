@@ -1,5 +1,13 @@
 package net.discdd.bundleclient;
 
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.util.logging.Logger;
+
 import android.annotation.SuppressLint;
 import android.content.ContentResolver;
 import android.content.ContentUris;
@@ -12,15 +20,6 @@ import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
 import android.text.TextUtils;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-
-import java.util.logging.Logger;
-
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.WARNING;
 
 public class FileUtils {
 
@@ -73,8 +72,8 @@ public class FileUtils {
                                 .query(uri, new String[] { MediaStore.MediaColumns.DISPLAY_NAME }, null, null, null);
                         if (cursor != null && cursor.moveToFirst()) {
                             String fileName = cursor.getString(0);
-                            String path =
-                                    Environment.getExternalStorageDirectory().toString() + "/Download/" + fileName;
+                            String path = Environment.getExternalStorageDirectory().toString() + "/Download/" +
+                                    fileName;
                             if (!TextUtils.isEmpty(path)) {
                                 return path;
                             }
@@ -90,11 +89,11 @@ public class FileUtils {
                             return id.replaceFirst("raw:", "");
                         }
                         String[] contentUriPrefixesToTry = new String[] { "content://downloads/public_downloads",
-                                "content://downloads/my_downloads" };
+                                                                          "content://downloads/my_downloads" };
                         for (String contentUriPrefix : contentUriPrefixesToTry) {
                             try {
-                                final Uri contentUri =
-                                        ContentUris.withAppendedId(Uri.parse(contentUriPrefix), Long.valueOf(id));
+                                final Uri contentUri = ContentUris.withAppendedId(Uri.parse(contentUriPrefix),
+                                                                                  Long.valueOf(id));
 
                                 // final Uri contentUri = ContentUris.withAppendedId(
                                 //        Uri.parse("content://downloads/public_downloads"), Long.valueOf(id));

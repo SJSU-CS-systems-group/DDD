@@ -1,18 +1,19 @@
 package net.discdd.app.echo;
 
-import net.discdd.config.GrpcSecurityConfig;
-import net.discdd.grpc.GrpcServerRunner;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Properties;
+import java.util.logging.Logger;
+
 import org.springframework.boot.Banner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Import;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Properties;
-import java.util.logging.Logger;
+import net.discdd.config.GrpcSecurityConfig;
+import net.discdd.grpc.GrpcServerRunner;
 
 /*
  * This is the echo ServiceAdapter. It is just for testing. It works with the echo client app which will

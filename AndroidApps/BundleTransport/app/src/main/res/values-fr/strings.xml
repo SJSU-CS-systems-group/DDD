@@ -15,7 +15,9 @@
     <string name="change_phone_name">Modifier le nom du téléphone</string>
     <string name="interactions_with_bundleclients">Interactions avec Bundleclices</string>
     <string name="wifi_transport_not_active">Transport WiFi Pas actif</string>
-    <string name="wifi_transport_not_active_group_info_null">Transport WiFi Pas actif: les informations du groupe sont nuls, vérifiez que le wifi est activé</string>
+    <string name="wifi_transport_not_active_group_info_null">Transport WiFi Pas actif: les informations du groupe sont
+        nuls, vérifiez que le wifi est activé
+    </string>
     <string name="connected">Lié</string>
     <string name="invited">Invité</string>
     <string name="failed">Échoué</string>
@@ -26,19 +28,27 @@
     <string name="permissions">Autorisation</string>
     <string name="logs">Bûches</string>
     <string name="reload">Recharger</string>
-    <string name="check_permissions_and_that_wifi_is_enabled">Vérifiez les autorisations et que le WiFi est activé</string>
+    <string name="check_permissions_and_that_wifi_is_enabled">Vérifiez les autorisations et que le WiFi est activé
+    </string>
     <string name="no_usb_connection_detected">Aucune connexion USB détectée</string>
     <string name="usb_connection_detected">Connexion USB détectée</string>
-    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">L\'USB était connecté mais le répertoire des transports DDD n\'a pas été détecté</string>
+    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">L\'USB était connecté mais le
+        répertoire des transports DDD n\'a pas été détecté
+    </string>
     <string name="exchange_usb_data">Échanger des données USB</string>
-    <string name="to_settings_text">Pour permettre à notre application de gérer les fichiers liés à l\'application sur cet appareil et votre stockage USB, veuillez basculer \ "Oui \" pour BundleTransport dans vos paramètres. Nous vous assurons que seuls les fichiers créés par notre application seront accessibles. La protection de la confidentialité des utilisateurs et le maintien des pratiques éthiques sont nos principales priorités.</string>
+    <string name="to_settings_text">Pour permettre à notre application de gérer les fichiers liés à l\'application sur
+        cet appareil et votre stockage USB, veuillez basculer \ "Oui \" pour BundleTransport dans vos paramètres. Nous
+        vous assurons que seuls les fichiers créés par notre application seront accessibles. La protection de la
+        confidentialité des utilisateurs et le maintien des pratiques éthiques sont nos principales priorités.
+    </string>
     <string name="error_updating_storage_info">Erreur mise à jour des informations de stockage</string>
     <string name="apply_changes">Cliquez sur Définir le stockage pour appliquer les modifications</string>
     <string name="storage_updated">Stockage mis à jour</string>
     <string name="failed_to_update_storage">Échec de la mise à jour du stockage</string>
     <string name="initiating_bundle_exchange">Échange de bundle initiant ...</string>
     <string name="exchanging_with_client">Échange avec le client</string>
-    <string name="collect_data_even_when_app_is_closed">Collecter les données même lorsque l\'application est fermée</string>
+    <string name="collect_data_even_when_app_is_closed">Collecter les données même lorsque l\'application est fermée
+    </string>
     <string name="dismiss">Rejeter</string>
     <string name="storage" translatable="false">Stockage</string>
     <string name="usb" translatable="false">USB</string>

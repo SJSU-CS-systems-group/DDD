@@ -22,21 +22,13 @@ public class RegisteredAppAdapter {
 
     public RegisteredAppAdapter() {}
 
-    public String getAppId() {
-        return appId;
-    }
+    public String getAppId() { return appId; }
 
-    public void setAppId(String appId) {
-        this.appId = appId;
-    }
+    public void setAppId(String appId) { this.appId = appId; }
 
-    public String getAddress() {
-        return address;
-    }
+    public String getAddress() { return address; }
 
-    public void setAddress(String address) {
-        this.address = address;
-    }
+    public void setAddress(String address) { this.address = address; }
 
     @Override
     public String toString() {

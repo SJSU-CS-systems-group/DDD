@@ -1,10 +1,10 @@
 package net.discdd.app.k9.common;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import java.util.Map;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ControlAduTest {
     @Test
@@ -28,8 +28,8 @@ public class ControlAduTest {
         Assertions.assertEquals(origRegisterAdu, serDeserRegisterAdu);
 
         var origRegisterAckAdu = new ControlAdu.RegisterAckControlAdu(Map.of("email", "testemail"));
-        var serDeserRegisterAckAdu =
-                (ControlAdu.RegisterAckControlAdu) ControlAdu.fromBytes(origRegisterAckAdu.toBytes());
+        var serDeserRegisterAckAdu = (ControlAdu.RegisterAckControlAdu) ControlAdu.fromBytes(origRegisterAckAdu
+                .toBytes());
         Assertions.assertFalse(serDeserRegisterAckAdu.success());
         Assertions.assertEquals(origRegisterAckAdu, serDeserRegisterAckAdu);
 

@@ -25,7 +25,7 @@ object TransportServiceManager {
     }
 
     fun setService(service: BundleTransportService) {
-        logger.info("Setting transport wifi service: ${service}")
+        logger.info("Setting transport wifi service: $service")
         _btService = service
     }
 
@@ -37,5 +37,4 @@ object TransportServiceManager {
     fun getService(): BundleTransportService? {
         return _btService
     }
-
 }

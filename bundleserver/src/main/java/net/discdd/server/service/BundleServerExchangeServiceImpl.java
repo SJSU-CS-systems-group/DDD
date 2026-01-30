@@ -1,7 +1,17 @@
 package net.discdd.server.service;
 
-import io.grpc.Context;
-import io.grpc.stub.StreamObserver;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+
+import java.nio.file.Path;
+import java.security.cert.X509Certificate;
+import java.util.Base64;
+import java.util.Random;
+import java.util.logging.Logger;
+
+import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.ecc.Curve;
+
 import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
 import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.grpc.BundleSenderType;
@@ -13,17 +23,9 @@ import net.discdd.grpc.RecencyBlobStatus;
 import net.discdd.server.bundletransmission.ServerBundleTransmission;
 import net.discdd.tls.DDDTLSUtil;
 import net.discdd.tls.NettyServerCertificateInterceptor;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.ecc.Curve;
 
-import java.nio.file.Path;
-import java.security.cert.X509Certificate;
-import java.util.Base64;
-import java.util.Random;
-import java.util.logging.Logger;
-
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
+import io.grpc.Context;
+import io.grpc.stub.StreamObserver;
 
 @GrpcService
 public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
@@ -56,8 +58,8 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
                              BundleSenderType senderType,
                              PublicKeyMap publicKeyMap) {
         if (bundleExchangeName.isDownload()) {
-            X509Certificate clientCert =
-                    NettyServerCertificateInterceptor.CLIENT_CERTIFICATE_KEY.get(Context.current());
+            X509Certificate clientCert = NettyServerCertificateInterceptor.CLIENT_CERTIFICATE_KEY.get(Context
+                    .current());
             String senderId = "";
             if (publicKeyMap != null) {
                 var clientIdPubKeyBytes = publicKeyMap.getClientPub();
@@ -127,8 +129,9 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
             recencyBlob = bundleTransmission.getRecencyBlob(senderId);
             logger.log(INFO, "Created Blob for sender " + senderId);
         } catch (InvalidKeyException e) {
-            recencyBlob =
-                    GetRecencyBlobResponse.newBuilder().setStatus(RecencyBlobStatus.RECENCY_BLOB_STATUS_FAILED).build();
+            recencyBlob = GetRecencyBlobResponse.newBuilder()
+                    .setStatus(RecencyBlobStatus.RECENCY_BLOB_STATUS_FAILED)
+                    .build();
             logger.log(SEVERE, "Problem signing recency blob", e);
         }
         responseObserver.onNext(recencyBlob);

@@ -1,19 +1,20 @@
 package net.discdd.server;
 
-import io.grpc.stub.StreamObserver;
+import static java.util.logging.Level.INFO;
+
+import java.util.logging.Logger;
+
 import net.discdd.grpc.ConnectionData;
 import net.discdd.grpc.GrpcService;
 import net.discdd.grpc.ResponseStatus;
 import net.discdd.grpc.ServiceAdapterRegistryServiceGrpc;
 import net.discdd.server.repository.RegisteredAppAdapterRepository;
 
-import java.util.logging.Logger;
-
-import static java.util.logging.Level.INFO;
+import io.grpc.stub.StreamObserver;
 
 @GrpcService
-public class ServiceAdapterRegistryService
-        extends ServiceAdapterRegistryServiceGrpc.ServiceAdapterRegistryServiceImplBase {
+public class ServiceAdapterRegistryService extends
+        ServiceAdapterRegistryServiceGrpc.ServiceAdapterRegistryServiceImplBase {
     private static final Logger logger = Logger.getLogger(ServiceAdapterRegistryService.class.getName());
     final private RegisteredAppAdapterRepository registeredAppAdapterRepository;
 
@@ -31,10 +32,9 @@ public class ServiceAdapterRegistryService
                 responseObserver.onNext(ResponseStatus.newBuilder().setCode(0).setMessage("OK").build());
             } else {
                 responseObserver.onNext(ResponseStatus.newBuilder()
-                                                .setCode(2)
-                                                .setMessage("A different address is registered for " +
-                                                                    connectionData.getAppName())
-                                                .build());
+                        .setCode(2)
+                        .setMessage("A different address is registered for " + connectionData.getAppName())
+                        .build());
             }
         } else {
             responseObserver.onNext(ResponseStatus.newBuilder().setCode(1).setMessage("No Such App").build());

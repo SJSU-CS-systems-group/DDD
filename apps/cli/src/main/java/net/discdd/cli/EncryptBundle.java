@@ -1,10 +1,7 @@
 package net.discdd.cli;
 
-import net.discdd.bundlesecurity.ServerSecurity;
-import net.discdd.utils.BundleUtils;
-import picocli.CommandLine;
+import static java.util.logging.Level.INFO;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,31 +10,30 @@ import java.nio.file.StandardOpenOption;
 import java.util.concurrent.Callable;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.INFO;
+import net.discdd.bundlesecurity.ServerSecurity;
+import net.discdd.utils.BundleUtils;
+
+import picocli.CommandLine;
 
 @CommandLine.Command(name = "encrypt-bundle", description = "Encrypt bundle")
 public class EncryptBundle implements Callable<Void> {
+    private static final Logger logger = Logger.getLogger(EncryptBundle.class.getName());
+    @CommandLine.Option(names = "--applicationYaml", required = true, description = "an application yaml")
+    private static File applicationYml;
+    @CommandLine.Option(names = "--appProps", required = true, description = "Personal application properties file " +
+            "path")
+    private static String appProps;
+
     static {
         System.setProperty("java.util.logging.SimpleFormatter.format", "%5$s%6$s%n");
     }
 
-    private static final Logger logger = Logger.getLogger(EncryptBundle.class.getName());
-
     @CommandLine.Option(names = "--decrypted-bundle", required = true, description = "Bundle file path")
     private String bundlePath;
-
     @CommandLine.Option(names = "--encrypted-path", description = "Encrypted bundle file path")
     private String encPath;
-
     @CommandLine.Option(names = "--clientId", required = true, description = "Client ID")
     private String clientId;
-
-    @CommandLine.Option(names = "--applicationYaml", required = true, description = "an application yaml")
-    private static File applicationYml;
-
-    @CommandLine.Option(names = "--appProps", required = true, description = "Personal application properties file " +
-            "path")
-    private static String appProps;
 
     @Override
     public Void call() {

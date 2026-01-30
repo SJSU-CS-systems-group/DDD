@@ -1,20 +1,10 @@
 package net.discdd.bundletransport;
 
-import io.grpc.Server;
-import io.grpc.TlsServerCredentials;
-import io.grpc.okhttp.OkHttpServerBuilder;
-import io.grpc.stub.StreamObserver;
-import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
-import net.discdd.grpc.BundleSenderType;
-import net.discdd.grpc.GetRecencyBlobRequest;
-import net.discdd.grpc.GetRecencyBlobResponse;
-import net.discdd.grpc.PublicKeyMap;
-import net.discdd.pathutils.TransportPaths;
-import net.discdd.tls.DDDTLSUtil;
-import net.discdd.tls.GrpcSecurityKey;
-import net.discdd.transport.TransportToBundleServerManager;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
-import javax.net.ssl.KeyManager;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,10 +12,21 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
+import javax.net.ssl.KeyManager;
+
+import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
+import net.discdd.grpc.BundleSenderType;
+import net.discdd.grpc.GetRecencyBlobRequest;
+import net.discdd.grpc.GetRecencyBlobResponse;
+import net.discdd.grpc.PublicKeyMap;
+import net.discdd.pathutils.TransportPaths;
+import net.discdd.tls.DDDTLSUtil;
+import net.discdd.transport.TransportToBundleServerManager;
+
+import io.grpc.Server;
+import io.grpc.TlsServerCredentials;
+import io.grpc.okhttp.OkHttpServerBuilder;
+import io.grpc.stub.StreamObserver;
 
 public class RpcServer {
     private static final Logger logger = Logger.getLogger(RpcServer.class.getName());
@@ -67,8 +68,7 @@ public class RpcServer {
             @Override
             protected void bundleCompletion(BundleExchangeName bundleExchangeName,
                                             BundleSenderType senderType,
-                                            Path path) {
-            }
+                                            Path path) {}
 
             @Override
             public void getRecencyBlob(GetRecencyBlobRequest request,
@@ -91,8 +91,11 @@ public class RpcServer {
                                                                        bundleTransportService.grpcKeys.grpcCert)
                     .getKeyManagers();
             var credentials = TlsServerCredentials.newBuilder().keyManager(keyManagers).build();
-            server = OkHttpServerBuilder.forPort(port, credentials).maxInboundMessageSize(20 * 1024 * 1024) // 20 MB;
-                    .addService(bundleExchangeService).executor(Executors.newFixedThreadPool(4)).build();
+            server = OkHttpServerBuilder.forPort(port, credentials)
+                    .maxInboundMessageSize(20 * 1024 * 1024) // 20 MB;
+                    .addService(bundleExchangeService)
+                    .executor(Executors.newFixedThreadPool(4))
+                    .build();
         } catch (Exception e) {
             logger.log(SEVERE, "TLS communication exceptions ", e);
             return;
@@ -128,9 +131,7 @@ public class RpcServer {
         }
     }
 
-    public boolean isServerRunning() {
-        return server != null && !server.isShutdown();
-    }
+    public boolean isServerRunning() { return server != null && !server.isShutdown(); }
 
     public boolean isShutdown() {
         if (server == null) {

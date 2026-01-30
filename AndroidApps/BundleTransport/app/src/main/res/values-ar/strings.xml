@@ -15,7 +15,9 @@
     <string name="change_phone_name">تغيير اسم الهاتف</string>
     <string name="interactions_with_bundleclients">التفاعلات مع البوندليكات</string>
     <string name="wifi_transport_not_active">نقل wifi غير نشط</string>
-    <string name="wifi_transport_not_active_group_info_null">نقل WiFi غير نشط: معلومات المجموعة خالية ، تحقق من تمكين WiFi</string>
+    <string name="wifi_transport_not_active_group_info_null">نقل WiFi غير نشط: معلومات المجموعة خالية ، تحقق من تمكين
+        WiFi
+    </string>
     <string name="connected">متصل</string>
     <string name="invited">مدعو</string>
     <string name="failed">فشل</string>
@@ -29,9 +31,14 @@
     <string name="check_permissions_and_that_wifi_is_enabled">تحقق من الأذونات ويتم تمكين شبكة wifi</string>
     <string name="no_usb_connection_detected">لم يتم اكتشاف اتصال USB</string>
     <string name="usb_connection_detected">تم اكتشاف اتصال USB</string>
-    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">تم توصيل USB ولكن لم يتم اكتشاف دليل النقل DDD</string>
+    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">تم توصيل USB ولكن لم يتم اكتشاف دليل
+        النقل DDD
+    </string>
     <string name="exchange_usb_data">تبادل بيانات USB</string>
-    <string name="to_settings_text">لتمكين تطبيقنا من إدارة الملفات المتعلقة بالتطبيق على هذا الجهاز وتخزين USB الخاص بك ، يرجى تبديل \ "نعم \" ل bundletransport في إعداداتك. نؤكد لكم أنه سيتم الوصول إلى الملفات التي تم إنشاؤها بواسطة تطبيقنا فقط. تعد حماية خصوصية المستخدم والحفاظ على الممارسات الأخلاقية أولوياتنا العليا.</string>
+    <string name="to_settings_text">لتمكين تطبيقنا من إدارة الملفات المتعلقة بالتطبيق على هذا الجهاز وتخزين USB الخاص بك
+        ، يرجى تبديل \ "نعم \" ل bundletransport في إعداداتك. نؤكد لكم أنه سيتم الوصول إلى الملفات التي تم إنشاؤها
+        بواسطة تطبيقنا فقط. تعد حماية خصوصية المستخدم والحفاظ على الممارسات الأخلاقية أولوياتنا العليا.
+    </string>
     <string name="error_updating_storage_info">خطأ في تحديث معلومات التخزين</string>
     <string name="apply_changes">انقر فوق تعيين سعة التخزين لتطبيق التغييرات</string>
     <string name="storage_updated">تخزين تحديث</string>

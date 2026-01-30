@@ -1,15 +1,15 @@
 package net.discdd.utils;
 
-import android.content.Context;
-import android.net.wifi.WifiManager;
-import android.os.PowerManager;
-
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+
+import android.content.Context;
+import android.net.wifi.WifiManager;
+import android.os.PowerManager;
 
 /**
  * This is a single threaded scheduler that periodically runs the given Callable.
@@ -19,27 +19,17 @@ import java.util.concurrent.TimeUnit;
  * @param <T>
  */
 public class DDDFixedRateScheduler<T> {
+    public static final String SVC_POWER_LOCK = "net.discdd.scheduler::SvcPowerLock";
     private final Callable<T> callable;
-    private int periodInMinutes;
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     public T lastResult;
     public Exception lastException;
     public long lastExecutionStart;
     public long lastExecutionFinish;
+    private int periodInMinutes;
     private ScheduledFuture<?> scheduleFuture;
-    public static final String SVC_POWER_LOCK = "net.discdd.scheduler::SvcPowerLock";
     private PowerManager.WakeLock wakeLock;
     private WifiManager.WifiLock wifiLock;
-
-    private void doWakeLock(boolean running) {
-        if (running) {
-            if (wakeLock != null && !wakeLock.isHeld()) wakeLock.acquire();
-            if (wifiLock != null && !wifiLock.isHeld()) wifiLock.acquire();
-        } else {
-            if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
-            if (wifiLock != null && wifiLock.isHeld()) wifiLock.release();
-        }
-    }
 
     /**
      * the callable will be run periodically. the same callable will be used repeatedly.
@@ -53,6 +43,28 @@ public class DDDFixedRateScheduler<T> {
         var wm = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
         if (wm != null) wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, SVC_POWER_LOCK);
     }
+
+    private void doWakeLock(boolean running) {
+        if (running) {
+            if (wakeLock != null && !wakeLock.isHeld()) wakeLock.acquire();
+            if (wifiLock != null && !wifiLock.isHeld()) wifiLock.acquire();
+        } else {
+            if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
+            if (wifiLock != null && wifiLock.isHeld()) wifiLock.release();
+        }
+    }
+
+    /**
+     * does one time invocation of the callable. it will not affect the periodically scheduled callables.
+     * it also will not affect lastResult and lastCallable
+     *
+     * @return the future representing pending callable.
+     */
+    public Future<T> callItNow() {
+        return scheduler.submit(callable);
+    }
+
+    int getPeriodInMinutes() { return periodInMinutes; }
 
     /**
      * sets a new period for scheduling. any outstanding future invocations will be canceled, before
@@ -88,18 +100,6 @@ public class DDDFixedRateScheduler<T> {
             }
         }, periodInMinutes, periodInMinutes, TimeUnit.MINUTES);
     }
-
-    /**
-     * does one time invocation of the callable. it will not affect the periodically scheduled callables.
-     * it also will not affect lastResult and lastCallable
-     *
-     * @return the future representing pending callable.
-     */
-    public Future<T> callItNow() {
-        return scheduler.submit(callable);
-    }
-
-    int getPeriodInMinutes() {return periodInMinutes;}
 
     public Future<T> callItNow(Callable<T> oneTimeCallable) {
         return scheduler.submit(oneTimeCallable);

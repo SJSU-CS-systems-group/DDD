@@ -1,13 +1,13 @@
 package net.discdd.app.k9;
 
+import java.nio.file.Path;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-
-import java.nio.file.Path;
 
 @DataJpaTest
 @Import(K9Config.class)
@@ -21,8 +21,7 @@ class K9ApplicationTests {
     }
 
     @Test
-    void contextLoads() {
-    }
+    void contextLoads() {}
 
 //    @Test
 //    void k9DDDAdapter() {

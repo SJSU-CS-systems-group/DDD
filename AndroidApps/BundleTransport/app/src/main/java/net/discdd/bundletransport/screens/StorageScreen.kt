@@ -31,9 +31,9 @@ import net.discdd.theme.ComposableTheme
 
 class StorageFragment : Fragment() {
     override fun onCreateView(
-            inflater: LayoutInflater,
-            container: ViewGroup?,
-            savedInstanceState: Bundle?
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
     ): View {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
@@ -48,7 +48,7 @@ class StorageFragment : Fragment() {
 
 @Composable
 fun StorageScreen(
-        viewModel: StorageViewModel = viewModel()
+    viewModel: StorageViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsState()
     val sliderRange = 0f..maxOf(1000f, state.totalBytes.toFloat())
@@ -62,24 +62,24 @@ fun StorageScreen(
     }
 
     Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
     ) {
         Column(
-                modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Slider(
-                    value = maxOf(0f, minOf(maxSliderValue, sliderRange.endInclusive)),
-                    onValueChange = { viewModel.onSliderValueChange(it.toLong()) },
-                    valueRange = 0f..state.totalBytes.toFloat(),
+                value = maxOf(0f, minOf(maxSliderValue, sliderRange.endInclusive)),
+                onValueChange = { viewModel.onSliderValueChange(it.toLong()) },
+                valueRange = 0f..state.totalBytes.toFloat(),
             )
             Text("Storage: ${state.actualStorageValue} MB")
             Button(
-                    onClick = { viewModel.onSetStorageClick() },
-                    modifier = Modifier.fillMaxWidth()
+                onClick = { viewModel.onSetStorageClick() },
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Set Storage")
             }
@@ -87,9 +87,9 @@ fun StorageScreen(
             Text("Used Space: ${state.usedSpace} MB")
             state.showMessage?.let { message ->
                 Text(
-                        text = message,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium
+                    text = message,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
         }

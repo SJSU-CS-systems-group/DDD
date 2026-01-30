@@ -1,8 +1,13 @@
 package net.discdd.wifiaware;
 
 import static android.net.wifi.aware.WifiAwareManager.ACTION_WIFI_AWARE_STATE_CHANGED;
-
 import static java.util.logging.Level.SEVERE;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.logging.Logger;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -21,14 +26,7 @@ import android.net.wifi.aware.WifiAwareNetworkSpecifier;
 import android.net.wifi.aware.WifiAwareSession;
 import android.os.Handler;
 import android.os.Looper;
-
 import androidx.annotation.NonNull;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.logging.Logger;
 
 public class WifiAwareHelper {
     private static final Logger logger = Logger.getLogger(WifiAwareHelper.class.getName());
@@ -36,10 +34,9 @@ public class WifiAwareHelper {
     private final List<WifiAwareStateListener> listeners = new ArrayList<>();
     private final IntentFilter intentFilter = new IntentFilter(ACTION_WIFI_AWARE_STATE_CHANGED);
     private final HashMap<PeerHandle, ConnectionInfo> connections = new HashMap<>();
-
+    private final WifiAwareManager wifiAwareManager;
     private WifiAwareSession wifiAwareSession;
     private WifiAwareBroadcastReceiver receiver;
-    private final WifiAwareManager wifiAwareManager;
 
     public WifiAwareHelper(Context context) {
         this.context = context;
@@ -114,9 +111,7 @@ public class WifiAwareHelper {
         return future;
     }
 
-    public boolean isWifiAwareAvailable() {
-        return wifiAwareManager != null && wifiAwareManager.isAvailable();
-    }
+    public boolean isWifiAwareAvailable() { return wifiAwareManager != null && wifiAwareManager.isAvailable(); }
 
     public void addListener(WifiAwareStateListener listener) {
         listeners.add(listener);
@@ -135,8 +130,9 @@ public class WifiAwareHelper {
             var newConInfo = new ConnectionInfo();
             var networkCallback = new ConnectivityManager.NetworkCallback() {
                 @Override
-                public void onCapabilitiesChanged(@NonNull Network network,
-                                                  @NonNull NetworkCapabilities networkCapabilities) {
+                public void onCapabilitiesChanged(@NonNull
+                Network network, @NonNull
+                NetworkCapabilities networkCapabilities) {
                     newConInfo.setNetwork((WifiAwareNetworkInfo) networkCapabilities.getTransportInfo());
                 }
             };
@@ -147,33 +143,25 @@ public class WifiAwareHelper {
         }
         conInfo.fillInNetwork(future);
 
-        WifiAwareNetworkSpecifier networkSpecifier =
-                new WifiAwareNetworkSpecifier.Builder(discoverySession, peerHandle).setPskPassphrase("DiscDataDist")
-                        .setPort(Math.max(port, 0))
-                        .build();
+        WifiAwareNetworkSpecifier networkSpecifier = new WifiAwareNetworkSpecifier.Builder(discoverySession, peerHandle)
+                .setPskPassphrase("DiscDataDist")
+                .setPort(Math.max(port, 0))
+                .build();
 
-        NetworkRequest networkRequest =
-                new NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI_AWARE)
-                        .setNetworkSpecifier(networkSpecifier)
-                        .build();
+        NetworkRequest networkRequest = new NetworkRequest.Builder().addTransportType(
+                                                                                      NetworkCapabilities.TRANSPORT_WIFI_AWARE)
+                .setNetworkSpecifier(networkSpecifier)
+                .build();
 
-        ConnectivityManager connectivityManager =
-                (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(
+                                                                                                 Context.CONNECTIVITY_SERVICE);
         connectivityManager.requestNetwork(networkRequest, conInfo.callback);
         return future;
     }
 
-    public WifiAwareSession getWifiAwareSession() {
-        return wifiAwareSession;
-    }
+    public WifiAwareSession getWifiAwareSession() { return wifiAwareSession; }
 
-    public static class WiFiAwareException extends Exception {
-        public WiFiAwareException(String message) {
-            super(message);
-        }
-    }
-
-    public Context getContext() {return this.context;}
+    public Context getContext() { return this.context; }
 
     public void unregisterWifiIntentReceiver() {
         getContext().unregisterReceiver(receiver);
@@ -191,6 +179,19 @@ public class WifiAwareHelper {
         var event = new WifiAwareHelper.WifiAwareEvent(action, message);
         for (WifiAwareStateListener listener : listeners) {
             listener.onReceiveAction(event);
+        }
+    }
+
+    public enum WifiAwareEventType {
+        WIFI_AWARE_MANAGER_INITIALIZED,
+        WIFI_AWARE_MANAGER_AVAILABILITY_CHANGED,
+        WIFI_AWARE_MANAGER_FAILED,
+        WIFI_AWARE_MANAGER_TERMINATED,
+    }
+
+    public static class WiFiAwareException extends Exception {
+        public WiFiAwareException(String message) {
+            super(message);
         }
     }
 
@@ -228,13 +229,6 @@ public class WifiAwareHelper {
 
     public record PeerMessage(PeerHandle peerHandle, byte[] message) {}
 
-    public enum WifiAwareEventType {
-        WIFI_AWARE_MANAGER_INITIALIZED,
-        WIFI_AWARE_MANAGER_AVAILABILITY_CHANGED,
-        WIFI_AWARE_MANAGER_FAILED,
-        WIFI_AWARE_MANAGER_TERMINATED,
-    }
-
     public record WifiAwareEvent(WifiAwareHelper.WifiAwareEventType type, String message) {}
 
     public class WifiAwareBroadcastReceiver extends BroadcastReceiver {
@@ -262,4 +256,3 @@ public class WifiAwareHelper {
     }
 
 }
-

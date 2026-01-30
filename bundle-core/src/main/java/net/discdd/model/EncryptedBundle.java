@@ -9,7 +9,5 @@ public class EncryptedBundle {
         this.source = source;
     }
 
-    public File getSource() {
-        return source;
-    }
+    public File getSource() { return source; }
 }

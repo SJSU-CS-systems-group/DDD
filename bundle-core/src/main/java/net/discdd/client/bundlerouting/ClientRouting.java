@@ -1,21 +1,22 @@
 package net.discdd.client.bundlerouting;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.gson.JsonParseException;
-import net.discdd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
-import net.discdd.pathutils.ClientPaths;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.WARNING;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.gson.JsonParseException;
+
+import net.discdd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
+import net.discdd.pathutils.ClientPaths;
 
 public class ClientRouting {
 
@@ -40,8 +41,8 @@ public class ClientRouting {
 
         if (clientPaths.metadataFile.exists()) {
             try {
-                metadata =
-                        objectMapper.readValue(clientPaths.metadataFile, new TypeReference<HashMap<String, Long>>() {});
+                metadata = objectMapper.readValue(clientPaths.metadataFile,
+                                                  new TypeReference<HashMap<String, Long>>() {});
             } catch (JsonParseException | JsonMappingException e) {
                 throw new ClientMetaDataFileException("Corrupted JSON File:" + e);
             }

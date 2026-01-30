@@ -17,7 +17,9 @@
     <string name="not_connected">غير متصل</string>
     <string name="connected_to_transport">متصل بالنقل</string>
     <string name="refresh_peers">تحديث الأقران</string>
-    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">تم توصيل USB ، ولكن لم يتم اكتشاف دليل /ddd_transport ٪ n</string>
+    <string name="usb_was_connected_but_ddd_transport_directory_was_not_detected">تم توصيل USB ، ولكن لم يتم اكتشاف دليل
+        /ddd_transport ٪ n
+    </string>
     <string name="never">أبداً</string>
     <string name="usb_connection_detected">تم اكتشاف اتصال USB</string>
     <string name="settings_saved">الإعدادات المحفوظة</string>
@@ -27,7 +29,10 @@
     <string name="initiating_bundle_exchange">بدء تبادل الحزمة ...</string>
     <string name="exchanging_with_transport">التبادل مع النقل</string>
     <string name="reload">إعادة تحميل</string>
-    <string name="to_settings_text">لتمكين تطبيقنا لإدارة الملفات المتعلقة بالتطبيق على هذا الجهاز وتخزين USB الخاص بك ، يرجى تبديل \ "نعم \" للبوندليكلين في إعداداتك. نؤكد لكم أنه سيتم الوصول إلى الملفات التي تم إنشاؤها بواسطة تطبيقنا فقط. تعد حماية خصوصية المستخدم والحفاظ على الممارسات الأخلاقية أولوياتنا العليا.</string>
+    <string name="to_settings_text">لتمكين تطبيقنا لإدارة الملفات المتعلقة بالتطبيق على هذا الجهاز وتخزين USB الخاص بك ،
+        يرجى تبديل \ "نعم \" للبوندليكلين في إعداداتك. نؤكد لكم أنه سيتم الوصول إلى الملفات التي تم إنشاؤها بواسطة
+        تطبيقنا فقط. تعد حماية خصوصية المستخدم والحفاظ على الممارسات الأخلاقية أولوياتنا العليا.
+    </string>
     <string name="subscribe">يشترك</string>
     <string name="service_name" translatable="false">DDD</string>
     <string name="unsubscribe">إلغاء الاشتراك</string>
@@ -37,6 +42,8 @@
     <string name="wifi_aware_tab">واي فاي مدرك</string>
     <string name="sent">"مرسل: "</string>
     <string name="received">تلقى</string>
-    <string name="cannot_transfer_bundle_usb_not_ready_or_directory_not_found">لا يمكن نقل حزمة: USB غير جاهز أو لم يتم العثور على الدليل</string>
+    <string name="cannot_transfer_bundle_usb_not_ready_or_directory_not_found">لا يمكن نقل حزمة: USB غير جاهز أو لم يتم
+        العثور على الدليل
+    </string>
     <string name="delete_logs">سجلات واضحة</string>
 </resources>

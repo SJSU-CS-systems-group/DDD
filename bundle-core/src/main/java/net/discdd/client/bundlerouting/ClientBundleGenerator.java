@@ -1,9 +1,6 @@
 package net.discdd.client.bundlerouting;
 
-import net.discdd.bundlesecurity.BundleIDGenerator;
-import net.discdd.client.bundlesecurity.ClientSecurity;
-import net.discdd.pathutils.ClientPaths;
-import org.whispersystems.libsignal.InvalidKeyException;
+import static java.util.logging.Level.WARNING;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -12,7 +9,11 @@ import java.security.GeneralSecurityException;
 import java.util.Objects;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.WARNING;
+import org.whispersystems.libsignal.InvalidKeyException;
+
+import net.discdd.bundlesecurity.BundleIDGenerator;
+import net.discdd.client.bundlesecurity.ClientSecurity;
+import net.discdd.pathutils.ClientPaths;
 
 public class ClientBundleGenerator {
 
@@ -38,11 +39,6 @@ public class ClientBundleGenerator {
         }
     }
 
-    private void updateBundleIDFile() throws IOException {
-        clientPaths.counterFilePath.getParent().toFile().mkdirs();
-        Files.write(clientPaths.counterFilePath, Long.toUnsignedString(currentCounter).getBytes());
-    }
-
     synchronized public static ClientBundleGenerator initializeInstance(ClientSecurity clientSecurity,
                                                                         ClientPaths clientPaths) throws IOException {
         if (singleGeneratorInstance == null) {
@@ -58,6 +54,11 @@ public class ClientBundleGenerator {
             throw new IllegalStateException("Client Bundle Generator has not been initialized!");
         }
         return singleGeneratorInstance;
+    }
+
+    private void updateBundleIDFile() throws IOException {
+        clientPaths.counterFilePath.getParent().toFile().mkdirs();
+        Files.write(clientPaths.counterFilePath, Long.toUnsignedString(currentCounter).getBytes());
     }
 
     public String generateBundleID() throws IOException, InvalidKeyException, GeneralSecurityException {

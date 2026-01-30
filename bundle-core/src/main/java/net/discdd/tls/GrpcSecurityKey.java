@@ -1,8 +1,7 @@
 package net.discdd.tls;
 
-import net.discdd.bundlesecurity.SecurityUtils;
-import org.bouncycastle.jcajce.provider.asymmetric.X509;
-import org.bouncycastle.operator.OperatorCreationException;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -16,9 +15,9 @@ import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
+import org.bouncycastle.operator.OperatorCreationException;
+
+import net.discdd.bundlesecurity.SecurityUtils;
 
 public class GrpcSecurityKey {
     private static final Logger logger = Logger.getLogger(GrpcSecurityKey.class.getName());

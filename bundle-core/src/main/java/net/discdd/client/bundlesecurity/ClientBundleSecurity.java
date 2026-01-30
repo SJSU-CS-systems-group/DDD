@@ -1,5 +1,23 @@
 package net.discdd.client.bundlesecurity;
 
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+
+import java.io.File;
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.cert.CertificateException;
+import java.util.logging.Logger;
+
+import org.bouncycastle.operator.OperatorCreationException;
+import org.whispersystems.libsignal.DuplicateMessageException;
+import org.whispersystems.libsignal.InvalidKeyException;
+import org.whispersystems.libsignal.InvalidMessageException;
+import org.whispersystems.libsignal.NoSessionException;
+
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
 import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.client.bundlerouting.ClientBundleGenerator;
@@ -9,26 +27,6 @@ import net.discdd.model.UncompressedBundle;
 import net.discdd.pathutils.ClientPaths;
 import net.discdd.tls.GrpcSecurityKey;
 import net.discdd.utils.Constants;
-import org.bouncycastle.operator.OperatorCreationException;
-import org.whispersystems.libsignal.DuplicateMessageException;
-import org.whispersystems.libsignal.InvalidKeyException;
-import org.whispersystems.libsignal.InvalidMessageException;
-import org.whispersystems.libsignal.NoSessionException;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
-import java.security.GeneralSecurityException;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.cert.CertificateException;
-import java.util.logging.Logger;
-
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
 
 public class ClientBundleSecurity {
     private static final Logger logger = Logger.getLogger(ClientBundleSecurity.class.getName());
@@ -66,9 +64,7 @@ public class ClientBundleSecurity {
         }
     }
 
-    public ClientBundleGenerator getClientBundleGenerator() {
-        return clientBundleGenerator;
-    }
+    public ClientBundleGenerator getClientBundleGenerator() { return clientBundleGenerator; }
 
     public String generateNewBundleId() throws IOException, InvalidKeyException, GeneralSecurityException {
         return clientBundleGenerator.generateBundleID();
@@ -93,15 +89,9 @@ public class ClientBundleSecurity {
         return new Payload(bundleId, decryptedPayloadJar);
     }
 
-    public ClientWindow getClientWindow() {
-        return this.clientWindow;
-    }
+    public ClientWindow getClientWindow() { return this.clientWindow; }
 
-    public ClientSecurity getClientSecurity() {
-        return this.client;
-    }
+    public ClientSecurity getClientSecurity() { return this.client; }
 
-    public GrpcSecurityKey getClientGrpcSecurityKey() {
-        return this.clientGrpcSecurityKey;
-    }
+    public GrpcSecurityKey getClientGrpcSecurityKey() { return this.clientGrpcSecurityKey; }
 }

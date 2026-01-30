@@ -20,11 +20,11 @@ import java.util.logging.Logger
 
 // APK URLs
 const val mailApkUrl =
-        "https://github.com/SJSU-CS-systems-group/DDD-thunderbird-android/releases/latest/download/ddd-mail.apk"
+    "https://github.com/SJSU-CS-systems-group/DDD-thunderbird-android/releases/latest/download/ddd-mail.apk"
 const val clientApkUrl = "https://github.com/SJSU-CS-systems-group/DDD/releases/latest/download/DDDClient.apk"
 
 class AppShareViewModel(
-        val myApplication: Application
+    val myApplication: Application
 ) : AndroidViewModel(myApplication) {
     private val logger = Logger.getLogger(AppShareViewModel::class.java.name)
     private val mailApkFile by lazy {
@@ -57,9 +57,10 @@ class AppShareViewModel(
         }
     }
 
-
     private fun downloadFile(
-            url: String, dest: Path, progress: MutableStateFlow<Float>
+        url: String,
+        dest: Path,
+        progress: MutableStateFlow<Float>
     ): String? {
         val fileName = url.substringAfterLast('/')
         try {
@@ -69,7 +70,7 @@ class AppShareViewModel(
             val fileLength = connection.contentLength
             val inputStream = connection.inputStream
 
-            val tmpPath = dest.resolveSibling("${fileName}.tmp")
+            val tmpPath = dest.resolveSibling("$fileName.tmp")
             // Delete the file if it already exists
             if (Files.exists(tmpPath)) {
                 Files.delete(tmpPath)
@@ -114,7 +115,8 @@ class AppShareViewModel(
         }
         val packageManager = myApplication.packageManager
         val packageInfo = packageManager.getPackageArchiveInfo(
-                apkPath.toAbsolutePath().toString(), PackageManager.GET_ACTIVITIES
+            apkPath.toAbsolutePath().toString(),
+            PackageManager.GET_ACTIVITIES
         )
 
         return "${apkPath.fileName} ${packageInfo?.versionName ?: "Error"}"
@@ -126,13 +128,13 @@ class AppShareViewModel(
         }
         val packageManager = myApplication.packageManager
         val packageInfo = packageManager.getPackageArchiveInfo(
-                apkPath.toAbsolutePath().toString(),
-                PackageManager.GET_SIGNING_CERTIFICATES
+            apkPath.toAbsolutePath().toString(),
+            PackageManager.GET_SIGNING_CERTIFICATES
         )
 
         if (packageInfo == null) return false
         val signingInfo = packageInfo.signingInfo
-        logger.log(Level.FINE, "signingInfo: ${signingInfo}, apk info: ${apkPath.toAbsolutePath()}")
+        logger.log(Level.FINE, "signingInfo: $signingInfo, apk info: ${apkPath.toAbsolutePath()}")
         return signingInfo != null
     }
 

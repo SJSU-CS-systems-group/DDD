@@ -1,14 +1,9 @@
 package net.discdd.server.bundlesecurity;
 
-import net.discdd.bundlesecurity.SecurityUtils;
-import net.discdd.bundlesecurity.ServerSecurity;
-import net.discdd.grpc.RecencyBlob;
-import net.discdd.model.Payload;
-import net.discdd.model.UncompressedBundle;
-import net.discdd.utils.Constants;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.whispersystems.libsignal.InvalidKeyException;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 import java.io.File;
 import java.io.IOException;
@@ -17,10 +12,16 @@ import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.util.logging.Logger;
 
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-import static java.util.logging.Level.WARNING;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.whispersystems.libsignal.InvalidKeyException;
+
+import net.discdd.bundlesecurity.SecurityUtils;
+import net.discdd.bundlesecurity.ServerSecurity;
+import net.discdd.grpc.RecencyBlob;
+import net.discdd.model.Payload;
+import net.discdd.model.UncompressedBundle;
+import net.discdd.utils.Constants;
 
 @Service
 public class ServerBundleSecurity {
@@ -72,9 +73,7 @@ public class ServerBundleSecurity {
         return SecurityUtils.signMessageRaw(blob.toByteArray(), serverSecurity.getSigningKey());
     }
 
-    public byte[] getIdentityPublicKey() {
-        return serverSecurity.getIdentityPublicKey().serialize();
-    }
+    public byte[] getIdentityPublicKey() { return serverSecurity.getIdentityPublicKey().serialize(); }
 
     public long getCounterFromBundlePath(Path bundlePath, boolean direction) throws GeneralSecurityException,
             IOException, InvalidKeyException {

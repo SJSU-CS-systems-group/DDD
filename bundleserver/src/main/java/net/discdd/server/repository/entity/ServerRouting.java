@@ -1,10 +1,15 @@
 package net.discdd.server.repository.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.EmbeddedId;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
+
+import net.discdd.server.repository.compositeId.ServerRoutingId;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
-import net.discdd.server.repository.compositeId.ServerRoutingId;
 
 @Entity(name = "ServerRouting")
 @Table(name = "serverroutingtable")

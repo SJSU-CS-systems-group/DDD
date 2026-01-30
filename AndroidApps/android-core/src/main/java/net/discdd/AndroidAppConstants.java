@@ -1,8 +1,8 @@
 package net.discdd;
 
-import android.content.SharedPreferences;
-
 import java.util.logging.Logger;
+
+import android.content.SharedPreferences;
 
 public class AndroidAppConstants {
     public static final Logger logger = Logger.getLogger(AndroidAppConstants.class.getName());

@@ -6,15 +6,8 @@ import java.util.List;
 public class UncompressedPayload {
 
     private final File source;
-
-    public File getSource() {
-        return this.source;
-    }
-
     private final String bundleId;
-
     private final Acknowledgement ackRecord;
-
     private final List<ADU> ADUs;
 
     private UncompressedPayload(String bundleId, Acknowledgement ackRecord, List<ADU> ADUs, File source) {
@@ -24,17 +17,13 @@ public class UncompressedPayload {
         this.source = source;
     }
 
-    public String getBundleId() {
-        return this.bundleId;
-    }
+    public File getSource() { return this.source; }
 
-    public Acknowledgement getAckRecord() {
-        return this.ackRecord;
-    }
+    public String getBundleId() { return this.bundleId; }
 
-    public List<ADU> getADUs() {
-        return this.ADUs;
-    }
+    public Acknowledgement getAckRecord() { return this.ackRecord; }
+
+    public List<ADU> getADUs() { return this.ADUs; }
 
     public static class Builder {
 
@@ -46,36 +35,28 @@ public class UncompressedPayload {
 
         private List<ADU> ADUs;
 
-        public String getBundleId() {
-            return this.bundleId;
+        public String getBundleId() { return this.bundleId; }
+
+        public Builder setBundleId(String bundleId) {
+            this.bundleId = bundleId;
+            return this;
         }
 
-        public Acknowledgement getAckRecord() {
-            return this.ackRecord;
-        }
-
-        public List<ADU> getADUs() {
-            return this.ADUs;
-        }
-
-        public File getSource() {
-            return this.source;
-        }
+        public Acknowledgement getAckRecord() { return this.ackRecord; }
 
         public Builder setAckRecord(Acknowledgement ackRecord) {
             this.ackRecord = ackRecord;
             return this;
         }
 
+        public List<ADU> getADUs() { return this.ADUs; }
+
         public Builder setADUs(List<ADU> ADUs) {
             this.ADUs = ADUs;
             return this;
         }
 
-        public Builder setBundleId(String bundleId) {
-            this.bundleId = bundleId;
-            return this;
-        }
+        public File getSource() { return this.source; }
 
         public Builder setSource(File source) {
             this.source = source;

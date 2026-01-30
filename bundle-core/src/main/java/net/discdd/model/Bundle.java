@@ -16,11 +16,7 @@ public class Bundle {
         this.id = null;
     }
 
-    public String getBundleId() {
-        return id;
-    }
+    public String getBundleId() { return id; }
 
-    public File getSource() {
-        return this.source;
-    }
+    public File getSource() { return this.source; }
 }

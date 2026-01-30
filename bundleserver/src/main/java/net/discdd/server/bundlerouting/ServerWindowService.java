@@ -1,35 +1,34 @@
 package net.discdd.server.bundlerouting;
 
+import static java.util.logging.Level.FINE;
+
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.util.logging.Logger;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.whispersystems.libsignal.InvalidKeyException;
+
 import net.discdd.bundlesecurity.BundleIDGenerator;
 import net.discdd.bundlesecurity.InvalidClientIDException;
 import net.discdd.bundlesecurity.ServerSecurity;
 import net.discdd.server.bundletransmission.ServerBundleTransmission;
 import net.discdd.server.repository.ServerWindowRepository;
 import net.discdd.server.repository.entity.ServerWindow;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.whispersystems.libsignal.InvalidKeyException;
-
-import java.io.IOException;
-import java.security.GeneralSecurityException;
-import java.util.logging.Logger;
-
-import static java.util.logging.Level.FINE;
 
 @Service
 public class ServerWindowService {
 
+    private static final Logger logger = Logger.getLogger(ServerWindowService.class.getName());
     private final ServerWindowRepository serverwindowrepo;
+    @Autowired
+    ServerSecurity serverSecurity;
 
     @Autowired
     public ServerWindowService(ServerWindowRepository serverWindowRepository) {
         this.serverwindowrepo = serverWindowRepository;
     }
-
-    private static final Logger logger = Logger.getLogger(ServerWindowService.class.getName());
-
-    @Autowired
-    ServerSecurity serverSecurity;
 
     private ServerWindow getValueFromTable(String clientID) {
         var window = serverwindowrepo.findByClientID(clientID);

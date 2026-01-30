@@ -20,19 +20,11 @@ public class UncompressedBundle {
         this.encryptedPayload = encryptedPayload;
     }
 
-    public String getBundleId() {
-        return this.bundleId;
-    }
+    public String getBundleId() { return this.bundleId; }
 
-    public File getSource() {
-        return this.source;
-    }
+    public File getSource() { return this.source; }
 
-    public EncryptionHeader getEncryptionHeader() {
-        return this.encryptionHeader;
-    }
+    public EncryptionHeader getEncryptionHeader() { return this.encryptionHeader; }
 
-    public EncryptedPayload getEncryptedPayload() {
-        return this.encryptedPayload;
-    }
+    public EncryptedPayload getEncryptedPayload() { return this.encryptedPayload; }
 }
