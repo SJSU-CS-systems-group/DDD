@@ -9,18 +9,18 @@ import androidx.compose.ui.unit.Density
 
 @Composable
 fun rememberNoFlingSwipeToDismissBoxState(
-    initialValue: SwipeToDismissBoxValue = SwipeToDismissBoxValue.Settled,
-    confirmValueChange: (SwipeToDismissBoxValue) -> Boolean = { true },
-    positionalThreshold: (totalDistance: Float) -> Float =
-        SwipeToDismissBoxDefaults.positionalThreshold,
+        initialValue: SwipeToDismissBoxValue = SwipeToDismissBoxValue.Settled,
+        confirmValueChange: (SwipeToDismissBoxValue) -> Boolean = { true },
+        positionalThreshold: (totalDistance: Float) -> Float =
+                SwipeToDismissBoxDefaults.positionalThreshold,
 ): SwipeToDismissBoxState {
     val density = Density(Float.POSITIVE_INFINITY) //prevents notification dismissal by flinging
     return rememberSaveable(
-        saver = SwipeToDismissBoxState.Saver(
-            confirmValueChange = confirmValueChange,
-            density = density,
-            positionalThreshold = positionalThreshold
-        )
+            saver = SwipeToDismissBoxState.Saver(
+                    confirmValueChange = confirmValueChange,
+                    density = density,
+                    positionalThreshold = positionalThreshold
+            )
     ) {
         SwipeToDismissBoxState(initialValue, density, confirmValueChange, positionalThreshold)
     }

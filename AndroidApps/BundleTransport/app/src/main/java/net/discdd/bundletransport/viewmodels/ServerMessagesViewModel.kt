@@ -14,25 +14,25 @@ import java.time.LocalDateTime
 
 fun sampleMessages(): List<ServerMessage> {
     return listOf(
-        ServerMessage().apply {
-            messageId = 1
-            date = LocalDateTime.of(2025, 11, 17, 10, 0)
-            message = "test #1"
-            isRead = false
-        },
-        ServerMessage().apply {
-            messageId = 2
-            date = LocalDateTime.of(2025, 11, 17, 10, 2)
-            message = "test #2"
-            isRead = false
-        },
-        ServerMessage().apply {
-            messageId = 3
-            date = LocalDateTime.of(2025, 11, 17, 10, 1)
-            message =
-                "hello this is a test notification for a really long notification hello hello testing one two three hello hi"
-            isRead = false
-        }
+            ServerMessage().apply {
+                messageId = 1
+                date = LocalDateTime.of(2025, 11, 17, 10, 0)
+                message = "test #1"
+                isRead = false
+            },
+            ServerMessage().apply {
+                messageId = 2
+                date = LocalDateTime.of(2025, 11, 17, 10, 2)
+                message = "test #2"
+                isRead = false
+            },
+            ServerMessage().apply {
+                messageId = 3
+                date = LocalDateTime.of(2025, 11, 17, 10, 1)
+                message =
+                        "hello this is a test notification for a really long notification hello hello testing one two three hello hi"
+                isRead = false
+            }
     )
 }
 
@@ -42,7 +42,7 @@ class ServerMessagesViewModel(app: Application) : AndroidViewModel(app) {
     val messages: LiveData<List<ServerMessage>> = repository.getAllServerMessages()
 
     init {
-       if (BuildConfig.DEBUG) { //sample messages
+        if (BuildConfig.DEBUG) { //sample messages
             viewModelScope.launch(Dispatchers.IO) {
                 repository.seedSampleMessages(sampleMessages())
             }

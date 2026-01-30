@@ -1,6 +1,7 @@
 package net.discdd.bundletransport.utils;
 
 import androidx.room.TypeConverter;
+
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -13,6 +14,8 @@ public class Converters {
 
     @TypeConverter
     public static LocalDateTime toLocalDateTime(Long timestamp) {
-        return timestamp == null ? null : LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneId.systemDefault());
+        return timestamp == null ?
+               null :
+               LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneId.systemDefault());
     }
 }

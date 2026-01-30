@@ -42,123 +42,122 @@ import net.discdd.bundletransport.viewmodels.ServerMessagesViewModel
 
 @Composable
 fun ServerMessagesScreen(
-    viewModel: ServerMessagesViewModel = viewModel(),
-    onRefresh: () -> Unit = { }
+        viewModel: ServerMessagesViewModel = viewModel(),
+        onRefresh: () -> Unit = { }
 ) {
     val notifications by viewModel.messages.observeAsState(emptyList())
-    val unreadCount = notifications.count {!it.isRead}
+    val unreadCount = notifications.count { !it.isRead }
     var dialogFor by remember { mutableStateOf<ServerMessage?>(null) }
 
-        if (notifications.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No notifications yet.")
-            }
-        } else {
-            LazyColumn(
+    if (notifications.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("No notifications yet.")
+        }
+    } else {
+        LazyColumn(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxSize()
-            ) {
-                //Header (# unread notifs and refresh button)
-                item(key = "header") {
-                    Row(
+        ) {
+            //Header (# unread notifs and refresh button)
+            item(key = "header") {
+                Row(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
+                                .fillMaxWidth()
+                                .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
+                ) {
+                    Text(
                             text = "New Notifications: ${unreadCount}",
                             fontSize = 20.sp
-                        )
-                        Spacer(Modifier.weight(1f))
-                        FilledTonalButton(
+                    )
+                    Spacer(Modifier.weight(1f))
+                    FilledTonalButton(
                             onClick = { onRefresh() },
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
-                        ) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Refresh", modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Refresh")
-                        }
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh", modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Refresh")
                     }
                 }
-                items(notifications, key = { it.messageId }) { notification ->
-                    val dismissState = rememberNoFlingSwipeToDismissBoxState(
+            }
+            items(notifications, key = { it.messageId }) { notification ->
+                val dismissState = rememberNoFlingSwipeToDismissBoxState(
                         positionalThreshold = { it * 0.55f }, //change 0.55f to change threshold
                         confirmValueChange = {
                             val swiped = it == SwipeToDismissBoxValue.StartToEnd
-                                      || it == SwipeToDismissBoxValue.EndToStart
+                                    || it == SwipeToDismissBoxValue.EndToStart
                             if (swiped) {
                                 viewModel.deleteById(notification.messageId)
                                 true
-                            }
-                            else false
+                            } else false
                         }
-                    )
+                )
 
-                    SwipeToDismissBox(
+                SwipeToDismissBox(
                         state = dismissState,
                         enableDismissFromStartToEnd = true,
                         enableDismissFromEndToStart = true,
                         backgroundContent = {
                             val shape = MaterialTheme.shapes.medium
                             Box(
-                                modifier = Modifier.fillMaxSize()
-                                    .padding(horizontal = 16.dp)
-                                    .clip(shape)
-                                    .background(MaterialTheme.colorScheme.errorContainer),
-                                contentAlignment = Alignment.Center
+                                    modifier = Modifier.fillMaxSize()
+                                            .padding(horizontal = 16.dp)
+                                            .clip(shape)
+                                            .background(MaterialTheme.colorScheme.errorContainer),
+                                    contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    contentDescription = "Delete",
-                                    tint = MaterialTheme.colorScheme.onErrorContainer,
-                                    modifier = Modifier.align(Alignment.CenterStart)
-                                        .padding(24.dp)
-                                        .requiredSize(24.dp)
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Delete",
+                                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                                        modifier = Modifier.align(Alignment.CenterStart)
+                                                .padding(24.dp)
+                                                .requiredSize(24.dp)
                                 )
                                 Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    contentDescription = "Delete",
-                                    tint = MaterialTheme.colorScheme.onErrorContainer,
-                                    modifier = Modifier.align(Alignment.CenterEnd)
-                                        .padding(24.dp)
-                                        .requiredSize(24.dp)
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Delete",
+                                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                                        modifier = Modifier.align(Alignment.CenterEnd)
+                                                .padding(24.dp)
+                                                .requiredSize(24.dp)
                                 )
                             }
                         },
                         content = {
                             //Notif card
                             NotifCard(
-                                notif = notification,
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                                onCardClick = {
-                                    viewModel.markRead(notification.messageId)
-                                    dialogFor = notification
-                                }
+                                    notif = notification,
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                                    onCardClick = {
+                                        viewModel.markRead(notification.messageId)
+                                        dialogFor = notification
+                                    }
                             )
                         }
-                    )
-                }
+                )
             }
         }
+    }
 
     //Popup when notif is clicked
     dialogFor?.let { notif ->
         val whenText = notif.date
         Dialog(onDismissRequest = { dialogFor = null }) {
             Surface(
-                shape = MaterialTheme.shapes.medium,
-                tonalElevation = 6.dp
+                    shape = MaterialTheme.shapes.medium,
+                    tonalElevation = 6.dp
             ) {
                 Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Notification", style = MaterialTheme.typography.titleLarge)
                     Text(notif.message, style = MaterialTheme.typography.bodyLarge)
 
                     Text(
-                        "Sent: $whenText",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                            "Sent: $whenText",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         TextButton(onClick = { dialogFor = null }) { Text("OK") }
@@ -172,41 +171,41 @@ fun ServerMessagesScreen(
 //UI for each notification card
 @Composable
 private fun NotifCard(
-    notif: ServerMessage,
-    modifier: Modifier = Modifier,
-    onCardClick: () -> Unit,
+        notif: ServerMessage,
+        modifier: Modifier = Modifier,
+        onCardClick: () -> Unit,
 ) {
     val container by animateColorAsState(
-        targetValue =
+            targetValue =
             if (!notif.isRead) MaterialTheme.colorScheme.secondaryContainer
             else MaterialTheme.colorScheme.surfaceVariant
     )
     Card(
-        modifier = modifier,
-        onClick = onCardClick,
-        colors = CardDefaults.cardColors(
-            containerColor = container
-        )
+            modifier = modifier,
+            onClick = onCardClick,
+            colors = CardDefaults.cardColors(
+                    containerColor = container
+            )
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (!notif.isRead) {
                     Surface(
-                        shape = MaterialTheme.shapes.small,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(8.dp)
+                            shape = MaterialTheme.shapes.small,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(8.dp)
                     ) {}
                 }
                 Text(
-                    text = notif.message,
-                    modifier = Modifier
-                       .weight(1f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                        text = notif.message,
+                        modifier = Modifier
+                                .weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = notif.date.toString()
+                        text = notif.date.toString()
                 )
             }
         }
