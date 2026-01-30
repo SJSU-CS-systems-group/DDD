@@ -157,6 +157,22 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>com.simpligility.maven.plugins</groupId>
+                <artifactId>android-maven-plugin</artifactId>
+                <version>4.6.0</version>
+                <extensions>true</extensions>
+                <executions>
+                    <execution>
+                        <id>check-git-pull-rebase</id>
+                        <phase>validate</phase>
+                        <configuration>
+                            <executable>${checkpullrebase}</executable>
+                            <addOutputToClasspath>false</addOutputToClasspath>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
 
         </plugins>
     </build>

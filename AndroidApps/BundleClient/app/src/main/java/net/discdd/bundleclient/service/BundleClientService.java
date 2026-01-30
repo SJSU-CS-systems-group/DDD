@@ -36,6 +36,7 @@ import net.discdd.bundleclient.service.wifiDirect.DDDWifiDirect;
 import net.discdd.client.bundletransmission.ClientBundleTransmission;
 import net.discdd.client.bundletransmission.ClientBundleTransmission.BundleExchangeCounts;
 import net.discdd.client.bundletransmission.ClientBundleTransmission.Statuses;
+import net.discdd.client.bundletransmission.RecentTransport;
 import net.discdd.client.bundletransmission.TransportDevice;
 import net.discdd.datastore.providers.MessageProvider;
 import net.discdd.grpc.GetRecencyBlobResponse;
@@ -497,7 +498,7 @@ public class BundleClientService extends Service {
         return completableFuture;
     }
 
-    public ClientBundleTransmission.RecentTransport[] getRecentTransports() {
+    public RecentTransport[] getRecentTransports() {
         return bundleTransmission.getRecentTransports();
     }
 
@@ -505,11 +506,11 @@ public class BundleClientService extends Service {
         return dddWifi.isDiscoveryActive();
     }
 
-    public ClientBundleTransmission.RecentTransport getRecentTransport(DDDWifiDevice peer) {
+    public RecentTransport getRecentTransport(DDDWifiDevice peer) {
         return Arrays.stream(bundleTransmission.getRecentTransports())
                 .filter(rt -> peer.equals(rt.getDevice()))
                 .findFirst()
-                .orElse(new ClientBundleTransmission.RecentTransport(peer, GetRecencyBlobResponse.getDefaultInstance()));
+                .orElse(new RecentTransport(peer, GetRecencyBlobResponse.getDefaultInstance()));
     }
 
     public void notifyNewAdu() {
