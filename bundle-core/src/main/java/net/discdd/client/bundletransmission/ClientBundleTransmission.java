@@ -245,7 +245,7 @@ public class ClientBundleTransmission {
      */
     @Getter
     public static class RecentTransport {
-        private TransportDevice device;
+        public TransportDevice device;
         /* @param lastExchange time of last bundle exchange */
         private long lastExchange;
         /* @param lastSeen time of last device discovery */
