@@ -30,6 +30,7 @@ import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 import java.util.Base64;
@@ -155,7 +156,9 @@ public class SecurityUtils {
     public static String encryptAesCbcPkcs5(String sharedSecret, String plainText) throws NoSuchAlgorithmException,
             InvalidKeySpecException, NoSuchPaddingException, InvalidAlgorithmParameterException,
             java.security.InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
+        SecureRandom random = new SecureRandom();
         byte[] iv = new byte[16];
+        random.nextBytes(iv);
         byte[] encryptedData = null;
 
         /* Create SecretKeyFactory object */
