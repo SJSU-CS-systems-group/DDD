@@ -28,10 +28,10 @@ jobs:
           </settings>" > ~/.m2/settings.xml
 
       - name: Gradle spotless
-        run: ./gradlew spotlessApply
+        run: (cd AndroidApps; ./gradlew spotlessCheck)
 
       - name: Maven spotless
-        run: mvn spotless:apply
+        run: mvn spotless:check
 
       - name: Maven install
         run: mvn -U -ntp install
