@@ -179,7 +179,9 @@ public class SecurityUtils {
     }
 
     public static byte[] decryptAesCbcPkcs5(String sharedSecret, String cipherText) throws GeneralSecurityException {
+        SecureRandom random = new SecureRandom();
         byte[] iv = new byte[16];
+        random.nextBytes(iv);
         byte[] encryptedData = Base64.getUrlDecoder().decode(cipherText);
 
         /* Create SecretKeyFactory object */
