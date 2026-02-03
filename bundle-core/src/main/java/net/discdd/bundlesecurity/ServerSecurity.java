@@ -51,7 +51,6 @@ public class ServerSecurity {
     private SignalProtocolAddress ourAddress;
     private IdentityKeyPair ourIdentityKeyPair;
     private ECKeyPair ourSignedPreKey;
-    private Optional<ECKeyPair> ourOneTimePreKey;
     private ECKeyPair ourRatchetKey;
     private Path serverRootPath;
     private Path clientRootPath;
@@ -74,7 +73,6 @@ public class ServerSecurity {
             String name = DEFAULT_SERVER_NAME;
             name = SecurityUtils.generateID(ourIdentityKeyPair.getPublicKey().serialize());
             ourAddress = new SignalProtocolAddress(name, ServerDeviceID);
-            ourOneTimePreKey = Optional.absent();
 
             clientRootPath = serverRootPath.resolve("Clients");
             clientRootPath.toFile().mkdirs();
