@@ -201,7 +201,7 @@ public class ClientSecurity {
 
         String secretKey = Base64.getUrlEncoder().encodeToString(agreement);
 
-        return SecurityUtils.encryptAesCbcPkcs5(secretKey, bundleID);
+        return SecurityUtils.encryptAesCbcPkcs5Deterministic(secretKey, bundleID);
     }
 
     /* Add Headers (Identity, Base Key & Bundle ID) to Bundle Path */

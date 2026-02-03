@@ -345,7 +345,7 @@ public class ServerSecurity {
         String sharedSecret = null;
         sharedSecret = getsharedSecret(clientID);
 
-        return SecurityUtils.encryptAesCbcPkcs5(sharedSecret, bundleID);
+        return SecurityUtils.encryptAesCbcPkcs5Deterministic(sharedSecret, bundleID);
     }
 
     public String createEncryptedBundleId(String clientId, long bundleCounter, boolean downstream) throws

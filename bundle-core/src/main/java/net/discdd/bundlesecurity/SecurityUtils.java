@@ -14,6 +14,7 @@ import org.whispersystems.libsignal.util.KeyHelper;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.Mac;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
@@ -33,6 +34,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
@@ -153,17 +155,43 @@ public class SecurityUtils {
         return generateID(publicKey);
     }
 
+    // Deterministic encryption: derives the IV from HMAC(sharedSecret, plainText) so that
+    // encrypting the same plaintext with the same key always yields the same ciphertext.
+    // Used for bundle ID encryption where client and server must independently compute matching IDs.
+    public static String encryptAesCbcPkcs5Deterministic(String sharedSecret, String plainText) throws
+            NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException,
+            InvalidAlgorithmParameterException, java.security.InvalidKeyException, IllegalBlockSizeException,
+            BadPaddingException {
+        Mac mac = Mac.getInstance("HmacSHA256");
+        mac.init(new SecretKeySpec(sharedSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+        byte[] iv = Arrays.copyOf(mac.doFinal(plainText.getBytes(StandardCharsets.UTF_8)), 16);
+
+        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+        KeySpec spec = new PBEKeySpec(sharedSecret.toCharArray(), sharedSecret.getBytes(), ITERATIONS, KEYLEN);
+        SecretKey skey = factory.generateSecret(spec);
+        SecretKeySpec secretKeySpec = new SecretKeySpec(skey.getEncoded(), "AES");
+
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
+
+        byte[] encryptedData = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
+
+        byte[] combined = new byte[iv.length + encryptedData.length];
+        System.arraycopy(iv, 0, combined, 0, iv.length);
+        System.arraycopy(encryptedData, 0, combined, iv.length, encryptedData.length);
+
+        return Base64.getUrlEncoder().encodeToString(combined);
+    }
+
     public static String encryptAesCbcPkcs5(String sharedSecret, String plainText) throws NoSuchAlgorithmException,
             InvalidKeySpecException, NoSuchPaddingException, InvalidAlgorithmParameterException,
             java.security.InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
         SecureRandom random = new SecureRandom();
         byte[] iv = new byte[16];
         random.nextBytes(iv);
-        byte[] encryptedData = null;
 
         /* Create SecretKeyFactory object */
-        SecretKeyFactory factory;
-        factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
 
         /* Create KeySpec object */
         KeySpec spec = new PBEKeySpec(sharedSecret.toCharArray(), sharedSecret.getBytes(), ITERATIONS, KEYLEN);
@@ -173,16 +201,18 @@ public class SecurityUtils {
         Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
         cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
 
-        encryptedData = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
+        byte[] encryptedData = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
 
-        return Base64.getUrlEncoder().encodeToString(encryptedData);
+        // Prepend IV to ciphertext so decrypt can recover it
+        byte[] combined = new byte[iv.length + encryptedData.length];
+        System.arraycopy(iv, 0, combined, 0, iv.length);
+        System.arraycopy(encryptedData, 0, combined, iv.length, encryptedData.length);
+
+        return Base64.getUrlEncoder().encodeToString(combined);
     }
 
     public static byte[] decryptAesCbcPkcs5(String sharedSecret, String cipherText) throws GeneralSecurityException {
-        SecureRandom random = new SecureRandom();
-        byte[] iv = new byte[16];
-        random.nextBytes(iv);
-        byte[] encryptedData = Base64.getUrlDecoder().decode(cipherText);
+        byte[] allData = Base64.getUrlDecoder().decode(cipherText);
 
         /* Create SecretKeyFactory object */
         SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
@@ -192,9 +222,19 @@ public class SecurityUtils {
         SecretKeySpec secretKeySpec = new SecretKeySpec(skey.getEncoded(), "AES");
 
         Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
 
-        return cipher.doFinal(encryptedData);
+        // New format: first 16 bytes are the IV, remainder is ciphertext
+        byte[] iv = Arrays.copyOfRange(allData, 0, 16);
+        byte[] encryptedData = Arrays.copyOfRange(allData, 16, allData.length);
+
+        try {
+            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
+            return cipher.doFinal(encryptedData);
+        } catch (BadPaddingException e) {
+            // Fallback for legacy data encrypted with a zero IV
+            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, new IvParameterSpec(new byte[16]));
+            return cipher.doFinal(allData);
+        }
     }
 
     public static String unzip(String zipFilePath) throws IOException {
