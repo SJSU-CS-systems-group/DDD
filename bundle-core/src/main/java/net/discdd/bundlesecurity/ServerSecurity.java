@@ -91,26 +91,6 @@ public class ServerSecurity {
                                serverKeyPath));
             throw new RuntimeException("Bad keys");
         }
-        //     try {
-        //     // TODO: Load protocol store from files(serverProtocolStore)
-        //         loadKeysfromFiles(serverKeyPath);
-        //         logger.log(SEVERE,"[ServerSecurity]: Using Existing Keys");
-        //     } catch (InvalidKeyException | IOException | EncodingException e) {
-        //         logger.log(SEVERE,"[ServerSecurity]: Error Loading Keys from files, generating new keys instead");
-
-        // ECKeyPair identityKeyPair       = Curve.generateKeyPair();
-        // ourIdentityKeyPair              = new IdentityKeyPair(new IdentityKey(identityKeyPair.getPublicKey()),
-        //                                                             identityKeyPair.getPrivateKey());
-        // ourSignedPreKey                 = Curve.generateKeyPair();
-        // ourRatchetKey                   = ourSignedPreKey;
-
-        //     try {
-        //         writeKeysToFiles(serverKeyPath, true);
-        //     } catch (IOException | EncodingException exception) {
-        //         throw new ServerIntializationException("Failed to write keys to Files:"+exception);
-        //     }
-        // }
-
     }
 
     /* Initialize or get previous server Security Instance */
