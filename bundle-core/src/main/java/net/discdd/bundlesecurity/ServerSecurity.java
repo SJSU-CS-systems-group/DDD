@@ -230,7 +230,7 @@ public class ServerSecurity {
             IOException {
         var clientSession = clientMap.get(clientID);
         if (clientSession != null) {
-            return clientMap.get(clientID);
+            return clientSession;
         }
         var keyPath = clientRootPath.resolve(clientID);
         SessionRecord clientSessionRecord = null;
