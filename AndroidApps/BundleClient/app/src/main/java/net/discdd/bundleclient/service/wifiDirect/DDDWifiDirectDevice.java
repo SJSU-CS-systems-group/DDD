@@ -4,7 +4,7 @@ import android.net.wifi.p2p.WifiP2pDevice;
 import net.discdd.bundleclient.service.DDDWifiDevice;
 import net.discdd.grpc.GetRecencyBlobResponse;
 
-class DDDWifiDirectDevice implements DDDWifiDevice {
+public class DDDWifiDirectDevice implements DDDWifiDevice {
     public WifiP2pDevice wifiP2pDevice;
     final public String transportId;
     public GetRecencyBlobResponse recencyBlob;
@@ -17,6 +17,9 @@ class DDDWifiDirectDevice implements DDDWifiDevice {
 
     @Override
     public String getWifiAddress() {
+        if (wifiP2pDevice == null) {
+            return "DEVICE_NULL";
+        }
         return wifiP2pDevice.deviceAddress;
     }
 

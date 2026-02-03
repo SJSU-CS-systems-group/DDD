@@ -94,6 +94,7 @@ public class ClientBundleTransmission {
     public final ClientApplicationDataManager applicationDataManager;
 
     final private ClientRouting clientRouting;
+    @Getter
     final private ClientPaths clientPaths;
 
     public ClientBundleTransmission(ClientPaths clientPaths, Consumer<ADU> aduConsumer) throws
@@ -103,10 +104,6 @@ public class ClientBundleTransmission {
         this.bundleSecurity = new ClientBundleSecurity(clientPaths);
         this.applicationDataManager = new ClientApplicationDataManager(clientPaths, aduConsumer);
         this.clientRouting = ClientRouting.initializeInstance(clientPaths);
-    }
-
-    public ClientPaths getClientPaths() {
-        return clientPaths;
     }
 
     public void registerBundleId(String bundleId) throws IOException, WindowExceptions.BufferOverflow,
@@ -263,6 +260,15 @@ public class ClientBundleTransmission {
             this.device = device;
             this.recencyBlobResponse = recencyBlobResponse;
         }
+
+        public RecentTransport(TransportDevice device, long lastExchange, long lastSeen,
+                               long recencyTime, GetRecencyBlobResponse recencyBlobResponse) {
+            this.device = device;
+            this.lastExchange = lastExchange;
+            this.lastSeen = lastSeen;
+            this.recencyTime = recencyTime;
+            this.recencyBlobResponse = recencyBlobResponse;
+        }
     }
 
     final private HashMap<TransportDevice, RecentTransport> recentTransports = new HashMap<>();
@@ -305,6 +311,12 @@ public class ClientBundleTransmission {
     public void expireNotSeenPeers(long expirationTime) {
         synchronized (recentTransports) {
             recentTransports.values().removeIf(transport -> transport.getLastSeen() < expirationTime);
+        }
+    }
+
+    public void addPeers(HashMap<TransportDevice, RecentTransport> devices) {
+        synchronized (recentTransports) {
+            recentTransports.putAll(devices);
         }
     }
 
