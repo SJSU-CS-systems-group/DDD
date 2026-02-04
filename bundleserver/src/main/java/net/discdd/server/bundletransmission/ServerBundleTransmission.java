@@ -286,10 +286,6 @@ public class ServerBundleTransmission {
         return config.getBundleTransmission().getToSendDirectory().resolve(encryptedBundleId);
     }
 
-    public Path getPathToSendDirectory() {
-        return config.getBundleTransmission().getToSendDirectory();
-    }
-
     private void cleanupOldBundles(String clientId, String currentBundleId) {
         var clientDir = getClientSendDirectory(clientId);
         var files = clientDir.toFile().listFiles();
