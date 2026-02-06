@@ -19,7 +19,7 @@ import java.util.concurrent.Executors;
 public class K9Config {
     @Bean
     public StoreADUs sendStoreADUs(@Value("${adapter-server.rootdir}") Path rootDir) {
-        return new StoreADUs(rootDir.resolve("send"), true);
+        return new StoreADUs(rootDir.resolve("send"));
     }
 
     @Bean(name = "grpcExecutor")
