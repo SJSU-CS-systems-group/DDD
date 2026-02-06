@@ -54,7 +54,7 @@ public class ClientApplicationDataManager {
     }
 
     // we cannot use .toList() since we are targeting Java 11, but Intellij really wants us to
-    @SuppressWarnings("all")
+    @SuppressWarnings("SimplifyStreamApiCallChains")
     public List<String> getRegisteredAppIds() {
         return sendADUsStorage.getAllClientApps(true)
                 .map(StoreADUs.ClientApp::appId)
