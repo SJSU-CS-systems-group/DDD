@@ -99,6 +99,10 @@ fun HomeScreen(
             title = "Bug reports",
             screen = { BugReportScreen() }
         ),
+        TabItem(
+            title = "Notifications",
+            screen = { ServerMessagesScreen() }
+        ),
     )
 
     /*
