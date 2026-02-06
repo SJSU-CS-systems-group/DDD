@@ -15,10 +15,15 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
+import java.util.logging.Logger;
 import java.util.zip.CRC32;
 import java.util.zip.CheckedInputStream;
 
+import static java.util.logging.Level.SEVERE;
+
 public class JarUtils {
+    private static final Logger logger = Logger.getLogger(JarUtils.class.getName());
+
     private static long getChecksum(File file) throws IOException {
         long checkSum = 0L;
         try (CheckedInputStream checkedInputStream = new CheckedInputStream(new FileInputStream(file), new CRC32())) {
@@ -75,7 +80,7 @@ public class JarUtils {
                 messageDigest.reset();
 
             } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
+                logger.log(SEVERE, "Failed to calculate hash of JAR entries using SHA-256", e);
             }
         }
     }
@@ -102,7 +107,7 @@ public class JarUtils {
             jos.close();
             fos.close();
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.log(SEVERE, "Failed to JAR directory " + dirPath + " to " + jarFilePath, e);
         }
     }
 
@@ -161,7 +166,7 @@ public class JarUtils {
             // Close the JAR file
             jarFile.close();
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.log(SEVERE, "Failed to unjar file " + jarFilePath + " to " + dirPath, e);
         }
     }
 }

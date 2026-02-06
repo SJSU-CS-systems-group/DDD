@@ -11,6 +11,7 @@ import java.util.concurrent.Callable;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 
 @CommandLine.Command(name = "decrypt-bundle", description = "Decrypt bundle")
 public class DecryptBundle implements Callable<Void> {
@@ -52,7 +53,7 @@ public class DecryptBundle implements Callable<Void> {
 
             logger.log(INFO, "Finished decrypting " + decryptedBundlePath);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.log(SEVERE, "Failed to decrypt bundle file", e);
         }
         return null;
     }
