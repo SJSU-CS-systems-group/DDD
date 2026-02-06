@@ -7,6 +7,7 @@ import net.discdd.server.service.TransportMessageService;
 import org.springframework.stereotype.Component;
 import picocli.CommandLine;
 
+import javax.annotation.Nonnull;
 import java.util.concurrent.Callable;
 
 @CommandLine.Command(
@@ -56,9 +57,11 @@ public class MessageCast implements Callable<Integer> {
     )
     int add(
             @CommandLine.Parameters(index = "0", description = "Transport ID")
+                    @Nonnull
             String transportId,
 
             @CommandLine.Parameters(index = "1", description = "Message text")
+                    @Nonnull
             String messageText
     ) {
         TransportMessage msg = service.createMessage(transportId, messageText);
@@ -121,7 +124,8 @@ public class MessageCast implements Callable<Integer> {
 
     @Override
     public Integer call() {
-        System.out.println("Use subcommands: list, add, delete");
+        System.out.println("Available subcommands: list, add, delete, delete-all");
+        System.out.println("Use '--help' to see all available subcommands and their descriptions.");
         return 0;
     }
 }

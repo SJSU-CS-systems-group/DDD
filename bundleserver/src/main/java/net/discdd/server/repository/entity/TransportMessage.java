@@ -16,7 +16,11 @@ public class TransportMessage {
     public MessageKey messageKey;
 
     public String message;
+
+    // Date when the message was created
     public LocalDateTime messageDate;
+
+    // Date when the message was read, null if unread.
     public LocalDateTime readDate;
 
 }
