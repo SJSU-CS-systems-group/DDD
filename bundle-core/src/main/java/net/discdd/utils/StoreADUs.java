@@ -45,11 +45,6 @@ public class StoreADUs {
         this.rootFolder = rootFolder;
     }
 
-    // TODO: remove this constructor after everything has been converted
-    public StoreADUs(Path rootFolder, boolean ignore) {
-        this(rootFolder);
-    }
-
     public Metadata getMetadata(String clientId, String appId) {
         Path metadataPath = getAppFolder(clientId, appId).resolve(METADATA_FILENAME);
         try {
