@@ -3,10 +3,7 @@ package net.discdd.bundleclient.viewmodels
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.Dispatchers
 
-import kotlinx.coroutines.launch
 import net.discdd.bundleclient.BuildConfig
 import net.discdd.bundleclient.utils.ServerMessage
 import net.discdd.bundleclient.utils.ServerMessageRepository
@@ -43,21 +40,15 @@ class ServerMessagesViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         if (BuildConfig.DEBUG) { //sample messages
-            viewModelScope.launch(Dispatchers.IO) {
-                repository.seedSampleMessages(sampleMessages())
-            }
+            repository.seedSampleMessages(sampleMessages())
         }
     }
 
     fun markRead(messageId: Long) {
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.markRead(messageId)
-        }
+        repository.markRead(messageId)
     }
 
     fun deleteById(messageId: Long) {
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.deleteById(messageId)
-        }
+        repository.deleteById(messageId)
     }
 }
