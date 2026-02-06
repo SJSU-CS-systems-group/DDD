@@ -81,7 +81,7 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
             logger.log(INFO,
                        senderType.name() + ":" + senderId + " requested " + bundleExchangeName.encryptedBundleId());
 
-            var bundlePath = bundleTransmission.getPathForBundleToSend(senderId, bundleExchangeName.encryptedBundleId());
+            var bundlePath = bundleTransmission.getPathForBundleToSend(bundleExchangeName.encryptedBundleId());
             logger.info(String.format("Path for bundle %s is %s exists %s",
                                       bundleExchangeName.encryptedBundleId(),
                                       bundlePath.toString(),
@@ -96,7 +96,7 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
             try {
                 var encryptedBundleId = bundleTransmission.generateBundleForClient(senderId);
                 if (encryptedBundleId != null && encryptedBundleId.equals(bundleExchangeName.encryptedBundleId())) {
-                    return bundleTransmission.getPathForBundleToSend(senderId, encryptedBundleId);
+                    return bundleTransmission.getPathForBundleToSend(encryptedBundleId);
                 }
                 logger.log(INFO,
                            String.format("%s requested %s but waiting to send %s",

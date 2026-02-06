@@ -274,6 +274,18 @@ public class ServerBundleTransmission {
         return getClientSendDirectory(clientId).resolve(encryptedBundleId);
     }
 
+    public Path getPathForBundleToSend(String encryptedBundleId) {
+        var clientId = applicationDataManager.getClientIdForBundle(encryptedBundleId);
+        if (clientId != null) {
+            var perClientPath = getPathForBundleToSend(clientId, encryptedBundleId);
+            if (Files.exists(perClientPath)) {
+                return perClientPath;
+            }
+        }
+        // Fallback: flat directory (backward compat for pre-existing bundles)
+        return config.getBundleTransmission().getToSendDirectory().resolve(encryptedBundleId);
+    }
+
     private void cleanupOldBundles(String clientId, String currentBundleId) {
         var clientDir = getClientSendDirectory(clientId);
         var files = clientDir.toFile().listFiles();
