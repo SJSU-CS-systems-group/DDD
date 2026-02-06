@@ -13,11 +13,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -36,19 +35,15 @@ public class StoreADUs {
     private static final Logger logger = Logger.getLogger(StoreADUs.class.getName());
     /**
      * Listeners that will be notified when a new ADU is added.
-     * This member is synchronized to allow concurrent access, and listeners can directly add or remove themselves.
+     * This member utilizes a ConcurrentHashMap to allow concurrent access, and listeners can directly add or remove
+     * themselves.
      * When a new ADU is added, all listeners will be notified with the appId of added ADUs.
      */
-    public final Set<Consumer<String>> additionListeners = Collections.synchronizedSet(new HashSet<>());
+    public final Set<Consumer<String>> additionListeners = ConcurrentHashMap.newKeySet();
 
     public StoreADUs(Path rootFolder) {
         logger.log(FINEST, "ADU rootFolder: " + rootFolder);
         this.rootFolder = rootFolder;
-    }
-
-    // TODO: remove this constructor after everything has been converted
-    public StoreADUs(Path rootFolder, boolean ignore) {
-        this(rootFolder);
     }
 
     public Metadata getMetadata(String clientId, String appId) {
@@ -325,8 +320,8 @@ public class StoreADUs {
             }
         }
 
-        synchronized (additionListeners) {
-            additionListeners.forEach(c -> c.accept(appId));
+        for (var c : List.copyOf(additionListeners)) {
+            c.accept(appId);
         }
         return aduPath.toFile();
     }
