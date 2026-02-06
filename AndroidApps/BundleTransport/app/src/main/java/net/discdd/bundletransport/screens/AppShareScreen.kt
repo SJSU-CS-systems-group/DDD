@@ -154,9 +154,9 @@ fun QRCodeDisplay(instructions: String, contentURL: String) {
     )
     generateQRCode(contentURL, 200, 200)?.let { wifiQrCodeBitmap ->
         Image(
-            bitmap = wifiQrCodeBitmap.asImageBitmap(),
-            contentDescription = "QR Code",
-            modifier = Modifier.size(200.dp).padding(start = 10.dp, top = 5.dp, end = 15.dp, bottom = 8.dp)
+                bitmap = wifiQrCodeBitmap.asImageBitmap(),
+                contentDescription = "QR Code",
+                modifier = Modifier.size(200.dp).padding(start = 10.dp, top = 5.dp, end = 15.dp, bottom = 8.dp)
         )
     }
 }
