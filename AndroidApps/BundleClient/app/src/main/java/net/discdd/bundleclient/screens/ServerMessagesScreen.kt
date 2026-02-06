@@ -144,7 +144,6 @@ fun ServerMessagesScreen(
 
     //Popup when notif is clicked
     dialogFor?.let { notif ->
-        val whenText = notif.date
         Dialog(onDismissRequest = { dialogFor = null }) {
             Surface(
                     shape = MaterialTheme.shapes.medium,
@@ -152,10 +151,9 @@ fun ServerMessagesScreen(
             ) {
                 Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Notification", style = MaterialTheme.typography.titleLarge)
-                    Text(notif.message, style = MaterialTheme.typography.bodyLarge)
-
+                    Text(notif.message ?: "", style = MaterialTheme.typography.bodyLarge)
                     Text(
-                            "Sent: $whenText",
+                            "Sent: ${notif.date?.toString() ?: "Unknown date"}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -197,7 +195,7 @@ private fun NotifCard(
                     ) {}
                 }
                 Text(
-                        text = notif.message,
+                        text = notif.message ?: "",
                         modifier = Modifier
                                 .weight(1f),
                         maxLines = 1,
@@ -205,7 +203,7 @@ private fun NotifCard(
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                        text = notif.date.toString()
+                        text = notif.date?.toString() ?: ""
                 )
             }
         }
