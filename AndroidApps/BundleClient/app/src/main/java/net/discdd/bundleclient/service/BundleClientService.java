@@ -30,19 +30,15 @@ import androidx.core.app.ServiceCompat;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import androidx.room.Room;
 import net.discdd.bundleclient.BuildConfig;
 import net.discdd.bundleclient.R;
 import net.discdd.bundleclient.service.wifiDirect.DDDWifiDirect;
-import net.discdd.bundleclient.service.wifiDirect.DDDWifiDirectDevice;
 import net.discdd.client.bundletransmission.ClientBundleTransmission;
 import net.discdd.client.bundletransmission.ClientBundleTransmission.BundleExchangeCounts;
 import net.discdd.client.bundletransmission.ClientBundleTransmission.Statuses;
-import net.discdd.client.bundletransmission.ClientBundleTransmission.RecentTransport;
 import net.discdd.client.bundletransmission.TransportDevice;
-import net.discdd.datastore.ClientDataBase;
-import net.discdd.datastore.PersistentTransport;
-import net.discdd.datastore.PersistentTransportDao;
+import net.discdd.datastore.RecentTransport;
+import net.discdd.datastore.RecentTransportRepository;
 import net.discdd.datastore.providers.MessageProvider;
 import net.discdd.grpc.GetRecencyBlobResponse;
 import net.discdd.model.ADU;
@@ -58,10 +54,7 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -100,9 +93,7 @@ public class BundleClientService extends Service {
     private ClientBundleTransmission bundleTransmission;
     final private Observer<? super DDDWifiEventType> liveDataObserver = this::broadcastWifiEvent;
     private MutableLiveData<DDDWifiEventType> eventsLiveData;
-    private ClientDataBase db = Room.databaseBuilder(getApplicationContext(),
-                                                     ClientDataBase.class, "ClientDatabase").build();
-    private PersistentTransportDao transportDao = db.transportDao();
+    private final RecentTransportRepository transportRepository = new RecentTransportRepository(getApplication());
 
     public BundleClientService() {
         super();
@@ -276,7 +267,6 @@ public class BundleClientService extends Service {
 
     @Override
     public void onDestroy() {
-        transportDao.insertAll(convertToPersistentTransport(bundleTransmission.getRecentTransports()));
         instance.stopSelf();
         instance = null;
         if (dddWifi != null) {
@@ -304,9 +294,9 @@ public class BundleClientService extends Service {
             broadcastBundleClientLogEvent(R.string.failed_to_start_discovery_s, e.getMessage());
             // not the end of the world, we can still try
         }
-        var recentTransports = bundleTransmission.getRecentTransports();
+        var recentTransports = transportRepository.getRecentTransports();
         for (var transport : recentTransports) {
-            if (transport.getDevice() instanceof DDDWifiDevice && ClientBundleTransmission.doesTransportHaveNewData(transport)) {
+            if (transport.getDevice() instanceof DDDWifiDevice && RecentTransportRepository.doesTransportHaveNewData(transport)) {
                 var bc = exchangeWith((DDDWifiDevice) transport.getDevice());
                 exchangeCounts.add(bc);
                 logger.log(INFO,
@@ -511,7 +501,7 @@ public class BundleClientService extends Service {
     }
 
     public RecentTransport[] getRecentTransports() {
-        return bundleTransmission.getRecentTransports();
+        return transportRepository.getRecentTransports();
     }
 
     public boolean isDiscoveryActive() {
@@ -519,7 +509,7 @@ public class BundleClientService extends Service {
     }
 
     public RecentTransport getRecentTransport(DDDWifiDevice peer) {
-        return Arrays.stream(bundleTransmission.getRecentTransports())
+        return Arrays.stream(transportRepository.getRecentTransports())
                 .filter(rt -> peer.equals(rt.getDevice()))
                 .findFirst()
                 .orElse(new RecentTransport(peer, GetRecencyBlobResponse.getDefaultInstance()));
@@ -532,10 +522,10 @@ public class BundleClientService extends Service {
     }
 
     public void peersUpdated() {
-        dddWifi.listDevices().forEach(device -> bundleTransmission.processDiscoveredPeer(device, device.getRecencyBlob()));
+        dddWifi.listDevices().forEach(device -> transportRepository.processDiscoveredPeer(device, device.getRecencyBlob()));
         // expire peers that haven't been seen for a minute
         long expirationTime = System.currentTimeMillis() - 60 * 1000;
-        bundleTransmission.expireNotSeenPeers(expirationTime);
+        transportRepository.expireNotSeenPeers(expirationTime);
     }
 
     public void wifiPermissionGranted() {
@@ -552,30 +542,5 @@ public class BundleClientService extends Service {
 
     public class BundleClientServiceBinder extends Binder {
         public BundleClientService getService() {return BundleClientService.this;}
-    }
-
-    private PersistentTransport[] convertToPersistentTransport(RecentTransport[] recentTransports) {
-        PersistentTransport[] persistentTransports = new PersistentTransport[recentTransports.length];
-        int i = 0;
-        for (var recentTransport : recentTransports) {
-            var persistentTransport = new PersistentTransport(recentTransport);
-            persistentTransport.setDevice(recentTransport.getDevice());
-            persistentTransport.setLastExchange(recentTransport.getLastExchange());
-            persistentTransport.setLastSeen(recentTransport.getLastSeen());
-            persistentTransport.setRecencyTime(recentTransport.getRecencyTime());
-            persistentTransport.setRecencyBlobResponse(recentTransport.getRecencyBlobResponse());
-            persistentTransports[i] = persistentTransport;
-        }
-        return persistentTransports;
-    }
-
-    private HashMap<TransportDevice, RecentTransport> convertToHashSetTransport(List<PersistentTransport> persistentTransports) {
-        HashMap<TransportDevice, ClientBundleTransmission.RecentTransport> transportSet = new HashMap<>();
-        for (var persistentTransport : persistentTransports) {
-            transportSet.put(new DDDWifiDirectDevice(null, persistentTransport.getTransportId(), persistentTransport.getRecencyBlobResponse()),
-                             new RecentTransport(persistentTransport.getDevice(), persistentTransport.get));
-        }
-        return transportSet;
-
     }
 }

@@ -1,14 +1,24 @@
 package net.discdd.datastore;
 
+import android.content.Context;
 import androidx.room.Database;
-import androidx.room.DatabaseConfiguration;
-import androidx.room.InvalidationTracker;
+import androidx.room.Room;
 import androidx.room.RoomDatabase;
-import androidx.sqlite.db.SupportSQLiteOpenHelper;
-import org.jetbrains.annotations.NotNull;
 
-@Database(entities = { PersistentTransport.class }, version = 1)
+@Database(entities = { RecentTransport.class }, version = 1)
 public abstract class ClientDataBase extends RoomDatabase {
-    public abstract PersistentTransportDao transportDao();
 
+    private static ClientDataBase INSTANCE;
+
+    public static synchronized ClientDataBase getInstance(Context context) {
+        if (INSTANCE == null) {
+            INSTANCE = Room.databaseBuilder(context.getApplicationContext(), ClientDataBase.class, "ClientDataBase")
+                    .fallbackToDestructiveMigration()
+                    .build();
+        }
+
+        return INSTANCE;
+    }
+
+    public abstract RecentTransportDao transportDao();
 }

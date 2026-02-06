@@ -7,7 +7,7 @@ import net.discdd.client.bundletransmission.*;
 import net.discdd.grpc.GetRecencyBlobResponse;
 
 @Entity
-public class PersistentTransport {
+public class RecentTransport {
     @PrimaryKey @NonNull
     final private String transportId;
     private TransportDevice device;
@@ -16,12 +16,15 @@ public class PersistentTransport {
     private long recencyTime;
     private GetRecencyBlobResponse recencyBlobResponse;
 
-    public PersistentTransport(ClientBundleTransmission.RecentTransport transport) {
-        this.transportId = transport.device.getId();
-        this.lastExchange = 0;
-        this.lastSeen = 0;
-        this.recencyTime = 0;
-        this.recencyBlobResponse = null;
+    public RecentTransport(TransportDevice device) {
+        this.device = device;
+        this.transportId = device.getId();
+    }
+
+    public RecentTransport(TransportDevice device, GetRecencyBlobResponse recencyBlobResponse) {
+        this.device = device;
+        this.transportId = device.getId();
+        this.recencyBlobResponse = recencyBlobResponse;
     }
 
     @NonNull

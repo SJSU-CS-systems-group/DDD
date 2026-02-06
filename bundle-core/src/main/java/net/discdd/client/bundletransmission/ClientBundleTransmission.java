@@ -64,7 +64,6 @@ import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -234,90 +233,6 @@ public class ClientBundleTransmission {
         }
         var newBundleId = bundleSecurity.generateNewBundleId();
         return generateNewBundle(newBundleId);
-    }
-
-    /**
-     * Used to track in memory recently seen transports.
-     * All times are in milliseconds since epoch.
-     */
-    @Getter
-    public static class RecentTransport {
-        public TransportDevice device;
-        /* @param lastExchange time of last bundle exchange */
-        private long lastExchange;
-        /* @param lastSeen time of last device discovery */
-        private long lastSeen;
-        /* @param recencyTime time from the last recencyBlob received */
-        private long recencyTime;
-        /* @param recencyBlobResponse the latest recencyBlobResponse received */
-        private GetRecencyBlobResponse recencyBlobResponse;
-
-        public RecentTransport(TransportDevice device) {
-            this.device = device;
-        }
-
-        public RecentTransport(TransportDevice device, GetRecencyBlobResponse recencyBlobResponse) {
-            this.device = device;
-            this.recencyBlobResponse = recencyBlobResponse;
-        }
-
-        public RecentTransport(TransportDevice device, long lastExchange, long lastSeen,
-                               long recencyTime, GetRecencyBlobResponse recencyBlobResponse) {
-            this.device = device;
-            this.lastExchange = lastExchange;
-            this.lastSeen = lastSeen;
-            this.recencyTime = recencyTime;
-            this.recencyBlobResponse = recencyBlobResponse;
-        }
-    }
-
-    final private HashMap<TransportDevice, RecentTransport> recentTransports = new HashMap<>();
-
-    public static boolean doesTransportHaveNewData(RecentTransport transport) {
-        return transport.recencyBlobResponse.getRecencyBlob().getBlobTimestamp() > transport.lastExchange;
-    }
-
-    public RecentTransport[] getRecentTransports() {
-        synchronized (recentTransports) {
-            return recentTransports.values().toArray(new RecentTransport[0]);
-        }
-    }
-
-    public RecentTransport getRecentTransport(TransportDevice device) {
-        synchronized (recentTransports) {
-            return recentTransports.get(device);
-        }
-    }
-
-    public void processDiscoveredPeer(TransportDevice device, GetRecencyBlobResponse response) {
-        synchronized (recentTransports) {
-            RecentTransport recentTransport = recentTransports.computeIfAbsent(device, RecentTransport::new);
-            recentTransport.device = device;
-            recentTransport.lastSeen = System.currentTimeMillis();
-            recentTransport.recencyBlobResponse = response;
-        }
-    }
-
-    public void timestampExchangeWithTransport(TransportDevice device) {
-        if (device == TransportDevice.SERVER_DEVICE) return;
-        synchronized (recentTransports) {
-            RecentTransport recentTransport = recentTransports.computeIfAbsent(device, RecentTransport::new);
-            var now = System.currentTimeMillis();
-            recentTransport.lastExchange = now;
-            recentTransport.lastSeen = now;
-        }
-    }
-
-    public void expireNotSeenPeers(long expirationTime) {
-        synchronized (recentTransports) {
-            recentTransports.values().removeIf(transport -> transport.getLastSeen() < expirationTime);
-        }
-    }
-
-    public void addPeers(HashMap<TransportDevice, RecentTransport> devices) {
-        synchronized (recentTransports) {
-            recentTransports.putAll(devices);
-        }
     }
 
     // returns true if the blob is more recent than previously seen
