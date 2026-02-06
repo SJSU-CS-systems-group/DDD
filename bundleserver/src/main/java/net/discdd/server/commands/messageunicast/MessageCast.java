@@ -42,7 +42,7 @@ public class MessageCast implements Callable<Integer> {
         repo.findAll().forEach(m -> {
             MessageKey key = m.messageKey;
             System.out.printf(
-                    "transportId=%s, messageNumber=%d | %s%n",
+                    "transportId=%s, messageNumber=%d message= %s%n",
                     key.getTransportId(),
                     key.getMessageNumber(),
                     m.message
