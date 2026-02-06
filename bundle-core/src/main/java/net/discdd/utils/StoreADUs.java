@@ -35,7 +35,8 @@ public class StoreADUs {
     private static final Logger logger = Logger.getLogger(StoreADUs.class.getName());
     /**
      * Listeners that will be notified when a new ADU is added.
-     * This member utilizes a ConcurrentHashMap to allow concurrent access, and listeners can directly add or remove themselves.
+     * This member utilizes a ConcurrentHashMap to allow concurrent access, and listeners can directly add or remove
+     * themselves.
      * When a new ADU is added, all listeners will be notified with the appId of added ADUs.
      */
     public final Set<Consumer<String>> additionListeners = ConcurrentHashMap.newKeySet();
