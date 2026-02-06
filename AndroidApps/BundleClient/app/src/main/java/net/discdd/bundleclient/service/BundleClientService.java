@@ -93,7 +93,7 @@ public class BundleClientService extends Service {
     private ClientBundleTransmission bundleTransmission;
     final private Observer<? super DDDWifiEventType> liveDataObserver = this::broadcastWifiEvent;
     private MutableLiveData<DDDWifiEventType> eventsLiveData;
-    private final RecentTransportRepository transportRepository = new RecentTransportRepository(getApplication());
+    private RecentTransportRepository transportRepository;
 
     public BundleClientService() {
         super();
@@ -219,7 +219,7 @@ public class BundleClientService extends Service {
                                                           inServerIdentity.readAllBytes(),
                                                           inServerSignedPre.readAllBytes(),
                                                           inServerRatchet.readAllBytes());
-                bundleTransmission = new ClientBundleTransmission(clientPaths, this::processIncomingADU);
+                bundleTransmission = new ClientBundleTransmission(clientPaths, this::processIncomingADU, transportRepository);
             } catch (IOException e) {
                 logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
             }
@@ -259,6 +259,7 @@ public class BundleClientService extends Service {
         // hacky, but chatGPT seems to like it.
         // this allows MessageProvider to access the service
         instance = this;
+        transportRepository = new RecentTransportRepository(getApplication());
         if (BuildConfig.DEBUG) {
             StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().detectAll().penaltyLog().build());
             StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().detectAll().penaltyLog().build());

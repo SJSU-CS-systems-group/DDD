@@ -1,6 +1,7 @@
 package net.discdd.bundleclient.service.wifiDirect;
 
 import android.net.wifi.p2p.WifiP2pDevice;
+import net.discdd.bundleclient.service.DDDWifi;
 import net.discdd.bundleclient.service.DDDWifiDevice;
 import net.discdd.grpc.GetRecencyBlobResponse;
 
@@ -8,6 +9,10 @@ public class DDDWifiDirectDevice implements DDDWifiDevice {
     public WifiP2pDevice wifiP2pDevice;
     final public String transportId;
     public GetRecencyBlobResponse recencyBlob;
+
+    public DDDWifiDirectDevice(String transportId) {
+        this.transportId = transportId;
+    }
 
     public DDDWifiDirectDevice(WifiP2pDevice wifiP2pDevice, String transportId, GetRecencyBlobResponse recencyBlob) {
         this.wifiP2pDevice = wifiP2pDevice;
@@ -25,6 +30,9 @@ public class DDDWifiDirectDevice implements DDDWifiDevice {
 
     @Override
     public String getDescription() {
+        if (wifiP2pDevice == null) {
+            return " ";
+        }
         return this.wifiP2pDevice.deviceName;
     }
 

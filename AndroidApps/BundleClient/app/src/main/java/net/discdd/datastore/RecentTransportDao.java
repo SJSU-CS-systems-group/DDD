@@ -1,26 +1,26 @@
 package net.discdd.datastore;
 
-import androidx.room.Delete;
+import androidx.room.Dao;
 import androidx.room.Insert;
 import androidx.room.Query;
+import androidx.room.Upsert;
 
 import java.util.List;
 
+@Dao
 public interface RecentTransportDao {
     @Insert
     void insertAll(RecentTransport... transports);
 
-    @Delete
-    void deleteAll();
+    @Upsert
+    void insertOrUpdate(RecentTransport transport);
 
-    @Query("SELECT * FROM RecentTransport")
+    @Query("SELECT * FROM RecentTransports")
     List<RecentTransport> getAllTransports();
 
-    @Query("SELECT * FROM RecentTransport WHERE transportId = :transportId")
+    @Query("SELECT * FROM RecentTransports WHERE transportId = :transportId")
     RecentTransport getByTransportId(String transportId);
 
-    @Query("DELETE FROM RecentTransport WHERE transportId = :transportId")
+    @Query("DELETE FROM RecentTransports WHERE transportId = :transportId")
     void deleteByTransportId(String transportId);
-
-    void insert(RecentTransport transport);
 }

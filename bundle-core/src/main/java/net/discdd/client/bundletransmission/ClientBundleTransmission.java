@@ -95,14 +95,17 @@ public class ClientBundleTransmission {
     final private ClientRouting clientRouting;
     @Getter
     final private ClientPaths clientPaths;
+    private TransportRepository transportRepository;
 
-    public ClientBundleTransmission(ClientPaths clientPaths, Consumer<ADU> aduConsumer) throws
+    // TransportRepository is null when we are running tests
+    public ClientBundleTransmission(ClientPaths clientPaths, Consumer<ADU> aduConsumer, TransportRepository transportRepository) throws
             WindowExceptions.BufferOverflow, IOException, InvalidKeyException,
             RoutingExceptions.ClientMetaDataFileException, NoSuchAlgorithmException {
         this.clientPaths = clientPaths;
         this.bundleSecurity = new ClientBundleSecurity(clientPaths);
         this.applicationDataManager = new ClientApplicationDataManager(clientPaths, aduConsumer);
         this.clientRouting = ClientRouting.initializeInstance(clientPaths);
+        this.transportRepository = transportRepository;
     }
 
     public void registerBundleId(String bundleId) throws IOException, WindowExceptions.BufferOverflow,
@@ -256,13 +259,10 @@ public class ClientBundleTransmission {
                                               recencyBlobResponse.getRecencyBlobSignature().toByteArray())) {
             throw new RecencyException("Recency blob signature verification failed");
         }
-        synchronized (recentTransports) {
-            RecentTransport recentTransport = recentTransports.computeIfAbsent(device, RecentTransport::new);
-            if (recencyBlob.getBlobTimestamp() > recentTransport.recencyTime) {
-                recentTransport.recencyTime = recencyBlob.getBlobTimestamp();
-                return true;
-            }
-            return false;
+        if (transportRepository != null) {
+            return transportRepository.isRecencyBlobNew(device, recencyBlob);
+        } else {
+            return true;
         }
     }
 
@@ -352,7 +352,9 @@ public class ClientBundleTransmission {
                     logger.log(INFO, "Recency blob processed for " + transportSenderId);
                 }
 
-                timestampExchangeWithTransport(device);
+                if (transportRepository != null) {
+                    transportRepository.timestampExchange(device);
+                }
                 var clientSecurity = bundleSecurity.getClientSecurity();
                 var bundleRequests = getNextBundles();
                 PublicKeyMap publicKeyMap = PublicKeyMap.newBuilder()

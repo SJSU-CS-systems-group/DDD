@@ -123,7 +123,7 @@ public class LocalAduSendReceive extends StdOutMixin {
         var clientPaths = new ClientPaths(rootPath, null, null, null);
         var bundleTransmission = new ClientBundleTransmission(clientPaths, (ADU adu) -> {
             out().println("Received ADU: " + adu);
-        });
+        }, null);
         var bundleExchangeCounts = bundleTransmission.doExchangeWithTransport(TransportDevice.SERVER_DEVICE,
                                                                               serverAddress.getHostName(),
                                                                               serverAddress.getPort(),

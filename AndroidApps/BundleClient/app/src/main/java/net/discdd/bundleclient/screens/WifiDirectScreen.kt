@@ -73,7 +73,7 @@ fun WifiDirectScreen(
         state.dialogPeer?.let { peer ->
             AlertDialog(
                 onDismissRequest = { viewModel.dismissDialog() },
-                title = { Text(text = peer.device.description) },
+                title = { Text(text = peer.deviceName) },
                 text = {
                     Column {
                         Text(text = "TransportId: ${peer.deviceId}")
@@ -235,7 +235,7 @@ fun PeerItem(
         TextButton(
             onClick = onItemClick
         ) {
-            Text(text = peer.device.description.ifBlank { "TransportID: " + peer.device.id })
+            Text(text = peer.deviceName.ifBlank { "TransportID: " + peer.device.id })
         }
         Button(
             onClick = onExchangeClick,
