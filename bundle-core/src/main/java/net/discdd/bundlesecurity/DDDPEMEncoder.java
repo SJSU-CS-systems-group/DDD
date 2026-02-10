@@ -42,12 +42,6 @@ public class DDDPEMEncoder {
     public static final String publicKeyType = "PUBLIC KEY";
     public static final String CERTIFICATE = "CERTIFICATE";
 
-//    public static String encode(byte[] bytes, String type) {
-//        String base64EncodedPrivateKey = Base64.getUrlEncoder().encodeToString(bytes);
-//        return String.format(KEY_HEADER, type) + "\n" + base64EncodedPrivateKey + "\n" + String.format(KEY_FOOTER,
-//        type);
-//    }
-
     public static String encode(byte[] bytes, String type) {
         if (type.equals(CERTIFICATE)) {
             return String.format(KEY_HEADER, type) + "\n" + Base64.getEncoder().encodeToString(bytes) + "\n" +
