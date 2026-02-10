@@ -314,7 +314,7 @@ public class ServerBundleTransmission {
                                  Collections.singletonList(senderId) :
                                  this.bundleRouting.getClientsForTransportId(senderId);
 
-        logger.log(SEVERE,
+        logger.log(INFO,
                    "[BundleTransmission] Found " + clientIds.size() + " reachable from the sender: " +
                            bundleSenderToString(senderType, senderId));
         Set<String> deletionSet = new HashSet<>(bundleIdsPresent);
