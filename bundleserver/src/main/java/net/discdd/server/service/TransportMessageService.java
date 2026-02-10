@@ -24,18 +24,15 @@ public class TransportMessageService {
         for (int attempt = 0; attempt < maxRetries; attempt++) {
             Long max = repo.findMaxMessageNumber(transportId);
             long next = (max == null ? 1L : max + 1);
-            TransportMessage msg = new TransportMessage(
-                    new MessageKey(transportId, next),
-                    messageText,
-                    LocalDateTime.now(),
-                    null
-            );
+            TransportMessage msg =
+                    new TransportMessage(new MessageKey(transportId, next), messageText, LocalDateTime.now(), null);
             try {
                 return repo.save(msg);
             } catch (org.springframework.dao.DataIntegrityViolationException e) {
                 // Another transaction inserted the same messageNumber, retry
                 if (attempt == maxRetries - 1) {
-                    throw new RuntimeException("Failed to create message after " + maxRetries + " attempts due to concurrent inserts.", e);
+                    throw new RuntimeException(
+                            "Failed to create message after " + maxRetries + " attempts due to concurrent inserts.", e);
                 }
                 // else, loop and retry
             }

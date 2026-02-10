@@ -10,7 +10,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface TransportMessageRepository extends CrudRepository<TransportMessage, MessageKey> {
 
-    @Query("SELECT MAX(t.messageKey.messageNumber) FROM TransportMessage t WHERE t.messageKey.transportId = :transportId")
+    @Query("SELECT MAX(t.messageKey.messageNumber) FROM TransportMessage t WHERE t.messageKey.transportId = " +
+            ":transportId")
     Long findMaxMessageNumber(@Param("transportId") String transportId);
 
 }

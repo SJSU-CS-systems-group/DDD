@@ -10,10 +10,7 @@ import picocli.CommandLine;
 import javax.annotation.Nonnull;
 import java.util.concurrent.Callable;
 
-@CommandLine.Command(
-        name = "message-transport",
-        description = "Manage transport messages by transportId"
-)
+@CommandLine.Command(name = "message-transport", description = "Manage transport messages by transportId")
 @Component
 public class MessageCast implements Callable<Integer> {
 
@@ -28,12 +25,9 @@ public class MessageCast implements Callable<Integer> {
     @CommandLine.Parameters(arity = "1", index = "0", hidden = true)
     String ignoredConfigFile;
 
-    @CommandLine.Command(
-            name = "list",
-            description = "List all transport messages"
-    )
+    @CommandLine.Command(name = "list", description = "List all transport messages")
     int list() {
-        if(repo.count() == 0) {
+        if (repo.count() == 0) {
             System.out.println("There are no messages in the table");
             return 0;
         }
@@ -41,53 +35,33 @@ public class MessageCast implements Callable<Integer> {
         System.out.println("Transport Messages:");
         repo.findAll().forEach(m -> {
             MessageKey key = m.messageKey;
-            System.out.printf(
-                    "transportId=%s, messageNumber=%d message= %s%n",
-                    key.getTransportId(),
-                    key.getMessageNumber(),
-                    m.message
-            );
+            System.out.printf("transportId=%s, messageNumber=%d message= %s%n",
+                              key.getTransportId(),
+                              key.getMessageNumber(),
+                              m.message);
         });
         return 0;
     }
 
-    @CommandLine.Command(
-            name = "add",
-            description = "Add a new message to a transportId"
-    )
-    int add(
-            @CommandLine.Parameters(index = "0", description = "Transport ID")
-                    @Nonnull
-            String transportId,
+    @CommandLine.Command(name = "add", description = "Add a new message to a transportId")
+    int add(@CommandLine.Parameters(index = "0", description = "Transport ID") @Nonnull String transportId,
 
-            @CommandLine.Parameters(index = "1", description = "Message text")
-                    @Nonnull
-            String messageText
-    ) {
+            @CommandLine.Parameters(index = "1", description = "Message text") @Nonnull String messageText) {
         TransportMessage msg = service.createMessage(transportId, messageText);
 
-        System.out.printf(
-                "Created message: transportId=%s, messageNumber=%d, message=%s, messageDate=%s%n",
-                msg.messageKey.getTransportId(),
-                msg.messageKey.getMessageNumber(),
-                msg.message,
-                msg.messageDate.toString()
-        );
+        System.out.printf("Created message: transportId=%s, messageNumber=%d, message=%s, messageDate=%s%n",
+                          msg.messageKey.getTransportId(),
+                          msg.messageKey.getMessageNumber(),
+                          msg.message,
+                          msg.messageDate.toString());
 
         return 0;
     }
 
-    @CommandLine.Command(
-            name = "delete",
-            description = "Delete a message with transportId and messageNumber"
-    )
-    int delete(
-            @CommandLine.Parameters(index = "0", description = "Transport ID")
-            String transportId,
+    @CommandLine.Command(name = "delete", description = "Delete a message with transportId and messageNumber")
+    int delete(@CommandLine.Parameters(index = "0", description = "Transport ID") String transportId,
 
-            @CommandLine.Parameters(index = "1", description = "Message number")
-            long messageNumber
-    ) {
+               @CommandLine.Parameters(index = "1", description = "Message number") long messageNumber) {
         MessageKey key = new MessageKey(transportId, messageNumber);
 
         if (!repo.existsById(key)) {
@@ -96,18 +70,11 @@ public class MessageCast implements Callable<Integer> {
         }
 
         repo.deleteById(key);
-        System.out.printf(
-                "Deleted message: transportId=%s, messageNumber=%d%n",
-                transportId,
-                messageNumber
-        );
+        System.out.printf("Deleted message: transportId=%s, messageNumber=%d%n", transportId, messageNumber);
         return 0;
     }
 
-    @CommandLine.Command(
-            name = "delete-all",
-            description = "Delete all transport messages"
-    )
+    @CommandLine.Command(name = "delete-all", description = "Delete all transport messages")
     int deleteAll() {
         long count = repo.count();
 
