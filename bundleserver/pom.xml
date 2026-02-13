@@ -106,7 +106,6 @@
         <dependency>
             <groupId>info.picocli</groupId>
             <artifactId>picocli-spring-boot-starter</artifactId>
-            <version>${picocli.version}</version>
         </dependency>
         <dependency>
             <groupId>io.leego</groupId>

@@ -73,7 +73,6 @@
         <dependency>
             <groupId>info.picocli</groupId>
             <artifactId>picocli</artifactId>
-            <version>${picocli.version}</version>
         </dependency>
         <dependency>
             <groupId>net.discdd</groupId>
