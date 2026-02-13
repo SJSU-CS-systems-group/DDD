@@ -194,9 +194,7 @@ public class ServerApplicationDataManager {
     }
 
     public String getClientIdForBundle(String encryptedBundleId) {
-        return bundleMetadataRepository.findById(encryptedBundleId)
-                .map(m -> m.clientId)
-                .orElse(null);
+        return bundleMetadataRepository.findById(encryptedBundleId).map(m -> m.clientId).orElse(null);
     }
 
     public boolean newAckNeeded(String lastSentBundleId) {

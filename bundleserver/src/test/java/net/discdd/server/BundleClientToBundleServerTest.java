@@ -216,8 +216,7 @@ public class BundleClientToBundleServerTest extends End2EndTest {
         receiveBundle();
 
         java.nio.file.Path clientDir = serverBundleTransmission.getClientSendDirectory(clientId);
-        assertTrue(java.nio.file.Files.isDirectory(clientDir),
-                   "Per-client directory should exist: " + clientDir);
+        assertTrue(java.nio.file.Files.isDirectory(clientDir), "Per-client directory should exist: " + clientDir);
 
         java.io.File[] files = clientDir.toFile().listFiles();
         assertNotNull(files, "Client directory should be listable");
@@ -226,7 +225,8 @@ public class BundleClientToBundleServerTest extends End2EndTest {
         // Root toSendDirectory should contain only subdirectories, no bare bundle files
         java.nio.file.Path toSendRoot = bundleServerConfig.getBundleTransmission().getToSendDirectory();
         java.io.File[] rootFiles = toSendRoot.toFile().listFiles(java.io.File::isFile);
-        assertEquals(0, rootFiles == null ? 0 : rootFiles.length,
+        assertEquals(0,
+                     rootFiles == null ? 0 : rootFiles.length,
                      "No bundle files should exist directly in the flat toSendDirectory root");
     }
 
@@ -259,8 +259,7 @@ public class BundleClientToBundleServerTest extends End2EndTest {
 
         java.io.File[] after = clientDir.toFile().listFiles();
         assertNotNull(after);
-        assertEquals(1, after.length,
-                     "cleanupOldBundles() should leave exactly one bundle in the client directory");
+        assertEquals(1, after.length, "cleanupOldBundles() should leave exactly one bundle in the client directory");
 
         String newBundleId = after[0].getName();
         assertNotEquals(oldBundleId, newBundleId, "The surviving file should be the newly generated bundle");
