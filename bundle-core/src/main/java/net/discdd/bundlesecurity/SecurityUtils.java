@@ -224,7 +224,9 @@ public class SecurityUtils {
             ZipEntry entry = zis.getNextEntry();
             while (entry != null) {
                 File newFile = new File(destDir, entry.getName());
-                if (entry.isDirectory()) {
+                if (!newFile.toPath().startsWith(destDirPath)) {
+                    throw new SecurityException("Zip Slip detected: " + entry.getName());
+                } else if (entry.isDirectory()) {
                     newFile.mkdirs();
                 } else {
                     File parent = newFile.getParentFile();
