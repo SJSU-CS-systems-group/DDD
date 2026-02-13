@@ -54,13 +54,8 @@ public class SecurityUtils {
     public static final String BUNDLE_SECURITY_DIR = "BundleSecurity";
     public static final String PUB_KEY_HEADER = "-----BEGIN EC PUBLIC KEY-----";
     public static final String PUB_KEY_FOOTER = "-----END EC PUBLIC KEY-----";
-    public static final String PVT_KEY_HEADER = "-----BEGIN EC PRIVATE KEY-----";
-    public static final String PVT_KEY_FOOTER = "-----END EC PRIVATE KEY-----";
-    public static final String EC_ENCRYPTED_PUBLIC_KEY_HEADER = "-----BEGIN EC PRIVATE KEY-----";
-    public static final String EC_ENCRYPTED_PUBLIC_KEY_FOOTER = "-----END EC PRIVATE KEY-----";
 
     // ----------------- TransportSecurity -----------------
-    public static final String TRANSPORT_KEY_PATH = "Transport_Keys";
     public static final String TRANSPORT = "transport";
 
     // ----------------- ClientSecurity -----------------
@@ -82,8 +77,6 @@ public class SecurityUtils {
     public static final String SERVER_SIGNEDPRE_PRIVATE_KEY = "serverSignedPreKey.pvt";
     public static final String SERVER_RATCHET_PRIVATE_KEY = "serverRatchetKey.pvt";
 
-    public static final String ADAPTER = "adapter";
-
     // ----------------- GrpcSecurity -----------------
     public static final String GRPC_SECURITY_PATH = "GrpcSecurity";
     public static final String GRPC_PUBLIC_KEY = "%sGrpcPub.pub";
@@ -91,7 +84,6 @@ public class SecurityUtils {
     public static final String GRPC_CERT = "%sGrpcCert.crt";
 
     // ----------------- Other Utils -----------------
-    public static final int CHUNKSIZE = 1024 * 1024; /* 1MB */
     public static final int ITERATIONS = 65536;
     public static final int KEYLEN = 256;
     private static final Logger logger = Logger.getLogger(SecurityUtils.class.getName());
