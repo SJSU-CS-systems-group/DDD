@@ -175,7 +175,7 @@ public class End2EndTest {
 
         String secretKey = Base64.getUrlEncoder().encodeToString(agreement);
 
-        return SecurityUtils.encryptAesCbcPkcs5Deterministic(secretKey, bundleID);
+        return SecurityUtils.encryptAesCbcPkcs5(secretKey, bundleID, true);
 
     }
 

@@ -156,45 +156,23 @@ public class SecurityUtils {
         return generateID(publicKey);
     }
 
-    // Deterministic encryption: derives the IV from HMAC(sharedSecret, plainText) so that
-    // encrypting the same plaintext with the same key always yields the same ciphertext.
-    // Used for bundle ID encryption where client and server must independently compute matching IDs.
-    public static String encryptAesCbcPkcs5Deterministic(String sharedSecret, String plainText) throws
+    public static String encryptAesCbcPkcs5(String sharedSecret, String plainText, boolean isBundleID) throws
             NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException,
             InvalidAlgorithmParameterException, java.security.InvalidKeyException, IllegalBlockSizeException,
             BadPaddingException {
-        Mac mac = Mac.getInstance("HmacSHA256");
-        mac.init(new SecretKeySpec(sharedSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
-        byte[] iv = Arrays.copyOf(mac.doFinal(plainText.getBytes(StandardCharsets.UTF_8)), 16);
-
-        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-        KeySpec spec = new PBEKeySpec(sharedSecret.toCharArray(), sharedSecret.getBytes(), ITERATIONS, KEYLEN);
-        SecretKey skey = factory.generateSecret(spec);
-        SecretKeySpec secretKeySpec = new SecretKeySpec(skey.getEncoded(), "AES");
-
-        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
-
-        byte[] encryptedData = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
-
-        byte[] combined = new byte[iv.length + encryptedData.length];
-        System.arraycopy(iv, 0, combined, 0, iv.length);
-        System.arraycopy(encryptedData, 0, combined, iv.length, encryptedData.length);
-
-        return Base64.getUrlEncoder().encodeToString(combined);
-    }
-
-    public static String encryptAesCbcPkcs5(String sharedSecret, String plainText) throws NoSuchAlgorithmException,
-            InvalidKeySpecException, NoSuchPaddingException, InvalidAlgorithmParameterException,
-            java.security.InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
-        SecureRandom random = new SecureRandom();
         byte[] iv = new byte[16];
-        random.nextBytes(iv);
+        if (isBundleID) {
+            // encrypting the same plaintext with the same key always yields the same ciphertext.
+            // Used for bundle ID encryption where client and server must independently compute matching IDs.
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(sharedSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            iv = Arrays.copyOf(mac.doFinal(plainText.getBytes(StandardCharsets.UTF_8)), 16);
+        } else {
+            SecureRandom random = new SecureRandom();
+            random.nextBytes(iv);
+        }
 
-        /* Create SecretKeyFactory object */
         SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-
-        /* Create KeySpec object */
         KeySpec spec = new PBEKeySpec(sharedSecret.toCharArray(), sharedSecret.getBytes(), ITERATIONS, KEYLEN);
         SecretKey skey = factory.generateSecret(spec);
         SecretKeySpec secretKeySpec = new SecretKeySpec(skey.getEncoded(), "AES");
@@ -204,7 +182,6 @@ public class SecurityUtils {
 
         byte[] encryptedData = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
 
-        // Prepend IV to ciphertext so decrypt can recover it
         byte[] combined = new byte[iv.length + encryptedData.length];
         System.arraycopy(iv, 0, combined, 0, iv.length);
         System.arraycopy(encryptedData, 0, combined, iv.length, encryptedData.length);
