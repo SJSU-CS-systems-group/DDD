@@ -105,10 +105,8 @@ public class DDDPEMEncoder {
         ECKeyPair ephemeralKeyPair = Curve.generateKeyPair();
         byte[] agreement = Curve.calculateAgreement(serverIdentityPublicKey, ephemeralKeyPair.getPrivateKey());
         String sharedSecret = Base64.getEncoder().encodeToString(agreement);
-        String encryptedClientPubKey = encryptAesCbcPkcs5(sharedSecret,
-                                                          Base64.getEncoder()
-                                                                  .encodeToString(clientPublicKey.serialize()),
-                                                          false);
+        String encryptedClientPubKey =
+                encryptAesCbcPkcs5(sharedSecret, Base64.getEncoder().encodeToString(clientPublicKey.serialize()));
         return (EC_ENCRYPTED_PUBLIC_KEY_HEADER + "\n" +
                 Base64.getUrlEncoder().encodeToString(encryptedClientPubKey.getBytes()) + "\n" +
                 Base64.getUrlEncoder().encodeToString(ephemeralKeyPair.getPublicKey().serialize()) + "\n" +
