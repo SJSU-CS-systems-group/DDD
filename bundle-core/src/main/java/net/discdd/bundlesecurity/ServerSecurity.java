@@ -323,7 +323,7 @@ public class ServerSecurity {
         String sharedSecret = null;
         sharedSecret = getsharedSecret(clientID);
 
-        return SecurityUtils.encryptAesCbcPkcs5(sharedSecret, bundleID, true);
+        return SecurityUtils.encryptAesCbcPkcs5(sharedSecret, bundleID);
     }
 
     public String createEncryptedBundleId(String clientId, long bundleCounter, boolean downstream) throws
