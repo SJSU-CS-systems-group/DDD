@@ -59,3 +59,83 @@ here is an example settings.xml:
 </settings>
 ```
 
+# Deployment
+
+The bundleserver is deployed via a GitHub Actions pipeline (`.github/workflows/deploy.yml`) triggered on pushes to `main` (excluding Android-only and CI-only changes).
+
+## Pipeline stages
+
+1. **build** — builds all Maven modules on a self-hosted runner and uploads bundleserver, k9, and CLI jars as artifacts
+2. **deploy-canary** — SCPs jars to the canary server and restarts `bundleserver` and `k9` systemd services
+3. **test-canary** — runs CLI sanity tests against the canary server (initialize client, add ADU, exchange)
+4. **deploy-production** — requires manual approval in the GitHub Actions UI, then SCPs jars to production and restarts services
+
+## Required GitHub setup
+
+Two GitHub Environments must be configured in repo Settings → Environments:
+- **canary** — no protection rules
+- **production** — "Required reviewers" protection rule enabled
+
+Each environment needs these secrets:
+- `DEPLOY_SSH_HOST` — server IP or hostname
+- `DEPLOY_SSH_USER` — SSH user for deployment
+- `SERVER_KEYS_PATH` — (canary only) local path on the `ddd` runner where canary server public keys are stored (set up once during runner setup)
+
+## One-time setup on `ddd` runner
+
+SSH access to both canary and production servers must be configured once on the self-hosted `ddd` runner:
+
+1. Generate an SSH key pair (or reuse an existing one):
+   ```bash
+   ssh-keygen -t ed25519 -f ~/.ssh/deploy_key -N ""
+   ```
+2. Add the public key (`~/.ssh/deploy_key.pub`) to `~/.ssh/authorized_keys` on both the canary and production servers
+3. Add both servers to `known_hosts`:
+   ```bash
+   ssh-keyscan -H <canary-host> >> ~/.ssh/known_hosts
+   ssh-keyscan -H <prod-host> >> ~/.ssh/known_hosts
+   ```
+4. Configure SSH to use the deploy key by default (add to `~/.ssh/config`):
+   ```
+   Host <canary-host>
+     IdentityFile ~/.ssh/deploy_key
+   Host <prod-host>
+     IdentityFile ~/.ssh/deploy_key
+   ```
+5. Copy the canary server's public keys to a local directory on the runner:
+   ```bash
+   mkdir -p ~/canary-server-keys
+   scp <canary-user>@<canary-host>:<path-to-server-keys>/server_identity.pub ~/canary-server-keys/
+   scp <canary-user>@<canary-host>:<path-to-server-keys>/server_signed_pre.pub ~/canary-server-keys/
+   scp <canary-user>@<canary-host>:<path-to-server-keys>/server_ratchet.pub ~/canary-server-keys/
+   ```
+6. Set `SERVER_KEYS_PATH` secret in the `canary` GitHub Environment to `~/canary-server-keys` (or the absolute path)
+
+## One-time setup on canary server
+
+The canary server must be set up to mirror the production server:
+
+1. Install Java 17
+2. Set up MySQL and create the `dtn_server_db` database
+3. Generate BundleSecurity server keys (same process as production) and place them at the configured path
+4. Create systemd service files for `bundleserver` and `k9` (same as production)
+5. Configure `application.yml` with canary-specific DB credentials, paths, and ports
+6. Ensure the deploy user has `sudo` access to restart the systemd services
+
+## CLI sanity test commands
+
+The CLI tool (`apps/cli/target/cli-*.jar`) is used for canary testing:
+
+```bash
+# Initialize client storage with server keys and address
+java -jar cli.jar bc initializeStorage <dir> --server-keys <keys-dir> --server <host>:<port>
+
+# Add a test ADU
+java -jar cli.jar bc addAdu <dir> <appid> <adu-file>
+
+# Perform exchange (upload + download bundles)
+java -jar cli.jar bc exchange <dir>
+```
+
+If any step exits non-zero, the test-canary job fails and blocks the production approval gate.
+
