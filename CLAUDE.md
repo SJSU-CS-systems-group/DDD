@@ -61,7 +61,7 @@ here is an example settings.xml:
 
 # Deployment
 
-The bundleserver is deployed via a GitHub Actions pipeline (`.github/workflows/deploy.yml`) triggered on pushes to `main` (excluding Android-only and CI-only changes).
+The bundleserver is deployed via a GitHub Actions pipeline (`.github/workflows/deploy.yml`) triggered on pushes to `main` (excluding Android-only and CI-only changes). It can also be triggered manually from any branch via the "Run workflow" button in the Actions UI (`workflow_dispatch`).
 
 ## Pipeline stages
 
@@ -102,14 +102,14 @@ SSH access to both canary and production servers must be configured once on the 
    Host <prod-host>
      IdentityFile ~/.ssh/deploy_key
    ```
-5. Copy the canary server's public keys to a local directory on the runner:
+5. Copy the canary server's BundleSecurity **public** keys to a local directory on the runner (the CLI sanity test needs these to initialize a test client — keys are static and only need to be copied once):
    ```bash
    mkdir -p ~/canary-server-keys
    scp <canary-user>@<canary-host>:<path-to-server-keys>/server_identity.pub ~/canary-server-keys/
    scp <canary-user>@<canary-host>:<path-to-server-keys>/server_signed_pre.pub ~/canary-server-keys/
    scp <canary-user>@<canary-host>:<path-to-server-keys>/server_ratchet.pub ~/canary-server-keys/
    ```
-6. Set `SERVER_KEYS_PATH` secret in the `canary` GitHub Environment to `~/canary-server-keys` (or the absolute path)
+6. Set `SERVER_KEYS_PATH` secret in the `canary` GitHub Environment to the absolute path (e.g. `/home/<runner-user>/canary-server-keys`)
 
 ## One-time setup on canary server
 
