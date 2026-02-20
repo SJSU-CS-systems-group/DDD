@@ -15,9 +15,15 @@ permissions:
 
 jobs:
   build:
-    runs-on: ddd
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
 
       - name: Configure Maven
         run: |
@@ -54,30 +60,57 @@ jobs:
 
   deploy-canary:
     needs: build
-    runs-on: ddd
+    runs-on: ubuntu-latest
     environment: canary
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
 
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.DEPLOY_SSH_HOST }} >> ~/.ssh/known_hosts
+
       - name: Deploy to canary
         run: |
-          scp bundleserver-jar/bundleserver-*.jar ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:~/bundleserver.jar
-          scp k9-jar/k9-*.jar ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:~/k9.jar
-          ssh ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }} "sudo systemctl restart bundleserver && sudo systemctl restart k9"
+          scp -i ~/.ssh/deploy_key bundleserver-jar/bundleserver-*.jar ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:~/bundleserver.jar
+          scp -i ~/.ssh/deploy_key k9-jar/k9-*.jar ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:~/k9.jar
+          ssh -i ~/.ssh/deploy_key ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }} "sudo systemctl restart bundleserver && sudo systemctl restart k9"
 
       - name: Wait for server startup
         run: sleep 15
 
   test-canary:
     needs: deploy-canary
-    runs-on: ddd
+    runs-on: ubuntu-latest
     environment: canary
     steps:
       - name: Download CLI jar
         uses: actions/download-artifact@v4
         with:
           name: cli-jar
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.DEPLOY_SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Copy server public keys from canary
+        run: |
+          mkdir -p /tmp/canary-server-keys
+          scp -i ~/.ssh/deploy_key ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:${{ secrets.SERVER_KEYS_PATH }}/server_identity.pub /tmp/canary-server-keys/
+          scp -i ~/.ssh/deploy_key ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:${{ secrets.SERVER_KEYS_PATH }}/server_signed_pre.pub /tmp/canary-server-keys/
+          scp -i ~/.ssh/deploy_key ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:${{ secrets.SERVER_KEYS_PATH }}/server_ratchet.pub /tmp/canary-server-keys/
 
       - name: Run sanity tests
         run: |
@@ -86,9 +119,8 @@ jobs:
           CANARY_PORT="7778"
 
           # Test 1: Initialize a fresh client
-          rm -rf /tmp/canary-test-client
           java -jar $CLI_JAR bc initializeStorage /tmp/canary-test-client \
-            --server-keys ${{ secrets.SERVER_KEYS_PATH }} \
+            --server-keys /tmp/canary-server-keys \
             --server ${CANARY_HOST}:${CANARY_PORT}
 
           # Test 2: Add a test ADU
@@ -100,18 +132,25 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: rm -rf /tmp/canary-test-client /tmp/test-adu.txt
+        run: rm -rf /tmp/canary-test-client /tmp/test-adu.txt /tmp/canary-server-keys
 
   deploy-production:
     needs: test-canary
-    runs-on: ddd
+    runs-on: ubuntu-latest
     environment: production
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
 
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.DEPLOY_SSH_HOST }} >> ~/.ssh/known_hosts
+
       - name: Deploy to production
         run: |
-          scp bundleserver-jar/bundleserver-*.jar ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:~/bundleserver.jar
-          scp k9-jar/k9-*.jar ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:~/k9.jar
-          ssh ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }} "sudo systemctl restart bundleserver && sudo systemctl restart k9"
+          scp -i ~/.ssh/deploy_key bundleserver-jar/bundleserver-*.jar ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:~/bundleserver.jar
+          scp -i ~/.ssh/deploy_key k9-jar/k9-*.jar ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:~/k9.jar
+          ssh -i ~/.ssh/deploy_key ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }} "sudo systemctl restart bundleserver && sudo systemctl restart k9"

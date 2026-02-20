@@ -79,7 +79,8 @@ Two GitHub Environments must be configured in repo Settings → Environments:
 Each environment needs these secrets:
 - `DEPLOY_SSH_HOST` — server IP or hostname
 - `DEPLOY_SSH_USER` — SSH user for deployment
-- `SERVER_KEYS_PATH` — (canary only) local path on the `ddd` runner where canary server public keys are stored (set up once during runner setup)
+- `DEPLOY_SSH_KEY` — SSH private key for authentication (generated once, stored as a secret)
+- `SERVER_KEYS_PATH` — (canary only) path on the canary server where BundleSecurity public keys are stored
 
 ## One-time setup on `ddd` runner
 
@@ -90,26 +91,7 @@ SSH access to both canary and production servers must be configured once on the 
    ssh-keygen -t ed25519 -f ~/.ssh/deploy_key -N ""
    ```
 2. Add the public key (`~/.ssh/deploy_key.pub`) to `~/.ssh/authorized_keys` on both the canary and production servers
-3. Add both servers to `known_hosts`:
-   ```bash
-   ssh-keyscan -H <canary-host> >> ~/.ssh/known_hosts
-   ssh-keyscan -H <prod-host> >> ~/.ssh/known_hosts
-   ```
-4. Configure SSH to use the deploy key by default (add to `~/.ssh/config`):
-   ```
-   Host <canary-host>
-     IdentityFile ~/.ssh/deploy_key
-   Host <prod-host>
-     IdentityFile ~/.ssh/deploy_key
-   ```
-5. Copy the canary server's BundleSecurity **public** keys to a local directory on the runner (the CLI sanity test needs these to initialize a test client — keys are static and only need to be copied once):
-   ```bash
-   mkdir -p ~/canary-server-keys
-   scp <canary-user>@<canary-host>:<path-to-server-keys>/server_identity.pub ~/canary-server-keys/
-   scp <canary-user>@<canary-host>:<path-to-server-keys>/server_signed_pre.pub ~/canary-server-keys/
-   scp <canary-user>@<canary-host>:<path-to-server-keys>/server_ratchet.pub ~/canary-server-keys/
-   ```
-6. Set `SERVER_KEYS_PATH` secret in the `canary` GitHub Environment to the absolute path (e.g. `/home/<runner-user>/canary-server-keys`)
+3. Add the private key (`~/.ssh/deploy_key`) as the `DEPLOY_SSH_KEY` secret in both GitHub Environments
 
 ## One-time setup on canary server
 
