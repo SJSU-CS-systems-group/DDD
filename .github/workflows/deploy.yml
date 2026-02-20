@@ -117,6 +117,7 @@ jobs:
           java -jar $CLI_JAR bc addAdu /tmp/canary-test-client echo /tmp/test-adu.txt
 
           # Test 3: Exchange with server (upload + download)
+          # exits non-zero if either side of the exchange fails
           java -jar $CLI_JAR bc exchange /tmp/canary-test-client
 
       - name: Cleanup
