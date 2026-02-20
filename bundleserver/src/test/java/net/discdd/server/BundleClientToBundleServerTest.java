@@ -20,6 +20,8 @@ import net.discdd.grpc.PublicKeyMap;
 import net.discdd.grpc.Status;
 import net.discdd.model.Bundle;
 import net.discdd.pathutils.ClientPaths;
+import net.discdd.server.bundletransmission.ServerBundleTransmission;
+import net.discdd.server.config.BundleServerConfig;
 import net.discdd.server.repository.SentAduDetailsRepository;
 import net.discdd.tls.DDDNettyTLS;
 import net.discdd.utils.Constants;
@@ -59,6 +61,10 @@ import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 import static net.discdd.client.bundletransmission.TransportDevice.FAKE_DEVICE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(classes = { BundleServerApplication.class, End2EndTest.End2EndTestInitializer.class })
 @TestMethodOrder(MethodOrderer.MethodName.class)
@@ -78,6 +84,10 @@ public class BundleClientToBundleServerTest extends End2EndTest {
 
     @Autowired
     private SentAduDetailsRepository sentAduDetailsRepository;
+    @Autowired
+    private ServerBundleTransmission serverBundleTransmission;
+    @Autowired
+    private BundleServerConfig bundleServerConfig;
 
     @BeforeAll
     static void setUp() throws Exception {
@@ -195,6 +205,66 @@ public class BundleClientToBundleServerTest extends End2EndTest {
                 .setRecencyBlob(rsp.getRecencyBlob().toBuilder().setBlobTimestamp(System.currentTimeMillis() - 100_000))
                 .build();
         Assertions.assertThrows(IOException.class, () -> bundleTransmission.processRecencyBlob(FAKE_DEVICE, oldBlob));
+    }
+
+    /**
+     * Verifies that after a download, the server writes the bundle under
+     * toSendDirectory/{clientId}/ and not as a flat file directly in toSendDirectory/.
+     */
+    @Test
+    void test6BundleWrittenToPerClientDirectory() throws Exception {
+        receiveBundle();
+
+        java.nio.file.Path clientDir = serverBundleTransmission.getClientSendDirectory(clientId);
+        assertTrue(java.nio.file.Files.isDirectory(clientDir), "Per-client directory should exist: " + clientDir);
+
+        java.io.File[] files = clientDir.toFile().listFiles();
+        assertNotNull(files, "Client directory should be listable");
+        assertTrue(files.length >= 1, "At least one bundle file should be in " + clientDir);
+
+        // Root toSendDirectory should contain only subdirectories, no bare bundle files
+        java.nio.file.Path toSendRoot = bundleServerConfig.getBundleTransmission().getToSendDirectory();
+        java.io.File[] rootFiles = toSendRoot.toFile().listFiles(java.io.File::isFile);
+        assertEquals(0,
+                     rootFiles == null ? 0 : rootFiles.length,
+                     "No bundle files should exist directly in the flat toSendDirectory root");
+    }
+
+    /**
+     * Verifies that cleanupOldBundles() removes the previous bundle file when a new one is generated.
+     */
+    @Test
+    void test7OldBundleDeletedWhenNewBundleGenerated() throws Exception {
+        // Capture the bundle currently on disk for this client
+        java.nio.file.Path clientDir = serverBundleTransmission.getClientSendDirectory(clientId);
+        java.io.File[] before = clientDir.toFile().listFiles();
+        assertNotNull(before);
+        assertEquals(1, before.length, "Should have exactly one bundle before new generation");
+        String oldBundleId = before[0].getName();
+
+        // Push new ADU data from the service adapter so the server will generate a fresh bundle
+        testAppServiceAdapter.handleRequest((req, rsp) -> {
+            rsp.onNext(net.discdd.grpc.ExchangeADUsResponse.newBuilder()
+                               .setLastADUIdReceived(0)
+                               .addAdus(net.discdd.grpc.AppDataUnit.newBuilder()
+                                                .setAduId(99)
+                                                .setData(com.google.protobuf.ByteString.copyFromUtf8("cleanup-test"))
+                                                .build())
+                               .build());
+            rsp.onCompleted();
+        });
+
+        // Trigger a new bundle generation cycle
+        receiveBundle();
+
+        java.io.File[] after = clientDir.toFile().listFiles();
+        assertNotNull(after);
+        assertEquals(1, after.length, "cleanupOldBundles() should leave exactly one bundle in the client directory");
+
+        String newBundleId = after[0].getName();
+        assertNotEquals(oldBundleId, newBundleId, "The surviving file should be the newly generated bundle");
+        assertFalse(clientDir.resolve(oldBundleId).toFile().exists(),
+                    "Old bundle file should have been deleted by cleanupOldBundles()");
     }
 
     // send the bundle the same way the client does. we should move this code into bundle transmission so we are really
