@@ -80,7 +80,6 @@ Each environment needs these secrets:
 - `DEPLOY_SSH_HOST` — server IP or hostname
 - `DEPLOY_SSH_USER` — SSH user for deployment
 - `DEPLOY_SSH_KEY` — SSH private key for authentication (generated once, stored as a secret)
-- `SERVER_KEYS_PATH` — (canary only) path on the canary server where BundleSecurity public keys are stored
 
 ## One-time SSH setup
 
