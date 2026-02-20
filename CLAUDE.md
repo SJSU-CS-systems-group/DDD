@@ -65,7 +65,7 @@ The bundleserver is deployed via a GitHub Actions pipeline (`.github/workflows/d
 
 ## Pipeline stages
 
-1. **build** — builds all Maven modules on a self-hosted runner and uploads bundleserver, k9, and CLI jars as artifacts
+1. **build** — builds all Maven modules on a GitHub-hosted runner (`ubuntu-latest`) and uploads bundleserver, k9, and CLI jars as artifacts
 2. **deploy-canary** — SCPs jars to the canary server and restarts `bundleserver` and `k9` systemd services
 3. **test-canary** — runs CLI sanity tests against the canary server (initialize client, add ADU, exchange)
 4. **deploy-production** — requires manual approval in the GitHub Actions UI, then SCPs jars to production and restarts services
@@ -82,22 +82,22 @@ Each environment needs these secrets:
 - `DEPLOY_SSH_KEY` — SSH private key for authentication (generated once, stored as a secret)
 - `SERVER_KEYS_PATH` — (canary only) path on the canary server where BundleSecurity public keys are stored
 
-## One-time setup on `ddd` runner
+## One-time SSH setup
 
-SSH access to both canary and production servers must be configured once on the self-hosted `ddd` runner:
+SSH access to both canary and production servers must be configured once:
 
-1. Generate an SSH key pair (or reuse an existing one):
+1. Generate an SSH key pair on any machine:
    ```bash
-   ssh-keygen -t ed25519 -f ~/.ssh/deploy_key -N ""
+   ssh-keygen -t ed25519 -f deploy_key -N ""
    ```
-2. Add the public key (`~/.ssh/deploy_key.pub`) to `~/.ssh/authorized_keys` on both the canary and production servers
-3. Add the private key (`~/.ssh/deploy_key`) as the `DEPLOY_SSH_KEY` secret in both GitHub Environments
+2. Add the public key (`deploy_key.pub`) to `~/.ssh/authorized_keys` on both the canary and production servers
+3. Add the private key (`deploy_key`) as the `DEPLOY_SSH_KEY` secret in both GitHub Environments — the workflow writes it to disk on each run
 
 ## One-time setup on canary server
 
 The canary server must be set up to mirror the production server:
 
-1. Install Java 17
+1. Install Java 21
 2. Set up MySQL and create the `dtn_server_db` database
 3. Generate BundleSecurity server keys (same process as production) and place them at the configured path
 4. Create systemd service files for `bundleserver` and `k9` (same as production)
