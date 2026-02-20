@@ -13,6 +13,7 @@ import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceRequest;
 import android.net.wifi.p2p.nsd.WifiP2pServiceRequest;
+import android.os.Build;
 import android.os.HandlerThread;
 import androidx.annotation.RequiresPermission;
 import androidx.core.app.ActivityCompat;
@@ -244,6 +245,13 @@ public class DDDWifiDirect implements DDDWifi {
     AtomicBoolean isReceiverRegistered = new AtomicBoolean(false);
     private void registerBroadcastReceiver() {
         wifiP2pManager.requestP2pState(wifiChannel, this::processStateChange);
+        //sync discovery state at a registration time, not just from broadcasts
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {   //TO DO: delete because we always target SDK_INIT above 33
+            wifiP2pManager.requestDiscoveryState(wifiChannel, state -> {
+                discoveryActive = state == WifiP2pManager.WIFI_P2P_DISCOVERY_STARTED;
+                eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DISCOVERY_CHANGED);
+            });
+        }
         if (isReceiverRegistered.getAndSet(true)) return;
         bundleClientService.registerReceiver(broadcastReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
     }
