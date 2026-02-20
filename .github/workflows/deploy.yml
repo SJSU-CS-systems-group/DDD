@@ -87,6 +87,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: canary
     steps:
+      - uses: actions/checkout@v4
+
       - name: Download CLI jar
         uses: actions/download-artifact@v4
         with:
@@ -98,29 +100,16 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.DEPLOY_SSH_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Copy server public keys from canary
-        run: |
-          mkdir -p /tmp/canary-server-keys
-          scp -i ~/.ssh/deploy_key ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:${{ secrets.SERVER_KEYS_PATH }}/server_identity.pub /tmp/canary-server-keys/
-          scp -i ~/.ssh/deploy_key ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:${{ secrets.SERVER_KEYS_PATH }}/server_signed_pre.pub /tmp/canary-server-keys/
-          scp -i ~/.ssh/deploy_key ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:${{ secrets.SERVER_KEYS_PATH }}/server_ratchet.pub /tmp/canary-server-keys/
-
       - name: Run sanity tests
         run: |
           CLI_JAR=$(ls cli-*.jar)
           CANARY_HOST="${{ secrets.DEPLOY_SSH_HOST }}"
           CANARY_PORT="7778"
+          SERVER_KEYS="apps/cli/src/main/resources/Server_Keys"
 
           # Test 1: Initialize a fresh client
           java -jar $CLI_JAR bc initializeStorage /tmp/canary-test-client \
-            --server-keys /tmp/canary-server-keys \
+            --server-keys $SERVER_KEYS \
             --server ${CANARY_HOST}:${CANARY_PORT}
 
           # Test 2: Add a test ADU
@@ -132,7 +121,7 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: rm -rf /tmp/canary-test-client /tmp/test-adu.txt /tmp/canary-server-keys
+        run: rm -rf /tmp/canary-test-client /tmp/test-adu.txt
 
   deploy-production:
     needs: test-canary
