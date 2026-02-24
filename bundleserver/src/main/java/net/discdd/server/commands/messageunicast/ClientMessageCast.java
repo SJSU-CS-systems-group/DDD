@@ -52,7 +52,7 @@ public class ClientMessageCast implements Callable<Integer> {
 
     static final class ClientMessagePayload {
         int v = 1;
-        String messageId;
+        long messageId;
         String sentAt;
         String message;
         boolean read = false;
@@ -127,15 +127,21 @@ public class ClientMessageCast implements Callable<Integer> {
                 names = "--message-id",
                 description = "Optional stable messageId for testing/dedupe"
         )
-        private String messageId;
+        private Long messageId;
 
         @Override
         public Integer call() {
             try {
                 ClientMessagePayload payload = new ClientMessagePayload();
-                payload.messageId = (messageId != null && !messageId.isBlank())
-                                    ? messageId
-                                    : "msg-" + UUID.randomUUID();
+                if (messageId != null) {
+                    payload.messageId = messageId;
+                } else {
+                    long id = UUID.randomUUID().getMostSignificantBits();
+                    if (id == Long.MIN_VALUE) {
+                        id = 0; // avoid abs overflow edge case
+                    }
+                    payload.messageId = Math.abs(id);
+                }
                 payload.sentAt = Instant.now().toString();
                 payload.message = messageText;
 
