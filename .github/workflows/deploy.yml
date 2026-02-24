@@ -35,7 +35,7 @@ jobs:
           </server></servers></settings>" > ~/.m2/settings.xml
 
       - name: Build
-        run: mvn -ntp clean install -Dmaven.test.skip=true
+        run: mvn -ntp clean install
 
       - name: Upload bundleserver jar
         uses: actions/upload-artifact@v4
