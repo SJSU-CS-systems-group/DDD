@@ -53,9 +53,8 @@ dependencies {
     compileOnly("com.google.auto.service:auto-service-annotations:1.1.1")
 
     // Compose migration
-    var composeBom = platform("androidx.compose:compose-bom:2025.02.00")
-    implementation(composeBom)
-    androidTestImplementation(composeBom)
+    implementation platform("androidx.compose:compose-bom:${rootProject.ext.composeBomVersion}")
+    androidTestImplementation("androidx.compose:compose-bom:${rootProject.ext.composeBomVersion}")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
