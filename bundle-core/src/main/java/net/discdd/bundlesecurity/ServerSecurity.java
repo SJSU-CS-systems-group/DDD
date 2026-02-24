@@ -142,23 +142,6 @@ public class ServerSecurity {
         Files.write(path.resolve(SecurityUtils.SERVER_RATCHET_PRIVATE_KEY), ourRatchetKey.getPrivateKey().serialize());
     }
 
-    private Path[] writeKeysToFiles(Path path, boolean writePvt) throws IOException {
-        /* Create Directory if it does not exist */
-        Files.createDirectories(path);
-
-        Path[] serverKeypaths = { path.resolve(SecurityUtils.SERVER_IDENTITY_KEY),
-                                  path.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY),
-                                  path.resolve(SecurityUtils.SERVER_RATCHET_KEY) };
-
-        if (writePvt) {
-            writePrivateKeys(path);
-        }
-        DDDPEMEncoder.createEncodedPublicKeyFile(ourIdentityKeyPair.getPublicKey().getPublicKey(), serverKeypaths[0]);
-        DDDPEMEncoder.createEncodedPublicKeyFile(ourSignedPreKey.getPublicKey(), serverKeypaths[1]);
-        DDDPEMEncoder.createEncodedPublicKeyFile(ourRatchetKey.getPublicKey(), serverKeypaths[2]);
-        return serverKeypaths;
-    }
-
     private void updateSessionRecord(ClientSession clientSession) {
         String clientID = clientSession.getClientID();
         var sessionStorePath = clientRootPath.resolve(clientID).resolve(SecurityUtils.SESSION_STORE_FILE);
@@ -246,13 +229,6 @@ public class ServerSecurity {
         return clientSession;
     }
 
-    private String getsharedSecret(ClientSession client) throws InvalidKeyException {
-        byte[] agreement =
-                Curve.calculateAgreement(client.IdentityKey.getPublicKey(), ourIdentityKeyPair.getPrivateKey());
-        String secretKey = Base64.getUrlEncoder().encodeToString(agreement);
-        return secretKey;
-    }
-
     private String getsharedSecret(ECPublicKey clientIdentitKey) throws InvalidKeyException {
         byte[] agreement = Curve.calculateAgreement(clientIdentitKey, ourIdentityKeyPair.getPrivateKey());
         String secretKey = Base64.getUrlEncoder().encodeToString(agreement);
@@ -306,18 +282,6 @@ public class ServerSecurity {
         updateSessionRecord(client);
     }
 
-    public Path[] createEncryptionHeader(Path encPath, String bundleID, ClientSession client) throws IOException {
-        var bundlePath = encPath.resolve(bundleID);
-
-        /* Create Directory if it does not exist */
-        Files.createDirectories(bundlePath);
-        /* Create Bundle ID File */
-        createBundleIDFile(bundleID, client, bundlePath);
-
-        /* Write Keys to Bundle directory */
-        return writeKeysToFiles(bundlePath, false);
-    }
-
     public String encryptBundleID(String bundleID, String clientID) throws GeneralSecurityException,
             InvalidKeyException, InvalidClientIDException, IOException {
         String sharedSecret = null;
@@ -332,11 +296,6 @@ public class ServerSecurity {
         return encryptBundleID(bundleId, clientId);
     }
 
-    public void createBundleIDFile(String bundleID, ClientSession client, Path bundlePath) throws IOException {
-        var bundleIDPath = bundlePath.resolve(SecurityUtils.BUNDLEID_FILENAME);
-        Files.write(bundleIDPath, bundleID.getBytes());
-    }
-
     public String decryptBundleID(String encryptedBundleID, String clientID) throws InvalidClientIDException,
             InvalidKeyException, GeneralSecurityException, IOException {
         String sharedSecret = null;
@@ -349,25 +308,9 @@ public class ServerSecurity {
         return new String(bundleBytes, StandardCharsets.UTF_8);
     }
 
-    public String getDecryptedBundleIDFromFile(Path bundlePath, String clientID) throws InvalidClientIDException,
-            GeneralSecurityException, InvalidKeyException, IOException {
-        var bundleIDPath = bundlePath.resolve(SecurityUtils.BUNDLEID_FILENAME);
-        byte[] encryptedBundleID = Files.readAllBytes(bundleIDPath);
-
-        return decryptBundleID(new String(encryptedBundleID, StandardCharsets.UTF_8), clientID);
-    }
-
     public String getBundleIDFromFile(Path bundlePath) throws IOException {
         byte[] bundleIDBytes = Files.readAllBytes(bundlePath.resolve(SecurityUtils.BUNDLEID_FILENAME));
         return new String(bundleIDBytes, StandardCharsets.UTF_8);
-    }
-
-    public Path getServerRootPath() {
-        return serverRootPath;
-    }
-
-    public Path getClientRootPath() {
-        return clientRootPath;
     }
 
     public long getCounterFromBundlePath(Path bundlePath, boolean direction) throws IOException, InvalidKeyException,
