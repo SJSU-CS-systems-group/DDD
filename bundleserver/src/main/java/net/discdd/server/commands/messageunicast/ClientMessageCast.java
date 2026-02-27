@@ -15,15 +15,10 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
-@CommandLine.Command(
-        name = "message-client",
-        description = "Manage client messages by clientId",
-        subcommands = {
-                ClientMessageCast.ListCmd.class,
-                ClientMessageCast.AddCmd.class,
-                ClientMessageCast.DeleteAllCmd.class
-        }
-)
+@CommandLine.Command(name = "message-client", description = "Manage client messages by clientId", subcommands = {
+        ClientMessageCast.ListCmd.class,
+        ClientMessageCast.AddCmd.class,
+        ClientMessageCast.DeleteAllCmd.class })
 @Component
 public class ClientMessageCast implements Callable<Integer> {
 
@@ -68,10 +63,8 @@ public class ClientMessageCast implements Callable<Integer> {
         @Nonnull
         private String clientId;
 
-        @CommandLine.Option(
-                names = "--display",
-                description = "Displays the JSON contents and metadata prepared to be sent."
-        )
+        @CommandLine.Option(names = "--display", description = "Displays the JSON contents and metadata prepared to " +
+                "be sent.")
         private boolean display;
 
         @Override
@@ -91,8 +84,7 @@ public class ClientMessageCast implements Callable<Integer> {
                     System.out.printf("aduId=%d bytes=%d file=%s%n",
                                       adu.getADUId(),
                                       adu.getSize(),
-                                      adu.getSource().getName()
-                    );
+                                      adu.getSource().getName());
 
                     if (display) {
                         byte[] raw = store.getADU(clientId, APP_ID, adu.getADUId());
@@ -123,10 +115,7 @@ public class ClientMessageCast implements Callable<Integer> {
         @Nonnull
         private String messageText;
 
-        @CommandLine.Option(
-                names = "--message-id",
-                description = "Optional stable messageId for testing/dedupe"
-        )
+        @CommandLine.Option(names = "--message-id", description = "Optional stable messageId for testing/dedupe")
         private Long messageId;
 
         @Override
@@ -156,10 +145,11 @@ public class ClientMessageCast implements Callable<Integer> {
                     return 1;
                 }
 
-                System.out.printf(
-                        "Queued client message for Client: %s: file=%s, messageId=%s, sentAt=%s%n",
-                        clientId, created.getName(), payload.messageId, payload.sentAt
-                );
+                System.out.printf("Queued client message for Client: %s: file=%s, messageId=%s, sentAt=%s%n",
+                                  clientId,
+                                  created.getName(),
+                                  payload.messageId,
+                                  payload.sentAt);
                 return 0;
 
             } catch (Exception e) {
@@ -192,7 +182,8 @@ public class ClientMessageCast implements Callable<Integer> {
 
                 store.deleteAllFilesUpTo(clientId, APP_ID, lastAdded);
                 System.out.printf("Deleted ALL queued client messages for Client: %s (up to %d)%n",
-                                  clientId, lastAdded);
+                                  clientId,
+                                  lastAdded);
                 return 0;
 
             } catch (Exception e) {
