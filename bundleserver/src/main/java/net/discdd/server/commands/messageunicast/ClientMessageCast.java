@@ -151,11 +151,6 @@ public class ClientMessageCast implements Callable<Integer> {
 
                 File created = store.addADU(clientId, APP_ID, bytes, -1);
 
-                if (created == null) {
-                    System.err.println("ADU was skipped (likely <= lastAduDeleted).");
-                    return 1;
-                }
-
                 System.out.printf(
                         "Queued client message for Client: %s: file=%s, messageId=%s, sentAt=%s%n",
                         clientId, created.getName(), payload.messageId, payload.sentAt
