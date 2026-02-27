@@ -16,7 +16,8 @@ public interface TransportMessageRepository extends CrudRepository<TransportMess
             ":transportId")
     Long findMaxMessageNumber(@Param("transportId") String transportId);
 
-    @Query("SELECT t FROM TransportMessage t WHERE t.messageKey.transportId = :transportId AND t.messageKey.messageNumber > :lastMessageId ORDER BY t.messageKey.messageNumber ASC")
+    @Query("SELECT t FROM TransportMessage t WHERE t.messageKey.transportId = :transportId AND t.messageKey" +
+            ".messageNumber > :lastMessageId ORDER BY t.messageKey.messageNumber ASC")
     List<TransportMessage> findMessagesAfter(@Param("transportId") String transportId,
                                              @Param("lastMessageId") long lastMessageId);
 
