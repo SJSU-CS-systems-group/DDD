@@ -152,7 +152,7 @@ public class ClientMessageCast implements Callable<Integer> {
                 File created = store.addADU(clientId, APP_ID, bytes, -1);
 
                 if (created == null) {
-                    System.err.println("ADU was skipped (likely <= lastAduDeleted).");
+                    System.err.println("Unexpected: addADU returned null");
                     return 1;
                 }
 
@@ -183,21 +183,16 @@ public class ClientMessageCast implements Callable<Integer> {
         public Integer call() {
             try {
                 StoreADUs store = parent.sendStore();
-                List<ADU> adus = store.getADUs(clientId, APP_ID).toList();
 
-                if (adus.isEmpty()) {
+                long lastAdded = store.getLastADUIdAdded(clientId, APP_ID);
+                if (lastAdded < 0) {
                     System.out.println("No queued client messages to delete for Client: " + clientId);
                     return 0;
                 }
 
-                long maxId = adus.stream()
-                        .mapToLong(ADU::getADUId)
-                        .max()
-                        .orElseThrow();
-
-                store.deleteAllFilesUpTo(clientId, APP_ID, maxId);
+                store.deleteAllFilesUpTo(clientId, APP_ID, lastAdded);
                 System.out.printf("Deleted ALL queued client messages for Client: %s (up to %d)%n",
-                                  clientId, maxId);
+                                  clientId, lastAdded);
                 return 0;
 
             } catch (Exception e) {
