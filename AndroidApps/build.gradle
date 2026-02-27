@@ -6,6 +6,7 @@ buildscript {
         appVersionCode = 14
         appVersionName = '0.3-beta0'
         composeBomVersion = '2025.02.00'
+        junitVersion = '4.13.2'
     }
     repositories {
         google()
