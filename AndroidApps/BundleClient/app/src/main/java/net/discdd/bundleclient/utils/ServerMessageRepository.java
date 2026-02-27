@@ -40,12 +40,4 @@ public class ServerMessageRepository {
             serverMessageDao.deleteById(messageId);
         });
     }
-
-    public void seedSampleMessages(List<ServerMessage> sampleMessages) {
-        AppDatabase.runOnDatabaseExecutor(() -> {
-            if (serverMessageDao.count() == 0) {
-                serverMessageDao.insertAll(sampleMessages);
-            }
-        });
-    }
 }
