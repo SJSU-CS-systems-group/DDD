@@ -103,26 +103,12 @@ jobs:
       - name: Run sanity tests
         run: |
           CLI_JAR=$(ls cli-*.jar)
-          CANARY_HOST="${{ secrets.DEPLOY_SSH_HOST }}"
-          CANARY_PORT="7778"
-          SERVER_KEYS="apps/cli/src/main/resources/Server_Keys"
-
-          # Test 1: Initialize a fresh client
-          java -jar $CLI_JAR bc initializeStorage /tmp/canary-test-client \
-            --server-keys $SERVER_KEYS \
-            --server ${CANARY_HOST}:${CANARY_PORT}
-
-          # Test 2: Add a test ADU
-          echo "canary-sanity-test-$(date +%s)" > /tmp/test-adu.txt
-          java -jar $CLI_JAR bc addAdu /tmp/canary-test-client echo /tmp/test-adu.txt
-
-          # Test 3: Exchange with server (upload + download)
-          # exits non-zero if either side of the exchange fails
-          java -jar $CLI_JAR bc exchange /tmp/canary-test-client
-
-      - name: Cleanup
-        if: always()
-        run: rm -rf /tmp/canary-test-client /tmp/test-adu.txt
+          bash scripts/canary-test.sh \
+            "$CLI_JAR" \
+            apps/cli/src/main/resources/Server_Keys \
+            ${{ secrets.DEPLOY_SSH_HOST }} \
+            7778 \
+            ${{ secrets.TEST_EMAIL }}
 
   deploy-production:
     needs: test-canary
