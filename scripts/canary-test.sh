@@ -115,7 +115,7 @@ echo "=== Step 6: Exchange to upload email, then poll for reply ==="
 java -jar "$CLI_JAR" bc exchange "$CLIENT_DIR"
 
 for attempt in $(seq 1 15); do
-    echo "Exchange attempt $attempt/30 (waiting for reply from $TARGET_EMAIL)..."
+    echo "Exchange attempt $attempt/15 (waiting for reply from $TARGET_EMAIL)..."
     sleep 20
     java -jar "$CLI_JAR" bc exchange "$CLIENT_DIR"
 
