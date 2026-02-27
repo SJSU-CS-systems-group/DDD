@@ -23,7 +23,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Refresh
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 import androidx.compose.material3.*
@@ -39,11 +38,11 @@ import androidx.compose.ui.window.Dialog
 import net.discdd.bundleclient.utils.ServerMessage
 import net.discdd.bundleclient.utils.rememberNoFlingSwipeToDismissBoxState
 import net.discdd.bundleclient.viewmodels.ServerMessagesViewModel
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun ServerMessagesScreen(
         viewModel: ServerMessagesViewModel = viewModel(),
-        onRefresh: () -> Unit = { }
 ) {
     val notifications by viewModel.messages.observeAsState(emptyList())
     val unreadCount = notifications.count { !it.isRead }
@@ -59,7 +58,7 @@ fun ServerMessagesScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxSize()
         ) {
-            //Header (# unread notifs and refresh button)
+            //Header (# unread notifs)
             item(key = "header") {
                 Row(
                         modifier = Modifier
@@ -71,15 +70,6 @@ fun ServerMessagesScreen(
                             text = "New Notifications: ${unreadCount}",
                             fontSize = 20.sp
                     )
-                    Spacer(Modifier.weight(1f))
-                    FilledTonalButton(
-                            onClick = { onRefresh() },
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh", modifier = Modifier.size(20.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Refresh")
-                    }
                 }
             }
             items(notifications, key = { it.messageId }) { notification ->
@@ -203,7 +193,7 @@ private fun NotifCard(
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                        text = notif.date?.toString() ?: ""
+                        text = notif.date?.format(DateTimeFormatter.ofPattern("M/d h:mm a")) ?: ""
                 )
             }
         }

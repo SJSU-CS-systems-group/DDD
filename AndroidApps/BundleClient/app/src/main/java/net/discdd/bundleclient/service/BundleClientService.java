@@ -37,6 +37,7 @@ import net.discdd.client.bundletransmission.ClientBundleTransmission;
 import net.discdd.client.bundletransmission.ClientBundleTransmission.BundleExchangeCounts;
 import net.discdd.client.bundletransmission.ClientBundleTransmission.Statuses;
 import net.discdd.client.bundletransmission.TransportDevice;
+import net.discdd.bundleclient.utils.ServerMessageAduHandler;
 import net.discdd.datastore.providers.MessageProvider;
 import net.discdd.grpc.GetRecencyBlobResponse;
 import net.discdd.model.ADU;
@@ -247,6 +248,9 @@ public class BundleClientService extends Service {
             }
         } else {
             insertedAppIds.add(adu.getAppId());
+            if (ServerMessageAduHandler.APP_ID.equals(adu.getAppId())) {
+                ServerMessageAduHandler.handle(getApplicationContext(), adu);
+            }
         }
     }
 
