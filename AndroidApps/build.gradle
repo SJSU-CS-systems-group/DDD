@@ -5,6 +5,7 @@ buildscript {
         kotlin_version = '1.9.25'
         appVersionCode = 14
         appVersionName = '0.3-beta0'
+        gsonVersion = '2.10.1'
         composeBomVersion = '2025.02.00'
         junitVersion = '4.13.2'
     }
