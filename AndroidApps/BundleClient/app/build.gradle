@@ -94,7 +94,7 @@ dependencies {
     // DDD common core
     implementation 'net.discdd:bundle-core:0.0.2'
     //implementation 'org.conscrypt:conscrypt-android:2.5.3'
-    implementation 'com.google.code.gson:gson:2.8.7'
+    implementation "com.google.code.gson:gson:${rootProject.ext.gsonVersion}"
     implementation group: 'commons-io', name: 'commons-io', version: '2.4'
     implementation 'org.apache.commons:commons-text:1.9'
     //JSON
