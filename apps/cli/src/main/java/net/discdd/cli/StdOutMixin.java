@@ -12,7 +12,6 @@ public class StdOutMixin {
         return cmd().getErr();
     }
 
-    @SuppressWarnings("")
     final public PrintWriter out() {
         return cmd().getOut();
     }

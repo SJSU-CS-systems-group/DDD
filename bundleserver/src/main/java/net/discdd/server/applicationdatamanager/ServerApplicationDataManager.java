@@ -188,8 +188,13 @@ public class ServerApplicationDataManager {
         details.forEach(d -> lastAdus.put(d.appId, d.aduIdRangeEnd));
         return registeredAppAdapterRepository.findAllAppIds().stream().anyMatch(app -> {
             var lastStoredAdu = sendADUsStorage.getLastADUIdAdded(clientId, app);
-            return lastStoredAdu > lastAdus.getOrDefault(app, 0L);
+            var lastDeletedAdu = sendADUsStorage.getLastADUIdDeleted(clientId, app);
+            return lastStoredAdu > Math.max(lastAdus.getOrDefault(app, 0L), lastDeletedAdu);
         });
+    }
+
+    public String getClientIdForBundle(String encryptedBundleId) {
+        return bundleMetadataRepository.findById(encryptedBundleId).map(m -> m.clientId).orElse(null);
     }
 
     public boolean newAckNeeded(String lastSentBundleId) {

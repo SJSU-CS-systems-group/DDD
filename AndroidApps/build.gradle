@@ -6,6 +6,7 @@ buildscript {
         appVersionCode = 14
         appVersionName = '0.3-beta0'
         gsonVersion = '2.10.1'
+        composeBomVersion = '2025.02.00'
     }
     repositories {
         google()
