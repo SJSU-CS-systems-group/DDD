@@ -9,8 +9,10 @@ import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
