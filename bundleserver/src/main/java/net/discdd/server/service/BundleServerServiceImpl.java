@@ -5,11 +5,15 @@ import io.grpc.stub.StreamObserver;
 import net.discdd.grpc.BundleInventoryRequest;
 import net.discdd.grpc.BundleInventoryResponse;
 import net.discdd.grpc.BundleServerServiceGrpc;
+import net.discdd.grpc.CheckMessagesRequest;
+import net.discdd.grpc.CheckMessagesResponse;
 import net.discdd.grpc.CrashReportRequest;
 import net.discdd.grpc.CrashReportResponse;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.grpc.GrpcService;
+import net.discdd.grpc.ServerMessage;
 import net.discdd.grpc.Status;
+import net.discdd.server.repository.TransportMessageRepository;
 import net.discdd.server.bundletransmission.ServerBundleTransmission;
 import net.discdd.tls.DDDTLSUtil;
 import net.discdd.tls.NettyServerCertificateInterceptor;
@@ -39,6 +43,9 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
 
     @Autowired
     private ServerBundleTransmission bundleTransmission;
+
+    @Autowired
+    private TransportMessageRepository transportMessageRepository;
 
     @PostConstruct
     private void init() {
@@ -104,6 +111,26 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
 
     private static String bundleListToString(List<EncryptedBundleId> bundleList) {
         return bundleList.stream().map(EncryptedBundleId::getEncryptedId).collect(Collectors.joining(","));
+    }
+
+    @Override
+    public void checkMessages(CheckMessagesRequest request, StreamObserver<CheckMessagesResponse> responseObserver) {
+        X509Certificate clientCert = NettyServerCertificateInterceptor.CLIENT_CERTIFICATE_KEY.get(Context.current());
+        String transportId = DDDTLSUtil.publicKeyToName(clientCert.getPublicKey());
+
+        var messages = transportMessageRepository.findMessagesAfter(transportId, request.getLastMessageId());
+
+        var responseBuilder = CheckMessagesResponse.newBuilder();
+        messages.stream()
+                .map(m -> ServerMessage.newBuilder()
+                        .setMessageId(m.messageKey.getMessageNumber())
+                        .setDate(m.messageDate.toString())
+                        .setMessage(m.message)
+                        .build())
+                .forEach(responseBuilder::addServerMessage);
+
+        responseObserver.onNext(responseBuilder.build());
+        responseObserver.onCompleted();
     }
 
     @Override
