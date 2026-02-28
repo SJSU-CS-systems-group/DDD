@@ -1,0 +1,132 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main, canary-server-workflow]
+    paths-ignore:
+      - 'AndroidApps/**'
+      - '.github/workflows/daily.yml'
+      - '.github/workflows/release.yml'
+      - '.github/workflows/format-action.yml'
+  workflow_dispatch:
+
+permissions:
+  packages: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Configure Maven
+        run: |
+          mkdir -p ~/.m2
+          echo "<settings><servers><server>
+            <id>github</id>
+            <username>github-actions[bot]</username>
+            <password>${{ secrets.GITHUB_TOKEN }}</password>
+          </server></servers></settings>" > ~/.m2/settings.xml
+
+      - name: Build
+        run: mvn -ntp clean install
+
+      - name: Upload bundleserver jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundleserver-jar
+          path: bundleserver/target/bundleserver-*.jar
+          if-no-files-found: error
+
+      - name: Upload k9 jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: k9-jar
+          path: apps/k9/server/target/k9-*.jar
+          if-no-files-found: error
+
+      - name: Upload CLI jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-jar
+          path: apps/cli/target/cli-*.jar
+          if-no-files-found: error
+
+  deploy-canary:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: canary
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.DEPLOY_SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to canary
+        run: |
+          scp -i ~/.ssh/deploy_key bundleserver-jar/bundleserver-*.jar ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:~/bundleserver.jar
+          scp -i ~/.ssh/deploy_key k9-jar/k9-*.jar ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:~/k9.jar
+          ssh -i ~/.ssh/deploy_key ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }} "sudo systemctl restart bundleserver && sudo systemctl restart k9"
+
+      - name: Wait for server startup
+        run: sleep 15
+
+  test-canary:
+    needs: deploy-canary
+    runs-on: ubuntu-latest
+    environment: canary
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download CLI jar
+        uses: actions/download-artifact@v4
+        with:
+          name: cli-jar
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Run sanity tests
+        run: |
+          CLI_JAR=$(ls cli-*.jar)
+          bash scripts/canary-test.sh \
+            "$CLI_JAR" \
+            apps/cli/src/main/resources/Server_Keys \
+            ${{ secrets.DEPLOY_SSH_HOST }} \
+            7778 \
+            ${{ secrets.TEST_EMAIL }}
+
+  deploy-production:
+    needs: test-canary
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.DEPLOY_SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to production
+        run: |
+          scp -i ~/.ssh/deploy_key bundleserver-jar/bundleserver-*.jar ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:~/bundleserver.jar
+          scp -i ~/.ssh/deploy_key k9-jar/k9-*.jar ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}:~/k9.jar
+          ssh -i ~/.ssh/deploy_key ${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }} "sudo systemctl restart bundleserver && sudo systemctl restart k9"
