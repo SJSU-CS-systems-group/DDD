@@ -134,31 +134,6 @@ public class ServerSecurity {
         ourRatchetKey = new ECKeyPair(ratchetKeyPublicKey, ratchetKeyPrivateKey);
     }
 
-    /* TODO: Change to keystore */
-    private void writePrivateKeys(Path path) throws IOException {
-        Files.write(path.resolve(SecurityUtils.SERVER_IDENTITY_PRIVATE_KEY), ourIdentityKeyPair.serialize());
-        Files.write(path.resolve(SecurityUtils.SERVER_SIGNEDPRE_PRIVATE_KEY),
-                    ourSignedPreKey.getPrivateKey().serialize());
-        Files.write(path.resolve(SecurityUtils.SERVER_RATCHET_PRIVATE_KEY), ourRatchetKey.getPrivateKey().serialize());
-    }
-
-    private Path[] writeKeysToFiles(Path path, boolean writePvt) throws IOException {
-        /* Create Directory if it does not exist */
-        Files.createDirectories(path);
-
-        Path[] serverKeypaths = { path.resolve(SecurityUtils.SERVER_IDENTITY_KEY),
-                                  path.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY),
-                                  path.resolve(SecurityUtils.SERVER_RATCHET_KEY) };
-
-        if (writePvt) {
-            writePrivateKeys(path);
-        }
-        DDDPEMEncoder.createEncodedPublicKeyFile(ourIdentityKeyPair.getPublicKey().getPublicKey(), serverKeypaths[0]);
-        DDDPEMEncoder.createEncodedPublicKeyFile(ourSignedPreKey.getPublicKey(), serverKeypaths[1]);
-        DDDPEMEncoder.createEncodedPublicKeyFile(ourRatchetKey.getPublicKey(), serverKeypaths[2]);
-        return serverKeypaths;
-    }
-
     private void updateSessionRecord(ClientSession clientSession) {
         String clientID = clientSession.getClientID();
         var sessionStorePath = clientRootPath.resolve(clientID).resolve(SecurityUtils.SESSION_STORE_FILE);
@@ -304,18 +279,6 @@ public class ServerSecurity {
         ClientSession client = getClientSession(clientID, null);
         client.cipherSession.encrypt(plaintext, outputStream);
         updateSessionRecord(client);
-    }
-
-    public Path[] createEncryptionHeader(Path encPath, String bundleID, ClientSession client) throws IOException {
-        var bundlePath = encPath.resolve(bundleID);
-
-        /* Create Directory if it does not exist */
-        Files.createDirectories(bundlePath);
-        /* Create Bundle ID File */
-        createBundleIDFile(bundleID, client, bundlePath);
-
-        /* Write Keys to Bundle directory */
-        return writeKeysToFiles(bundlePath, false);
     }
 
     public String encryptBundleID(String bundleID, String clientID) throws GeneralSecurityException,
