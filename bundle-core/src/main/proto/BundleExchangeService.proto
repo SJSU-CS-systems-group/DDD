@@ -90,8 +90,33 @@ message GetRecencyBlobResponse {
   bytes serverPublicKey = 3;
 }
 
+/*
+ * PSI (Private Set Intersection) messages for obscuring bundle ownership.
+ * Used between client and transport only.
+ */
+message PSIElement {
+  bytes value = 1;
+}
+
+message PSIRequest {
+  repeated PSIElement clientBlindedValues = 1;
+}
+
+message PSIResponse {
+  string sessionId = 1;
+  repeated PSIElement doublyBlindedClientValues = 2;
+  repeated PSIElement transportBlindedValues = 3;
+}
+
+message PSIDownloadRequest {
+  string sessionId = 1;
+  int32 transportIndex = 2;
+}
+
 service BundleExchangeService {
   rpc uploadBundle(stream BundleUploadRequest) returns (BundleUploadResponse) {}
   rpc downloadBundle(BundleDownloadRequest) returns (stream BundleDownloadResponse) {}
   rpc getRecencyBlob(GetRecencyBlobRequest) returns (GetRecencyBlobResponse) {}
+  rpc psiExchange(PSIRequest) returns (PSIResponse) {}
+  rpc psiDownloadBundle(PSIDownloadRequest) returns (stream BundleDownloadResponse) {}
 }
