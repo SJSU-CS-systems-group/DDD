@@ -149,7 +149,6 @@ public class BundleClientService extends Service {
         connectivityManager.registerDefaultNetworkCallback(networkCallback);
         checkValidNetwork();
         transportManager = new RecentTransportManager();
-        transportManager.recentTransportRepository.printAllTransports();
         return START_STICKY;
     }
 
@@ -559,7 +558,8 @@ public class BundleClientService extends Service {
 
     private class RecentTransportManager {
         private final RecentTransportRepository recentTransportRepository;
-        final public HashMap<TransportDevice, RecentTransport> transportMap = new HashMap<>();
+        // Use transportId as key to avoid duplicates when device is null from room DB
+        final public HashMap<String, RecentTransport> transportMap = new HashMap<>();
 
         public RecentTransportManager() {
             recentTransportRepository = new RecentTransportRepository(getApplication());
@@ -568,7 +568,7 @@ public class BundleClientService extends Service {
                 List<RecentTransport> devices = recentTransportRepository.getAllTransportsSync();
                 if (devices != null) {
                     for (RecentTransport device : devices) {
-                        transportMap.put(device.getDevice(), device);
+                        transportMap.put(device.getTransportId(), device);
                     }
                 }
             });
@@ -576,7 +576,7 @@ public class BundleClientService extends Service {
 
         public void timeStampExchange(TransportDevice device) {
             synchronized(transportMap) {
-                RecentTransport transport = transportMap.get(device);
+                RecentTransport transport = transportMap.get(device.getId());
                 if (transport != null) {
                     transport.setLastExchange(System.currentTimeMillis());
                     recentTransportRepository.processDiscoveredPeer(device, transport.getRecencyBlobResponse());
@@ -598,7 +598,7 @@ public class BundleClientService extends Service {
         public void processDiscoveredPeer(TransportDevice device, GetRecencyBlobResponse response) {
             recentTransportRepository.processDiscoveredPeer(device, response);
             synchronized(transportMap) {
-                RecentTransport existingTransport = transportMap.get(device);
+                RecentTransport existingTransport = transportMap.get(device.getId());
                 if (existingTransport != null) {
                     existingTransport.setDevice(device);
                     existingTransport.setLastSeen(System.currentTimeMillis());
@@ -609,10 +609,9 @@ public class BundleClientService extends Service {
                     newTransport.setDevice(device);
                     newTransport.setLastSeen(System.currentTimeMillis());
                     newTransport.setRecencyBlobResponse(response);
-                    transportMap.put(device, newTransport);
+                    transportMap.put(device.getId(), newTransport);
                 }
             }
-            transportManager.recentTransportRepository.printAllTransports();
         }
     }
 }
