@@ -6,8 +6,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.Properties;
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.SEVERE;
 
 public class CliUtils {
+    private static final Logger logger = Logger.getLogger(CliUtils.class.getName());
+
     public static String getReceivedProcessingDirectory(File applicationYml, String appProps) {
         Properties prop = new Properties();
         String resultString = "";
@@ -53,7 +58,7 @@ public class CliUtils {
             properties.load(input);
             s = properties.getProperty("bundle-server.bundle-store-root");
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.log(SEVERE, "Failed to load bundle store root from config file", e);
         }
         return s;
     }

@@ -77,9 +77,7 @@ public class ServerSecurity {
             clientRootPath = serverRootPath.resolve("Clients");
             clientRootPath.toFile().mkdirs();
         } catch (Exception e) {
-//            logger.log(SEVERE,(e.getMessage());
-
-            e.printStackTrace();
+            logger.log(SEVERE, "Failed to load server keys", e);
             logger.log(SEVERE,
                        String.format(
                                "Error loading server keys. Ensure the following key files exist in your application" +
