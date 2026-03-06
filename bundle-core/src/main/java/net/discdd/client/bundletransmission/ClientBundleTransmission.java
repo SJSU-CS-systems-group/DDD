@@ -526,8 +526,8 @@ public class ClientBundleTransmission {
     }
 
     private Path downloadBundleViaPSI(List<String> encryptedBundleIds,
-                                      BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub stub)
-            throws IOException {
+                                      BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub stub) throws
+            IOException {
 
         var psi = new BundleOwnershipPSI();
         BigInteger clientSecret = psi.generateSecret();
@@ -537,14 +537,15 @@ public class ClientBundleTransmission {
 
         var requestBuilder = PSIRequest.newBuilder();
         for (BigInteger val : blindedValues) {
-            requestBuilder.addClientBlindedValues(
-                    PSIElement.newBuilder().setValue(ByteString.copyFrom(val.toByteArray())).build());
+            requestBuilder.addClientBlindedValues(PSIElement.newBuilder()
+                                                          .setValue(ByteString.copyFrom(val.toByteArray()))
+                                                          .build());
         }
 
         PSIResponse psiResponse;
         try {
-            psiResponse = stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, MILLISECONDS)
-                    .psiExchange(requestBuilder.build());
+            psiResponse =
+                    stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, MILLISECONDS).psiExchange(requestBuilder.build());
         } catch (StatusRuntimeException e) {
             if (e.getStatus().getCode() == io.grpc.Status.Code.UNIMPLEMENTED) {
                 logger.log(INFO, "Transport does not support PSI, falling back to legacy download");
@@ -553,10 +554,12 @@ public class ClientBundleTransmission {
             throw e;
         }
 
-        List<BigInteger> doublyBlinded = psiResponse.getDoublyBlindedClientValuesList().stream()
+        List<BigInteger> doublyBlinded = psiResponse.getDoublyBlindedClientValuesList()
+                .stream()
                 .map(e -> new BigInteger(1, e.getValue().toByteArray()))
                 .collect(Collectors.toList());
-        List<BigInteger> transportValues = psiResponse.getTransportBlindedValuesList().stream()
+        List<BigInteger> transportValues = psiResponse.getTransportBlindedValuesList()
+                .stream()
                 .map(e -> new BigInteger(1, e.getValue().toByteArray()))
                 .collect(Collectors.toList());
 
@@ -572,8 +575,9 @@ public class ClientBundleTransmission {
 
         for (var match : matches) {
             if (match.clientIndex() < 0 || match.clientIndex() >= encryptedBundleIds.size()) {
-                logger.log(WARNING, "PSI: Skipping match with invalid client index " + match.clientIndex() +
-                        " (valid range: 0-" + (encryptedBundleIds.size() - 1) + ")");
+                logger.log(WARNING,
+                           "PSI: Skipping match with invalid client index " + match.clientIndex() +
+                                   " (valid range: 0-" + (encryptedBundleIds.size() - 1) + ")");
                 continue;
             }
             String encryptedBundleId = encryptedBundleIds.get(match.clientIndex());
@@ -586,11 +590,12 @@ public class ClientBundleTransmission {
 
             var bundlePath = clientPaths.receiveBundlePath.resolve(encryptedBundleId);
             try {
-                var responses = stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, MILLISECONDS)
-                        .psiDownloadBundle(downloadRequest);
+                var responses =
+                        stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, MILLISECONDS).psiDownloadBundle(downloadRequest);
 
                 try (var fileOutputStream = Files.newOutputStream(bundlePath,
-                        StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+                                                                  StandardOpenOption.CREATE,
+                                                                  StandardOpenOption.TRUNCATE_EXISTING)) {
                     while (responses.hasNext()) {
                         var response = responses.next();
                         fileOutputStream.write(response.getChunk().getChunk().toByteArray());

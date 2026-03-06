@@ -100,15 +100,12 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
 
     @Override
     public void psiExchange(PSIRequest request, StreamObserver<PSIResponse> responseObserver) {
-        responseObserver.onError(
-                io.grpc.Status.UNIMPLEMENTED.withDescription("PSI not supported").asException());
+        responseObserver.onError(io.grpc.Status.UNIMPLEMENTED.withDescription("PSI not supported").asException());
     }
 
     @Override
-    public void psiDownloadBundle(PSIDownloadRequest request,
-                                  StreamObserver<BundleDownloadResponse> responseObserver) {
-        responseObserver.onError(
-                io.grpc.Status.UNIMPLEMENTED.withDescription("PSI not supported").asException());
+    public void psiDownloadBundle(PSIDownloadRequest request, StreamObserver<BundleDownloadResponse> responseObserver) {
+        responseObserver.onError(io.grpc.Status.UNIMPLEMENTED.withDescription("PSI not supported").asException());
     }
 
     protected abstract Path pathProducer(BundleExchangeName bundleExchangeName,

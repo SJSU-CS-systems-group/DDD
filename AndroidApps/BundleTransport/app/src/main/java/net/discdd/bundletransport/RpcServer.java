@@ -113,10 +113,9 @@ public class RpcServer {
                 try {
                     int numElements = request.getClientBlindedValuesCount();
                     if (numElements > MAX_PSI_ELEMENTS_PER_REQUEST) {
-                        responseObserver.onError(io.grpc.Status.INVALID_ARGUMENT
-                                .withDescription("Too many PSI elements: " + numElements +
-                                        ", maximum allowed: " + MAX_PSI_ELEMENTS_PER_REQUEST)
-                                .asException());
+                        responseObserver.onError(io.grpc.Status.INVALID_ARGUMENT.withDescription(
+                                "Too many PSI elements: " + numElements + ", maximum allowed: " +
+                                        MAX_PSI_ELEMENTS_PER_REQUEST).asException());
                         return;
                     }
                     var psi = new BundleOwnershipPSI();
@@ -124,7 +123,8 @@ public class RpcServer {
 
                     List<String> bundleFileNames = listBundleFiles(toClientPath);
 
-                    List<BigInteger> clientBlinded = request.getClientBlindedValuesList().stream()
+                    List<BigInteger> clientBlinded = request.getClientBlindedValuesList()
+                            .stream()
                             .map(e -> new BigInteger(1, e.getValue().toByteArray()))
                             .collect(Collectors.toList());
 
@@ -139,20 +139,21 @@ public class RpcServer {
 
                     var responseBuilder = PSIResponse.newBuilder().setSessionId(sessionId);
                     for (BigInteger val : transportResponse.doublyBlindedClientValues()) {
-                        responseBuilder.addDoublyBlindedClientValues(
-                                PSIElement.newBuilder().setValue(ByteString.copyFrom(val.toByteArray())).build());
+                        responseBuilder.addDoublyBlindedClientValues(PSIElement.newBuilder()
+                                                                             .setValue(ByteString.copyFrom(val.toByteArray()))
+                                                                             .build());
                     }
                     for (BigInteger val : transportResponse.transportBlindedValues()) {
-                        responseBuilder.addTransportBlindedValues(
-                                PSIElement.newBuilder().setValue(ByteString.copyFrom(val.toByteArray())).build());
+                        responseBuilder.addTransportBlindedValues(PSIElement.newBuilder()
+                                                                          .setValue(ByteString.copyFrom(val.toByteArray()))
+                                                                          .build());
                     }
 
                     responseObserver.onNext(responseBuilder.build());
                     responseObserver.onCompleted();
                 } catch (Exception e) {
                     logger.log(SEVERE, "PSI exchange failed", e);
-                    responseObserver.onError(
-                            io.grpc.Status.INTERNAL.withDescription(e.getMessage()).asException());
+                    responseObserver.onError(io.grpc.Status.INTERNAL.withDescription(e.getMessage()).asException());
                 } finally {
                     onBundleExchangeEvent(BundleExchangeEvent.DOWNLOAD_FINISHED);
                 }
@@ -164,42 +165,42 @@ public class RpcServer {
                 onBundleExchangeEvent(BundleExchangeEvent.DOWNLOAD_STARTED);
                 try {
                     PSISession session = psiSessions.get(request.getSessionId());
-                    if (session == null ||
-                            System.currentTimeMillis() - session.createdAt() > PSI_SESSION_TTL_MS) {
+                    if (session == null || System.currentTimeMillis() - session.createdAt() > PSI_SESSION_TTL_MS) {
                         if (session != null) {
                             psiSessions.remove(request.getSessionId());
                         }
-                        responseObserver.onError(io.grpc.Status.NOT_FOUND
-                                .withDescription("PSI session expired or not found").asException());
+                        responseObserver.onError(io.grpc.Status.NOT_FOUND.withDescription(
+                                "PSI session expired or not found").asException());
                         return;
                     }
                     int index = request.getTransportIndex();
                     if (index < 0 || index >= session.bundleFileNames().size()) {
-                        responseObserver.onError(io.grpc.Status.INVALID_ARGUMENT
-                                .withDescription("Invalid transport index").asException());
+                        responseObserver.onError(io.grpc.Status.INVALID_ARGUMENT.withDescription(
+                                "Invalid transport index").asException());
                         return;
                     }
                     String fileName = session.bundleFileNames().get(index);
                     Path filePath = toClientPath.resolve(fileName);
 
                     if (!Files.exists(filePath)) {
-                        responseObserver.onError(io.grpc.Status.NOT_FOUND
-                                .withDescription("Bundle file not found").asException());
+                        responseObserver.onError(io.grpc.Status.NOT_FOUND.withDescription("Bundle file not found")
+                                                         .asException());
                         return;
                     }
 
                     try (InputStream is = Files.newInputStream(filePath, StandardOpenOption.READ)) {
                         transferToStream(is,
-                                bytes -> responseObserver.onNext(BundleDownloadResponse.newBuilder()
-                                        .setChunk(BundleChunk.newBuilder().setChunk(bytes).build())
-                                        .build()));
+                                         bytes -> responseObserver.onNext(BundleDownloadResponse.newBuilder()
+                                                                                  .setChunk(BundleChunk.newBuilder()
+                                                                                                    .setChunk(bytes)
+                                                                                                    .build())
+                                                                                  .build()));
                     }
                     responseObserver.onCompleted();
                     psiSessions.remove(request.getSessionId());
                 } catch (Exception e) {
                     logger.log(SEVERE, "PSI download failed", e);
-                    responseObserver.onError(
-                            io.grpc.Status.INTERNAL.withDescription(e.getMessage()).asException());
+                    responseObserver.onError(io.grpc.Status.INTERNAL.withDescription(e.getMessage()).asException());
                 } finally {
                     onBundleExchangeEvent(BundleExchangeEvent.DOWNLOAD_FINISHED);
                 }
@@ -209,8 +210,7 @@ public class RpcServer {
                 File[] files = dir.toFile().listFiles();
                 if (files == null) return List.of();
                 return Arrays.stream(files)
-                        .filter(f -> f.isFile() &&
-                                !f.getName().equals(TransportToBundleServerManager.RECENCY_BLOB_BIN))
+                        .filter(f -> f.isFile() && !f.getName().equals(TransportToBundleServerManager.RECENCY_BLOB_BIN))
                         .map(File::getName)
                         .collect(Collectors.toList());
             }

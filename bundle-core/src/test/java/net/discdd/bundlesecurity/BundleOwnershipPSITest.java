@@ -72,9 +72,9 @@ public class BundleOwnershipPSITest {
 
         List<BigInteger> clientBlinded = psi.clientBlindBundleIds(clientIds, a);
         var transportResponse = psi.transportProcess(clientBlinded, transportFiles, b);
-        var matches = psi.clientFindMatches(
-                transportResponse.doublyBlindedClientValues(),
-                transportResponse.transportBlindedValues(), a);
+        var matches = psi.clientFindMatches(transportResponse.doublyBlindedClientValues(),
+                                            transportResponse.transportBlindedValues(),
+                                            a);
 
         assertEquals(1, matches.size());
         assertEquals(1, matches.get(0).transportIndex()); // "bundleB" at index 1 in transport
@@ -91,9 +91,9 @@ public class BundleOwnershipPSITest {
 
         List<BigInteger> clientBlinded = psi.clientBlindBundleIds(clientIds, a);
         var transportResponse = psi.transportProcess(clientBlinded, transportFiles, b);
-        var matches = psi.clientFindMatches(
-                transportResponse.doublyBlindedClientValues(),
-                transportResponse.transportBlindedValues(), a);
+        var matches = psi.clientFindMatches(transportResponse.doublyBlindedClientValues(),
+                                            transportResponse.transportBlindedValues(),
+                                            a);
 
         assertTrue(matches.isEmpty());
     }
@@ -108,9 +108,9 @@ public class BundleOwnershipPSITest {
 
         List<BigInteger> clientBlinded = psi.clientBlindBundleIds(clientIds, a);
         var transportResponse = psi.transportProcess(clientBlinded, transportFiles, b);
-        var matches = psi.clientFindMatches(
-                transportResponse.doublyBlindedClientValues(),
-                transportResponse.transportBlindedValues(), a);
+        var matches = psi.clientFindMatches(transportResponse.doublyBlindedClientValues(),
+                                            transportResponse.transportBlindedValues(),
+                                            a);
 
         assertEquals(2, matches.size());
     }
@@ -125,9 +125,9 @@ public class BundleOwnershipPSITest {
 
         List<BigInteger> clientBlinded = psi.clientBlindBundleIds(clientIds, a);
         var transportResponse = psi.transportProcess(clientBlinded, transportFiles, b);
-        var matches = psi.clientFindMatches(
-                transportResponse.doublyBlindedClientValues(),
-                transportResponse.transportBlindedValues(), a);
+        var matches = psi.clientFindMatches(transportResponse.doublyBlindedClientValues(),
+                                            transportResponse.transportBlindedValues(),
+                                            a);
 
         assertTrue(matches.isEmpty());
     }
@@ -142,9 +142,9 @@ public class BundleOwnershipPSITest {
 
         List<BigInteger> clientBlinded = psi.clientBlindBundleIds(clientIds, a);
         var transportResponse = psi.transportProcess(clientBlinded, transportFiles, b);
-        var matches = psi.clientFindMatches(
-                transportResponse.doublyBlindedClientValues(),
-                transportResponse.transportBlindedValues(), a);
+        var matches = psi.clientFindMatches(transportResponse.doublyBlindedClientValues(),
+                                            transportResponse.transportBlindedValues(),
+                                            a);
 
         assertTrue(matches.isEmpty());
     }
