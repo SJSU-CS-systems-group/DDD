@@ -2,7 +2,7 @@ name: Nightly Release
 
 on:
   push:
-    branches: [canary-server-workflow]
+    branches: [client-jar-release]
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
@@ -96,3 +96,4 @@ jobs:
             DDDClient.aab DDDClient.apk \
             DDDTransport.aab DDDTransport.apk \
             cli-*.jar
+
