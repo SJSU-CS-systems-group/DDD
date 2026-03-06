@@ -9,6 +9,7 @@ import net.discdd.bundlerouting.RoutingExceptions;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
 import net.discdd.bundlesecurity.BundleIDGenerator;
+import net.discdd.bundlesecurity.BundleOwnershipPSI;
 import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.client.applicationdatamanager.ClientApplicationDataManager;
 import net.discdd.client.bundlerouting.ClientBundleGenerator;
@@ -23,6 +24,10 @@ import net.discdd.grpc.BundleUploadRequest;
 import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.grpc.GetRecencyBlobRequest;
 import net.discdd.grpc.GetRecencyBlobResponse;
+import net.discdd.grpc.PSIDownloadRequest;
+import net.discdd.grpc.PSIElement;
+import net.discdd.grpc.PSIRequest;
+import net.discdd.grpc.PSIResponse;
 import net.discdd.grpc.PublicKeyMap;
 import net.discdd.grpc.RecencyBlobStatus;
 import net.discdd.grpc.Status;
@@ -63,9 +68,12 @@ import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.math.BigInteger;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -432,10 +440,10 @@ public class ClientBundleTransmission {
                         .setClientPub(ByteString.copyFrom(clientSecurity.getClientIdentityPublicKey().serialize()))
                         .setSignedTLSPub(ByteString.copyFrom(clientSecurity.getSignedTLSPub(bundleSecurity.getClientGrpcSecurityKey().grpcKeyPair.getPublic())))
                         .build();
-                // we don't include the public key map if we are connecting to a transport, since we only authenticate
-                // ourselves to BundleServers not transports
+                // Use PSI when connecting to a transport to obscure bundle ownership.
+                // Fall back to legacy download when connecting directly to the server.
                 var bundlesDownloaded = connectingToTransport ?
-                                        downloadBundles(bundleRequests, BundleSenderType.CLIENT, blockingStub, null) :
+                                        downloadBundleViaPSI(bundleRequests, blockingStub) :
                                         downloadBundles(bundleRequests,
                                                         BundleSenderType.CLIENT,
                                                         blockingStub,
@@ -515,6 +523,92 @@ public class ClientBundleTransmission {
         return bundleUploadResponseObserver.bundleUploadResponse.getStatus() == Status.SUCCESS ?
                Statuses.COMPLETE :
                Statuses.EMPTY;
+    }
+
+    private Path downloadBundleViaPSI(List<String> encryptedBundleIds,
+                                      BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub stub)
+            throws IOException {
+
+        var psi = new BundleOwnershipPSI();
+        BigInteger clientSecret = psi.generateSecret();
+
+        // Blind the encrypted bundle IDs (same strings the transport has as filenames)
+        List<BigInteger> blindedValues = psi.clientBlindBundleIds(encryptedBundleIds, clientSecret);
+
+        var requestBuilder = PSIRequest.newBuilder();
+        for (BigInteger val : blindedValues) {
+            requestBuilder.addClientBlindedValues(
+                    PSIElement.newBuilder().setValue(ByteString.copyFrom(val.toByteArray())).build());
+        }
+
+        PSIResponse psiResponse;
+        try {
+            psiResponse = stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, MILLISECONDS)
+                    .psiExchange(requestBuilder.build());
+        } catch (StatusRuntimeException e) {
+            if (e.getStatus().getCode() == io.grpc.Status.Code.UNIMPLEMENTED) {
+                logger.log(INFO, "Transport does not support PSI, falling back to legacy download");
+                return downloadBundles(encryptedBundleIds, BundleSenderType.CLIENT, stub, null);
+            }
+            throw e;
+        }
+
+        List<BigInteger> doublyBlinded = psiResponse.getDoublyBlindedClientValuesList().stream()
+                .map(e -> new BigInteger(1, e.getValue().toByteArray()))
+                .collect(Collectors.toList());
+        List<BigInteger> transportValues = psiResponse.getTransportBlindedValuesList().stream()
+                .map(e -> new BigInteger(1, e.getValue().toByteArray()))
+                .collect(Collectors.toList());
+
+        var matches = psi.clientFindMatches(doublyBlinded, transportValues, clientSecret);
+
+        if (matches.isEmpty()) {
+            logger.log(INFO, "PSI: No matching bundles found on transport");
+            return null;
+        }
+
+        // Prefer earlier window entries (lower client index = higher priority)
+        matches.sort(Comparator.comparingInt(BundleOwnershipPSI.PSIMatch::clientIndex));
+
+        for (var match : matches) {
+            if (match.clientIndex() < 0 || match.clientIndex() >= encryptedBundleIds.size()) {
+                logger.log(WARNING, "PSI: Skipping match with invalid client index " + match.clientIndex() +
+                        " (valid range: 0-" + (encryptedBundleIds.size() - 1) + ")");
+                continue;
+            }
+            String encryptedBundleId = encryptedBundleIds.get(match.clientIndex());
+            var downloadRequest = PSIDownloadRequest.newBuilder()
+                    .setSessionId(psiResponse.getSessionId())
+                    .setTransportIndex(match.transportIndex())
+                    .build();
+
+            logger.log(INFO, "PSI: Downloading match at transport index " + match.transportIndex());
+
+            var bundlePath = clientPaths.receiveBundlePath.resolve(encryptedBundleId);
+            try {
+                var responses = stub.withDeadlineAfter(GRPC_LONG_TIMEOUT_MS, MILLISECONDS)
+                        .psiDownloadBundle(downloadRequest);
+
+                try (var fileOutputStream = Files.newOutputStream(bundlePath,
+                        StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+                    while (responses.hasNext()) {
+                        var response = responses.next();
+                        fileOutputStream.write(response.getChunk().getChunk().toByteArray());
+                    }
+                }
+
+                if (Files.size(bundlePath) > 0) {
+                    return bundlePath;
+                }
+            } catch (StatusRuntimeException e) {
+                if (e.getStatus().getCode() == io.grpc.Status.Code.NOT_FOUND) {
+                    logger.log(INFO, "PSI: Bundle at index " + match.transportIndex() + " not found");
+                } else {
+                    logger.log(SEVERE, "PSI: Download failed", e);
+                }
+            }
+        }
+        return null;
     }
 
     private Path downloadBundles(List<String> bundleRequests,
