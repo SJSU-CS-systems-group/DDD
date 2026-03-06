@@ -9,6 +9,9 @@ import net.discdd.grpc.BundleExchangeServiceGrpc;
 import net.discdd.grpc.BundleSenderType;
 import net.discdd.grpc.BundleUploadRequest;
 import net.discdd.grpc.BundleUploadResponse;
+import net.discdd.grpc.PSIDownloadRequest;
+import net.discdd.grpc.PSIRequest;
+import net.discdd.grpc.PSIResponse;
 import net.discdd.grpc.PublicKeyMap;
 import net.discdd.grpc.Status;
 import net.discdd.utils.BundleUtils;
@@ -93,6 +96,16 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
                 buffer.clear();
             }
         }
+    }
+
+    @Override
+    public void psiExchange(PSIRequest request, StreamObserver<PSIResponse> responseObserver) {
+        responseObserver.onError(io.grpc.Status.UNIMPLEMENTED.withDescription("PSI not supported").asException());
+    }
+
+    @Override
+    public void psiDownloadBundle(PSIDownloadRequest request, StreamObserver<BundleDownloadResponse> responseObserver) {
+        responseObserver.onError(io.grpc.Status.UNIMPLEMENTED.withDescription("PSI not supported").asException());
     }
 
     protected abstract Path pathProducer(BundleExchangeName bundleExchangeName,
