@@ -162,7 +162,11 @@ public class RpcServer {
                 onBundleExchangeEvent(BundleExchangeEvent.DOWNLOAD_STARTED);
                 try {
                     PSISession session = psiSessions.get(request.getSessionId());
-                    if (session == null) {
+                    if (session == null ||
+                            System.currentTimeMillis() - session.createdAt() > PSI_SESSION_TTL_MS) {
+                        if (session != null) {
+                            psiSessions.remove(request.getSessionId());
+                        }
                         responseObserver.onError(io.grpc.Status.NOT_FOUND
                                 .withDescription("PSI session expired or not found").asException());
                         return;
