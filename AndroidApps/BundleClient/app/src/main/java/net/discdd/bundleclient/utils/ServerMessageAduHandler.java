@@ -29,24 +29,20 @@ public class ServerMessageAduHandler {
     }
 
     public static void handle(Context context, ADU adu) {
-        Log.d("ServerMessageAduHandler", "handle() called, aduId=" + adu.getADUId() + " file=" + adu.getSource());
         try {
             byte[] bytes = Files.readAllBytes(adu.getSource().toPath());
-            Log.d("ServerMessageAduHandler", "read " + bytes.length + " bytes: " + new String(bytes, StandardCharsets.UTF_8));
             AppDatabase.runOnDatabaseExecutor(() -> {
                 try {
                     ClientMessagePayload payload = GSON.fromJson(
                             new String(bytes, StandardCharsets.UTF_8), ClientMessagePayload.class);
-                    Log.d("ServerMessageAduHandler", "inserting messageId=" + payload.messageId + " msg=" + payload.message);
                     ServerMessage msg = new ServerMessage();
                     msg.setMessageId(payload.messageId);
                     msg.setDate(LocalDateTime.ofInstant(Instant.parse(payload.sentAt), ZoneId.systemDefault()));
                     msg.setMessage(payload.message);
                     msg.setRead(payload.read);
                     AppDatabase.getInstance(context).serverMessageDao().insert(msg);
-                    Log.d("ServerMessageAduHandler", "insert complete for messageId=" + payload.messageId);
                 } catch (Exception e) {
-                    logger.log(WARNING, "Failed to process server message ADU", e);
+                    logger.log(WARNING, "Failed to process server message ADU id=" + adu.getADUId(), e);
                 }
             });
         } catch (IOException e) {
