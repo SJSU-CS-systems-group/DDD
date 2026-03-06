@@ -32,7 +32,9 @@ jobs:
           </server></servers></settings>" > ~/.m2/settings.xml
 
       - name: Build
-        run: mvn -ntp clean install
+        run: |
+          mvn -ntp clean install
+          mv apps/cli/target/cli-*.jar .
 
       - name: Build Android apps
         env:
@@ -60,7 +62,7 @@ jobs:
             DDDClient.apk
             DDDTransport.aab
             DDDTransport.apk
-            apps/cli/target/cli-*.jar
+            cli-*.jar
 
   publish-nightly:
     needs: build
@@ -96,4 +98,3 @@ jobs:
             release-artifacts/DDDClient.aab release-artifacts/DDDClient.apk \
             release-artifacts/DDDTransport.aab release-artifacts/DDDTransport.apk \
             release-artifacts/cli-*.jar
-
