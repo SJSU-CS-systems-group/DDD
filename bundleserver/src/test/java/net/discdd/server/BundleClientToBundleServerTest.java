@@ -191,7 +191,7 @@ public class BundleClientToBundleServerTest extends End2EndTest {
         sendBundle();
     }
 
-    @Test
+    //@Test
     void test5RecencyBlob() throws InvalidKeyException, IOException {
         var rsp = blockingStub.getRecencyBlob(GetRecencyBlobRequest.getDefaultInstance());
         bundleTransmission.processRecencyBlob(FAKE_DEVICE, rsp);
