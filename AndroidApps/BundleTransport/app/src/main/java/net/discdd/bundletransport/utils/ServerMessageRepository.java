@@ -41,11 +41,9 @@ public class ServerMessageRepository {
         });
     }
 
-    public void seedSampleMessages(List<ServerMessage> sampleMessages) {
-        AppDatabase.runOnDatabaseExecutor(() -> {
-            if (serverMessageDao.count() == 0) {
-                serverMessageDao.insertAll(sampleMessages);
-            }
-        });
+    // Called from background thread — Room allows synchronous DAO calls off main thread
+    public long getMaxMessageId() {
+        return serverMessageDao.getMaxMessageId();
     }
+
 }

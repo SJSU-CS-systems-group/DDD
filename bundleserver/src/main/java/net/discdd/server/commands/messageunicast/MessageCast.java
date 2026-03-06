@@ -49,11 +49,11 @@ public class MessageCast implements Callable<Integer> {
             @CommandLine.Parameters(index = "1", description = "Message text") @Nonnull String messageText) {
         TransportMessage msg = service.createMessage(transportId, messageText);
 
-        System.out.printf("Created message: transportId=%s, messageNumber=%d, message=%s, messageDate=%s%n",
+        System.out.printf("Created message: transportId=%s, messageNumber=%d, message=%s, sentAt=%s%n",
                           msg.messageKey.getTransportId(),
                           msg.messageKey.getMessageNumber(),
                           msg.message,
-                          msg.messageDate.toString());
+                          msg.sentAt.toString());
 
         return 0;
     }

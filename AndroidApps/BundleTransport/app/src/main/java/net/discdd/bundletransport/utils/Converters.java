@@ -3,19 +3,15 @@ package net.discdd.bundletransport.utils;
 import androidx.room.TypeConverter;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 
 public class Converters {
     @TypeConverter
-    public static Long fromLocalDateTime(LocalDateTime dateTime) {
-        return dateTime == null ? null : dateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+    public static Long fromInstant(Instant instant) {
+        return instant == null ? null : instant.toEpochMilli();
     }
 
     @TypeConverter
-    public static LocalDateTime toLocalDateTime(Long timestamp) {
-        return timestamp == null ?
-               null :
-               LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneId.systemDefault());
+    public static Instant toInstant(Long millis) {
+        return millis == null ? null : Instant.ofEpochMilli(millis);
     }
 }

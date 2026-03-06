@@ -1,7 +1,6 @@
 package net.discdd.bundleclient.utils;
 
 import android.content.Context;
-import android.util.Log;
 import com.google.gson.Gson;
 import net.discdd.model.ADU;
 
@@ -9,8 +8,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.WARNING;
@@ -37,7 +34,8 @@ public class ServerMessageAduHandler {
                             new String(bytes, StandardCharsets.UTF_8), ClientMessagePayload.class);
                     ServerMessage msg = new ServerMessage();
                     msg.setMessageId(payload.messageId);
-                    msg.setDate(LocalDateTime.ofInstant(Instant.parse(payload.sentAt), ZoneId.systemDefault()));
+                    msg.setSentAt(Instant.parse(payload.sentAt));
+                    msg.setReceivedAt(Instant.now());
                     msg.setMessage(payload.message);
                     msg.setRead(payload.read);
                     AppDatabase.getInstance(context).serverMessageDao().insert(msg);

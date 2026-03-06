@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Nonnull;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Service
 public class TransportMessageService {
@@ -25,7 +25,7 @@ public class TransportMessageService {
             Long max = repo.findMaxMessageNumber(transportId);
             long next = (max == null ? 1L : max + 1);
             TransportMessage msg =
-                    new TransportMessage(new MessageKey(transportId, next), messageText, LocalDateTime.now(), null);
+                    new TransportMessage(new MessageKey(transportId, next), messageText, Instant.now(), null);
             try {
                 return repo.save(msg);
             } catch (org.springframework.dao.DataIntegrityViolationException e) {

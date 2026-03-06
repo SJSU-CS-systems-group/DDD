@@ -23,10 +23,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Refresh
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 import androidx.compose.material3.*
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,13 +39,16 @@ import androidx.compose.ui.window.Dialog
 import net.discdd.bundletransport.utils.ServerMessage
 import net.discdd.bundletransport.utils.rememberNoFlingSwipeToDismissBoxState
 import net.discdd.bundletransport.viewmodels.ServerMessagesViewModel
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun ServerMessagesScreen(
         viewModel: ServerMessagesViewModel = viewModel(),
-        onRefresh: () -> Unit = { }
 ) {
     val notifications by viewModel.messages.observeAsState(emptyList())
+    val zoneId by viewModel.zoneId.collectAsState()
+    val cardFormatter = remember(zoneId) { DateTimeFormatter.ofPattern("MMM d").withZone(zoneId) }
+    val dialogFormatter = remember(zoneId) { DateTimeFormatter.ofPattern("h:mm a, MMM d, yyyy").withZone(zoneId) }
     val unreadCount = notifications.count { !it.isRead }
     var dialogFor by remember { mutableStateOf<ServerMessage?>(null) }
 
@@ -59,7 +62,6 @@ fun ServerMessagesScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxSize()
         ) {
-            //Header (# unread notifs and refresh button)
             item(key = "header") {
                 Row(
                         modifier = Modifier
@@ -71,15 +73,6 @@ fun ServerMessagesScreen(
                             text = "New Notifications: ${unreadCount}",
                             fontSize = 20.sp
                     )
-                    Spacer(Modifier.weight(1f))
-                    FilledTonalButton(
-                            onClick = { onRefresh() },
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh", modifier = Modifier.size(20.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Refresh")
-                    }
                 }
             }
             items(notifications, key = { it.messageId }) { notification ->
@@ -130,6 +123,7 @@ fun ServerMessagesScreen(
                             //Notif card
                             NotifCard(
                                     notif = notification,
+                                    cardFormatter = cardFormatter,
                                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                                     onCardClick = {
                                         viewModel.markRead(notification.messageId)
@@ -144,7 +138,6 @@ fun ServerMessagesScreen(
 
     //Popup when notif is clicked
     dialogFor?.let { notif ->
-        val whenText = notif.date
         Dialog(onDismissRequest = { dialogFor = null }) {
             Surface(
                     shape = MaterialTheme.shapes.medium,
@@ -153,9 +146,13 @@ fun ServerMessagesScreen(
                 Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Notification", style = MaterialTheme.typography.titleLarge)
                     Text(notif.message, style = MaterialTheme.typography.bodyLarge)
-
                     Text(
-                            "Sent: $whenText",
+                            "Sent: ${dialogFormatter.format(notif.sentAt)}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                            "Received: ${dialogFormatter.format(notif.receivedAt)}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -172,6 +169,7 @@ fun ServerMessagesScreen(
 @Composable
 private fun NotifCard(
         notif: ServerMessage,
+        cardFormatter: DateTimeFormatter,
         modifier: Modifier = Modifier,
         onCardClick: () -> Unit,
 ) {
@@ -205,7 +203,7 @@ private fun NotifCard(
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                        text = notif.date.toString()
+                        text = cardFormatter.format(notif.sentAt)
                 )
             }
         }
