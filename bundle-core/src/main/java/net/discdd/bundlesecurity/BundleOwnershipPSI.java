@@ -6,7 +6,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Implements a Diffie-Hellman style Private Set Intersection (PSI) protocol
@@ -114,17 +116,19 @@ public class BundleOwnershipPSI {
                                             BigInteger clientSecret) {
         // doublyBlindedClientValues are already (x_j^b) = H(bundleID_j)^(ab), no further blinding needed
 
-        // Compute y_i^a = H(fileName_i)^(ab) for each transport value
-        List<BigInteger> transportFinal = new ArrayList<>(transportBlindedValues.size());
-        for (BigInteger val : transportBlindedValues) {
-            transportFinal.add(blind(val, clientSecret));
+        // Compute y_i^a = H(fileName_i)^(ab) for each transport value and index by value
+        Map<BigInteger, List<Integer>> transportIndex = new HashMap<>();
+        for (int i = 0; i < transportBlindedValues.size(); i++) {
+            BigInteger val = blind(transportBlindedValues.get(i), clientSecret);
+            transportIndex.computeIfAbsent(val, k -> new ArrayList<>()).add(i);
         }
 
-        // Find matching pairs
+        // Find matching pairs via hash lookup
         List<PSIMatch> matches = new ArrayList<>();
         for (int j = 0; j < doublyBlindedClientValues.size(); j++) {
-            for (int i = 0; i < transportFinal.size(); i++) {
-                if (doublyBlindedClientValues.get(j).equals(transportFinal.get(i))) {
+            List<Integer> hits = transportIndex.get(doublyBlindedClientValues.get(j));
+            if (hits != null) {
+                for (int i : hits) {
                     matches.add(new PSIMatch(i, j));
                 }
             }

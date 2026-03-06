@@ -91,8 +91,13 @@ message GetRecencyBlobResponse {
 }
 
 /*
- * PSI (Private Set Intersection) messages for obscuring bundle ownership.
- * Used between client and transport only.
+ * Encoding: value is an unsigned big-endian integer of variable length.
+ * It represents an element of the RFC 3526 Group 15 (3072-bit MODP) subgroup.
+ *
+ * In Java, produce with BigInteger.toByteArray() (which may prepend a leading
+ * 0x00 byte to keep the value positive in two's-complement). Consumers MUST
+ * tolerate a leading zero byte and MUST interpret the bytes as unsigned
+ * big-endian (e.g. new BigInteger(1, bytes) in Java).
  */
 message PSIElement {
   bytes value = 1;

@@ -571,6 +571,11 @@ public class ClientBundleTransmission {
         matches.sort(Comparator.comparingInt(BundleOwnershipPSI.PSIMatch::clientIndex));
 
         for (var match : matches) {
+            if (match.clientIndex() < 0 || match.clientIndex() >= encryptedBundleIds.size()) {
+                logger.log(WARNING, "PSI: Skipping match with invalid client index " + match.clientIndex() +
+                        " (valid range: 0-" + (encryptedBundleIds.size() - 1) + ")");
+                continue;
+            }
             String encryptedBundleId = encryptedBundleIds.get(match.clientIndex());
             var downloadRequest = PSIDownloadRequest.newBuilder()
                     .setSessionId(psiResponse.getSessionId())

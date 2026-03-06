@@ -47,6 +47,7 @@ public class RpcServer {
     private static final Logger logger = Logger.getLogger(RpcServer.class.getName());
 
     private static final int port = 7777;
+    private static final int MAX_PSI_ELEMENTS_PER_REQUEST = 40;
     private static final long PSI_SESSION_TTL_MS = 5 * 60 * 1000; // 5 minutes
     private static RpcServer rpcServerInstance;
     private final BundleTransportService bundleTransportService;
@@ -108,6 +109,14 @@ public class RpcServer {
             public void psiExchange(PSIRequest request, StreamObserver<PSIResponse> responseObserver) {
                 onBundleExchangeEvent(BundleExchangeEvent.DOWNLOAD_STARTED);
                 try {
+                    int numElements = request.getClientBlindedValuesCount();
+                    if (numElements > MAX_PSI_ELEMENTS_PER_REQUEST) {
+                        responseObserver.onError(io.grpc.Status.INVALID_ARGUMENT
+                                .withDescription("Too many PSI elements: " + numElements +
+                                        ", maximum allowed: " + MAX_PSI_ELEMENTS_PER_REQUEST)
+                                .asException());
+                        return;
+                    }
                     var psi = new BundleOwnershipPSI();
                     BigInteger transportSecret = psi.generateSecret();
 
