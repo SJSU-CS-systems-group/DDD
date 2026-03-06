@@ -75,6 +75,7 @@ jobs:
                 DDDClient.apk
                 DDDTransport.aab
                 DDDTransport.apk
+                apps/cli/target/cli-*.jar
         env:
               GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
