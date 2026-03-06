@@ -94,7 +94,5 @@ jobs:
             --repo ${{ github.repository }} \
             --title "Nightly $(date -u '+%Y-%m-%d')" \
             --notes "Nightly build from ${{ github.sha }}" \
-            --prerelease \
-            release-artifacts/DDDClient.aab release-artifacts/DDDClient.apk \
-            release-artifacts/DDDTransport.aab release-artifacts/DDDTransport.apk \
-            release-artifacts/cli-*.jar
+            --prerelease DDDClient.aab DDDClient.apk DDDTransport.aab DDDTransport.apk cli-*.jar
+
