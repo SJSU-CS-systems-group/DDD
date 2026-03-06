@@ -13,6 +13,7 @@ import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceRequest;
 import android.net.wifi.p2p.nsd.WifiP2pServiceRequest;
+import android.os.Build;
 import android.os.HandlerThread;
 import androidx.annotation.RequiresPermission;
 import androidx.core.app.ActivityCompat;
@@ -141,6 +142,7 @@ public class DDDWifiDirect implements DDDWifi {
         }
         if (wifiEnable) {
             if (hasPermission()) {
+
                 wifiP2pManager.requestDeviceInfo(wifiChannel, (DDDWifiDirect.this::processDeviceInfo));
             }
         }
@@ -177,6 +179,7 @@ public class DDDWifiDirect implements DDDWifi {
         this.handlerThread = new HandlerThread("WifiP2PHandlerThread");
         this.handlerThread.start();
         this.wifiChannel = wifiP2pManager.initialize(bundleClientService, handlerThread.getLooper(), () -> logger.warning("Framework lost. Ignoring"));
+        logger.info("Has permission: " + hasPermission());
         if (hasPermission()) {
             registerBroadcastReceiver();
         }
@@ -243,8 +246,22 @@ public class DDDWifiDirect implements DDDWifi {
 
     AtomicBoolean isReceiverRegistered = new AtomicBoolean(false);
     private void registerBroadcastReceiver() {
+        logger.info("Requesting current Wifi P2p state for receiver registration.");
         wifiP2pManager.requestP2pState(wifiChannel, this::processStateChange);
-        if (isReceiverRegistered.getAndSet(true)) return;
+        //sync discovery state at a registration time, not just from broadcasts
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {   //TO DO: delete because we always target SDK_INIT above 33
+            logger.info("Requesting current Wifi P2p discovery state");
+            wifiP2pManager.requestDiscoveryState(wifiChannel, state -> {
+                logger.info("Discovery state received: " + (state == WifiP2pManager.WIFI_P2P_DISCOVERY_STARTED ? "STARTED" : "STOPPED"));
+                discoveryActive = state == WifiP2pManager.WIFI_P2P_DISCOVERY_STARTED;
+                eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DISCOVERY_CHANGED);
+            });
+        }
+        if (isReceiverRegistered.getAndSet(true)) {
+            logger.info("Broadcast receiver already registered, skipping registration");
+            return;
+        }
+        logger.info("Registering Wifi Direct broadcast receiver.");
         bundleClientService.registerReceiver(broadcastReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
     }
 
@@ -469,6 +486,7 @@ public class DDDWifiDirect implements DDDWifi {
     public void wifiPermissionGranted() {
         // reregister the receivers with the new permissions
         unregisterBroadcastReceiver();
+        logger.info("Registering Broadcast Receiver since Wifi permission was granted");
         registerBroadcastReceiver();
     }
 }
