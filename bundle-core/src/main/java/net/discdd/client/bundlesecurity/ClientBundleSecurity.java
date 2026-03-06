@@ -35,7 +35,6 @@ public class ClientBundleSecurity {
     final private ClientPaths clientPaths;
     private final ClientWindow clientWindow;
     private final ClientBundleGenerator clientBundleGenerator;
-    private final boolean isEncryptionEnabled = true;
     private ClientSecurity client = null;
     private GrpcSecurityKey clientGrpcSecurityKey = null;
 
@@ -81,14 +80,12 @@ public class ClientBundleSecurity {
                 .resolve(Constants.BUNDLE_ENCRYPTED_PAYLOAD_FILE_NAME + ".jar")
                 .toFile();
         String bundleId = "";
-        if (this.isEncryptionEnabled) {
-            ClientSecurity clientSecurity = ClientSecurity.getInstance();
-            clientSecurity.decrypt(uncompressedBundle.getSource().toPath(), uncompressedBundle.getSource().toPath());
-            bundleId = clientSecurity.getBundleIDFromFile(uncompressedBundle.getSource().toPath());
-            File decryptedPayload = uncompressedBundle.getSource().toPath().resolve(bundleId + ".decrypted").toFile();
-            if (decryptedPayload.exists()) {
-                decryptedPayload.renameTo(decryptedPayloadJar);
-            }
+        ClientSecurity clientSecurity = ClientSecurity.getInstance();
+        clientSecurity.decrypt(uncompressedBundle.getSource().toPath(), uncompressedBundle.getSource().toPath());
+        bundleId = clientSecurity.getBundleIDFromFile(uncompressedBundle.getSource().toPath());
+        File decryptedPayload = uncompressedBundle.getSource().toPath().resolve(bundleId + ".decrypted").toFile();
+        if (decryptedPayload.exists()) {
+            decryptedPayload.renameTo(decryptedPayloadJar);
         }
         return new Payload(bundleId, decryptedPayloadJar);
     }
