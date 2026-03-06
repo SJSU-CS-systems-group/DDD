@@ -47,6 +47,8 @@ public class RpcServer {
     private static final Logger logger = Logger.getLogger(RpcServer.class.getName());
 
     private static final int port = 7777;
+    //The number 40 was chosen because a SessionRecord only keeps track of the Private Keys of the
+    // last 40 bundles sent. So at most the client will be able to decrypt 40 of their own bundles.
     private static final int MAX_PSI_ELEMENTS_PER_REQUEST = 40;
     private static final long PSI_SESSION_TTL_MS = 5 * 60 * 1000; // 5 minutes
     private static RpcServer rpcServerInstance;
