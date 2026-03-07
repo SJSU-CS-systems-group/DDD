@@ -1,5 +1,5 @@
 #!/bin/bash
-# DDD Canary Sanity Test
+# DDD Client Registration and Exchange Test
 #
 # Simulates a new mobile client performing the complete end-to-end flow:
 #   1. Initialize client storage
@@ -8,7 +8,7 @@
 #   4. (Optional) Send email to target address, poll for auto-reply
 #
 # Usage:
-#   ./canary-test.sh <cli-jar> <server-keys-dir> <host> <port> [target-email]
+#   ./client-registration-exchange-test.sh <cli-jar> <server-keys-dir> <host> <port> [target-email]
 #
 # Arguments:
 #   cli-jar         path to the built cli-*.jar
@@ -16,7 +16,7 @@
 #   host            bundleserver hostname or IP
 #   port            bundleserver port (typically 7778)
 #   target-email    (optional) address with auto-reply configured;
-#                   if omitted the email delivery steps are skipped
+#                   if omitted the exchange test is skipped
 
 set -e
 
@@ -83,61 +83,22 @@ done
 
 [ -n "$REGISTERED_EMAIL" ] || fail "Did not receive register-ack within 5 exchanges"
 echo "Registered as: $REGISTERED_EMAIL"
+echo "$REGISTERED_EMAIL" > "$CLIENT_DIR/registered-email.txt"
 
-# ── Optional email delivery test ─────────────────────────────────────────────
+echo ""
+echo "=== Registration test PASSED ==="
+
+# ── Optional exchange test ────────────────────────────────────────────────────
 if [ -z "$TARGET_EMAIL" ]; then
-    echo ""
-    echo "No target email configured (TEST_EMAIL_TARGET not set) — skipping email delivery test"
-    echo ""
-    echo "=== Sanity test PASSED ==="
+    echo "No target email provided — skipping exchange test"
     exit 0
 fi
 
-# ── Step 5: Send a test email to the target address ──────────────────────────
 echo ""
-echo "=== Step 5: Send test email to $TARGET_EMAIL ==="
-cat > "$CLIENT_DIR/test-email.eml" << EMLEOF
-From: $REGISTERED_EMAIL
-To: $TARGET_EMAIL
-Subject: DDD Sanity Test $(date +%s)
-Content-Type: text/plain
-
-This is an automated DDD sanity test email. Please reply.
-EMLEOF
-
-java -jar "$CLI_JAR" bc addAdu "$CLIENT_DIR" "$K9_APP_ID" "$CLIENT_DIR/test-email.eml"
-
-# ── Step 6: Exchange — upload email, then poll for bounce or reply ────────────
-# The server forwards the email externally. If it fails immediately a bounce
-# is queued and arrives on the next exchange download.
-echo ""
-echo "=== Step 6: Exchange to upload email, then poll for reply ==="
-java -jar "$CLI_JAR" bc exchange "$CLIENT_DIR"
-
-for attempt in $(seq 1 15); do
-    echo "Exchange attempt $attempt/15 (waiting for reply from $TARGET_EMAIL)..."
-    sleep 20
-    java -jar "$CLI_JAR" bc exchange "$CLIENT_DIR"
-
-    if [ -d "$RECV_DIR" ]; then
-        for adu_file in "$RECV_DIR"/*; do
-            [ -f "$adu_file" ] || continue
-
-            # Bounce: server could not deliver the email
-            if grep -q "Subject: Mail delivery failed" "$adu_file" 2>/dev/null; then
-                fail "Email was bounced by server: $(cat "$adu_file")"
-            fi
-
-            # Reply: a non-control ADU that mentions the target address
-            if ! head -1 "$adu_file" 2>/dev/null | grep -q "^# CONTROL" && \
-               grep -q "$TARGET_EMAIL" "$adu_file" 2>/dev/null; then
-                echo "Auto-reply received from $TARGET_EMAIL"
-                echo ""
-                echo "=== Sanity test PASSED ==="
-                exit 0
-            fi
-        done
-    fi
-done
-
-fail "Did not receive auto-reply from $TARGET_EMAIL within 5 minutes"
+echo "=== Step 5: Exchange test ==="
+bash "$(dirname "$0")/existing-client-test.sh" \
+    "$CLI_JAR" \
+    "$CLIENT_DIR" \
+    "$HOST" \
+    "$PORT" \
+    "$TARGET_EMAIL"
