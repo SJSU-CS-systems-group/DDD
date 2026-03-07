@@ -5,6 +5,7 @@ import io.grpc.StatusRuntimeException;
 import io.grpc.okhttp.OkHttpChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import lombok.Getter;
+import lombok.Setter;
 import net.discdd.bundlerouting.RoutingExceptions;
 import net.discdd.bundlerouting.WindowUtils.WindowExceptions;
 import net.discdd.bundlerouting.service.BundleUploadResponseObserver;
@@ -58,7 +59,6 @@ import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.net.Socket;
@@ -102,7 +102,10 @@ public class ClientBundleTransmission {
     public final ClientApplicationDataManager applicationDataManager;
 
     final private ClientRouting clientRouting;
+    @Getter
     final private ClientPaths clientPaths;
+    @Setter
+    private RecencyTracker recencyTracker;
 
     public ClientBundleTransmission(ClientPaths clientPaths, Consumer<ADU> aduConsumer) throws
             WindowExceptions.BufferOverflow, IOException, InvalidKeyException,
@@ -111,10 +114,6 @@ public class ClientBundleTransmission {
         this.bundleSecurity = new ClientBundleSecurity(clientPaths);
         this.applicationDataManager = new ClientApplicationDataManager(clientPaths, aduConsumer);
         this.clientRouting = ClientRouting.initializeInstance(clientPaths);
-    }
-
-    public ClientPaths getClientPaths() {
-        return clientPaths;
     }
 
     public void registerBundleId(String bundleId) throws IOException, WindowExceptions.BufferOverflow,
@@ -247,75 +246,6 @@ public class ClientBundleTransmission {
         return generateNewBundle(newBundleId);
     }
 
-    /**
-     * Used to track in memory recently seen transports.
-     * All times are in milliseconds since epoch.
-     */
-    @Getter
-    public static class RecentTransport {
-        private TransportDevice device;
-        /* @param lastExchange time of last bundle exchange */
-        private long lastExchange;
-        /* @param lastSeen time of last device discovery */
-        private long lastSeen;
-        /* @param recencyTime time from the last recencyBlob received */
-        private long recencyTime;
-        /* @param recencyBlobResponse the latest recencyBlobResponse received */
-        private GetRecencyBlobResponse recencyBlobResponse;
-
-        public RecentTransport(TransportDevice device) {
-            this.device = device;
-        }
-
-        public RecentTransport(TransportDevice device, GetRecencyBlobResponse recencyBlobResponse) {
-            this.device = device;
-            this.recencyBlobResponse = recencyBlobResponse;
-        }
-    }
-
-    final private HashMap<TransportDevice, RecentTransport> recentTransports = new HashMap<>();
-
-    public static boolean doesTransportHaveNewData(RecentTransport transport) {
-        return transport.recencyBlobResponse.getRecencyBlob().getBlobTimestamp() > transport.lastExchange;
-    }
-
-    public RecentTransport[] getRecentTransports() {
-        synchronized (recentTransports) {
-            return recentTransports.values().toArray(new RecentTransport[0]);
-        }
-    }
-
-    public RecentTransport getRecentTransport(TransportDevice device) {
-        synchronized (recentTransports) {
-            return recentTransports.get(device);
-        }
-    }
-
-    public void processDiscoveredPeer(TransportDevice device, GetRecencyBlobResponse response) {
-        synchronized (recentTransports) {
-            RecentTransport recentTransport = recentTransports.computeIfAbsent(device, RecentTransport::new);
-            recentTransport.device = device;
-            recentTransport.lastSeen = System.currentTimeMillis();
-            recentTransport.recencyBlobResponse = response;
-        }
-    }
-
-    public void timestampExchangeWithTransport(TransportDevice device) {
-        if (device == TransportDevice.SERVER_DEVICE) return;
-        synchronized (recentTransports) {
-            RecentTransport recentTransport = recentTransports.computeIfAbsent(device, RecentTransport::new);
-            var now = System.currentTimeMillis();
-            recentTransport.lastExchange = now;
-            recentTransport.lastSeen = now;
-        }
-    }
-
-    public void expireNotSeenPeers(long expirationTime) {
-        synchronized (recentTransports) {
-            recentTransports.values().removeIf(transport -> transport.getLastSeen() < expirationTime);
-        }
-    }
-
     // returns true if the blob is more recent than previously seen
     public boolean processRecencyBlob(TransportDevice device, GetRecencyBlobResponse recencyBlobResponse) throws
             IOException, InvalidKeyException {
@@ -337,14 +267,7 @@ public class ClientBundleTransmission {
                                               recencyBlobResponse.getRecencyBlobSignature().toByteArray())) {
             throw new RecencyException("Recency blob signature verification failed");
         }
-        synchronized (recentTransports) {
-            RecentTransport recentTransport = recentTransports.computeIfAbsent(device, RecentTransport::new);
-            if (recencyBlob.getBlobTimestamp() > recentTransport.recencyTime) {
-                recentTransport.recencyTime = recencyBlob.getBlobTimestamp();
-                return true;
-            }
-            return false;
-        }
+        return recencyTracker.isNewerRecencyBlob(device, recencyBlobResponse);
     }
 
     public void deleteSentBundle(Bundle bundle) {
@@ -433,7 +356,6 @@ public class ClientBundleTransmission {
                     logger.log(INFO, "Recency blob processed for " + transportSenderId);
                 }
 
-                timestampExchangeWithTransport(device);
                 var clientSecurity = bundleSecurity.getClientSecurity();
                 var bundleRequests = getNextBundles();
                 PublicKeyMap publicKeyMap = PublicKeyMap.newBuilder()
