@@ -67,8 +67,12 @@ The bundleserver is deployed via a GitHub Actions pipeline (`.github/workflows/d
 
 1. **build** — builds all Maven modules on a GitHub-hosted runner (`ubuntu-latest`) and uploads bundleserver, k9, and CLI jars as artifacts
 2. **deploy-canary** — SCPs jars to the canary server and restarts `bundleserver` and `k9` systemd services
-3. **test-canary** — runs CLI sanity tests against the canary server (initialize client, add ADU, exchange)
+3. **test-canary** — three tests against the canary server:
+   - **New client registration** (`scripts/canary-test.sh`): initializes a fresh client, registers with k9 (app ID `net.discdd.mail`), polls until register-ack received. No email exchange (new client emails get flagged as spam by Gmail).
+   - **Backward-compat exchange** (`scripts/existing-client-test.sh`): downloads the `client-cli` GitHub release jar, SCPs the persistent registered client dir from `~/ddd/test-client` on the canary server, runs full email exchange (send email → poll for auto-reply from `TEST_EMAIL` secret), SCPs updated client dir back.
+   - **New jar exchange** (`scripts/existing-client-test.sh`): same as above but using the newly built CLI jar, running sequentially against the same (already-updated) client dir.
 4. **deploy-production** — requires manual approval in the GitHub Actions UI, then SCPs jars to production and restarts services
+5. **update-client-baseline** — runs after `deploy-production` succeeds; to be implemented: update the `client-cli` GitHub release with the newly built CLI jar (triggered always after production deploy, so the baseline is always the previous production jar)
 
 ## Required GitHub setup
 
