@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Nonnull;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Service
 public class TransportMessageService {
@@ -19,13 +19,13 @@ public class TransportMessageService {
     }
 
     @Transactional
-    public TransportMessage createMessage(@Nonnull String transportId, @Nonnull String messageText) {
+    public TransportMessage createMessage(@Nonnull String transportId, @Nonnull String subject, String body) {
         int maxRetries = 5;
         for (int attempt = 0; attempt < maxRetries; attempt++) {
             Long max = repo.findMaxMessageNumber(transportId);
             long next = (max == null ? 1L : max + 1);
             TransportMessage msg =
-                    new TransportMessage(new MessageKey(transportId, next), messageText, LocalDateTime.now(), null);
+                    new TransportMessage(new MessageKey(transportId, next), subject, body, Instant.now(), null);
             try {
                 return repo.save(msg);
             } catch (org.springframework.dao.DataIntegrityViolationException e) {
