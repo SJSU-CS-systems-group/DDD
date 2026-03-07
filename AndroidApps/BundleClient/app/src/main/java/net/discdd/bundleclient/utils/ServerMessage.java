@@ -1,5 +1,6 @@
 package net.discdd.bundleclient.utils;
 
+import androidx.annotation.Nullable;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 
@@ -11,7 +12,9 @@ public class ServerMessage {
     private long messageId;
     private Instant sentAt;
     private Instant receivedAt;
-    private String message;
+    private String subject;
+    @Nullable
+    private String body;
     private boolean read;
 
     public long getMessageId() {
@@ -38,12 +41,20 @@ public class ServerMessage {
         this.receivedAt = receivedAt;
     }
 
-    public String getMessage() {
-        return message;
+    public String getSubject() {
+        return subject;
     }
 
-    public void setMessage(String message) {
-        this.message = message;
+    public void setSubject(String subject) {
+        this.subject = subject;
+    }
+
+    public String getBody() {
+        return body;
+    }
+
+    public void setBody(String body) {
+        this.body = body;
     }
 
     public boolean isRead() {

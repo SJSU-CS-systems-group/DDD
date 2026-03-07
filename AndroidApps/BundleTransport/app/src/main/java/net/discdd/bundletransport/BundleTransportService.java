@@ -127,7 +127,8 @@ public class BundleTransportService extends Service implements BundleExchangeSer
                     sm.setMessageId(m.getMessageId());
                     sm.setSentAt(java.time.Instant.parse(m.getSentAt()));
                     sm.setReceivedAt(receivedAt);
-                    sm.setMessage(m.getMessage());
+                    sm.setSubject(m.getSubject());
+                    sm.setBody(m.getBody().isEmpty() ? null : m.getBody());
                     sm.setRead(false);
                     return sm;
                 }).collect(java.util.stream.Collectors.toList());

@@ -125,7 +125,8 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
                 .map(m -> ServerMessage.newBuilder()
                         .setMessageId(m.messageKey.getMessageNumber())
                         .setSentAt(m.sentAt.toString())
-                        .setMessage(m.message)
+                        .setSubject(m.subject)
+                        .setBody(m.body == null ? "" : m.body)
                         .build())
                 .forEach(responseBuilder::addServerMessage);
 

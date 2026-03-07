@@ -41,7 +41,8 @@ message CheckMessagesRequest {
 message ServerMessage {
   int64 messageId = 1;
   string sent_at = 2;
-  string message = 3;
+  string subject = 3;
+  string body = 4;
 }
 
 message CheckMessagesResponse {

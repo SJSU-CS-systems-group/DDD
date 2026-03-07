@@ -146,7 +146,10 @@ fun ServerMessagesScreen(
             ) {
                 Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Notification", style = MaterialTheme.typography.titleLarge)
-                    Text(notif.message ?: "", style = MaterialTheme.typography.bodyLarge)
+                    Text(notif.subject ?: "", style = MaterialTheme.typography.bodyLarge)
+                    notif.body?.takeIf { it.isNotEmpty() }?.let {
+                        Text(it, style = MaterialTheme.typography.bodyMedium)
+                    }
                     Text(
                             "Sent: ${dialogFormatter.format(notif.sentAt)}",
                             style = MaterialTheme.typography.bodyMedium,
@@ -196,7 +199,7 @@ private fun NotifCard(
                     ) {}
                 }
                 Text(
-                        text = notif.message ?: "",
+                        text = notif.subject ?: "",
                         modifier = Modifier
                                 .weight(1f),
                         maxLines = 1,

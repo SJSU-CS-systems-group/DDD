@@ -15,12 +15,12 @@ public class TransportMessage {
     @EmbeddedId
     public MessageKey messageKey;
 
-    public String message;
+    public String subject;
 
-    // Date when the message was created (UTC)
+    public String body;
+
     public Instant sentAt;
 
-    // Date when the message was read, null if unread.
     public Instant readDate;
 
 }

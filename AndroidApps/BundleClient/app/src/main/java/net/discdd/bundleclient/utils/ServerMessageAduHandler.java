@@ -21,7 +21,8 @@ public class ServerMessageAduHandler {
         int v;
         long messageId;
         String sentAt;
-        String message;
+        String subject;
+        String body;
         boolean read;
     }
 
@@ -36,7 +37,8 @@ public class ServerMessageAduHandler {
                     msg.setMessageId(payload.messageId);
                     msg.setSentAt(Instant.parse(payload.sentAt));
                     msg.setReceivedAt(Instant.now());
-                    msg.setMessage(payload.message);
+                    msg.setSubject(payload.subject);
+                    msg.setBody(payload.body == null || payload.body.isEmpty() ? null : payload.body);
                     msg.setRead(payload.read);
                     AppDatabase.getInstance(context).serverMessageDao().insert(msg);
                 } catch (Exception e) {

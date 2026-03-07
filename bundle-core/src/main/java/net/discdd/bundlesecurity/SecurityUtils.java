@@ -202,7 +202,11 @@ public class SecurityUtils {
             ZipEntry entry = zis.getNextEntry();
             while (entry != null) {
                 File newFile = new File(destDir, entry.getName());
-                if (entry.isDirectory()) {
+                String canonicalDest = destDir.getCanonicalPath() + File.separator;
+                String canonicalFile = newFile.getCanonicalPath();
+                if (!canonicalFile.startsWith(canonicalDest)) {
+                    throw new SecurityException("Zip Slip detected: " + entry.getName());
+                } else if (entry.isDirectory()) {
                     newFile.mkdirs();
                 } else {
                     File parent = newFile.getParentFile();
