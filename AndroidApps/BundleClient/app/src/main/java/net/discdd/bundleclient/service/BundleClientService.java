@@ -557,6 +557,9 @@ public class BundleClientService extends Service {
     }
 
     public static boolean doesTransportHaveNewData(RecentTransport transport) {
+        if (transport == null) {
+            return false;
+        }
         return transport.getRecencyBlobResponse().getRecencyBlob().getBlobTimestamp() > transport.getLastExchange();
     }
 

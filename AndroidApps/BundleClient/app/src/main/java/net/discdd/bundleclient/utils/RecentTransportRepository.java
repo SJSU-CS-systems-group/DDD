@@ -65,17 +65,14 @@ public class RecentTransportRepository implements RecencyTracker {
             returnVal = AppDatabase.runOnDatabaseExecutorWithReturn(() -> {
                 RecentTransport existingTransport = recentTransportDao.getById(device.getId());
                 long newTimestamp = response.getRecencyBlob().getBlobTimestamp();
-
                 if (existingTransport == null) {
-                    // No existing transport record - treat as newer
-                    return true;
+                    return false;
                 }
-
                 long existingTimestamp = existingTransport.getRecencyBlobResponse().getRecencyBlob().getBlobTimestamp();
                 return newTimestamp > existingTimestamp;
             }).get();
         } catch (Exception e) {
-            returnVal = false;
+            return false;
         }
         return returnVal;
     }
