@@ -22,7 +22,6 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
-
 public class ClientWindow {
 
     private static final Logger logger = Logger.getLogger(ClientWindow.class.getName());
