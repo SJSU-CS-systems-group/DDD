@@ -1,0 +1,95 @@
+name: Nightly Release
+
+on:
+  schedule:
+    - cron: '0 16 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: Android Release
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Configure Maven
+        run: |
+          mkdir -p ~/.m2
+          echo "<settings><servers><server>
+            <id>github</id>
+            <username>github-actions[bot]</username>
+            <password>${{ secrets.GITHUB_TOKEN }}</password>
+          </server></servers></settings>" > ~/.m2/settings.xml
+
+      - name: Build
+        run: |
+          mvn -ntp clean install
+          mv apps/cli/target/cli-*.jar .
+
+      - name: Build Android apps
+        env:
+          DDD_KEYFILE_PASSWORD: ${{ secrets.DDD_KEYFILE_PASSWORD }}
+        run: |
+          cd AndroidApps
+          KEYFILE=${PWD}/signing-key.jks
+          echo "${{ secrets.DDD_KEYFILE }}" | base64 -d > $KEYFILE
+          ./gradlew clean bundleRelease assembleRelease \
+            -Pandroid.injected.signing.store.file=$KEYFILE \
+            -Pandroid.injected.signing.store.password=$DDD_KEYFILE_PASSWORD \
+            -Pandroid.injected.signing.key.alias=ddd \
+            -Pandroid.injected.signing.key.password=$DDD_KEYFILE_PASSWORD
+          mv BundleClient/app/build/outputs/bundle/release/app-release.aab ../DDDClient.aab
+          mv BundleClient/app/build/outputs/apk/release/app-release.apk ../DDDClient.apk
+          mv BundleTransport/app/build/outputs/bundle/release/app-release.aab ../DDDTransport.aab
+          mv BundleTransport/app/build/outputs/apk/release/app-release.apk ../DDDTransport.apk
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: |
+            DDDClient.aab
+            DDDClient.apk
+            DDDTransport.aab
+            DDDTransport.apk
+            cli-*.jar
+
+  publish-nightly:
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+
+      - name: Save previous nightly CLI jar
+        run: |
+          gh release download nightly --pattern "cli-*.jar" --output old-cli.jar \
+            --repo ${{ github.repository }} 2>/dev/null || true
+
+      - name: Upload old CLI jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: old-cli-jar
+          path: old-cli.jar
+          if-no-files-found: ignore
+
+      - name: Publish nightly release
+        run: |
+          gh release delete nightly --yes --cleanup-tag 2>/dev/null || true
+          gh release create nightly \
+            --repo ${{ github.repository }} \
+            --title "Nightly $(date -u '+%Y-%m-%d')" \
+            --notes "Nightly build from ${{ github.sha }}" \
+            --prerelease DDDClient.aab DDDClient.apk DDDTransport.aab DDDTransport.apk cli-*.jar
