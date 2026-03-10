@@ -40,35 +40,29 @@ public class RecentTransportRepository implements RecencyTracker {
 
     public void processDiscoveredPeer(TransportDevice device, GetRecencyBlobResponse response) {
         synchronized(transportMap) {
-            RecentTransport existingTransport = transportMap.get(device.getId());
-            if (existingTransport != null) {
-                existingTransport.setDevice(device);
-                existingTransport.setLastSeen(System.currentTimeMillis());
-                existingTransport.setRecencyBlobResponse(response);
-            } else {
-                RecentTransport newTransport = new RecentTransport();
-                newTransport.setTransportId(device.getId());
-                newTransport.setDevice(device);
-                newTransport.setLastSeen(System.currentTimeMillis());
-                newTransport.setRecencyBlobResponse(response);
-                transportMap.put(device.getId(), newTransport);
-            }
+            transportMap.compute(device.getId(), (id, transport) -> {
+                if (transport == null) {
+                    transport = new RecentTransport();
+                    transport.setTransportId(id);
+                }
+                transport.setTransportId(device.getId());
+                transport.setDevice(device);
+                transport.setLastSeen(System.currentTimeMillis());
+                transport.setRecencyBlobResponse(response);
+                return transport;
+            });
         }
         AppDatabase.runOnDatabaseExecutor(() -> {
-            RecentTransport existingTransport = recentTransportDao.getById(device.getId());
-            if (existingTransport != null) {
-                existingTransport.setDevice(device);
-                existingTransport.setLastSeen(System.currentTimeMillis());
-                existingTransport.setRecencyBlobResponse(response);
-                recentTransportDao.upsert(existingTransport);
-            } else {
-                RecentTransport newTransport = new RecentTransport();
-                newTransport.setTransportId(device.getId());
-                newTransport.setDevice(device);
-                newTransport.setLastSeen(System.currentTimeMillis());
-                newTransport.setRecencyBlobResponse(response);
-                recentTransportDao.upsert(newTransport);
+            RecentTransport transport = recentTransportDao.getById(device.getId());
+            if (transport == null) {
+                transport = new RecentTransport();
+                transport.setTransportId(device.getId());
             }
+            transport.setTransportId(device.getId());
+            transport.setDevice(device);
+            transport.setLastSeen(System.currentTimeMillis());
+            transport.setRecencyBlobResponse(response);
+            recentTransportDao.upsert(transport);
         });
     }
 
