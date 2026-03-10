@@ -14,6 +14,7 @@ import java.util.concurrent.Callable;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 
 @CommandLine.Command(name = "encrypt-bundle", description = "Encrypt bundle")
 public class EncryptBundle implements Callable<Void> {
@@ -68,7 +69,7 @@ public class EncryptBundle implements Callable<Void> {
                                                       encryptedBundleOs);
             logger.log(INFO, "Finished encrypting " + bundlePath);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.log(SEVERE, "Failed to encrypt bundle " + bundlePath, e);
         }
         return null;
     }
