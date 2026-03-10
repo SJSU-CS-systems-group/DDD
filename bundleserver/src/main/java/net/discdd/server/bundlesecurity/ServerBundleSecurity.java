@@ -42,11 +42,10 @@ public class ServerBundleSecurity {
                                         uncompressedBundle.getSource().toPath());
             logger.log(FINE, "[BundleSecurity] decrypted payload");
         } catch (Exception e) {
-            // TODO
+
             logger.log(SEVERE,
                        "[BundleSecurity] Failed to decrypt payload" + uncompressedBundle.getSource().toPath(),
                        e);
-            // e.printStackTrace();
             return null;
         }
 
