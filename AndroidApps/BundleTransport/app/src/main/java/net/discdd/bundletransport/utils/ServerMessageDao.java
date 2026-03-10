@@ -2,7 +2,6 @@ package net.discdd.bundletransport.utils;
 
 import androidx.lifecycle.LiveData;
 import androidx.room.Dao;
-import androidx.room.Insert;
 import androidx.room.Query;
 import androidx.room.Upsert;
 
@@ -16,7 +15,7 @@ public interface ServerMessageDao {
     @Upsert
     void insertAll(List<ServerMessage> serverMessages);
 
-    @Query("SELECT * FROM ServerMessages ORDER BY date DESC")
+    @Query("SELECT * FROM ServerMessages ORDER BY sentAt DESC")
     LiveData<List<ServerMessage>> getAllServerMessages();
 
     @Query("UPDATE ServerMessages SET read = 1 WHERE messageId = :messageId")
@@ -25,6 +24,4 @@ public interface ServerMessageDao {
     @Query("DELETE FROM ServerMessages WHERE messageId = :messageId")
     void deleteById(long messageId);
 
-    @Query("SELECT COUNT(*) FROM ServerMessages")
-    int count();
 }
