@@ -18,7 +18,7 @@ public class DDDWifiDirectDevice implements DDDWifiDevice {
     @Override
     public String getWifiAddress() {
         if (wifiP2pDevice == null) {
-            return "Unknown Address";
+            return "Unknown";
         }
         return wifiP2pDevice.deviceAddress;
     }
@@ -26,7 +26,7 @@ public class DDDWifiDirectDevice implements DDDWifiDevice {
     @Override
     public String getDescription() {
         if (wifiP2pDevice == null) {
-            return "Unknown Device";
+            return "Unknown";
         }
         return this.wifiP2pDevice.deviceName;
     }

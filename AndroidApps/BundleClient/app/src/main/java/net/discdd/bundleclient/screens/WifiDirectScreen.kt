@@ -235,7 +235,7 @@ fun PeerItem(
         TextButton(
             onClick = onItemClick
         ) {
-            Text(text = peer.device.description.ifBlank { "TransportID: " + peer.device.id })
+            Text(text = if (peer.device.description.equals("Unknown")) { "Unknown\nDevice Name" } else { peer.device.description })
         }
         Button(
             onClick = onExchangeClick,

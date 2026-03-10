@@ -33,7 +33,6 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import net.discdd.bundleclient.BuildConfig;
 import net.discdd.bundleclient.R;
 import net.discdd.bundleclient.service.wifiDirect.DDDWifiDirect;
-import net.discdd.bundleclient.utils.AppDatabase;
 import net.discdd.bundleclient.utils.RecentTransport;
 import net.discdd.bundleclient.utils.RecentTransportRepository;
 import net.discdd.client.bundletransmission.ClientBundleTransmission;
@@ -56,9 +55,7 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -97,7 +94,7 @@ public class BundleClientService extends Service {
     private ClientBundleTransmission bundleTransmission;
     final private Observer<? super DDDWifiEventType> liveDataObserver = this::broadcastWifiEvent;
     private MutableLiveData<DDDWifiEventType> eventsLiveData;
-    private RecentTransportManager transportManager;
+    private RecentTransportRepository recentTransportRepository;
 
     public BundleClientService() {
         super();
@@ -149,7 +146,9 @@ public class BundleClientService extends Service {
         };
         connectivityManager.registerDefaultNetworkCallback(networkCallback);
         checkValidNetwork();
-        transportManager = new RecentTransportManager();
+
+        recentTransportRepository = new RecentTransportRepository(getApplication());
+        bundleTransmission.setRecencyTracker(recentTransportRepository);
         return START_STICKY;
     }
 
@@ -302,7 +301,7 @@ public class BundleClientService extends Service {
             broadcastBundleClientLogEvent(R.string.failed_to_start_discovery_s, e.getMessage());
             // not the end of the world, we can still try
         }
-        var recentTransports = transportManager.transportMap.values().toArray(new RecentTransport[0]);
+        var recentTransports = recentTransportRepository.getAllTransports();
         for (var transport : recentTransports) {
             if (transport.getDevice() instanceof DDDWifiDevice && doesTransportHaveNewData(transport)) {
                 var bc = exchangeWith((DDDWifiDevice) transport.getDevice());
@@ -337,7 +336,7 @@ public class BundleClientService extends Service {
                                                  addr.getHostAddress());
             BundleExchangeCounts currentBundle =
                     bundleTransmission.doExchangeWithTransport(device, addr.getHostAddress(), 7777, true);
-            transportManager.timeStampExchange(device);
+            recentTransportRepository.timeStampExchange(device);
             broadcastBundleClientLogEvent(R.string.s_upload_s_download_s,
                                                  device.getDescription(),
                                                  statusesToString(currentBundle.uploadStatus()),
@@ -494,7 +493,7 @@ public class BundleClientService extends Service {
                                                                     serverAddress,
                                                                     port,
                                                                     false);
-                    transportManager.timeStampExchange(TransportDevice.SERVER_DEVICE);
+                    recentTransportRepository.timeStampExchange(TransportDevice.SERVER_DEVICE);
                     logger.log(INFO,
                                format("Upload status: %s, Download status: %s",
                                       bc.uploadStatus().toString(),
@@ -511,9 +510,7 @@ public class BundleClientService extends Service {
     }
 
     public RecentTransport[] getRecentTransports() {
-        synchronized (transportManager.transportMap) {
-            return transportManager.transportMap.values().toArray(new RecentTransport[0]);
-        }
+        return recentTransportRepository.getAllTransports();
     }
 
     public boolean isDiscoveryActive() {
@@ -534,10 +531,10 @@ public class BundleClientService extends Service {
     }
 
     public void peersUpdated() {
-        dddWifi.listDevices().forEach(device -> transportManager.processDiscoveredPeer(device, device.getRecencyBlob()));
+        dddWifi.listDevices().forEach(device -> recentTransportRepository.processDiscoveredPeer(device, device.getRecencyBlob()));
         // expire peers that haven't been seen for a minute
         long expirationTime = System.currentTimeMillis() - 60 * 1000;
-        transportManager.expireNotSeenPeers(expirationTime);
+        recentTransportRepository.expireNotSeenPeers(expirationTime);
     }
 
     public void wifiPermissionGranted() {
@@ -561,64 +558,5 @@ public class BundleClientService extends Service {
             return false;
         }
         return transport.getRecencyBlobResponse().getRecencyBlob().getBlobTimestamp() > transport.getLastExchange();
-    }
-
-    private class RecentTransportManager {
-        private final RecentTransportRepository recentTransportRepository;
-        // Use transportId as key to avoid duplicates when device is null from room DB
-        final public HashMap<String, RecentTransport> transportMap = new HashMap<>();
-
-        public RecentTransportManager() {
-            recentTransportRepository = new RecentTransportRepository(getApplication());
-            bundleTransmission.setRecencyTracker(recentTransportRepository);
-            AppDatabase.runOnDatabaseExecutor(() -> {
-                List<RecentTransport> devices = recentTransportRepository.getAllTransportsSync();
-                if (devices != null) {
-                    for (RecentTransport device : devices) {
-                        transportMap.put(device.getTransportId(), device);
-                    }
-                }
-            });
-        }
-
-        public void timeStampExchange(TransportDevice device) {
-            synchronized(transportMap) {
-                RecentTransport transport = transportMap.get(device.getId());
-                if (transport != null) {
-                    transport.setLastExchange(System.currentTimeMillis());
-                    recentTransportRepository.processDiscoveredPeer(device, transport.getRecencyBlobResponse());
-                }
-            }
-            try {
-                recentTransportRepository.timeStampExchange(device);
-            } catch (ExecutionException | InterruptedException e) {}
-
-        }
-
-        public void expireNotSeenPeers(long expirationThresholdMillis) {
-            recentTransportRepository.expireNotSeenPeers(expirationThresholdMillis);
-            synchronized(transportMap) {
-                transportMap.entrySet().removeIf(entry -> entry.getValue().getLastSeen() < expirationThresholdMillis);
-            }
-        }
-
-        public void processDiscoveredPeer(TransportDevice device, GetRecencyBlobResponse response) {
-            recentTransportRepository.processDiscoveredPeer(device, response);
-            synchronized(transportMap) {
-                RecentTransport existingTransport = transportMap.get(device.getId());
-                if (existingTransport != null) {
-                    existingTransport.setDevice(device);
-                    existingTransport.setLastSeen(System.currentTimeMillis());
-                    existingTransport.setRecencyBlobResponse(response);
-                } else {
-                    RecentTransport newTransport = new RecentTransport();
-                    newTransport.setTransportId(device.getId());
-                    newTransport.setDevice(device);
-                    newTransport.setLastSeen(System.currentTimeMillis());
-                    newTransport.setRecencyBlobResponse(response);
-                    transportMap.put(device.getId(), newTransport);
-                }
-            }
-        }
     }
 }

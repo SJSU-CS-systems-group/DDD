@@ -191,13 +191,22 @@ public class BundleClientToBundleServerTest extends End2EndTest {
         sendBundle();
     }
 
-    //@Test
+    @Test
     void test5RecencyBlob() throws InvalidKeyException, IOException {
+        var seenBlobs = new HashMap<String, GetRecencyBlobResponse>();
+        bundleTransmission.setRecencyTracker((device, response) -> {
+            var previous = seenBlobs.put(device.getId(), response);
+            return previous == null ||
+                    response.getRecencyBlob().getBlobTimestamp() > previous.getRecencyBlob().getBlobTimestamp();
+        });
+
         var rsp = blockingStub.getRecencyBlob(GetRecencyBlobRequest.getDefaultInstance());
-        bundleTransmission.processRecencyBlob(FAKE_DEVICE, rsp);
-        //var rt = bundleTransmission.getRecentTransport(FAKE_DEVICE);
+        assertTrue(bundleTransmission.processRecencyBlob(FAKE_DEVICE, rsp));
+        assertEquals(rsp, seenBlobs.get(FAKE_DEVICE.getId()));
+
         // the blob should have been signed within the last second or so
-        assertEquals((double) System.currentTimeMillis(), (double) 0, 2000);
+        long blobTimestamp = rsp.getRecencyBlob().getBlobTimestamp();
+        assertEquals((double) System.currentTimeMillis(), (double) blobTimestamp, 2000);
         var badBlob = rsp.toBuilder().setRecencyBlob(rsp.getRecencyBlob().toBuilder().setNonce(1)).build();
         // mess with the signature
         Assertions.assertThrows(IOException.class, () -> bundleTransmission.processRecencyBlob(FAKE_DEVICE, badBlob));

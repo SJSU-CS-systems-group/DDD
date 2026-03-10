@@ -2,9 +2,11 @@ package net.discdd.client.bundletransmission;
 
 import net.discdd.grpc.GetRecencyBlobResponse;
 
+import java.util.HashMap;
+
 /**
  * Interface for tracking recency of transport exchanges.
- * Implementations determine if a recency blob is newer than previously seen.
+ * We use this interface to wire the method from RecentTransportRepository to ClientBundleTransmission
  */
 public interface RecencyTracker {
     /**
@@ -15,4 +17,6 @@ public interface RecencyTracker {
      * @return true if this blob is more recent than previously seen
      */
     boolean isNewerRecencyBlob(TransportDevice device, GetRecencyBlobResponse response);
+
+
 }
