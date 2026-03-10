@@ -13,7 +13,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    environment: Nightly Release
+    environment: Android Release
     steps:
       - uses: actions/checkout@v4
 
