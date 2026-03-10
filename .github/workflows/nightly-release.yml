@@ -68,6 +68,8 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
+      - uses: actions/checkout@v4
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -85,11 +87,25 @@ jobs:
           path: old-cli.jar
           if-no-files-found: ignore
 
-      - name: Publish nightly release
+      - name: Force-move nightly tag
         run: |
-          gh release delete nightly --yes --cleanup-tag 2>/dev/null || true
-          gh release create nightly \
-            --repo ${{ github.repository }} \
-            --title "Nightly $(date -u '+%Y-%m-%d')" \
-            --notes "Nightly build from ${{ github.sha }}" \
-            --prerelease DDDClient.aab DDDClient.apk DDDTransport.aab DDDTransport.apk cli-*.jar
+          git tag -f nightly ${{ github.sha }}
+          git push -f https://x-access-token:${{ secrets.NIGHTLY_WORKFLOW_PAT }}@github.com/${{ github.repository }}.git refs/tags/nightly
+
+      - name: Get date
+        id: date
+        run: echo "DATE=$(date -u '+%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Publish nightly release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly
+          name: Nightly ${{ steps.date.outputs.DATE }}
+          body: Nightly build from commit ${{ github.sha }}
+          prerelease: true
+          files: |
+            DDDClient.aab
+            DDDClient.apk
+            DDDTransport.aab
+            DDDTransport.apk
+            cli-*.jar
