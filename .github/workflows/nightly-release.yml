@@ -1,6 +1,8 @@
 name: Nightly Release
 
 on:
+  push:
+    branches: [nightly-release-env]
   schedule:
     - cron: '0 16 * * *'
   workflow_dispatch:
