@@ -10,6 +10,7 @@ import net.discdd.model.ADU;
 import net.discdd.model.Acknowledgement;
 import net.discdd.model.Bundle;
 import net.discdd.model.EncryptedPayload;
+import net.discdd.model.EncryptionHeader;
 import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
 import net.discdd.model.UncompressedPayload;
@@ -65,10 +66,18 @@ public class BundleUtils {
         logger.log(INFO, "Extracting bundle for bundle name: " + bundleFileName);
         Path extractedBundlePath = extractDirPath.resolve(bundleFileName);
         JarUtils.jarToDir(bundle.getSource().getAbsolutePath(), extractedBundlePath.toString());
-        File[] payloads = extractedBundlePath.resolve("payloads").toFile().listFiles();
-        EncryptedPayload encryptedPayload = new EncryptedPayload(null, payloads[0]);
-        return new UncompressedBundle( // TODO get encryption header, payload signature and get bundle id from BS
-                                       null, extractedBundlePath.toFile(), null, encryptedPayload);
+
+        String bundleId = Files.readString(extractedBundlePath.resolve(SecurityUtils.BUNDLEID_FILENAME)).trim();
+
+        EncryptionHeader encryptionHeader = EncryptionHeader.builder()
+                .clientIdentityKey(extractedBundlePath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY).toFile())
+                .clientBaseKey(extractedBundlePath.resolve(SecurityUtils.CLIENT_BASE_KEY).toFile())
+                .serverIdentityKey(extractedBundlePath.resolve(SecurityUtils.SERVER_IDENTITY_KEY).toFile())
+                .build();
+
+        File[] payloads = extractedBundlePath.resolve(SecurityUtils.PAYLOAD_DIR).toFile().listFiles();
+        EncryptedPayload encryptedPayload = new EncryptedPayload(bundleId, payloads[0]);
+        return new UncompressedBundle(bundleId, extractedBundlePath.toFile(), encryptionHeader, encryptedPayload);
     }
 
     public static UncompressedPayload extractPayload(Payload payload, Path extractDirPath) throws IOException {
