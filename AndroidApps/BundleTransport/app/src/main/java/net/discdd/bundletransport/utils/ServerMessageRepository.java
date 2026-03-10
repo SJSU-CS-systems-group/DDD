@@ -41,4 +41,9 @@ public class ServerMessageRepository {
         });
     }
 
+    // Called from background thread — Room allows synchronous DAO calls off main thread
+    public long getMaxMessageId() {
+        return serverMessageDao.getMaxMessageId();
+    }
+
 }
