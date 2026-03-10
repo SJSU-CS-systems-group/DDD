@@ -94,11 +94,16 @@ jobs:
           git tag -f nightly
           git push -f origin nightly
 
+      - name: Get date
+        id: date
+        run: echo "DATE=$(date -u '+%Y-%m-%d')" >> $GITHUB_OUTPUT
+
       - name: Publish nightly release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: nightly
-          name: Nightly ${{ github.run_id }}
+          name: Nightly ${{ steps.date.outputs.DATE }}
+          body: Nightly build from commit ${{ github.sha }}
           prerelease: true
           files: |
             DDDClient.aab
