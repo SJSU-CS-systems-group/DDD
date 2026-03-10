@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: write
-  workflows: write
 
 jobs:
   build:
@@ -91,7 +90,7 @@ jobs:
       - name: Force-move nightly tag
         run: |
           git tag -f nightly ${{ github.sha }}
-          git push -f origin refs/tags/nightly
+          git push -f https://x-access-token:${{ secrets.NIGHTLY_WORKFLOW_PAT }}@github.com/${{ github.repository }}.git refs/tags/nightly
 
       - name: Get date
         id: date
