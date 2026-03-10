@@ -18,5 +18,4 @@ public interface RecencyTracker {
      */
     boolean isNewerRecencyBlob(TransportDevice device, GetRecencyBlobResponse response);
 
-
 }
