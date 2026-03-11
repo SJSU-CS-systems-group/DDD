@@ -33,6 +33,8 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import net.discdd.bundleclient.BuildConfig;
 import net.discdd.bundleclient.R;
 import net.discdd.bundleclient.service.wifiDirect.DDDWifiDirect;
+import net.discdd.bundleclient.utils.RecentTransport;
+import net.discdd.bundleclient.utils.RecentTransportRepository;
 import net.discdd.client.bundletransmission.ClientBundleTransmission;
 import net.discdd.client.bundletransmission.ClientBundleTransmission.BundleExchangeCounts;
 import net.discdd.client.bundletransmission.ClientBundleTransmission.Statuses;
@@ -92,6 +94,7 @@ public class BundleClientService extends Service {
     private ClientBundleTransmission bundleTransmission;
     final private Observer<? super DDDWifiEventType> liveDataObserver = this::broadcastWifiEvent;
     private MutableLiveData<DDDWifiEventType> eventsLiveData;
+    private RecentTransportRepository recentTransportRepository;
 
     public BundleClientService() {
         super();
@@ -143,6 +146,9 @@ public class BundleClientService extends Service {
         };
         connectivityManager.registerDefaultNetworkCallback(networkCallback);
         checkValidNetwork();
+
+        recentTransportRepository = new RecentTransportRepository(getApplication());
+        bundleTransmission.setRecencyTracker(recentTransportRepository);
         return START_STICKY;
     }
 
@@ -295,9 +301,9 @@ public class BundleClientService extends Service {
             broadcastBundleClientLogEvent(R.string.failed_to_start_discovery_s, e.getMessage());
             // not the end of the world, we can still try
         }
-        var recentTransports = bundleTransmission.getRecentTransports();
+        var recentTransports = recentTransportRepository.getAllTransports();
         for (var transport : recentTransports) {
-            if (transport.getDevice() instanceof DDDWifiDevice && ClientBundleTransmission.doesTransportHaveNewData(transport)) {
+            if (transport.getDevice() instanceof DDDWifiDevice && doesTransportHaveNewData(transport)) {
                 var bc = exchangeWith((DDDWifiDevice) transport.getDevice());
                 exchangeCounts.add(bc);
                 logger.log(INFO,
@@ -330,6 +336,7 @@ public class BundleClientService extends Service {
                                                  addr.getHostAddress());
             BundleExchangeCounts currentBundle =
                     bundleTransmission.doExchangeWithTransport(device, addr.getHostAddress(), 7777, true);
+            recentTransportRepository.timeStampExchange(device);
             broadcastBundleClientLogEvent(R.string.s_upload_s_download_s,
                                                  device.getDescription(),
                                                  statusesToString(currentBundle.uploadStatus()),
@@ -486,6 +493,7 @@ public class BundleClientService extends Service {
                                                                     serverAddress,
                                                                     port,
                                                                     false);
+                    recentTransportRepository.timeStampExchange(TransportDevice.SERVER_DEVICE);
                     logger.log(INFO,
                                format("Upload status: %s, Download status: %s",
                                       bc.uploadStatus().toString(),
@@ -501,19 +509,19 @@ public class BundleClientService extends Service {
         return completableFuture;
     }
 
-    public ClientBundleTransmission.RecentTransport[] getRecentTransports() {
-        return bundleTransmission.getRecentTransports();
+    public RecentTransport[] getRecentTransports() {
+        return recentTransportRepository.getAllTransports();
     }
 
     public boolean isDiscoveryActive() {
         return dddWifi.isDiscoveryActive();
     }
 
-    public ClientBundleTransmission.RecentTransport getRecentTransport(DDDWifiDevice peer) {
-        return Arrays.stream(bundleTransmission.getRecentTransports())
+    public RecentTransport getRecentTransport(DDDWifiDevice peer) {
+        return Arrays.stream(getRecentTransports())
                 .filter(rt -> peer.equals(rt.getDevice()))
                 .findFirst()
-                .orElse(new ClientBundleTransmission.RecentTransport(peer, GetRecencyBlobResponse.getDefaultInstance()));
+                .orElse(new RecentTransport(peer, GetRecencyBlobResponse.getDefaultInstance()));
     }
 
     public void notifyNewAdu() {
@@ -523,10 +531,10 @@ public class BundleClientService extends Service {
     }
 
     public void peersUpdated() {
-        dddWifi.listDevices().forEach(device -> bundleTransmission.processDiscoveredPeer(device, device.getRecencyBlob()));
+        dddWifi.listDevices().forEach(device -> recentTransportRepository.processDiscoveredPeer(device, device.getRecencyBlob()));
         // expire peers that haven't been seen for a minute
         long expirationTime = System.currentTimeMillis() - 60 * 1000;
-        bundleTransmission.expireNotSeenPeers(expirationTime);
+        recentTransportRepository.expireNotSeenPeers(expirationTime);
     }
 
     public void wifiPermissionGranted() {
@@ -545,4 +553,10 @@ public class BundleClientService extends Service {
         public BundleClientService getService() {return BundleClientService.this;}
     }
 
+    public static boolean doesTransportHaveNewData(RecentTransport transport) {
+        if (transport == null) {
+            return false;
+        }
+        return transport.getRecencyBlobResponse().getRecencyBlob().getBlobTimestamp() > transport.getLastExchange();
+    }
 }
