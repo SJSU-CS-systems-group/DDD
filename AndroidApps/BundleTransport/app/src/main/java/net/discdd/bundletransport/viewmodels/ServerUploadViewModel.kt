@@ -19,6 +19,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import net.discdd.bundletransport.BundleTransportService
+import net.discdd.bundletransport.screens.FileUtil.getFile
 import java.io.File
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
@@ -58,8 +59,7 @@ class ServerUploadViewModel(
 
     private val logger = Logger.getLogger(ServerUploadViewModel::class.java.name)
     private val transportPaths: TransportPaths by lazy {
-        val dir = context.getExternalFilesDir(null) ?: context.filesDir
-        TransportPaths(dir.toPath())
+        TransportPaths(context.getFile().toPath())
     }
     private val _state = MutableStateFlow(ServerState())
     val state = _state.asStateFlow()
@@ -97,7 +97,7 @@ class ServerUploadViewModel(
     fun updateRecencyBlobStatus() {
         viewModelScope.launch {
             val status = withContext(Dispatchers.IO) {
-                var clientDir = context.getExternalFilesDir("BundleTransmission/client") ?: File(context.filesDir, "BundleTransmission/client")
+                var clientDir = File(context.getFile(), "BundleTransmission/client")
                 clientDir.mkdirs()
                 val file = File(clientDir, "recencyBlob.bin")
 

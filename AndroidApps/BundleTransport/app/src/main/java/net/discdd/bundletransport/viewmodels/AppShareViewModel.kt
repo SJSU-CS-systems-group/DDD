@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import net.discdd.bundletransport.screens.FileUtil.getFile
 import java.io.File
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -28,12 +29,10 @@ class AppShareViewModel(
 ) : AndroidViewModel(myApplication) {
     private val logger = Logger.getLogger(AppShareViewModel::class.java.name)
     private val mailApkFile by lazy {
-        var dir = myApplication.getExternalFilesDir(null) ?: myApplication.filesDir
-        File(dir, "ddd-mail.apk").toPath()
+        File(myApplication.getFile(), "ddd-mail.apk").toPath()
     }
     private val clientApkFile by lazy {
-        var dir = myApplication.getExternalFilesDir(null) ?: myApplication.filesDir
-        File(dir, "DDDclient.apk").toPath()
+        File(myApplication.getFile(), "DDDclient.apk").toPath()
     }
     private var _downloadMailProgress = MutableStateFlow(1f)
     val downloadMailProgress = _downloadMailProgress.asStateFlow()

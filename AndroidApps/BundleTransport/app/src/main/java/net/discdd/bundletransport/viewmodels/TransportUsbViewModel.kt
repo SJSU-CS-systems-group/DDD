@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import net.discdd.bundletransport.screens.FileUtil.getFile
 import net.discdd.pathutils.TransportPaths
 import net.discdd.viewmodels.UsbViewModel
 import java.io.File
@@ -29,8 +30,7 @@ class TransportUsbViewModel(
     }
 
     private val anotherTransportPaths by lazy {
-        var dir = application.getExternalFilesDir(null) ?: application.filesDir
-        TransportPaths(dir.toPath())
+        TransportPaths(getApplication<Application>().getFile().toPath())
     }
 
     fun createIfDoesNotExist(parent: DocumentFile, name: String): DocumentFile {

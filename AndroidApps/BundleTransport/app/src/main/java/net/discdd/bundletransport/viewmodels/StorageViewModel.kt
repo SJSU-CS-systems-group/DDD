@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.discdd.bundletransport.R
+import net.discdd.bundletransport.screens.FileUtil.getFile
 import net.discdd.bundletransport.StorageManager
 import androidx.core.content.edit
 
@@ -28,9 +29,8 @@ class StorageViewModel(application: Application) : AndroidViewModel(application)
     private val minStorage = 100
     private val context get() = getApplication<Application>()
     private val storageManager by lazy {
-        var dir = context.getExternalFilesDir(null) ?: context.filesDir
         StorageManager(
-            dir.toPath(),
+            context.getFile().toPath(),
                 retrievePreference().toLong()
         )
     }
