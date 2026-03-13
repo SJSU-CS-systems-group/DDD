@@ -58,7 +58,7 @@ jobs:
           NEW_JAR=$(ls cli-*.jar)
           REMOTE="${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}"
 
-          scp -i ~/.ssh/deploy_key -r "$REMOTE:~/ddd/test-client" ./persistent-client \
+          scp -i ~/.ssh/deploy_key -r "$REMOTE:~/test-client" ./persistent-client \
             || { echo "No persistent client dir — run one-time client setup first"; exit 1; }
 
           if [ -f old-cli.jar ]; then
@@ -71,8 +71,8 @@ jobs:
           bash scripts/existing-client-test.sh "$NEW_JAR" ./persistent-client \
             ${{ secrets.DEPLOY_SSH_HOST }} 7778 ${{ secrets.TEST_EMAIL }}
 
-          ssh -i ~/.ssh/deploy_key "$REMOTE" "rm -rf ~/ddd/test-client && mkdir -p ~/ddd"
-          scp -i ~/.ssh/deploy_key -r ./persistent-client "$REMOTE:~/ddd/test-client"
+          ssh -i ~/.ssh/deploy_key "$REMOTE" "rm -rf ~/test-client"
+          scp -i ~/.ssh/deploy_key -r ./persistent-client "$REMOTE:~/test-client"
 
       - name: Notify Discord on failure
         if: failure()
