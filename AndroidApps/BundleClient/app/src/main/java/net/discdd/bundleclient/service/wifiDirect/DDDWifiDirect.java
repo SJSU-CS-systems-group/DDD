@@ -142,7 +142,6 @@ public class DDDWifiDirect implements DDDWifi {
         }
         if (wifiEnable) {
             if (hasPermission()) {
-
                 wifiP2pManager.requestDeviceInfo(wifiChannel, (DDDWifiDirect.this::processDeviceInfo));
             }
         }
