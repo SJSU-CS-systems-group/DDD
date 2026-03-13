@@ -302,7 +302,7 @@ public class DDDWifiDirect implements DDDWifi {
             return "🚫: " + statusString;
         }
         if (wifiChannel == null) {
-            return "📶: " + statusString;
+            return "📶: " + statusString + " | Discovery: " + discoveryStatusText;
         }
 
         var statusBuilder = new StringBuilder();
@@ -481,6 +481,7 @@ public class DDDWifiDirect implements DDDWifi {
         unregisterBroadcastReceiver();
         // there is no shutdown for wifiP2pManager
         wifiEnable = false;
+        discoveryStatusText = "Shut down";
         wifiChannel.close();
         wifiChannel = null;
         // shutdown looper
