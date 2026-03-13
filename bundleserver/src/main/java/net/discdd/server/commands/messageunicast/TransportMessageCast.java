@@ -51,9 +51,11 @@ public class TransportMessageCast implements Callable<Integer> {
             @CommandLine.Parameters(index = "2", description = "Body (optional)", arity = "0..1") String body) {
         TransportMessage msg = service.createMessage(transportId, subject, body);
 
-        String bodySummary = (msg.body == null || msg.body.isEmpty()) ? "none"
-                : msg.body.length() <= 30 ? msg.body
-                : msg.body.substring(0, 30) + "... (run 'list' for full message body)";
+        String bodySummary = (msg.body == null || msg.body.isEmpty()) ?
+                             "none" :
+                             msg.body.length() <= 30 ?
+                             msg.body :
+                             msg.body.substring(0, 30) + "... (run 'list' for full message body)";
         System.out.printf("Created message: transportId=%s, messageNumber=%d, subject=%s, body=%s, sentAt=%s%n",
                           msg.messageKey.getTransportId(),
                           msg.messageKey.getMessageNumber(),

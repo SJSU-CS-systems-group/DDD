@@ -150,16 +150,19 @@ public class ClientMessageCast implements Callable<Integer> {
                     return 1;
                 }
 
-                String bodySummary = (payload.body == null || payload.body.isEmpty()) ? "none"
-                        : payload.body.length() <= 30 ? payload.body
-                        : payload.body.substring(0, 30) + "... (run 'list' for full message body)";
-                System.out.printf("Queued client message for Client: %s: file=%s, messageId=%s, subject=%s, body=%s, sentAt=%s%n",
-                                  clientId,
-                                  created.getName(),
-                                  payload.messageId,
-                                  payload.subject,
-                                  bodySummary,
-                                  payload.sentAt);
+                String bodySummary = (payload.body == null || payload.body.isEmpty()) ?
+                                     "none" :
+                                     payload.body.length() <= 30 ?
+                                     payload.body :
+                                     payload.body.substring(0, 30) + "... (run 'list' for full message body)";
+                System.out.printf(
+                        "Queued client message for Client: %s: file=%s, messageId=%s, subject=%s, body=%s, sentAt=%s%n",
+                        clientId,
+                        created.getName(),
+                        payload.messageId,
+                        payload.subject,
+                        bodySummary,
+                        payload.sentAt);
                 return 0;
 
             } catch (Exception e) {
