@@ -153,7 +153,11 @@ public class BundleTransportService extends Service implements BundleExchangeSer
             return START_STICKY;
         }
         executor.submit(() -> {
-            this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
+            var dir = getApplicationContext().getExternalFilesDir(null);
+            if (dir == null) {
+                dir = getApplicationContext().getFilesDir();
+            }
+            this.transportPaths = new TransportPaths(dir.toPath());
             try {
                 this.grpcKeys = new GrpcSecurityKey(transportPaths.grpcSecurityPath, SecurityUtils.SERVER);
             } catch (InvalidAlgorithmParameterException | NoSuchAlgorithmException | NoSuchProviderException |
@@ -235,6 +239,9 @@ public class BundleTransportService extends Service implements BundleExchangeSer
             try {
                 TrafficStats.setThreadStatsTag(0xD15CDDD);
                 File filesDir = getApplicationContext().getExternalFilesDir(null);
+                if (filesDir == null) {
+                    filesDir = getApplicationContext().getFilesDir();
+                }
                 httpServer = new FileHttpServer(8080, filesDir);
                 httpServer.start();
                 httpServerRunning = true;
