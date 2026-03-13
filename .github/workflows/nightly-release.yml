@@ -1,8 +1,6 @@
 name: Nightly Release
 
 on:
-  push:
-    branches: [canary-server-workflow]
   schedule:
     - cron: '0 16 * * *'
   workflow_dispatch:
