@@ -1,0 +1,82 @@
+name: Client Tests
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+
+jobs:
+  client-tests:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Download CLI jar
+        uses: actions/download-artifact@v4
+        with:
+          name: cli-jar
+
+      - name: Download old CLI jar
+        uses: actions/download-artifact@v4
+        with:
+          name: old-cli-jar
+        continue-on-error: true
+
+      - name: Warn if no old CLI jar
+        run: |
+          if [ ! -f old-cli.jar ]; then
+            echo "::warning::No previous nightly jar found — backward compat test will be skipped"
+            curl -s -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+              -H "Content-Type: application/json" \
+              -d "{\"content\": \"⚠️ [${{ inputs.environment }}] Backward compat test skipped - no previous nightly jar found. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"
+          fi
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.DEPLOY_SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Run registration test
+        run: |
+          CLI_JAR=$(ls cli-*.jar)
+          bash scripts/client-registration-exchange-test.sh "$CLI_JAR" \
+            apps/cli/src/main/resources/Server_Keys \
+            ${{ secrets.DEPLOY_SSH_HOST }} 7778
+
+      - name: Test exchange flows
+        run: |
+          NEW_JAR=$(ls cli-*.jar)
+          REMOTE="${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}"
+
+          scp -i ~/.ssh/deploy_key -r "$REMOTE:~/ddd/tes-client" ./persistent-client \
+            || { echo "No persistent client dir — run one-time client setup first"; exit 1; }
+
+          if [ -f old-cli.jar ]; then
+            echo "--- Exchange test: previous jar ---"
+            bash scripts/existing-client-test.sh old-cli.jar ./persistent-client \
+              ${{ secrets.DEPLOY_SSH_HOST }} 7778 ${{ secrets.TEST_EMAIL }}
+          fi
+
+          echo "--- Exchange test: new jar ---"
+          bash scripts/existing-client-test.sh "$NEW_JAR" ./persistent-client \
+            ${{ secrets.DEPLOY_SSH_HOST }} 7778 ${{ secrets.TEST_EMAIL }}
+
+          ssh -i ~/.ssh/deploy_key "$REMOTE" "rm -rf ~/ddd/tes-client && mkdir -p ~/ddd"
+          scp -i ~/.ssh/deploy_key -r ./persistent-client "$REMOTE:~/ddd/tes-client"
+
+      - name: Notify Discord on failure
+        if: failure()
+        run: |
+          curl -s -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"content\": \"❌ [${{ inputs.environment }}] Client tests failed! Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"

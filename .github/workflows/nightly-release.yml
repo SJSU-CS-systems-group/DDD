@@ -1,6 +1,8 @@
 name: Nightly Release
 
 on:
+  push:
+    branches: [canary-server-workflow]
   schedule:
     - cron: '0 16 * * *'
   workflow_dispatch:
@@ -51,16 +53,22 @@ jobs:
           mv BundleTransport/app/build/outputs/bundle/release/app-release.aab ../DDDTransport.aab
           mv BundleTransport/app/build/outputs/apk/release/app-release.apk ../DDDTransport.apk
 
-      - name: Upload artifacts
+      - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: release-artifacts
+          name: android-artifacts
           path: |
             DDDClient.aab
             DDDClient.apk
             DDDTransport.aab
             DDDTransport.apk
-            cli-*.jar
+
+      - name: Upload CLI jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-jar
+          path: cli-*.jar
+          if-no-files-found: error
 
   publish-nightly:
     needs: build
@@ -70,10 +78,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download artifacts
+      - name: Download Android artifacts
         uses: actions/download-artifact@v4
         with:
-          name: release-artifacts
+          name: android-artifacts
+
+      - name: Download CLI jar
+        uses: actions/download-artifact@v4
+        with:
+          name: cli-jar
 
       - name: Save previous nightly CLI jar
         run: |
@@ -109,3 +122,10 @@ jobs:
             DDDTransport.aab
             DDDTransport.apk
             cli-*.jar
+
+  run-client-tests:
+    needs: publish-nightly
+    uses: ./.github/workflows/client-test.yml
+    with:
+      environment: production
+
