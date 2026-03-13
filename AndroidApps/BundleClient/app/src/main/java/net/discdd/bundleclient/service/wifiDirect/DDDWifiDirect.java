@@ -486,7 +486,6 @@ public class DDDWifiDirect implements DDDWifi {
     public void wifiPermissionGranted() {
         // reregister the receivers with the new permissions
         unregisterBroadcastReceiver();
-        logger.info("Registering Broadcast Receiver since Wifi permission was granted");
         registerBroadcastReceiver();
     }
 }
