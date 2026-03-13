@@ -49,7 +49,8 @@ public class ClientMessageCast implements Callable<Integer> {
         int v = 1;
         long messageId;
         String sentAt;
-        String message;
+        String subject;
+        String body;
         boolean read = false;
     }
 
@@ -111,9 +112,12 @@ public class ClientMessageCast implements Callable<Integer> {
         @Nonnull
         private String clientId;
 
-        @CommandLine.Parameters(index = "1", description = "Message text")
+        @CommandLine.Parameters(index = "1", description = "Message subject")
         @Nonnull
-        private String messageText;
+        private String subject;
+
+        @CommandLine.Parameters(index = "2", arity = "0..1", description = "Message body (optional)")
+        private String body;
 
         @CommandLine.Option(names = "--message-id", description = "Optional stable messageId for testing/dedupe")
         private Long messageId;
@@ -132,7 +136,8 @@ public class ClientMessageCast implements Callable<Integer> {
                     payload.messageId = Math.abs(id);
                 }
                 payload.sentAt = Instant.now().toString();
-                payload.message = messageText;
+                payload.subject = subject;
+                payload.body = (body == null || body.isEmpty()) ? null : body;
 
                 byte[] bytes = GSON.toJson(payload).getBytes(StandardCharsets.UTF_8);
 
@@ -145,11 +150,19 @@ public class ClientMessageCast implements Callable<Integer> {
                     return 1;
                 }
 
-                System.out.printf("Queued client message for Client: %s: file=%s, messageId=%s, sentAt=%s%n",
-                                  clientId,
-                                  created.getName(),
-                                  payload.messageId,
-                                  payload.sentAt);
+                String bodySummary = (payload.body == null || payload.body.isEmpty()) ?
+                                     "none" :
+                                     payload.body.length() <= 30 ?
+                                     payload.body :
+                                     payload.body.substring(0, 30) + "... (run 'list' for full message body)";
+                System.out.printf(
+                        "Queued client message for Client: %s: file=%s, messageId=%s, subject=%s, body=%s, sentAt=%s%n",
+                        clientId,
+                        created.getName(),
+                        payload.messageId,
+                        payload.subject,
+                        bodySummary,
+                        payload.sentAt);
                 return 0;
 
             } catch (Exception e) {

@@ -41,8 +41,6 @@ public class BundleServerAduDeliverer implements ServerApplicationDataManager.Ad
     private final StoreADUs sendFolder;
     private final StoreADUs receiveFolder;
     // appId to executor and stub
-    // TODO: This should adapt to changes in the registered app adapters repository. currently it's only checked at
-    //  startup
     private final ConcurrentHashMap<String, AppState> apps = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
     private final Duration dataCheckInterval;
@@ -121,6 +119,7 @@ public class BundleServerAduDeliverer implements ServerApplicationDataManager.Ad
 
     // Periodic checkin to see if the service adapters have data to send
     private void checkServiceAdapters() {
+        revalidateApps(true);
         apps.forEach((appId, appState) -> {
             try {
                 logger.info("Checking for pending data for " + appId + " at " + appState.stub.getChannel().authority());
@@ -137,6 +136,8 @@ public class BundleServerAduDeliverer implements ServerApplicationDataManager.Ad
     }
 
     private void addAppWithPendingData(String appId, String clientId) {
+        // BundleClient has no service adapter by design; ADUs are injected directly via CLI
+        if (ServerApplicationDataManager.BUNDLE_CLIENT_APP_ID.equals(appId)) return;
         // if the app isn't registered, check to see if something changed
         if (!apps.containsKey(appId)) revalidateApps(true);
         final var appState = apps.get(appId);

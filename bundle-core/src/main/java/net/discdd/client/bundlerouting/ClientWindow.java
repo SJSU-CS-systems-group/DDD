@@ -22,8 +22,6 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
-// TODO: I'm not sure if this class is worthwhile. We can easily generate a sequence of needed
-//       encryptedBundleIds on the fly.
 public class ClientWindow {
 
     private static final Logger logger = Logger.getLogger(ClientWindow.class.getName());
