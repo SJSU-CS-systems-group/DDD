@@ -124,6 +124,7 @@ public class LocalAduSendReceive extends StdOutMixin {
         var bundleTransmission = new ClientBundleTransmission(clientPaths, (ADU adu) -> {
             out().println("Received ADU: " + adu);
         });
+        bundleTransmission.setRecencyTracker((device, response) -> true);
         var bundleExchangeCounts = bundleTransmission.doExchangeWithTransport(TransportDevice.SERVER_DEVICE,
                                                                               serverAddress.getHostName(),
                                                                               serverAddress.getPort(),
