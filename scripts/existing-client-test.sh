@@ -33,7 +33,7 @@ REGISTERED_EMAIL=$(cat "$CLIENT_DIR/registered-email.txt" 2>/dev/null | tr -d '\
 
 echo "Testing as: $REGISTERED_EMAIL  jar: $(basename "$CLI_JAR")"
 
-# ── Step 1: Queue outbound email ──────────────────────────────────────────────
+
 echo ""
 echo "=== Step 1: Queue outbound email to $TARGET_EMAIL ==="
 cat > "$CLIENT_DIR/test-email.eml" << EMLEOF
@@ -47,12 +47,12 @@ EMLEOF
 
 java -jar "$CLI_JAR" bc addAdu "$CLIENT_DIR" "$K9_APP_ID" "$CLIENT_DIR/test-email.eml"
 
-# ── Step 2: Exchange — upload email ──────────────────────────────────────────
+
 echo ""
 echo "=== Step 2: Exchange ==="
 java -jar "$CLI_JAR" bc exchange "$CLIENT_DIR"
 
-# ── Step 3: Poll for auto-reply ───────────────────────────────────────────────
+
 echo ""
 echo "=== Step 3: Poll for auto-reply from $TARGET_EMAIL ==="
 

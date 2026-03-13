@@ -35,14 +35,14 @@ fail() {
     exit 1
 }
 
-# ── Step 1: Initialize a fresh client ────────────────────────────────────────
+
 echo "=== Step 1: Initialize client ==="
 java -jar "$CLI_JAR" bc initializeStorage "$CLIENT_DIR" \
     --server-keys "$SERVER_KEYS" \
     --server "${HOST}:${PORT}"
 echo "Client initialized at $CLIENT_DIR"
 
-# ── Step 2: Queue registration request ───────────────────────────────────────
+
 # RegisterControlAdu is a Java properties file prefixed with the "# CONTROL" header.
 # The server will generate an email: prefix<rand>suffix@<domain>
 echo ""
@@ -51,12 +51,12 @@ printf '# CONTROL\ntype=register\nprefix=test\nsuffix=test\npassword=testpass123
     > "$CLIENT_DIR/register.bin"
 java -jar "$CLI_JAR" bc addAdu "$CLIENT_DIR" "$K9_APP_ID" "$CLIENT_DIR/register.bin"
 
-# ── Step 3: Exchange — upload registration bundle ────────────────────────────
+
 echo ""
 echo "=== Step 3: Exchange to upload registration request ==="
 java -jar "$CLI_JAR" bc exchange "$CLIENT_DIR"
 
-# ── Step 4: Poll exchanges until register-ack received ───────────────────────
+
 # The server processes the register ADU and queues a RegisterAckControlAdu.
 # Because the client downloads before uploading, the ack arrives on the next exchange.
 echo ""
@@ -88,7 +88,7 @@ echo "$REGISTERED_EMAIL" > "$CLIENT_DIR/registered-email.txt"
 echo ""
 echo "=== Registration test PASSED ==="
 
-# ── Optional exchange test ────────────────────────────────────────────────────
+
 if [ -z "$TARGET_EMAIL" ]; then
     echo "No target email provided — skipping exchange test"
     exit 0
