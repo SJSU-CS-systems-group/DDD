@@ -59,6 +59,7 @@ public class DDDWifiDirect implements DDDWifi {
     private HandlerThread handlerThread;
     private WifiP2pManager.Channel wifiChannel;
     private boolean discoveryActive = false;
+    private String discoveryStatusText = "Not yet started";
     private WifiP2pGroup group;
     private InetAddress ownerAddress;
     private List<DDDWifiDevice> peers = new CopyOnWriteArrayList<>();
@@ -301,6 +302,9 @@ public class DDDWifiDirect implements DDDWifi {
         statusBuilder.append("🛜: ");
         statusBuilder.append(statusString);
         if (group == null) {
+            if (!discoveryActive) {
+                statusBuilder.append(" | Discovery: ").append(discoveryStatusText);
+            }
             return statusBuilder.toString();
         }
 
