@@ -128,4 +128,5 @@ jobs:
     uses: ./.github/workflows/client-test.yml
     with:
       environment: production
+    secrets: inherit
 
