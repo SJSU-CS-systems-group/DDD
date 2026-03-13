@@ -179,7 +179,6 @@ public class DDDWifiDirect implements DDDWifi {
         this.handlerThread = new HandlerThread("WifiP2PHandlerThread");
         this.handlerThread.start();
         this.wifiChannel = wifiP2pManager.initialize(bundleClientService, handlerThread.getLooper(), () -> logger.warning("Framework lost. Ignoring"));
-        logger.info("Has permission: " + hasPermission());
         if (hasPermission()) {
             registerBroadcastReceiver();
         }
