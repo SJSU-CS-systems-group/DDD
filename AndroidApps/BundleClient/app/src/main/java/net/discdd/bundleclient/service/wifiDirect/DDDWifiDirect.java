@@ -258,7 +258,6 @@ public class DDDWifiDirect implements DDDWifi {
             });
         }
         if (isReceiverRegistered.getAndSet(true)) {
-            logger.info("Broadcast receiver already registered, skipping registration");
             return;
         }
         bundleClientService.registerReceiver(broadcastReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED);
