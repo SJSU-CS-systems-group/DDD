@@ -141,7 +141,7 @@ public class BundleClientService extends Service {
 
             @Override
             public void onLost(Network network) {
-                eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DISCONNECTED);
+                eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_CONNECTED);
             }
         };
         connectivityManager.registerDefaultNetworkCallback(networkCallback);
