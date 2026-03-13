@@ -1,6 +1,7 @@
 package net.discdd.bundletransport.screens
 
 import android.Manifest
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,6 +45,7 @@ import net.discdd.screens.PermissionScreen
 import net.discdd.screens.UsbScreen
 import net.discdd.screens.BugReportScreen
 import net.discdd.viewmodels.SettingsViewModel
+import java.io.File
 
 data class TabItem(
         val title: String,
@@ -218,4 +220,10 @@ fun TransportHomeScreen(
 @Composable
 fun TransportHomeScreenPreview() {
     TransportHomeScreen()
+}
+
+object FileUtil {
+    fun Context.getFile(): File {
+        return getExternalFilesDir(null) ?: filesDir
+    }
 }

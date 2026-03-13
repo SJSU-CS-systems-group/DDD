@@ -19,6 +19,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import net.discdd.bundletransport.BundleTransportService
+import net.discdd.bundletransport.screens.FileUtil.getFile
 import java.io.File
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
@@ -58,7 +59,7 @@ class ServerUploadViewModel(
 
     private val logger = Logger.getLogger(ServerUploadViewModel::class.java.name)
     private val transportPaths: TransportPaths by lazy {
-        TransportPaths(context.getExternalFilesDir(null)?.toPath())
+        TransportPaths(context.getFile().toPath())
     }
     private val _state = MutableStateFlow(ServerState())
     val state = _state.asStateFlow()
@@ -96,7 +97,8 @@ class ServerUploadViewModel(
     fun updateRecencyBlobStatus() {
         viewModelScope.launch {
             val status = withContext(Dispatchers.IO) {
-                val clientDir = context.getExternalFilesDir("BundleTransmission/client")
+                var clientDir = File(context.getFile(), "BundleTransmission/client")
+                clientDir.mkdirs()
                 val file = File(clientDir, "recencyBlob.bin")
 
                 if (!file.exists()) {
@@ -117,18 +119,14 @@ class ServerUploadViewModel(
     }
 
     fun reloadCount() {
-        if (transportPaths != null && transportPaths.toClientPath != null && transportPaths.toServerPath != null) {
-            val clientFiles: Array<String>? = transportPaths.toClientPath.toFile().list()
-            val serverFiles: Array<String>? = transportPaths.toServerPath.toFile().list()
+        val clientFiles: Array<String>? = transportPaths.toClientPath.toFile().list()
+        val serverFiles: Array<String>? = transportPaths.toServerPath.toFile().list()
 
-            val clientCountFiles = if (clientFiles != null) clientFiles.size else 0
-            val serverCountFiles = if (serverFiles != null) serverFiles.size else 0
+        val clientCountFiles = clientFiles?.size ?: 0
+        val serverCountFiles = serverFiles?.size ?: 0
 
-            _state.update { current -> current.copy(clientCount = clientCountFiles.toString()) }
-            _state.update { current -> current.copy(serverCount = serverCountFiles.toString()) }
-        } else {
-            logger.warning("transportPaths or its paths are null when attempting to reload counts")
-        }
+        _state.update { current -> current.copy(clientCount = clientCountFiles.toString()) }
+        _state.update { current -> current.copy(serverCount = serverCountFiles.toString()) }
     }
 
     fun saveDomainPort() {
