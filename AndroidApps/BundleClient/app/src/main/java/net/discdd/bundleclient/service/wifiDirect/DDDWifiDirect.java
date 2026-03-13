@@ -252,7 +252,6 @@ public class DDDWifiDirect implements DDDWifi {
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {   //TO DO: delete because we always target SDK_INIT above 33
             logger.info("Requesting current Wifi P2p discovery state");
             wifiP2pManager.requestDiscoveryState(wifiChannel, state -> {
-                logger.info("Discovery state received: " + (state == WifiP2pManager.WIFI_P2P_DISCOVERY_STARTED ? "STARTED" : "STOPPED"));
                 discoveryActive = state == WifiP2pManager.WIFI_P2P_DISCOVERY_STARTED;
                 eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DISCOVERY_CHANGED);
             });
