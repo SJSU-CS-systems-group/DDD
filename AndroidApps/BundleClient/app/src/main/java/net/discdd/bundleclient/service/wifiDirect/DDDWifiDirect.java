@@ -188,6 +188,8 @@ public class DDDWifiDirect implements DDDWifi {
         logger.info("Has permission: " + hasPermission());
         if (hasPermission()) {
             registerBroadcastReceiver();
+        } else {
+            discoveryStatusText = "Permission not granted";
         }
 
         WifiP2pManager.DnsSdTxtRecordListener txtResponseListener = (type, txtRecord, device) -> {
