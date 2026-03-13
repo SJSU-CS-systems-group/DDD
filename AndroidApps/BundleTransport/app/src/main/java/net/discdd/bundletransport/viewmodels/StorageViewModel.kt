@@ -28,12 +28,9 @@ class StorageViewModel(application: Application) : AndroidViewModel(application)
     private val minStorage = 100
     private val context get() = getApplication<Application>()
     private val storageManager by lazy {
-        var dir = context.getExternalFilesDir(null)
-        if (dir == null) {
-            dir = context.filesDir
-        }
+        var dir = context.getExternalFilesDir(null) ?: context.filesDir
         StorageManager(
-            dir?.toPath(),
+            dir.toPath(),
                 retrievePreference().toLong()
         )
     }

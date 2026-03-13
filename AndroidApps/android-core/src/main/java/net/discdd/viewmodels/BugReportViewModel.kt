@@ -66,11 +66,8 @@ class BugReportViewModel : ViewModel() {
                 logger.log(INFO, "Writing bug report to client device internal storage")
                 clientDestDir
             } else {
-                var dir = context.applicationContext.getExternalFilesDir(null)
-                if (dir == null) {
-                    dir = context.applicationContext.filesDir
-                }
-                val externalDir = dir?.toPath()
+                var dir = context.applicationContext.getExternalFilesDir(null) ?: context.applicationContext.filesDir
+                val externalDir = dir.toPath()
                         ?: throw IllegalStateException("External files directory is null")
                 logger.log(INFO, "Writing bug report to transport device external storage")
                 externalDir

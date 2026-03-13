@@ -28,17 +28,11 @@ class AppShareViewModel(
 ) : AndroidViewModel(myApplication) {
     private val logger = Logger.getLogger(AppShareViewModel::class.java.name)
     private val mailApkFile by lazy {
-        var dir = myApplication.getExternalFilesDir(null)
-        if (dir == null) {
-            dir = myApplication.filesDir
-        }
+        var dir = myApplication.getExternalFilesDir(null) ?: myApplication.filesDir
         File(dir, "ddd-mail.apk").toPath()
     }
     private val clientApkFile by lazy {
-        var dir = myApplication.getExternalFilesDir(null)
-        if (dir == null) {
-            dir = myApplication.filesDir
-        }
+        var dir = myApplication.getExternalFilesDir(null) ?: myApplication.filesDir
         File(dir, "DDDclient.apk").toPath()
     }
     private var _downloadMailProgress = MutableStateFlow(1f)
