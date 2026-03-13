@@ -124,6 +124,7 @@ public class LocalAduSendReceive extends StdOutMixin {
         var bundleTransmission = new ClientBundleTransmission(clientPaths, (ADU adu) -> {
             out().println("Received ADU: " + adu);
         });
+        bundleTransmission.setRecencyTracker((device, response) -> true);
         var bundleExchangeCounts = bundleTransmission.doExchangeWithTransport(TransportDevice.SERVER_DEVICE,
                                                                               serverAddress.getHostName(),
                                                                               serverAddress.getPort(),
@@ -131,6 +132,12 @@ public class LocalAduSendReceive extends StdOutMixin {
         out().printf("Sent %s, received %s%n",
                      bundleExchangeCounts.downloadStatus(),
                      bundleExchangeCounts.uploadStatus());
+        if (bundleExchangeCounts.uploadStatus() == ClientBundleTransmission.Statuses.FAILED ||
+                bundleExchangeCounts.downloadStatus() == ClientBundleTransmission.Statuses.FAILED) {
+            throw new ExecutionException(cmd(), "Exchange failed: Sent " +
+                    bundleExchangeCounts.downloadStatus() + ", received " +
+                    bundleExchangeCounts.uploadStatus(), bundleExchangeCounts.e());
+        }
     }
 
     @Command(mixinStandardHelpOptions = true)
