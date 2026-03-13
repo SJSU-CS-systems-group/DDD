@@ -200,8 +200,9 @@ public class ClientSecurity {
                 Curve.calculateAgreement(theirIdentityKey.getPublicKey(), ourIdentityKeyPair.getPrivateKey());
 
         String secretKey = Base64.getUrlEncoder().encodeToString(agreement);
-
-        return SecurityUtils.encryptAesCbcPkcs5(secretKey, bundleID, true);
+        String encryptedBundleID = SecurityUtils.encryptAesCbcPkcs5(secretKey, bundleID, true);
+        logger.log(FINE, "We're about to create encrypted bundle id %s", encryptedBundleID);
+        return encryptedBundleID;
     }
 
     /* Add Headers (Identity, Base Key & Bundle ID) to Bundle Path */

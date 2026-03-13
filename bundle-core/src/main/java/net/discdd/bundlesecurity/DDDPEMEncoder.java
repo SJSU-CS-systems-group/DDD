@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.INFO;
 import static net.discdd.bundlesecurity.SecurityUtils.decryptAesCbcPkcs5;
 import static net.discdd.bundlesecurity.SecurityUtils.encryptAesCbcPkcs5;
 
@@ -105,6 +106,7 @@ public class DDDPEMEncoder {
         ECKeyPair ephemeralKeyPair = Curve.generateKeyPair();
         byte[] agreement = Curve.calculateAgreement(serverIdentityPublicKey, ephemeralKeyPair.getPrivateKey());
         String sharedSecret = Base64.getEncoder().encodeToString(agreement);
+        logger.log(INFO, String.format("We're about to create encrypted client public key %s", Base64.getEncoder().encodeToString(clientPublicKey.serialize())));
         String encryptedClientPubKey =
                 encryptAesCbcPkcs5(sharedSecret, Base64.getEncoder().encodeToString(clientPublicKey.serialize()), false);
         return (EC_ENCRYPTED_PUBLIC_KEY_HEADER + "\n" +

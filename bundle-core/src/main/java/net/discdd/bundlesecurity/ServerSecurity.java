@@ -77,7 +77,6 @@ public class ServerSecurity {
             clientRootPath = serverRootPath.resolve("Clients");
             clientRootPath.toFile().mkdirs();
         } catch (Exception e) {
-//            logger.log(SEVERE,(e.getMessage());
 
             e.printStackTrace();
             logger.log(SEVERE,
@@ -285,8 +284,9 @@ public class ServerSecurity {
             InvalidKeyException, InvalidClientIDException, IOException {
         String sharedSecret = null;
         sharedSecret = getsharedSecret(clientID);
-
-        return SecurityUtils.encryptAesCbcPkcs5(sharedSecret, bundleID, true);
+        String encryptedBundleID = SecurityUtils.encryptAesCbcPkcs5(sharedSecret, bundleID, true);
+        logger.log(FINE, "We're about to create encrypted bundle id %s", encryptedBundleID);
+        return encryptedBundleID;
     }
 
     public String createEncryptedBundleId(String clientId, long bundleCounter, boolean downstream) throws

@@ -164,9 +164,9 @@ public class SecurityUtils {
         if (isBundleID) {
             // encrypting the same plaintext with the same key always yields the same ciphertext.
             // Used for bundle ID encryption where client and server must independently compute matching IDs.
-//            Mac mac = Mac.getInstance("HmacSHA256");
-//            mac.init(new SecretKeySpec(sharedSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
-//            iv = Arrays.copyOf(mac.doFinal(plainText.getBytes(StandardCharsets.UTF_8)), 16);
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(sharedSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            iv = Arrays.copyOf(mac.doFinal(plainText.getBytes(StandardCharsets.UTF_8)), 16);
         } else {
             SecureRandom random = new SecureRandom();
             random.nextBytes(iv);
@@ -211,15 +211,7 @@ public class SecurityUtils {
         } catch (BadPaddingException e) {
             // Fallback for legacy data encrypted with a zero IV
             cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, new IvParameterSpec(new byte[16]));
-            byte[] result = cipher.doFinal(allData);
-            // All valid plaintexts (bundle IDs, base64-encoded keys) are printable ASCII.
-            // If the fallback returns non-ASCII bytes, the key is wrong — reject instead of silently returning garbage.
-            for (byte b : result) {
-                if (b < 0x20 || b > 0x7E) {
-                    throw new BadPaddingException("Decryption produced non-ASCII output: wrong key or corrupted data");
-                }
-            }
-            return result;
+            return cipher.doFinal(allData);
         }
     }
 
