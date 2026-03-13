@@ -24,4 +24,6 @@ public interface ServerMessageDao {
     @Query("DELETE FROM ServerMessages WHERE messageId = :messageId")
     void deleteById(long messageId);
 
+    @Query("SELECT COALESCE(MAX(messageId), 0) FROM ServerMessages")
+    long getMaxMessageId();
 }

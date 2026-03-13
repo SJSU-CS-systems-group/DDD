@@ -17,7 +17,9 @@ import net.discdd.grpc.BundleUploadRequest;
 import net.discdd.grpc.BundleUploadResponse;
 import net.discdd.grpc.CrashReportRequest;
 import net.discdd.grpc.EncryptedBundleId;
+import net.discdd.grpc.CheckMessagesRequest;
 import net.discdd.grpc.GetRecencyBlobRequest;
+import net.discdd.grpc.ServerMessage;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.tls.DDDTLSUtil;
 import net.discdd.tls.DDDX509ExtendedTrustManager;
@@ -74,9 +76,14 @@ public class TransportToBundleServerManager {
         public int downloadCount = 0;
         public int toDownloadCount = 0;
         public int deleteCount = 0;
+        public List<ServerMessage> serverMessages = new ArrayList<>();
     }
 
     public ExchangeResult doExchange() throws Exception {
+        return doExchange(0);
+    }
+
+    public ExchangeResult doExchange(long lastMessageId) throws Exception {
         ManagedChannel channel = null;
         ExchangeResult exchangeResult = new ExchangeResult();
         try {
@@ -120,6 +127,11 @@ public class TransportToBundleServerManager {
             exchangeResult.downloadCount =
                     processDownloadBundles(inventoryResponse.getBundlesToDownloadList(), exchangeStub);
             processRecencyBlob(blockingExchangeStub);
+
+            var messagesResponse =
+                    bsStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                            .checkMessages(CheckMessagesRequest.newBuilder().setLastMessageId(lastMessageId).build());
+            exchangeResult.serverMessages = messagesResponse.getServerMessageList();
 
             logger.log(INFO, "Connect server completed");
         } finally {
