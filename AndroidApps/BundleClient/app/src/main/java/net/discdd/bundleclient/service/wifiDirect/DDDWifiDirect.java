@@ -124,6 +124,8 @@ public class DDDWifiDirect implements DDDWifi {
                         discoveryActive = discoveryState == WifiP2pManager.WIFI_P2P_DISCOVERY_STARTED;
                         if (!discoveryActive && !wifiEnable) {
                             discoveryStatusText = "Wi-Fi P2P disabled";
+                        } else if (!discoveryActive) {
+                            discoveryStatusText = "Timed out (auto-stopped by Android)";
                         }
                         eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DISCOVERY_CHANGED);
                     }
