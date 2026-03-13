@@ -136,6 +136,8 @@ public class BundleServerAduDeliverer implements ServerApplicationDataManager.Ad
     }
 
     private void addAppWithPendingData(String appId, String clientId) {
+        // BundleClient has no service adapter by design; ADUs are injected directly via CLI
+        if (ServerApplicationDataManager.BUNDLE_CLIENT_APP_ID.equals(appId)) return;
         // if the app isn't registered, check to see if something changed
         if (!apps.containsKey(appId)) revalidateApps(true);
         final var appState = apps.get(appId);

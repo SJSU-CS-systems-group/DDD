@@ -12,12 +12,12 @@ import java.util.concurrent.Callable;
 
 @CommandLine.Command(name = "message-transport", description = "Manage transport messages by transportId")
 @Component
-public class MessageCast implements Callable<Integer> {
+public class TransportMessageCast implements Callable<Integer> {
 
     private final TransportMessageRepository repo;
     private final TransportMessageService service;
 
-    public MessageCast(TransportMessageRepository repo, TransportMessageService service) {
+    public TransportMessageCast(TransportMessageRepository repo, TransportMessageService service) {
         this.repo = repo;
         this.service = service;
     }
@@ -35,25 +35,31 @@ public class MessageCast implements Callable<Integer> {
         System.out.println("Transport Messages:");
         repo.findAll().forEach(m -> {
             MessageKey key = m.messageKey;
-            System.out.printf("transportId=%s, messageNumber=%d message= %s%n",
+            System.out.printf("transportId=%s, messageNumber=%d, subject=%s, body=%s, sentAt=%s%n",
                               key.getTransportId(),
                               key.getMessageNumber(),
-                              m.message);
+                              m.subject,
+                              m.body == null ? "none" : m.body,
+                              m.sentAt);
         });
         return 0;
     }
 
     @CommandLine.Command(name = "add", description = "Add a new message to a transportId")
     int add(@CommandLine.Parameters(index = "0", description = "Transport ID") @Nonnull String transportId,
+            @CommandLine.Parameters(index = "1", description = "Subject") @Nonnull String subject,
+            @CommandLine.Parameters(index = "2", description = "Body (optional)", arity = "0..1") String body) {
+        TransportMessage msg = service.createMessage(transportId, subject, body);
 
-            @CommandLine.Parameters(index = "1", description = "Message text") @Nonnull String messageText) {
-        TransportMessage msg = service.createMessage(transportId, messageText);
-
-        System.out.printf("Created message: transportId=%s, messageNumber=%d, message=%s, messageDate=%s%n",
+        String bodySummary = (msg.body == null || msg.body.isEmpty()) ? "none"
+                : msg.body.length() <= 30 ? msg.body
+                : msg.body.substring(0, 30) + "... (run 'list' for full message body)";
+        System.out.printf("Created message: transportId=%s, messageNumber=%d, subject=%s, body=%s, sentAt=%s%n",
                           msg.messageKey.getTransportId(),
                           msg.messageKey.getMessageNumber(),
-                          msg.message,
-                          msg.messageDate.toString());
+                          msg.subject,
+                          bodySummary,
+                          msg.sentAt.toString());
 
         return 0;
     }

@@ -6,7 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import net.discdd.server.repository.messageId.MessageKey;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @AllArgsConstructor
@@ -15,12 +15,12 @@ public class TransportMessage {
     @EmbeddedId
     public MessageKey messageKey;
 
-    public String message;
+    public String subject;
 
-    // Date when the message was created
-    public LocalDateTime messageDate;
+    public String body;
 
-    // Date when the message was read, null if unread.
-    public LocalDateTime readDate;
+    public Instant sentAt;
+
+    public Instant readDate;
 
 }
