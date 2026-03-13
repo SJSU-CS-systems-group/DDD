@@ -47,9 +47,8 @@ public class RpcServer {
     private static final Logger logger = Logger.getLogger(RpcServer.class.getName());
 
     private static final int port = 7777;
-    //The number 40 was chosen because a SessionRecord only keeps track of the Private Keys of the
-    // last 40 bundles sent. So at most the client will be able to decrypt 40 of their own bundles.
-    private static final int MAX_PSI_ELEMENTS_PER_REQUEST = 40;
+    //The number 10 here is the max bundles a client can be looking for
+    private static final int MAX_PSI_ELEMENTS_PER_REQUEST = 10;
     private static final long PSI_SESSION_TTL_MS = 5 * 60 * 1000; // 5 minutes
     private static RpcServer rpcServerInstance;
     private final BundleTransportService bundleTransportService;
@@ -221,7 +220,7 @@ public class RpcServer {
                                                                        bundleTransportService.grpcKeys.grpcCert)
                     .getKeyManagers();
             var credentials = TlsServerCredentials.newBuilder().keyManager(keyManagers).build();
-            server = OkHttpServerBuilder.forPort(port, credentials).maxInboundMessageSize(20 * 1024 * 1024) // 20 MB;
+            server = OkHttpServerBuilder.forPort(port, credentials).maxInboundMessageSize(5 * 1000 * 1000) // 5 MB;
                     .addService(bundleExchangeService).executor(Executors.newFixedThreadPool(4)).build();
         } catch (Exception e) {
             logger.log(SEVERE, "TLS communication exceptions ", e);
