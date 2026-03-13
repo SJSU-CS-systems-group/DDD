@@ -246,7 +246,6 @@ public class DDDWifiDirect implements DDDWifi {
 
     AtomicBoolean isReceiverRegistered = new AtomicBoolean(false);
     private void registerBroadcastReceiver() {
-        logger.info("Requesting current Wifi P2p state for receiver registration.");
         wifiP2pManager.requestP2pState(wifiChannel, this::processStateChange);
         //sync discovery state at a registration time, not just from broadcasts
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {   //TO DO: delete because we always target SDK_INIT above 33
