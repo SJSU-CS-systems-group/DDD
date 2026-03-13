@@ -128,9 +128,8 @@ public class TransportToBundleServerManager {
                     processDownloadBundles(inventoryResponse.getBundlesToDownloadList(), exchangeStub);
             processRecencyBlob(blockingExchangeStub);
 
-            var messagesResponse =
-                    bsStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                            .checkMessages(CheckMessagesRequest.newBuilder().setLastMessageId(lastMessageId).build());
+            var messagesResponse = bsStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                    .checkMessages(CheckMessagesRequest.newBuilder().setLastMessageId(lastMessageId).build());
             exchangeResult.serverMessages = messagesResponse.getServerMessageList();
 
             logger.log(INFO, "Connect server completed");
