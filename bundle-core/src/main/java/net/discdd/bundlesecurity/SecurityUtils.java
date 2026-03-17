@@ -217,12 +217,12 @@ public class SecurityUtils {
         return finalCipher;
     }
 
-    public static byte[] decryptAesCbcPkcs5(String sharedSecret, String cipherText, boolean isBundleID) throws GeneralSecurityException {
+    public static byte[] decryptAesCbcPkcs5(String sharedSecret, String cipherText, boolean isBundleID) {
         byte[] decoded = Base64.getUrlDecoder().decode(cipherText);
 
         byte[] iv;
         byte[] encryptedData;
-        byte[] finalCipher;
+        byte[] finalCipher = new byte[0];
 
         if (isBundleID) {
             iv = new byte[16]; // zero IV, matches encrypt side
@@ -232,15 +232,18 @@ public class SecurityUtils {
             encryptedData = Arrays.copyOfRange(decoded, 16, decoded.length);
         }
 
-        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-        KeySpec spec = new PBEKeySpec(sharedSecret.toCharArray(), sharedSecret.getBytes(), ITERATIONS, KEYLEN);
-        SecretKey skey = factory.generateSecret(spec);
-        SecretKeySpec secretKeySpec = new SecretKeySpec(skey.getEncoded(), "AES");
+        try {
+            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+            KeySpec spec = new PBEKeySpec(sharedSecret.toCharArray(), sharedSecret.getBytes(), ITERATIONS, KEYLEN);
+            SecretKey skey = factory.generateSecret(spec);
+            SecretKeySpec secretKeySpec = new SecretKeySpec(skey.getEncoded(), "AES");
 
-        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
-        finalCipher = cipher.doFinal(encryptedData);
-
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
+            finalCipher = cipher.doFinal(encryptedData);
+        } catch (GeneralSecurityException e) {
+            logger.log(SEVERE, "Decrypting failed");
+        }
         return finalCipher;
     }
 

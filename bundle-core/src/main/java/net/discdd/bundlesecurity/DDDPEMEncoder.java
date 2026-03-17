@@ -145,10 +145,10 @@ public class DDDPEMEncoder {
             byte[] agreement = Curve.calculateAgreement(ephemeralPublicKey, ServerPrivKey);
             String sharedSecret = Base64.getEncoder().encodeToString(agreement);
             byte[] decryptedClientPubKey;
+            decryptedClientPubKey = decryptAesCbcPkcs5(sharedSecret, new String(encryptedClientPublicKey), false);
             try {
-                decryptedClientPubKey = decryptAesCbcPkcs5(sharedSecret, new String(encryptedClientPublicKey), false);
-                Curve.decodePoint(decryptedClientPubKey, 0);
-            } catch (GeneralSecurityException e) {
+                Curve.decodePoint(Base64.getDecoder().decode(decryptedClientPubKey), 0);
+            } catch (InvalidKeyException | IllegalArgumentException e) {
                 decryptedClientPubKey = decryptAesCbcPkcs5(sharedSecret, new String(encryptedClientPublicKey));
             }
             String keyInStandardBase64Characters = new String(decryptedClientPubKey);
