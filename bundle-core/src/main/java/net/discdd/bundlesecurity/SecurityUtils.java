@@ -217,7 +217,7 @@ public class SecurityUtils {
         return finalCipher;
     }
 
-    public static byte[] decryptAesCbcPkcs5(String sharedSecret, String cipherText, boolean isBundleID) {
+    public static byte[] decryptAesCbcPkcs5(String sharedSecret, String cipherText, boolean isBundleID) throws GeneralSecurityException {
         byte[] decoded = Base64.getUrlDecoder().decode(cipherText);
 
         byte[] iv;
@@ -232,18 +232,14 @@ public class SecurityUtils {
             encryptedData = Arrays.copyOfRange(decoded, 16, decoded.length);
         }
 
-        try {
-            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-            KeySpec spec = new PBEKeySpec(sharedSecret.toCharArray(), sharedSecret.getBytes(), ITERATIONS, KEYLEN);
-            SecretKey skey = factory.generateSecret(spec);
-            SecretKeySpec secretKeySpec = new SecretKeySpec(skey.getEncoded(), "AES");
+        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+        KeySpec spec = new PBEKeySpec(sharedSecret.toCharArray(), sharedSecret.getBytes(), ITERATIONS, KEYLEN);
+        SecretKey skey = factory.generateSecret(spec);
+        SecretKeySpec secretKeySpec = new SecretKeySpec(skey.getEncoded(), "AES");
 
-            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
-            finalCipher = cipher.doFinal(encryptedData);
-        } catch (Exception e) {
-            return decryptAesCbcPkcs5(sharedSecret, cipherText);
-        }
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
+        finalCipher = cipher.doFinal(encryptedData);
 
         return finalCipher;
     }
