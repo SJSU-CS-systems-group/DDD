@@ -161,13 +161,7 @@ public class SecurityUtils {
             InvalidAlgorithmParameterException, java.security.InvalidKeyException, IllegalBlockSizeException,
             BadPaddingException {
         byte[] iv = new byte[16];
-        if (isBundleID) {
-            // encrypting the same plaintext with the same key always yields the same ciphertext.
-            // Used for bundle ID encryption where client and server must independently compute matching IDs.
-            Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(new SecretKeySpec(sharedSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
-            iv = Arrays.copyOf(mac.doFinal(plainText.getBytes(StandardCharsets.UTF_8)), 16);
-        } else {
+        if (!isBundleID) {
             SecureRandom random = new SecureRandom();
             random.nextBytes(iv);
         }
@@ -182,15 +176,21 @@ public class SecurityUtils {
 
         byte[] encryptedData = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
 
+        if (isBundleID) {
+            return Base64.getUrlEncoder().encodeToString(encryptedData);
+        }
+
+        // isBundleID=false: prepend IV so decryption can extract it; combined = [iv (16 bytes) | encryptedData]
+        // return Base64(iv + encryptedData)
         byte[] combined = new byte[iv.length + encryptedData.length];
         System.arraycopy(iv, 0, combined, 0, iv.length);
         System.arraycopy(encryptedData, 0, combined, iv.length, encryptedData.length);
-
         return Base64.getUrlEncoder().encodeToString(combined);
     }
 
     public static byte[] decryptAesCbcPkcs5(String sharedSecret, String cipherText) throws GeneralSecurityException {
-        byte[] allData = Base64.getUrlDecoder().decode(cipherText);
+        byte[] iv = new byte[16];
+        byte[] encryptedData = Base64.getUrlDecoder().decode(cipherText);
 
         /* Create SecretKeyFactory object */
         SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
@@ -200,19 +200,9 @@ public class SecurityUtils {
         SecretKeySpec secretKeySpec = new SecretKeySpec(skey.getEncoded(), "AES");
 
         Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
 
-        // New format: first 16 bytes are the IV, remainder is ciphertext
-        byte[] iv = Arrays.copyOfRange(allData, 0, 16);
-        byte[] encryptedData = Arrays.copyOfRange(allData, 16, allData.length);
-
-        try {
-            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
-            return cipher.doFinal(encryptedData);
-        } catch (BadPaddingException e) {
-            // Fallback for legacy data encrypted with a zero IV
-            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, new IvParameterSpec(new byte[16]));
-            return cipher.doFinal(allData);
-        }
+        return cipher.doFinal(encryptedData);
     }
 
     public static String unzip(String zipFilePath) throws IOException {
