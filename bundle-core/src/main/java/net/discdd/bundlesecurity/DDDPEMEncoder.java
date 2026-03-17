@@ -147,6 +147,7 @@ public class DDDPEMEncoder {
             byte[] decryptedClientPubKey;
             try {
                 decryptedClientPubKey = decryptAesCbcPkcs5(sharedSecret, new String(encryptedClientPublicKey), false);
+                Curve.decodePoint(decryptedClientPubKey, 0);
             } catch (GeneralSecurityException e) {
                 decryptedClientPubKey = decryptAesCbcPkcs5(sharedSecret, new String(encryptedClientPublicKey));
             }
