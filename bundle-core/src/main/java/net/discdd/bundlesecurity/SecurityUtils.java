@@ -188,6 +188,14 @@ public class SecurityUtils {
         return Base64.getUrlEncoder().encodeToString(combined);
     }
 
+    /**
+     * Handles legacy case of encrypting without randomized IV.
+     *
+     * @param sharedSecret
+     * @param cipherText
+     * @return
+     * @throws GeneralSecurityException
+     */
     public static byte[] decryptAesCbcPkcs5(String sharedSecret, String cipherText) throws GeneralSecurityException {
         byte[] iv = new byte[16];
         byte[] encryptedData = Base64.getUrlDecoder().decode(cipherText);
@@ -195,6 +203,31 @@ public class SecurityUtils {
         /* Create SecretKeyFactory object */
         SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
         /* Create KeySpec object */
+        KeySpec spec = new PBEKeySpec(sharedSecret.toCharArray(), sharedSecret.getBytes(), ITERATIONS, KEYLEN);
+        SecretKey skey = factory.generateSecret(spec);
+        SecretKeySpec secretKeySpec = new SecretKeySpec(skey.getEncoded(), "AES");
+
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
+
+        return cipher.doFinal(encryptedData);
+    }
+
+    public static byte[] decryptAesCbcPkcs5(String sharedSecret, String cipherText, boolean isBundleID) throws GeneralSecurityException {
+        byte[] decoded = Base64.getUrlDecoder().decode(cipherText);
+
+        byte[] iv;
+        byte[] encryptedData;
+
+        if (isBundleID) {
+            iv = new byte[16]; // zero IV, matches encrypt side
+            encryptedData = decoded;
+        } else {
+            iv = Arrays.copyOfRange(decoded, 0, 16);
+            encryptedData = Arrays.copyOfRange(decoded, 16, decoded.length);
+        }
+
+        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
         KeySpec spec = new PBEKeySpec(sharedSecret.toCharArray(), sharedSecret.getBytes(), ITERATIONS, KEYLEN);
         SecretKey skey = factory.generateSecret(spec);
         SecretKeySpec secretKeySpec = new SecretKeySpec(skey.getEncoded(), "AES");
