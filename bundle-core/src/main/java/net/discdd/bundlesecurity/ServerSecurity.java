@@ -307,7 +307,7 @@ public class ServerSecurity {
 
         sharedSecret = getsharedSecret(clientID);
 
-        bundleBytes = SecurityUtils.decryptAesCbcPkcs5(sharedSecret, encryptedBundleID);
+        bundleBytes = SecurityUtils.decryptAesCbcPkcs5(sharedSecret, encryptedBundleID, true);
 
         return new String(bundleBytes, StandardCharsets.UTF_8);
     }
@@ -349,7 +349,7 @@ public class ServerSecurity {
         String sharedSecret = getsharedSecret(clientIdentityKey.getPublicKey());
 
         byte[] bundleIDbytes =
-                SecurityUtils.decryptAesCbcPkcs5(sharedSecret, new String(encryptedBundleID, StandardCharsets.UTF_8));
+                SecurityUtils.decryptAesCbcPkcs5(sharedSecret, new String(encryptedBundleID, StandardCharsets.UTF_8), true);
 
         receivedBundleID = new String(bundleIDbytes, StandardCharsets.UTF_8);
         return BundleIDGenerator.getCounterFromBundleID(receivedBundleID, direction);

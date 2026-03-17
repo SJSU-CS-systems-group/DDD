@@ -146,7 +146,7 @@ public class DDDPEMEncoder {
             String sharedSecret = Base64.getEncoder().encodeToString(agreement);
             byte[] decryptedClientPubKey;
             try {
-                decryptedClientPubKey = decryptAesCbcPkcs5(sharedSecret, new String(encryptedClientPublicKey));
+                decryptedClientPubKey = decryptAesCbcPkcs5(sharedSecret, new String(encryptedClientPublicKey), false);
             } catch (GeneralSecurityException e) {
                 throw new RuntimeException("AES decryption failed: " + e.getMessage(), e);
             }

@@ -269,7 +269,7 @@ public class ClientSecurity {
 
         String secretKey = Base64.getUrlEncoder().encodeToString(agreement);
 
-        bundleIDBytes = SecurityUtils.decryptAesCbcPkcs5(secretKey, encryptedBundleID);
+        bundleIDBytes = SecurityUtils.decryptAesCbcPkcs5(secretKey, encryptedBundleID, true);
         return new String(bundleIDBytes, StandardCharsets.UTF_8);
     }
 
