@@ -55,6 +55,7 @@
     <string name="starting_server_exchange_with_host_s_port_d">Starting server exchange with host: %s, port: %d</string>
     <string name="deleted_d_bundles_sent_d_d_received_d_d">deleted %d bundles, sent %d/%d, received %d/%d</string>
     <string name="error_during_server_exchange_s">Error during server exchange: %s</string>
+    <string name="received_d_server_messages">received %d server messages</string>
     <string name="no_internet_connection_available_skipping_server_exchange">No internet connection available, skipping
         server exchange.
     </string>
