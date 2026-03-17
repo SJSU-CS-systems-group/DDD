@@ -145,11 +145,12 @@ public class DDDPEMEncoder {
             byte[] agreement = Curve.calculateAgreement(ephemeralPublicKey, ServerPrivKey);
             String sharedSecret = Base64.getEncoder().encodeToString(agreement);
             byte[] decryptedClientPubKey;
-            try {
+//            try {
                 decryptedClientPubKey = decryptAesCbcPkcs5(sharedSecret, new String(encryptedClientPublicKey), false);
-            } catch (GeneralSecurityException e) {
-                throw new RuntimeException("AES decryption failed: " + e.getMessage(), e);
-            }
+//            } catch (GeneralSecurityException e) {
+//                decryptedClientPubKey = decryptAesCbcPkcs5(sharedSecret, new String(encryptedClientPublicKey));
+//                throw new RuntimeException("AES decryption failed: " + e.getMessage(), e);
+//            }
             String keyInStandardBase64Characters = new String(decryptedClientPubKey);
             keyInStandardBase64Characters = keyInStandardBase64Characters.replace('+', '-').replace('/', '_');
             return keyInStandardBase64Characters;

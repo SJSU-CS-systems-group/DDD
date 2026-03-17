@@ -196,28 +196,33 @@ public class SecurityUtils {
      * @return
      * @throws GeneralSecurityException
      */
-    public static byte[] decryptAesCbcPkcs5(String sharedSecret, String cipherText) throws GeneralSecurityException {
+    public static byte[] decryptAesCbcPkcs5(String sharedSecret, String cipherText) {
         byte[] iv = new byte[16];
         byte[] encryptedData = Base64.getUrlDecoder().decode(cipherText);
+        byte[] finalCipher;
 
-        /* Create SecretKeyFactory object */
-        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-        /* Create KeySpec object */
-        KeySpec spec = new PBEKeySpec(sharedSecret.toCharArray(), sharedSecret.getBytes(), ITERATIONS, KEYLEN);
-        SecretKey skey = factory.generateSecret(spec);
-        SecretKeySpec secretKeySpec = new SecretKeySpec(skey.getEncoded(), "AES");
+        try {
+            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+            KeySpec spec = new PBEKeySpec(sharedSecret.toCharArray(), sharedSecret.getBytes(), ITERATIONS, KEYLEN);
+            SecretKey skey = factory.generateSecret(spec);
+            SecretKeySpec secretKeySpec = new SecretKeySpec(skey.getEncoded(), "AES");
 
-        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
+            finalCipher = cipher.doFinal(encryptedData);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
 
-        return cipher.doFinal(encryptedData);
+        return finalCipher;
     }
 
-    public static byte[] decryptAesCbcPkcs5(String sharedSecret, String cipherText, boolean isBundleID) throws GeneralSecurityException {
+    public static byte[] decryptAesCbcPkcs5(String sharedSecret, String cipherText, boolean isBundleID) {
         byte[] decoded = Base64.getUrlDecoder().decode(cipherText);
 
         byte[] iv;
         byte[] encryptedData;
+        byte[] finalCipher;
 
         if (isBundleID) {
             iv = new byte[16]; // zero IV, matches encrypt side
@@ -227,15 +232,20 @@ public class SecurityUtils {
             encryptedData = Arrays.copyOfRange(decoded, 16, decoded.length);
         }
 
-        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-        KeySpec spec = new PBEKeySpec(sharedSecret.toCharArray(), sharedSecret.getBytes(), ITERATIONS, KEYLEN);
-        SecretKey skey = factory.generateSecret(spec);
-        SecretKeySpec secretKeySpec = new SecretKeySpec(skey.getEncoded(), "AES");
+        try {
+            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+            KeySpec spec = new PBEKeySpec(sharedSecret.toCharArray(), sharedSecret.getBytes(), ITERATIONS, KEYLEN);
+            SecretKey skey = factory.generateSecret(spec);
+            SecretKeySpec secretKeySpec = new SecretKeySpec(skey.getEncoded(), "AES");
 
-        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
+            finalCipher = cipher.doFinal(encryptedData);
+        } catch (Exception e) {
+            return decryptAesCbcPkcs5(sharedSecret, cipherText);
+        }
 
-        return cipher.doFinal(encryptedData);
+        return finalCipher;
     }
 
     public static String unzip(String zipFilePath) throws IOException {
