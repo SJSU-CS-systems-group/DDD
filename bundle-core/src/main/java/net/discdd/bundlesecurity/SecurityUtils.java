@@ -156,6 +156,15 @@ public class SecurityUtils {
         return generateID(publicKey);
     }
 
+    /**
+     * Encrypts a plaintext string using AES-CBC-PKCS5 with a shared secret, using an all-zero IV for bundle IDs or a
+     * random IV prepended to the ciphertext for non-bundle IDs.
+     *
+     * @param sharedSecret
+     * @param plainText
+     * @param isBundleID
+     * @return
+     */
     public static String encryptAesCbcPkcs5(String sharedSecret, String plainText, boolean isBundleID) throws
             NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException,
             InvalidAlgorithmParameterException, java.security.InvalidKeyException, IllegalBlockSizeException,
@@ -180,7 +189,7 @@ public class SecurityUtils {
             return Base64.getUrlEncoder().encodeToString(encryptedData);
         }
 
-        // isBundleID=false: prepend IV so decryption can extract it; combined = [iv (16 bytes) | encryptedData]
+        // isBundleID=false: prepend IV so decryption can extract it; combined = [iv (16 bytes) + encryptedData (16N bytes)]
         // return Base64(iv + encryptedData)
         byte[] combined = new byte[iv.length + encryptedData.length];
         System.arraycopy(iv, 0, combined, 0, iv.length);
@@ -189,7 +198,7 @@ public class SecurityUtils {
     }
 
     /**
-     * Handles legacy case of encrypting without randomized IV.
+     * Handles legacy case of encrypting with the IV fixed to all-zeros
      *
      * @param sharedSecret
      * @param cipherText
@@ -217,6 +226,15 @@ public class SecurityUtils {
         return finalCipher;
     }
 
+    /**
+     * Decrypts an AES-CBC-PKCS5 ciphertext using a shared secret, with the IV either fixed to all-zeros (for bundle
+     * IDs) or extracted from the first 16 bytes of the ciphertext (for non-bundle IDs).
+     *
+     * @param sharedSecret
+     * @param cipherText
+     * @param isBundleID
+     * @return
+     */
     public static byte[] decryptAesCbcPkcs5(String sharedSecret, String cipherText, boolean isBundleID) {
         byte[] decoded = Base64.getUrlDecoder().decode(cipherText);
 
@@ -225,7 +243,7 @@ public class SecurityUtils {
         byte[] finalCipher = new byte[0];
 
         if (isBundleID) {
-            iv = new byte[16]; // zero IV, matches encrypt side
+            iv = new byte[16];
             encryptedData = decoded;
         } else {
             iv = Arrays.copyOfRange(decoded, 0, 16);
@@ -242,7 +260,7 @@ public class SecurityUtils {
             cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
             finalCipher = cipher.doFinal(encryptedData);
         } catch (GeneralSecurityException e) {
-            logger.log(SEVERE, "Decrypting failed");
+            logger.log(SEVERE, "Decrypting failed. This was a legacy-encrypted ciphertext.");
         }
         return finalCipher;
     }
