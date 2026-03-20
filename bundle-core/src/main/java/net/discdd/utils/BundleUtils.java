@@ -50,6 +50,7 @@ import java.util.regex.Pattern;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 import static net.discdd.bundlesecurity.SecurityUtils.PAYLOAD_DIR;
 import static net.discdd.bundlesecurity.SecurityUtils.PAYLOAD_FILENAME;
@@ -234,10 +235,10 @@ public class BundleUtils {
                 }
                 return Optional.of(builder);
             } catch (JsonSyntaxException e) {
-                e.printStackTrace();
+                logger.log(SEVERE, "Failed to parse bundle structure map", e);
                 return Optional.empty();
             } catch (JsonIOException e) {
-                e.printStackTrace();
+                logger.log(SEVERE, "Failed to process bundle structure map", e);
                 return Optional.empty();
             }
         }
@@ -270,7 +271,7 @@ public class BundleUtils {
         try (FileWriter writer = new FileWriter(jsonFile)) {
             writer.write(jsonString);
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.log(SEVERE, "Failed to write bundle JSON to " + jsonFile.getAbsolutePath(), e);
         }
     }
 
@@ -306,13 +307,13 @@ public class BundleUtils {
                 }
                 return Optional.of(builder);
             } catch (JsonSyntaxException e) {
-                e.printStackTrace();
+                logger.log(SEVERE, "Failed to parse bundle JSON from " + jsonFile.getAbsolutePath(), e);
                 return Optional.empty();
             } catch (JsonIOException e) {
-                e.printStackTrace();
+                logger.log(SEVERE, "Failed to read bundle JSON from " + jsonFile.getAbsolutePath(), e);
                 return Optional.empty();
             } catch (FileNotFoundException e) {
-                e.printStackTrace();
+                logger.log(SEVERE, "Bundle JSON file not found: " + jsonFile.getAbsolutePath(), e);
                 return Optional.empty();
             }
         }
