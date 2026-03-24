@@ -2,7 +2,7 @@ name: Nightly Release
 
 on:
   push:
-    branches: [client-jar-fix]
+    branches: [main, client-jar-fix]
   schedule:
     - cron: '0 16 * * *'
   workflow_dispatch:
