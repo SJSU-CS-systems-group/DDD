@@ -76,12 +76,12 @@ android {
 
 dependencies {
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
-    implementation 'io.grpc:grpc-protobuf:1.58.0'
-    implementation 'io.grpc:grpc-stub:1.58.0'
-    implementation 'io.grpc:grpc-okhttp:1.58.0'
-    implementation 'io.grpc:grpc-context:1.58.0'
+    implementation "io.grpc:grpc-protobuf-lite:${rootProject.ext.grpcVersion}"
+    implementation "io.grpc:grpc-stub:${rootProject.ext.grpcVersion}"
+    implementation "io.grpc:grpc-okhttp:${rootProject.ext.grpcVersion}"
+    implementation "io.grpc:grpc-context:${rootProject.ext.grpcVersion}"
     implementation 'com.google.firebase:firebase-crashlytics-buildtools:3.0.2'
-    implementation 'com.google.protobuf:protobuf-java:3.23.4'
+    implementation "com.google.protobuf:protobuf-javalite:${rootProject.ext.protobufVersion}"
     implementation project(':android-core')
     implementation 'androidx.core:core-ktx:1.12.0'
     compileOnly 'org.apache.tomcat:annotations-api:6.0.53' // necessary for Java 9+
