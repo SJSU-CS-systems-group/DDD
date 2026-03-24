@@ -203,12 +203,11 @@ public class SecurityUtils {
      * @param sharedSecret
      * @param cipherText
      * @return
-     * @throws GeneralSecurityException
      */
     public static byte[] decryptAesCbcPkcs5(String sharedSecret, String cipherText) {
         byte[] iv = new byte[16];
         byte[] encryptedData = Base64.getUrlDecoder().decode(cipherText);
-        byte[] finalCipher;
+        byte[] finalCipher = new byte[0];
 
         try {
             SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
@@ -220,7 +219,7 @@ public class SecurityUtils {
             cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
             finalCipher = cipher.doFinal(encryptedData);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            logger.log(SEVERE, "Tried legacy decrypting: FAILED.");
         }
 
         return finalCipher;
