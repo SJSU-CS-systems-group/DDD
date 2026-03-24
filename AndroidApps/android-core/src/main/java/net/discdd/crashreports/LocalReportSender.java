@@ -16,7 +16,9 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
@@ -32,16 +34,28 @@ public class LocalReportSender implements ReportSender {
     }
 
     @Override
-    public void send(Context context, CrashReportData errorContent) throws ReportSenderException {
-        Path rootDir = context.getApplicationContext().getDataDir().toPath().resolve("to-be-bundled");
-        logger.log(INFO, "Directory where acra will send reports to: " + rootDir);
-        if (rootDir.toFile().exists()) {
+    public void send(Context context, CrashReportData errorContent) throws ReportSenderException, IOException {
+        Path toBeBundledDir = context.getApplicationContext().getDataDir().toPath().resolve("to-be-bundled");
+        logger.log(INFO, "Directory where acra will send reports to: " + toBeBundledDir);
+        if (toBeBundledDir.toFile().exists()) {
             logger.log(INFO, "We are writing crash report to this devices internal storage");
         } else {
             logger.log(INFO, "We will stop trying to write a crash report to device");
             return;
         }
-        File logFile = new File(String.valueOf(rootDir), "crash_report.txt");
+        // List files in to-be-bundled
+        // if list file contains "crash_report", keep, otherwise, ignore
+        // if list already has five reports: optimize this dir (rewrite optimizeReports so that newest files are kept)
+        AtomicInteger num = new AtomicInteger(); //change name
+        Files.walk(toBeBundledDir).forEach(file -> {
+                if (file.startsWith("crash_report")) {
+                    num.getAndIncrement();
+                    if (num.getAcquire() > 4) {
+                        //optimize dir
+                    }
+                }
+        });
+        File logFile = new File(String.valueOf(toBeBundledDir), "crash_report.txt");
         try {
             String reportText = config.getReportFormat()
                     .toFormattedString(errorContent, config.getReportContent(), "\n", "\n\t", false);
