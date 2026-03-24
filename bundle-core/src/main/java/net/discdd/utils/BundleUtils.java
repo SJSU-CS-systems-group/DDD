@@ -67,7 +67,7 @@ public class BundleUtils {
         Path extractedBundlePath = extractDirPath.resolve(bundleFileName);
         JarUtils.jarToDir(bundle.getSource().getAbsolutePath(), extractedBundlePath.toString());
 
-        String bundleId = Files.readString(extractedBundlePath.resolve(SecurityUtils.BUNDLEID_FILENAME)).trim();
+        String bundleId = new String(Files.readAllBytes(extractedBundlePath.resolve(SecurityUtils.BUNDLEID_FILENAME)), java.nio.charset.StandardCharsets.UTF_8).trim();
 
         EncryptionHeader encryptionHeader = EncryptionHeader.builder()
                 .clientIdentityKey(extractedBundlePath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY).toFile())
