@@ -2,7 +2,8 @@ name: Deploy
 
 on:
   push:
-    branches: [main, canary-server-workflow]
+    branches:
+      - main
     paths-ignore:
       - 'AndroidApps/**'
       - '.github/workflows/daily.yml'
