@@ -35,20 +35,28 @@ public class LocalReportSender implements ReportSender {
     }
 
     @Override
-    public void send(Context context, CrashReportData errorContent) throws ReportSenderException {
+    public void send(Context context, CrashReportData errorContent) throws ReportSenderException, IOException {
         Path toBeBundledDir = context.getApplicationContext().getDataDir().toPath().resolve("to-be-bundled");
         logger.log(INFO, "Directory where acra will send reports to: " + toBeBundledDir);
-        if (!toBeBundledDir.toFile().exists()) {
-            toBeBundledDir.toFile().mkdir();
-        }
-        int currIndex;
-        try {
-            currIndex = optimizeReports(toBeBundledDir);
-        } catch (IOException e) {
-            logger.log(SEVERE, "Optimizing reports on this device failed" + e);
+        if (toBeBundledDir.toFile().exists()) {
+            logger.log(INFO, "We are writing crash report to this devices internal storage");
+        } else {
+            logger.log(INFO, "We will stop trying to write a crash report to device");
             return;
         }
-        File logFile = new File(String.valueOf(toBeBundledDir), "crash_report" + currIndex + ".txt");
+        // List files in to-be-bundled
+        // if list file contains "crash_report", keep, otherwise, ignore
+        // if list already has five reports: optimize this dir (rewrite optimizeReports so that newest files are kept)
+        AtomicInteger num = new AtomicInteger(); //change name
+        Files.walk(toBeBundledDir).forEach(file -> {
+                if (file.startsWith("crash_report")) {
+                    num.getAndIncrement();
+                    if (num.getAcquire() > 4) {
+                        //optimize dir
+                    }
+                }
+        });
+        File logFile = new File(String.valueOf(toBeBundledDir), "crash_report.txt");
         try {
             String reportText = config.getReportFormat()
                     .toFormattedString(errorContent, config.getReportContent(), "\n", "\n\t", false);
