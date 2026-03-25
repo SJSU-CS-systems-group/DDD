@@ -50,7 +50,7 @@ public class LocalAduSendReceiveTest {
         try {
             new Socket("localhost", 7778).close();
         } catch (Exception e) {
-            System.err.println("☣️ No server running on localhost:7778, skipping test: " + e.getMessage());
+            System.err.println("No server running on localhost:7778, skipping test: " + e.getMessage());
             return;
         }
 
