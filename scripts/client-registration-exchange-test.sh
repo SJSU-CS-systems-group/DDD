@@ -28,7 +28,7 @@ TARGET_EMAIL="${5:-}"
 
 K9_APP_ID="net.discdd.mail"
 CLIENT_DIR=$(mktemp -d /tmp/ddd-sanity-XXXXXX)
-#trap 'rm -rf "$CLIENT_DIR"' EXIT
+trap 'rm -rf "$CLIENT_DIR"' EXIT
 
 fail() {
     echo "SANITY TEST FAILED: $1" >&2
