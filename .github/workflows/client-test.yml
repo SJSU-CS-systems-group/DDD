@@ -65,6 +65,13 @@ jobs:
             ${{ secrets.TEST_EMAIL }} ${{ secrets.TEST_PASSWORD }} \
             ${{ secrets.TEST_TARGET_EMAIL }}
 
+      - name: Notify Discord on success
+        if: success()
+        run: |
+          curl -s -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"content\": \"✅ [${{ inputs.environment }}] Client tests passed! Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"
+
       - name: Notify Discord on failure
         if: failure()
         run: |
