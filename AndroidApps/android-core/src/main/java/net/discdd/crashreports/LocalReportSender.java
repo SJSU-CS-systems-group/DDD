@@ -18,10 +18,12 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 
 public class LocalReportSender implements ReportSender {
     private static final Logger logger = Logger.getLogger(LocalReportSender.class.getName());
@@ -34,7 +36,7 @@ public class LocalReportSender implements ReportSender {
     }
 
     @Override
-    public void send(Context context, CrashReportData errorContent) throws ReportSenderException, IOException {
+    public void send(Context context, CrashReportData errorContent) throws ReportSenderException {
         Path toBeBundledDir = context.getApplicationContext().getDataDir().toPath().resolve("to-be-bundled");
         logger.log(INFO, "Directory where acra will send reports to: " + toBeBundledDir);
         if (toBeBundledDir.toFile().exists()) {
@@ -46,15 +48,11 @@ public class LocalReportSender implements ReportSender {
         // List files in to-be-bundled
         // if list file contains "crash_report", keep, otherwise, ignore
         // if list already has five reports: optimize this dir (rewrite optimizeReports so that newest files are kept)
-        AtomicInteger num = new AtomicInteger(); //change name
-        Files.walk(toBeBundledDir).forEach(file -> {
-                if (file.startsWith("crash_report")) {
-                    num.getAndIncrement();
-                    if (num.getAcquire() > 4) {
-                        //optimize dir
-                    }
-                }
-        });
+        try {
+            int numReports = optimizeReports(toBeBundledDir);
+        } catch (IOException e) {
+            throw new RuntimeException(e); //TODO: no runtime excepts
+        }
         File logFile = new File(String.valueOf(toBeBundledDir), "crash_report.txt");
         try {
             String reportText = config.getReportFormat()
@@ -73,52 +71,53 @@ public class LocalReportSender implements ReportSender {
     }
 
     /**
-     * Prepares crash report file for new crash to be appended.
-     * Deletes old report if over the max amount have been created.
+     * Prepares to-be-bundled dir for new crash report file.
+     * Deletes and renames old report if over the max amount have been created.
      *
-     * @param logFile the file of crash reports to be optimized
-     * @return whether the
+     * @param reportsDir the dir of crash reports to be optimized
+     * @return next available index
      */
-    public void optimizeReports(File logFile) throws IOException {
-        //looking for how many reports exist in singular reports file
-        String reportsFooterTag, lastLineToRemove;
-        reportsFooterTag = lastLineToRemove = "SHARED_PREFERENCES=default=empty";
-        int reportAmount = 0;
-        try (BufferedReader br = new BufferedReader(new FileReader(logFile))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                if (line.contains(reportsFooterTag)) {
-                    reportAmount++;
-                }
+    public int optimizeReports(Path reportsDir) throws IOException {
+        int nextIndex = 0;
+        //looking for how many reports exist in dir
+        AtomicInteger num = new AtomicInteger(); //change name
+        Files.walk(reportsDir).forEach(file -> {
+            if (file.startsWith("crash_report")) {
+                num.getAndIncrement();
             }
-        }
-        if (reportAmount > MAX_AMOUNT_REPORTS) {
-            //create a temp file to copy all reports suceeding first report
-            File tempFile = new File(logFile + ".tmp");
-            try (BufferedReader br = new BufferedReader(new FileReader(logFile));
-                 BufferedWriter bw = new BufferedWriter(new FileWriter(tempFile))) {
-                String line;
-                boolean started = false;
-                while ((line = br.readLine()) != null) {
-                    if (started) {
-                        bw.write(line);
-                        bw.newLine();
-                    } else if (line.contains(lastLineToRemove)) {
-                        started = true;
+        });
+        if (num.getAcquire() >= MAX_AMOUNT_REPORTS) {
+            //rewrite file name with number after "crash_report" - 1
+            // if currChar == 1, delete old crash report
+            Files.walk(reportsDir).sorted().forEach(file -> { //sort b/c walk doesn't guarantee order in which dir is traversed
+                if (file.startsWith("crash_report")) {
+                    int indexToReplace = 12; // Index 12 is the crash report number MAKE FINAL
+                    char currChar = file.getFileName().toString().charAt(12);
+                    int currNum = Character.getNumericValue(currChar);
+                    int newNum = currNum - 1;
+                    char newChar = (char) newNum;
+
+                    if (newNum != 0) {
+                        StringBuilder builder = new StringBuilder(file.getFileName().toString());
+                        builder.setCharAt(indexToReplace, newChar);
+                        String modified = builder.toString();
+                        try {
+                            Object params = new String[] { file.toFile().getName(), file.getParent().resolve(modified).toString() };
+                            logger.log(INFO, "Optimizing crash reports moving the file {0} to {1}", params);
+                            Files.move(file, file.getParent().resolve(modified), StandardCopyOption.REPLACE_EXISTING);
+                        } catch (IOException e) {
+                            logger.log(SEVERE, "Optimizing crash reports unsuccessfully attempted to move directory");
+                        }
+                    } else {
+                        if (file.toFile().delete()) {
+                            logger.log(INFO, "Optimizing crash reports successfully deleted the file: " + file.toFile().getName());
+                        }
                     }
                 }
-            }
-            //overwrite the original file to match the temporary file
-            try (BufferedReader br = new BufferedReader(new FileReader(tempFile));
-                 BufferedWriter bw = new BufferedWriter(new FileWriter(logFile, false))) {
-                String line;
-                while ((line = br.readLine()) != null) {
-                    bw.write(line);
-                    bw.newLine();
-                }
-            }
-            tempFile.delete();
+            });
+            return MAX_AMOUNT_REPORTS;
         }
+        return num.getAcquire() + 1;
     }
 
     @AutoService(ReportSenderFactory.class)
