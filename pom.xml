@@ -5,8 +5,6 @@
     <properties>
         <lombok.version>1.18.42</lombok.version>
         <protobuf-plugin.version>3.4.2</protobuf-plugin.version>
-        <!-- careful! this version must be compatible with io.grpc -->
-        <!-- IMPORTANT: These versions must match AndroidApps/build.gradle (grpcVersion, protobufVersion) -->
         <protobuf.version>4.31.1</protobuf.version>
         <grpc.version>1.73.0</grpc.version>
         <junit.version>5.12.2</junit.version>
