@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - prod-test-env
     paths-ignore:
       - 'AndroidApps/**'
       - '.github/workflows/daily.yml'
