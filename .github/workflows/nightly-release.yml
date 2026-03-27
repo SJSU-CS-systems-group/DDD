@@ -125,6 +125,6 @@ jobs:
     needs: publish-nightly
     uses: ./.github/workflows/client-test.yml
     with:
-      environment: production
+      environment: production-test
     secrets: inherit
 
