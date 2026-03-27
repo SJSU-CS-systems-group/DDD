@@ -102,8 +102,7 @@ public class LocalReportSender implements ReportSender {
                         builder.setCharAt(indexToReplace, newChar);
                         String modified = builder.toString();
                         try {
-                            Object params = new String[] { file.toFile().getName(), file.getParent().resolve(modified).toString() };
-                            logger.log(INFO, "Optimizing crash reports moving the file {0} to {1}", params);
+                            logger.log(INFO, "Optimizing crash reports moving the file " + file.toFile().getName() + " to " + file.getParent().resolve(modified).toString());
                             Files.move(file, file.getParent().resolve(modified), StandardCopyOption.REPLACE_EXISTING);
                         } catch (IOException e) {
                             logger.log(SEVERE, "Optimizing crash reports unsuccessfully attempted to move directory");
