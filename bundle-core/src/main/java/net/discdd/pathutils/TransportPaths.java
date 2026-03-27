@@ -23,14 +23,14 @@ public class TransportPaths {
     public final Path toClientPath;
     public final Path toServerPath;
     public final Path grpcSecurityPath;
-    public final Path crashReportPath;
+    public final Path crashReportsDir;
 
     public TransportPaths(Path rootDir) {
 
         this.toRootDir = rootDir;
         this.toClientPath = rootDir.resolve("BundleTransmission/client");
         this.toServerPath = rootDir.resolve("BundleTransmission/server");
-        this.crashReportPath = rootDir.resolve("crash_report.txt");
+        this.crashReportsDir = rootDir.resolve("to-be-bundled");
 
         try {
             if (!Files.exists(toClientPath) || !Files.exists(toServerPath)) {
