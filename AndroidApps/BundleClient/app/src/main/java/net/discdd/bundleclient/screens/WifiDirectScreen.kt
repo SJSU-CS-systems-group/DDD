@@ -133,9 +133,8 @@ fun WifiDirectScreen(
                 }
             }
             Text(
-                text = "Discovery Status: ${viewModel.getDiscoveryStatus() ?: "Unknown"}"
+                text = "Discovery Status: ${state.discoveryStatusText}"
             )
-            // MV fixed this call ^
 
             var expanded by remember { mutableStateOf(false) }
             val backgroundExchange by viewModel.backgroundExchange.collectAsState()

@@ -36,6 +36,7 @@ data class WifiDirectState(
     val dddWifiEnabled: Boolean = false,
     val connectedStateText: String = "",
     val discoveryActive: Boolean = false,
+    val discoveryStatusText: String = "Starting up...",
     val clientId: String = "Service not running",
     val peers: List<PeerDevice> = emptyList(),
     val showPeerDialog: Boolean = false,
@@ -152,7 +153,8 @@ class WifiDirectViewModel(
             _state.update {
                 it.copy(discoveryActive = wifiService?.isDiscoveryActive ?: false,
                     dddWifiEnabled = (wifiService?.dddWifi?.isDddWifiEnabled ?: false),
-                    connectedStateText = wifiService?.dddWifi?.stateDescription ?: context.getString(R.string.not_connected)
+                    connectedStateText = wifiService?.dddWifi?.stateDescription ?: context.getString(R.string.not_connected),
+                    discoveryStatusText = wifiService?.discoveryStatusText ?: "Starting up..."
                 )
             }
         }
@@ -204,10 +206,9 @@ class WifiDirectViewModel(
         }
     }
 
-    // MV added function
-    fun getDiscoveryStatus(): String? {
-        return wifiService?.discoveryStatusText
-    }
+    //fun getDiscoveryStatus(): String? {
+    //    return wifiService?.discoveryStatusText
+    //}
 
     fun setBackgroundExchange(value: Int) {
         // we set up a collector in the init that will save this value to SharedPreferences
