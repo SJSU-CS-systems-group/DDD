@@ -39,29 +39,23 @@ public class LocalReportSender implements ReportSender {
     public void send(Context context, CrashReportData errorContent) throws ReportSenderException {
         Path toBeBundledDir = context.getApplicationContext().getDataDir().toPath().resolve("to-be-bundled");
         logger.log(INFO, "Directory where acra will send reports to: " + toBeBundledDir);
-        if (toBeBundledDir.toFile().exists()) {
-            logger.log(INFO, "We are writing crash report to this devices internal storage");
-        } else {
-            logger.log(INFO, "We will stop trying to write a crash report to device");
-            return;
+        if (!toBeBundledDir.toFile().exists()) {
+            toBeBundledDir.toFile().mkdir();
+//        } else {
+//            logger.log(INFO, "We will stop trying to write a crash report to device");
+//            return;
         }
-        // List files in to-be-bundled
-        // if list file contains "crash_report", keep, otherwise, ignore
-        // if list already has five reports: optimize this dir (rewrite optimizeReports so that newest files are kept)
+        int currIndex;
         try {
-            int numReports = optimizeReports(toBeBundledDir);
+            currIndex = optimizeReports(toBeBundledDir);
         } catch (IOException e) {
             throw new RuntimeException(e); //TODO: no runtime excepts
         }
-        File logFile = new File(String.valueOf(toBeBundledDir), "crash_report.txt");
+        File logFile = new File(String.valueOf(toBeBundledDir), "crash_report" + currIndex + ".txt");
         try {
             String reportText = config.getReportFormat()
                     .toFormattedString(errorContent, config.getReportContent(), "\n", "\n\t", false);
-            if (logFile.exists()) {
-                optimizeReports(logFile);
-            }
-            FileWriter writer = new FileWriter(logFile, true);
-            writer.append("\n");
+            FileWriter writer = new FileWriter(logFile, false);
             writer.append(reportText);
             writer.flush();
             writer.close();
@@ -78,24 +72,31 @@ public class LocalReportSender implements ReportSender {
      * @return next available index
      */
     public int optimizeReports(Path reportsDir) throws IOException {
-        int nextIndex = 0;
         //looking for how many reports exist in dir
         AtomicInteger num = new AtomicInteger(); //change name
+        logger.log(INFO, "ACRA: About to start counting num reports in dir");
         Files.walk(reportsDir).forEach(file -> {
-            if (file.startsWith("crash_report")) {
+            if (file.getFileName().toString().startsWith("crash_report")) {
                 num.getAndIncrement();
+                logger.log(INFO, "ACRA: Num reports (and counting possibly): " + num.getAcquire());
             }
         });
         if (num.getAcquire() >= MAX_AMOUNT_REPORTS) {
+            logger.log(INFO, "ACRA: Max num reports read, deleting oldest");
             //rewrite file name with number after "crash_report" - 1
             // if currChar == 1, delete old crash report
             Files.walk(reportsDir).sorted().forEach(file -> { //sort b/c walk doesn't guarantee order in which dir is traversed
-                if (file.startsWith("crash_report")) {
+                if (file.getFileName().toString().startsWith("crash_report")) {
                     int indexToReplace = 12; // Index 12 is the crash report number MAKE FINAL
                     char currChar = file.getFileName().toString().charAt(12);
-                    int currNum = Character.getNumericValue(currChar);
+                    int currNum;
+                    try {
+                        currNum = Character.getNumericValue(currChar);
+                    } catch (Exception e) {
+                        throw new IllegalArgumentException("Crash report is not written in format we expect");
+                    }
                     int newNum = currNum - 1;
-                    char newChar = (char) newNum;
+                    char newChar = (char) ('0' + newNum);
 
                     if (newNum != 0) {
                         StringBuilder builder = new StringBuilder(file.getFileName().toString());
