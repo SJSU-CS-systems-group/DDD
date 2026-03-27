@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: '0 16 * * *'
   workflow_dispatch:
+  push:
+    branches:
+      - prod-test-env
 
 permissions:
   contents: write
