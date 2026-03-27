@@ -48,12 +48,17 @@ public class MessageProvider extends ContentProvider {
 
     private void checkCallerAppId() throws SecurityException {
         try {
-            if (getCallerAppId().startsWith("net.discdd.")) return;
+            if (getAllAppIds().contains(getCallerAppId())) return;
         } catch (IOException e) {
             logger.log(WARNING, "Unable to get caller app ID", e);
         }
-        throw new SecurityException("not on the list!");
+        throw new SecurityException("caller app ID is not on the list!");
     }
+
+    private List<String> getAllAppIds() throws IOException {
+        return BundleClientService.instance.getBundleTransmission().applicationDataManager.getRegisteredAppIds();
+    }
+
     @Override
     public boolean onCreate() {
         var appRootDataDir = Paths.get(getContext().getApplicationInfo().dataDir);
