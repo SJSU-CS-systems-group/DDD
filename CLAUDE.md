@@ -81,6 +81,7 @@ Each environment needs these secrets:
 - `DEPLOY_SSH_HOST` — server IP or hostname
 - `DEPLOY_SSH_USER` — SSH user for deployment (canary/production only)
 - `DEPLOY_SSH_KEY` — SSH private key for authentication (canary/production only)
+- `SERVER_KEYS_PATH` — path to directory containing server public key files
 - `TEST_EMAIL` — email address of an existing account used for exchange tests
 - `TEST_PASSWORD` — password for `TEST_EMAIL`
 - `TEST_TARGET_EMAIL` — external address with auto-reply configured
