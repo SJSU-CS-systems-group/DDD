@@ -55,12 +55,9 @@ public class ClientApplicationDataManager {
         }
     }
 
-    // we cannot use .toList() since we are targeting Java 11, but Intellij really wants us to
     @SuppressWarnings("SimplifyStreamApiCallChains")
     public List<String> getRegisteredAppIds() {
-        return registeredAppIds.isEmpty() ? sendADUsStorage.getAllClientApps(true)
-                .map(StoreADUs.ClientApp::appId)
-                .collect(Collectors.toUnmodifiableList()) : registeredAppIds;
+        return registeredAppIds;
     }
 
     public void setRegisteredAppIds(List<String> appIds) {
@@ -116,7 +113,11 @@ public class ClientApplicationDataManager {
         List<ADU> adusToSend = new ArrayList<>();
         final long dataSizeLimit = ClientPaths.APP_DATA_SIZE_LIMIT;
         var sizeLimiter = new SizeLimiter(dataSizeLimit - initialSize);
-        for (String appId : this.getRegisteredAppIds()) {
+        // we cannot use .toList() since we are targeting Java 11, but Intellij really wants us to
+        List<String> appIds = this.getRegisteredAppIds().isEmpty() ? sendADUsStorage.getAllClientApps(true)
+                .map(StoreADUs.ClientApp::appId)
+                .collect(Collectors.toUnmodifiableList()) : this.getRegisteredAppIds();
+        for (String appId : appIds) {
             StreamExt.takeWhile(sendADUsStorage.getADUs(clientId, appId), a -> sizeLimiter.test(a.getSize()))
                     .forEach(adusToSend::add);
         }
