@@ -66,6 +66,7 @@ import java.util.function.BiConsumer;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+import static java.util.logging.Level.FINE;
 import static net.discdd.bundlesecurity.DDDPEMEncoder.ECPrivateKeyType;
 import static net.discdd.bundlesecurity.DDDPEMEncoder.ECPublicKeyType;
 
@@ -174,8 +175,9 @@ public class End2EndTest {
                 Curve.calculateAgreement(serverIdentity.getPublicKey().getPublicKey(), clientIdentity.getPrivateKey());
 
         String secretKey = Base64.getUrlEncoder().encodeToString(agreement);
-
-        return SecurityUtils.encryptAesCbcPkcs5(secretKey, bundleID);
+        String encryptedBundleID = SecurityUtils.encryptAesCbcPkcs5(secretKey, bundleID, true);
+        logger.log(FINE, "We're about to create encrypted bundle id %s", encryptedBundleID);
+        return SecurityUtils.encryptAesCbcPkcs5(secretKey, bundleID, true);
 
     }
 

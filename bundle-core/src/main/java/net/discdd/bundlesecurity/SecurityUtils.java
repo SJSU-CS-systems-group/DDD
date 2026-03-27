@@ -15,6 +15,7 @@ import org.whispersystems.libsignal.util.KeyHelper;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.Mac;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
@@ -31,8 +32,10 @@ import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
@@ -153,17 +156,26 @@ public class SecurityUtils {
         return generateID(publicKey);
     }
 
-    public static String encryptAesCbcPkcs5(String sharedSecret, String plainText) throws NoSuchAlgorithmException,
-            InvalidKeySpecException, NoSuchPaddingException, InvalidAlgorithmParameterException,
-            java.security.InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
+    /**
+     * Encrypts a plaintext string using AES-CBC-PKCS5 with a shared secret, using an all-zero IV for bundle IDs or a
+     * random IV prepended to the ciphertext for non-bundle IDs.
+     *
+     * @param sharedSecret
+     * @param plainText
+     * @param isBundleID
+     * @return
+     */
+    public static String encryptAesCbcPkcs5(String sharedSecret, String plainText, boolean isBundleID) throws
+            NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException,
+            InvalidAlgorithmParameterException, java.security.InvalidKeyException, IllegalBlockSizeException,
+            BadPaddingException {
         byte[] iv = new byte[16];
-        byte[] encryptedData = null;
+        if (!isBundleID) {
+            SecureRandom random = new SecureRandom();
+            random.nextBytes(iv);
+        }
 
-        /* Create SecretKeyFactory object */
-        SecretKeyFactory factory;
-        factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-
-        /* Create KeySpec object */
+        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
         KeySpec spec = new PBEKeySpec(sharedSecret.toCharArray(), sharedSecret.getBytes(), ITERATIONS, KEYLEN);
         SecretKey skey = factory.generateSecret(spec);
         SecretKeySpec secretKeySpec = new SecretKeySpec(skey.getEncoded(), "AES");
@@ -171,26 +183,86 @@ public class SecurityUtils {
         Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
         cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
 
-        encryptedData = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
+        byte[] encryptedData = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
 
-        return Base64.getUrlEncoder().encodeToString(encryptedData);
+        if (isBundleID) {
+            return Base64.getUrlEncoder().encodeToString(encryptedData);
+        }
+
+        // isBundleID=false: prepend IV so decryption can extract it; combined = [iv (16 bytes) + encryptedData (16N
+        // bytes)]
+        // return Base64(iv + encryptedData)
+        byte[] combined = new byte[iv.length + encryptedData.length];
+        System.arraycopy(iv, 0, combined, 0, iv.length);
+        System.arraycopy(encryptedData, 0, combined, iv.length, encryptedData.length);
+        return Base64.getUrlEncoder().encodeToString(combined);
     }
 
-    public static byte[] decryptAesCbcPkcs5(String sharedSecret, String cipherText) throws GeneralSecurityException {
+    /**
+     * Handles legacy case of encrypting with the IV fixed to all-zeros
+     *
+     * @param sharedSecret
+     * @param cipherText
+     * @return
+     */
+    public static byte[] decryptAesCbcPkcs5(String sharedSecret, String cipherText) {
         byte[] iv = new byte[16];
         byte[] encryptedData = Base64.getUrlDecoder().decode(cipherText);
+        byte[] finalCipher = new byte[0];
 
-        /* Create SecretKeyFactory object */
-        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-        /* Create KeySpec object */
-        KeySpec spec = new PBEKeySpec(sharedSecret.toCharArray(), sharedSecret.getBytes(), ITERATIONS, KEYLEN);
-        SecretKey skey = factory.generateSecret(spec);
-        SecretKeySpec secretKeySpec = new SecretKeySpec(skey.getEncoded(), "AES");
+        try {
+            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+            KeySpec spec = new PBEKeySpec(sharedSecret.toCharArray(), sharedSecret.getBytes(), ITERATIONS, KEYLEN);
+            SecretKey skey = factory.generateSecret(spec);
+            SecretKeySpec secretKeySpec = new SecretKeySpec(skey.getEncoded(), "AES");
 
-        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
+            finalCipher = cipher.doFinal(encryptedData);
+        } catch (Exception e) {
+            logger.log(SEVERE, "Tried legacy decrypting: FAILED.");
+        }
 
-        return cipher.doFinal(encryptedData);
+        return finalCipher;
+    }
+
+    /**
+     * Decrypts an AES-CBC-PKCS5 ciphertext using a shared secret, with the IV either fixed to all-zeros (for bundle
+     * IDs) or extracted from the first 16 bytes of the ciphertext (for non-bundle IDs).
+     *
+     * @param sharedSecret
+     * @param cipherText
+     * @param isBundleID
+     * @return
+     */
+    public static byte[] decryptAesCbcPkcs5(String sharedSecret, String cipherText, boolean isBundleID) {
+        byte[] decoded = Base64.getUrlDecoder().decode(cipherText);
+
+        byte[] iv;
+        byte[] encryptedData;
+        byte[] finalCipher = new byte[0];
+
+        if (isBundleID) {
+            iv = new byte[16];
+            encryptedData = decoded;
+        } else {
+            iv = Arrays.copyOfRange(decoded, 0, 16);
+            encryptedData = Arrays.copyOfRange(decoded, 16, decoded.length);
+        }
+
+        try {
+            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+            KeySpec spec = new PBEKeySpec(sharedSecret.toCharArray(), sharedSecret.getBytes(), ITERATIONS, KEYLEN);
+            SecretKey skey = factory.generateSecret(spec);
+            SecretKeySpec secretKeySpec = new SecretKeySpec(skey.getEncoded(), "AES");
+
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, new IvParameterSpec(iv));
+            finalCipher = cipher.doFinal(encryptedData);
+        } catch (GeneralSecurityException e) {
+            logger.log(SEVERE, "Decrypting failed. This was a legacy-encrypted ciphertext.");
+        }
+        return finalCipher;
     }
 
     public static String unzip(String zipFilePath) throws IOException {
