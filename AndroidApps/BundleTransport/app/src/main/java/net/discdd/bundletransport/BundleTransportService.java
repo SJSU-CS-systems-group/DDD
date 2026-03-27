@@ -71,6 +71,7 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     private final RpcServer grpcServer = new RpcServer(this);
     public GrpcSecurityKey grpcKeys;
     public String transportId;
+    public String fullTransportId;
     String host;
     int port;
     ConnectivityManager connectivityManager;
@@ -186,8 +187,8 @@ public class BundleTransportService extends Service implements BundleExchangeSer
                      CertificateException | OperatorCreationException | IOException e) {
                 logExchange(SEVERE, e, R.string.failed_to_initialize_grpcsecurity_s, e.getMessage());
             }
-            transportId = Base64.encodeToString(grpcKeys.grpcKeyPair.getPublic().getEncoded(), Base64.DEFAULT);
-            transportId = transportId.substring(transportId.length() - 20, transportId.length() - 4);
+            fullTransportId = Base64.encodeToString(grpcKeys.grpcKeyPair.getPublic().getEncoded(), Base64.DEFAULT);
+            transportId = fullTransportId.substring(fullTransportId.length() - 20, fullTransportId.length() - 4);
 
             // Init Room-backed message repo for storing server messages
             serverMessageRepository = new ServerMessageRepository(getApplication());

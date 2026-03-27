@@ -101,7 +101,7 @@ fun ServerUploadScreen(
             RecencyBlobStatusBanner(recencyBlobStatus)
 
             Text(
-                    text = "TransportId: ${uploadViewModel.transportID}",
+                    text = "TransportId: ${if (showEasterEgg) uploadViewModel.fullTransportID else uploadViewModel.transportID}",
             )
             FilledTonalButton(
                     onClick = { uploadViewModel.connectServer() },

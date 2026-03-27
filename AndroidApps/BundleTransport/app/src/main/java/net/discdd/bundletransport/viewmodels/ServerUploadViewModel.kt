@@ -50,6 +50,11 @@ class ServerUploadViewModel(
             val service = TransportServiceManager.getService()
             return service?.transportId ?: "Unknown"
         }
+    val fullTransportID: String
+        get() {
+            val service = TransportServiceManager.getService()
+            return service?.fullTransportId ?: "Unknown"
+        }
     private val RECENCY_BLOB_AGE_THRESHOLD = 24.hours
     private val context get() = getApplication<Application>()
     private val sharedPref by lazy { context.getSharedPreferences(BundleTransportService.BUNDLETRANSPORT_PREFERENCES, MODE_PRIVATE) }

@@ -80,7 +80,8 @@ fun HomeScreen(
             screen = {
                 WifiDirectScreen(
                     serviceReadyFuture = WifiServiceManager.serviceReady,
-                    nearbyWifiState = nearbyWifiState
+                    nearbyWifiState = nearbyWifiState,
+                    showEasterEgg = showEasterEgg,
                 ) {
                     viewModel.onToggleEasterEgg()
                     Toast.makeText(context, "Easter Egg Toggled!", Toast.LENGTH_SHORT).show()

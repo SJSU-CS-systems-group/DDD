@@ -41,6 +41,7 @@ fun WifiDirectScreen(
     viewModel: WifiDirectViewModel = viewModel(),
     serviceReadyFuture: CompletableFuture<BundleClientService>,
     nearbyWifiState: PermissionState,
+    showEasterEgg: Boolean = false,
     onToggle: () -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
@@ -117,7 +118,7 @@ fun WifiDirectScreen(
             * Click this portion 7 times in <3sec in order to toggle the easter egg!
             * */
             EasterEgg(
-                content = { Text(text = "ClientId: ${state.clientId.substring(0,10)}") },
+                content = { Text(text = "ClientId: ${if (showEasterEgg) state.clientId else state.clientId.substring(0,10)}") },
                 onToggle = onToggle,
             )
             Text(text = "Wifi Direct Enabled: ${if (state.dddWifiEnabled) "✅" else "❌"}")
