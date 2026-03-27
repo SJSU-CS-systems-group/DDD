@@ -89,6 +89,7 @@ public class BundleClientService extends Service {
     ConnectivityManager connectivityManager;
     ConnectivityManager.NetworkCallback networkCallback;
     private DDDWifi dddWifi;
+    private DDDWifiDirect dddWifiDirect; // MV ADDED
     private ClientBundleTransmission bundleTransmission;
     final private Observer<? super DDDWifiEventType> liveDataObserver = this::broadcastWifiEvent;
     private MutableLiveData<DDDWifiEventType> eventsLiveData;
@@ -222,7 +223,7 @@ public class BundleClientService extends Service {
                 logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
             }
 
-            var dddWifiDirect = new DDDWifiDirect(this);
+            dddWifiDirect = new DDDWifiDirect(this); // MV deleted "var"
             this.dddWifi = dddWifiDirect;
             this.dddWifi.getEventLiveData().observeForever(liveDataObserver);
             eventsLiveData = (MutableLiveData<DDDWifiEventType>) dddWifiDirect.getEventLiveData();
@@ -507,6 +508,11 @@ public class BundleClientService extends Service {
 
     public boolean isDiscoveryActive() {
         return dddWifi.isDiscoveryActive();
+    }
+
+    // MV added wrapper
+    public String getDiscoveryStatusText() {
+        return dddWifiDirect.getDiscoveryStatusText();
     }
 
     public ClientBundleTransmission.RecentTransport getRecentTransport(DDDWifiDevice peer) {

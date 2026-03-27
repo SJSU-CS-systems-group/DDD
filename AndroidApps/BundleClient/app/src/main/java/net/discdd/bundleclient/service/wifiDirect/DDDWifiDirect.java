@@ -60,6 +60,7 @@ public class DDDWifiDirect implements DDDWifi {
     private WifiP2pManager.Channel wifiChannel;
     private boolean discoveryActive = false;
     private String discoveryStatusText = "Not yet started";
+    private boolean initialized = false; // MV
     private WifiP2pGroup group;
     private InetAddress ownerAddress;
     private List<DDDWifiDevice> peers = new CopyOnWriteArrayList<>();
@@ -178,6 +179,7 @@ public class DDDWifiDirect implements DDDWifi {
     }
 
     public void initialize() {
+        initialized = true; // MV
         if (wifiChannel != null) {
             logger.severe("Calling initialize on an initialized channel. Ignoring.");
             return;
@@ -295,6 +297,11 @@ public class DDDWifiDirect implements DDDWifi {
         return discoveryActive;
     }
 
+    // MV added this getter
+    public String getDiscoveryStatusText() {
+        return discoveryStatusText;
+    }
+
     @Override
     public String getStateDescription() {
         var statusString = status >= 0 && status < STATUS_STRINGS.length ? STATUS_STRINGS[status] : "UNKNOWN";
@@ -302,7 +309,8 @@ public class DDDWifiDirect implements DDDWifi {
             return "🚫: " + statusString;
         }
         if (wifiChannel == null) {
-            return "📶: " + statusString + " | Discovery: " + discoveryStatusText;
+            return initialized? "📶: " + statusString + " | Discovery: Shut down"
+                              : "📶: " + statusString + " | Discovery: Starting up..."; // MV
         }
 
         var statusBuilder = new StringBuilder();

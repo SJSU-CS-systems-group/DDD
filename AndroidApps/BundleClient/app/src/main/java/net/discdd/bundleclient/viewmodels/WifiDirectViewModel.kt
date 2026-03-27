@@ -204,6 +204,11 @@ class WifiDirectViewModel(
         }
     }
 
+    // MV added function
+    fun getDiscoveryStatus(): String? {
+        return wifiService?.discoveryStatusText
+    }
+
     fun setBackgroundExchange(value: Int) {
         // we set up a collector in the init that will save this value to SharedPreferences
         _backgroundExchange.value = value
