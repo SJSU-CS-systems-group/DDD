@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
@@ -24,7 +23,6 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -40,7 +38,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -120,11 +117,13 @@ fun ServerUploadScreen(
             Text(
                     text = "TransportId: ${if (showEasterEgg) uploadViewModel.fullTransportID else uploadViewModel.transportID}",
             )
-            FilledTonalButton(
-                    onClick = { showQRScanner = true },
-                    modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Scan QR Code")
+            if (showEasterEgg) {
+                FilledTonalButton(
+                        onClick = { showQRScanner = true },
+                        modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Scan QR Code")
+                }
             }
             FilledTonalButton(
                     onClick = { uploadViewModel.connectServer() },
@@ -132,39 +131,6 @@ fun ServerUploadScreen(
                     modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Connect to Bundle Server")
-            }
-
-            if (showEasterEgg) {
-                OutlinedTextField(
-                        value = uploadState.domain,
-                        onValueChange = { uploadViewModel.onDomainChanged(it) },
-                        label = { Text("Domain Input") },
-                        modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                )
-                OutlinedTextField(
-                        value = uploadState.port,
-                        onValueChange = { uploadViewModel.onPortChanged(it) },
-                        label = { Text("Port Input") },
-                        modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                )
-                FilledTonalButton(
-                        onClick = { uploadViewModel.saveDomainPort() },
-                        modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Save Domain and Port")
-                }
-                FilledTonalButton(
-                        onClick = { uploadViewModel.restoreDomainPort() },
-                        modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Restore Domain and Port")
-                }
             }
 
             BackGroundExchange(uploadViewModel)

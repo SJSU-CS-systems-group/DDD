@@ -40,6 +40,9 @@ class ServerViewModel(
     private val _isTransmitting = MutableStateFlow(false)
     val isTransmitting = _isTransmitting.asStateFlow()
 
+    private val _isCustomServer = MutableStateFlow(sharedPref.getBoolean("custom_server_keys", false))
+    val isCustomServer = _isCustomServer.asStateFlow()
+
     // Store the last saved values for comparison and reversion
     private var oldDomain: String = ""
     private var oldPort: Int = 0
@@ -189,6 +192,7 @@ class ServerViewModel(
                 // Reinitialize the entire bundle transmission chain with new keys
                 WifiServiceManager.getService()?.reinitializeBundleTransmission()
 
+                _isCustomServer.value = true
                 appendMessage("Saved. Host: ${config.host}, Port: ${config.port}")
             } catch (e: Exception) {
                 appendMessage("Failed to apply scanned config: ${e.message}")

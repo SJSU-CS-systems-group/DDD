@@ -4,8 +4,11 @@ import android.Manifest
 import android.content.Intent
 import android.provider.Settings
 import android.widget.Toast
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -40,6 +43,7 @@ import net.discdd.UsbConnectionManager
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.WifiServiceManager
 import net.discdd.bundleclient.viewmodels.ClientUsbViewModel
+import net.discdd.bundleclient.viewmodels.ServerViewModel
 import net.discdd.screens.LogScreen
 import net.discdd.components.NotificationBottomSheet
 import net.discdd.screens.BugReportScreen
@@ -55,13 +59,15 @@ data class TabItem(
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun HomeScreen(
-    viewModel: SettingsViewModel = viewModel()
+    viewModel: SettingsViewModel = viewModel(),
+    serverViewModel: ServerViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val showUsbScreen by UsbConnectionManager.usbConnected.collectAsState()
     val firstOpen by viewModel.firstOpen.collectAsState()
     val showEasterEgg by viewModel.showEasterEgg.collectAsState()
+    val isCustomServer by serverViewModel.isCustomServer.collectAsState()
     val nearbyWifiState = rememberPermissionState(Manifest.permission.NEARBY_WIFI_DEVICES)
     val notificationState = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS,
         onPermissionResult = {
@@ -162,12 +168,21 @@ fun HomeScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
             ) {
                 Text(
                     text = context.getString(R.string.app_name),
                     style = MaterialTheme.typography.titleLarge
                 )
+                if (isCustomServer) {
+                    Text(
+                        text = "Custom Server",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
 
             ScrollableTabRow(
