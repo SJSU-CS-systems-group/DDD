@@ -36,10 +36,11 @@ echo "Testing as: $REGISTERED_EMAIL  jar: $(basename "$CLI_JAR")"
 
 echo ""
 echo "=== Step 1: Queue outbound email to $TARGET_EMAIL ==="
+TEST_SUBJECT="DDD Exchange Test $(date +%s)"
 cat > "$CLIENT_DIR/test-email.eml" << EMLEOF
 From: $REGISTERED_EMAIL
 To: $TARGET_EMAIL
-Subject: DDD Exchange Test $(date +%s)
+Subject: $TEST_SUBJECT
 Content-Type: text/plain
 
 Automated DDD exchange test. Please reply.
@@ -76,8 +77,8 @@ for attempt in $(seq 1 15); do
             fail "Email bounced: $(cat "$adu_file")"
         fi
 
-        # Any new non-control ADU is treated as the reply
-        if ! head -1 "$adu_file" 2>/dev/null | grep -q "^# CONTROL"; then
+        # Check if this is a reply to our specific email
+        if grep -q "Re: $TEST_SUBJECT" "$adu_file" 2>/dev/null; then
             echo "Reply received (ADU $adu_name):"
             head -5 "$adu_file"
             echo ""
@@ -87,4 +88,4 @@ for attempt in $(seq 1 15); do
     done
 done
 
-fail "No reply received within 5 minutes. New ADUs in receive dir: $(ls "$RECV_DIR" 2>/dev/null | grep -vxF "$(echo "$EXISTING_ADUS")" || echo none)"
+fail "No reply to '$TEST_SUBJECT' received within 5 minutes. New ADUs in receive dir: $(ls "$RECV_DIR" 2>/dev/null | grep -vxF "$(echo "$EXISTING_ADUS")" || echo none)"

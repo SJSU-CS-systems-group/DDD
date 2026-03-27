@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - canary-test
     paths-ignore:
       - 'AndroidApps/**'
       - '.github/workflows/daily.yml'
