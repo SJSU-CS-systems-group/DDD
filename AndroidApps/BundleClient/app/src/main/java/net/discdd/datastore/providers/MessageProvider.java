@@ -53,6 +53,7 @@ public class MessageProvider extends ContentProvider {
             } else {
                 if (getAllAppIds().contains(getCallerAppId())) return;
             }
+            logger.log(WARNING, "Unknown app ID: " + getCallerAppId());
         } catch (IOException e) {
             logger.log(WARNING, "Unable to get caller app ID", e);
         }
