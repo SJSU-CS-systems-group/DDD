@@ -38,6 +38,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import net.discdd.bundleclient.R
 import net.discdd.bundleclient.viewmodels.ServerViewModel
+import net.discdd.components.QRScannerScreen
+import net.discdd.utils.QRCodeParser
 import net.discdd.viewmodels.ConnectivityViewModel
 import net.discdd.viewmodels.SettingsViewModel
 
@@ -53,6 +55,7 @@ fun ServerScreen(
     val isTransmitting by serverViewModel.isTransmitting.collectAsState()
     // Dialog state to confirm key reset
     var showResetDialog by remember { mutableStateOf(false) }
+    var showQRScanner by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     // Input validation
     val isValidPort = serverState.port.toIntOrNull()?.let { it in 1..65_535 } == true
@@ -71,6 +74,20 @@ fun ServerScreen(
         if (serverState.domain.isNotBlank() && isValidPort) {
             showResetDialog = true
         }
+    }
+
+    if (showQRScanner) {
+        QRScannerScreen(
+            onQRCodeScanned = { scannedUrl ->
+                val config = QRCodeParser.parse(scannedUrl)
+                if (config != null) {
+                    serverViewModel.applyScannedConfig(config)
+                }
+                showQRScanner = false
+            },
+            onDismiss = { showQRScanner = false },
+        )
+        return
     }
 
     Surface(
@@ -129,6 +146,12 @@ fun ServerScreen(
                 }
             }
 
+            FilledTonalButton(
+                onClick = { showQRScanner = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Scan QR Code")
+            }
             FilledTonalButton(
                 enabled = !isTransmitting && enableConnectBtn,
                 onClick = { serverViewModel.connectServer() },

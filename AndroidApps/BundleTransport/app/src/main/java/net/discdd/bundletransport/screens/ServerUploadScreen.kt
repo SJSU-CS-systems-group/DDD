@@ -49,7 +49,9 @@ import kotlinx.coroutines.delay
 import net.discdd.bundletransport.viewmodels.RecencyBlobStatus
 import net.discdd.bundletransport.viewmodels.ServerUploadViewModel
 import net.discdd.components.EasterEgg
+import net.discdd.components.QRScannerScreen
 import net.discdd.components.UserLogComponent
+import net.discdd.utils.QRCodeParser
 import net.discdd.utils.UserLogRepository
 import net.discdd.viewmodels.ConnectivityViewModel
 import net.discdd.viewmodels.SettingsViewModel
@@ -67,6 +69,7 @@ fun ServerUploadScreen(
     val connectivityState by connectivityViewModel.state.collectAsState()
     val showEasterEgg by settingsViewModel.showEasterEgg.collectAsState()
     var connectServerBtn by remember { mutableStateOf(false) }
+    var showQRScanner by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
 
     LaunchedEffect(uploadState.domain, uploadState.port, connectivityState.networkConnected) {
@@ -79,6 +82,20 @@ fun ServerUploadScreen(
             delay(5000)
             uploadViewModel.clearMessage()
         }
+    }
+
+    if (showQRScanner) {
+        QRScannerScreen(
+            onQRCodeScanned = { scannedUrl ->
+                val config = QRCodeParser.parse(scannedUrl)
+                if (config != null) {
+                    uploadViewModel.applyScannedConfig(config.host, config.port)
+                }
+                showQRScanner = false
+            },
+            onDismiss = { showQRScanner = false },
+        )
+        return
     }
 
     Surface(
@@ -103,6 +120,12 @@ fun ServerUploadScreen(
             Text(
                     text = "TransportId: ${if (showEasterEgg) uploadViewModel.fullTransportID else uploadViewModel.transportID}",
             )
+            FilledTonalButton(
+                    onClick = { showQRScanner = true },
+                    modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Scan QR Code")
+            }
             FilledTonalButton(
                     onClick = { uploadViewModel.connectServer() },
                     enabled = connectServerBtn,

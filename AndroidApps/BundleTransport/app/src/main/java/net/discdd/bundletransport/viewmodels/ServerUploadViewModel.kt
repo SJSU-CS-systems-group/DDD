@@ -173,6 +173,17 @@ class ServerUploadViewModel(
         _state.update { it.copy(message = null) }
     }
 
+    fun applyScannedConfig(host: String, port: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _state.update { it.copy(domain = host, port = port.toString()) }
+            sharedPref.edit {
+                putString(BundleTransportService.BUNDLETRANSPORT_DOMAIN_PREFERENCE, host)
+                putInt(BundleTransportService.BUNDLETRANSPORT_PORT_PREFERENCE, port)
+            }
+            _state.update { it.copy(message = "Saved. Host: $host, Port: $port") }
+        }
+    }
+
     fun setBackgroundExchange(value: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             _backgroundExchange.value = value

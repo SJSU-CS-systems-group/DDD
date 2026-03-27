@@ -98,7 +98,7 @@ public class ClientBundleSecurity {
     }
 
     public ClientSecurity getClientSecurity() {
-        return this.client;
+        return ClientSecurity.getInstance();
     }
 
     public GrpcSecurityKey getClientGrpcSecurityKey() {
