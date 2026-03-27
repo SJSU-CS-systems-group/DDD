@@ -43,26 +43,26 @@ jobs:
         run: |
           CLI_JAR=$(ls cli-*.jar)
           bash scripts/client-registration-exchange-test.sh "$CLI_JAR" \
-            apps/cli/src/main/resources/Server_Keys \
+            ${{ secrets.SERVER_KEYS_PATH }} \
             ${{ secrets.DEPLOY_SSH_HOST }} 7778
 
       - name: Test exchange flows
         run: |
           NEW_JAR=$(ls cli-*.jar)
-          SERVER_KEYS=apps/cli/src/main/resources/Server_Keys
+          SERVER_KEYS=${{ secrets.SERVER_KEYS_PATH }}
 
           if [ -f old-cli.jar ]; then
             echo "--- Exchange test: previous jar ---"
             bash scripts/existing-client-test.sh old-cli.jar "$SERVER_KEYS" \
               ${{ secrets.DEPLOY_SSH_HOST }} 7778 \
-              ${{ secrets.TEST_EMAIL }} ${{ secrets.TEST_PASSWORD }} \
+              ${{ secrets.TEST_EMAIL }} ${{ secrets.TEST_EMAIL_PASSWORD }} \
               ${{ secrets.TEST_TARGET_EMAIL }}
           fi
 
           echo "--- Exchange test: new jar ---"
           bash scripts/existing-client-test.sh "$NEW_JAR" "$SERVER_KEYS" \
             ${{ secrets.DEPLOY_SSH_HOST }} 7778 \
-            ${{ secrets.TEST_EMAIL }} ${{ secrets.TEST_PASSWORD }} \
+            ${{ secrets.TEST_EMAIL }} ${{ secrets.TEST_EMAIL_PASSWORD }} \
             ${{ secrets.TEST_TARGET_EMAIL }}
 
       - name: Notify Discord on success
