@@ -139,9 +139,10 @@ public class BundleClientService extends Service {
                 checkValidNetwork();
             }
 
+            // set to DDDWIFI_CONNECTED because the device is no longer connected to a Wi-Fi direct network
             @Override
             public void onLost(Network network) {
-                eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DISCONNECTED);
+                eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_CONNECTED);
             }
         };
         connectivityManager.registerDefaultNetworkCallback(networkCallback);

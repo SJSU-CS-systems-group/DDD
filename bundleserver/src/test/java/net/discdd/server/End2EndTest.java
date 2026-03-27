@@ -201,7 +201,7 @@ public class End2EndTest {
             }
             return new ADU(aduFile, TEST_APPID, aduId, aduFile.length(), clientId);
         }).collect(Collectors.toList());
-        BundleUtils.createBundlePayloadForAdus(adus, "{}".getBytes(), "HB", null, baos);
+        BundleUtils.createBundlePayloadForAdus(adus, "{}".getBytes(), "HB", null, baos, List.of(TEST_APPID));
         String bundleId = BundleIDGenerator.generateBundleID(clientId, bundleCount, BundleIDGenerator.UPSTREAM);
         String encryptedBundleID = encryptBundleID(bundleId);
         Path bundleJarPath = targetDir.resolve(encryptedBundleID);

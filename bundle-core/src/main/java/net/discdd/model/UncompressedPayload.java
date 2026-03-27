@@ -16,12 +16,14 @@ public class UncompressedPayload {
     private final Acknowledgement ackRecord;
 
     private final List<ADU> ADUs;
+    private final List<String> appIds;
 
-    private UncompressedPayload(String bundleId, Acknowledgement ackRecord, List<ADU> ADUs, File source) {
+    private UncompressedPayload(String bundleId, Acknowledgement ackRecord, List<ADU> ADUs, File source, List<String> appIds) {
         this.bundleId = bundleId;
         this.ackRecord = ackRecord;
         this.ADUs = ADUs;
         this.source = source;
+        this.appIds = appIds;
     }
 
     public String getBundleId() {
@@ -35,6 +37,9 @@ public class UncompressedPayload {
     public List<ADU> getADUs() {
         return this.ADUs;
     }
+    public List<String> getAppIds() {
+        return this.appIds;
+    }
 
     public static class Builder {
 
@@ -45,6 +50,7 @@ public class UncompressedPayload {
         private Acknowledgement ackRecord;
 
         private List<ADU> ADUs;
+        private List<String> appIds;
 
         public String getBundleId() {
             return this.bundleId;
@@ -60,6 +66,10 @@ public class UncompressedPayload {
 
         public File getSource() {
             return this.source;
+        }
+
+        public List<String> getAppIds() {
+            return this.appIds;
         }
 
         public Builder setAckRecord(Acknowledgement ackRecord) {
@@ -82,8 +92,13 @@ public class UncompressedPayload {
             return this;
         }
 
+        public Builder setAppIds(List<String> appIds) {
+            this.appIds = appIds;
+            return this;
+        }
+
         public UncompressedPayload build() {
-            return new UncompressedPayload(this.bundleId, this.ackRecord, this.ADUs, this.source);
+            return new UncompressedPayload(this.bundleId, this.ackRecord, this.ADUs, this.source, this.appIds == null ? List.of() : this.appIds);
         }
     }
 }

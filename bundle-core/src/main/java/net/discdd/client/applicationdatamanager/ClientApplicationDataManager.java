@@ -38,6 +38,8 @@ public class ClientApplicationDataManager {
     /* Database tables */
 
     final private ClientPaths clientPaths;
+    // appIds are sent by the server, used to send ADUs
+    final private List<String> registeredAppIds = new ArrayList<>();
 
     public ClientApplicationDataManager(ClientPaths clientPaths, Consumer<ADU> aduConsumer) {
         this.clientPaths = clientPaths;
@@ -56,9 +58,17 @@ public class ClientApplicationDataManager {
     // we cannot use .toList() since we are targeting Java 11, but Intellij really wants us to
     @SuppressWarnings("SimplifyStreamApiCallChains")
     public List<String> getRegisteredAppIds() {
-        return sendADUsStorage.getAllClientApps(true)
+        return registeredAppIds.isEmpty() ? sendADUsStorage.getAllClientApps(true)
                 .map(StoreADUs.ClientApp::appId)
-                .collect(Collectors.toUnmodifiableList());
+                .collect(Collectors.toUnmodifiableList()) : registeredAppIds;
+    }
+
+    public void setRegisteredAppIds(List<String> appIds) {
+        for (String appId : appIds) {
+            if (!registeredAppIds.contains(appId)) {
+                registeredAppIds.add(appId);
+            }
+        }
     }
 
     public void processAcknowledgement(String bundleId) {
