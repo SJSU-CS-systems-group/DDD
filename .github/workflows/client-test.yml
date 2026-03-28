@@ -39,40 +39,38 @@ jobs:
               -d "{\"content\": \"⚠️ [${{ inputs.environment }}] Backward compat test skipped - no previous nightly jar found. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"
           fi
 
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.DEPLOY_SSH_HOST }} >> ~/.ssh/known_hosts
-
       - name: Run registration test
         run: |
           CLI_JAR=$(ls cli-*.jar)
           bash scripts/client-registration-exchange-test.sh "$CLI_JAR" \
-            apps/cli/src/main/resources/Server_Keys \
+            ${{ secrets.SERVER_KEYS_PATH }} \
             ${{ secrets.DEPLOY_SSH_HOST }} 7778
 
       - name: Test exchange flows
         run: |
           NEW_JAR=$(ls cli-*.jar)
-          REMOTE="${{ secrets.DEPLOY_SSH_USER }}@${{ secrets.DEPLOY_SSH_HOST }}"
-
-          scp -i ~/.ssh/deploy_key -r "$REMOTE:~/test-client" ./persistent-client \
-            || { echo "No persistent client dir — run one-time client setup first"; exit 1; }
+          SERVER_KEYS=${{ secrets.SERVER_KEYS_PATH }}
 
           if [ -f old-cli.jar ]; then
             echo "--- Exchange test: previous jar ---"
-            bash scripts/existing-client-test.sh old-cli.jar ./persistent-client \
-              ${{ secrets.DEPLOY_SSH_HOST }} 7778 ${{ secrets.TEST_EMAIL }}
+            bash scripts/existing-client-test.sh old-cli.jar "$SERVER_KEYS" \
+              ${{ secrets.DEPLOY_SSH_HOST }} 7778 \
+              ${{ secrets.TEST_EMAIL }} ${{ secrets.TEST_EMAIL_PASSWORD }} \
+              ${{ secrets.TEST_TARGET_EMAIL }}
           fi
 
           echo "--- Exchange test: new jar ---"
-          bash scripts/existing-client-test.sh "$NEW_JAR" ./persistent-client \
-            ${{ secrets.DEPLOY_SSH_HOST }} 7778 ${{ secrets.TEST_EMAIL }}
+          bash scripts/existing-client-test.sh "$NEW_JAR" "$SERVER_KEYS" \
+            ${{ secrets.DEPLOY_SSH_HOST }} 7778 \
+            ${{ secrets.TEST_EMAIL }} ${{ secrets.TEST_EMAIL_PASSWORD }} \
+            ${{ secrets.TEST_TARGET_EMAIL }}
 
-          ssh -i ~/.ssh/deploy_key "$REMOTE" "rm -rf ~/test-client"
-          scp -i ~/.ssh/deploy_key -r ./persistent-client "$REMOTE:~/test-client"
+      - name: Notify Discord on success
+        if: success()
+        run: |
+          curl -s -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"content\": \"✅ [${{ inputs.environment }}] Client tests passed! Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"
 
       - name: Notify Discord on failure
         if: failure()

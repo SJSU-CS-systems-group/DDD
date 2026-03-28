@@ -72,25 +72,33 @@ The bundleserver is deployed via a GitHub Actions pipeline (`.github/workflows/d
 
 ## Required GitHub setup
 
-Two GitHub Environments must be configured in repo Settings → Environments:
+Three GitHub Environments must be configured in repo Settings → Environments:
 - **canary** — no protection rules
+- **production-test** — no protection rules (used by nightly tests against production server)
 - **production** — "Required reviewers" protection rule enabled
 
 Each environment needs these secrets:
 - `DEPLOY_SSH_HOST` — server IP or hostname
-- `DEPLOY_SSH_USER` — SSH user for deployment
-- `DEPLOY_SSH_KEY` — SSH private key for authentication (generated once, stored as a secret)
+- `DEPLOY_SSH_USER` — SSH user for deployment (canary/production only)
+- `DEPLOY_SSH_KEY` — SSH private key for authentication (canary/production only)
+- `SERVER_KEYS_PATH` — path to directory containing server public key files
+- `TEST_EMAIL` — email address of an existing account used for exchange tests
+- `TEST_EMAIL_PASSWORD` — password for `TEST_EMAIL`
+- `TEST_TARGET_EMAIL` — external address with auto-reply configured
+- `DISCORD_WEBHOOK_URL` — webhook for failure/warning notifications
 
 ## One-time SSH setup
 
-SSH access to both canary and production servers must be configured once:
+SSH access to the canary and production servers must be configured once:
 
 1. Generate an SSH key pair on any machine:
    ```bash
    ssh-keygen -t ed25519 -f deploy_key -N ""
    ```
-2. Add the public key (`deploy_key.pub`) to `~/.ssh/authorized_keys` on both the canary and production servers
-3. Add the private key (`deploy_key`) as the `DEPLOY_SSH_KEY` secret in both GitHub Environments — the workflow writes it to disk on each run
+2. Add the public key (`deploy_key.pub`) to `~/.ssh/authorized_keys` on both servers
+3. Add the private key (`deploy_key`) as the `DEPLOY_SSH_KEY` secret in the **canary** and **production** environments — the workflow writes it to disk on each run
+
+The **production-test** environment does not need `DEPLOY_SSH_KEY` — tests connect to the production server address but only via the bundle protocol (port 7778), not SSH.
 
 ## One-time setup on canary server
 
