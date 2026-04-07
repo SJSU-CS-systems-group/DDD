@@ -46,6 +46,7 @@ public class LocalReportSender implements ReportSender {
             currIndex = optimizeReports(toBeBundledDir);
         } catch (IOException e) {
             logger.log(SEVERE, "Optimizing reports on this device failed" + e);
+            return;
         }
         File logFile = new File(String.valueOf(toBeBundledDir), "crash_report" + currIndex + ".txt");
         try {
