@@ -113,8 +113,13 @@ public class TransportToBundleServerManager {
                 for (File crashFile : crashReportFiles) {
                     requestBuilder.addCrashReportData(ByteString.copyFrom(Files.readAllBytes(crashFile.toPath())));
                 }
-                bsStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                var crashResponse = bsStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                         .crashReports(requestBuilder.build());
+                if (crashResponse.getResult() == net.discdd.grpc.Status.SUCCESS) {
+                    for (File crashFile : crashReportFiles) {
+                        crashFile.delete();
+                    }
+                }
             }
             var inventoryResponse = bsStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     .bundleInventory(BundleInventoryRequest.newBuilder()
