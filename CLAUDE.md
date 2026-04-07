@@ -61,7 +61,7 @@ here is an example settings.xml:
 
 # Deployment
 
-The bundleserver is deployed via a GitHub Actions pipeline (`.github/workflows/deploy.yml`) triggered on pushes to `main` (excluding Android-only and CI-only changes). It can also be triggered manually from any branch via the "Run workflow" button in the Actions UI (`workflow_dispatch`).
+The bundleserver is deployed via a GitHub Actions pipeline (`.github/workflows/deploy.yml`) triggered on pushes to `main` (excluding CI-only changes). It can also be triggered manually from any branch via the "Run workflow" button in the Actions UI (`workflow_dispatch`).
 
 ## Pipeline stages
 
