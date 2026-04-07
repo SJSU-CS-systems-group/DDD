@@ -211,21 +211,31 @@ public class BundleClientService extends Service {
 
         try {
             //Application context
-            var resources = getApplicationContext().getResources();
-            try (InputStream inServerIdentity =
-                         resources.openRawResource(net.discdd.android_core.R.raw.server_identity);
-                 InputStream inServerSignedPre =
-                         resources.openRawResource(net.discdd.android_core.R.raw.server_signed_pre);
-                 InputStream inServerRatchet =
-                         resources.openRawResource(net.discdd.android_core.R.raw.server_ratchet)) {
+            var prefs = getSharedPreferences(NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE);
+            boolean hasCustomKeys = prefs.getBoolean("custom_server_keys", false);
 
+            if (hasCustomKeys) {
+                // QR-scanned keys already on disk — don't overwrite them
                 ClientPaths clientPaths = new ClientPaths(getApplicationContext().getDataDir().toPath(),
-                                                          inServerIdentity.readAllBytes(),
-                                                          inServerSignedPre.readAllBytes(),
-                                                          inServerRatchet.readAllBytes());
+                                                          null, null, null);
                 bundleTransmission = new ClientBundleTransmission(clientPaths, this::processIncomingADU);
-            } catch (IOException e) {
-                logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
+            } else {
+                var resources = getApplicationContext().getResources();
+                try (InputStream inServerIdentity =
+                             resources.openRawResource(net.discdd.android_core.R.raw.server_identity);
+                     InputStream inServerSignedPre =
+                             resources.openRawResource(net.discdd.android_core.R.raw.server_signed_pre);
+                     InputStream inServerRatchet =
+                             resources.openRawResource(net.discdd.android_core.R.raw.server_ratchet)) {
+
+                    ClientPaths clientPaths = new ClientPaths(getApplicationContext().getDataDir().toPath(),
+                                                              inServerIdentity.readAllBytes(),
+                                                              inServerSignedPre.readAllBytes(),
+                                                              inServerRatchet.readAllBytes());
+                    bundleTransmission = new ClientBundleTransmission(clientPaths, this::processIncomingADU);
+                } catch (IOException e) {
+                    logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
+                }
             }
 
             var dddWifiDirect = new DDDWifiDirect(this);
@@ -543,6 +553,41 @@ public class BundleClientService extends Service {
 
     public ClientBundleTransmission getBundleTransmission() {
         return bundleTransmission;
+    }
+
+    /**
+     * Reinitialize the bundle transmission with current keys on disk.
+     * Called after QR scan writes new server keys and clears client keys/session.
+     */
+    public void reinitializeBundleTransmission() {
+        try {
+            var prefs = getSharedPreferences(NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE);
+            boolean hasCustomKeys = prefs.getBoolean("custom_server_keys", false);
+
+            if (hasCustomKeys) {
+                ClientPaths clientPaths = new ClientPaths(getApplicationContext().getDataDir().toPath(),
+                                                          null, null, null);
+                bundleTransmission = new ClientBundleTransmission(clientPaths, this::processIncomingADU);
+            } else {
+                var resources = getApplicationContext().getResources();
+                try (InputStream inServerIdentity =
+                             resources.openRawResource(net.discdd.android_core.R.raw.server_identity);
+                     InputStream inServerSignedPre =
+                             resources.openRawResource(net.discdd.android_core.R.raw.server_signed_pre);
+                     InputStream inServerRatchet =
+                             resources.openRawResource(net.discdd.android_core.R.raw.server_ratchet)) {
+                    ClientPaths clientPaths = new ClientPaths(getApplicationContext().getDataDir().toPath(),
+                                                              inServerIdentity.readAllBytes(),
+                                                              inServerSignedPre.readAllBytes(),
+                                                              inServerRatchet.readAllBytes());
+                    bundleTransmission = new ClientBundleTransmission(clientPaths, this::processIncomingADU);
+                }
+            }
+            bundleTransmission.setRecencyTracker(recentTransportRepository);
+            logger.log(INFO, "Bundle transmission reinitialized with current keys");
+        } catch (Exception e) {
+            logger.log(SEVERE, "Failed to reinitialize BundleTransmission", e);
+        }
     }
 
     public enum BundleClientTransmissionEventType {
