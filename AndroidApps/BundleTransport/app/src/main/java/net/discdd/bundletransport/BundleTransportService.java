@@ -179,7 +179,8 @@ public class BundleTransportService extends Service implements BundleExchangeSer
             if (dir == null) {
                 dir = getApplicationContext().getFilesDir();
             }
-            this.transportPaths = new TransportPaths(dir.toPath());
+            this.transportPaths = new TransportPaths(dir.toPath(),
+                    getApplicationContext().getDataDir().toPath().resolve("to-be-bundled"));
             try {
                 this.grpcKeys = new GrpcSecurityKey(transportPaths.grpcSecurityPath, SecurityUtils.SERVER);
             } catch (InvalidAlgorithmParameterException | NoSuchAlgorithmException | NoSuchProviderException |
