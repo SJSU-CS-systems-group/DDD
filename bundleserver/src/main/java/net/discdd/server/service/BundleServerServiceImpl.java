@@ -136,11 +136,9 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
 
     @Override
     public void crashReports(CrashReportRequest request, StreamObserver<CrashReportResponse> response) {
-        //var data = request.getCrashReportData();
         X509Certificate clientCert = NettyServerCertificateInterceptor.CLIENT_CERTIFICATE_KEY.get(Context.current());
         var name = DDDTLSUtil.publicKeyToName(clientCert.getPublicKey());
         new File(crashDir).mkdirs();
-        //File crashFile = new File(crashDir, name);
         for (int i = 0; i < request.getCrashReportDataCount(); i++) {
             File crashFile = new File(crashDir, name + "_" + (i + 1));
             try {
