@@ -10,10 +10,7 @@ import org.acra.sender.ReportSenderException;
 import org.acra.sender.ReportSenderFactory;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -28,7 +25,7 @@ import static java.util.logging.Level.SEVERE;
 public class LocalReportSender implements ReportSender {
     private static final Logger logger = Logger.getLogger(LocalReportSender.class.getName());
     static final int MAX_AMOUNT_REPORTS = 5;
-
+    static final int CRASH_REPORT_NUM_INDEX = 12;
     CoreConfiguration config;
 
     public LocalReportSender(CoreConfiguration coreConfiguration) {
@@ -41,15 +38,12 @@ public class LocalReportSender implements ReportSender {
         logger.log(INFO, "Directory where acra will send reports to: " + toBeBundledDir);
         if (!toBeBundledDir.toFile().exists()) {
             toBeBundledDir.toFile().mkdir();
-//        } else {
-//            logger.log(INFO, "We will stop trying to write a crash report to device");
-//            return;
         }
         int currIndex;
         try {
             currIndex = optimizeReports(toBeBundledDir);
         } catch (IOException e) {
-            throw new RuntimeException(e); //TODO: no runtime excepts
+            logger.log(SEVERE, "Optimizing reports on this device failed" + e);
         }
         File logFile = new File(String.valueOf(toBeBundledDir), "crash_report" + currIndex + ".txt");
         try {
@@ -87,8 +81,7 @@ public class LocalReportSender implements ReportSender {
             // if currChar == 1, delete old crash report
             Files.walk(reportsDir).sorted().forEach(file -> { //sort b/c walk doesn't guarantee order in which dir is traversed
                 if (file.getFileName().toString().startsWith("crash_report")) {
-                    int indexToReplace = 12; // Index 12 is the crash report number MAKE FINAL
-                    char currChar = file.getFileName().toString().charAt(12);
+                    char currChar = file.getFileName().toString().charAt(CRASH_REPORT_NUM_INDEX);
                     int currNum;
                     try {
                         currNum = Character.getNumericValue(currChar);
@@ -100,7 +93,7 @@ public class LocalReportSender implements ReportSender {
 
                     if (newNum != 0) {
                         StringBuilder builder = new StringBuilder(file.getFileName().toString());
-                        builder.setCharAt(indexToReplace, newChar);
+                        builder.setCharAt(CRASH_REPORT_NUM_INDEX, newChar);
                         String modified = builder.toString();
                         try {
                             logger.log(INFO, "Optimizing crash reports moving the file " + file.toFile().getName() + " to " + file.getParent().resolve(modified).toString());
