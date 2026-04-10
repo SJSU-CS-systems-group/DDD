@@ -7,5 +7,5 @@
 /**/.venv
 application.properties
 
-# Private server keys — never commit these
+# Private server keys
 **/*.pvt
