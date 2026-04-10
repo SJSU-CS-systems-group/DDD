@@ -48,7 +48,9 @@ public class MessageProvider extends ContentProvider {
 
     private void checkCallerAppId() throws SecurityException {
         try {
-            if (getCallerAppId().startsWith("net.discdd.")) return;
+            String callerId = getCallerAppId();
+            if (callerId.startsWith("net.discdd.")) return;
+            if (callerId.startsWith("org.trcky.")) return;
         } catch (IOException e) {
             logger.log(WARNING, "Unable to get caller app ID", e);
         }
