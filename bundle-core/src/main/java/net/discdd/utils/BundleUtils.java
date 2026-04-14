@@ -385,7 +385,7 @@ public class BundleUtils {
 
     public static Future<?> runFuture(ExecutorService executorService,
                                       String ackedEncryptedBundleId,
-                                      String crashReport,
+                                      List<Path> crashReports,
                                       List<ADU> adus,
                                       byte[] routingData,
                                       PipedInputStream inputPipe) throws IOException {
@@ -395,7 +395,7 @@ public class BundleUtils {
                 BundleUtils.createBundlePayloadForAdus(adus,
                                                        routingData,
                                                        ackedEncryptedBundleId,
-                                                       crashReport,
+                                                       crashReports,
                                                        outputPipe);
             } catch (IOException | NoSuchAlgorithmException e) {
                 return e;

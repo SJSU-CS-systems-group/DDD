@@ -46,7 +46,6 @@ public class ClientPaths {
     public static final Long BUNDLE_SIZE_LIMIT = 100_000_000L;
 
     public final Path ackRecordPath;
-    public final Path crashReportPath;
     public final Path tosendDir;
 
     public final Path bundleGenerationDir;
@@ -83,8 +82,6 @@ public class ClientPaths {
         toBeBundledDir = rootDir.resolve(TO_BE_BUNDLED_DIRECTORY);
         ackRecordPath = toBeBundledDir.resolve(Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME);
         net.discdd.utils.FileUtils.createFileWithDefaultIfNeeded(ackRecordPath, "HB".getBytes());
-        crashReportPath = toBeBundledDir.resolve(Constants.BUNDLE_CRASH_REPORT_FILE_NAME);
-        net.discdd.utils.FileUtils.createFileWithDefaultIfNeeded(crashReportPath, "No report".getBytes());
         tosendDir = bundleGenerationDir.resolve(TO_SEND_DIRECTORY);
         tosendDir.toFile().mkdirs();
 
