@@ -70,6 +70,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.math.BigInteger;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -85,8 +86,6 @@ import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 import static net.discdd.utils.Constants.GRPC_LONG_TIMEOUT_MS;
 import static net.discdd.utils.Constants.GRPC_SHORT_TIMEOUT_MS;
-import static net.discdd.utils.FileUtils.crashReportExists;
-import static net.discdd.utils.FileUtils.readCrashReportFromFile;
 
 public class ClientBundleTransmission {
     public static class RecencyException extends IOException {
@@ -180,10 +179,16 @@ public class ClientBundleTransmission {
     private Bundle generateNewBundle(String bundleId) throws IOException, NoSuchAlgorithmException,
             InvalidKeyException {
         Acknowledgement ackRecord = AckRecordUtils.readAckRecordFromFile(clientPaths.ackRecordPath);
-        String crashReport = crashReportExists(String.valueOf(clientPaths.crashReportPath)) ?
-                             readCrashReportFromFile(clientPaths.crashReportPath) :
-                             null;
-        List<ADU> adus = this.applicationDataManager.fetchADUsToSend(clientPaths.BUNDLE_SIZE_LIMIT, null);
+        List<Path> crashReports;
+        try (var stream = Files.list(clientPaths.toBeBundledDir)) {
+            crashReports = stream
+                    .filter(p -> p.getFileName().toString().startsWith("crash_report"))
+                    .sorted()
+                    .collect(Collectors.toList());
+        } catch (IOException e) {
+            logger.log(WARNING, "Failed to list crash reports", e);
+            crashReports = Collections.emptyList();
+        }        List<ADU> adus = this.applicationDataManager.fetchADUsToSend(clientPaths.BUNDLE_SIZE_LIMIT, null);
         var routingData = clientRouting.bundleMetaData();
 
         PipedInputStream pipedInputStream = new PipedInputStream();
@@ -192,7 +197,7 @@ public class ClientBundleTransmission {
         var ackedEncryptedBundleId = ackRecord == null ? null : ackRecord.getBundleId();
         Future<?> future = BundleUtils.runFuture(executorService,
                                                  ackedEncryptedBundleId,
-                                                 crashReport,
+                                                 crashReports,
                                                  adus,
                                                  routingData,
                                                  pipedInputStream);
