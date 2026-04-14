@@ -57,6 +57,7 @@ public class ServerApplicationDataManager {
         this.registeredAppAdapterRepository = registeredAppAdapterRepository;
         this.sendADUsStorage = aduStores.getSendADUsStorage();
         this.receiveADUsStorage = aduStores.getReceiveADUsStorage();
+        this.crashReportListener = crashReportListener;
     }
 
     public List<String> getRegisteredAppIds() {
