@@ -96,6 +96,8 @@ public class ServerBundleTransmission {
         return Long.toHexString(random.nextLong());
     }
 
+
+    //TODO: this decrypts paylaod and reads ADUs but never extracts crash reports
     @Async
     @Transactional
     public void processReceivedBundle(BundleSenderType senderType, String senderId, Bundle bundle) throws Exception {
@@ -147,7 +149,8 @@ public class ServerBundleTransmission {
             UncompressedPayload uncompressedPayload =
                     BundleUtils.extractPayload(payload, uncompressedBundle.getSource().toPath());
             logger.log(FINE, "[BundleTransmission] extracted payload from uncompressed bundle");
-
+            //TODO: extract crash reports and write to crashReports/{transportId}_{n}
+            //TODO: trigger crashreportslistener
             if (!"HB".equals(uncompressedPayload.getAckRecord().getBundleId())) {
                 this.serverWindowService.processACK(clientId, uncompressedPayload.getAckRecord().getBundleId());
             }
@@ -161,6 +164,7 @@ public class ServerBundleTransmission {
 
             this.applicationDataManager.processAcknowledgement(clientId,
                                                                uncompressedPayload.getAckRecord().getBundleId());
+            //TODO: process crash report
             if (!uncompressedPayload.getADUs().isEmpty()) {
                 this.applicationDataManager.storeReceivedADUs(clientId,
                                                               uncompressedPayload.getBundleId(),
