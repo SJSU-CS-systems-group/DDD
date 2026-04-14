@@ -35,7 +35,7 @@ import static java.util.logging.Level.SEVERE;
  * Data in the "receive" folder are coming from BundleClients and going to the adapters.
  */
 @Component
-public class BundleServerAduDeliverer implements ServerApplicationDataManager.AduDeliveredListener {
+public class BundleServerAduDeliverer implements ServerApplicationDataManager.AduDeliveredListener, ServerApplicationDataManager.CrashReportListener {
     private static final Logger logger = Logger.getLogger(BundleServerAduDeliverer.class.getName());
     private final RegisteredAppAdapterRepository registeredAppAdapterRepository;
     private final StoreADUs sendFolder;
@@ -206,6 +206,11 @@ public class BundleServerAduDeliverer implements ServerApplicationDataManager.Ad
     @Override
     public void onAduDelivered(String clientId, Set<String> appId) {
         appId.forEach(app -> addAppWithPendingData(app, clientId));
+    }
+
+    @Override
+    public void onReportReceived() {
+
     }
 
     record AppState(String appId,

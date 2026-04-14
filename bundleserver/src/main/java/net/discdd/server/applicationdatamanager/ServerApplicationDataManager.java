@@ -38,6 +38,7 @@ public class ServerApplicationDataManager {
     private final RegisteredAppAdapterRepository registeredAppAdapterRepository;
     private final ClientBundleCountersRepository clientBundleCountersRepository;
     AduDeliveredListener aduDeliveredListener;
+    CrashReportListener crashReportListener;
     private final StoreADUs receiveADUsStorage;
     private final StoreADUs sendADUsStorage;
 
@@ -216,5 +217,9 @@ public class ServerApplicationDataManager {
 
     public interface AduDeliveredListener {
         void onAduDelivered(String clientId, Set<String> appId);
+    }
+
+    public interface CrashReportListener {
+        void onReportReceived();
     }
 }
