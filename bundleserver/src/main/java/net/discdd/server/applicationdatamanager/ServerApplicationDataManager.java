@@ -220,6 +220,7 @@ public class ServerApplicationDataManager {
         void onAduDelivered(String clientId, Set<String> appId);
     }
 
+    //TODO: move this method (to bundle service? or something both bundle service and client-processing share?) it doesn't make sense to live here
     public interface CrashReportListener {
         void onReportReceived();
     }

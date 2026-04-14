@@ -322,7 +322,7 @@ public class BundleUtils {
     public static void createBundlePayloadForAdus(List<ADU> adus,
                                                   byte[] routingData,
                                                   String ackedEncryptedBundleId,
-                                                  String crashReport,
+                                                  List<Path> crashReports,
                                                   OutputStream outputStream) throws IOException,
             NoSuchAlgorithmException {
         try (DDDJarFileCreator innerJar = new DDDJarFileCreator(outputStream)) {
@@ -331,8 +331,12 @@ public class BundleUtils {
             // add the records to the inner jar
             innerJar.createEntry("acknowledgement.txt", ackedEncryptedBundleId.getBytes());
             innerJar.createEntry("routing.metadata", routingData == null ? "{}".getBytes() : routingData);
-            if (crashReport != null) {
-                innerJar.createEntry("crash_report.txt", crashReport.getBytes());
+            for (var report: crashReports) {
+                try (var os = innerJar.createEntry(Paths.get(Constants.BUNDLE_CRASH_REPORT_DIRECTORY_NAME,
+                                                             report.getFileName().toString()));
+                     var aos = Files.newInputStream(report, StandardOpenOption.READ)) {
+                    aos.transferTo(os);
+                }
             }
 
             for (var adu : adus) {
