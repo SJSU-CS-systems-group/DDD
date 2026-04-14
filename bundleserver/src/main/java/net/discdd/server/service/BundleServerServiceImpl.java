@@ -13,6 +13,7 @@ import net.discdd.grpc.EncryptedBundleId;
 import net.discdd.grpc.GrpcService;
 import net.discdd.grpc.ServerMessage;
 import net.discdd.grpc.Status;
+import net.discdd.server.applicationdatamanager.ServerApplicationDataManager;
 import net.discdd.server.repository.TransportMessageRepository;
 import net.discdd.server.bundletransmission.ServerBundleTransmission;
 import net.discdd.tls.DDDTLSUtil;
@@ -46,6 +47,7 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
 
     @Autowired
     private TransportMessageRepository transportMessageRepository;
+    private ServerApplicationDataManager.CrashReportListener crashReportListener;
 
     @PostConstruct
     private void init() {
@@ -151,6 +153,7 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
                 return;
             }
         }
+        crashReportListener.onReportReceived();
         response.onNext(CrashReportResponse.newBuilder().setResult(Status.SUCCESS).build());
         response.onCompleted();
     }
