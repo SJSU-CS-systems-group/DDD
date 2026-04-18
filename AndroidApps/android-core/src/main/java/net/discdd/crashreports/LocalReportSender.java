@@ -71,33 +71,37 @@ public class LocalReportSender implements ReportSender {
     public int optimizeReports(Path reportsDir) throws IOException {
         AtomicInteger num = new AtomicInteger();
         logger.log(INFO, "ACRA: About to start counting num reports in dir");
-        Files.walk(reportsDir).forEach(file -> {
-            if (CRASH_REPORT_PATTERN.matcher(file.getFileName().toString()).matches()) {
-                num.getAndIncrement();
-                logger.log(INFO, "ACRA: Num reports (and counting possibly): " + num.getAcquire());
-            }
-        });
-        if (num.getAcquire() >= MAX_AMOUNT_REPORTS) {
-            logger.log(INFO, "ACRA: Max num reports read, deleting oldest");
-            Files.walk(reportsDir).sorted().forEach(file -> {
-                Matcher matcher = CRASH_REPORT_PATTERN.matcher(file.getFileName().toString());
-                if (!matcher.matches()) return; // skip legacy (crash_report.txt) and malformed files
-                int currNum = Integer.parseInt(matcher.group(1));
-                int newNum = currNum - 1;
-                if (newNum != 0) {
-                    String modified = "crash_report" + newNum + ".txt";
-                    try {
-                        logger.log(INFO, "Optimizing crash reports moving the file " + file.toFile().getName() + " to " + file.getParent().resolve(modified));
-                        Files.move(file, file.getParent().resolve(modified), StandardCopyOption.REPLACE_EXISTING);
-                    } catch (IOException e) {
-                        logger.log(SEVERE, "Optimizing crash reports unsuccessfully attempted to move directory");
-                    }
-                } else {
-                    if (file.toFile().delete()) {
-                        logger.log(INFO, "Optimizing crash reports successfully deleted the file: " + file.toFile().getName());
-                    }
+        try (var files = Files.walk(reportsDir)) {
+            files.forEach(file -> {
+                if (CRASH_REPORT_PATTERN.matcher(file.getFileName().toString()).matches()) {
+                    num.getAndIncrement();
+                    logger.log(INFO, "ACRA: Num reports (and counting possibly): " + num.getAcquire());
                 }
             });
+        }
+        if (num.getAcquire() >= MAX_AMOUNT_REPORTS) {
+            logger.log(INFO, "ACRA: Max num reports read, deleting oldest");
+            try (var files = Files.walk(reportsDir)) {
+                files.sorted().forEach(file -> {
+                    Matcher matcher = CRASH_REPORT_PATTERN.matcher(file.getFileName().toString());
+                    if (!matcher.matches()) return; // skip legacy (crash_report.txt) and malformed files
+                    int currNum = Integer.parseInt(matcher.group(1));
+                    int newNum = currNum - 1;
+                    if (newNum != 0) {
+                        String modified = "crash_report" + newNum + ".txt";
+                        try {
+                            logger.log(INFO, "Optimizing crash reports moving the file " + file.toFile().getName() + " to " + file.getParent().resolve(modified));
+                            Files.move(file, file.getParent().resolve(modified), StandardCopyOption.REPLACE_EXISTING);
+                        } catch (IOException e) {
+                            logger.log(SEVERE, "Optimizing crash reports unsuccessfully attempted to move directory");
+                        }
+                    } else {
+                        if (file.toFile().delete()) {
+                            logger.log(INFO, "Optimizing crash reports successfully deleted the file: " + file.toFile().getName());
+                        }
+                    }
+                });
+            }
             return MAX_AMOUNT_REPORTS;
         }
         return num.getAcquire() + 1;
