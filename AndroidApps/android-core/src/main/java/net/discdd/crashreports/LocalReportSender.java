@@ -18,6 +18,8 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
@@ -25,7 +27,7 @@ import static java.util.logging.Level.SEVERE;
 public class LocalReportSender implements ReportSender {
     private static final Logger logger = Logger.getLogger(LocalReportSender.class.getName());
     static final int MAX_AMOUNT_REPORTS = 5;
-    static final int CRASH_REPORT_NUM_INDEX = 12;
+    private static final Pattern CRASH_REPORT_PATTERN = Pattern.compile("^crash_report(\\d+)\\.txt$");
     CoreConfiguration config;
 
     public LocalReportSender(CoreConfiguration coreConfiguration) {
@@ -67,45 +69,32 @@ public class LocalReportSender implements ReportSender {
      * @return next available index
      */
     public int optimizeReports(Path reportsDir) throws IOException {
-        //looking for how many reports exist in dir
-        AtomicInteger num = new AtomicInteger(); //change name
+        AtomicInteger num = new AtomicInteger();
         logger.log(INFO, "ACRA: About to start counting num reports in dir");
         Files.walk(reportsDir).forEach(file -> {
-            if (file.getFileName().toString().startsWith("crash_report")) {
+            if (CRASH_REPORT_PATTERN.matcher(file.getFileName().toString()).matches()) {
                 num.getAndIncrement();
                 logger.log(INFO, "ACRA: Num reports (and counting possibly): " + num.getAcquire());
             }
         });
         if (num.getAcquire() >= MAX_AMOUNT_REPORTS) {
             logger.log(INFO, "ACRA: Max num reports read, deleting oldest");
-            //rewrite file name with number after "crash_report" - 1
-            // if currChar == 1, delete old crash report
-            Files.walk(reportsDir).sorted().forEach(file -> { //sort b/c walk doesn't guarantee order in which dir is traversed
-                if (file.getFileName().toString().startsWith("crash_report")) {
-                    char currChar = file.getFileName().toString().charAt(CRASH_REPORT_NUM_INDEX);
-                    int currNum;
+            Files.walk(reportsDir).sorted().forEach(file -> {
+                Matcher matcher = CRASH_REPORT_PATTERN.matcher(file.getFileName().toString());
+                if (!matcher.matches()) return; // skip legacy (crash_report.txt) and malformed files
+                int currNum = Integer.parseInt(matcher.group(1));
+                int newNum = currNum - 1;
+                if (newNum != 0) {
+                    String modified = "crash_report" + newNum + ".txt";
                     try {
-                        currNum = Character.getNumericValue(currChar);
-                    } catch (Exception e) {
-                        throw new IllegalArgumentException("Crash report is not written in format we expect");
+                        logger.log(INFO, "Optimizing crash reports moving the file " + file.toFile().getName() + " to " + file.getParent().resolve(modified));
+                        Files.move(file, file.getParent().resolve(modified), StandardCopyOption.REPLACE_EXISTING);
+                    } catch (IOException e) {
+                        logger.log(SEVERE, "Optimizing crash reports unsuccessfully attempted to move directory");
                     }
-                    int newNum = currNum - 1;
-                    char newChar = (char) ('0' + newNum);
-
-                    if (newNum != 0) {
-                        StringBuilder builder = new StringBuilder(file.getFileName().toString());
-                        builder.setCharAt(CRASH_REPORT_NUM_INDEX, newChar);
-                        String modified = builder.toString();
-                        try {
-                            logger.log(INFO, "Optimizing crash reports moving the file " + file.toFile().getName() + " to " + file.getParent().resolve(modified).toString());
-                            Files.move(file, file.getParent().resolve(modified), StandardCopyOption.REPLACE_EXISTING);
-                        } catch (IOException e) {
-                            logger.log(SEVERE, "Optimizing crash reports unsuccessfully attempted to move directory");
-                        }
-                    } else {
-                        if (file.toFile().delete()) {
-                            logger.log(INFO, "Optimizing crash reports successfully deleted the file: " + file.toFile().getName());
-                        }
+                } else {
+                    if (file.toFile().delete()) {
+                        logger.log(INFO, "Optimizing crash reports successfully deleted the file: " + file.toFile().getName());
                     }
                 }
             });
