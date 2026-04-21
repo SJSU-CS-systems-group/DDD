@@ -189,6 +189,12 @@ class ServerViewModel(
                 val sessionStore = bundleSecDir.resolve(SecurityUtils.SESSION_STORE_FILE)
                 sessionStore.toFile().delete()
 
+                try {
+                    ClientSecurity.resetInstance()
+                } catch (_: Exception) {
+                    // May fail if not yet initialized, which is fine — reinit below will create it
+                }
+
                 // Reinitialize the entire bundle transmission chain with new keys
                 WifiServiceManager.getService()?.reinitializeBundleTransmission()
 
