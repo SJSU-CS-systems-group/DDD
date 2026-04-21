@@ -117,7 +117,9 @@ public class TransportToBundleServerManager {
                         .crashReports(requestBuilder.build());
                 if (crashResponse.getResult() == net.discdd.grpc.Status.SUCCESS) {
                     for (File crashFile : crashReportFiles) {
-                        crashFile.delete();
+                        if (!crashFile.delete()) {
+                            logger.log(SEVERE, "Failed to delete crash report: " + crashFile.getName());
+                        }
                     }
                 }
             }
