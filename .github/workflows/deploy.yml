@@ -16,6 +16,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: github.event.head_commit.author.name != 'github-actions[bot]'
     steps:
       - uses: actions/checkout@v4
 
