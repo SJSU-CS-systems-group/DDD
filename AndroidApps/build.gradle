@@ -3,8 +3,8 @@ buildscript {
     ext {
         agp_version = '8.5.0'
         kotlin_version = '1.9.25'
-        appVersionCode = 15
-        appVersionName = '0.4-beta0'
+        appVersionCode = 16
+        appVersionName = '0.4-beta1'
         gsonVersion = '2.10.1'
         composeBomVersion = '2025.02.00'
         // gRPC and Protobuf versions - must match server versions in root pom.xml
