@@ -67,7 +67,7 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
     public void setDir(String bundleDir) {
         ReceiveDir = bundleDir + java.io.File.separator + "receive";
         SendDir = bundleDir + java.io.File.separator + "send";
-        crashDir = bundleDir + java.io.File.separator + "transport" + java.io.File.separator + "crashReports";
+        crashDir = bundleDir + java.io.File.separator + "crashReports" + java.io.File.separator + "transport";
     }
 
     @Override
