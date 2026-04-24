@@ -22,7 +22,9 @@ import net.discdd.server.bundlesecurity.ServerBundleSecurity;
 import net.discdd.server.config.BundleServerConfig;
 import net.discdd.server.repository.entity.ClientBundleCounters;
 import net.discdd.utils.BundleUtils;
+import net.discdd.utils.Constants;
 import net.discdd.utils.FileUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
@@ -49,6 +51,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
@@ -70,6 +73,9 @@ public class ServerBundleTransmission {
     private final BundleRouting bundleRouting;
     private final ServerWindowService serverWindowService;
     private final ServerSecurity serverSecurity;
+    private final ServerApplicationDataManager.CrashReportListener crashReportListener;
+    @Value("${bundle-server.bundle-store-shared}")
+    private String bundleStoreShared;
     SecureRandom secureRandom = new SecureRandom();
 
     public ServerBundleTransmission(ServerBundleSecurity bundleSecurity,
@@ -77,13 +83,15 @@ public class ServerBundleTransmission {
                                     BundleRouting bundleRouting,
                                     BundleServerConfig config,
                                     ServerWindowService serverWindowService,
-                                    ServerSecurity serverSecurity) {
+                                    ServerSecurity serverSecurity,
+                                    ServerApplicationDataManager.CrashReportListener crashReportListener) {
         this.config = config;
         this.bundleSecurity = bundleSecurity;
         this.applicationDataManager = applicationDataManager;
         this.bundleRouting = bundleRouting;
         this.serverWindowService = serverWindowService;
         this.serverSecurity = serverSecurity;
+        this.crashReportListener = crashReportListener;
     }
 
     public static String bundleSenderToString(BundleSenderType senderType, String senderId) {
@@ -97,7 +105,6 @@ public class ServerBundleTransmission {
     }
 
 
-    //TODO: this decrypts paylaod and reads ADUs but never extracts crash reports
     @Async
     @Transactional
     public void processReceivedBundle(BundleSenderType senderType, String senderId, Bundle bundle) throws Exception {
@@ -148,9 +155,32 @@ public class ServerBundleTransmission {
 
             UncompressedPayload uncompressedPayload =
                     BundleUtils.extractPayload(payload, uncompressedBundle.getSource().toPath());
-            logger.log(FINE, "[BundleTransmission] extracted payload from uncompressed bundle");
-            //TODO: extract crash reports and write to crashReports/{transportId}_{n}
-            //TODO: trigger crashreportslistener
+            logger.log(INFO, "[CrashReports] extracted payload to: " + uncompressedPayload.getSource().getAbsolutePath());
+            Path crashReportSrcDir = uncompressedPayload.getSource().toPath()
+                    .resolve(Constants.BUNDLE_CRASH_REPORT_DIRECTORY_NAME);
+            logger.log(INFO, "[CrashReports] looking for crash reports in: " + crashReportSrcDir + " exists=" + Files.isDirectory(crashReportSrcDir));
+            if (Files.isDirectory(crashReportSrcDir)) {
+                Path destDir = Path.of(bundleStoreShared, "crashReports");
+                logger.log(INFO, "[CrashReports] writing to destDir: " + destDir);
+                try {
+                    Files.createDirectories(destDir);
+                    long timestamp = System.currentTimeMillis();
+                    try (var entries = Files.list(crashReportSrcDir)) {
+                        var reports = entries.sorted().collect(Collectors.toList());
+                        logger.log(INFO, "[CrashReports] found " + reports.size() + " report(s) for client " + clientId);
+                        for (int i = 0; i < reports.size(); i++) {
+                            Path dest = destDir.resolve(clientId + "_" + timestamp + "_" + (i + 1));
+                            logger.log(INFO, "[CrashReports] copying " + reports.get(i) + " -> " + dest);
+                            Files.copy(reports.get(i), dest);
+                        }
+                        if (!reports.isEmpty()) {
+                            crashReportListener.onReportReceived();
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.log(WARNING, "[CrashReports] failed to extract crash reports for client " + clientId, e);
+                }
+            }
             if (!"HB".equals(uncompressedPayload.getAckRecord().getBundleId())) {
                 this.serverWindowService.processACK(clientId, uncompressedPayload.getAckRecord().getBundleId());
             }
@@ -164,7 +194,6 @@ public class ServerBundleTransmission {
 
             this.applicationDataManager.processAcknowledgement(clientId,
                                                                uncompressedPayload.getAckRecord().getBundleId());
-            //TODO: process crash report
             if (!uncompressedPayload.getADUs().isEmpty()) {
                 this.applicationDataManager.storeReceivedADUs(clientId,
                                                               uncompressedPayload.getBundleId(),
