@@ -334,8 +334,8 @@ public class BundleUtils {
             if (ackedEncryptedBundleId == null) ackedEncryptedBundleId = "HB";
             logger.log(INFO, "[BU/createBundlePayload] " + adus.size());
             // add the records to the inner jar
-            if (appIds != null) {
-                innerJar.createEntry("app_ids.txt", adus.isEmpty() ? "HB".getBytes() : String.join("\n", appIds).getBytes());
+            if (appIds != null && !appIds.isEmpty()) {
+                innerJar.createEntry("app_ids.txt", String.join("\n", appIds).getBytes());
             }
             innerJar.createEntry("acknowledgement.txt", ackedEncryptedBundleId.getBytes());
             innerJar.createEntry("routing.metadata", routingData == null ? "{}".getBytes() : routingData);

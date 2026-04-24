@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,14 +58,13 @@ public class ClientApplicationDataManager {
 
     @SuppressWarnings("SimplifyStreamApiCallChains")
     public List<String> getRegisteredAppIds() {
-        return registeredAppIds;
+        return List.copyOf(registeredAppIds);
     }
 
     public void setRegisteredAppIds(List<String> appIds) {
-        for (String appId : appIds) {
-            if (!registeredAppIds.contains(appId)) {
-                registeredAppIds.add(appId);
-            }
+        registeredAppIds.clear();
+        if (appIds != null) {
+            registeredAppIds.addAll(appIds);
         }
     }
 

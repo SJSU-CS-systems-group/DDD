@@ -56,6 +56,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
@@ -275,6 +276,60 @@ public class BundleClientToBundleServerTest extends End2EndTest {
         assertNotEquals(oldBundleId, newBundleId, "The surviving file should be the newly generated bundle");
         assertFalse(clientDir.resolve(oldBundleId).toFile().exists(),
                     "Old bundle file should have been deleted by cleanupOldBundles()");
+    }
+
+    /**
+     * Test that only ADUs from registered appIds are sent from the Client.
+     */
+    @Test
+    void test8AppIdFilter() throws Exception {
+        // Client adds ADUs for both a registered appId and an unregistered appId
+        sendStore.addADU(null, TEST_APPID, "ADU for registered app".getBytes(), 100);
+        sendStore.addADU(null, TEST_UNREG_APPID, "ADU for registered app".getBytes(), 101);
+
+        // Tells adapter that client has data
+        testAppServiceAdapter.clientsWithData.put(clientId, "pending");
+        testAppServiceAdapter.handleRequest((req, rsp) -> {
+            rsp.onNext(net.discdd.grpc.ExchangeADUsResponse.newBuilder()
+                               .setLastADUIdReceived(0)
+                               .addAdus(net.discdd.grpc.AppDataUnit.newBuilder()
+                                                .setAduId(99)
+                                                .setData(com.google.protobuf.ByteString.copyFromUtf8("filter-test"))
+                                                .build())
+                               .build());
+            rsp.onCompleted();
+        });
+
+        // Client receives app_ids.txt from server and updates its registered appIds
+        receiveBundle();
+
+        // Delete old bundles to force generation of a new bundle with our test ADUs
+        var oldBundles = clientPaths.tosendDir.toFile().listFiles();
+        if (oldBundles != null) {
+            for (var bundle : oldBundles) {
+                bundle.delete();
+            }
+        }
+
+        // Client should send the ADU with TEST_APPID, but not the ADU with TEST_UNREG_APPID, to the server
+        sendBundle();
+        testAppServiceAdapter.handleRequest((req, rsp) -> {
+            logger.log(INFO, "Received " + req.getAdusCount() + " ADUs from client");
+            // Should only receive ADU from TEST_APPID, not from TEST_UNREG_APPID
+            assertEquals(1, req.getAdusCount(), "Should only receive 1 ADU (from registered app)");
+            assertEquals(100, req.getAdus(0).getAduId(), "ADU should be from registered app (id=100)");
+            assertEquals("ADU for registered app", req.getAdus(0).getData().toStringUtf8(),
+                         "ADU content should match the registered app's ADU");
+
+            rsp.onNext(ExchangeADUsResponse.newBuilder()
+                               .setLastADUIdReceived(100)
+                               .build());
+            rsp.onCompleted();
+        });
+
+        var unregisteredAdus = sendStore.getADUs(null, TEST_UNREG_APPID).collect(Collectors.toList());
+        assertEquals(1, unregisteredAdus.size(), "Unregistered app's ADU should still be in send store (not sent)");
+        assertEquals(101, unregisteredAdus.get(0).getADUId());
     }
 
     // send the bundle the same way the client does. we should move this code into bundle transmission so we are really

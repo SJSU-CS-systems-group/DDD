@@ -61,6 +61,10 @@ public class MessageProvider extends ContentProvider {
     }
 
     private List<String> getAllAppIds() throws IOException {
+        if (BundleClientService.instance == null || BundleClientService.instance.getBundleTransmission() == null) {
+            logger.log(WARNING, "BundleClientService OR BundleTransmission instance is null, returning empty app ID list");
+            return List.of();
+        }
         return BundleClientService.instance.getBundleTransmission().applicationDataManager.getRegisteredAppIds();
     }
 
