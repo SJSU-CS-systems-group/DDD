@@ -27,6 +27,7 @@ import static java.util.logging.Level.SEVERE;
 public class LocalReportSender implements ReportSender {
     private static final Logger logger = Logger.getLogger(LocalReportSender.class.getName());
     static final int MAX_AMOUNT_REPORTS = 5;
+    private static final int CRASH_REPORT_NUM_INDEX = "crash_report".length();
     private static final Pattern CRASH_REPORT_PATTERN = Pattern.compile("^crash_report(\\d+)\\.txt$");
     CoreConfiguration config;
 
