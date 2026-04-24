@@ -47,6 +47,7 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
 
     @Autowired
     private TransportMessageRepository transportMessageRepository;
+    @Autowired
     private ServerApplicationDataManager.CrashReportListener crashReportListener;
 
     @PostConstruct
