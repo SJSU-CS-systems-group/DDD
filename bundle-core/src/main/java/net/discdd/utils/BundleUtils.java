@@ -331,7 +331,7 @@ public class BundleUtils {
             // add the records to the inner jar
             innerJar.createEntry("acknowledgement.txt", ackedEncryptedBundleId.getBytes());
             innerJar.createEntry("routing.metadata", routingData == null ? "{}".getBytes() : routingData);
-            for (var report: crashReports) {
+            for (var report: crashReports == null ? List.<Path>of() : crashReports) {
                 try (var os = innerJar.createEntry(Paths.get(Constants.BUNDLE_CRASH_REPORT_DIRECTORY_NAME,
                                                              report.getFileName().toString()));
                      var aos = Files.newInputStream(report, StandardOpenOption.READ)) {
