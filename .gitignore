@@ -6,3 +6,6 @@
 /**/build
 /**/.venv
 application.properties
+
+# Private server keys
+**/*.pvt

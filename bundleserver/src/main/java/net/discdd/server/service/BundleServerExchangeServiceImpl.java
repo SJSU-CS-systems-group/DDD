@@ -104,6 +104,9 @@ public class BundleServerExchangeServiceImpl extends BundleExchangeServiceImpl {
                                          bundleExchangeName.encryptedBundleId(),
                                          encryptedBundleId));
                 return null;
+            } catch (InvalidKeyException e) {
+                logger.log(INFO, "New client " + senderId + " — keys not yet received, skipping bundle generation");
+                return null;
             } catch (Exception e) {
                 logger.log(SEVERE, "Problem generating bundle for client " + senderId, e);
                 return null;

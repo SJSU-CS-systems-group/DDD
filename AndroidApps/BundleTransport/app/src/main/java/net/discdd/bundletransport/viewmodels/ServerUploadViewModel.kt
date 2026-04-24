@@ -50,6 +50,11 @@ class ServerUploadViewModel(
             val service = TransportServiceManager.getService()
             return service?.transportId ?: "Unknown"
         }
+    val fullTransportID: String
+        get() {
+            val service = TransportServiceManager.getService()
+            return service?.fullTransportId ?: "Unknown"
+        }
     private val RECENCY_BLOB_AGE_THRESHOLD = 24.hours
     private val context get() = getApplication<Application>()
     private val sharedPref by lazy { context.getSharedPreferences(BundleTransportService.BUNDLETRANSPORT_PREFERENCES, MODE_PRIVATE) }
@@ -65,6 +70,11 @@ class ServerUploadViewModel(
     val state = _state.asStateFlow()
     private val _backgroundExchange = MutableStateFlow(0)
     val backgroundExchange = _backgroundExchange.asStateFlow()
+
+    private val _isCustomServer = MutableStateFlow(
+            sharedPref.getString(BundleTransportService.BUNDLETRANSPORT_DOMAIN_PREFERENCE, AndroidAppConstants.BUNDLE_SERVER_DOMAIN) != AndroidAppConstants.BUNDLE_SERVER_DOMAIN
+    )
+    val isCustomServer = _isCustomServer.asStateFlow()
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -166,6 +176,18 @@ class ServerUploadViewModel(
 
     fun clearMessage() {
         _state.update { it.copy(message = null) }
+    }
+
+    fun applyScannedConfig(host: String, port: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _state.update { it.copy(domain = host, port = port.toString()) }
+            sharedPref.edit {
+                putString(BundleTransportService.BUNDLETRANSPORT_DOMAIN_PREFERENCE, host)
+                putInt(BundleTransportService.BUNDLETRANSPORT_PORT_PREFERENCE, port)
+            }
+            _isCustomServer.value = true
+            _state.update { it.copy(message = "Saved. Host: $host, Port: $port") }
+        }
     }
 
     fun setBackgroundExchange(value: Int) {

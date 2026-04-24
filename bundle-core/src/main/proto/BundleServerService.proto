@@ -21,7 +21,7 @@ message BundleInventoryResponse {
 
 
 message CrashReportRequest {
-  bytes crashReportData = 1;
+  repeated bytes crashReportData = 1;
 }
 
 message CrashReportResponse {

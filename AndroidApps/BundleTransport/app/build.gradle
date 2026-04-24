@@ -76,12 +76,13 @@ android {
 
 dependencies {
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
-    implementation 'io.grpc:grpc-protobuf:1.58.0'
-    implementation 'io.grpc:grpc-stub:1.58.0'
-    implementation 'io.grpc:grpc-okhttp:1.58.0'
-    implementation 'io.grpc:grpc-context:1.58.0'
+    // Use full gRPC/protobuf versions to match bundle-core's generated classes
+    implementation "io.grpc:grpc-protobuf:${rootProject.ext.grpcVersion}"
+    implementation "io.grpc:grpc-stub:${rootProject.ext.grpcVersion}"
+    implementation "io.grpc:grpc-okhttp:${rootProject.ext.grpcVersion}"
+    implementation "io.grpc:grpc-context:${rootProject.ext.grpcVersion}"
     implementation 'com.google.firebase:firebase-crashlytics-buildtools:3.0.2'
-    implementation 'com.google.protobuf:protobuf-java:3.23.4'
+    // Note: protobuf-java comes transitively from bundle-core and grpc-protobuf
     implementation project(':android-core')
     implementation 'androidx.core:core-ktx:1.12.0'
     compileOnly 'org.apache.tomcat:annotations-api:6.0.53' // necessary for Java 9+
@@ -90,7 +91,7 @@ dependencies {
     implementation platform("androidx.compose:compose-bom:${rootProject.ext.composeBomVersion}")
     androidTestImplementation("androidx.compose:compose-bom:${rootProject.ext.composeBomVersion}")
 
-    // Assuming net.discdd:bundle-core depends on protobuf-java
+    // DDD common core - brings in protobuf-java and grpc-protobuf
     implementation 'net.discdd:bundle-core:0.0.2'
 
     implementation "androidx.work:work-runtime:2.9.0"
