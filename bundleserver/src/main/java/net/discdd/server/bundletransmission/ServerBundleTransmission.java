@@ -160,7 +160,7 @@ public class ServerBundleTransmission {
                     .resolve(Constants.BUNDLE_CRASH_REPORT_DIRECTORY_NAME);
             logger.log(INFO, "[CrashReports] looking for crash reports in: " + crashReportSrcDir + " exists=" + Files.isDirectory(crashReportSrcDir));
             if (Files.isDirectory(crashReportSrcDir)) {
-                Path destDir = Path.of(bundleStoreShared, "crashReports");
+                Path destDir = Path.of(bundleStoreShared, "client", "crashReports");
                 logger.log(INFO, "[CrashReports] writing to destDir: " + destDir);
                 try {
                     Files.createDirectories(destDir);
