@@ -91,6 +91,7 @@ public class BundleUtils {
         logger.log(INFO, "Extracting payload for payload path: " + extractedPayloadPath);
         JarUtils.jarToDir(payload.getSource().getAbsolutePath(), extractedPayloadPath.toString());
 
+        Path appPath = extractedPayloadPath.resolve(Constants.BUNDLE_APP_ID_NAME);
         Path ackPath = extractedPayloadPath.resolve(Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME);
         Path aduPath = extractedPayloadPath.resolve(Constants.BUNDLE_ADU_DIRECTORY_NAME);
 
@@ -98,6 +99,10 @@ public class BundleUtils {
 
         UncompressedPayload.Builder builder = new UncompressedPayload.Builder();
 
+        if (Files.exists(appPath)) { // only the server will send appIds
+            List<String> appIds = Files.exists(appPath) ? Files.readAllLines(appPath) : List.of();
+            builder.setAppIds(appIds);
+        }
         builder.setAckRecord(AckRecordUtils.readAckRecordFromFile(ackPath));
         builder.setBundleId(payload.getBundleId());
         builder.setADUs(ADUUtils.readADUs(aduPath.toFile()));
@@ -323,12 +328,15 @@ public class BundleUtils {
                                                   byte[] routingData,
                                                   String ackedEncryptedBundleId,
                                                   List<Path> crashReports,
-                                                  OutputStream outputStream) throws IOException,
-            NoSuchAlgorithmException {
+                                                  OutputStream outputStream,
+                                                  List<String> appIds) throws IOException, NoSuchAlgorithmException {
         try (DDDJarFileCreator innerJar = new DDDJarFileCreator(outputStream)) {
             if (ackedEncryptedBundleId == null) ackedEncryptedBundleId = "HB";
             logger.log(INFO, "[BU/createBundlePayload] " + adus.size());
             // add the records to the inner jar
+            if (appIds != null && !appIds.isEmpty()) {
+                innerJar.createEntry(Constants.BUNDLE_APP_ID_NAME, String.join("\n", appIds).getBytes());
+            }
             innerJar.createEntry("acknowledgement.txt", ackedEncryptedBundleId.getBytes());
             innerJar.createEntry("routing.metadata", routingData == null ? "{}".getBytes() : routingData);
             for (var report: crashReports == null ? List.<Path>of() : crashReports) {
@@ -388,15 +396,17 @@ public class BundleUtils {
                                       List<Path> crashReports,
                                       List<ADU> adus,
                                       byte[] routingData,
-                                      PipedInputStream inputPipe) throws IOException {
+                                      PipedInputStream inputPipe,
+                                      List<String> appIds) throws IOException {
         PipedOutputStream outputPipe = new PipedOutputStream(inputPipe);
         Future<?> future = executorService.submit(() -> {
             try {
                 BundleUtils.createBundlePayloadForAdus(adus,
                                                        routingData,
                                                        ackedEncryptedBundleId,
-                                                       crashReports,
-                                                       outputPipe);
+                                                       crashReport,
+                                                       outputPipe,
+                                                       appIds);
             } catch (IOException | NoSuchAlgorithmException e) {
                 return e;
             } finally {

@@ -162,6 +162,8 @@ public class ClientBundleTransmission {
         UncompressedPayload uncompressedPayload =
                 BundleUtils.extractPayload(payload, uncompressedBundle.getSource().toPath());
 
+        List<String> appIds = uncompressedPayload.getAppIds();
+
         AckRecordUtils.writeAckRecordToFile(new Acknowledgement(bundleId), clientPaths.ackRecordPath);
         this.registerBundleId(bundleId);
 
@@ -169,6 +171,7 @@ public class ClientBundleTransmission {
 
         this.applicationDataManager.processAcknowledgement(ackedBundleId);
         this.applicationDataManager.storeReceivedADUs(null, null, uncompressedPayload.getADUs());
+        this.applicationDataManager.setRegisteredAppIds(appIds);
         deleteSentBundle(bundle);
     }
 
@@ -200,7 +203,8 @@ public class ClientBundleTransmission {
                                                  crashReports,
                                                  adus,
                                                  routingData,
-                                                 pipedInputStream);
+                                                 pipedInputStream,
+                                                 null);
         try {
             ClientSecurity clientSecurity = bundleSecurity.getClientSecurity();
 
