@@ -191,7 +191,8 @@ public class ClientBundleTransmission {
         } catch (IOException e) {
             logger.log(WARNING, "Failed to list crash reports", e);
             crashReports = Collections.emptyList();
-        }        List<ADU> adus = this.applicationDataManager.fetchADUsToSend(clientPaths.BUNDLE_SIZE_LIMIT, null);
+        }
+        List<ADU> adus = this.applicationDataManager.fetchADUsToSend(clientPaths.BUNDLE_SIZE_LIMIT, null);
         var routingData = clientRouting.bundleMetaData();
 
         PipedInputStream pipedInputStream = new PipedInputStream();
