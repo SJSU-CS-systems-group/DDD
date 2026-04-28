@@ -149,11 +149,8 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
             } catch (IOException e) {
                 logger.log(WARNING, "Couldn't write crash file to " + crashFile, e);
                 response.onNext(CrashReportResponse.newBuilder().setResult(Status.FAILED).build());
-                response.onCompleted();
-                return;
             }
         }
-        crashReportListener.onReportReceived();
         response.onNext(CrashReportResponse.newBuilder().setResult(Status.SUCCESS).build());
         response.onCompleted();
     }
