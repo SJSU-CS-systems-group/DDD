@@ -106,8 +106,8 @@ public class TransportToBundleServerManager {
             var bundlesFromClients = populateListFromPath(fromClientPath);
             var bundlesFromServer = populateListFromPath(fromServerPath);
 
-            File[] crashReportFiles = crashReportsDir.toFile()
-                    .listFiles((dir, name) -> name.startsWith("crash_report") && name.endsWith(".txt"));
+            File[] crashReportFiles = crashReportsDir.toFile().listFiles(
+                    (dir, name) -> name.startsWith("crash_report") && name.endsWith(".txt"));
             if (crashReportFiles != null && crashReportFiles.length > 0) {
                 var requestBuilder = CrashReportRequest.newBuilder();
                 for (File crashFile : crashReportFiles) {
