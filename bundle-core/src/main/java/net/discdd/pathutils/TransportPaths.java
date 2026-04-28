@@ -34,7 +34,7 @@ public class TransportPaths {
         this.toRootDir = rootDir;
         this.toClientPath = rootDir.resolve("BundleTransmission/client");
         this.toServerPath = rootDir.resolve("BundleTransmission/server");
-        this.crashReportsDir = rootDir.resolve("to-be-bundled");
+        this.crashReportsDir = crashReportsDir;
 
         try {
             if (!Files.exists(toClientPath) || !Files.exists(toServerPath)) {
