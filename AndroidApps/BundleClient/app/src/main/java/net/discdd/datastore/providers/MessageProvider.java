@@ -50,7 +50,7 @@ public class MessageProvider extends ContentProvider {
         try {
             if (getCallerAppId().startsWith("net.discdd.")) {
                 return;
-            } else if (!getAllAppIds().isEmpty() && getAllAppIds().contains(getCallerAppId())) {
+            } else if (getAllAppIds().isEmpty() || getAllAppIds().contains(getCallerAppId())) {
                 return;
             }
             logger.log(WARNING, "Unknown app ID: " + getCallerAppId());
