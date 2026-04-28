@@ -404,7 +404,7 @@ public class BundleUtils {
                 BundleUtils.createBundlePayloadForAdus(adus,
                                                        routingData,
                                                        ackedEncryptedBundleId,
-                                                       crashReport,
+                                                       crashReports,
                                                        outputPipe,
                                                        appIds);
             } catch (IOException | NoSuchAlgorithmException e) {
