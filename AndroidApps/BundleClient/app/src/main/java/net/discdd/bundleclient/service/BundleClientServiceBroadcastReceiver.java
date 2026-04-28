@@ -30,7 +30,7 @@ public class BundleClientServiceBroadcastReceiver extends BroadcastReceiver {
             if (wifiEvent != null) switch (wifiEvent) {
                 case DDDWIFI_DISCOVERY_CHANGED, DDDWIFI_STATE_CHANGED -> viewModel.updateState();
                 case DDDWIFI_PEERS_CHANGED -> viewModel.updateConnectedDevices();
-                case DDDWIFI_DICONNECTED -> viewModel.setValidNetwork(false);
+                case DDDWIFI_DISCONNECTED -> viewModel.setValidNetwork(false);
                 case DDDWIFI_CONNECTED -> viewModel.setValidNetwork(true);
             }
             if (bundleClientTransmissionEvent != null) {
