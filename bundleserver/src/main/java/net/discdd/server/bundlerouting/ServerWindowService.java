@@ -6,12 +6,14 @@ import net.discdd.bundlesecurity.ServerSecurity;
 import net.discdd.server.bundletransmission.ServerBundleTransmission;
 import net.discdd.server.repository.ServerWindowRepository;
 import net.discdd.server.repository.entity.ServerWindow;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.whispersystems.libsignal.InvalidKeyException;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.util.Optional;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
@@ -20,16 +22,16 @@ import static java.util.logging.Level.FINE;
 public class ServerWindowService {
 
     private final ServerWindowRepository serverwindowrepo;
+    private final Optional<ServerSecurity> serverSecurity;
 
     @Autowired
-    public ServerWindowService(ServerWindowRepository serverWindowRepository) {
+    public ServerWindowService(ServerWindowRepository serverWindowRepository, ObjectProvider<ServerSecurity> serverSecurityProvider) {
         this.serverwindowrepo = serverWindowRepository;
+        this.serverSecurity = serverSecurityProvider.getIfAvailable() != null ?
+            Optional.of(serverSecurityProvider.getIfAvailable()) : Optional.empty();
     }
 
     private static final Logger logger = Logger.getLogger(ServerWindowService.class.getName());
-
-    @Autowired
-    ServerSecurity serverSecurity;
 
     private ServerWindow getValueFromTable(String clientID) {
         var window = serverwindowrepo.findByClientID(clientID);
@@ -64,7 +66,7 @@ public class ServerWindowService {
     public void processACK(String clientID, String ackedBundleID) throws GeneralSecurityException, InvalidKeyException,
             InvalidClientIDException, IOException {
         String decryptedBundleID = null;
-        decryptedBundleID = serverSecurity.decryptBundleID(ackedBundleID, clientID);
+        decryptedBundleID = serverSecurity.get().decryptBundleID(ackedBundleID, clientID);
         logger.log(FINE, "[ServerWindow]: Decrypted Ack from file = " + decryptedBundleID);
         long ack = BundleIDGenerator.getCounterFromBundleID(decryptedBundleID, BundleIDGenerator.DOWNSTREAM);
 
