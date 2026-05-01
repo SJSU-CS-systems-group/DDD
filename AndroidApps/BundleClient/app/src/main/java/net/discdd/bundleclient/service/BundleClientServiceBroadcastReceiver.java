@@ -30,6 +30,7 @@ public class BundleClientServiceBroadcastReceiver extends BroadcastReceiver {
             if (wifiEvent != null) switch (wifiEvent) {
                 case DDDWIFI_DISCOVERY_CHANGED, DDDWIFI_STATE_CHANGED -> viewModel.updateState();
                 case DDDWIFI_PEERS_CHANGED -> viewModel.updateConnectedDevices();
+                // Wi-Fi direct networks are considered invalid because the client will not be able to exchange with transports
                 case DDDWIFI_DIRECT_CONNECTED -> viewModel.setValidNetwork(false);
                 case DDDWIFI_DIRECT_DISCONNECTED -> viewModel.setValidNetwork(true);
             }

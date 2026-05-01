@@ -170,9 +170,9 @@ public class BundleClientService extends Service {
     }
 
     private void checkValidNetwork() {
-        if (isNetworkValid()) {
+        if (isNetworkValid()) { /* the device is not connected to a Wi-Fi direct network */
             eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DIRECT_DISCONNECTED);
-        } else {
+        } else { /* the device is connected to a Wi-Fi direct network */
             eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DIRECT_CONNECTED);
         }
     }
