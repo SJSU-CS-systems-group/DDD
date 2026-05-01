@@ -39,6 +39,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Random;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 import static java.lang.String.format;
 import static java.util.logging.Level.INFO;
@@ -48,6 +49,7 @@ import static java.util.logging.Level.SEVERE;
 public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServiceImplBase {
 
     static final Logger logger = Logger.getLogger(K9DDDAdapter.class.getName());
+    private static final Pattern LOCALE_PATTERN = Pattern.compile("^[a-z]{2}$");
     public static final int MAX_RECIPIENTS = 5;
     // yahoo and gmail are 25M and MS is 20M
     public static final int MAX_DATA_SIZE = 1024 * 1024 * 20;
@@ -206,9 +208,10 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
 
     private byte[] getEmail(String type, String email, String locale) {
         var username = email.split("@")[0];
-        var localePath = "/emails/" + type + "_" + locale;
+        var validLocale = (locale != null && LOCALE_PATTERN.matcher(locale).matches()) ? locale : null;
+        var localePath = "/emails/" + type + "_" + validLocale;
         var defaultPath = "/emails/" + type;
-        var localeStream = (locale != null) ? K9DDDAdapter.class.getResourceAsStream(localePath) : null;
+        var localeStream = (validLocale != null) ? K9DDDAdapter.class.getResourceAsStream(localePath) : null;
         try (var is = (localeStream != null) ? localeStream : K9DDDAdapter.class.getResourceAsStream(defaultPath)) {
             if (is == null) {
                 logger.log(SEVERE, "Missing email template: " + defaultPath);
