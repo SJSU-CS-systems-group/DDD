@@ -120,11 +120,6 @@
                         <version>0.7.0</version>
                     </signature>
                     <ignores>
-                        <!-- Server-only packages (not used in Android) -->
-                        <ignore>net.discdd.tls.NettyServerCertificateInterceptor</ignore>
-                        <ignore>net.discdd.tls.NettyClientCertificateInterceptor</ignore>
-                        <ignore>net.discdd.tls.DDDX509ExtendedTrustManager</ignore>
-                        <ignore>net.discdd.bundlerouting.service.BundleExchangeServiceImpl</ignore>
                         <!-- Only used in server code -->
                         <ignore>java.lang.Record</ignore>
                     </ignores>
