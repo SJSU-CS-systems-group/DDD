@@ -9,9 +9,10 @@ import java.util.Map;
 public class ControlAduTest {
     @Test
     public void testControlAdus() throws IOException {
-        var origLoginAdu = new ControlAdu.LoginControlAdu(Map.of("email", "testuser", "password", "testpass"));
-        var serDeserLoginAdu = ControlAdu.fromBytes(origLoginAdu.toBytes());
+        var origLoginAdu = new ControlAdu.LoginControlAdu(Map.of("email", "testuser", "password", "testpass", "locale", "uk"));
+        var serDeserLoginAdu = (ControlAdu.LoginControlAdu) ControlAdu.fromBytes(origLoginAdu.toBytes());
         Assertions.assertEquals(origLoginAdu, serDeserLoginAdu);
+        Assertions.assertEquals("uk", serDeserLoginAdu.locale());
 
         var origLoginAckAdu = new ControlAdu.LoginAckControlAdu(Map.of("email", "testemail", "success", "true"));
         var serDeserLoginAckAdu = (ControlAdu.EmailAck) ControlAdu.fromBytes(origLoginAckAdu.toBytes());
@@ -23,9 +24,12 @@ public class ControlAduTest {
                                                                        "suffix",
                                                                        "testsuffix",
                                                                        "password",
-                                                                       "testpass"));
-        var serDeserRegisterAdu = ControlAdu.fromBytes(origRegisterAdu.toBytes());
+                                                                       "testpass",
+                                                                       "locale",
+                                                                       "uk"));
+        var serDeserRegisterAdu = (ControlAdu.RegisterControlAdu) ControlAdu.fromBytes(origRegisterAdu.toBytes());
         Assertions.assertEquals(origRegisterAdu, serDeserRegisterAdu);
+        Assertions.assertEquals("uk", serDeserRegisterAdu.locale());
 
         var origRegisterAckAdu = new ControlAdu.RegisterAckControlAdu(Map.of("email", "testemail"));
         var serDeserRegisterAckAdu =
