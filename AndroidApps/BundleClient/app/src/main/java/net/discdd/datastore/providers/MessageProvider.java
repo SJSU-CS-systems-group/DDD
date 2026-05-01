@@ -48,9 +48,9 @@ public class MessageProvider extends ContentProvider {
 
     private void checkCallerAppId() throws SecurityException {
         try {
-            if (getCallerAppId().startsWith("net.discdd.")) {
-                return;
-            } else if (!getAllAppIds().isEmpty() && getAllAppIds().contains(getCallerAppId())) {
+            var callerAppId = getCallerAppId();
+            var allAppIds = getAllAppIds();
+            if (callerAppId.startsWith("net.discdd.") || allAppIds.isEmpty() || allAppIds.contains(callerAppId)) {
                 return;
             }
             logger.log(WARNING, "Unknown app ID: " + getCallerAppId());
