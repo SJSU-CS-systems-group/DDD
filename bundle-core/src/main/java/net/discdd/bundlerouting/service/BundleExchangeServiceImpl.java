@@ -19,6 +19,7 @@ import net.discdd.utils.BundleUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
@@ -92,9 +93,10 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
         try (ReadableByteChannel channel = Channels.newChannel(in)) {
             int n;
             while ((n = channel.read(buffer)) > 0) {
-                buffer.flip();
+                // casting to Buffer so it won't get flagged by Animal Sniffer
+                ((Buffer) buffer).flip();
                 callback.accept(ByteString.copyFrom(buffer));
-                buffer.clear();
+                ((Buffer) buffer).clear();
             }
         }
     }

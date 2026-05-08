@@ -105,4 +105,36 @@
             <scope>compile</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <!-- animal sniffer ensures bundle-core is compatible with our API versions-->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>animal-sniffer-maven-plugin</artifactId>
+                <version>1.23</version>
+                <configuration>
+                    <signature>
+                        <groupId>com.toasttab.android</groupId>
+                        <artifactId>gummy-bears-api-33</artifactId>
+                        <version>0.7.0</version>
+                    </signature>
+                    <ignores>
+                        <!-- Might need to ignore server-only code in the future -->
+                        <!-- Only used in server code -->
+                        <ignore>java.lang.Record</ignore>
+                    </ignores>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>check-android-compatibility</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>
