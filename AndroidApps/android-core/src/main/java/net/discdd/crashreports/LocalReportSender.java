@@ -75,48 +75,57 @@ public class LocalReportSender implements ReportSender {
         logger.log(INFO, "ACRA: About to start counting num reports in dir");
         try (var stream = Files.walk(reportsDir)) {
             stream.forEach(file -> {
-            if (file.getFileName().toString().startsWith("crash_report")) {
-                num.getAndIncrement();
-                logger.log(INFO, "ACRA: Num reports (and counting possibly): " + num.getAcquire());
-            }
-        });
-        if (num.getAcquire() >= MAX_AMOUNT_REPORTS) {
-            logger.log(INFO, "ACRA: Max num reports read, deleting oldest");
-            try (var stream2 = Files.walk(reportsDir)) {
-                stream2.sorted().forEach(file -> {
                 if (file.getFileName().toString().startsWith("crash_report")) {
-                    char currChar = file.getFileName().toString().charAt(CRASH_REPORT_NUM_INDEX);
-                    Matcher m = CRASH_REPORT_PATTERN.matcher(file.getFileName().toString());
-                    if (!m.matches()) return;
-                    int currNum;
-                    try {
-                        currNum = Character.getNumericValue(currChar);
-                    } catch (Exception e) {
-                        throw new IllegalArgumentException("Crash report is not written in format we expect");
-                    }
-                    int newNum = currNum - 1;
-                    char newChar = (char) ('0' + newNum);
-
-                    if (newNum != 0) {
-                        StringBuilder builder = new StringBuilder(file.getFileName().toString());
-                        builder.setCharAt(CRASH_REPORT_NUM_INDEX, newChar);
-                        String modified = builder.toString();
-                        try {
-                            logger.log(INFO, "Optimizing crash reports moving the file " + file.toFile().getName() + " to " + file.getParent().resolve(modified));
-                            Files.move(file, file.getParent().resolve(modified), StandardCopyOption.REPLACE_EXISTING);
-                        } catch (IOException e) {
-                            logger.log(SEVERE, "Optimizing crash reports unsuccessfully attempted to move directory");
-                        }
-                    } else {
-                        if (file.toFile().delete()) {
-                            logger.log(INFO, "Optimizing crash reports successfully deleted the file: " + file.toFile().getName());
-                        }
-                    }
+                    num.getAndIncrement();
+                    logger.log(INFO, "ACRA: Num reports (and counting possibly): " + num.getAcquire());
                 }
-            });}
-            return MAX_AMOUNT_REPORTS;
+            });
+            if (num.getAcquire() >= MAX_AMOUNT_REPORTS) {
+                logger.log(INFO, "ACRA: Max num reports read, deleting oldest");
+                try (var stream2 = Files.walk(reportsDir)) {
+                    stream2.sorted().forEach(file -> {
+                        if (file.getFileName().toString().startsWith("crash_report")) {
+                            char currChar = file.getFileName().toString().charAt(CRASH_REPORT_NUM_INDEX);
+                            Matcher m = CRASH_REPORT_PATTERN.matcher(file.getFileName().toString());
+                            if (!m.matches()) return;
+                            int currNum;
+                            try {
+                                currNum = Character.getNumericValue(currChar);
+                            } catch (Exception e) {
+                                throw new IllegalArgumentException("Crash report is not written in format we expect");
+                            }
+                            int newNum = currNum - 1;
+                            char newChar = (char) ('0' + newNum);
+
+                            if (newNum != 0) {
+                                StringBuilder builder = new StringBuilder(file.getFileName().toString());
+                                builder.setCharAt(CRASH_REPORT_NUM_INDEX, newChar);
+                                String modified = builder.toString();
+                                try {
+                                    logger.log(INFO,
+                                               "Optimizing crash reports moving the file " + file.toFile().getName() +
+                                                       " to " + file.getParent().resolve(modified));
+                                    Files.move(file,
+                                               file.getParent().resolve(modified),
+                                               StandardCopyOption.REPLACE_EXISTING);
+                                } catch (IOException e) {
+                                    logger.log(SEVERE,
+                                               "Optimizing crash reports unsuccessfully attempted to move directory");
+                                }
+                            } else {
+                                if (file.toFile().delete()) {
+                                    logger.log(INFO,
+                                               "Optimizing crash reports successfully deleted the file: " +
+                                                       file.toFile().getName());
+                                }
+                            }
+                        }
+                    });
+                }
+                return MAX_AMOUNT_REPORTS;
+            }
+            return num.getAcquire() + 1;
         }
-        return num.getAcquire() + 1;
     }
 
     @AutoService(ReportSenderFactory.class)
