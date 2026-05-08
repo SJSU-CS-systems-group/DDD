@@ -344,6 +344,8 @@ public class BundleUtils {
                                                              report.getFileName().toString()));
                      var aos = Files.newInputStream(report, StandardOpenOption.READ)) {
                     aos.transferTo(os);
+                } catch (IOException e) {
+                    logger.log(WARNING, "[BU/createBundlePayload] Skipping crash report " + report, e);
                 }
             }
 
