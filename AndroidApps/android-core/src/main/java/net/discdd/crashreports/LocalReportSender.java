@@ -81,6 +81,7 @@ public class LocalReportSender implements ReportSender {
             });
             if (numFiles.getAcquire() >= MAX_AMOUNT_REPORTS) {
                 logger.log(INFO, "ACRA: Max numFiles reports read, deleting oldest");
+                // crash reports to-be-bundled reached max, scooting all current numbers down
                 try (var stream2 = Files.walk(reportsDir)) {
                     stream2.sorted().forEach(file -> {
                         if (file.getFileName().toString().startsWith("crash_report")) {
