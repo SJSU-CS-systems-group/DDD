@@ -19,6 +19,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import net.discdd.bundletransport.BundleTransportService
+import net.discdd.bundletransport.screens.FileUtil.getFile
 import java.io.File
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
@@ -49,6 +50,11 @@ class ServerUploadViewModel(
             val service = TransportServiceManager.getService()
             return service?.transportId ?: "Unknown"
         }
+    val fullTransportID: String
+        get() {
+            val service = TransportServiceManager.getService()
+            return service?.fullTransportId ?: "Unknown"
+        }
     private val RECENCY_BLOB_AGE_THRESHOLD = 24.hours
     private val context get() = getApplication<Application>()
     private val sharedPref by lazy { context.getSharedPreferences(BundleTransportService.BUNDLETRANSPORT_PREFERENCES, MODE_PRIVATE) }
@@ -58,12 +64,17 @@ class ServerUploadViewModel(
 
     private val logger = Logger.getLogger(ServerUploadViewModel::class.java.name)
     private val transportPaths: TransportPaths by lazy {
-        TransportPaths(context.getExternalFilesDir(null)?.toPath())
+        TransportPaths(context.getFile().toPath())
     }
     private val _state = MutableStateFlow(ServerState())
     val state = _state.asStateFlow()
     private val _backgroundExchange = MutableStateFlow(0)
     val backgroundExchange = _backgroundExchange.asStateFlow()
+
+    private val _isCustomServer = MutableStateFlow(
+            sharedPref.getString(BundleTransportService.BUNDLETRANSPORT_DOMAIN_PREFERENCE, AndroidAppConstants.BUNDLE_SERVER_DOMAIN) != AndroidAppConstants.BUNDLE_SERVER_DOMAIN
+    )
+    val isCustomServer = _isCustomServer.asStateFlow()
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -96,7 +107,8 @@ class ServerUploadViewModel(
     fun updateRecencyBlobStatus() {
         viewModelScope.launch {
             val status = withContext(Dispatchers.IO) {
-                val clientDir = context.getExternalFilesDir("BundleTransmission/client")
+                var clientDir = File(context.getFile(), "BundleTransmission/client")
+                clientDir.mkdirs()
                 val file = File(clientDir, "recencyBlob.bin")
 
                 if (!file.exists()) {
@@ -117,18 +129,14 @@ class ServerUploadViewModel(
     }
 
     fun reloadCount() {
-        if (transportPaths != null && transportPaths.toClientPath != null && transportPaths.toServerPath != null) {
-            val clientFiles: Array<String>? = transportPaths.toClientPath.toFile().list()
-            val serverFiles: Array<String>? = transportPaths.toServerPath.toFile().list()
+        val clientFiles: Array<String>? = transportPaths.toClientPath.toFile().list()
+        val serverFiles: Array<String>? = transportPaths.toServerPath.toFile().list()
 
-            val clientCountFiles = if (clientFiles != null) clientFiles.size else 0
-            val serverCountFiles = if (serverFiles != null) serverFiles.size else 0
+        val clientCountFiles = clientFiles?.size ?: 0
+        val serverCountFiles = serverFiles?.size ?: 0
 
-            _state.update { current -> current.copy(clientCount = clientCountFiles.toString()) }
-            _state.update { current -> current.copy(serverCount = serverCountFiles.toString()) }
-        } else {
-            logger.warning("transportPaths or its paths are null when attempting to reload counts")
-        }
+        _state.update { current -> current.copy(clientCount = clientCountFiles.toString()) }
+        _state.update { current -> current.copy(serverCount = serverCountFiles.toString()) }
     }
 
     fun saveDomainPort() {
@@ -168,6 +176,18 @@ class ServerUploadViewModel(
 
     fun clearMessage() {
         _state.update { it.copy(message = null) }
+    }
+
+    fun applyScannedConfig(host: String, port: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _state.update { it.copy(domain = host, port = port.toString()) }
+            sharedPref.edit {
+                putString(BundleTransportService.BUNDLETRANSPORT_DOMAIN_PREFERENCE, host)
+                putInt(BundleTransportService.BUNDLETRANSPORT_PORT_PREFERENCE, port)
+            }
+            _isCustomServer.value = true
+            _state.update { it.copy(message = "Saved. Host: $host, Port: $port") }
+        }
     }
 
     fun setBackgroundExchange(value: Int) {

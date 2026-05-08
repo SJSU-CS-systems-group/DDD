@@ -2,6 +2,7 @@ package net.discdd.utils;
 
 public class Constants {
     /* Bundle contents */
+    public static final String BUNDLE_APP_ID_NAME = "app_ids.txt";
     public static final String BUNDLE_ADU_DIRECTORY_NAME = "ADU";
 
     public static final String BUNDLE_IDENTIFIER_FILE_NAME = "bundle_identifier.txt";

@@ -1,16 +1,20 @@
 package net.discdd.bundleclient.utils;
 
+import androidx.annotation.Nullable;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity(tableName = "ServerMessages")
 public class ServerMessage {
     @PrimaryKey(autoGenerate = false)
     private long messageId;
-    private LocalDateTime date;
-    private String message;
+    private Instant sentAt;
+    private Instant receivedAt;
+    private String subject;
+    @Nullable
+    private String body;
     private boolean read;
 
     public long getMessageId() {
@@ -21,20 +25,36 @@ public class ServerMessage {
         this.messageId = messageId;
     }
 
-    public LocalDateTime getDate() {
-        return date;
+    public Instant getSentAt() {
+        return sentAt;
     }
 
-    public void setDate(LocalDateTime date) {
-        this.date = date;
+    public void setSentAt(Instant sentAt) {
+        this.sentAt = sentAt;
     }
 
-    public String getMessage() {
-        return message;
+    public Instant getReceivedAt() {
+        return receivedAt;
     }
 
-    public void setMessage(String message) {
-        this.message = message;
+    public void setReceivedAt(Instant receivedAt) {
+        this.receivedAt = receivedAt;
+    }
+
+    public String getSubject() {
+        return subject;
+    }
+
+    public void setSubject(String subject) {
+        this.subject = subject;
+    }
+
+    public String getBody() {
+        return body;
+    }
+
+    public void setBody(String body) {
+        this.body = body;
     }
 
     public boolean isRead() {

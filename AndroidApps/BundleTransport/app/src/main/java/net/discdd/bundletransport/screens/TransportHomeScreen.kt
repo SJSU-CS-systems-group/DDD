@@ -1,7 +1,9 @@
 package net.discdd.bundletransport.screens
 
 import android.Manifest
+import android.content.Context
 import android.widget.Toast
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -38,12 +40,14 @@ import net.discdd.bundletransport.ConnectivityManager
 import net.discdd.components.NotificationBottomSheet
 import net.discdd.bundletransport.R
 import net.discdd.bundletransport.TransportServiceManager
+import net.discdd.bundletransport.viewmodels.ServerUploadViewModel
 import net.discdd.bundletransport.viewmodels.TransportUsbViewModel
 import net.discdd.screens.LogScreen
 import net.discdd.screens.PermissionScreen
 import net.discdd.screens.UsbScreen
 import net.discdd.screens.BugReportScreen
 import net.discdd.viewmodels.SettingsViewModel
+import java.io.File
 
 data class TabItem(
         val title: String,
@@ -53,7 +57,8 @@ data class TabItem(
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun TransportHomeScreen(
-        viewModel: SettingsViewModel = viewModel()
+        viewModel: SettingsViewModel = viewModel(),
+        uploadViewModel: ServerUploadViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -61,6 +66,7 @@ fun TransportHomeScreen(
     val showUsbScreen by UsbConnectionManager.usbConnected.collectAsState()
     val showEasterEgg by viewModel.showEasterEgg.collectAsState()
     val internetAvailable by ConnectivityManager.internetAvailable.collectAsState()
+    val isCustomServer by uploadViewModel.isCustomServer.collectAsState()
     val nearbyWifiState = rememberPermissionState(
             Manifest.permission.NEARBY_WIFI_DEVICES
     )
@@ -172,11 +178,20 @@ fun TransportHomeScreen(
                     modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
             ) {
                 Text(
                         text = context.getString(R.string.app_name),
                         style = MaterialTheme.typography.titleLarge
                 )
+                if (isCustomServer) {
+                    Text(
+                            text = "Custom Server",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
 
             ScrollableTabRow(
@@ -218,4 +233,10 @@ fun TransportHomeScreen(
 @Composable
 fun TransportHomeScreenPreview() {
     TransportHomeScreen()
+}
+
+object FileUtil {
+    fun Context.getFile(): File {
+        return getExternalFilesDir(null) ?: filesDir
+    }
 }

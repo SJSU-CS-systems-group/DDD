@@ -31,13 +31,15 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import net.discdd.bundleclient.BuildConfig;
+import net.discdd.bundleclient.utils.ServerMessageAduHandler;
 import net.discdd.bundleclient.R;
 import net.discdd.bundleclient.service.wifiDirect.DDDWifiDirect;
+import net.discdd.bundleclient.utils.RecentTransport;
+import net.discdd.bundleclient.utils.RecentTransportRepository;
 import net.discdd.client.bundletransmission.ClientBundleTransmission;
 import net.discdd.client.bundletransmission.ClientBundleTransmission.BundleExchangeCounts;
 import net.discdd.client.bundletransmission.ClientBundleTransmission.Statuses;
 import net.discdd.client.bundletransmission.TransportDevice;
-import net.discdd.bundleclient.utils.ServerMessageAduHandler;
 import net.discdd.datastore.providers.MessageProvider;
 import net.discdd.grpc.GetRecencyBlobResponse;
 import net.discdd.model.ADU;
@@ -92,6 +94,7 @@ public class BundleClientService extends Service {
     private ClientBundleTransmission bundleTransmission;
     final private Observer<? super DDDWifiEventType> liveDataObserver = this::broadcastWifiEvent;
     private MutableLiveData<DDDWifiEventType> eventsLiveData;
+    private RecentTransportRepository recentTransportRepository;
 
     public BundleClientService() {
         super();
@@ -138,11 +141,14 @@ public class BundleClientService extends Service {
 
             @Override
             public void onLost(Network network) {
-                eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DISCONNECTED);
+                eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DIRECT_DISCONNECTED);
             }
         };
         connectivityManager.registerDefaultNetworkCallback(networkCallback);
         checkValidNetwork();
+
+        recentTransportRepository = new RecentTransportRepository(getApplication());
+        bundleTransmission.setRecencyTracker(recentTransportRepository);
         return START_STICKY;
     }
 
@@ -164,10 +170,10 @@ public class BundleClientService extends Service {
     }
 
     private void checkValidNetwork() {
-        if (isNetworkValid()) {
-            eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_CONNECTED);
-        } else {
-            eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DISCONNECTED);
+        if (isNetworkValid()) { /* the device is not connected to a Wi-Fi direct network */
+            eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DIRECT_DISCONNECTED);
+        } else { /* the device is connected to a Wi-Fi direct network */
+            eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DIRECT_CONNECTED);
         }
     }
 
@@ -205,21 +211,31 @@ public class BundleClientService extends Service {
 
         try {
             //Application context
-            var resources = getApplicationContext().getResources();
-            try (InputStream inServerIdentity =
-                         resources.openRawResource(net.discdd.android_core.R.raw.server_identity);
-                 InputStream inServerSignedPre =
-                         resources.openRawResource(net.discdd.android_core.R.raw.server_signed_pre);
-                 InputStream inServerRatchet =
-                         resources.openRawResource(net.discdd.android_core.R.raw.server_ratchet)) {
+            var prefs = getSharedPreferences(NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE);
+            boolean hasCustomKeys = prefs.getBoolean("custom_server_keys", false);
 
+            if (hasCustomKeys) {
+                // QR-scanned keys already on disk — don't overwrite them
                 ClientPaths clientPaths = new ClientPaths(getApplicationContext().getDataDir().toPath(),
-                                                          inServerIdentity.readAllBytes(),
-                                                          inServerSignedPre.readAllBytes(),
-                                                          inServerRatchet.readAllBytes());
+                                                          null, null, null);
                 bundleTransmission = new ClientBundleTransmission(clientPaths, this::processIncomingADU);
-            } catch (IOException e) {
-                logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
+            } else {
+                var resources = getApplicationContext().getResources();
+                try (InputStream inServerIdentity =
+                             resources.openRawResource(net.discdd.android_core.R.raw.server_identity);
+                     InputStream inServerSignedPre =
+                             resources.openRawResource(net.discdd.android_core.R.raw.server_signed_pre);
+                     InputStream inServerRatchet =
+                             resources.openRawResource(net.discdd.android_core.R.raw.server_ratchet)) {
+
+                    ClientPaths clientPaths = new ClientPaths(getApplicationContext().getDataDir().toPath(),
+                                                              inServerIdentity.readAllBytes(),
+                                                              inServerSignedPre.readAllBytes(),
+                                                              inServerRatchet.readAllBytes());
+                    bundleTransmission = new ClientBundleTransmission(clientPaths, this::processIncomingADU);
+                } catch (IOException e) {
+                    logger.log(SEVERE, "[SEC]: Failed to initialize Server Keys", e);
+                }
             }
 
             var dddWifiDirect = new DDDWifiDirect(this);
@@ -295,9 +311,9 @@ public class BundleClientService extends Service {
             broadcastBundleClientLogEvent(R.string.failed_to_start_discovery_s, e.getMessage());
             // not the end of the world, we can still try
         }
-        var recentTransports = bundleTransmission.getRecentTransports();
+        var recentTransports = recentTransportRepository.getAllTransports();
         for (var transport : recentTransports) {
-            if (transport.getDevice() instanceof DDDWifiDevice && ClientBundleTransmission.doesTransportHaveNewData(transport)) {
+            if (transport.getDevice() instanceof DDDWifiDevice && doesTransportHaveNewData(transport)) {
                 var bc = exchangeWith((DDDWifiDevice) transport.getDevice());
                 exchangeCounts.add(bc);
                 logger.log(INFO,
@@ -330,6 +346,7 @@ public class BundleClientService extends Service {
                                                  addr.getHostAddress());
             BundleExchangeCounts currentBundle =
                     bundleTransmission.doExchangeWithTransport(device, addr.getHostAddress(), 7777, true);
+            recentTransportRepository.timeStampExchange(device);
             broadcastBundleClientLogEvent(R.string.s_upload_s_download_s,
                                                  device.getDescription(),
                                                  statusesToString(currentBundle.uploadStatus()),
@@ -486,6 +503,7 @@ public class BundleClientService extends Service {
                                                                     serverAddress,
                                                                     port,
                                                                     false);
+                    recentTransportRepository.timeStampExchange(TransportDevice.SERVER_DEVICE);
                     logger.log(INFO,
                                format("Upload status: %s, Download status: %s",
                                       bc.uploadStatus().toString(),
@@ -501,19 +519,19 @@ public class BundleClientService extends Service {
         return completableFuture;
     }
 
-    public ClientBundleTransmission.RecentTransport[] getRecentTransports() {
-        return bundleTransmission.getRecentTransports();
+    public RecentTransport[] getRecentTransports() {
+        return recentTransportRepository.getAllTransports();
     }
 
     public boolean isDiscoveryActive() {
         return dddWifi.isDiscoveryActive();
     }
 
-    public ClientBundleTransmission.RecentTransport getRecentTransport(DDDWifiDevice peer) {
-        return Arrays.stream(bundleTransmission.getRecentTransports())
+    public RecentTransport getRecentTransport(DDDWifiDevice peer) {
+        return Arrays.stream(getRecentTransports())
                 .filter(rt -> peer.equals(rt.getDevice()))
                 .findFirst()
-                .orElse(new ClientBundleTransmission.RecentTransport(peer, GetRecencyBlobResponse.getDefaultInstance()));
+                .orElse(new RecentTransport(peer, GetRecencyBlobResponse.getDefaultInstance()));
     }
 
     public void notifyNewAdu() {
@@ -523,10 +541,10 @@ public class BundleClientService extends Service {
     }
 
     public void peersUpdated() {
-        dddWifi.listDevices().forEach(device -> bundleTransmission.processDiscoveredPeer(device, device.getRecencyBlob()));
+        dddWifi.listDevices().forEach(device -> recentTransportRepository.processDiscoveredPeer(device, device.getRecencyBlob()));
         // expire peers that haven't been seen for a minute
         long expirationTime = System.currentTimeMillis() - 60 * 1000;
-        bundleTransmission.expireNotSeenPeers(expirationTime);
+        recentTransportRepository.expireNotSeenPeers(expirationTime);
     }
 
     public void wifiPermissionGranted() {
@@ -537,6 +555,41 @@ public class BundleClientService extends Service {
         return bundleTransmission;
     }
 
+    /**
+     * Reinitialize the bundle transmission with current keys on disk.
+     * Called after QR scan writes new server keys and clears client keys/session.
+     */
+    public void reinitializeBundleTransmission() {
+        try {
+            var prefs = getSharedPreferences(NET_DISCDD_BUNDLECLIENT_SETTINGS, MODE_PRIVATE);
+            boolean hasCustomKeys = prefs.getBoolean("custom_server_keys", false);
+
+            if (hasCustomKeys) {
+                ClientPaths clientPaths = new ClientPaths(getApplicationContext().getDataDir().toPath(),
+                                                          null, null, null);
+                bundleTransmission = new ClientBundleTransmission(clientPaths, this::processIncomingADU);
+            } else {
+                var resources = getApplicationContext().getResources();
+                try (InputStream inServerIdentity =
+                             resources.openRawResource(net.discdd.android_core.R.raw.server_identity);
+                     InputStream inServerSignedPre =
+                             resources.openRawResource(net.discdd.android_core.R.raw.server_signed_pre);
+                     InputStream inServerRatchet =
+                             resources.openRawResource(net.discdd.android_core.R.raw.server_ratchet)) {
+                    ClientPaths clientPaths = new ClientPaths(getApplicationContext().getDataDir().toPath(),
+                                                              inServerIdentity.readAllBytes(),
+                                                              inServerSignedPre.readAllBytes(),
+                                                              inServerRatchet.readAllBytes());
+                    bundleTransmission = new ClientBundleTransmission(clientPaths, this::processIncomingADU);
+                }
+            }
+            bundleTransmission.setRecencyTracker(recentTransportRepository);
+            logger.log(INFO, "Bundle transmission reinitialized with current keys");
+        } catch (Exception e) {
+            logger.log(SEVERE, "Failed to reinitialize BundleTransmission", e);
+        }
+    }
+
     public enum BundleClientTransmissionEventType {
         WIFI_DIRECT_CLIENT_EXCHANGE_STARTED, WIFI_DIRECT_CLIENT_EXCHANGE_FINISHED
     }
@@ -545,4 +598,10 @@ public class BundleClientService extends Service {
         public BundleClientService getService() {return BundleClientService.this;}
     }
 
+    public static boolean doesTransportHaveNewData(RecentTransport transport) {
+        if (transport == null) {
+            return false;
+        }
+        return transport.getRecencyBlobResponse().getRecencyBlob().getBlobTimestamp() > transport.getLastExchange();
+    }
 }

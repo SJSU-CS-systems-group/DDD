@@ -66,11 +66,13 @@ import java.util.function.BiConsumer;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+import static java.util.logging.Level.FINE;
 import static net.discdd.bundlesecurity.DDDPEMEncoder.ECPrivateKeyType;
 import static net.discdd.bundlesecurity.DDDPEMEncoder.ECPublicKeyType;
 
 public class End2EndTest {
     public static final String TEST_APPID = "testAppId";
+    public static final String TEST_UNREG_APPID = "testUnregisteredAppId";
     // we don't really need the atomicity part, but we need a way to pass around a mutable long
     protected final static TestAppServiceAdapter testAppServiceAdapter = new TestAppServiceAdapter();
     private static final Logger logger = Logger.getLogger(End2EndTest.class.getName());
@@ -174,8 +176,9 @@ public class End2EndTest {
                 Curve.calculateAgreement(serverIdentity.getPublicKey().getPublicKey(), clientIdentity.getPrivateKey());
 
         String secretKey = Base64.getUrlEncoder().encodeToString(agreement);
-
-        return SecurityUtils.encryptAesCbcPkcs5(secretKey, bundleID);
+        String encryptedBundleID = SecurityUtils.encryptAesCbcPkcs5(secretKey, bundleID, true);
+        logger.log(FINE, "We're about to create encrypted bundle id %s", encryptedBundleID);
+        return SecurityUtils.encryptAesCbcPkcs5(secretKey, bundleID, true);
 
     }
 
@@ -199,7 +202,7 @@ public class End2EndTest {
             }
             return new ADU(aduFile, TEST_APPID, aduId, aduFile.length(), clientId);
         }).collect(Collectors.toList());
-        BundleUtils.createBundlePayloadForAdus(adus, "{}".getBytes(), "HB", null, baos);
+        BundleUtils.createBundlePayloadForAdus(adus, "{}".getBytes(), "HB", null, baos, List.of(TEST_APPID));
         String bundleId = BundleIDGenerator.generateBundleID(clientId, bundleCount, BundleIDGenerator.UPSTREAM);
         String encryptedBundleID = encryptBundleID(bundleId);
         Path bundleJarPath = targetDir.resolve(encryptedBundleID);

@@ -28,6 +28,10 @@ import static java.util.logging.Level.INFO;
 @Service
 public class ServerApplicationDataManager {
     private static final Logger logger = Logger.getLogger(ServerApplicationDataManager.class.getName());
+    // BundleClient's App ID, itself, is a special case: server notifications are injected
+    // directly to BundleClient via the server CLI without needing a service adapter, so
+    // the App ID must be explicitly included when collecting ADUs to send to the client.
+    static final String BUNDLE_CLIENT_APP_ID = "net.discdd.bundleclient";
     private final BundleServerConfig bundleServerConfig;
     private final SentAduDetailsRepository sentAduDetailsRepository;
     private final BundleMetadataRepository bundleMetadataRepository;
@@ -55,7 +59,11 @@ public class ServerApplicationDataManager {
     }
 
     public List<String> getRegisteredAppIds() {
-        return registeredAppAdapterRepository.findAllAppIds().stream().toList();
+        var ids = new ArrayList<>(registeredAppAdapterRepository.findAllAppIds().stream().toList());
+        // BundleClient's App ID is directly included here since server notifications are
+        // injected to BundleClient via the server CLI without needing a service adapter.
+        ids.add(BUNDLE_CLIENT_APP_ID);
+        return ids;
     }
 
     public void processAcknowledgement(String clientId, String bundleId) throws IOException {
@@ -186,7 +194,7 @@ public class ServerApplicationDataManager {
         var details = sentAduDetailsRepository.findByBundleId(lastBundleSent);
         var lastAdus = new HashMap<String, Long>();
         details.forEach(d -> lastAdus.put(d.appId, d.aduIdRangeEnd));
-        return registeredAppAdapterRepository.findAllAppIds().stream().anyMatch(app -> {
+        return getRegisteredAppIds().stream().anyMatch(app -> {
             var lastStoredAdu = sendADUsStorage.getLastADUIdAdded(clientId, app);
             var lastDeletedAdu = sendADUsStorage.getLastADUIdDeleted(clientId, app);
             return lastStoredAdu > Math.max(lastAdus.getOrDefault(app, 0L), lastDeletedAdu);

@@ -124,8 +124,9 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
         messages.stream()
                 .map(m -> ServerMessage.newBuilder()
                         .setMessageId(m.messageKey.getMessageNumber())
-                        .setDate(m.messageDate.toString())
-                        .setMessage(m.message)
+                        .setSentAt(m.sentAt.toString())
+                        .setSubject(m.subject)
+                        .setBody(m.body == null ? "" : m.body)
                         .build())
                 .forEach(responseBuilder::addServerMessage);
 
@@ -135,21 +136,22 @@ public class BundleServerServiceImpl extends BundleServerServiceGrpc.BundleServe
 
     @Override
     public void crashReports(CrashReportRequest request, StreamObserver<CrashReportResponse> response) {
-        var data = request.getCrashReportData();
         X509Certificate clientCert = NettyServerCertificateInterceptor.CLIENT_CERTIFICATE_KEY.get(Context.current());
         var name = DDDTLSUtil.publicKeyToName(clientCert.getPublicKey());
         new File(crashDir).mkdirs();
-        File crashFile = new File(crashDir, name);
-        try {
-            Files.write(crashFile.toPath(),
-                        data.toByteArray(),
-                        StandardOpenOption.CREATE,
-                        StandardOpenOption.TRUNCATE_EXISTING);
-            response.onNext(CrashReportResponse.newBuilder().setResult(Status.SUCCESS).build());
-        } catch (IOException e) {
-            logger.log(WARNING, "Couldn't write crash file to " + crashFile, e);
-            response.onNext(CrashReportResponse.newBuilder().setResult(Status.FAILED).build());
+        for (int i = 0; i < request.getCrashReportDataCount(); i++) {
+            File crashFile = new File(crashDir, name + "_" + (i + 1));
+            try {
+                Files.write(crashFile.toPath(),
+                            request.getCrashReportData(i).toByteArray(),
+                            StandardOpenOption.CREATE,
+                            StandardOpenOption.TRUNCATE_EXISTING);
+            } catch (IOException e) {
+                logger.log(WARNING, "Couldn't write crash file to " + crashFile, e);
+                response.onNext(CrashReportResponse.newBuilder().setResult(Status.FAILED).build());
+            }
         }
+        response.onNext(CrashReportResponse.newBuilder().setResult(Status.SUCCESS).build());
         response.onCompleted();
     }
 }

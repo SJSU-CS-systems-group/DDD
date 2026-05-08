@@ -17,7 +17,9 @@ import net.discdd.grpc.BundleUploadRequest;
 import net.discdd.grpc.BundleUploadResponse;
 import net.discdd.grpc.CrashReportRequest;
 import net.discdd.grpc.EncryptedBundleId;
+import net.discdd.grpc.CheckMessagesRequest;
 import net.discdd.grpc.GetRecencyBlobRequest;
+import net.discdd.grpc.ServerMessage;
 import net.discdd.pathutils.TransportPaths;
 import net.discdd.tls.DDDTLSUtil;
 import net.discdd.tls.DDDX509ExtendedTrustManager;
@@ -51,7 +53,7 @@ public class TransportToBundleServerManager {
     public static final String RECENCY_BLOB_BIN = "recencyBlob.bin";
     private final Path fromClientPath;
     private final Path fromServerPath;
-    private final Path crashReportsPath;
+    private final Path crashReportsDir;
     private final String serverHost;
     private final int serverPort;
     private final GrpcSecurityKey grpcSecurityKey;
@@ -65,7 +67,7 @@ public class TransportToBundleServerManager {
         this.serverPort = Integer.parseInt(port);
         this.fromClientPath = transportPaths.toServerPath;
         this.fromServerPath = transportPaths.toClientPath;
-        this.crashReportsPath = transportPaths.crashReportPath;
+        this.crashReportsDir = transportPaths.crashReportsDir;
     }
 
     public static class ExchangeResult {
@@ -74,9 +76,14 @@ public class TransportToBundleServerManager {
         public int downloadCount = 0;
         public int toDownloadCount = 0;
         public int deleteCount = 0;
+        public List<ServerMessage> serverMessages = new ArrayList<>();
     }
 
     public ExchangeResult doExchange() throws Exception {
+        return doExchange(0);
+    }
+
+    public ExchangeResult doExchange(long lastMessageId) throws Exception {
         ManagedChannel channel = null;
         ExchangeResult exchangeResult = new ExchangeResult();
         try {
@@ -99,12 +106,22 @@ public class TransportToBundleServerManager {
             var bundlesFromClients = populateListFromPath(fromClientPath);
             var bundlesFromServer = populateListFromPath(fromServerPath);
 
-            if (crashReportsPath.toFile().exists()) {
-                var collectedCrashes = bsStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                        .crashReports(CrashReportRequest.newBuilder()
-                                              .setCrashReportData(ByteString.copyFrom(Files.readAllBytes(
-                                                      crashReportsPath)))
-                                              .build());
+            File[] crashReportFiles = crashReportsDir.toFile()
+                    .listFiles((dir, name) -> name.startsWith("crash_report") && name.endsWith(".txt"));
+            if (crashReportFiles != null && crashReportFiles.length > 0) {
+                var requestBuilder = CrashReportRequest.newBuilder();
+                for (File crashFile : crashReportFiles) {
+                    requestBuilder.addCrashReportData(ByteString.copyFrom(Files.readAllBytes(crashFile.toPath())));
+                }
+                var crashResponse = bsStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                        .crashReports(requestBuilder.build());
+                if (crashResponse.getResult() == net.discdd.grpc.Status.SUCCESS) {
+                    for (File crashFile : crashReportFiles) {
+                        if (!crashFile.delete()) {
+                            logger.log(SEVERE, "Failed to delete crash report: " + crashFile.getName());
+                        }
+                    }
+                }
             }
             var inventoryResponse = bsStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     .bundleInventory(BundleInventoryRequest.newBuilder()
@@ -120,6 +137,10 @@ public class TransportToBundleServerManager {
             exchangeResult.downloadCount =
                     processDownloadBundles(inventoryResponse.getBundlesToDownloadList(), exchangeStub);
             processRecencyBlob(blockingExchangeStub);
+
+            var messagesResponse = bsStub.withDeadlineAfter(Constants.GRPC_SHORT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                    .checkMessages(CheckMessagesRequest.newBuilder().setLastMessageId(lastMessageId).build());
+            exchangeResult.serverMessages = messagesResponse.getServerMessageList();
 
             logger.log(INFO, "Connect server completed");
         } finally {

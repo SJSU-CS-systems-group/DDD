@@ -18,7 +18,7 @@ import net.discdd.bundleclient.WifiServiceManager
 import net.discdd.bundleclient.service.BundleClientService
 import net.discdd.bundleclient.service.BundleClientServiceBroadcastReceiver
 import net.discdd.bundleclient.service.DDDWifiDevice
-import net.discdd.client.bundletransmission.ClientBundleTransmission
+import net.discdd.bundleclient.service.wifiDirect.DDDWifiDirectDevice
 import net.discdd.viewmodels.WifiBannerViewModel
 import java.util.concurrent.CompletableFuture
 
@@ -162,16 +162,16 @@ class WifiDirectViewModel(
     fun updateConnectedDevices() {
         viewModelScope.launch {
             val recentTransports = wifiService?.recentTransports ?: return@launch
-            val currentPeersMap = _state.value.peers.associateBy { it.device }
+            val currentPeersMap = _state.value.peers.associateBy { it.deviceId }
 
             val updatedPeers = recentTransports.map { recentTransport ->
-                val currentPeer = currentPeersMap[recentTransport.device]
-                val hasNewData = ClientBundleTransmission.doesTransportHaveNewData(recentTransport)
+                val currentPeer = currentPeersMap[recentTransport.transportId]
+                val hasNewData = BundleClientService.doesTransportHaveNewData(recentTransport)
                 if (currentPeer != null) {
                     // Update existing peer
                     currentPeer.copy(
-                        device = recentTransport.device as DDDWifiDevice,
-                        deviceId = recentTransport.device.id ?: context.getString(R.string.unknown_transportId),
+                        device = if (recentTransport.device is DDDWifiDevice) recentTransport.device as DDDWifiDevice else currentPeer.device,
+                        deviceId = recentTransport.transportId,
                         lastSeen = recentTransport.lastSeen,
                         lastExchange = recentTransport.lastExchange,
                         recencyTime = recentTransport.recencyTime,
@@ -180,8 +180,8 @@ class WifiDirectViewModel(
                 } else {
                     // Create new peer
                     PeerDevice(
-                        device = recentTransport.device as DDDWifiDevice,
-                        deviceId = recentTransport.device.id ?: context.getString(R.string.unknown_transportId),
+                        device = if (recentTransport.device is DDDWifiDevice) recentTransport.device as DDDWifiDevice else DDDWifiDirectDevice(null, recentTransport.transportId, null),
+                        deviceId = recentTransport.transportId,
                         lastSeen = recentTransport.lastSeen,
                         lastExchange = recentTransport.lastExchange,
                         recencyTime = recentTransport.recencyTime,

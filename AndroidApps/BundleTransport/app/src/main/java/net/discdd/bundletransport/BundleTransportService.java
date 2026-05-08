@@ -20,6 +20,8 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
 import net.discdd.bundlerouting.service.BundleExchangeServiceImpl;
 import net.discdd.bundlesecurity.SecurityUtils;
+import net.discdd.bundletransport.utils.ServerMessage;
+import net.discdd.bundletransport.utils.ServerMessageRepository;
 import net.discdd.bundletransport.wifi.DDDWifiServer;
 import net.discdd.grpc.GetRecencyBlobResponse;
 import net.discdd.pathutils.TransportPaths;
@@ -69,6 +71,7 @@ public class BundleTransportService extends Service implements BundleExchangeSer
     private final RpcServer grpcServer = new RpcServer(this);
     public GrpcSecurityKey grpcKeys;
     public String transportId;
+    public String fullTransportId;
     String host;
     int port;
     ConnectivityManager connectivityManager;
@@ -83,6 +86,7 @@ public class BundleTransportService extends Service implements BundleExchangeSer
                             periodicExchangeScheduler.setPeriodInMinutes(sharedPreferences.getInt(key, 0));
                 }
             };
+    private ServerMessageRepository serverMessageRepository;
     private FileHttpServer httpServer;
     private boolean httpServerRunning = false;
     private DDDWifiServer dddWifiServer;
@@ -102,10 +106,12 @@ public class BundleTransportService extends Service implements BundleExchangeSer
 
         logExchange(INFO, R.string.starting_server_exchange_with_host_s_port_d, host, port);
         try {
+            // Pass the highest known messageId so we only fetch messages newer than what we already have
+            long lastMessageId = serverMessageRepository.getMaxMessageId();
             var exchangeCounts = new TransportToBundleServerManager(grpcKeys,
                                                                     transportPaths,
                                                                     host,
-                                                                    Integer.toString(port)).doExchange();
+                                                                    Integer.toString(port)).doExchange(lastMessageId);
             logExchange(INFO,
                         R.string.deleted_d_bundles_sent_d_d_received_d_d,
                         exchangeCounts.deleteCount,
@@ -113,6 +119,23 @@ public class BundleTransportService extends Service implements BundleExchangeSer
                         exchangeCounts.toUploadCount,
                         exchangeCounts.downloadCount,
                         exchangeCounts.toDownloadCount);
+
+            // Convert gRPC ServerMessage protos to Room entities and persist them
+            if (!exchangeCounts.serverMessages.isEmpty()) {
+                var receivedAt = java.time.Instant.now();
+                var roomMessages = exchangeCounts.serverMessages.stream().map(m -> {
+                    ServerMessage sm = new ServerMessage();
+                    sm.setMessageId(m.getMessageId());
+                    sm.setSentAt(java.time.Instant.parse(m.getSentAt()));
+                    sm.setReceivedAt(receivedAt);
+                    sm.setSubject(m.getSubject());
+                    sm.setBody(m.getBody().isEmpty() ? null : m.getBody());
+                    sm.setRead(false);
+                    return sm;
+                }).collect(java.util.stream.Collectors.toList());
+                serverMessageRepository.insertAll(roomMessages);
+                logExchange(INFO, R.string.received_d_server_messages, roomMessages.size());
+            }
         } catch (Exception e) {
             logExchange(SEVERE, e, R.string.error_during_server_exchange_s, e.getMessage());
         }
@@ -153,16 +176,25 @@ public class BundleTransportService extends Service implements BundleExchangeSer
             return START_STICKY;
         }
         executor.submit(() -> {
-            this.transportPaths = new TransportPaths(getApplicationContext().getExternalFilesDir(null).toPath());
+            var dir = getApplicationContext().getExternalFilesDir(null);
+            if (dir == null) {
+                dir = getApplicationContext().getFilesDir();
+            }
+            this.transportPaths = new TransportPaths(dir.toPath(),
+                                                     getApplicationContext().getDataDir()
+                                                             .toPath()
+                                                             .resolve("to-be-bundled"));
             try {
                 this.grpcKeys = new GrpcSecurityKey(transportPaths.grpcSecurityPath, SecurityUtils.SERVER);
             } catch (InvalidAlgorithmParameterException | NoSuchAlgorithmException | NoSuchProviderException |
                      CertificateException | OperatorCreationException | IOException e) {
                 logExchange(SEVERE, e, R.string.failed_to_initialize_grpcsecurity_s, e.getMessage());
             }
-            transportId = Base64.encodeToString(grpcKeys.grpcKeyPair.getPublic().getEncoded(), Base64.DEFAULT);
-            transportId = transportId.substring(transportId.length() - 20, transportId.length() - 4);
+            fullTransportId = Base64.encodeToString(grpcKeys.grpcKeyPair.getPublic().getEncoded(), Base64.DEFAULT);
+            transportId = fullTransportId.substring(fullTransportId.length() - 20, fullTransportId.length() - 4);
 
+            // Init Room-backed message repo for storing server messages
+            serverMessageRepository = new ServerMessageRepository(getApplication());
             connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
             // BundleTransportService doesn't use LogFragment directly, but we do want our
             // logs to go to its logger
@@ -235,6 +267,9 @@ public class BundleTransportService extends Service implements BundleExchangeSer
             try {
                 TrafficStats.setThreadStatsTag(0xD15CDDD);
                 File filesDir = getApplicationContext().getExternalFilesDir(null);
+                if (filesDir == null) {
+                    filesDir = getApplicationContext().getFilesDir();
+                }
                 httpServer = new FileHttpServer(8080, filesDir);
                 httpServer.start();
                 httpServerRunning = true;

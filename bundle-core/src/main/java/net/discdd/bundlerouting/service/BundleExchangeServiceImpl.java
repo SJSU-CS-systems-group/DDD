@@ -31,6 +31,7 @@ import java.util.logging.Logger;
 import static java.lang.String.format;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrpc.BundleExchangeServiceImplBase {
     private static final Logger logger = Logger.getLogger(BundleExchangeServiceImpl.class.getName());
@@ -58,7 +59,7 @@ public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrp
                                 pathProducer(bundleExchangeName, request.getSenderType(), null);
 
             if (downloadPath == null) {
-                logger.log(SEVERE,
+                logger.log(WARNING,
                            format("Could not produce a path for %s with map %s",
                                   bundleExchangeName.encryptedBundleId,
                                   request.getPublicKeyMap()));

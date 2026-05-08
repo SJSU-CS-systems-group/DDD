@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +39,8 @@ public class ClientApplicationDataManager {
     /* Database tables */
 
     final private ClientPaths clientPaths;
+    // appIds are sent by the server, used to send ADUs
+    final private List<String> registeredAppIds = new ArrayList<>();
 
     public ClientApplicationDataManager(ClientPaths clientPaths, Consumer<ADU> aduConsumer) {
         this.clientPaths = clientPaths;
@@ -53,12 +56,16 @@ public class ClientApplicationDataManager {
         }
     }
 
-    // we cannot use .toList() since we are targeting Java 11, but Intellij really wants us to
     @SuppressWarnings("SimplifyStreamApiCallChains")
     public List<String> getRegisteredAppIds() {
-        return sendADUsStorage.getAllClientApps(true)
-                .map(StoreADUs.ClientApp::appId)
-                .collect(Collectors.toUnmodifiableList());
+        return List.copyOf(registeredAppIds);
+    }
+
+    public void setRegisteredAppIds(List<String> appIds) {
+        registeredAppIds.clear();
+        if (appIds != null) {
+            registeredAppIds.addAll(appIds);
+        }
     }
 
     public void processAcknowledgement(String bundleId) {
@@ -106,7 +113,13 @@ public class ClientApplicationDataManager {
         List<ADU> adusToSend = new ArrayList<>();
         final long dataSizeLimit = ClientPaths.APP_DATA_SIZE_LIMIT;
         var sizeLimiter = new SizeLimiter(dataSizeLimit - initialSize);
-        for (String appId : this.getRegisteredAppIds()) {
+        // we cannot use .toList() since we are targeting Java 11, but Intellij really wants us to
+        List<String> appIds = this.getRegisteredAppIds().isEmpty() ?
+                              sendADUsStorage.getAllClientApps(true)
+                                      .map(StoreADUs.ClientApp::appId)
+                                      .collect(Collectors.toUnmodifiableList()) :
+                              this.getRegisteredAppIds();
+        for (String appId : appIds) {
             StreamExt.takeWhile(sendADUsStorage.getADUs(clientId, appId), a -> sizeLimiter.test(a.getSize()))
                     .forEach(adusToSend::add);
         }

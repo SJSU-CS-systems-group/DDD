@@ -220,8 +220,13 @@ public class ServerBundleTransmission {
 
         var adus = applicationDataManager.fetchADUsToSend(encryptedBundleId, bundleCounter, 0, clientId);
         PipedInputStream pipedInputStream = new PipedInputStream();
-        Future<?> future =
-                BundleUtils.runFuture(executorService, counts.lastReceivedBundleId, null, adus, null, pipedInputStream);
+        Future<?> future = BundleUtils.runFuture(executorService,
+                                                 counts.lastReceivedBundleId,
+                                                 null,
+                                                 adus,
+                                                 null,
+                                                 pipedInputStream,
+                                                 applicationDataManager.getRegisteredAppIds());
         Files.createDirectories(getClientSendDirectory(clientId));
         try {
             var bundleOutputStream = Files.newOutputStream(getPathForBundleToSend(clientId, encryptedBundleId),

@@ -10,13 +10,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.security.GeneralSecurityException;
 import java.util.Objects;
-import java.util.logging.Logger;
-
-import static java.util.logging.Level.WARNING;
 
 public class ClientBundleGenerator {
-
-    private static final Logger logger = Logger.getLogger(ClientBundleGenerator.class.getName());
 
     static ClientBundleGenerator singleGeneratorInstance = null;
     ClientSecurity clientSecurity;
@@ -45,11 +40,10 @@ public class ClientBundleGenerator {
 
     synchronized public static ClientBundleGenerator initializeInstance(ClientSecurity clientSecurity,
                                                                         ClientPaths clientPaths) throws IOException {
-        if (singleGeneratorInstance == null) {
-            singleGeneratorInstance = new ClientBundleGenerator(clientSecurity, clientPaths);
-        } else {
-            logger.log(WARNING, "[BR]: Client bundle generator instance is already created!");
-        }
+        // Always replace the singleton so callers passing a fresh ClientSecurity (e.g. after a
+        // server switch via QR scan) get a generator bound to the new keys instead of silently
+        // returning a stale instance still referencing the previous ClientSecurity.
+        singleGeneratorInstance = new ClientBundleGenerator(clientSecurity, clientPaths);
         return singleGeneratorInstance;
     }
 

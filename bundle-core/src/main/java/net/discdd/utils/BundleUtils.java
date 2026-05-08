@@ -10,6 +10,7 @@ import net.discdd.model.ADU;
 import net.discdd.model.Acknowledgement;
 import net.discdd.model.Bundle;
 import net.discdd.model.EncryptedPayload;
+import net.discdd.model.EncryptionHeader;
 import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
 import net.discdd.model.UncompressedPayload;
@@ -65,10 +66,19 @@ public class BundleUtils {
         logger.log(INFO, "Extracting bundle for bundle name: " + bundleFileName);
         Path extractedBundlePath = extractDirPath.resolve(bundleFileName);
         JarUtils.jarToDir(bundle.getSource().getAbsolutePath(), extractedBundlePath.toString());
-        File[] payloads = extractedBundlePath.resolve("payloads").toFile().listFiles();
-        EncryptedPayload encryptedPayload = new EncryptedPayload(null, payloads[0]);
-        return new UncompressedBundle( // TODO get encryption header, payload signature and get bundle id from BS
-                                       null, extractedBundlePath.toFile(), null, encryptedPayload);
+
+        String bundleId =
+                new String(Files.readAllBytes(extractedBundlePath.resolve(SecurityUtils.BUNDLEID_FILENAME))).trim();
+
+        EncryptionHeader encryptionHeader = EncryptionHeader.builder()
+                .clientIdentityKey(extractedBundlePath.resolve(SecurityUtils.CLIENT_IDENTITY_KEY).toFile())
+                .clientBaseKey(extractedBundlePath.resolve(SecurityUtils.CLIENT_BASE_KEY).toFile())
+                .serverIdentityKey(extractedBundlePath.resolve(SecurityUtils.SERVER_IDENTITY_KEY).toFile())
+                .build();
+
+        File[] payloads = extractedBundlePath.resolve(SecurityUtils.PAYLOAD_DIR).toFile().listFiles();
+        EncryptedPayload encryptedPayload = new EncryptedPayload(bundleId, payloads[0]);
+        return new UncompressedBundle(bundleId, extractedBundlePath.toFile(), encryptionHeader, encryptedPayload);
     }
 
     public static UncompressedPayload extractPayload(Payload payload, Path extractDirPath) throws IOException {
@@ -81,6 +91,7 @@ public class BundleUtils {
         logger.log(INFO, "Extracting payload for payload path: " + extractedPayloadPath);
         JarUtils.jarToDir(payload.getSource().getAbsolutePath(), extractedPayloadPath.toString());
 
+        Path appPath = extractedPayloadPath.resolve(Constants.BUNDLE_APP_ID_NAME);
         Path ackPath = extractedPayloadPath.resolve(Constants.BUNDLE_ACKNOWLEDGEMENT_FILE_NAME);
         Path aduPath = extractedPayloadPath.resolve(Constants.BUNDLE_ADU_DIRECTORY_NAME);
 
@@ -88,6 +99,10 @@ public class BundleUtils {
 
         UncompressedPayload.Builder builder = new UncompressedPayload.Builder();
 
+        if (Files.exists(appPath)) { // only the server will send appIds
+            List<String> appIds = Files.exists(appPath) ? Files.readAllLines(appPath) : List.of();
+            builder.setAppIds(appIds);
+        }
         builder.setAckRecord(AckRecordUtils.readAckRecordFromFile(ackPath));
         builder.setBundleId(payload.getBundleId());
         builder.setADUs(ADUUtils.readADUs(aduPath.toFile()));
@@ -313,12 +328,15 @@ public class BundleUtils {
                                                   byte[] routingData,
                                                   String ackedEncryptedBundleId,
                                                   String crashReport,
-                                                  OutputStream outputStream) throws IOException,
-            NoSuchAlgorithmException {
+                                                  OutputStream outputStream,
+                                                  List<String> appIds) throws IOException, NoSuchAlgorithmException {
         try (DDDJarFileCreator innerJar = new DDDJarFileCreator(outputStream)) {
             if (ackedEncryptedBundleId == null) ackedEncryptedBundleId = "HB";
             logger.log(INFO, "[BU/createBundlePayload] " + adus.size());
             // add the records to the inner jar
+            if (appIds != null && !appIds.isEmpty()) {
+                innerJar.createEntry(Constants.BUNDLE_APP_ID_NAME, String.join("\n", appIds).getBytes());
+            }
             innerJar.createEntry("acknowledgement.txt", ackedEncryptedBundleId.getBytes());
             innerJar.createEntry("routing.metadata", routingData == null ? "{}".getBytes() : routingData);
             if (crashReport != null) {
@@ -374,7 +392,8 @@ public class BundleUtils {
                                       String crashReport,
                                       List<ADU> adus,
                                       byte[] routingData,
-                                      PipedInputStream inputPipe) throws IOException {
+                                      PipedInputStream inputPipe,
+                                      List<String> appIds) throws IOException {
         PipedOutputStream outputPipe = new PipedOutputStream(inputPipe);
         Future<?> future = executorService.submit(() -> {
             try {
@@ -382,7 +401,8 @@ public class BundleUtils {
                                                        routingData,
                                                        ackedEncryptedBundleId,
                                                        crashReport,
-                                                       outputPipe);
+                                                       outputPipe,
+                                                       appIds);
             } catch (IOException | NoSuchAlgorithmException e) {
                 return e;
             } finally {

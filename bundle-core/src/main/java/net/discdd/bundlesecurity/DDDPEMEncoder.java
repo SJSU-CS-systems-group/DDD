@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.INFO;
 import static net.discdd.bundlesecurity.SecurityUtils.decryptAesCbcPkcs5;
 import static net.discdd.bundlesecurity.SecurityUtils.encryptAesCbcPkcs5;
 
@@ -105,8 +106,13 @@ public class DDDPEMEncoder {
         ECKeyPair ephemeralKeyPair = Curve.generateKeyPair();
         byte[] agreement = Curve.calculateAgreement(serverIdentityPublicKey, ephemeralKeyPair.getPrivateKey());
         String sharedSecret = Base64.getEncoder().encodeToString(agreement);
-        String encryptedClientPubKey =
-                encryptAesCbcPkcs5(sharedSecret, Base64.getEncoder().encodeToString(clientPublicKey.serialize()));
+        logger.log(INFO,
+                   String.format("We're about to create encrypted client public key %s",
+                                 Base64.getEncoder().encodeToString(clientPublicKey.serialize())));
+        String encryptedClientPubKey = encryptAesCbcPkcs5(sharedSecret,
+                                                          Base64.getEncoder()
+                                                                  .encodeToString(clientPublicKey.serialize()),
+                                                          false);
         return (EC_ENCRYPTED_PUBLIC_KEY_HEADER + "\n" +
                 Base64.getUrlEncoder().encodeToString(encryptedClientPubKey.getBytes()) + "\n" +
                 Base64.getUrlEncoder().encodeToString(ephemeralKeyPair.getPublicKey().serialize()) + "\n" +
@@ -143,10 +149,11 @@ public class DDDPEMEncoder {
             byte[] agreement = Curve.calculateAgreement(ephemeralPublicKey, ServerPrivKey);
             String sharedSecret = Base64.getEncoder().encodeToString(agreement);
             byte[] decryptedClientPubKey;
+            decryptedClientPubKey = decryptAesCbcPkcs5(sharedSecret, new String(encryptedClientPublicKey), false);
             try {
+                Curve.decodePoint(Base64.getDecoder().decode(decryptedClientPubKey), 0);
+            } catch (InvalidKeyException | IllegalArgumentException e) {
                 decryptedClientPubKey = decryptAesCbcPkcs5(sharedSecret, new String(encryptedClientPublicKey));
-            } catch (GeneralSecurityException e) {
-                throw new RuntimeException("AES decryption failed: " + e.getMessage(), e);
             }
             String keyInStandardBase64Characters = new String(decryptedClientPubKey);
             keyInStandardBase64Characters = keyInStandardBase64Characters.replace('+', '-').replace('/', '_');

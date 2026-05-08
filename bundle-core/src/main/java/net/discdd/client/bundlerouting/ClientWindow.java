@@ -22,8 +22,6 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Level.WARNING;
 
-// TODO: I'm not sure if this class is worthwhile. We can easily generate a sequence of needed
-//       encryptedBundleIds on the fly.
 public class ClientWindow {
 
     private static final Logger logger = Logger.getLogger(ClientWindow.class.getName());
@@ -111,11 +109,10 @@ public class ClientWindow {
 
     public static ClientWindow initializeInstance(int windowLength, String clientID, ClientPaths clientPaths) throws
             BufferOverflow, IOException {
-        if (singleClientWindowInstance == null) {
-            singleClientWindowInstance = new ClientWindow(windowLength, clientID, clientPaths);
-        } else {
-            logger.log(INFO, "[WIN]: Client Window Instance is already initialized!");
-        }
+        // Always replace the singleton so callers passing a fresh client identity (e.g. after a
+        // server switch via QR scan) get a window bound to the new clientID instead of silently
+        // returning a stale instance with the previous clientID.
+        singleClientWindowInstance = new ClientWindow(windowLength, clientID, clientPaths);
         return singleClientWindowInstance;
     }
 
