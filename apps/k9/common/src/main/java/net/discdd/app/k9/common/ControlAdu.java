@@ -140,6 +140,8 @@ public class ControlAdu {
         public String email() {return properties.getProperty("email");}
 
         public String password() {return properties.getProperty("password");}
+
+        public String locale() {return properties.getProperty("locale");}
     }
 
     public static class LoginAckControlAdu extends ControlAdu implements EmailAck {
@@ -164,6 +166,8 @@ public class ControlAdu {
         public String suffix() {return properties.getProperty("suffix");}
 
         public String password() {return properties.getProperty("password");}
+
+        public String locale() {return properties.getProperty("locale");}
     }
 
     public static class RegisterAckControlAdu extends ControlAdu implements EmailAck {
