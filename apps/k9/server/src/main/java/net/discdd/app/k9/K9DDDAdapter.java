@@ -30,6 +30,7 @@ import jakarta.mail.internet.MimeMessage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +39,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Random;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 import static java.lang.String.format;
 import static java.util.logging.Level.INFO;
@@ -47,6 +49,7 @@ import static java.util.logging.Level.SEVERE;
 public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServiceImplBase {
 
     static final Logger logger = Logger.getLogger(K9DDDAdapter.class.getName());
+    private static final Pattern LOCALE_PATTERN = Pattern.compile("^[a-z]{2}$");
     public static final int MAX_RECIPIENTS = 5;
     // yahoo and gmail are 25M and MS is 20M
     public static final int MAX_DATA_SIZE = 1024 * 1024 * 20;
@@ -191,9 +194,9 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
                 // create success ack
                 var ack = new ControlAdu.LoginAckControlAdu(Map.of("email", adu.email(), "success", true));
                 sendADUsStorage.addADU(clientId, APP_ID, ack.toBytes(), -1);
-                sendADUsStorage.addADU(clientId, APP_ID, getEmail("login", adu.email()), -1);
+                sendADUsStorage.addADU(clientId, APP_ID, getEmail("login", adu.email(), adu.locale()), -1);
                 if (!Objects.equals(clientId, oldClientId)) {
-                    sendADUsStorage.addADU(oldClientId, APP_ID, getEmail("logout", adu.email()), -1);
+                    sendADUsStorage.addADU(oldClientId, APP_ID, getEmail("logout", adu.email(), adu.locale()), -1);
                 }
             }
         } else {
@@ -203,13 +206,21 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
         }
     }
 
-    private byte[] getEmail(String type, String email) {
+    private byte[] getEmail(String type, String email, String locale) {
         var username = email.split("@")[0];
-        try (var is = K9DDDAdapter.class.getResourceAsStream("/emails/" + type)) {
-            return new String(is.readAllBytes()).replace("DDD_SUPPORT_EMAIL", supportEmail)
+        var validLocale = (locale != null && LOCALE_PATTERN.matcher(locale).matches()) ? locale : null;
+        var localePath = "/emails/" + type + "_" + validLocale;
+        var defaultPath = "/emails/" + type;
+        var localeStream = (validLocale != null) ? K9DDDAdapter.class.getResourceAsStream(localePath) : null;
+        try (var is = (localeStream != null) ? localeStream : K9DDDAdapter.class.getResourceAsStream(defaultPath)) {
+            if (is == null) {
+                logger.log(SEVERE, "Missing email template: " + defaultPath);
+                return null;
+            }
+            return new String(is.readAllBytes(), StandardCharsets.UTF_8).replace("DDD_SUPPORT_EMAIL", supportEmail)
                     .replace("EMAIL_ADDRESS", email)
                     .replace("USERNAME", username)
-                    .getBytes();
+                    .getBytes(StandardCharsets.UTF_8);
         } catch (IOException e) {
             logger.log(SEVERE, "Error fetching email template for type: " + type, e);
             return null;
@@ -260,7 +271,7 @@ public class K9DDDAdapter extends ServiceAdapterServiceGrpc.ServiceAdapterServic
                 clientToEmailRepository.save(entity);
                 var ack = new ControlAdu.RegisterAckControlAdu(Map.of("email", email, "success", true));
                 sendADUsStorage.addADU(clientId, APP_ID, ack.toBytes(), -1);
-                sendADUsStorage.addADU(clientId, APP_ID, getEmail("welcome", email), -1);
+                sendADUsStorage.addADU(clientId, APP_ID, getEmail("welcome", email, adu.locale()), -1);
                 return;
             }
             if (tries++ > 100) {

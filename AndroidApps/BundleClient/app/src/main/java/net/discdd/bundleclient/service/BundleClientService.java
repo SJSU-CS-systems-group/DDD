@@ -141,7 +141,7 @@ public class BundleClientService extends Service {
 
             @Override
             public void onLost(Network network) {
-                eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DISCONNECTED);
+                eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DIRECT_DISCONNECTED);
             }
         };
         connectivityManager.registerDefaultNetworkCallback(networkCallback);
@@ -170,10 +170,10 @@ public class BundleClientService extends Service {
     }
 
     private void checkValidNetwork() {
-        if (isNetworkValid()) {
-            eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_CONNECTED);
-        } else {
-            eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DISCONNECTED);
+        if (isNetworkValid()) { /* the device is not connected to a Wi-Fi direct network */
+            eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DIRECT_DISCONNECTED);
+        } else { /* the device is connected to a Wi-Fi direct network */
+            eventsLiveData.postValue(DDDWifiEventType.DDDWIFI_DIRECT_CONNECTED);
         }
     }
 

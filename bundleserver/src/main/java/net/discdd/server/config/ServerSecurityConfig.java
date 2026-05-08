@@ -1,6 +1,7 @@
 package net.discdd.server.config;
 
 import net.discdd.bundlesecurity.ServerSecurity;
+import net.discdd.server.commands.CommandProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,6 +20,11 @@ public class ServerSecurityConfig {
 
     @Bean
     ServerSecurity createServerSecurityInstance() {
+        // Skip bean creation during CLI command execution (e.g., generate-keys)
+        if (isCliCommand()) {
+            return null;
+        }
+
         try {
             logger.log(FINE, "Using keys in " + bundleStoreConfig.getBundleSecurity().getServerKeyPath());
 
@@ -29,5 +35,19 @@ public class ServerSecurityConfig {
             e.printStackTrace();
         }
         return null;
+    }
+
+    private boolean isCliCommand() {
+        String[] args = getCommandLineArgs();
+        return CommandProcessor.checkForCommand(args);
+    }
+
+    private String[] getCommandLineArgs() {
+        // Get args from system property set by BundleServerApplication
+        String argsStr = System.getProperty("bundleserver.cli.args", "");
+        if (argsStr.isEmpty()) {
+            return new String[0];
+        }
+        return argsStr.split("\\|");
     }
 }
