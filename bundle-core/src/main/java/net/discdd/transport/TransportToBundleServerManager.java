@@ -115,6 +115,9 @@ public class TransportToBundleServerManager {
                 }
                 bsStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                         .crashReports(requestBuilder.build());
+                for (File crashFile : crashReportFiles) {
+                    crashFile.delete();
+                }
             }
             var inventoryResponse = bsStub.withDeadlineAfter(Constants.GRPC_LONG_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     .bundleInventory(BundleInventoryRequest.newBuilder()

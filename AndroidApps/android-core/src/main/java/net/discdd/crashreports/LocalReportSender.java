@@ -73,7 +73,8 @@ public class LocalReportSender implements ReportSender {
         //looking for how many reports exist in dir
         AtomicInteger num = new AtomicInteger(); //change name
         logger.log(INFO, "ACRA: About to start counting num reports in dir");
-        Files.walk(reportsDir).forEach(file -> {
+        try (var stream = Files.walk(reportsDir)) {
+            stream.forEach(file -> {
             if (file.getFileName().toString().startsWith("crash_report")) {
                 num.getAndIncrement();
                 logger.log(INFO, "ACRA: Num reports (and counting possibly): " + num.getAcquire());
@@ -81,11 +82,12 @@ public class LocalReportSender implements ReportSender {
         });
         if (num.getAcquire() >= MAX_AMOUNT_REPORTS) {
             logger.log(INFO, "ACRA: Max num reports read, deleting oldest");
-            //rewrite file name with number after "crash_report" - 1
-            // if currChar == 1, delete old crash report
-            Files.walk(reportsDir).sorted().forEach(file -> { //sort b/c walk doesn't guarantee order in which dir is traversed
+            try (var stream2 = Files.walk(reportsDir)) {
+                stream2.sorted().forEach(file -> {
                 if (file.getFileName().toString().startsWith("crash_report")) {
                     char currChar = file.getFileName().toString().charAt(CRASH_REPORT_NUM_INDEX);
+                    Matcher m = CRASH_REPORT_PATTERN.matcher(file.getFileName().toString());
+                    if (!m.matches()) return;
                     int currNum;
                     try {
                         currNum = Character.getNumericValue(currChar);
@@ -111,7 +113,7 @@ public class LocalReportSender implements ReportSender {
                         }
                     }
                 }
-            });
+            });}
             return MAX_AMOUNT_REPORTS;
         }
         return num.getAcquire() + 1;

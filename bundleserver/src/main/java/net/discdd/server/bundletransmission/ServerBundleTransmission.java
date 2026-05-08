@@ -37,6 +37,7 @@ import java.io.IOException;
 import java.io.PipedInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
@@ -162,13 +163,13 @@ public class ServerBundleTransmission {
                 try {
                     Files.createDirectories(destDir);
                     long timestamp = System.currentTimeMillis();
-                    try (var entries = Files.list(crashReportSrcDir)) {
+                    try (var entries = Files.list(crashReportSrcDir).filter(Files::isRegularFile)) {
                         var reports = entries.sorted().collect(Collectors.toList());
                         logger.log(INFO, "[CrashReports] found " + reports.size() + " report(s) for client " + clientId);
                         for (int i = 0; i < reports.size(); i++) {
                             Path dest = destDir.resolve(clientId + "_" + timestamp + "_" + (i + 1));
                             logger.log(INFO, "[CrashReports] copying " + reports.get(i) + " -> " + dest);
-                            Files.copy(reports.get(i), dest);
+                            Files.copy(reports.get(i), dest, StandardCopyOption.REPLACE_EXISTING);
                         }
                     }
                 } catch (Exception e) {
