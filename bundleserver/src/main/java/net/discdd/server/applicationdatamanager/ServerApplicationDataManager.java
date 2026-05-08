@@ -217,5 +217,4 @@ public class ServerApplicationDataManager {
     public interface AduDeliveredListener {
         void onAduDelivered(String clientId, Set<String> appId);
     }
-
 }

@@ -70,18 +70,17 @@ public class LocalReportSender implements ReportSender {
      * @return next available index
      */
     public int optimizeReports(Path reportsDir) throws IOException {
-        //looking for how many reports exist in dir
-        AtomicInteger num = new AtomicInteger(); //change name
-        logger.log(INFO, "ACRA: About to start counting num reports in dir");
+        AtomicInteger numFiles = new AtomicInteger();
+        logger.log(INFO, "ACRA: About to start counting numFiles reports in dir");
         try (var stream = Files.walk(reportsDir)) {
             stream.forEach(file -> {
                 if (file.getFileName().toString().startsWith("crash_report")) {
-                    num.getAndIncrement();
-                    logger.log(INFO, "ACRA: Num reports (and counting possibly): " + num.getAcquire());
+                    numFiles.getAndIncrement();
+                    logger.log(INFO, "ACRA: Num reports (and counting possibly): " + numFiles.getAcquire());
                 }
             });
-            if (num.getAcquire() >= MAX_AMOUNT_REPORTS) {
-                logger.log(INFO, "ACRA: Max num reports read, deleting oldest");
+            if (numFiles.getAcquire() >= MAX_AMOUNT_REPORTS) {
+                logger.log(INFO, "ACRA: Max numFiles reports read, deleting oldest");
                 try (var stream2 = Files.walk(reportsDir)) {
                     stream2.sorted().forEach(file -> {
                         if (file.getFileName().toString().startsWith("crash_report")) {
@@ -124,7 +123,7 @@ public class LocalReportSender implements ReportSender {
                 }
                 return MAX_AMOUNT_REPORTS;
             }
-            return num.getAcquire() + 1;
+            return numFiles.getAcquire() + 1;
         }
     }
 
