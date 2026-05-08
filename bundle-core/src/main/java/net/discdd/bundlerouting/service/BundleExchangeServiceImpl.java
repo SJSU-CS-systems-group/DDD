@@ -36,7 +36,7 @@ import static java.util.logging.Level.WARNING;
 public abstract class BundleExchangeServiceImpl extends BundleExchangeServiceGrpc.BundleExchangeServiceImplBase {
     private static final Logger logger = Logger.getLogger(BundleExchangeServiceImpl.class.getName());
 
-    private static final int DOWNLOAD_BUFFER_SIZE = 4096;
+    private static final int DOWNLOAD_BUFFER_SIZE = 4 * 1024 * 1024;
 
     @Override
     public StreamObserver<BundleUploadRequest> uploadBundle(StreamObserver<BundleUploadResponse> responseObserver) {

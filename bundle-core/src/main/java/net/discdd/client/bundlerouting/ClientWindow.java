@@ -32,7 +32,7 @@ public class ClientWindow {
 
     private final LinkedList<UnencryptedBundleId> windowOfUnencryptedBundleIds = new LinkedList<>();
     private final String clientID;
-    private int windowLength = 10; /* Default Value */
+    private int windowLength = Constants.DEFAULT_WINDOW_SIZE;
     private final ClientPaths clientPaths;
 
     /* Generates bundleIDs for window slots
@@ -68,7 +68,6 @@ public class ClientWindow {
     private void initializeWindow() throws IOException {
 
         var start = 0L;
-        windowLength = Constants.DEFAULT_WINDOW_SIZE;
         var end = start + windowLength - 1;
 
         try {
