@@ -185,6 +185,7 @@ public class ClientBundleTransmission {
         List<Path> crashReports;
         try (var stream = Files.list(clientPaths.toBeBundledDir)) {
             crashReports = stream
+                    .filter(Files::isRegularFile)
                     .filter(p -> p.getFileName().toString().startsWith("crash_report"))
                     .sorted()
                     .collect(Collectors.toList());
