@@ -38,7 +38,6 @@ public class ServerApplicationDataManager {
     private final RegisteredAppAdapterRepository registeredAppAdapterRepository;
     private final ClientBundleCountersRepository clientBundleCountersRepository;
     AduDeliveredListener aduDeliveredListener;
-    CrashReportListener crashReportListener;
     private final StoreADUs receiveADUsStorage;
     private final StoreADUs sendADUsStorage;
 
@@ -57,7 +56,6 @@ public class ServerApplicationDataManager {
         this.registeredAppAdapterRepository = registeredAppAdapterRepository;
         this.sendADUsStorage = aduStores.getSendADUsStorage();
         this.receiveADUsStorage = aduStores.getReceiveADUsStorage();
-        this.crashReportListener = crashReportListener;
     }
 
     public List<String> getRegisteredAppIds() {
@@ -220,8 +218,4 @@ public class ServerApplicationDataManager {
         void onAduDelivered(String clientId, Set<String> appId);
     }
 
-    //TODO: move this method (to bundle service? or something both bundle service and client-processing share?) it doesn't make sense to live here
-    public interface CrashReportListener {
-        void onReportReceived();
-    }
 }

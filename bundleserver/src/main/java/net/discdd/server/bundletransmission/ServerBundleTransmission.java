@@ -73,7 +73,6 @@ public class ServerBundleTransmission {
     private final BundleRouting bundleRouting;
     private final ServerWindowService serverWindowService;
     private final ServerSecurity serverSecurity;
-    private final ServerApplicationDataManager.CrashReportListener crashReportListener;
     @Value("${bundle-server.bundle-store-shared}")
     private String bundleStoreShared;
     SecureRandom secureRandom = new SecureRandom();
@@ -83,15 +82,13 @@ public class ServerBundleTransmission {
                                     BundleRouting bundleRouting,
                                     BundleServerConfig config,
                                     ServerWindowService serverWindowService,
-                                    ServerSecurity serverSecurity,
-                                    ServerApplicationDataManager.CrashReportListener crashReportListener) {
+                                    ServerSecurity serverSecurity) {
         this.config = config;
         this.bundleSecurity = bundleSecurity;
         this.applicationDataManager = applicationDataManager;
         this.bundleRouting = bundleRouting;
         this.serverWindowService = serverWindowService;
         this.serverSecurity = serverSecurity;
-        this.crashReportListener = crashReportListener;
     }
 
     public static String bundleSenderToString(BundleSenderType senderType, String senderId) {
@@ -172,9 +169,6 @@ public class ServerBundleTransmission {
                             Path dest = destDir.resolve(clientId + "_" + timestamp + "_" + (i + 1));
                             logger.log(INFO, "[CrashReports] copying " + reports.get(i) + " -> " + dest);
                             Files.copy(reports.get(i), dest);
-                        }
-                        if (!reports.isEmpty()) {
-                            crashReportListener.onReportReceived();
                         }
                     }
                 } catch (Exception e) {
