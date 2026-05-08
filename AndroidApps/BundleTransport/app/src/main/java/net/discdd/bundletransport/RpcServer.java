@@ -220,7 +220,7 @@ public class RpcServer {
                                                                        bundleTransportService.grpcKeys.grpcCert)
                     .getKeyManagers();
             var credentials = TlsServerCredentials.newBuilder().keyManager(keyManagers).build();
-            server = OkHttpServerBuilder.forPort(port, credentials).maxInboundMessageSize(5 * 1000 * 1000) // 5 MB;
+            server = OkHttpServerBuilder.forPort(port, credentials).maxInboundMessageSize(5 * 1024 * 1024) // 5 MB;
                     .addService(bundleExchangeService).executor(Executors.newFixedThreadPool(4)).build();
         } catch (Exception e) {
             logger.log(SEVERE, "TLS communication exceptions ", e);
