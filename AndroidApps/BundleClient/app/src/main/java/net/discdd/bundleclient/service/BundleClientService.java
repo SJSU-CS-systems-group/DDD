@@ -354,6 +354,9 @@ public class BundleClientService extends Service {
             if (currentBundle.e() instanceof ClientBundleTransmission.RecencyException) {
                 broadcastBundleClientLogEvent(R.string.not_exchanged_recently_s, currentBundle.e().getMessage());
             }
+            if (currentBundle.e() instanceof ServerKeyMismatchException) {
+                broadcastBundleClientLogEvent(R.string.server_key_mismatch);
+            }
             String text1;
             String text2;
             if (currentBundle.uploadStatus() == Statuses.FAILED) {
