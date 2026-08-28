@@ -12,8 +12,6 @@ there are several parts to this project, including:
 
 our first target application is email and we have modified K9 (the opensource android email client) to work with DDD: https://github.com/SJSU-CS-systems-group/DDD-thunderbird-android
 
-Drop Box design doc (GitHub Pages, after it is enabled): https://sjsu-cs-systems-group.github.io/DDD/dropbox/
-
 the server apps are build with maven, and the android apps are built with gradle.
 we recommend using intellij and android studio for development.
 check out this repo directly into the relevant IDE. the IDE will automatically recognize the gradle and maven projects.
