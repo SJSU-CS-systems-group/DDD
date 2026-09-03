@@ -94,6 +94,12 @@ public class ClientBundleTransmission {
         }
     }
 
+    public static class ServerKeyMismatchException extends RecencyException {
+        public ServerKeyMismatchException(String message) {
+            super(message);
+        }
+    }
+
     private static final Logger logger = Logger.getLogger(ClientBundleTransmission.class.getName());
     private final ExecutorService executorService = Executors.newCachedThreadPool();
     private final ClientBundleSecurity bundleSecurity;
@@ -269,12 +275,12 @@ public class ClientBundleTransmission {
         }
         var receivedServerPublicKey = Curve.decodePoint(recencyBlobResponse.getServerPublicKey().toByteArray(), 0);
         if (!bundleSecurity.getClientSecurity().getServerPublicKey().equals(receivedServerPublicKey)) {
-            throw new RecencyException("Recency blob signed by unknown server");
+            throw new ServerKeyMismatchException("Recency blob signed by unknown server");
         }
         if (!SecurityUtils.verifySignatureRaw(recencyBlob.toByteArray(),
                                               receivedServerPublicKey,
                                               recencyBlobResponse.getRecencyBlobSignature().toByteArray())) {
-            throw new RecencyException("Recency blob signature verification failed");
+            throw new ServerKeyMismatchException("Recency blob signature verification failed");
         }
         return recencyTracker.isNewerRecencyBlob(device, recencyBlobResponse);
     }
