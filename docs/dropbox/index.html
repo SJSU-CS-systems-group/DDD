@@ -1,0 +1,2739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Drop Box — A Stationary Bundle Relay for DDD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f5f1e8;
+  --paper-tint: #ede7d8;
+  --ink: #1a1814;
+  --ink-soft: #3a342a;
+  --ink-muted: #5c5448;
+  --ink-faint: #8a8276;
+  --rule: #d4cdb8;
+  --rule-soft: #e2dcc9;
+  --accent: #b84a1f;
+  --accent-soft: #d97a52;
+  --accent-pale: #f0d9c8;
+  --signal-good: #4a6b2e;
+  --signal-warn: #a07020;
+  --signal-bad: #9a3525;
+  --serif: 'Fraunces', Georgia, serif;
+  --sans: 'Inter', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.6;
+  font-feature-settings: 'ss01', 'ss02', 'kern';
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─────────────────────────── Layout container */
+.page {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+/* ─────────────────────────── Header */
+.masthead {
+  border-bottom: 1px solid var(--rule);
+  padding: 24px 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-family: var(--sans);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.masthead .brand { font-weight: 600; color: var(--ink); letter-spacing: 0.06em; }
+.masthead .meta { display: flex; gap: 24px; }
+
+/* ─────────────────────────── Hero */
+.hero {
+  padding: 80px 0 64px;
+  border-bottom: 1px solid var(--rule);
+  position: relative;
+}
+.hero .kicker {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 24px;
+}
+.hero h1 {
+  font-family: var(--serif);
+  font-weight: 350;
+  font-size: clamp(40px, 6vw, 72px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin-bottom: 32px;
+  font-variation-settings: 'opsz' 144, 'SOFT' 50;
+}
+.hero h1 em {
+  font-style: italic;
+  font-weight: 300;
+  color: var(--accent);
+}
+.hero .lede {
+  font-family: var(--serif);
+  font-size: 22px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  max-width: 720px;
+  margin-bottom: 48px;
+  font-weight: 350;
+}
+.hero .meta-row, .overview-hero .meta-row {
+  display: flex;
+  gap: 48px;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink-muted);
+  border-top: 1px solid var(--rule-soft);
+  padding-top: 24px;
+}
+.hero .meta-row .label, .overview-hero .meta-row .label {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  display: block;
+  margin-bottom: 6px;
+}
+.hero .meta-row strong, .overview-hero .meta-row strong { color: var(--ink); font-weight: 500; }
+
+/* ─────────────────────────── Section structure */
+section {
+  padding: 80px 0;
+  border-bottom: 1px solid var(--rule);
+}
+section:last-of-type { border-bottom: none; }
+
+.section-header {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 32px;
+  margin-bottom: 56px;
+  align-items: baseline;
+}
+.section-num {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+}
+.section-header h2 {
+  font-family: var(--serif);
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 350;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+.section-header .subtitle {
+  grid-column: 2;
+  font-family: var(--sans);
+  font-size: 14px;
+  color: var(--ink-muted);
+  margin-top: 12px;
+  letter-spacing: 0.01em;
+}
+
+/* ─────────────────────────── Body content grid */
+.content {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 32px;
+}
+.content > .body { grid-column: 2; max-width: 720px; }
+.content > .full { grid-column: 1 / -1; }
+.content > .marginalia {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink-muted);
+  line-height: 1.5;
+  padding-top: 4px;
+}
+
+p { margin-bottom: 1.2em; }
+p + p { text-indent: 0; }
+
+.body h3 {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 22px;
+  margin-top: 2.4em;
+  margin-bottom: 0.6em;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+}
+.body h4 {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-top: 2em;
+  margin-bottom: 0.8em;
+}
+
+a { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--accent-pale); }
+a:hover { border-bottom-color: var(--accent); }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.88em;
+  background: var(--paper-tint);
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: var(--ink);
+  border: 1px solid var(--rule-soft);
+}
+
+strong { font-weight: 600; color: var(--ink); }
+em { font-style: italic; }
+
+ul, ol { margin: 1em 0 1.4em 1.5em; }
+li { margin-bottom: 0.4em; }
+
+/* ─────────────────────────── Pull quote / callout */
+.callout {
+  font-family: var(--serif);
+  font-size: 24px;
+  line-height: 1.4;
+  font-weight: 350;
+  font-style: italic;
+  color: var(--ink-soft);
+  border-left: 2px solid var(--accent);
+  padding: 8px 0 8px 28px;
+  margin: 2em 0;
+  max-width: 680px;
+}
+.callout .attrib {
+  font-family: var(--sans);
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-top: 12px;
+  display: block;
+}
+
+/* ─────────────────────────── Stats / numbers strip */
+.stats-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  margin: 2em 0;
+}
+.stats-strip .stat {
+  padding: 24px 28px;
+  border-right: 1px solid var(--rule-soft);
+}
+.stats-strip .stat:last-child { border-right: none; }
+.stats-strip .stat .num {
+  font-family: var(--serif);
+  font-weight: 350;
+  font-size: 36px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  font-variation-settings: 'opsz' 144;
+  display: block;
+  margin-bottom: 8px;
+}
+.stats-strip .stat .num .unit {
+  font-size: 14px;
+  font-family: var(--sans);
+  font-weight: 500;
+  color: var(--ink-muted);
+  margin-left: 4px;
+}
+.stats-strip .stat .label {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ─────────────────────────── Cost configuration table */
+.cost-config {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5em 0;
+  font-family: var(--sans);
+  font-size: 13px;
+}
+.cost-config th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding: 12px 14px 10px 0;
+  border-bottom: 1px solid var(--ink);
+  vertical-align: bottom;
+}
+.cost-config th:first-child { padding-left: 0; }
+.cost-config th:last-child, .cost-config td:last-child { text-align: right; padding-right: 0; }
+.cost-config td {
+  padding: 12px 14px 12px 0;
+  border-bottom: 1px solid var(--rule-soft);
+  color: var(--ink-soft);
+  line-height: 1.45;
+  vertical-align: top;
+}
+.cost-config td:first-child { padding-left: 0; }
+.cost-config tr.config-row td {
+  background: var(--paper-tint);
+  font-weight: 600;
+  color: var(--ink);
+  border-bottom: 1px solid var(--rule);
+}
+.cost-config tr.config-row td:first-child { font-family: var(--serif); font-size: 16px; padding: 14px 14px 14px 12px; }
+.cost-config .config-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  padding: 2px 7px;
+  border-radius: 2px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+.cost-config .total-row td {
+  font-weight: 600;
+  color: var(--ink);
+  border-bottom: 2px solid var(--ink);
+  font-family: var(--mono);
+  font-size: 14px;
+}
+.cost-config .total-row td:first-child {
+  font-family: var(--sans);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.cost-config .item-name { color: var(--ink); }
+.cost-config .item-note { display: block; font-size: 11px; color: var(--ink-faint); margin-top: 2px; }
+.cost-config .price { font-family: var(--mono); white-space: nowrap; color: var(--ink); }
+
+
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5em 0 2em;
+  font-family: var(--sans);
+  font-size: 13px;
+}
+.compare th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding: 12px 16px 12px 0;
+  border-bottom: 1px solid var(--ink);
+  vertical-align: bottom;
+}
+.compare th:first-child { padding-left: 0; }
+.compare td {
+  padding: 18px 16px 18px 0;
+  border-bottom: 1px solid var(--rule-soft);
+  vertical-align: top;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+.compare td:first-child { padding-left: 0; }
+.compare tr.recommended td {
+  background: linear-gradient(90deg, var(--accent-pale) 0%, transparent 100%);
+}
+.compare tr.recommended td:first-child {
+  font-weight: 600;
+  color: var(--ink);
+  position: relative;
+}
+.compare tr.recommended td:first-child::before {
+  content: "▶";
+  position: absolute;
+  left: -22px;
+  color: var(--accent);
+  font-size: 11px;
+  top: 21px;
+}
+.compare .device-name {
+  font-weight: 600;
+  color: var(--ink);
+  font-size: 14px;
+  display: block;
+  margin-bottom: 4px;
+}
+.compare .device-sub {
+  font-size: 11px;
+  color: var(--ink-faint);
+  font-family: var(--mono);
+  letter-spacing: 0;
+}
+.tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 2px;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+.tag-good { background: rgba(74, 107, 46, 0.12); color: var(--signal-good); }
+.tag-warn { background: rgba(160, 112, 32, 0.12); color: var(--signal-warn); }
+.tag-bad { background: rgba(154, 53, 37, 0.12); color: var(--signal-bad); }
+.tag-neutral { background: var(--paper-tint); color: var(--ink-muted); }
+
+/* ─────────────────────────── Architecture diagram (SVG) */
+.diagram-wrap {
+  margin: 2em 0;
+  padding: 32px 0;
+  border-top: 1px solid var(--rule-soft);
+  border-bottom: 1px solid var(--rule-soft);
+}
+.diagram-caption {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--ink-muted);
+  letter-spacing: 0.02em;
+  margin-top: 16px;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+.diagram-caption .fig {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+svg text { font-family: var(--sans); }
+svg .label-mono { font-family: var(--mono); }
+svg .label-serif { font-family: var(--serif); }
+
+/* ─────────────────────────── Code block */
+pre.codeblock {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.55;
+  background: #1a1814;
+  color: #e8dec5;
+  padding: 20px 24px;
+  margin: 1.5em 0;
+  overflow-x: auto;
+  border-radius: 2px;
+  position: relative;
+}
+pre.codeblock::before {
+  content: attr(data-lang);
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: #8a8276;
+  font-weight: 500;
+}
+pre.codeblock .kw { color: #e09060; }
+pre.codeblock .str { color: #a8b878; }
+pre.codeblock .com { color: #6c6456; font-style: italic; }
+pre.codeblock .fn { color: #d4af6a; }
+pre.codeblock .add { color: #c5d088; }
+
+/* ─────────────────────────── Priority list */
+.priority-list { margin: 1.5em 0 2em; }
+.priority-item {
+  display: grid;
+  grid-template-columns: 56px 100px 1fr;
+  gap: 24px;
+  padding: 24px 0;
+  border-bottom: 1px solid var(--rule-soft);
+  align-items: baseline;
+}
+.priority-item:first-child { border-top: 1px solid var(--ink); padding-top: 24px; }
+.priority-item .pri-num {
+  font-family: var(--serif);
+  font-size: 36px;
+  font-weight: 300;
+  font-variation-settings: 'opsz' 144;
+  color: var(--accent);
+  line-height: 1;
+}
+.priority-item .pri-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  align-self: start;
+  margin-top: 6px;
+  white-space: nowrap;
+}
+.pri-tag.high { color: var(--accent); }
+.pri-tag.med { color: var(--signal-warn); }
+.pri-tag.low { color: var(--ink-faint); }
+.priority-item h4 {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 500;
+  margin: 0 0 10px;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+.priority-item p {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
+}
+.priority-item .file-refs {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-muted);
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.priority-item .file-refs span {
+  background: var(--paper-tint);
+  padding: 2px 6px;
+  border-radius: 2px;
+  border: 1px solid var(--rule-soft);
+}
+
+/* ─────────────────────────── Two-column layout */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  margin: 2em 0;
+}
+.two-col > div h4 {
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+
+/* ─────────────────────────── Power/physical ideas grid */
+.idea-categories {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 32px;
+  margin: 2em 0;
+}
+.idea-cat h4 {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-bottom: 8px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--rule);
+}
+.idea-cat ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.idea-cat li {
+  font-family: var(--sans);
+  font-size: 13.5px;
+  line-height: 1.5;
+  padding: 8px 0;
+  color: var(--ink-soft);
+  border-bottom: 1px dotted var(--rule);
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+}
+.idea-cat li:last-child { border-bottom: none; }
+.idea-cat li .num-prefix {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--accent);
+  font-weight: 600;
+  flex-shrink: 0;
+  width: 18px;
+  text-align: right;
+}
+.idea-cat li strong { color: var(--ink); font-weight: 600; }
+
+/* ─────────────────────────── Collapsible appendix */
+details {
+  margin: 2em 0;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+}
+details summary {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 18px 24px;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.15s;
+}
+details summary:hover { background: var(--paper-tint); }
+details summary::-webkit-details-marker { display: none; }
+details summary::after {
+  content: "+";
+  font-family: var(--serif);
+  font-size: 24px;
+  font-weight: 300;
+  color: var(--accent);
+  transition: transform 0.2s;
+}
+details[open] summary::after { transform: rotate(45deg); }
+details > div { padding: 8px 24px 28px; border-top: 1px solid var(--rule-soft); }
+
+/* ─────────────────────────── TOC */
+.toc {
+  font-family: var(--sans);
+  font-size: 13px;
+  margin: 2em 0;
+  padding: 28px 32px;
+  background: var(--paper-tint);
+  border: 1px solid var(--rule);
+}
+.toc-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 16px;
+}
+.toc ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  columns: 2;
+  column-gap: 32px;
+}
+.toc li {
+  padding: 5px 0;
+  break-inside: avoid;
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+}
+.toc li a {
+  color: var(--ink-soft);
+  border-bottom: none;
+  flex: 1;
+}
+.toc li a:hover { color: var(--accent); }
+.toc .num {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ─────────────────────────── Footer */
+footer {
+  padding: 48px 0;
+  border-top: 1px solid var(--ink);
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--ink-muted);
+  display: flex;
+  justify-content: space-between;
+  letter-spacing: 0.04em;
+}
+
+/* ─────────────────────────── Responsive */
+@media (max-width: 800px) {
+  .section-header, .content {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .content > .body, .content > .full { grid-column: 1; }
+  .section-header .subtitle, .content > .marginalia { grid-column: 1; }
+  .two-col { grid-template-columns: 1fr; gap: 24px; }
+  .toc ol { columns: 1; }
+  .priority-item {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .stats-strip .stat { border-right: none; border-bottom: 1px solid var(--rule-soft); }
+  .hero .meta-row, .overview-hero .meta-row { flex-direction: column; gap: 20px; }
+}
+
+/* Print */
+@media print {
+  body { font-size: 11pt; }
+  .page { max-width: 100%; padding: 0 0.5in; }
+  section { padding: 0.4in 0; page-break-inside: avoid; }
+  details { border: none; }
+  details summary::after { display: none; }
+  details > div { display: block !important; }
+  .tab-nav { display: none !important; }
+  .tab-panel { display: block !important; page-break-before: always; }
+  .tab-panel:first-of-type { page-break-before: auto; }
+}
+
+/* ─────────────────────────── Tab navigation */
+.tab-nav {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--ink);
+  background: var(--paper);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  margin: 0 -32px;
+  padding: 0 32px;
+}
+.tab-btn {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--ink-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 18px 24px 16px;
+  cursor: pointer;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.tab-btn:hover { color: var(--ink); }
+.tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.tab-btn .tab-num {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+}
+.tab-btn.active .tab-num { color: var(--accent); }
+.tab-btn .tab-meta {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--ink-faint);
+  margin-left: 4px;
+}
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ─────────────────────────── Citations (footnote-style numbered) */
+sup.cite {
+  font-family: var(--mono);
+  font-size: 0.7em;
+  font-weight: 600;
+  color: var(--accent);
+  vertical-align: super;
+  margin-left: 1px;
+  line-height: 0;
+}
+sup.cite a {
+  color: var(--accent);
+  border-bottom: none;
+  padding: 0 2px;
+}
+sup.cite a:hover { background: var(--accent-pale); border-radius: 2px; }
+sup.cite.unlinked {
+  color: var(--ink-muted);
+  cursor: help;
+}
+.refs-list {
+  list-style: none;
+  margin: 1em 0;
+  padding: 0;
+  font-family: var(--sans);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.refs-list li {
+  padding: 6px 0 6px 32px;
+  border-bottom: 1px dotted var(--rule);
+  position: relative;
+  color: var(--ink-soft);
+}
+.refs-list li:last-child { border-bottom: none; }
+.refs-list .ref-num {
+  position: absolute;
+  left: 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.refs-list .ref-source { font-weight: 500; color: var(--ink); }
+.refs-list .ref-note { font-style: italic; color: var(--ink-faint); font-size: 11px; }
+.refs-list a { word-break: break-word; }
+.refs-list .ref-unlinked { color: var(--ink-muted); font-family: var(--mono); font-size: 11px; }
+
+/* ─────────────────────────── Cross-tab link styling */
+a.x-tab {
+  border-bottom: 1px dashed var(--accent-pale);
+}
+a.x-tab::after {
+  content: "↗";
+  font-size: 0.75em;
+  margin-left: 2px;
+  color: var(--accent);
+  vertical-align: super;
+}
+
+/* ─────────────────────────── Workstream cards (impl path) */
+.workstream {
+  margin: 2em 0;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.workstream-head {
+  background: var(--paper-tint);
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--rule);
+}
+.workstream-head .ws-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+.workstream-head h3 {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0 0 10px;
+}
+.workstream-head .ws-summary {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink-muted);
+  line-height: 1.5;
+}
+.workstream-body { padding: 24px; }
+.ws-section { margin-bottom: 24px; }
+.ws-section:last-child { margin-bottom: 0; }
+.ws-section h4 {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin: 0 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--rule-soft);
+}
+.ws-section ol, .ws-section ul {
+  margin: 8px 0 8px 1.5em;
+  font-family: var(--sans);
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+.ws-section li { margin-bottom: 6px; }
+.ws-section p {
+  font-family: var(--sans);
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  line-height: 1.55;
+  margin: 8px 0;
+}
+.ws-deps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.ws-dep {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 8px;
+  background: var(--paper-tint);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  color: var(--ink-soft);
+}
+.ws-criteria {
+  background: var(--paper-tint);
+  padding: 12px 16px;
+  border-left: 2px solid var(--signal-good);
+  margin-top: 8px;
+  font-size: 13px;
+  font-family: var(--sans);
+  color: var(--ink-soft);
+}
+.ws-criteria strong { color: var(--signal-good); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; display: block; margin-bottom: 4px; }
+
+/* ─────────────────────────── Overview hero variant */
+.overview-hero {
+  padding: 80px 0 64px;
+  border-bottom: 1px solid var(--rule);
+}
+.overview-card {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 32px;
+  margin: 2em 0;
+  padding: 28px 0;
+  border-top: 1px solid var(--rule-soft);
+  border-bottom: 1px solid var(--rule-soft);
+}
+.overview-card .ov-num {
+  font-family: var(--serif);
+  font-size: 48px;
+  font-weight: 300;
+  font-variation-settings: 'opsz' 144;
+  color: var(--accent);
+  line-height: 1;
+}
+.overview-card h3 {
+  font-family: var(--serif);
+  font-size: 24px;
+  font-weight: 500;
+  margin: 0 0 12px;
+  letter-spacing: -0.01em;
+}
+.overview-card p {
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
+}
+
+@media (max-width: 800px) {
+  .overview-card { grid-template-columns: 1fr; }
+  .tab-btn { padding: 14px 14px 12px; font-size: 12px; }
+  .tab-btn .tab-meta { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="page">
+
+<!-- ──────────────────────── MASTHEAD ──────────────────────── -->
+<header class="masthead">
+  <div class="brand">DDD · Disconnected Data Distribution</div>
+  <div class="meta">
+    <span>Design Document</span>
+    <span>Internal · Research Group</span>
+    <span>Rev. 0.6</span>
+  </div>
+</header>
+
+<!-- ──────────────────────── TAB NAVIGATION ──────────────────────── -->
+<nav class="tab-nav" role="tablist" aria-label="Document views">
+  <button class="tab-btn active" role="tab" data-tab="tab-overview" aria-selected="true">
+    <span class="tab-num">01</span>
+    <span>Overview</span>
+    <span class="tab-meta">~5 min</span>
+  </button>
+  <button class="tab-btn" role="tab" data-tab="tab-design" aria-selected="false">
+    <span class="tab-num">02</span>
+    <span>Full design</span>
+    <span class="tab-meta">~25 min</span>
+  </button>
+  <button class="tab-btn" role="tab" data-tab="tab-implementation" aria-selected="false">
+    <span class="tab-num">03</span>
+    <span>Implementation</span>
+    <span class="tab-meta">~15 min</span>
+  </button>
+</nav>
+
+<!-- ════════════════════════════════════════════════════════════════
+     TAB 1 · OVERVIEW
+     ════════════════════════════════════════════════════════════════ -->
+<div class="tab-panel active" id="tab-overview" role="tabpanel">
+
+<div class="overview-hero">
+  <div class="kicker">Stationary Bundle Relay · The Short Version</div>
+  <h1 style="font-family: var(--serif); font-weight: 350; font-size: clamp(40px, 6vw, 72px); line-height: 1.05; letter-spacing: -0.02em; margin-bottom: 32px;">The <em style="font-style: italic; font-weight: 300; color: var(--accent);">Drop Box</em>:<br>infrastructure for <br>disconnected places.</h1>
+  <p class="lede">A stationary Android phone, deployed at a bus stop or shelter, that quietly accumulates encrypted bundles from villagers and hands them off to passing transports. The cheapest path to reliable email — and eventually anything else — for places the internet doesn't reach, whether by geography, disaster, or design.</p>
+  <div class="meta-row">
+    <div><span class="label">For</span><strong>SJSU CS Systems Group · DDD Research</strong></div>
+    <div><span class="label">This view</span><strong>The core idea, in five minutes</strong></div>
+    <div><span class="label">Going deeper</span><strong>See <a href="#" class="x-tab" data-goto-tab="tab-design">Full design</a> or <a href="#" class="x-tab" data-goto-tab="tab-implementation">Implementation</a></strong></div>
+  </div>
+</div>
+
+<section style="border-bottom: 1px solid var(--rule);">
+  <div class="content">
+    <div class="marginalia"><strong>The premise.</strong></div>
+    <div class="body" style="padding-top: 60px;">
+      <h3 style="font-family: var(--serif); font-size: 28px; font-weight: 400; letter-spacing: -0.01em; margin-bottom: 24px;">DDD already moves encrypted bundles between disconnected phones and the internet using buses, mules, and anyone going somewhere. The drop box adds a patient, stationary node to that network.</h3>
+      <p>Today, a villager's phone exchanges with a bus driver's phone via Wi-Fi Direct or Wi-Fi Aware whenever they happen to be in the same place at the same time. This works, but depends on a real-time rendezvous: the bus has to pull in while the villager is at the stop, both phones awake and discoverable.</p>
+      <p>A stationary phone parked at the bus stop solves this asymmetry. Villagers exchange with it whenever they pass — early morning, late evening, between errands. Bus drivers exchange with it when they pull in. Neither needs to be there at the same time. The drop box becomes the patient memory of the transport network.</p>
+    </div>
+  </div>
+
+  <div class="content" style="padding-bottom: 60px;">
+    <div class="marginalia"></div>
+    <div class="full">
+      <div class="overview-card">
+        <div class="ov-num">01</div>
+        <div>
+          <h3>It's just a stationary BundleTransport</h3>
+          <p>From the protocol's perspective, the drop box is another transport. It runs the same <code>BundleTransport</code> service, speaks the same gRPC over Wi-Fi Direct or Wi-Fi Aware, sees only ciphertext it cannot decrypt. The cryptography and trust model don't change — the drop box is just a transport that doesn't move and never sleeps. <a href="#" class="x-tab" data-goto-tab="tab-design" data-goto-section="architecture">More in §02 of Full design.</a></p>
+        </div>
+      </div>
+
+      <div class="overview-card">
+        <div class="ov-num">02</div>
+        <div>
+          <h3>The hardware is a $25 used Android phone</h3>
+          <p>A retired Tecno, BLU, or Itel — abundant in Sub-Saharan African second-hand markets — runs the existing transport code with minimal changes. Routers and Raspberry Pis sound appealing but they don't speak Wi-Fi Direct or Wi-Fi Aware peer-to-peer, which would break the seamless discovery the system depends on. ESP32 microcontrollers <em>do</em> support Wi-Fi Aware natively but can't run our Java-based bundle and cryptography stack — porting it to embedded C is a research project, not a near-term deployment option. <a href="#" class="x-tab" data-goto-tab="tab-design" data-goto-section="hardware">Hardware comparison in §03.</a></p>
+        </div>
+      </div>
+
+      <div class="overview-card">
+        <div class="ov-num">03</div>
+        <div>
+          <h3>Software changes are small and additive</h3>
+          <p>The existing <code>BundleTransportService</code> is already a long-running foreground service that survives reboots. Drop box mode adds: a wake lock, battery optimization whitelisting, screen-off operation, two new fields (<code>type=dropbox</code>, <code>location</code>) in the DNS-SD service announcement, and storage quota management. Optional but valuable second pass: dual-protocol Wi-Fi Aware support alongside Wi-Fi Direct, using the Trick research project as a reference. <a href="#" class="x-tab" data-goto-tab="tab-design" data-goto-section="software">Priorities in §04.</a></p>
+        </div>
+      </div>
+
+      <div class="overview-card">
+        <div class="ov-num">04</div>
+        <div>
+          <h3>Power is solved cheaply</h3>
+          <p>Screen off, the phone draws roughly half a watt as a Wi-Fi Direct group owner — about as much as an LED night light. A 5 W solar panel of the kind already sold across African markets for solar lanterns, plus a small buffer cell, runs the device indefinitely. For disaster response, a 20,000 mAh power bank lasts ~40 hours and gets swapped on the bus driver's regular route. <a href="#" class="x-tab" data-goto-tab="tab-design" data-goto-section="power">Power and physical design in §06.</a></p>
+        </div>
+      </div>
+
+      <div class="overview-card">
+        <div class="ov-num">05</div>
+        <div>
+          <h3>Around $60 per deployed unit</h3>
+          <p>The complete pilot configuration — used phone, microSD, 3D-printed PETG enclosure, power bank, mounting hardware — lands at $50–62 per drop box. A self-sufficient solar version is $58–78. Adding Wi-Fi Aware support requires a Qualcomm-chipset phone (budget MediaTek devices typically lack the driver enablement), bringing the cost to $88–125. <a href="#" class="x-tab" data-goto-tab="tab-design" data-goto-section="cost">Full cost breakdown in §08.</a></p>
+        </div>
+      </div>
+
+      <div class="overview-card">
+        <div class="ov-num">06</div>
+        <div>
+          <h3>The drop box is application-agnostic</h3>
+          <p>Email is the first DDD application — a fork of K-9 Mail talks to the bundle system through a standard ContentProvider IPC. Future applications (messaging, content delivery, games) use the same pattern with their own <code>appId</code>. The drop box stores opaque encrypted bundles regardless of what's inside. There's no email-specific logic anywhere in the drop box — by design. <a href="#" class="x-tab" data-goto-tab="tab-design" data-goto-section="app-agnostic">More in §09.</a></p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="content" style="padding: 60px 0;">
+    <div class="marginalia"><strong>Where to go from here.</strong></div>
+    <div class="body">
+      <h3 style="font-family: var(--serif); font-size: 24px; font-weight: 500;">Two next steps for two audiences</h3>
+      <p>If you're evaluating the design — <a href="#" class="x-tab" data-goto-tab="tab-design">the Full design tab</a> walks through the technical reasoning, the hardware tradeoffs, the dual-protocol details, multi-transport coordination, build cost configurations, open questions, and the appendix of ~100 ranked physical design ideas.</p>
+      <p>If you're picking up implementation — <a href="#" class="x-tab" data-goto-tab="tab-implementation">the Implementation tab</a> organizes the work by parallel workstream (service hardening, dual protocol, client UX, routing, hardware) so different contributors can work on different parts. Each workstream has its starting state, what to build, files to touch, and dependencies.</p>
+    </div>
+  </div>
+</section>
+
+</div>
+<!-- ════════════════════════════════════════════════════════════════
+     TAB 2 · FULL DESIGN
+     ════════════════════════════════════════════════════════════════ -->
+<div class="tab-panel" id="tab-design" role="tabpanel">
+
+<!-- ──────────────────────── HERO ──────────────────────── -->
+<div class="hero">
+  <div class="kicker">Stationary Bundle Relay · Design Proposal</div>
+  <h1>The <em>Drop Box</em>:<br>infrastructure for <br>disconnected places.</h1>
+  <p class="lede">A stationary Android phone, deployed at a bus stop or shelter, that quietly accumulates encrypted bundles from villagers and hands them off to passing transports. The cheapest path to reliable email — and eventually anything else — for places the internet doesn't reach, whether by geography, disaster, or design.</p>
+  <div class="meta-row">
+    <div>
+      <span class="label">For</span>
+      <strong>SJSU CS Systems Group · DDD Research</strong>
+    </div>
+    <div>
+      <span class="label">Scope</span>
+      <strong>Drop Box concept, hardware, software, deployment</strong>
+    </div>
+    <div>
+      <span class="label">Reading time</span>
+      <strong>~25 minutes</strong>
+    </div>
+  </div>
+</div>
+
+<!-- ──────────────────────── TOC ──────────────────────── -->
+<div class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><span class="num">01</span><a href="#problem">The problem we are solving</a></li>
+    <li><span class="num">02</span><a href="#architecture">Where the drop box fits</a></li>
+    <li><span class="num">03</span><a href="#hardware">Hardware: why a phone wins</a></li>
+    <li><span class="num">04</span><a href="#software">Software implementation</a></li>
+    <li><span class="num">05</span><a href="#dual-protocol">Dual protocol — Aware + Direct</a></li>
+    <li><span class="num">06</span><a href="#power">Power and physical design</a></li>
+    <li><span class="num">07</span><a href="#multi-transport">Multi-transport coordination</a></li>
+    <li><span class="num">08</span><a href="#cost">Build cost &amp; procurement</a></li>
+    <li><span class="num">09</span><a href="#app-agnostic">Beyond email</a></li>
+    <li><span class="num">10</span><a href="#open-questions">Open questions</a></li>
+    <li><span class="num">11</span><a href="#appendix">Appendix · Deferred ideas &amp; references</a></li>
+  </ol>
+</div>
+
+<!-- ──────────────────────── 01 PROBLEM ──────────────────────── -->
+<section id="problem">
+  <div class="section-header">
+    <div class="section-num">§ 01</div>
+    <div>
+      <h2>The problem we are solving</h2>
+      <div class="subtitle">Range, timing, and the gap between "transport passing through" and "villager wants to send"</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia">
+      <strong>Recap.</strong> DDD moves end-to-end encrypted bundles from disconnected phones to the internet over physical carriers — buses, mules, anyone going somewhere. First app: email, via a K-9 fork.
+    </div>
+    <div class="body">
+      <p>DDD's transport layer assumes that a moving carrier — typically a bus driver — is in proximity to a villager's phone for long enough that an exchange completes over Wi-Fi Direct or Wi-Fi Aware. Both radios have a usable range of roughly 50–100 meters in line-of-sight, considerably less indoors. This works in theory. In practice it requires three things to align: the transport is present, the villager is present, and the villager's phone is awake and discoverable at the right moment.</p>
+      <p>The current system handles this by retrying on subsequent encounters and by accepting that not every encounter completes a full exchange. But this puts real pressure on encounter frequency. A bus passing through a remote village twice a day, for fifteen minutes each, gives at most thirty minutes of opportunity per day — and only if every villager who needs to exchange happens to be at the stop during one of those windows.</p>
+      <p>A stationary device parked at the stop solves this asymmetry. The villager exchanges with it whenever they pass — early morning, late evening, between errands. The bus driver exchanges with it when they pull in. Neither needs to be there at the same time. The drop box becomes, in effect, the patient memory of the transport network — turning a brittle real-time rendezvous into a reliable store-and-forward queue.</p>
+      <h3>Why now</h3>
+      <p>Three things make this the right moment. The existing <code>BundleTransport</code> service is already a long-running Android service that survives reboots, manages a Wi-Fi Direct group owner, and runs the gRPC exchange protocol. It is — minus a few power and lifecycle hardening passes — already most of the way to being a stationary device. The Trick research project has shipped a working Wi-Fi Aware implementation that we can study as a reference. And the K-9 email fork has demonstrated that real applications can ride this transport, which makes the case for permanent infrastructure rather than experiments.</p>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia"></div>
+    <div class="full">
+      <div class="stats-strip">
+        <div class="stat">
+          <span class="num">50–100<span class="unit">m</span></span>
+          <span class="label">Wi-Fi Direct range</span>
+        </div>
+        <div class="stat">
+          <span class="num">~7<span class="unit">ms</span></span>
+          <span class="label">Text msg E2E latency (Trick)</span>
+        </div>
+        <div class="stat">
+          <span class="num">$25–45</span>
+          <span class="label">Target unit cost (used phone)</span>
+        </div>
+        <div class="stat">
+          <span class="num">~0.5<span class="unit">W</span></span>
+          <span class="label">Idle draw, screen off</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────────── 02 ARCHITECTURE ──────────────────────── -->
+<section id="architecture">
+  <div class="section-header">
+    <div class="section-num">§ 02</div>
+    <div>
+      <h2>Where the drop box fits</h2>
+      <div class="subtitle">A new node between client and transport, but transparent to either</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia">
+      <strong>Key claim.</strong> The drop box adds a hop without changing the protocol. From the bundle's point of view, it has been carried by one transport instead of two.
+    </div>
+    <div class="body">
+      <p>From the cryptographic and protocol layers, the drop box is just another <code>BundleTransport</code>. It speaks the same gRPC service, advertises itself the same way over DNS-SD, runs the same exchange logic. What makes it a drop box is operational: it never moves, it has guaranteed power, it stays online, and it has more storage than any phone in someone's pocket would.</p>
+      <p>This is the deliberate design choice. We are not introducing a new role into the DDD trust model — the drop box sees only ciphertext, just like every other transport. Its only privileged position is geographic.</p>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia"></div>
+    <div class="full">
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 1000 420" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:auto;">
+          <defs>
+            <marker id="arrow1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#5c5448"/>
+            </marker>
+            <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#b84a1f"/>
+            </marker>
+          </defs>
+
+          <!-- Disconnected zone background -->
+          <rect x="20" y="60" width="380" height="320" fill="none" stroke="#d4cdb8" stroke-width="0.5" stroke-dasharray="4 3" rx="4"/>
+          <text x="35" y="80" font-size="10" font-weight="600" letter-spacing="2" fill="#8a8276" text-transform="uppercase">DISCONNECTED ZONE · VILLAGE</text>
+
+          <!-- Connected zone background -->
+          <rect x="700" y="60" width="280" height="320" fill="none" stroke="#d4cdb8" stroke-width="0.5" stroke-dasharray="4 3" rx="4"/>
+          <text x="715" y="80" font-size="10" font-weight="600" letter-spacing="2" fill="#8a8276">CONNECTED · INTERNET</text>
+
+          <!-- Villager phones -->
+          <g transform="translate(60, 110)">
+            <rect width="100" height="48" rx="3" fill="#f5f1e8" stroke="#3a342a" stroke-width="0.8"/>
+            <text x="50" y="22" font-size="13" font-weight="600" fill="#1a1814" text-anchor="middle">Villager</text>
+            <text x="50" y="38" font-size="10" fill="#5c5448" text-anchor="middle" font-family="JetBrains Mono">BundleClient</text>
+          </g>
+          <g transform="translate(60, 175)">
+            <rect width="100" height="48" rx="3" fill="#f5f1e8" stroke="#3a342a" stroke-width="0.8"/>
+            <text x="50" y="22" font-size="13" font-weight="600" fill="#1a1814" text-anchor="middle">Villager</text>
+            <text x="50" y="38" font-size="10" fill="#5c5448" text-anchor="middle" font-family="JetBrains Mono">BundleClient</text>
+          </g>
+          <g transform="translate(60, 240)">
+            <rect width="100" height="48" rx="3" fill="#f5f1e8" stroke="#3a342a" stroke-width="0.8"/>
+            <text x="50" y="22" font-size="13" font-weight="600" fill="#1a1814" text-anchor="middle">Villager</text>
+            <text x="50" y="38" font-size="10" fill="#5c5448" text-anchor="middle" font-family="JetBrains Mono">BundleClient</text>
+          </g>
+          <g transform="translate(60, 305)">
+            <rect width="100" height="48" rx="3" fill="#f5f1e8" stroke="#3a342a" stroke-width="0.8"/>
+            <text x="50" y="22" font-size="13" font-weight="600" fill="#1a1814" text-anchor="middle">Villager</text>
+            <text x="50" y="38" font-size="10" fill="#5c5448" text-anchor="middle" font-family="JetBrains Mono">BundleClient</text>
+          </g>
+
+          <!-- Drop box -->
+          <g transform="translate(220, 175)">
+            <rect width="160" height="120" rx="3" fill="#f0d9c8" stroke="#b84a1f" stroke-width="1.4"/>
+            <text x="80" y="32" font-size="15" font-weight="600" fill="#b84a1f" text-anchor="middle" font-family="Fraunces" font-style="italic">Drop Box</text>
+            <line x1="20" y1="44" x2="140" y2="44" stroke="#b84a1f" stroke-width="0.5" stroke-dasharray="2 2"/>
+            <text x="80" y="62" font-size="10" fill="#3a342a" text-anchor="middle">Stationary phone</text>
+            <text x="80" y="76" font-size="10" fill="#3a342a" text-anchor="middle">at bus stop</text>
+            <text x="80" y="100" font-size="9" fill="#5c5448" text-anchor="middle" font-family="JetBrains Mono">type=dropbox</text>
+            <text x="80" y="112" font-size="9" fill="#5c5448" text-anchor="middle" font-family="JetBrains Mono">+ persistent store</text>
+          </g>
+
+          <!-- Wi-Fi exchange labels - villagers to drop box -->
+          <line x1="160" y1="135" x2="218" y2="195" stroke="#5c5448" stroke-width="0.8" stroke-dasharray="3 3" marker-end="url(#arrow1)"/>
+          <line x1="160" y1="200" x2="218" y2="220" stroke="#5c5448" stroke-width="0.8" stroke-dasharray="3 3" marker-end="url(#arrow1)"/>
+          <line x1="160" y1="265" x2="218" y2="245" stroke="#5c5448" stroke-width="0.8" stroke-dasharray="3 3" marker-end="url(#arrow1)"/>
+          <line x1="160" y1="330" x2="218" y2="285" stroke="#5c5448" stroke-width="0.8" stroke-dasharray="3 3" marker-end="url(#arrow1)"/>
+
+          <text x="190" y="180" font-size="9" fill="#8a8276" font-style="italic" text-anchor="middle">Wi-Fi Aware</text>
+          <text x="190" y="192" font-size="9" fill="#8a8276" font-style="italic" text-anchor="middle">or Direct</text>
+
+          <!-- Bus driver / transport -->
+          <g transform="translate(450, 215)">
+            <rect width="180" height="62" rx="3" fill="#f5f1e8" stroke="#3a342a" stroke-width="0.8"/>
+            <text x="90" y="26" font-size="13" font-weight="600" fill="#1a1814" text-anchor="middle">Bus Driver</text>
+            <text x="90" y="44" font-size="10" fill="#5c5448" text-anchor="middle" font-family="JetBrains Mono">BundleTransport</text>
+            <text x="90" y="58" font-size="9" fill="#8a8276" text-anchor="middle">moves between zones</text>
+          </g>
+
+          <!-- Drop box to bus driver -->
+          <line x1="380" y1="240" x2="448" y2="240" stroke="#5c5448" stroke-width="1" marker-end="url(#arrow1)"/>
+          <text x="414" y="232" font-size="9" fill="#8a8276" font-style="italic" text-anchor="middle">at the stop</text>
+
+          <!-- Bus driver to server -->
+          <line x1="630" y1="240" x2="738" y2="180" stroke="#b84a1f" stroke-width="1.2" marker-end="url(#arrow2)"/>
+          <text x="680" y="200" font-size="10" fill="#b84a1f" font-style="italic" text-anchor="middle">gRPC / TLS</text>
+          <text x="680" y="214" font-size="9" fill="#8a8276" font-style="italic" text-anchor="middle">when connected</text>
+
+          <!-- Server -->
+          <g transform="translate(740, 130)">
+            <rect width="200" height="100" rx="3" fill="#f5f1e8" stroke="#1a1814" stroke-width="1"/>
+            <text x="100" y="28" font-size="14" font-weight="600" fill="#1a1814" text-anchor="middle">BundleServer</text>
+            <text x="100" y="50" font-size="10" fill="#5c5448" text-anchor="middle" font-family="JetBrains Mono">Spring Boot · gRPC</text>
+            <text x="100" y="66" font-size="10" fill="#5c5448" text-anchor="middle" font-family="JetBrains Mono">Signal protocol · MySQL</text>
+            <line x1="20" y1="78" x2="180" y2="78" stroke="#d4cdb8" stroke-width="0.5"/>
+            <text x="100" y="92" font-size="9" fill="#8a8276" text-anchor="middle" font-style="italic">+ Service Adapters</text>
+          </g>
+
+          <!-- Service adapters -->
+          <g transform="translate(740, 250)">
+            <rect width="200" height="34" rx="3" fill="#ede7d8" stroke="#5c5448" stroke-width="0.6"/>
+            <text x="100" y="22" font-size="11" fill="#3a342a" text-anchor="middle">K-9 Email Adapter</text>
+          </g>
+          <g transform="translate(740, 296)">
+            <rect width="200" height="34" rx="3" fill="#ede7d8" stroke="#5c5448" stroke-width="0.6"/>
+            <text x="100" y="22" font-size="11" fill="#3a342a" text-anchor="middle">Future apps · same pattern</text>
+          </g>
+
+          <!-- Bottom annotation -->
+          <line x1="220" y1="365" x2="380" y2="365" stroke="#b84a1f" stroke-width="0.5"/>
+          <text x="300" y="380" font-size="10" fill="#b84a1f" text-anchor="middle" font-style="italic" font-family="Fraunces">— stationary, persistent, always-on —</text>
+        </svg>
+        <div class="diagram-caption">
+          <span class="fig">Fig. 01</span>
+          <span>The drop box sits between villagers and the bus driver transport. Bundles are end-to-end encrypted at every hop; the drop box holds ciphertext it cannot read, exactly like any other transport. The chain becomes <code>client → drop box → transport → server</code>.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia">
+      <strong>Routing impact</strong><br>The two-hop path is the one piece of the protocol that needs careful thought — see § 07.
+    </div>
+    <div class="body">
+      <p>The drop box doesn't change what bundles look like, what encryption they use, how they're acknowledged, or how the windowing system works. What it changes is the assumption baked into <code>BundleRouting.processClientMetaData()</code> on the server — that a transport's encounters with clients are direct. With a drop box in the chain, the server learns "transport <em>X</em> picked up bundles that originated with clients <em>A, B, C</em>" but the encounter itself happened at the drop box, not in the village. Most of the time this distinction doesn't matter. When it does — for routing return bundles back through the right transport — the metadata needs to tell that story.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────────── 03 HARDWARE ──────────────────────── -->
+<section id="hardware">
+  <div class="section-header">
+    <div class="section-num">§ 03</div>
+    <div>
+      <h2>Hardware: why a phone wins</h2>
+      <div class="subtitle">Routers and single-board computers don't speak the right protocols. Microcontrollers do, but can't run our software stack. The phone solves both.</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia">
+      <strong>The constraint that decides this.</strong><br>Wi-Fi Direct and Wi-Fi Aware are intentionally peer-to-peer. They do not behave like a normal access point.
+    </div>
+    <div class="body">
+      <p>The natural instinct is to reach for purpose-built hardware — a small Linux router, a Raspberry Pi, a microcontroller with an SD card. Each is cheaper than a phone in raw component cost. But they each fail on a different axis. Routers and single-board computers can only offer a standard Wi-Fi access point, not Wi-Fi Direct or Wi-Fi Aware — which means they break the seamless peer discovery our existing apps rely on. Microcontrollers like the ESP32 actually <em>do</em> support Wi-Fi Aware natively<sup class="cite"><a href="#ref-8">8</a></sup>, so the protocol problem doesn't apply — but they have no JVM, no port of the Signal cryptography library, and the bundle format would need to be reimplemented in firmware from scratch.</p>
+      <p>Wi-Fi Direct and Wi-Fi Aware are designed exactly for the property we want — devices automatically discover one another in proximity, with no access point, no SSID to type, no password. This is what makes the current DDD experience seamless. A villager walks past a transport and the exchange happens. They don't think about it.</p>
+      <p>A standard Wi-Fi access point — which is all a router or Pi can offer to phones — breaks this. The phone has to leave its current network, join a new one, possibly accept a "no internet on this connection" warning, do the exchange, and reconnect. Android makes this progressively harder for legitimate privacy and battery reasons. Even with aggressive engineering, the experience would be worse than it is today, and the work to make the existing apps tolerate it is non-trivial.</p>
+      <p>The phone solution sidesteps all of this. A retired Tecno or BLU running the existing <code>BundleTransport</code> code is, by construction, a peer that other phones already know how to find.</p>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia"></div>
+    <div class="full">
+      <table class="compare">
+        <thead>
+          <tr>
+            <th style="width: 22%">Option</th>
+            <th>Cost</th>
+            <th>Protocol fit</th>
+            <th>Code changes</th>
+            <th>Field repair</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="recommended">
+            <td>
+              <span class="device-name">Used Android phone</span>
+              <span class="device-sub">Tecno · BLU · Itel · donated</span>
+            </td>
+            <td>$20–40</td>
+            <td><span class="tag tag-good">native</span> Wi-Fi Direct + Aware</td>
+            <td><span class="tag tag-good">minimal</span> drop box mode toggle</td>
+            <td><span class="tag tag-good">easy</span> any local phone shop</td>
+          </tr>
+          <tr>
+            <td>
+              <span class="device-name">GL.iNet pocket router</span>
+              <span class="device-sub">GL-MT300N · OpenWrt</span>
+            </td>
+            <td>$22–28</td>
+            <td><span class="tag tag-bad">wrong</span> standard Wi-Fi AP only</td>
+            <td><span class="tag tag-warn">moderate</span> new exchange protocol</td>
+            <td><span class="tag tag-warn">medium</span> needs router experience</td>
+          </tr>
+          <tr>
+            <td>
+              <span class="device-name">Raspberry Pi Zero 2W</span>
+              <span class="device-sub">Linux SBC · hobbyist-grade</span>
+            </td>
+            <td>$45–65</td>
+            <td><span class="tag tag-bad">wrong</span> standard Wi-Fi AP only</td>
+            <td><span class="tag tag-warn">moderate</span> same as router</td>
+            <td><span class="tag tag-bad">hard</span> requires SSH, Linux</td>
+          </tr>
+          <tr>
+            <td>
+              <span class="device-name">ESP32 microcontroller</span>
+              <span class="device-sub">SD-backed dumb relay</span>
+            </td>
+            <td>$8–15</td>
+            <td><span class="tag tag-good">has NAN</span> but no JVM for our stack</td>
+            <td><span class="tag tag-bad">large</span> firmware from scratch</td>
+            <td><span class="tag tag-bad">very hard</span> firmware flashing</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia">
+      <strong>Range and antennas.</strong> A phone's Wi-Fi antenna is internal and sealed. There is no jack, no pigtail, no driver knob. What helps:
+      <ul style="margin: 8px 0 0 0; padding-left: 16px; font-size: 12px;">
+        <li>mounting height (3–4m doubles area)</li>
+        <li>face-out orientation</li>
+        <li>passive aluminum reflector behind</li>
+      </ul>
+    </div>
+    <div class="body">
+      <p>The other reasons the phone wins are practical rather than technical. Phones in this class are <em>already</em> in the supply chain in the target deployment regions — Tecno and Itel are the dominant brands across Sub-Saharan Africa, with active second-hand markets and local repair shops in every market town. A drop box that fails can be replaced or repaired by anyone who can swap a SIM card. A drop box that needs a soldering iron and a Linux laptop cannot.</p>
+      <h3>What about an antenna?</h3>
+      <p>This question comes up reasonably often, so it's worth being precise. You cannot extend a phone's Wi-Fi range by attaching an external antenna — the antenna is etched onto the phone's mainboard and there is no exposed feed point. Any "boosters" you can buy that claim otherwise are at best useless and at worst harmful (they can confuse the impedance matching of the internal radio).</p>
+      <p>What does work, mechanically, is mounting the phone higher. Wi-Fi range falls off sharply as the line-of-sight clears human and structural obstacles. A phone at 3–4 meters covers meaningfully more area than one at 1 meter. A passive aluminum reflector behind the phone — a curved sheet, not a precisely tuned element — directs more energy in one direction and gives a real 3–5 dB advantage at the cost of a pole-clamp-sized piece of metal. For a bus stop where you know which direction the waiting area is, this is essentially free range.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────────── 04 SOFTWARE ──────────────────────── -->
+<section id="software">
+  <div class="section-header">
+    <div class="section-num">§ 04</div>
+    <div>
+      <h2>Software implementation</h2>
+      <div class="subtitle">Five priorities, ordered by what unlocks the most value with the least invasive change</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia">
+      <strong>Good news.</strong> The existing <code>BundleTransport</code> code is already most of the way to being a drop box. It runs as a foreground service with <code>START_STICKY</code>, manages a Wi-Fi Direct group owner, runs a gRPC server, and survives reboots.
+    </div>
+    <div class="body">
+      <p>The implementation work is not "build a new app." It is "harden the existing transport service so it can run unattended forever, and add the small things that make a stationary node distinguishable from a moving one." The five priorities below are ordered to deliver the most value first. Items 1 and 2 together produce a working drop box. Items 3–5 improve the experience and unlock multi-transport scenarios.</p>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia"></div>
+    <div class="full">
+      <div class="priority-list">
+
+        <div class="priority-item">
+          <div class="pri-num">01</div>
+          <div class="pri-tag high">High</div>
+          <div>
+            <h4>Drop box mode in <code>BundleTransportService</code></h4>
+            <p>A single <code>SharedPreferences</code> flag, <code>dropbox_mode = true</code>, that on enable acquires a <code>PARTIAL_WAKE_LOCK</code> (keeps the CPU running while the screen stays off), programmatically requests battery-optimization whitelisting, and ensures no foreground activity is holding <code>FLAG_KEEP_SCREEN_ON</code>. The service already uses <code>START_STICKY</code> and auto-restarts after kills, so survival across reboots and OOM events is already handled. Add storage quota management — when the bundle store crosses 80% full, invoke <code>StorageManager.updateStorage()</code> to delete oldest. Extend the DNS-SD TXT record with <code>type=dropbox</code> and an optional <code>location</code> string so clients can show "Drop Box · Nairobi Bus Stop 3" instead of an opaque transport ID.</p>
+            <div class="file-refs">
+              <span>BundleTransportService.java</span>
+              <span>DDDWifiServer.java</span>
+              <span>StorageManager.java</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="priority-item">
+          <div class="pri-num">02</div>
+          <div class="pri-tag high">High</div>
+          <div>
+            <h4>Dual-protocol discovery — Wi-Fi Aware alongside Wi-Fi Direct</h4>
+            <p>Add Wi-Fi Aware publish/subscribe to <code>BundleTransportService</code> alongside the existing Wi-Fi Direct group owner. Check <code>FEATURE_WIFI_AWARE</code> at startup; if present, run both; if absent, Wi-Fi Direct alone is fully functional. Use Trick's <code>AndroidWifiAwareManager</code> as the reference for session management — attach, simultaneous publish + subscribe, network specifier, role negotiation. The exchange protocol (gRPC over TLS) is identical regardless of how the connection was discovered. Note that radio coexistence is chipset-dependent — Qualcomm handles this cleanly, MediaTek can struggle.</p>
+            <div class="file-refs">
+              <span>BundleTransportService.java</span>
+              <span>AndroidWifiAwareManager.kt (Trick · reference)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="priority-item">
+          <div class="pri-num">03</div>
+          <div class="pri-tag med">Medium</div>
+          <div>
+            <h4>Exchange progress UI in <code>BundleClient</code></h4>
+            <p>The infrastructure is already there — <code>BundleClientServiceBroadcastReceiver</code> receives <code>WIFI_DIRECT_CLIENT_EXCHANGE_STARTED</code> and <code>...FINISHED</code> events, but the cases are empty. Wire them to <code>StateFlow</code> updates in <code>WifiDirectViewModel</code>, show a progress indicator during exchange, and surface a clear "bundle sent ✓" confirmation when <code>uploadStatus == COMPLETE</code>. The new <code>type=dropbox</code> TXT field lets the client label drop boxes distinctly. Manual exchange button is already implemented and works — keep it as the primary affordance for drop boxes specifically, since user intent matters more for a fixed installation than for a moving carrier.</p>
+            <div class="file-refs">
+              <span>BundleClientServiceBroadcastReceiver.java</span>
+              <span>WifiDirectViewModel.kt</span>
+              <span>WifiDirectScreen.kt</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="priority-item">
+          <div class="pri-num">04</div>
+          <div class="pri-tag med">Medium</div>
+          <div>
+            <h4>Multi-transport bundle pickup coordination</h4>
+            <p>A drop box in a busy area accumulates bundles from many villagers and hands them to whichever bus driver passes through. Today there is no per-transport tracking of "which bundles has this transport already taken." We need a small ledger inside the drop box: <code>{transportId → [bundleIds downloaded]}</code>. When a new transport arrives, prioritize bundles that no transport has confirmed delivery on, and offer already-handled ones as redundancy if there's still capacity. Confirmation flows through the existing ACK mechanism; for older bundles a heuristic — "N transports have taken it, deprioritize but don't delete" — handles the case where ACKs are slow to return.</p>
+            <div class="file-refs">
+              <span>BundleTransportService.java</span>
+              <span>BundleExchangeServiceImpl.java</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="priority-item">
+          <div class="pri-num">05</div>
+          <div class="pri-tag low">Lower · Research</div>
+          <div>
+            <h4>Two-hop routing metadata</h4>
+            <p>The genuinely novel piece. Today, <code>BundleRouting.processClientMetaData()</code> assumes a single hop: the transport that delivered a bundle is the same one that received it from the client. With a drop box in the chain, the server needs to learn the two-hop path so it can route return bundles correctly. Drop box should include a small <code>relay_metadata</code> structure in its own bundle to the server — listing clients seen and transports that have picked up — and the server's routing service needs to handle relay entries. This is a real protocol extension worth framing as a research contribution.</p>
+            <div class="file-refs">
+              <span>BundleRouting.java</span>
+              <span>routing.metadata format</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia">
+      <strong>What you don't have to build.</strong> Everything below already works in the existing codebase.
+    </div>
+    <div class="body">
+      <h3>What already works without changes</h3>
+      <ul>
+        <li>Bundle storage and bulk transfer of arbitrary numbers of bundles. <code>TransportToBundleServerManager</code> handles N bundles in one session — the same logic carries 1 bundle or 1,000.</li>
+        <li>Server-side deduplication. Bundles with counter ≤ <code>lastReceivedBundleCounter</code> are silently skipped.</li>
+        <li>Storage cleanup. <code>StorageManager.updateStorage()</code> already deletes oldest bundles when the configured limit is exceeded.</li>
+        <li>The full gRPC/TLS exchange between transport and server.</li>
+        <li>PSI privacy-preserving bundle ownership verification — clients can ask a transport "do you have any of my bundles?" without revealing which bundle IDs they're looking for.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia">
+      <strong>Concrete change.</strong> The DNS-SD TXT record is the natural place to advertise drop box identity.
+    </div>
+    <div class="body">
+      <h3>The smallest change that makes a drop box visible as a drop box</h3>
+      <p>Inside <code>DDDWifiServer.createGroup()</code>, the TXT record already advertises <code>ddd</code>, <code>transportId</code>, and the recency blob. Two new keys make a drop box self-identifying:</p>
+
+      <pre class="codeblock" data-lang="java"><span class="com">// DDDWifiServer.java — inside createGroup()</span>
+txt = <span class="kw">new</span> HashMap&lt;&gt;();
+txt.<span class="fn">put</span>(<span class="str">"ddd"</span>, bts.<span class="fn">getBundleServerURL</span>());
+txt.<span class="fn">put</span>(<span class="str">"transportId"</span>, bts.transportId);
+txt.<span class="fn">put</span>(<span class="str">"recencyBlob"</span>, Base64.<span class="fn">getEncoder</span>().<span class="fn">encodeToString</span>(lastRecencyBlob.<span class="fn">toByteArray</span>()));
+<span class="add">txt.put("type",     bts.isDropBox() ? "dropbox" : "transport");</span>
+<span class="add">txt.put("location", bts.getDropBoxLocation());  // "Nairobi · Bus Stop 3"</span></pre>
+
+      <p>The client side, on receiving a TXT record with <code>type=dropbox</code>, simply renders the peer with a different label and (if you want) prefers manual exchange over automatic background polling. That's the entire UI-layer change.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────────── 05 DUAL PROTOCOL ──────────────────────── -->
+<section id="dual-protocol">
+  <div class="section-header">
+    <div class="section-num">§ 05</div>
+    <div>
+      <h2>Dual protocol — Aware when possible, Direct as fallback</h2>
+      <div class="subtitle">The drop box advertises both. The connecting phone uses whichever it can.</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia">
+      <strong>Why both.</strong> Wi-Fi Aware is better when both ends support it. Wi-Fi Direct is universal. Most budget Android phones — the dominant device class in our target deployments — do not have Wi-Fi Aware. We need the fallback.
+    </div>
+    <div class="body">
+      <p>Wi-Fi Aware (Neighbor Awareness Networking, IEEE 802.11aq) is the better protocol. Its synchronized sleep/wake cycle keeps the radio off 96% of the time during idle discovery. It does not require giving up your Wi-Fi internet connection — the NAN interface is logically separate. It discovers peers in around a second versus several seconds for Wi-Fi Direct group owner negotiation. Multi-peer is native. From an engineering point of view, a future where everyone uses Wi-Fi Aware and Wi-Fi Direct is deprecated would be cleaner.</p>
+      <p>That future is not the present. Wi-Fi Aware requires the chipset to support it, the OEM to enable it in the driver, and the device to expose <code>FEATURE_WIFI_AWARE</code>. The exact phones our target population is most likely to own — Tecno, Itel, Infinix, generally MediaTek-based — frequently lack it even on otherwise capable hardware, because driver-level enablement is uneven. Qualcomm-based Android phones from 2018 onward generally have it. iPhones have it from iPhone 12 onward, but only on iOS 26+, and Apple's <code>WiFiAware</code> framework is brand new<sup class="cite"><a href="#ref-7">7</a></sup>.</p>
+      <p>Wi-Fi Direct, by contrast, is on every Android phone since version 4.0 and works without surprises. It's slower to set up, draws more power as group owner, and won't talk to iOS at all. But it works.</p>
+      <p>The drop box's job is to advertise both, accept either, and let the connecting client use whatever it has. If the drop box phone itself doesn't support Wi-Fi Aware, it falls back to Wi-Fi Direct only — still fully functional. This is in deliberate contrast to the Trick research project, which is Wi-Fi Aware only and shows an "Unsupported Device" screen if Aware isn't available — exactly the wrong model for our target population.</p>
+      <h3>The ecosystem is converging on Wi-Fi Aware</h3>
+      <p>One reason to invest in the Wi-Fi Aware path despite its current hardware unevenness: the ecosystem trajectory is clearly toward it. Apple was effectively required to ship Wi-Fi Aware in iOS 26 under the EU's Digital Markets Act, then released the framework worldwide<sup class="cite"><a href="#ref-1">1</a></sup><sup class="cite"><a href="#ref-2">2</a></sup>. Google shipped Quick Share ↔ AirDrop interoperability over Wi-Fi Aware on the Pixel 10 in November 2025, and announced expansion to many more Android phones throughout 2026<sup class="cite"><a href="#ref-3">3</a></sup><sup class="cite"><a href="#ref-4">4</a></sup>. Matter 1.4.2 adopted Wi-Fi Aware Unsynchronized Service Discovery (NAN-USD) for commissioning<sup class="cite"><a href="#ref-5">5</a></sup>. The protocol is becoming the cross-platform standard that AWDL was for Apple alone.</p>
+      <p>This doesn't change the immediate implementation path — Wi-Fi Direct must remain the baseline because budget Android in our target deployments doesn't have Wi-Fi Aware yet, and developer-level cross-platform iOS↔Android NAN is still unreliable in practice (per Apple Developer Forums reports<sup class="cite"><a href="#ref-6">6</a></sup>). But it means the dual-protocol investment is durable: Wi-Fi Aware is becoming more, not less, supported over time.</p>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia"></div>
+    <div class="full">
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 1000 360" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:auto;">
+          <defs>
+            <marker id="arrow3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 Z" fill="#5c5448"/>
+            </marker>
+          </defs>
+
+          <!-- Drop box center -->
+          <g transform="translate(400, 130)">
+            <rect width="200" height="100" rx="3" fill="#f0d9c8" stroke="#b84a1f" stroke-width="1.4"/>
+            <text x="100" y="28" font-size="14" font-weight="600" fill="#b84a1f" text-anchor="middle" font-family="Fraunces" font-style="italic">Drop Box phone</text>
+            <line x1="20" y1="40" x2="180" y2="40" stroke="#b84a1f" stroke-width="0.5" stroke-dasharray="2 2"/>
+            <text x="100" y="60" font-size="11" fill="#3a342a" text-anchor="middle">advertises both protocols</text>
+            <text x="100" y="80" font-size="10" fill="#5c5448" text-anchor="middle" font-family="JetBrains Mono">simultaneously</text>
+          </g>
+
+          <!-- Wi-Fi Aware label -->
+          <g transform="translate(60, 140)">
+            <rect width="200" height="80" rx="3" fill="#f5f1e8" stroke="#3a342a" stroke-width="0.8"/>
+            <text x="100" y="26" font-size="13" font-weight="600" fill="#1a1814" text-anchor="middle">Wi-Fi Aware (NAN)</text>
+            <text x="100" y="46" font-size="10" fill="#5c5448" text-anchor="middle">Lower power · Multi-peer</text>
+            <text x="100" y="62" font-size="10" fill="#5c5448" text-anchor="middle">~1s discovery</text>
+          </g>
+
+          <!-- Wi-Fi Direct label -->
+          <g transform="translate(740, 140)">
+            <rect width="200" height="80" rx="3" fill="#f5f1e8" stroke="#3a342a" stroke-width="0.8"/>
+            <text x="100" y="26" font-size="13" font-weight="600" fill="#1a1814" text-anchor="middle">Wi-Fi Direct</text>
+            <text x="100" y="46" font-size="10" fill="#5c5448" text-anchor="middle">Universal · All Android 4.0+</text>
+            <text x="100" y="62" font-size="10" fill="#5c5448" text-anchor="middle">2–15s discovery</text>
+          </g>
+
+          <!-- Lines from drop box to protocols -->
+          <line x1="395" y1="170" x2="265" y2="170" stroke="#5c5448" stroke-width="0.8" stroke-dasharray="3 3"/>
+          <line x1="605" y1="170" x2="735" y2="170" stroke="#5c5448" stroke-width="0.8" stroke-dasharray="3 3"/>
+
+          <!-- Phones below -->
+          <g transform="translate(40, 270)">
+            <rect width="240" height="60" rx="3" fill="#ede7d8" stroke="#5c5448" stroke-width="0.6"/>
+            <text x="120" y="22" font-size="11" font-weight="600" fill="#3a342a" text-anchor="middle">Newer Qualcomm Android</text>
+            <text x="120" y="40" font-size="9" fill="#8a8276" text-anchor="middle">iPhone 12+ · iOS 26+</text>
+            <text x="120" y="54" font-size="9" fill="#8a8276" text-anchor="middle" font-style="italic">→ uses Wi-Fi Aware</text>
+          </g>
+
+          <g transform="translate(720, 270)">
+            <rect width="240" height="60" rx="3" fill="#ede7d8" stroke="#5c5448" stroke-width="0.6"/>
+            <text x="120" y="22" font-size="11" font-weight="600" fill="#3a342a" text-anchor="middle">Budget Android (Tecno/Itel)</text>
+            <text x="120" y="40" font-size="9" fill="#8a8276" text-anchor="middle">Older devices · MediaTek</text>
+            <text x="120" y="54" font-size="9" fill="#8a8276" text-anchor="middle" font-style="italic">→ uses Wi-Fi Direct</text>
+          </g>
+
+          <!-- Connecting lines -->
+          <line x1="160" y1="220" x2="160" y2="270" stroke="#5c5448" stroke-width="0.8" marker-end="url(#arrow3)"/>
+          <line x1="840" y1="220" x2="840" y2="270" stroke="#5c5448" stroke-width="0.8" marker-end="url(#arrow3)"/>
+
+          <!-- Top label -->
+          <text x="500" y="50" font-size="11" font-weight="600" letter-spacing="2" fill="#8a8276" text-anchor="middle">DROP BOX ADVERTISES BOTH · CLIENT CHOOSES</text>
+          <line x1="350" y1="65" x2="650" y2="65" stroke="#d4cdb8" stroke-width="0.5"/>
+
+          <!-- Bottom note -->
+          <text x="500" y="350" font-size="10" font-style="italic" fill="#8a8276" text-anchor="middle">If the drop box phone itself doesn't support Wi-Fi Aware, it falls back to Wi-Fi Direct only — still fully functional.</text>
+        </svg>
+        <div class="diagram-caption">
+          <span class="fig">Fig. 02</span>
+          <span>The drop box's responsibility is to be findable by every phone that might walk past, not to enforce a single protocol. Every connecting client picks the best protocol available to it.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout">
+    Trick demonstrated that Wi-Fi Aware works beautifully when the hardware supports it — 264 ms attach, 977 ms discovery, 7.4 ms message latency, zero loss across 6,133 messages in their ramp test. We can have those numbers for the supported subset, and Wi-Fi Direct for everyone else, and the user never has to know which one carried their bundle.
+    <span class="attrib">— from Trick's published performance report</span>
+  </div>
+</section>
+
+<!-- ──────────────────────── 06 POWER + PHYSICAL ──────────────────────── -->
+<section id="power">
+  <div class="section-header">
+    <div class="section-num">§ 06</div>
+    <div>
+      <h2>Power and physical design</h2>
+      <div class="subtitle">A phone that runs forever needs surprisingly little — and the enclosure is more important than the panel</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia">
+      <strong>Honest baseline.</strong> Screen off, Wi-Fi Direct group owner active, gRPC server idle: ~0.5 W sustained. That's roughly the draw of a single LED night light.
+    </div>
+    <div class="body">
+      <p>The drop box's screen never needs to be on. There is no UI for a passerby — discovery happens through Wi-Fi protocols, exchange happens automatically. With the screen off and the radio in steady-state idle, an Android phone draws on the order of half a watt as a Wi-Fi Direct group owner, and as little as 0.2 W in Wi-Fi Aware idle. Active exchange is short bursts of 2–3 watts but only for the few seconds the radio is moving data.</p>
+      <p>Daily energy budget, screen off, conservative: about 14–24 Wh. A 5 W solar panel — the kind already sold across Sub-Saharan African markets for solar lanterns — generates roughly 25 Wh per day at 5–6 peak sun hours. That's enough to run the drop box continuously and charge a small buffer battery for nighttime operation.</p>
+      <p>For disaster response, where rapid deployment matters more than long-term self-sufficiency, a 20,000 mAh USB power bank does the job for 40+ hours and gets swapped on the bus driver's regular route. No solar required.</p>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia"></div>
+    <div class="full">
+      <div class="stats-strip">
+        <div class="stat">
+          <span class="num">~0.5<span class="unit">W</span></span>
+          <span class="label">Idle, screen off, WD GO</span>
+        </div>
+        <div class="stat">
+          <span class="num">~0.2<span class="unit">W</span></span>
+          <span class="label">Idle, Wi-Fi Aware NAN</span>
+        </div>
+        <div class="stat">
+          <span class="num">14–24<span class="unit">Wh/day</span></span>
+          <span class="label">Total consumption</span>
+        </div>
+        <div class="stat">
+          <span class="num">$18–30</span>
+          <span class="label">Power: solar panel + buffer cell</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia">
+      <strong>The thermal trap.</strong> A black enclosure in equatorial sun reaches 80°C+ inside. Phones throttle hard at 45°C and shut down at 60°C. Color choice is not aesthetic — it determines whether the device works.
+    </div>
+    <div class="body">
+      <h3>The enclosure does more work than the panel</h3>
+      <p>For a deployed drop box, the enclosure is where most of the deployment risk lives. The phone itself is solved — we know it works. The protocols are solved. The interesting failure modes are environmental.</p>
+      <p>Heat is the largest. A sealed black plastic box in direct equatorial sun will reach internal temperatures the phone cannot survive. White or light-gray PETG, ventilation slots with insect mesh, internal ribs that channel convection, and a small shade canopy above the enclosure all matter more than any individual radio choice.</p>
+      <p>Pressure is the second-largest. As the enclosure heats and cools through a daily cycle, the air inside expands and contracts. A perfectly sealed enclosure either pushes its lid off or, worse, pulls moist outside air in through the gasket on cooling. A small Gore-Tex membrane vent — about a dollar — solves this completely.</p>
+      <p>Water is the third. A weep hole at the lowest point of the enclosure with a fine mesh insert lets condensation drain. A silicone flap over the recessed USB-C port stops rain from running directly into the most failure-prone connector on the device. Everything else — gaskets, glands, weatherstripping — is incremental on top of these.</p>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia"></div>
+    <div class="full">
+      <div class="idea-categories">
+        <div class="idea-cat">
+          <h4>Must build · core enclosure</h4>
+          <ul>
+            <li><span class="num-prefix">01</span><div><strong>White/light-gray PETG clamshell</strong> — color is the most important thermal decision. PETG over PLA for UV survival.</div></li>
+            <li><span class="num-prefix">02</span><div><strong>Silicone O-ring gasket channel</strong> — 2 mm groove, standard cord stock.</div></li>
+            <li><span class="num-prefix">03</span><div><strong>Gore-Tex pressure vent</strong> — ~$1 part, prevents lid blow-off and gasket-pumped moisture.</div></li>
+            <li><span class="num-prefix">04</span><div><strong>Inner wall convection ribs</strong> — channels airflow from low intake to high exhaust.</div></li>
+            <li><span class="num-prefix">05</span><div><strong>Weep hole, 3 mm with mesh</strong> — lowest point, drains any condensation that does form.</div></li>
+            <li><span class="num-prefix">06</span><div><strong>Recessed USB-C port + flap</strong> — keeps rain off the most critical connector.</div></li>
+            <li><span class="num-prefix">07</span><div><strong>Clear front window panel</strong> — phone status LED visible without opening.</div></li>
+          </ul>
+        </div>
+
+        <div class="idea-cat">
+          <h4>Must build · mounting</h4>
+          <ul>
+            <li><span class="num-prefix">08</span><div><strong>Pole clamp, hose-clamp slots</strong> — 25–50 mm pole range, no drilling required.</div></li>
+            <li><span class="num-prefix">09</span><div><strong>15° forward tilt</strong> — built into clamp, aims face at waiting area.</div></li>
+            <li><span class="num-prefix">10</span><div><strong>Keyhole-slot wall mount plate</strong> — enclosure removable for maintenance without disturbing mount.</div></li>
+            <li><span class="num-prefix">11</span><div><strong>Cable management channel</strong> — recessed groove for USB and solar cables, protects from UV and abrasion.</div></li>
+            <li><span class="num-prefix">12</span><div><strong>Anti-rotation pin</strong> — small detent stops enclosure rotating on mount over time from wind.</div></li>
+          </ul>
+        </div>
+
+        <div class="idea-cat">
+          <h4>Strong second-tier</h4>
+          <ul>
+            <li><span class="num-prefix">13</span><div><strong>Aluminum reflector behind phone</strong> — 200 mm curved sheet, +3–5 dB toward waiting area, ~doubles range that direction.</div></li>
+            <li><span class="num-prefix">14</span><div><strong>Shade canopy</strong> — 50 mm overhang above enclosure, dramatically reduces solar load.</div></li>
+            <li><span class="num-prefix">15</span><div><strong>Modular back panel</strong> — wall, pole, eave variants share the same front shell.</div></li>
+            <li><span class="num-prefix">16</span><div><strong>Model-specific phone tray</strong> — universal outer, swappable inner cradle per phone.</div></li>
+            <li><span class="num-prefix">17</span><div><strong>Quarter-turn tool-free latches</strong> — coin opens it, no lost screws.</div></li>
+            <li><span class="num-prefix">18</span><div><strong>Tool & log pocket inside lid</strong> — screwdriver, spare gasket, paper maintenance log.</div></li>
+            <li><span class="num-prefix">19</span><div><strong>Phone standoff cradle</strong> — 5 mm air gap under phone allows convection where most heat is generated.</div></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia">
+      <strong>See appendix</strong> for ranged-by-priority list of ~100 physical design ideas, including ones we deliberately rejected and why.
+    </div>
+    <div class="body">
+      <h3>What to skip</h3>
+      <p>For completeness: external antenna mods to the phone don't work — the radio is sealed, the impedance match would be wrong, and you'd more likely damage the radio than improve it. Wi-Fi range extenders use standard Wi-Fi, which is the wrong protocol. Microcontroller-based "smart enclosures" with auxiliary radios add complexity without solving any actual problem. Black enclosures fail in the sun. Fuel cells and thermoelectric generators are interesting on paper and useless at $50.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────────── 07 MULTI-TRANSPORT ──────────────────────── -->
+<section id="multi-transport">
+  <div class="section-header">
+    <div class="section-num">§ 07</div>
+    <div>
+      <h2>Multi-transport coordination</h2>
+      <div class="subtitle">When two bus drivers pass through, the second should pick up what the first missed</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia">
+      <strong>Today's behavior.</strong> When a transport uploads a bundle to the server it deletes its local copy (<code>Files.delete(path)</code> in <code>TransportToBundleServerManager</code>). Bundles aren't kept after delivery — they're consumed.
+    </div>
+    <div class="body">
+      <p>A drop box in a heavily-trafficked area accumulates bundles continuously. Multiple bus drivers may pass through during a day. The system should naturally distribute pickup duty — bus driver A takes some bundles, bus driver B takes ones A didn't get to, and over the course of a day everything reaches the server.</p>
+      <p>The existing protocol gets us most of the way there. The transport-to-server inventory exchange already handles arbitrarily many bundles in a single session. Server-side deduplication silently skips bundles already received. Bundles uploaded by transport A and then also by transport B don't cause any problem — the server takes the first, ignores the second.</p>
+      <p>What's missing is the drop box's awareness of <em>who has taken what</em>. The drop box should maintain a small ledger:</p>
+
+      <pre class="codeblock" data-lang="conceptual"><span class="com">// per-transport download tracking on drop box</span>
+transport_A_id → [bundle_1, bundle_2, bundle_3]   <span class="com">// all confirmed</span>
+transport_B_id → [bundle_1, bundle_4, bundle_5]   <span class="com">// 1 yes, 4–5 missed</span>
+transport_C_id → [bundle_4, bundle_5, bundle_6]   <span class="com">// next arrival</span></pre>
+
+      <p>When transport C arrives, the drop box prioritizes bundles 4 and 5 (no transport has confirmed delivery) over bundle 6 (fresh and equally needs delivery), but still offers everything if there's capacity. Confirmation flows from the existing ACK mechanism — when the originating client eventually receives a return bundle and ACKs it, that ACK propagates back through the system. For older bundles whose ACKs are slow, a heuristic suffices: "N transports have taken it, mark as likely-delivered, deprioritize but don't delete."</p>
+      <h3>The two-hop routing question</h3>
+      <p>The deeper change is server-side. Today, when the server receives a bundle from transport <em>X</em>, it reads the <code>routing.metadata</code> JSON inside the bundle's payload and records which clients <em>X</em> has been encountering. This builds the <code>transport → clients</code> mapping that drives where return bundles get sent.</p>
+      <p>With a drop box in the chain, the encounter is more accurately described as <em>"client met drop box, drop box met transport X"</em>. From the server's perspective today, this looks like transport X met the client directly. That mostly works — return bundles get routed to X, X gives them to the drop box, drop box gives them to the client — but it loses some routing fidelity. If X is unlikely to return to the same drop box but Y is, return bundles for that drop box's clients should preferentially go to Y.</p>
+      <p>The clean fix is for the drop box to include relay metadata in its own bundles to the server, recording which clients it has seen and which transports have picked up from it. The server's <code>BundleRouting.processClientMetaData()</code> learns the relay topology over time. This is genuinely novel — not every store-and-forward system reasons about its own intermediate nodes — and it's the part of this work that most resembles a publishable research contribution.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────────── 08 BUILD COST ──────────────────────── -->
+<section id="cost">
+  <div class="section-header">
+    <div class="section-num">§ 08</div>
+    <div>
+      <h2>Build cost &amp; procurement</h2>
+      <div class="subtitle">Concrete numbers as of April 2026 — for budgeting a pilot, not negotiating a contract</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia">
+      <strong>Two design decisions</strong> drive nearly all of the cost: dual-protocol or Wi-Fi Direct only, and solar or power bank.
+    </div>
+    <div class="body">
+      <p>The phone-based drop box is genuinely cheap. With a Wi-Fi Direct-only configuration, a complete unit including storage, enclosure, and a power bank lands well under $80. A self-sufficient solar version costs a little more. Adding Wi-Fi Aware support requires a Qualcomm-chipset phone, which roughly doubles the phone cost — Tecno and Itel are predominantly MediaTek, and MediaTek's Wi-Fi Aware driver enablement is uneven enough that you can't rely on it for production.</p>
+      <p>The four configurations below are presented in rough order of "what you'd actually deploy first." Configuration A is the immediate pilot. Configuration B is the production answer once the dual-protocol code is written and tested. Configurations C and D are research alternatives — included for completeness, not as recommendations.</p>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia"></div>
+    <div class="full">
+      <table class="cost-config">
+        <thead>
+          <tr>
+            <th>Configuration</th>
+            <th>Components</th>
+            <th>Cost</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          <tr class="config-row">
+            <td>A · Phone, Wi-Fi Direct only<span class="config-tag tag-good">recommended pilot</span></td>
+            <td>Used budget Android (Tecno / Infinix / Itel) — works with existing code, no changes.</td>
+            <td class="price">$50–62</td>
+          </tr>
+          <tr><td><span class="item-name">Used budget Android phone</span><span class="item-note">Tecno Spark, Infinix Smart, Itel A-series — Africa second-hand markets</span></td><td colspan="2"><span class="price">$15–25</span></td></tr>
+          <tr><td><span class="item-name">128 GB microSD card</span><span class="item-note">Lexar / Samsung / SanDisk — note: AI-driven storage shortages cause volatility</span></td><td colspan="2"><span class="price">$15</span></td></tr>
+          <tr><td><span class="item-name">PETG 3D-printed enclosure</span><span class="item-note">~150 g of filament at $10–15/kg, plus printer time</span></td><td colspan="2"><span class="price">$2–4</span></td></tr>
+          <tr><td><span class="item-name">20,000 mAh power bank (budget brand)</span><span class="item-note">~29 hours runtime, swap every 2 days on bus driver's route</span></td><td colspan="2"><span class="price">$15</span></td></tr>
+          <tr><td><span class="item-name">USB-C cable, mounting hardware, label</span><span class="item-note">Hose clamps, screws, weatherproof tape</span></td><td colspan="2"><span class="price">$3</span></td></tr>
+
+          <tr class="config-row">
+            <td>A+ · Phone + solar<span class="config-tag tag-good">self-sufficient</span></td>
+            <td>Same as A but with 5W panel and small buffer cell. Indefinite runtime in equatorial sun.</td>
+            <td class="price">$53–78</td>
+          </tr>
+          <tr><td><span class="item-name">Used budget Android phone</span><span class="item-note">Same as Config A</span></td><td colspan="2"><span class="price">$15–25</span></td></tr>
+          <tr><td><span class="item-name">128 GB microSD</span></td><td colspan="2"><span class="price">$15</span></td></tr>
+          <tr><td><span class="item-name">PETG enclosure</span></td><td colspan="2"><span class="price">$2–4</span></td></tr>
+          <tr><td><span class="item-name">5–10 W USB solar panel</span><span class="item-note">Foldable IP67 panel — same hardware as African solar lanterns</span></td><td colspan="2"><span class="price">$10–18</span></td></tr>
+          <tr><td><span class="item-name">TP4056 charge module + 2× 18650 cells</span><span class="item-note">Or substitute a $20 d.light A2T solar lantern as integrated buffer</span></td><td colspan="2"><span class="price">$8–12</span></td></tr>
+          <tr><td><span class="item-name">USB-C cable, hardware</span></td><td colspan="2"><span class="price">$3–4</span></td></tr>
+
+          <tr class="config-row">
+            <td>B · Phone, dual protocol<span class="config-tag tag-warn">production, post Wi-Fi Aware work</span></td>
+            <td>Qualcomm-chipset phone with confirmed Wi-Fi Aware support. Future-compatible.</td>
+            <td class="price">$88–125</td>
+          </tr>
+          <tr><td><span class="item-name">Used Qualcomm Android phone</span><span class="item-note">Pixel 4a / 5a, Moto G Power, Galaxy A32 5G — confirmed FEATURE_WIFI_AWARE</span></td><td colspan="2"><span class="price">$50–80</span></td></tr>
+          <tr><td><span class="item-name">128 GB microSD</span></td><td colspan="2"><span class="price">$15</span></td></tr>
+          <tr><td><span class="item-name">PETG enclosure</span></td><td colspan="2"><span class="price">$3–5</span></td></tr>
+          <tr><td><span class="item-name">20,000 mAh power bank (better-quality)</span><span class="item-note">Anker Zolo on sale, or equivalent regional brand</span></td><td colspan="2"><span class="price">$20–25</span></td></tr>
+
+          <tr class="config-row">
+            <td>C · GL.iNet router<span class="config-tag tag-neutral">range research</span></td>
+            <td>Standard Wi-Fi AP only — requires new drop box exchange protocol in apps.</td>
+            <td class="price">$70–72</td>
+          </tr>
+          <tr><td><span class="item-name">GL.iNet GL-MT300N-V2</span><span class="item-note">FCC import status uncertain for US deployments — see Appendix A</span></td><td colspan="2"><span class="price">$22</span></td></tr>
+          <tr><td><span class="item-name">External 3 dBi 2.4GHz antenna</span></td><td colspan="2"><span class="price">$5</span></td></tr>
+          <tr><td><span class="item-name">128 GB USB flash drive (storage)</span></td><td colspan="2"><span class="price">$15</span></td></tr>
+          <tr><td><span class="item-name">20,000 mAh power bank</span></td><td colspan="2"><span class="price">$20</span></td></tr>
+          <tr><td><span class="item-name">PETG enclosure + pole hardware</span></td><td colspan="2"><span class="price">$8–10</span></td></tr>
+
+          <tr class="config-row">
+            <td>D · ESP32 dumb relay<span class="config-tag tag-neutral">long-term research</span></td>
+            <td>Hardware is cheap; firmware engineering cost is the real budget item.</td>
+            <td class="price">$48–60 hardware</td>
+          </tr>
+          <tr><td><span class="item-name">ESP32-WROOM-32UE module</span><span class="item-note">External U.FL antenna connector — supports NAN per Espressif docs</span></td><td colspan="2"><span class="price">$4–6</span></td></tr>
+          <tr><td><span class="item-name">microSD SPI module + 128 GB card</span></td><td colspan="2"><span class="price">$17</span></td></tr>
+          <tr><td><span class="item-name">External 2.4GHz antenna + cable</span></td><td colspan="2"><span class="price">$4</span></td></tr>
+          <tr><td><span class="item-name">TP4056 + 3× 18650 cells</span></td><td colspan="2"><span class="price">$10–15</span></td></tr>
+          <tr><td><span class="item-name">5 W solar panel</span></td><td colspan="2"><span class="price">$10–15</span></td></tr>
+          <tr><td><span class="item-name">PETG enclosure</span></td><td colspan="2"><span class="price">$3</span></td></tr>
+          <tr><td colspan="3" style="background:#f0d9c8; padding: 14px 16px; font-style: italic; color: #663318; border-bottom: none; font-family: var(--serif); font-size: 14px;">Hardware cost only. Excludes the dominant cost — engineering time to write the bundle protocol stack, libsignal port, and exchange logic in C from scratch. This is a multi-month embedded firmware project, not a procurement question.</td></tr>
+
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia">
+      <strong>Procurement notes</strong> for the recommended Configuration A.
+    </div>
+    <div class="body">
+      <h3>Notes on procurement</h3>
+      <p><strong>Phones.</strong> For Sub-Saharan Africa deployments, the cheapest path is to source used phones locally. Markets in Lagos, Nairobi, and Accra have abundant supply of functional Tecno, Infinix, and Itel devices in the $12–25 range. For US disaster response, used phones from Swappa or Back Market in the same price range work — Moto G or older Samsung A-series at the lower end, Pixel 4a or 5a if dual-protocol is required.</p>
+      <p><strong>microSD cards.</strong> Storage prices are volatile right now due to AI-driven shortages affecting NAND supply<sup class="cite"><a href="#ref-10">10</a></sup>. Budget $18–22 per card to be safe rather than the $15 baseline. Buy from reputable retailers — counterfeit microSDs are common in regional electronics markets and frequently misrepresent capacity.</p>
+      <p><strong>Power banks.</strong> No-name brands work fine for this application — the device draws so little that even a moderately-rated bank lasts 20+ hours. Anker, INIU, Baseus are reliable choices but not necessary for the drop box use case. A regional Chinese brand from the Lagos electronics market at $12–15 is operationally equivalent.</p>
+      <p><strong>3D printing.</strong> If the research group has a printer in-house, filament cost is the only marginal expense (~$2–4 per enclosure). If outsourcing, expect $15–30 per enclosure printed by a service like Hubs or a local maker space, plus turnaround time. PETG is the right material; ASA is better for outdoor UV resistance if available at slightly higher cost ($20–25/kg vs $10–15/kg).</p>
+      <p><strong>Solar components.</strong> The TP4056 + 18650 + 5W panel approach gives the most flexibility. The simpler alternative — a $20 d.light A2T solar lantern with USB out — is operationally equivalent and locally repairable in African deployment regions. Worth considering for pilots where minimizing custom assembly matters more than minimizing per-unit cost.</p>
+
+      <h3>What scales</h3>
+      <p>At ~$60 per unit for Configuration A, deploying drop boxes at every bus stop in a small city — say 30 stops — is roughly $1,800 in hardware, plus mounting and installation labor. That's well within research budget territory. The constraint becomes operational rather than financial: someone has to maintain them, monitor for theft, swap power banks where solar isn't deployed. The "drop box is cheap, operations are expensive" pattern is consistent with most infrastructure deployments and worth budgeting for explicitly when planning a real pilot.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────────── 09 APP AGNOSTIC ──────────────────────── -->
+<section id="app-agnostic">
+  <div class="section-header">
+    <div class="section-num">§ 09</div>
+    <div>
+      <h2>Beyond email — the drop box is application-agnostic</h2>
+      <div class="subtitle">Email is the first app. The drop box stores opaque encrypted bundles and doesn't know what's inside them.</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia">
+      <strong>The pattern.</strong> Any Android app can integrate with DDD by talking to the <code>BundleClient</code> via the standard <code>DDDClientAdapter</code> ContentProvider IPC.
+    </div>
+    <div class="body">
+      <p>The K-9 email fork is the first concrete application to ride DDD's transport, but the protocol below is fully generic. A bundle's payload is a directory of ADUs (Application Data Units) keyed by <code>appId/aduId</code>. Every app gets its own namespace. <code>net.discdd.k9</code> is email; <code>net.discdd.echo</code> is a reflection test app that already exists; future apps for Signal-style messaging, content delivery, even turn-based games would just claim their own appId and the rest of the system handles their data identically.</p>
+      <p>From the drop box's perspective this is a feature, not a problem. It stores ciphertext keyed by encrypted bundle ID. It cannot decrypt the bundle, which means it cannot tell whether the bundle contains an email or a chess move or a video chunk. It also doesn't need to. The forwarding decision is "do I have this bundle, has the requesting party seen it, when did it arrive" — questions that can be answered without ever knowing what's inside.</p>
+      <p>This matters for the drop box design because it tells us what <em>not</em> to add. There should be no email-specific logic in the drop box. There should be no application-aware caching. If a future app produces dramatically larger or smaller bundles than email, the drop box should handle both without modification. The only knobs that matter are storage capacity, age-based eviction, and per-transport pickup tracking — all of which are app-agnostic.</p>
+      <h3>How the K-9 integration actually works</h3>
+      <p>The mechanism is worth understanding because it's the template for every future app. The K-9 fork talks to <code>BundleClient</code> through Android's ContentProvider IPC at <code>content://net.discdd.provider.datastoreprovider/messages</code>. The <code>DDDClientAdapter</code> library wraps this with an <code>OutputStream</code> for sending ADUs and an <code>InputStream</code> for receiving them, plus a <code>ContentObserver</code> callback for "new ADUs available." Email content goes through this pipe, gets packaged into the next outgoing bundle, and rides whatever transport (drop box or otherwise) is available. On the server side, a Spring Boot <code>K9DDDAdapter</code> implements <code>ServiceAdapterServiceGrpc</code>, receives the ADUs, and bridges to a real SMTP server.</p>
+      <p>A future Signal-style messaging app would do exactly the same thing: install alongside <code>BundleClient</code>, use <code>DDDClientAdapter</code> with its own appId, implement a corresponding server-side adapter. The drop box doesn't change at all — it's already storing both apps' bundles, indistinguishable from each other.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────────── 10 OPEN QUESTIONS ──────────────────────── -->
+<section id="open-questions">
+  <div class="section-header">
+    <div class="section-num">§ 10</div>
+    <div>
+      <h2>Open questions and research directions</h2>
+      <div class="subtitle">What we don't know yet, in roughly the order it matters</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia"></div>
+    <div class="body">
+
+      <h4>Near-term (engineering)</h4>
+      <ul>
+        <li><strong>Wi-Fi Direct + Wi-Fi Aware coexistence on real budget hardware.</strong> Both protocols share the radio. Qualcomm chipsets handle the time-slicing well. MediaTek chipsets often don't. We need empirical testing on the exact phone models we'd actually deploy — something like a Tecno Spark 10 or Itel A60 — before committing to dual-protocol on every drop box.</li>
+        <li><strong>How long does a drop box phone actually last?</strong> Battery degradation under continuous Wi-Fi Direct GO operation, 24/7, is undocumented. We should run a unit for 6+ months in lab conditions and measure capacity loss, before deploying at scale.</li>
+        <li><strong>How does Android's Doze mode interact with our wake lock?</strong> Doze has changed in every Android version since 6.0. The exact behavior on Android 12+ — which is what's in the cheap phones currently shipping — needs verification.</li>
+      </ul>
+
+      <h4>Medium-term (deployment)</h4>
+      <ul>
+        <li><strong>Drop box density.</strong> One per bus stop is the obvious answer. But what's the right cadence in a market town with five stops? Two stops apart? Five? This is a coverage and redundancy question we can't answer from theory.</li>
+        <li><strong>Theft and vandalism rates.</strong> Truly unknown until pilots. The hardware is cheap enough that 20% loss might still be acceptable, but operational lessons (what gets stolen, how, when) matter for design iteration.</li>
+        <li><strong>iOS BundleClient.</strong> The iOS Wi-Fi Aware framework only landed in iOS 26 and only works on iPhone 12+. There's a path here, but it requires substantial new work and the user base is small in our primary deployment regions. Worth scoping but not prioritizing.</li>
+      </ul>
+
+      <h4>Longer-term (research)</h4>
+      <ul>
+        <li><strong>Multi-hop without server involvement.</strong> Two drop boxes on the same bus route could in principle exchange bundles between themselves whenever the same bus passes both, without the server ever knowing. This is real DTN territory and worth thinking about as the network grows.</li>
+        <li><strong>Wi-Fi Aware ranging as a wakeup trigger.</strong> NAN supports approximate distance measurement to nearby devices. A drop box could stay in deepest possible idle, only fully waking when a phone is within 10 meters. The user experience would be indistinguishable from "always on" but the power profile would be dramatically better.</li>
+        <li><strong>NAN-USD (Unsynchronized Service Discovery) for idle announce.</strong> A lighter-weight NAN mode standardized for exactly the "I exist, find me when you need me" pattern — no full cluster, no synchronized beacons, just intermittent service discovery broadcasts. Adopted in Matter 1.4.2<sup class="cite"><a href="#ref-5">5</a></sup> and shipped in ESP-IDF examples<sup class="cite"><a href="#ref-9">9</a></sup>. Could substantially lower the drop box's idle power draw further, and is well-aligned with the proximity-trigger idea above.</li>
+        <li><strong>Opportunistic server sync.</strong> A drop box at a bus terminal might have intermittent Wi-Fi internet from the terminal itself. When that's available, the drop box could become a quasi-server, syncing bundles directly. This collapses the bus-driver hop entirely for some bundles.</li>
+        <li><strong>Two-hop routing as a published protocol extension.</strong> The relay metadata work in § 07 is novel enough that it's worth writing up properly once we have empirical data on whether it actually improves return-bundle delivery rates.</li>
+      </ul>
+
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────────── 10 APPENDIX ──────────────────────── -->
+<section id="appendix">
+  <div class="section-header">
+    <div class="section-num">§ 11</div>
+    <div>
+      <h2>Appendix · Deferred and rejected ideas</h2>
+      <div class="subtitle">Collapsed by default. Open what's relevant.</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="marginalia"></div>
+    <div class="full">
+
+      <details>
+        <summary>A. Hardware alternatives we considered and rejected</summary>
+        <div>
+          <p>Each of these has appeal in isolation. Each fails on at least one axis that matters for our deployment.</p>
+          <ul>
+            <li><strong>GL.iNet pocket router (GL-MT300N-V2).</strong> ~$22 on Amazon (verified April 2026). Runs OpenWrt Linux, real external antenna connector option, USB host for storage, low power draw. Genuinely a good piece of hardware. The deal-breaker is that it provides a standard Wi-Fi access point, not Wi-Fi Direct or Wi-Fi Aware. Existing villager phones know how to find a transport via Direct/Aware automatically; they don't know to leave their current Wi-Fi network and join a router's SSID. Working around this means substantial app changes and a worse user experience. <em>Caveat for US deployments:</em> the FCC issued a March 2026 ruling restricting import authorization for consumer routers manufactured outside the US, prompted by compromise concerns around TP-Link devices. GL.iNet is also Chinese-manufactured and not specifically named in available reporting — worth verifying procurement legality before any US disaster-response deployment that relies on this hardware.</li>
+            <li><strong>Raspberry Pi Zero 2W.</strong> $15 board, $40+ all-in. Same protocol problem as the router. Additionally: no built-in UI, requires SSH or pre-imaged SD cards for setup, weak built-in radio. The hobbyist tax is real for field deployment.</li>
+            <li><strong>ESP32 microcontroller + SD.</strong> $8–15. The cheapest option by far, and meaningfully more capable than we initially credited it with — the original ESP32 plus the S2, C5, C6, and (recently) S3 variants <em>do</em> support Wi-Fi Aware (NAN) natively per Espressif's official ESP-IDF documentation<sup class="cite"><a href="#ref-8">8</a></sup>, including both Service Discovery and Datapath. The NAN duty-cycle behavior also makes idle power draw dramatically lower than a phone's. The ESP32-WROOM-32UE adds an external antenna connector for real range extension. The disqualifying problem isn't the radio — it's the software stack. There is no JVM on the chip, no port of libsignal to embedded C, and the full bundle format (zip-within-zip with double-ratchet encrypted payload) would need a complete from-scratch firmware reimplementation. A separate research project on a "dumb relay" drop box with a custom protocol could make sense — but it's a different and much larger undertaking than deploying drop boxes now.</li>
+            <li><strong>Custom PCB.</strong> Premature. The supply chain for cheap Android phones is already optimized for our exact deployment regions. There is no advantage to designing hardware until we've deployed enough phones to know what specifically we'd want to change.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details>
+        <summary>B. Power options beyond the recommended solar lantern setup</summary>
+        <div>
+          <ul>
+            <li><strong>Grid power, where available.</strong> Bus terminals and shops often have outlets. A USB charger and a cable is the cheapest possible setup. Recommended where the deployment site has reliable mains.</li>
+            <li><strong>20,000 mAh USB power bank, swap-based.</strong> The disaster-response option. Bus driver swaps the bank as part of their route. ~40 hours runtime. Zero solar complexity. Predictable failure mode.</li>
+            <li><strong>5W solar panel + TP4056 charge module + 18650 cells.</strong> The recommended self-sufficient setup for African deployments. Roughly $18–30 in parts depending on sourcing, all available from any electronics market that already stocks solar lanterns. A $20 d.light A2T solar lantern with integrated USB out is an operationally equivalent simpler alternative.</li>
+            <li><strong>Larger 20W panel + dedicated charge controller.</strong> Overkill for a single drop box, but worth considering for deployments that include heavier loads (e.g., a small status display, or a future drop box network sync).</li>
+            <li><strong>Hand-crank or piezoelectric harvesters.</strong> Genuinely don't generate enough power to be useful for our continuous loads. Solar wins by orders of magnitude.</li>
+            <li><strong>Fuel cells.</strong> Real technology, $200+ per unit, fuel availability is the killer in our deployment regions. Not viable.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details>
+        <summary>C. Full physical / enclosure design idea list (~100 items)</summary>
+        <div>
+          <p style="margin-bottom: 1em;">Ranked roughly by importance. Items marked <span class="tag tag-good">must</span> are the ones we believe ship-blocking. Items marked <span class="tag tag-warn">good</span> are strong-second-tier. Items marked <span class="tag tag-neutral">explore</span> are worth thinking about. Items marked <span class="tag tag-bad">skip</span> are listed so we don't reconsider them.</p>
+
+          <h4 style="margin-top: 16px;">Enclosure shell</h4>
+          <ul>
+            <li><span class="tag tag-good">must</span> White or light gray PETG. Black fails in equatorial sun.</li>
+            <li><span class="tag tag-good">must</span> Two-piece clamshell, single screw per corner.</li>
+            <li><span class="tag tag-good">must</span> 2 mm O-ring channel around lid perimeter.</li>
+            <li><span class="tag tag-good">must</span> Gore-Tex pressure equalization vent (Amphenol LFT or equiv).</li>
+            <li><span class="tag tag-good">must</span> Inner wall ribs for convection channels.</li>
+            <li><span class="tag tag-good">must</span> Clear PETG window for status LED visibility.</li>
+            <li><span class="tag tag-warn">good</span> Quarter-turn coin-operable latches instead of screws.</li>
+            <li><span class="tag tag-warn">good</span> Modular swappable back panel (wall/pole/eave variants).</li>
+            <li><span class="tag tag-warn">good</span> Model-specific phone cradle insert, universal outer.</li>
+            <li><span class="tag tag-warn">good</span> Phone standoffs creating 5 mm air gap underneath.</li>
+            <li><span class="tag tag-warn">good</span> Snap-fit phone retention clips (no adhesive).</li>
+            <li><span class="tag tag-warn">good</span> Tool & maintenance log pocket inside lid.</li>
+            <li><span class="tag tag-warn">good</span> TPU bumper lining the phone cradle.</li>
+            <li><span class="tag tag-warn">good</span> Lid hinge with built-in 120° stop.</li>
+            <li><span class="tag tag-neutral">explore</span> Foam compression gasket as cheap O-ring alternative.</li>
+            <li><span class="tag tag-neutral">explore</span> Transparent enclosure (less "valuable-looking" to thieves).</li>
+            <li><span class="tag tag-neutral">explore</span> Tray-style inner chassis sliding out on rails.</li>
+            <li><span class="tag tag-neutral">explore</span> Stackable design (drop box on top, power compartment below).</li>
+            <li><span class="tag tag-neutral">explore</span> Two-phone enclosure: active + hot spare.</li>
+            <li><span class="tag tag-bad">skip</span> Fully potted permanent install (defeats maintenance).</li>
+            <li><span class="tag tag-bad">skip</span> Pelican-style ruggedized case (overkill, expensive).</li>
+          </ul>
+
+          <h4 style="margin-top: 16px;">Mounting</h4>
+          <ul>
+            <li><span class="tag tag-good">must</span> Pole clamp with hose-clamp slots (25–50 mm range).</li>
+            <li><span class="tag tag-good">must</span> 15° forward tilt aiming face at waiting area.</li>
+            <li><span class="tag tag-good">must</span> Keyhole-slot wall mount plate.</li>
+            <li><span class="tag tag-good">must</span> Cable routing channel.</li>
+            <li><span class="tag tag-good">must</span> Anti-rotation pin between mount and enclosure.</li>
+            <li><span class="tag tag-warn">good</span> Eave bracket — one mount for shade + rain protection.</li>
+            <li><span class="tag tag-warn">good</span> U-bolt mount option for 30–80 mm poles.</li>
+            <li><span class="tag tag-warn">good</span> Bus shelter ceiling rail mount.</li>
+            <li><span class="tag tag-warn">good</span> Swing-out maintenance hinge.</li>
+            <li><span class="tag tag-warn">good</span> Height-adjustable threaded rod within clamp.</li>
+            <li><span class="tag tag-neutral">explore</span> Ground stake for sites without poles.</li>
+            <li><span class="tag tag-neutral">explore</span> Tree strap mount for rural sites.</li>
+            <li><span class="tag tag-neutral">explore</span> Surveyor's tripod adapter (5/8" thread) for emergency response.</li>
+            <li><span class="tag tag-neutral">explore</span> Magnetic mount plate for steel surfaces.</li>
+            <li><span class="tag tag-neutral">explore</span> Dual-pole cradle for high-wind locations.</li>
+            <li><span class="tag tag-neutral">explore</span> Stackable elevation collars for height adjustment.</li>
+            <li><span class="tag tag-bad">skip</span> Concrete footing — too slow, defeats rapid deployment.</li>
+          </ul>
+
+          <h4 style="margin-top: 16px;">Power and electronics</h4>
+          <ul>
+            <li><span class="tag tag-good">must</span> Recessed USB-C port with silicone flap cover.</li>
+            <li><span class="tag tag-warn">good</span> Power bank cradle compartment inside enclosure.</li>
+            <li><span class="tag tag-warn">good</span> Solar panel bracket arm, latitude-tilt adjustable.</li>
+            <li><span class="tag tag-warn">good</span> TP4056 charge controller pocket.</li>
+            <li><span class="tag tag-warn">good</span> Redundant power input (primary + backup with diode OR).</li>
+            <li><span class="tag tag-neutral">explore</span> Inductive Qi charging — no exposed connector at all.</li>
+            <li><span class="tag tag-neutral">explore</span> Charge-state LED indicator visible through window.</li>
+            <li><span class="tag tag-neutral">explore</span> Supercapacitor surge buffer for radio wakeups.</li>
+            <li><span class="tag tag-neutral">explore</span> Backup CR2032 for RTC during full discharge.</li>
+            <li><span class="tag tag-bad">skip</span> Wind turbine — too inconsistent for our load profile.</li>
+            <li><span class="tag tag-bad">skip</span> Thermoelectric harvester — too little gradient available.</li>
+            <li><span class="tag tag-bad">skip</span> Microhydro — site-specific to the point of irrelevance.</li>
+            <li><span class="tag tag-bad">skip</span> Fuel cells — fuel availability is the killer.</li>
+          </ul>
+
+          <h4 style="margin-top: 16px;">Thermal management</h4>
+          <ul>
+            <li><span class="tag tag-good">must</span> Light enclosure color (white or light gray PETG).</li>
+            <li><span class="tag tag-good">must</span> Inner convection ribs (low intake to high exhaust path).</li>
+            <li><span class="tag tag-warn">good</span> Ventilation slots with fine stainless mesh.</li>
+            <li><span class="tag tag-warn">good</span> Heat sink fin array on rear exterior.</li>
+            <li><span class="tag tag-warn">good</span> Phone-to-aluminum thermal pad + spreader plate.</li>
+            <li><span class="tag tag-warn">good</span> External shade canopy (50 mm overhang).</li>
+            <li><span class="tag tag-warn">good</span> Thermal break between phone cradle and outer wall.</li>
+            <li><span class="tag tag-neutral">explore</span> Phase-change material thermal buffer (paraffin pocket).</li>
+            <li><span class="tag tag-bad">skip</span> Active Peltier cooling — too power-hungry.</li>
+            <li><span class="tag tag-bad">skip</span> Refrigeration of any kind — out of scope.</li>
+          </ul>
+
+          <h4 style="margin-top: 16px;">Weatherproofing</h4>
+          <ul>
+            <li><span class="tag tag-good">must</span> Weep hole at lowest point with mesh.</li>
+            <li><span class="tag tag-good">must</span> Pressure equalization vent (Gore-Tex membrane).</li>
+            <li><span class="tag tag-warn">good</span> Cable entry gland (3D-printed PG7-equivalent).</li>
+            <li><span class="tag tag-warn">good</span> Rain hood lip above front panel.</li>
+            <li><span class="tag tag-warn">good</span> Drain tube on cable entry.</li>
+            <li><span class="tag tag-warn">good</span> UV-resistant clearcoat surface (extends PETG lifespan to 10+ years).</li>
+            <li><span class="tag tag-warn">good</span> Silica gel desiccant pocket inside.</li>
+            <li><span class="tag tag-warn">good</span> Conformal coat recommendation for high-humidity sites.</li>
+          </ul>
+
+          <h4 style="margin-top: 16px;">Signal / range improvements</h4>
+          <ul>
+            <li><span class="tag tag-warn">good</span> Curved aluminum reflector behind phone (200 mm, +3–5 dB).</li>
+            <li><span class="tag tag-warn">good</span> Reflector integrated into pole clamp design.</li>
+            <li><span class="tag tag-warn">good</span> Mount height 3–4 m where possible.</li>
+            <li><span class="tag tag-neutral">explore</span> Fresnel-tuned parabolic reflector (more gain, harder to print).</li>
+            <li><span class="tag tag-neutral">explore</span> Ground plane plate (small additional gain).</li>
+            <li><span class="tag tag-neutral">explore</span> Corner reflector for highly directional sites.</li>
+            <li><span class="tag tag-neutral">explore</span> Faceted enclosure front aiming at specific waiting zone.</li>
+            <li><span class="tag tag-bad">skip</span> External antenna mod to phone — impossible.</li>
+            <li><span class="tag tag-bad">skip</span> Wi-Fi range extender — wrong protocol.</li>
+            <li><span class="tag tag-bad">skip</span> Yagi connected to phone — no connector exists.</li>
+          </ul>
+
+          <h4 style="margin-top: 16px;">Anti-theft and security</h4>
+          <ul>
+            <li><span class="tag tag-warn">good</span> Cable lock loop integrated into mount plate.</li>
+            <li><span class="tag tag-warn">good</span> Tamper-evident sticker slot at seam.</li>
+            <li><span class="tag tag-warn">good</span> Hidden mount screws requiring long-shaft driver.</li>
+            <li><span class="tag tag-warn">good</span> Aluminum serial-number plate (harder to remove than sticker).</li>
+            <li><span class="tag tag-neutral">explore</span> Sand fill in unused base space (adds weight).</li>
+            <li><span class="tag tag-neutral">explore</span> Decoy "GPS tracked asset" sticker without actual GPS.</li>
+            <li><span class="tag tag-neutral">explore</span> Buried ground anchor for freestanding posts.</li>
+            <li><span class="tag tag-neutral">explore</span> Reed switch + buzzer for tamper detection.</li>
+            <li><span class="tag tag-bad">skip</span> Padlock through hasps (defeated by bolt cutters anyway).</li>
+          </ul>
+
+          <h4 style="margin-top: 16px;">User-facing details</h4>
+          <ul>
+            <li><span class="tag tag-good">must</span> Recessed sign face for printed label card.</li>
+            <li><span class="tag tag-warn">good</span> QR code holder (links to explainer / app download).</li>
+            <li><span class="tag tag-warn">good</span> Multilingual label slot (double-sided card).</li>
+            <li><span class="tag tag-warn">good</span> Numbered installation instructions inside lid.</li>
+            <li><span class="tag tag-warn">good</span> Maintenance log paper card slot.</li>
+            <li><span class="tag tag-neutral">explore</span> External 3-LED traffic-light status tower.</li>
+            <li><span class="tag tag-neutral">explore</span> E-ink "last exchange: Xh ago" display (separate coin cell).</li>
+            <li><span class="tag tag-neutral">explore</span> Acoustic guide to amplify exchange-complete chime.</li>
+            <li><span class="tag tag-neutral">explore</span> Braille label for inclusivity.</li>
+            <li><span class="tag tag-neutral">explore</span> RFID/NFC tag for maintenance check-ins.</li>
+            <li><span class="tag tag-neutral">explore</span> Capacitive touch button passing through to phone screen.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details>
+        <summary>D. Useful code references for implementation</summary>
+        <div>
+          <h4>BundleTransportService — already headless-capable</h4>
+          <p><code>onStartCommand()</code> uses <code>START_STICKY</code> for auto-restart. <code>startForeground()</code> creates <code>DDDWifiServer</code>, <code>FileHttpServer</code> on port 8080 (NanoHTTPD), and the gRPC <code>RpcServer</code>. The service is missing <code>PARTIAL_WAKE_LOCK</code> acquisition and battery optimization whitelist registration — both needed for drop box mode.</p>
+
+          <h4>DDDWifiServer — DNS-SD TXT record (where to add type=dropbox)</h4>
+          <p style="font-size: 13px; margin: 0.5em 0 0.8em;">The first three lines exist today. Lines highlighted in green are the proposed additions for drop box mode.</p>
+          <pre class="codeblock" data-lang="java">txt = <span class="kw">new</span> HashMap&lt;&gt;();
+txt.<span class="fn">put</span>(<span class="str">"ddd"</span>, bts.<span class="fn">getBundleServerURL</span>());
+txt.<span class="fn">put</span>(<span class="str">"transportId"</span>, bts.transportId);
+txt.<span class="fn">put</span>(<span class="str">"recencyBlob"</span>, Base64.<span class="fn">getEncoder</span>().<span class="fn">encodeToString</span>(lastRecencyBlob.<span class="fn">toByteArray</span>()));
+<span class="add">txt.put("type",     bts.isDropBox() ? "dropbox" : "transport");</span>
+<span class="add">txt.put("location", bts.getDropBoxLocation());</span></pre>
+          <p>Network name: <code>"DIRECT-ddd_" + transportId</code>. Passphrase: <code>"ConnectToMe"</code>. Band: <code>GROUP_OWNER_BAND_2GHZ</code>. Persistent: <code>true</code>.</p>
+
+          <h4>BundleClientServiceBroadcastReceiver — empty cases to wire up</h4>
+          <p style="font-size: 13px; margin: 0.5em 0 0.8em;">The cases are currently empty bodies. Suggested fills shown as comments below.</p>
+          <pre class="codeblock" data-lang="java"><span class="kw">case</span> WIFI_DIRECT_CLIENT_EXCHANGE_STARTED -> {
+    <span class="com">// add: progress indicator in UI</span>
+}
+<span class="kw">case</span> WIFI_DIRECT_CLIENT_EXCHANGE_FINISHED -> {
+    <span class="com">// add: "bundle sent ✓" or "failed" in UI</span>
+}</pre>
+
+          <h4>Wi-Fi Aware dual-protocol pattern (from Trick)</h4>
+          <pre class="codeblock" data-lang="kotlin"><span class="com">// AndroidWifiAwareManager.kt — both called after successful attach:</span>
+<span class="fn">startPublishing</span>(wifiSession)   <span class="com">// advertise "ddd-bundle" service</span>
+<span class="fn">startSubscribing</span>(wifiSession)  <span class="com">// discover peers advertising same service</span>
+
+<span class="com">// Check first:</span>
+<span class="kw">if</span> (wifiAwareManager?.isAvailable != <span class="kw">true</span>) {
+    <span class="com">// fall back to Wi-Fi Direct only</span>
+}</pre>
+
+          <h4>TransportToBundleServerManager — bulk bundle handling already works</h4>
+          <pre class="codeblock" data-lang="java"><span class="kw">var</span> bundlesFromClients = <span class="fn">populateListFromPath</span>(fromClientPath);
+<span class="kw">var</span> bundlesFromServer  = <span class="fn">populateListFromPath</span>(fromServerPath);
+<span class="com">// Single BundleInventoryRequest covers ALL bundles</span>
+<span class="com">// processUploadBundles() loops, deletes each after upload</span>
+<span class="com">// processDownloadBundles() loops, downloads each</span></pre>
+
+          <h4>StorageManager — cleanup already implemented</h4>
+          <pre class="codeblock" data-lang="java"><span class="kw">while</span> (<span class="fn">getStorageSize</span>(storageList) > userStoragePreference) {
+    Files.<span class="fn">delete</span>(storageList.<span class="fn">get</span>(<span class="str">0</span>));  <span class="com">// oldest first</span>
+    storageList = <span class="fn">getStorageList</span>();
+}</pre>
+
+          <h4>Server-side window length</h4>
+          <pre class="codeblock" data-lang="java"><span class="com">// ServerBundleTransmission.java</span>
+<span class="kw">public static final int</span> WINDOW_LENGTH = <span class="str">3</span>;</pre>
+        </div>
+      </details>
+
+      <details>
+        <summary>E. K-9 email integration as the template for future apps</summary>
+        <div>
+          <p>The K-9 fork (DDD-thunderbird-android repo) is the first concrete application running on DDD's transport. The integration pattern is worth documenting because it's the template every future app will follow.</p>
+
+          <h4>The IPC bridge: DDDClientAdapter</h4>
+          <p>Lives in <code>AndroidApps/client-adapter/</code>. Exposes a ContentProvider at <code>content://net.discdd.provider.datastoreprovider/messages</code>. Apps interact with it via:</p>
+          <ul>
+            <li><code>createAduToSend()</code> — returns an OutputStream. Write your app's data to it; close to finalize.</li>
+            <li><code>receiveAdu(aduId)</code> — returns an InputStream over an incoming ADU's bytes.</li>
+            <li><code>registerForAduAdditions()</code> — installs a ContentObserver. Callback fires when new ADUs arrive for this app.</li>
+            <li><code>deleteReceivedAdusUpTo(aduId)</code> — cleanup once your app has processed.</li>
+            <li>MAX_ADU_SIZE = 512 KB. Larger payloads split across multiple ADUs.</li>
+          </ul>
+
+          <h4>The server-side adapter: K9DDDAdapter</h4>
+          <p>Spring Boot service extending <code>ServiceAdapterServiceGrpc</code>. Identifies this app's ADUs by <code>APP_ID = "net.discdd.k9"</code>. Receives them from the BundleServer, decrypts and processes, and bridges to a real SMTP server. Outgoing email comes back through the same pipe. Maps DDD client identity to email address via <code>K9ClientIdToEmailMappingRepository</code>.</p>
+
+          <h4>The control protocol: ControlAdu</h4>
+          <p>Java Properties-format messages prefixed with <code>"# CONTROL"</code>, distinguished from user-data ADUs by a magic-byte check. Used for login, register, whoami, and their corresponding ack types. This is how K-9 onboards a new account: send a RegisterControlAdu, wait for RegisterAckControlAdu to come back through the bundle system.</p>
+
+          <h4>Why this matters for the drop box</h4>
+          <p>The drop box stores opaque encrypted bytes. It doesn't know any of this is happening. A future Signal-style messaging app, a YouTube-style content app, or a turn-based game app would all use the exact same ContentProvider IPC, register their own appId, and ride the same bundles. The drop box treats them all identically — it's just storage and forwarding for whatever ADUs come its way.</p>
+          <p>The implication for design: there should be no application-specific logic in the drop box code. No email-sized assumptions, no priority-by-app, no caching by content type. Application-agnostic by construction.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>F. Why not Trick's approach (Wi-Fi Aware only)?</summary>
+        <div>
+          <p>Trick is a separate research project from the same group, exploring serverless peer-to-peer messaging over Wi-Fi Aware with libsignal-based end-to-end encryption. It's an excellent reference implementation for the Wi-Fi Aware side of our dual-protocol design.</p>
+          <p>It is, however, intentionally Wi-Fi Aware only. If <code>FEATURE_WIFI_AWARE</code> isn't present, Trick shows an "Unsupported Device" screen and refuses to operate. There's no fallback.</p>
+          <p>This is the right choice for Trick's research goals — it lets the team focus on what Wi-Fi Aware can do without compromise. It is the wrong choice for DDD because our target population is overwhelmingly on the budget Android devices most likely to lack Wi-Fi Aware support. Wi-Fi Aware is the better protocol where it works; Wi-Fi Direct must remain the universal baseline.</p>
+          <p>What we should take from Trick: the Wi-Fi Aware session management code in <code>AndroidWifiAwareManager.kt</code>, the deterministic role negotiation pattern, the heartbeat-based reconnection logic, and the empirical performance numbers. What we should not take: the assumption that a single protocol is sufficient.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>G. References &amp; sources</summary>
+        <div>
+          <p style="font-family: var(--sans); font-size: 12px; color: var(--ink-muted); margin-bottom: 16px;">External claims throughout this document are numbered in the body and listed here. Sources from official documentation and major established outlets are linked directly. Sources from less-established outlets are cited by name only — search them yourself if you want to follow up. Performance numbers from the Trick research project are internal and not listed here.</p>
+          <ol class="refs-list">
+            <li id="ref-1">
+              <span class="ref-num">¹</span>
+              <span class="ref-source">Apple Developer · WWDC25 Session 228, "Meet WiFi Aware"</span><br>
+              Official Apple session introducing the WiFiAware framework in iOS 26. Covers <code>WAPairedDevice</code>, <code>WAPublishableService</code>, <code>WASubscribableService</code>.<br>
+              <a href="https://developer.apple.com/videos/play/wwdc2025/228/" rel="noopener noreferrer">developer.apple.com/videos/play/wwdc2025/228/</a>
+            </li>
+            <li id="ref-2">
+              <span class="ref-num">²</span>
+              <span class="ref-source">MacRumors · "iOS 26 adding two new Wi-Fi features" (June 2025)</span><br>
+              Coverage of Apple's Wi-Fi Aware framework, including the EU Digital Markets Act context and worldwide release.<br>
+              <a href="https://www.macrumors.com/2025/06/21/ios-26-adding-two-new-wi-fi-features/" rel="noopener noreferrer">macrumors.com/2025/06/21/ios-26-adding-two-new-wi-fi-features/</a>
+            </li>
+            <li id="ref-3">
+              <span class="ref-num">³</span>
+              <span class="ref-source">Google Security Blog · "Android Quick Share support for AirDrop" (November 2025)</span><br>
+              Google's announcement of AirDrop interoperability via Wi-Fi Aware on the Pixel 10, with a multi-layered security model spanning both platforms.<br>
+              <a href="https://security.googleblog.com/2025/11/android-quick-share-support-for-airdrop-security.html" rel="noopener noreferrer">security.googleblog.com/2025/11/android-quick-share-support-for-airdrop-security.html</a>
+            </li>
+            <li id="ref-4">
+              <span class="ref-num">⁴</span>
+              <span class="ref-source">MacRumors · "AirDrop Quick Share interoperability — more phones in 2026" (February 2026)</span><br>
+              Coverage of Google's announcement that the Wi-Fi-Aware-based interoperability is expanding to many more Android phones throughout 2026.<br>
+              <a href="https://www.macrumors.com/2026/02/11/airdrop-quick-share-interoperability-more-phones/" rel="noopener noreferrer">macrumors.com/2026/02/11/airdrop-quick-share-interoperability-more-phones/</a>
+            </li>
+            <li id="ref-5">
+              <span class="ref-num">⁵</span>
+              <span class="ref-source">Help Net Security · "Matter 1.4.2 smart home security" (August 2025)</span><br>
+              Coverage of Matter 1.4.2's adoption of Wi-Fi-only commissioning via NAN-USD, eliminating the Bluetooth requirement for device pairing.<br>
+              <a href="https://www.helpnetsecurity.com/2025/08/11/matter-1-4-2-smart-home-security/" rel="noopener noreferrer">helpnetsecurity.com/2025/08/11/matter-1-4-2-smart-home-security/</a>
+            </li>
+            <li id="ref-6">
+              <span class="ref-num">⁶</span>
+              <span class="ref-source">Apple Developer Forums · iOS-Android Wi-Fi Aware interoperability discussion</span><br>
+              Thread documenting iOS 26 apps unable to discover services published from Android devices, and vice versa, with comment from Apple Developer Relations engineer noting Wi-Fi Aware is "complex and rapidly evolving."<br>
+              <a href="https://developer.apple.com/forums/thread/790195" rel="noopener noreferrer">developer.apple.com/forums/thread/790195</a>
+            </li>
+            <li id="ref-7">
+              <span class="ref-num">⁷</span>
+              <span class="ref-source">9to5Mac · "iOS 26 third-party AirDrop alternatives" (June 2025)</span><br>
+              Coverage of the iOS 26 Wi-Fi Aware framework as an open standard available to third-party developers, including potential cross-platform implementations.<br>
+              <a href="https://9to5mac.com/2025/06/20/ios-26-to-let-third-party-apps-build-their-own-airdrop-alternative/" rel="noopener noreferrer">9to5mac.com/2025/06/20/ios-26-to-let-third-party-apps-build-their-own-airdrop-alternative/</a>
+            </li>
+            <li id="ref-8">
+              <span class="ref-num">⁸</span>
+              <span class="ref-source">Espressif · ESP-IDF Wi-Fi Aware (NAN) API Reference</span><br>
+              Official ESP-IDF documentation confirming NAN support across ESP32 variants, including Service Discovery and Datapath. Per-chip status confirmed for original ESP32, ESP32-S2, ESP32-C5, ESP32-C6, with ESP32-S3 supported in the latest IDF.<br>
+              <a href="https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/network/esp_nan.html" rel="noopener noreferrer">docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/network/esp_nan.html</a>
+            </li>
+            <li id="ref-9">
+              <span class="ref-num">⁹</span>
+              <span class="ref-source">Espressif · ESP-IDF Wi-Fi Aware example for USD publisher/subscriber</span><br>
+              Official ESP-IDF examples demonstrating NAN-USD (Unsynchronized Service Discovery) — the lightweight mode for advertising a service without forming a full NAN cluster. Same documentation tree as ref. 8.<br>
+              <a href="https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/network/esp_nan.html" rel="noopener noreferrer">docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/network/esp_nan.html</a>
+            </li>
+            <li id="ref-10">
+              <span class="ref-num">¹⁰</span>
+              <span class="ref-source">Engadget · Best microSD card guide (February 2026 update)</span><br>
+              Storage industry coverage noting AI-driven NAND shortages causing microSD pricing and stock volatility throughout late 2025 and into 2026.<br>
+              <a href="https://www.engadget.com/computing/accessories/best-microsd-card-130038282.html" rel="noopener noreferrer">engadget.com/computing/accessories/best-microsd-card-130038282.html</a>
+            </li>
+          </ol>
+          <h4 style="margin-top: 24px;">Further reading (cited by name, no links provided)</h4>
+          <p style="font-family: var(--sans); font-size: 12px; color: var(--ink-muted);">Some additional research touched on a March 2026 FCC ruling restricting import authorization for consumer routers manufactured outside the US, attributed to compromise concerns around TP-Link devices. The available reporting on this came from a single less-established source and could not be independently verified at the time of writing — the claim is included in the GL.iNet entry of Appendix A as a "worth verifying before US procurement" flag rather than a confirmed fact. Anyone planning a US disaster-response deployment using GL.iNet hardware should verify the current FCC import status directly through official channels.</p>
+          <p style="font-family: var(--sans); font-size: 12px; color: var(--ink-muted); margin-top: 12px;">Pricing data for ESP32 modules, microSD cards, power banks, solar panels, and PETG filament was cross-referenced against Amazon, DigiKey, the official Raspberry Pi store, manufacturer storefronts, and regional African electronics outlets at the time of writing. Pricing in the body text reflects rough April 2026 ranges and should be re-verified before procurement — component prices in this category move on a quarterly basis.</p>
+        </div>
+      </details>
+
+    </div>
+  </div>
+</section>
+
+</div>
+<!-- ════════════════════════════════════════════════════════════════
+     TAB 3 · IMPLEMENTATION PATH
+     ════════════════════════════════════════════════════════════════ -->
+<div class="tab-panel" id="tab-implementation" role="tabpanel">
+
+<div class="hero">
+  <div class="kicker">Where to start · Workstreams that can run in parallel</div>
+  <h1 style="font-family: var(--serif); font-weight: 350; font-size: clamp(32px, 5vw, 56px); line-height: 1.1; letter-spacing: -0.02em; margin-bottom: 32px;">Implementation <em style="font-style: italic; font-weight: 300; color: var(--accent);">path</em>:<br>five workstreams,<br>five contributors.</h1>
+  <p class="lede">The drop box implementation breaks naturally into five workstreams that can be tackled in parallel by different people or teams. Each is self-contained enough to start without blocking on the others, with one or two cross-dependencies called out explicitly. Each section below is structured the same way: where the code is today, what to build next, files and components to touch, dependencies, and how you'll know you're done.</p>
+  <div class="meta-row">
+    <div><span class="label">Reading time</span><strong>~15 minutes</strong></div>
+    <div><span class="label">Codebases</span><strong>DDD · Trick · DDD-thunderbird-android</strong></div>
+    <div><span class="label">Background</span><strong><a href="#" class="x-tab" data-goto-tab="tab-design">Full design</a> for context</strong></div>
+  </div>
+</div>
+
+<section style="padding-top: 60px;">
+  <div class="content">
+    <div class="marginalia">
+      <strong>Pick a workstream.</strong> Start with WS-1 if you're unsure — it unblocks the most immediate value.
+    </div>
+    <div class="body">
+      <h3 style="font-family: var(--serif); font-size: 24px; font-weight: 500; margin-bottom: 12px;">How the workstreams relate</h3>
+      <p>The five workstreams below can be picked up independently. WS-1 (drop box mode) is the foundation — anyone running a unit will need this first, and other workstreams test against it. WS-2 (dual protocol) is the largest engineering effort and the most novel; it can develop in parallel with WS-1 and integrate later. WS-3 (client UX) is mostly UI plumbing on the BundleClient side. WS-4 (routing) is the research-flavored work and depends on WS-1 being deployable for real testing. WS-5 (hardware & enclosure) is mechanical and runs entirely outside the codebase — a hardware-oriented contributor or maker can work on this from day one.</p>
+      <p>None of the workstreams require all the others to be done first. The minimum-viable drop box is WS-1 + WS-5 (mode + physical unit). Everything else improves the result.</p>
+    </div>
+  </div>
+
+  <!-- ============== WORKSTREAM 1 ============== -->
+  <div class="content">
+    <div class="marginalia"></div>
+    <div class="full">
+      <div class="workstream">
+        <div class="workstream-head">
+          <div class="ws-label">Workstream 1 · Foundational · Highest priority</div>
+          <h3>Drop box mode &amp; service hardening</h3>
+          <div class="ws-summary">Make <code>BundleTransportService</code> survive forever, headless, on a phone with the screen permanently off. Distinguish it from a moving transport in the discovery layer so clients can see what they're connecting to.</div>
+        </div>
+        <div class="workstream-body">
+
+          <div class="ws-section">
+            <h4>Where we are now</h4>
+            <p>The existing <code>BundleTransportService</code> is already most of the way there. It runs as a foreground service with <code>START_STICKY</code> (auto-restart after kill), creates the Wi-Fi Direct group owner via <code>DDDWifiServer</code>, runs the gRPC <code>RpcServer</code> and a NanoHTTPD <code>FileHttpServer</code> on port 8080, and survives reboots. <code>StorageManager</code> already handles age-based bundle cleanup when storage exceeds a configured limit. The DNS-SD TXT record already advertises <code>ddd</code>, <code>transportId</code>, and <code>recencyBlob</code>.</p>
+            <p>What's missing is power-management hardening (no <code>WAKE_LOCK</code>, no battery-optimization whitelist), no distinction in the discovery announcement between a moving transport and a stationary drop box, and no automatic enabling of headless operation.</p>
+          </div>
+
+          <div class="ws-section">
+            <h4>What to build</h4>
+            <ol>
+              <li>Add a <code>SharedPreferences</code> flag <code>dropbox_mode</code> readable from <code>BundleTransportService</code>. UI to toggle it in the existing transport app settings.</li>
+              <li>On service start, if drop box mode is enabled: acquire a <code>PowerManager.PARTIAL_WAKE_LOCK</code> for the lifetime of the service (keeps CPU alive while screen turns off normally); programmatically request battery-optimization whitelisting via the <code>REQUEST_IGNORE_BATTERY_OPTIMIZATIONS</code> intent; ensure no foreground activity holds <code>FLAG_KEEP_SCREEN_ON</code> so the screen times out and stays off. The phone's natural screen-off behavior is what we want — we're not trying to override the display, just keep the service running while the display is dark.</li>
+              <li>Extend <code>DDDWifiServer.createGroup()</code> TXT record with <code>type=dropbox</code> when in drop box mode, plus an optional <code>location</code> string from preferences.</li>
+              <li>Wire <code>StorageManager.updateStorage()</code> to run automatically when storage crosses 80% of the configured cap (currently it's manually invoked).</li>
+              <li>Add a minimal status surface. The phone's notification LED — where present — can be set to an "alive" pattern via the <code>FLAG_SHOW_LIGHTS</code> notification flag, though many modern phones lack a dedicated notification LED. As a fallback, a periodic notification update or the existing foreground-service notification serves as a heartbeat indicator visible through the enclosure's clear panel without requiring screen wake.</li>
+            </ol>
+          </div>
+
+          <div class="ws-section">
+            <h4>Files to touch</h4>
+            <div class="ws-deps">
+              <span class="ws-dep">BundleTransportService.java</span>
+              <span class="ws-dep">DDDWifiServer.java</span>
+              <span class="ws-dep">StorageManager.java</span>
+              <span class="ws-dep">SettingsScreen.kt (UI toggle)</span>
+            </div>
+          </div>
+
+          <div class="ws-section">
+            <h4>Dependencies</h4>
+            <p>None blocking. Can ship without WS-2; runs Wi-Fi Direct alone.</p>
+          </div>
+
+          <div class="ws-criteria">
+            <strong>Done when</strong>
+            A drop box phone runs unattended for 7+ days with the screen never turning on, survives Doze mode and OOM kills, automatically reclaims storage when full, and presents itself in the BundleClient peer list as a labeled drop box rather than a generic transport.
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ============== WORKSTREAM 2 ============== -->
+      <div class="workstream">
+        <div class="workstream-head">
+          <div class="ws-label">Workstream 2 · Largest effort · Research-flavored</div>
+          <h3>Dual-protocol discovery — Wi-Fi Aware alongside Wi-Fi Direct</h3>
+          <div class="ws-summary">Add Wi-Fi Aware (NAN) publish/subscribe to the transport service so capable phones get the better protocol while everyone else falls back to Wi-Fi Direct. The drop box advertises both; the connecting client picks whichever it supports.</div>
+        </div>
+        <div class="workstream-body">
+
+          <div class="ws-section">
+            <h4>Where we are now</h4>
+            <p>DDD currently uses Wi-Fi Direct exclusively, with the transport always running as group owner via <code>DDDWifiServer</code>. There is no Wi-Fi Aware code in DDD itself.</p>
+            <p>The Trick research project (a separate codebase from the same group) has a complete working Wi-Fi Aware implementation at <code>composeApp/src/androidMain/.../AndroidWifiAwareManager.kt</code>. It demonstrates: feature availability checking via <code>FEATURE_WIFI_AWARE</code>, simultaneous publish + subscribe after attach, network specifier with PSK, deterministic role negotiation by lexicographic device ID comparison, TCP over the NAN data path, heartbeat monitoring, and reconnection. Performance: 264 ms attach, 977 ms peer discovery, 7.4 ms text latency.</p>
+            <p>Trick is intentionally Wi-Fi Aware <em>only</em> (it shows an "Unsupported Device" screen if Aware isn't available). DDD must always fall back to Wi-Fi Direct because the target population's budget MediaTek phones often lack Wi-Fi Aware support.</p>
+          </div>
+
+          <div class="ws-section">
+            <h4>What to build</h4>
+            <ol>
+              <li>At <code>BundleTransportService</code> startup, check <code>PackageManager.hasSystemFeature(FEATURE_WIFI_AWARE)</code>. If absent, run only the existing Wi-Fi Direct path and exit early.</li>
+              <li>If present, attach a <code>WifiAwareSession</code> alongside the existing <code>DDDWifiServer</code>. Both publish and subscribe to a service named (for example) <code>"ddd-bundle"</code>.</li>
+              <li>When a peer subscribes to our publish, set up a Wi-Fi Aware data path via <code>WifiAwareNetworkSpecifier</code>, requesting a network through <code>ConnectivityManager</code>. Run the existing gRPC service over that network — the exchange protocol above the network layer is identical to Wi-Fi Direct.</li>
+              <li>Handle radio coexistence carefully. Both Wi-Fi Direct GO and Wi-Fi Aware share the radio; Qualcomm chipsets handle this cleanly, MediaTek can struggle. Add logging to surface coexistence issues during testing.</li>
+              <li>Mirror the same logic on the <code>BundleClient</code> side: discover via Aware when available, fall back to Direct.</li>
+              <li>Document tested phone models (which chipsets cleanly support both protocols simultaneously) so deployment knows what to procure.</li>
+            </ol>
+          </div>
+
+          <div class="ws-section">
+            <h4>Files to touch</h4>
+            <div class="ws-deps">
+              <span class="ws-dep">BundleTransportService.java</span>
+              <span class="ws-dep">new WifiAwareManager wrapper class</span>
+              <span class="ws-dep">BundleClientService.java</span>
+              <span class="ws-dep">reference: Trick AndroidWifiAwareManager.kt</span>
+            </div>
+          </div>
+
+          <div class="ws-section">
+            <h4>Dependencies</h4>
+            <p>Independent of WS-1, but real-world testing benefits from a deployable drop box (so test against WS-1 result). Forward-compatible with WS-4: once relay metadata is implemented, it works identically over either protocol.</p>
+          </div>
+
+          <div class="ws-criteria">
+            <strong>Done when</strong>
+            On a Qualcomm-chipset phone, the drop box service simultaneously advertises both protocols. A client phone with Wi-Fi Aware support discovers and exchanges via Aware; a client without falls back to Wi-Fi Direct seamlessly. Coexistence behavior is documented for at least three phone models.
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ============== WORKSTREAM 3 ============== -->
+      <div class="workstream">
+        <div class="workstream-head">
+          <div class="ws-label">Workstream 3 · UI plumbing · Quick win</div>
+          <h3>Client-side exchange progress &amp; drop box labeling</h3>
+          <div class="ws-summary">The infrastructure for showing exchange progress and outcome already exists — the broadcast cases are just empty. Wire them up, and use the new <code>type=dropbox</code> TXT field to label drop boxes distinctly in the peer list.</div>
+        </div>
+        <div class="workstream-body">
+
+          <div class="ws-section">
+            <h4>Where we are now</h4>
+            <p><code>BundleClientService</code> already broadcasts <code>WIFI_DIRECT_CLIENT_EXCHANGE_STARTED</code> and <code>WIFI_DIRECT_CLIENT_EXCHANGE_FINISHED</code> events. <code>BundleClientServiceBroadcastReceiver</code> receives them but the case bodies are empty — there's a commented-out hint about reading the device address from the intent extras, suggesting the wiring was started but not finished.</p>
+            <p>The <code>BundleExchangeCounts</code> result type already includes <code>uploadStatus()</code> and <code>downloadStatus()</code> with values <code>COMPLETE</code>, <code>FAILED</code>, <code>EMPTY</code>. The data is there; nothing surfaces it to the user.</p>
+            <p><code>WifiDirectScreen.kt</code> shows discovered peers with a per-peer "Exchange" button that does work. The text label currently shows just the transport ID.</p>
+          </div>
+
+          <div class="ws-section">
+            <h4>What to build</h4>
+            <ol>
+              <li>Wire the empty broadcast receiver cases to push state updates into <code>WifiDirectViewModel</code>'s <code>StateFlow</code>. During an exchange, the ViewModel exposes "exchanging with peer X." On finish, exposes the upload/download counts and statuses.</li>
+              <li>In <code>WifiDirectScreen.kt</code>, render a progress indicator while a peer's exchange is in progress. On completion, show a clear "✓ Bundle sent" or "✗ Failed" affordance that fades after a few seconds.</li>
+              <li>Read the <code>type</code> field from each peer's DNS-SD TXT record. If <code>type=dropbox</code>, render the peer with a distinct label and icon — e.g., "Drop Box · Nairobi Bus Stop 3" using the optional <code>location</code> field — versus a generic transport.</li>
+              <li>For drop box peers specifically, the existing manual exchange button is the primary affordance. Consider whether automatic background exchanges with drop boxes should be more or less aggressive than with moving transports — argument either way; worth user-testing.</li>
+            </ol>
+          </div>
+
+          <div class="ws-section">
+            <h4>Files to touch</h4>
+            <div class="ws-deps">
+              <span class="ws-dep">BundleClientServiceBroadcastReceiver.java</span>
+              <span class="ws-dep">WifiDirectViewModel.kt</span>
+              <span class="ws-dep">WifiDirectScreen.kt</span>
+              <span class="ws-dep">PeerItem composable</span>
+            </div>
+          </div>
+
+          <div class="ws-section">
+            <h4>Dependencies</h4>
+            <p>The drop box label work depends on WS-1 (which adds the <code>type=dropbox</code> TXT field). Progress indicator work has no dependencies.</p>
+          </div>
+
+          <div class="ws-criteria">
+            <strong>Done when</strong>
+            A user initiating an exchange sees clear progress feedback during and after. Drop boxes appear in the peer list with distinct labeling that includes their configured location string.
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ============== WORKSTREAM 4 ============== -->
+      <div class="workstream">
+        <div class="workstream-head">
+          <div class="ws-label">Workstream 4 · Research contribution · Routing &amp; encryption-adjacent</div>
+          <h3>Multi-transport coordination &amp; two-hop routing metadata</h3>
+          <div class="ws-summary">Make the drop box smart about which bus driver has taken which bundles. Extend <code>routing.metadata</code> to express the two-hop path so the server can route return bundles correctly. The most novel piece of work — and the most likely to be a publishable research contribution.</div>
+        </div>
+        <div class="workstream-body">
+
+          <div class="ws-section">
+            <h4>Where we are now</h4>
+            <p>Today, the system assumes a single hop from client to transport to server. Each client bundle carries a <code>routing.metadata</code> JSON map of <code>{transportId: encounterCount}</code>. The server's <code>BundleRouting.processClientMetaData()</code> reads this and builds a <code>transport → [clientIds]</code> mapping that drives where return bundles get sent.</p>
+            <p>Bundle deduplication is handled correctly: server skips bundles where the counter is less than or equal to <code>lastReceivedBundleCounter</code>. So multiple transports carrying the same bundle is harmless. <code>TransportToBundleServerManager</code> already handles arbitrary numbers of bundles in one inventory exchange — and after successful upload, deletes the local copy via <code>Files.delete(path)</code>.</p>
+            <p>What's missing: the drop box has no concept of which transport has already taken which bundles, and the server's routing model doesn't know about relay nodes.</p>
+          </div>
+
+          <div class="ws-section">
+            <h4>What to build · drop box side</h4>
+            <ol>
+              <li>Maintain a per-transport download ledger on the drop box: <code>{transportId → [bundleIds]}</code>, persisted to local storage.</li>
+              <li>When a transport arrives, prioritize bundles that no transport has confirmed downloading. Offer already-handled bundles as redundancy if there's still capacity in the exchange.</li>
+              <li>Confirmation flows from the existing ACK mechanism — when a return bundle's ACK eventually arrives, the originating client's bundle is fully delivered. For older bundles whose ACKs lag, use a heuristic: "N transports have taken this, mark as likely-delivered, deprioritize further offers but don't delete."</li>
+              <li>Storage cleanup remains driven by <code>StorageManager</code> for hard limits, but the drop box prefers deleting confirmed-delivered bundles before unconfirmed ones.</li>
+            </ol>
+          </div>
+
+          <div class="ws-section">
+            <h4>What to build · routing metadata side</h4>
+            <ol>
+              <li>Define a <code>relay_metadata</code> structure that drop boxes include in their own bundles to the server. This records which clientIds the drop box has seen and which transportIds have picked up from it.</li>
+              <li>Extend <code>BundleRouting.processClientMetaData()</code> on the server to handle relay entries. The mapping becomes: <code>transport → drop_box → clients</code> where applicable, falling back to the existing direct-transport mapping where no drop box is involved.</li>
+              <li>When generating return bundles, the server uses the richer routing topology to prefer transports that frequent the drop boxes the originating client uses, rather than just transports that have encountered the client directly.</li>
+              <li>The protocol extension is backward-compatible: existing transports without <code>relay_metadata</code> behave exactly as today.</li>
+            </ol>
+          </div>
+
+          <div class="ws-section">
+            <h4>Files to touch</h4>
+            <div class="ws-deps">
+              <span class="ws-dep">BundleTransportService.java (drop box ledger)</span>
+              <span class="ws-dep">BundleExchangeServiceImpl.java (offer prioritization)</span>
+              <span class="ws-dep">BundleRouting.java (server, relay processing)</span>
+              <span class="ws-dep">routing.metadata format spec</span>
+              <span class="ws-dep">ServerBundleTransmission.java (return bundle dispatch)</span>
+            </div>
+          </div>
+
+          <div class="ws-section">
+            <h4>Dependencies</h4>
+            <p>Soft dependency on WS-1 — the drop box ledger and relay metadata only matter once drop boxes are deployable in real conditions. This workstream can be designed and prototyped in parallel, but its evaluation requires field data.</p>
+          </div>
+
+          <div class="ws-criteria">
+            <strong>Done when</strong>
+            A drop box receiving bundles from many villagers efficiently distributes them across multiple visiting transports without unnecessary duplication. Server return-bundle delivery rates measurably improve when drop boxes are in the chain compared to a baseline that ignores relay metadata. Result is publication-worthy.
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ============== WORKSTREAM 5 ============== -->
+      <div class="workstream">
+        <div class="workstream-head">
+          <div class="ws-label">Workstream 5 · Outside the codebase · Independent</div>
+          <h3>Hardware, enclosure &amp; deployment characterization</h3>
+          <div class="ws-summary">Phone selection criteria, 3D-printable mount and enclosure, power system, site survey methodology. Entirely outside the software workstreams — a hardware-oriented contributor or maker can run this from day one without touching any code.</div>
+        </div>
+        <div class="workstream-body">
+
+          <div class="ws-section">
+            <h4>Where we are now</h4>
+            <p>No drop box hardware exists yet. The conversation has settled on used Android phones as the right platform, with a clear preference for Qualcomm chipsets when dual-protocol support is needed. The physical design space has been explored at idea-list depth (~100 ranked items in the Full design appendix) but no enclosure has been designed in CAD.</p>
+          </div>
+
+          <div class="ws-section">
+            <h4>What to build · phone selection</h4>
+            <ol>
+              <li>Identify 3–5 candidate phone models in the $20–80 range that explicitly report <code>FEATURE_WIFI_AWARE</code>. Pixel 4a, Pixel 5a, Moto G Power (specific Snapdragon variant), Galaxy A32 5G are starting candidates.</li>
+              <li>Test each candidate for stable simultaneous Wi-Fi Direct GO + Wi-Fi Aware operation under load. Document model + Android version + chipset.</li>
+              <li>Identify a Wi-Fi-Direct-only fallback recommendation for budget deployments where dual protocol isn't needed. Tecno Spark Go and Itel A-series are the obvious candidates given supply chain in target deployment regions.</li>
+            </ol>
+          </div>
+
+          <div class="ws-section">
+            <h4>What to build · enclosure</h4>
+            <ol>
+              <li>Design a clamshell PETG enclosure in Fusion 360 or similar. White or light gray for thermal reasons. Modular back panel architecture — same outer shell, swappable backs for wall / pole / eave / solar mounts. Universal phone cradle with model-specific inner trays.</li>
+              <li>Required features: silicone O-ring gasket channel, GORE-Tex pressure equalization vent, weep hole with mesh insert, recessed USB-C port with silicone flap, inner wall convection ribs, clear front window for status LED visibility, cable management channel.</li>
+              <li>Mount features: pole clamp with hose-clamp slots (25–50 mm range), 15° forward tilt, anti-rotation pin, keyhole-slot wall plate.</li>
+              <li>Optional but recommended: aluminum reflector behind phone (curved sheet, +3–5 dB gain in one direction), shade canopy (50 mm overhang), quarter-turn coin-operable latches, tool and maintenance log pocket inside lid.</li>
+              <li>Print test units, deploy on a test pole, measure thermal behavior over a full sun day, refine.</li>
+            </ol>
+          </div>
+
+          <div class="ws-section">
+            <h4>What to build · power system</h4>
+            <ol>
+              <li>Spec two power configurations. <strong>Solar:</strong> 5–10 W USB panel + TP4056 charge controller + 2–3× 18650 cells, total cost ~$18–30. <strong>Power bank swap:</strong> 20,000 mAh budget bank, swapped on bus driver's route, ~29 hours runtime per swap.</li>
+              <li>For the simpler African-market alternative: a $20 d.light A2T solar lantern with USB out is operationally equivalent to the assembled solar setup, locally repairable, and eliminates custom electronics work.</li>
+              <li>Test runtime under realistic load (Wi-Fi Direct GO active continuously, intermittent exchanges). Verify the phone's battery degradation profile under continuous-charge operation over 30+ days.</li>
+            </ol>
+          </div>
+
+          <div class="ws-section">
+            <h4>What to build · site survey methodology</h4>
+            <ol>
+              <li>Develop a one-page checklist for selecting a drop box deployment site: line-of-sight to bus stop waiting area, mounting structure available (pole, eave, wall), shade availability (or design accommodates direct sun), power source if not solar, theft risk assessment.</li>
+              <li>Document mounting height recommendations (3–4 m optimal where possible) and orientation guidelines (face-out toward primary user direction).</li>
+              <li>Produce installation instructions clear enough that a non-technical volunteer can deploy a unit in 15 minutes.</li>
+            </ol>
+          </div>
+
+          <div class="ws-section">
+            <h4>Files / artifacts</h4>
+            <div class="ws-deps">
+              <span class="ws-dep">Fusion 360 enclosure model</span>
+              <span class="ws-dep">STL files for 3D printing</span>
+              <span class="ws-dep">Bill of materials</span>
+              <span class="ws-dep">Site survey checklist</span>
+              <span class="ws-dep">Installation guide</span>
+            </div>
+          </div>
+
+          <div class="ws-section">
+            <h4>Dependencies</h4>
+            <p>Fully independent of all software workstreams. Field testing benefits from WS-1 being deployable but design and prototyping can start immediately.</p>
+          </div>
+
+          <div class="ws-criteria">
+            <strong>Done when</strong>
+            Three deployable units exist in printed PETG, mounted on test poles, running for at least 30 days continuous. Bill of materials and installation guide are clear enough for a non-technical contributor to assemble a fourth unit independently.
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="content" style="padding: 60px 0;">
+    <div class="marginalia">
+      <strong>Cross-references.</strong>
+    </div>
+    <div class="body">
+      <h3 style="font-family: var(--serif); font-size: 22px; font-weight: 500;">For more depth on any specific area</h3>
+      <ul>
+        <li><a href="#" class="x-tab" data-goto-tab="tab-design" data-goto-section="software">§04 Software implementation</a> in the Full design tab — priority-ordered breakdown with code snippets for the smallest changes.</li>
+        <li><a href="#" class="x-tab" data-goto-tab="tab-design" data-goto-section="dual-protocol">§05 Dual protocol</a> — the protocol-level reasoning for WS-2.</li>
+        <li><a href="#" class="x-tab" data-goto-tab="tab-design" data-goto-section="multi-transport">§07 Multi-transport coordination</a> — the protocol design for WS-4.</li>
+        <li><a href="#" class="x-tab" data-goto-tab="tab-design" data-goto-section="power">§06 Power and physical design</a> + <a href="#" class="x-tab" data-goto-tab="tab-design" data-goto-section="cost">§08 Build cost</a> — the substrate for WS-5.</li>
+        <li><a href="#" class="x-tab" data-goto-tab="tab-design" data-goto-section="appendix">Appendix D</a> in the Full design tab has all the relevant code snippets pulled out for reference.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</div>
+<!-- ════════════════════════════════════════════════════════════════
+     END TAB PANELS
+     ════════════════════════════════════════════════════════════════ -->
+
+<!-- ──────────────────────── FOOTER ──────────────────────── -->
+<footer>
+  <div>DDD · Drop Box Design Document · Rev. 0.6</div>
+  <div>SJSU CS Systems Group</div>
+</footer>
+
+</div>
+
+<script>
+// Tab switching with cross-tab links and section anchors
+(function() {
+  const tabs = document.querySelectorAll('.tab-btn');
+  const panels = document.querySelectorAll('.tab-panel');
+
+  function switchTab(tabId, scrollToTop = true) {
+    tabs.forEach(t => {
+      const active = t.dataset.tab === tabId;
+      t.classList.toggle('active', active);
+      t.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    panels.forEach(p => p.classList.toggle('active', p.id === tabId));
+    if (scrollToTop) window.scrollTo({ top: 0, behavior: 'auto' });
+  }
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+  });
+
+  // Cross-tab links: click any element with data-goto-tab to switch tabs
+  // and optionally scroll to a section
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('[data-goto-tab]');
+    if (!link) return;
+    e.preventDefault();
+    const targetTab = link.dataset.gotoTab;
+    const targetSection = link.dataset.gotoSection;
+    // If we're going to a specific section, don't bother scrolling to top first
+    switchTab(targetTab, !targetSection);
+    if (targetSection) {
+      requestAnimationFrame(() => {
+        const el = document.getElementById(targetSection);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
