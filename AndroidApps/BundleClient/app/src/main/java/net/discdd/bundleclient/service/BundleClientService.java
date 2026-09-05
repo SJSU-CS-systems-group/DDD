@@ -313,7 +313,13 @@ public class BundleClientService extends Service {
         }
         var recentTransports = recentTransportRepository.getAllTransports();
         for (var transport : recentTransports) {
-            if (transport.getDevice() instanceof DDDWifiDevice && doesTransportHaveNewData(transport)) {
+            // exchange when the transport has new data to hand back (download), or when we have
+            // new outbound data it hasn't received yet since our last exchange (upload). The latter
+            // lets follow-up mail ride a transport we already exchanged with, even if that transport
+            // hasn't been back to the server.
+            if (transport.getDevice() instanceof DDDWifiDevice &&
+                    (doesTransportHaveNewData(transport) ||
+                            bundleTransmission.hasNewOutboundDataSince(transport.getLastExchange()))) {
                 var bc = exchangeWith((DDDWifiDevice) transport.getDevice());
                 exchangeCounts.add(bc);
                 logger.log(INFO,

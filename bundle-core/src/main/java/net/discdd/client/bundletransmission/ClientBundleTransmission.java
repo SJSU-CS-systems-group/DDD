@@ -255,6 +255,18 @@ public class ClientBundleTransmission {
         return generateNewBundle(newBundleId);
     }
 
+    /**
+     * Returns true if there is outbound data (new ADUs or a newer ack record) created after the
+     * given timestamp. Uses the same definition of "something new to send" as
+     * {@link #generateBundleForTransmission()} (see the reuse check there). Callers pass the time
+     * they last exchanged with a transport to decide whether that transport still needs a bundle,
+     * independent of whether the transport itself has new data to hand back.
+     */
+    public boolean hasNewOutboundDataSince(long timestamp) {
+        return clientPaths.ackRecordPath.toFile().lastModified() > timestamp ||
+                applicationDataManager.hasNewADUs(null, timestamp);
+    }
+
     // returns true if the blob is more recent than previously seen
     public boolean processRecencyBlob(TransportDevice device, GetRecencyBlobResponse recencyBlobResponse) throws
             IOException, InvalidKeyException {
