@@ -78,6 +78,8 @@ public class BundleClientService extends Service {
     public static final String BUNDLE_CLIENT_TRANSMISSION_EVENT_EXTRA = "BundleClientTransmissionEvent";
     public static final String NET_DISCDD_BUNDLECLIENT_SETTING_BACKGROUND_EXCHANGE = "background_exchange";
     public static final String NET_DISCDD_BUNDLECLIENT_DEVICEADDRESS_EXTRA = "deviceAddress";
+    // a transport is considered nearby if it was seen within this window; also used to expire peers
+    public static final long TRANSPORT_SEEN_EXPIRATION_MS = 60 * 1000;
     private static final Logger logger = Logger.getLogger(BundleClientService.class.getName());
     public static BundleClientService instance;
     private static SharedPreferences preferences;
@@ -316,10 +318,15 @@ public class BundleClientService extends Service {
             // exchange when the transport has new data to hand back (download), or when we have
             // new outbound data it hasn't received yet since our last exchange (upload). The latter
             // lets follow-up mail ride a transport we already exchanged with, even if that transport
-            // hasn't been back to the server.
+            // hasn't been back to the server. Gate the outbound case on lastSeen so we don't burn
+            // 10s connect timeouts on stale peers (e.g. history loaded from the DB at startup) that
+            // are no longer in range.
+            boolean seenRecently =
+                    transport.getLastSeen() >= System.currentTimeMillis() - TRANSPORT_SEEN_EXPIRATION_MS;
             if (transport.getDevice() instanceof DDDWifiDevice &&
                     (doesTransportHaveNewData(transport) ||
-                            bundleTransmission.hasNewOutboundDataSince(transport.getLastExchange()))) {
+                            (seenRecently &&
+                                    bundleTransmission.hasNewOutboundDataSince(transport.getLastExchange())))) {
                 var bc = exchangeWith((DDDWifiDevice) transport.getDevice());
                 exchangeCounts.add(bc);
                 logger.log(INFO,
@@ -549,7 +556,7 @@ public class BundleClientService extends Service {
     public void peersUpdated() {
         dddWifi.listDevices().forEach(device -> recentTransportRepository.processDiscoveredPeer(device, device.getRecencyBlob()));
         // expire peers that haven't been seen for a minute
-        long expirationTime = System.currentTimeMillis() - 60 * 1000;
+        long expirationTime = System.currentTimeMillis() - TRANSPORT_SEEN_EXPIRATION_MS;
         recentTransportRepository.expireNotSeenPeers(expirationTime);
     }
 
