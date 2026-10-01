@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  DDD Dropbox manifest (validated in Research/R5 §3).
+
+  android-core's manifest is merged automatically and already supplies Wi-Fi/location/network
+  permissions. We still declare everything the dropbox itself relies on, because:
+   - FOREGROUND_SERVICE and WAKE_LOCK reach BundleTransport only transitively via work-runtime;
+     startForeground() on targetSdk 34 and the keep-awake lock need them, so declare them explicitly.
+   - The dropbox both HOSTS a Wi-Fi Direct group (like BundleTransport) and JOINS one via DNS-SD
+     discovery (like BundleClient, whose discovery path requires FINE_LOCATION + NEARBY_WIFI_DEVICES).
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Wi-Fi Direct: host (create group, advertise DNS-SD) and join (discover, connect). -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <!-- Same flags as android-core's declaration so the manifest merger does not conflict. -->
+    <uses-permission
+        android:name="android.permission.NEARBY_WIFI_DEVICES"
+        android:usesPermissionFlags="neverForLocation"/>
+    <!-- gRPC over the P2P link (OkHttp server on 7777 and channel to the carrier's 7777). -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+
+    <!-- Always-on stationary relay: foreground data-sync service with optional keep-awake. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+    <uses-feature android:name="android.hardware.wifi.direct" android:required="true"/>
+
+    <application
+        android:name="net.discdd.crashreports.AcraApp"
+        android:icon="@drawable/bundledropbox_icon"
+        android:roundIcon="@drawable/bundledropbox_icon"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.AppCompat.DayNight">
+
+        <service
+            android:name="net.discdd.bundledropbox.service.DropboxService"
+            android:enabled="true"
+            android:foregroundServiceType="dataSync"
+            android:exported="false"/>
+
+        <activity
+            android:name="net.discdd.bundledropbox.BundleDropboxActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

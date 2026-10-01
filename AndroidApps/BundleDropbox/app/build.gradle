@@ -1,0 +1,114 @@
+// DDD Dropbox: a stationary relay that serves unmodified BundleClients as a transport (HOST mode)
+// and visits unmodified BundleTransports as a client (VISIT mode), oscillating on a Wi-Fi Direct timer.
+//
+// Derived from BundleTransport/app/build.gradle (validated in Research/R5 §2). Differences:
+//  - no protobuf plugin: all generated gRPC classes ship in the bundle-core jar;
+//  - no nanohttpd / firebase / viewpager2 / recyclerview / espresso / viewBinding (Compose-only, offline);
+//  - JUnit 4 for JVM unit tests of the pure-Java store/ and cycle/ packages.
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id "com.google.devtools.ksp" version "1.9.25-1.0.20"
+    id 'ru.vyarus.animalsniffer' version '1.7.1'
+}
+
+android {
+    namespace 'net.discdd.bundledropbox'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "net.discdd.bundledropbox"
+        minSdk 33
+        targetSdk 34
+        versionCode rootProject.ext.appVersionCode as Integer
+        versionName rootProject.ext.appVersionName as String
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildFeatures {
+        compose = true
+        buildConfig = true      // BuildConfig.DEBUG gates StrictMode, as in the transport service
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.15"
+    }
+    compileOptions {
+        coreLibraryDesugaringEnabled true
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+    packagingOptions {
+        jniLibs {
+            excludes += ['META-INF/*', 'META-INF/*/*', 'LICENSE-BouncyCastle', 'META-INF/versions/9/OSGI-INF/MANIFEST.MF']
+        }
+        resources {
+            excludes += ['META-INF/*', 'META-INF/*/*', 'LICENSE-BouncyCastle', 'META-INF/versions/9/OSGI-INF/MANIFEST.MF']
+        }
+    }
+    buildTypes {
+        debug { minifyEnabled false }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    lint {
+        abortOnError false
+        disable 'GoogleAppIndexingWarning', 'HardcodedText', 'InvalidPackage'
+        textOutput file('stdout')
+        textReport true
+    }
+}
+
+dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+
+    implementation project(':android-core')
+    implementation 'net.discdd:bundle-core:0.0.2'
+
+    // gRPC: full (non-lite) artifacts to match bundle-core's generated classes
+    implementation "io.grpc:grpc-protobuf:${rootProject.ext.grpcVersion}"
+    implementation "io.grpc:grpc-stub:${rootProject.ext.grpcVersion}"
+    implementation "io.grpc:grpc-okhttp:${rootProject.ext.grpcVersion}"   // OkHttpServerBuilder (serve clients) + OkHttpChannelBuilder (visit transports)
+    implementation "io.grpc:grpc-context:${rootProject.ext.grpcVersion}"
+    compileOnly 'org.apache.tomcat:annotations-api:6.0.53'                  // javax.annotation for grpc stubs on Java 9+
+    implementation "org.bouncycastle:bcpkix-jdk15to18:1.78"
+    implementation "org.bouncycastle:bcprov-jdk15to18:1.78"
+
+    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation "androidx.work:work-runtime:2.9.0"
+    implementation 'com.google.android.material:material:1.12.0'            // provides Theme.AppCompat.DayNight used in manifest
+    implementation "com.google.zxing:core:3.5.1"                            // QR for Wi-Fi group credentials
+
+    def acraVersion = '5.12.0'
+    implementation "ch.acra:acra-core:$acraVersion"                          // required by net.discdd.crashreports.AcraApp
+    annotationProcessor("com.google.auto.service:auto-service:1.1.1")
+    compileOnly("com.google.auto.service:auto-service-annotations:1.1.1")
+
+    implementation platform("androidx.compose:compose-bom:${rootProject.ext.composeBomVersion}")
+    androidTestImplementation platform("androidx.compose:compose-bom:${rootProject.ext.composeBomVersion}")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    implementation("androidx.activity:activity-compose:1.9.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    implementation("androidx.compose.runtime:runtime-livedata")
+    implementation("com.google.accompanist:accompanist-permissions:0.37.2")
+
+    def room_version = "2.6.1"
+    implementation "androidx.room:room-runtime:$room_version"
+    ksp "androidx.room:room-compiler:$room_version"
+
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.3'
+
+    signature 'com.toasttab.android:gummy-bears-api-33:0.7.0@signature'
+}
+
+animalsniffer {
+    ignoreFailures = false
+    annotation = 'org.codehaus.mojo.animal_sniffer.IgnoreJRERequirement'
+}

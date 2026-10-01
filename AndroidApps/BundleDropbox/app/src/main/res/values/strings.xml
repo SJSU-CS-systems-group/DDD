@@ -1,0 +1,50 @@
+<resources>
+    <string name="app_name">DDD Dropbox</string>
+
+    <!--
+      Strings needed by code adapted from BundleTransport (DDDWifiServer, BundleTransportService,
+      WifiDirectScreen/ViewModel, TransportHomeScreen) and logged through android-core's
+      LogUtil.logUi(context, logger, type, level, @StringRes, args). Ids match the transport's
+      strings.xml so copied code compiles unchanged (Research/R5 §6).
+    -->
+    <string name="available">Available</string>
+    <string name="check_permissions_and_that_wifi_is_enabled">Check Permissions and that Wifi is enabled</string>
+    <string name="connected">Connected</string>
+    <string name="connected_devices">Connected Devices:</string>
+    <string name="could_not_initialize_wifi_direct_s">could not initialize Wifi direct %s</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="failed">Failed</string>
+    <string name="failed_to_initialize_grpcsecurity_s">Failed to initialize GrpcSecurity for SERVER: %s</string>
+    <string name="initializing_wifidirectmanager">Initializing WifiDirectManager</string>
+    <string name="invited">Invited</string>
+    <string name="left_group_s">Left group: %s</string>
+    <string name="local_wifi">Local Wifi</string>
+    <string name="logs">Logs</string>
+    <string name="lost_clients_s">Lost clients: %s</string>
+    <string name="new_clients_s">New clients: %s</string>
+    <string name="new_group_s">New group: %s</string>
+    <string name="no_permission_for_wi_fi_direct">No permission for Wi-Fi Direct</string>
+    <string name="permissions">Permissions</string>
+    <string name="server_started">server started</string>
+    <string name="server_stopped">server stopped</string>
+    <string name="starting_grpc_server">Starting gRPC server</string>
+    <string name="stopping_grpc_server">Stopping gRPC server</string>
+    <string name="storage" translatable="false">Storage</string>
+    <string name="unavailable">Unavailable</string>
+    <string name="wifi_direct_create_group_failed_d">Could not create WiFi group. error = %d</string>
+    <string name="wifi_direct_create_group_failed_e">Failed to create WiFi group: %s</string>
+    <string name="wifi_direct_create_group_success">Created WiFi group.</string>
+    <string name="wifi_direct_get_group_success">Found existing WiFi group.</string>
+    <string name="wifi_direct_initialized">Wifi Direct initialized</string>
+    <string name="wifi_direct_no_permission">Cannot create WiFi group. Permissions have not been granted.</string>
+    <string name="Wifi_disabled">Please turn on WiFi to use DDD Dropbox features</string>
+
+    <!-- Dropbox-specific strings. -->
+    <string name="dropbox_notification_channel_name">DDD Dropbox</string>
+    <string name="dropbox_notification_title">DDD Dropbox is relaying bundles</string>
+    <string name="dropbox_notification_text">Alternating between serving clients and visiting transports</string>
+    <string name="status">Status</string>
+    <string name="settings">Settings</string>
+    <string name="bug_reports">Bug reports</string>
+    <string name="dropbox_placeholder">DDD Dropbox is starting up…</string>
+</resources>

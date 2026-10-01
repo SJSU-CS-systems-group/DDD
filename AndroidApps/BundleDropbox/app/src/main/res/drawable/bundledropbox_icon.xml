@@ -1,0 +1,30 @@
+<!--
+  DDD Dropbox launcher icon: a simple box with a two-way arrow (bundles go in and come out).
+  192dp vector, same size convention as bundletransport_icon.xml.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="192dp"
+    android:height="192dp"
+    android:viewportWidth="192"
+    android:viewportHeight="192">
+    <!-- rounded background -->
+    <path
+        android:fillColor="#2E5E8C"
+        android:pathData="M40,24h112a16,16 0,0 1,16 16v112a16,16 0,0 1,-16 16h-112a16,16 0,0 1,-16 -16v-112a16,16 0,0 1,16 -16z"/>
+    <!-- box body -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M52,84h88v60a8,8 0,0 1,-8 8h-72a8,8 0,0 1,-8 -8z"/>
+    <!-- box lid -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M46,68h100v12h-100z"/>
+    <!-- up arrow (upstream: client to server) -->
+    <path
+        android:fillColor="#2E5E8C"
+        android:pathData="M78,96l14,16h-9v28h-10v-28h-9z"/>
+    <!-- down arrow (downstream: server to client) -->
+    <path
+        android:fillColor="#2E5E8C"
+        android:pathData="M114,140l-14,-16h9v-28h10v28h9z"/>
+</vector>
