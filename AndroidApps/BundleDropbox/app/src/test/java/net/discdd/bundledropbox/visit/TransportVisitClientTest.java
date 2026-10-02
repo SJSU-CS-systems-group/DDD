@@ -199,6 +199,52 @@ public class TransportVisitClientTest {
     }
 
     @Test(timeout = 60_000)
+    public void uploadsNewestFirst() throws Exception {
+        // The server ignores counters at or below the last one it saw from a client, so the newest bundle is
+        // the valuable one and must go first when the dwell only allows one upload.
+        dropboxHoldsUpstream("up-old", 100);
+        dropboxHoldsUpstream("up-new", 100);
+
+        VisitResult r = visit(() -> carrier.uploads.get() == 0);
+
+        assertEquals(1, r.uploaded());
+        assertTrue(Files.exists(carrier.toServer.resolve("up-new")));
+        assertFalse(Files.exists(carrier.toServer.resolve("up-old")));
+    }
+
+    @Test(timeout = 60_000)
+    public void downloadsResumeWhereThePreviousVisitStopped() throws Exception {
+        carrierHolds("d1", 100);
+        carrierHolds("d2", 100);
+        carrierHolds("d3", 100);
+
+        // Each "dwell" only has time for one new bundle. Without resume, every visit would restart at index 0
+        // and spend its time re-downloading bundles the dropbox already holds.
+        for (int visitNo = 1; visitNo <= 3; visitNo++) {
+            int target = visitNo;
+            VisitResult r = visit(() -> store.list(Direction.DOWNSTREAM).size() < target);
+            assertEquals("visit " + visitNo, 1, r.downloaded());
+            assertEquals("visit " + visitNo + " re-downloaded a held bundle", 0, r.skipped());
+        }
+        assertEquals(List.of("d1", "d2", "d3"), downstreamIds());
+    }
+
+    @Test(timeout = 60_000)
+    public void callerCancelSignalStopsVisitEvenIfRaisedBeforeItStarts() throws Exception {
+        carrier.recency = successBlob(5_000);
+        dropboxHoldsUpstream("up1", 100);
+        carrierHolds("d1", 100);
+
+        // The gate token was force-released between tryAdmit and visit(): nothing may run.
+        VisitResult r = client.visit(InetAddress.getLoopbackAddress(), carrier.port, CARRIER, () -> true, () -> true);
+
+        assertTrue(r.stoppedEarly());
+        assertFalse(r.recencyFetched());
+        assertEquals(0, r.uploaded());
+        assertEquals(0, carrier.psiExchanges.get());
+    }
+
+    @Test(timeout = 60_000)
     public void recencyIsFetchedEvenWhenAlreadyToldToStop() throws Exception {
         carrier.recency = successBlob(5_000);
         dropboxHoldsUpstream("up1", 100);

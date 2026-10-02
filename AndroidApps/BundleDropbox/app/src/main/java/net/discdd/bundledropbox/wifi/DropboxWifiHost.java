@@ -76,6 +76,8 @@ final class DropboxWifiHost {
     private boolean endpointRunning;
     private WifiP2pDnsSdServiceInfo serviceInfo;
     private String currentAdvertisedId;
+    /** True after {@link #withdrawAdvertisement()} until the next {@link #start}: HOST is draining. */
+    private boolean withdrawn;
     /** Our group while STARTING/HOSTING (null otherwise). */
     private WifiP2pGroup group;
     private InetAddress groupOwnerAddress;
@@ -138,6 +140,7 @@ final class DropboxWifiHost {
         supersede("superseded by startHosting gen " + gen);
         Op op = new Op(gen, cb);
         activeOp = op;
+        withdrawn = false;
         String problem = link.precheck(false);
         if (problem != null) {
             op.fail(problem);
@@ -265,11 +268,38 @@ final class DropboxWifiHost {
      * id). Remove-then-add, as DDDWifiServer.updateRecencyBlob does. Best effort: failures are logged.
      */
     void refreshAdvertisement() {
-        if (state != State.HOSTING || activeOp != null) return;
+        if (state != State.HOSTING || activeOp != null || withdrawn) return;
         Op op = new Op(-1, null);
         activeOp = op;
         state = State.STARTING;
         advertise(op);
+    }
+
+    /**
+     * RadioDriver.withdrawHostAdvertisement, on the main thread: the HOST dwell ended with admitted clients
+     * still mid-exchange. Clear the DNS-SD record so no new client discovers a dropbox that is about to
+     * refuse it (a refused stock client stamps lastExchange and then skips this transportId, R3 §7), but
+     * keep the group and the endpoint so admitted clients finish. Best effort: a failure is only logged,
+     * {@link #stop} clears services again anyway.
+     *
+     * <p>Residual window: a client that already cached our record (or is mid-discovery) can still connect
+     * during the drain and be refused; withdrawing early only makes that window as small as the radio allows.
+     */
+    void withdrawAdvertisement() {
+        if (state != State.HOSTING || withdrawn) return;
+        withdrawn = true;
+        link.action("clearLocalServices (drain)",
+                    WifiTimeouts.SERVICE_OP_MS,
+                    (m, c, l) -> m.clearLocalServices(c, l),
+                    () -> state == State.HOSTING,
+                    (ok, why) -> {
+                        if (ok) {
+                            serviceInfo = null;
+                            link.wifi(INFO, "Stopped advertising; letting connected clients finish");
+                        } else {
+                            logger.warning("could not withdraw advertisement: " + why);
+                        }
+                    });
     }
 
     // ---------------------------------------------------------------- stop

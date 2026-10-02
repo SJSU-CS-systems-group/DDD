@@ -152,7 +152,7 @@ public final class WifiDirectRadioDriver implements RadioDriver {
     }
 
     /**
-     * The UI obtained NEARBY_WIFI_DEVICES (and/or ACCESS_FINE_LOCATION). Re-registers the receiver so
+     * The UI obtained NEARBY_WIFI_DEVICES. Re-registers the receiver so
      * P2P broadcasts (which need the permission) start arriving, as the transport and client do.
      */
     public void wifiPermissionGranted() {
@@ -193,6 +193,11 @@ public final class WifiDirectRadioDriver implements RadioDriver {
     @Override
     public void stopHosting(long gen, RadioCallback cb) {
         main.post(() -> host.stop(gen, failureRecorder(cb)));
+    }
+
+    @Override
+    public void withdrawHostAdvertisement() {
+        main.post(host::withdrawAdvertisement);
     }
 
     @Override
@@ -258,7 +263,7 @@ public final class WifiDirectRadioDriver implements RadioDriver {
             };
         }
         WifiRadioState.GroupInfo group = host.isActive() ? host.groupInfo() : joiner.groupInfo();
-        boolean permissions = link.hasNearbyPermission() && link.hasFineLocationPermission();
+        boolean permissions = link.hasNearbyPermission(); // the only runtime permission P2P needs (P2pLink.precheck)
         state = WifiRadioState.builder()
                 .phase(phase)
                 .p2pEnabled(link.manager != null && link.p2pConfirmedEnabled())

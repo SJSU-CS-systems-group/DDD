@@ -27,9 +27,12 @@ public interface CarrierChannelFactory {
      *
      * <p>The transport streams downloads through a 4 MiB buffer ({@code BundleExchangeServiceImpl.DOWNLOAD_BUFFER_SIZE}),
      * so a chunk may be up to 4 MiB of data, and a full chunk plus protobuf framing exceeds OkHttp's default 4 MiB
-     * limit (Research/R2 §4.1). In practice {@code transferToStream} reads through {@code Channels.newChannel},
-     * which yields much smaller chunks (8 KiB on the JDK), so the stock client usually gets away without raising
-     * it; the dropbox raises it anyway so the worst case cannot fail a visit.
+     * limit (Research/R2 §4.1). This is not just a worst case: {@code transferToStream} reads through
+     * {@code Channels.newChannel}, whose read loop keeps going while {@code available() > 0}, and the stream from
+     * {@code Files.newInputStream} reports the whole remaining file as available, so every chunk of a file of
+     * 4 MiB or more is a full 4 MiB. A stock client (default 4 MiB limit) therefore cannot download such a bundle
+     * from a transport; the dropbox raises its limit so a visit can, and serves its own clients in smaller chunks
+     * ({@code DropboxExchangeService.DOWNLOAD_CHUNK_BYTES}).
      */
     int MAX_INBOUND_MESSAGE_BYTES = 8 * 1024 * 1024;
 

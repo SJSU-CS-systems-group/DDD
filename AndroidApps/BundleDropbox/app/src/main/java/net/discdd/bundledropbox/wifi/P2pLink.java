@@ -133,16 +133,6 @@ final class P2pLink {
                 PackageManager.PERMISSION_GRANTED;
     }
 
-    /**
-     * @return true if ACCESS_FINE_LOCATION is granted. BundleClient's discovery/connect path requires it
-     *         together with NEARBY_WIFI_DEVICES ({@code @RequiresPermission(allOf=...)},
-     *         DDDWifiDirect.java:83-84; R5 §3), so the dropbox requires it for VISIT as well.
-     */
-    boolean hasFineLocationPermission() {
-        return ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
-                PackageManager.PERMISSION_GRANTED;
-    }
-
     void setP2pState(int state) {
         p2pState = state;
     }
@@ -171,15 +161,20 @@ final class P2pLink {
     }
 
     /**
-     * Checks everything an operation needs before touching the radio.
+     * Checks everything an operation needs before touching the radio. Both roles need only
+     * NEARBY_WIFI_DEVICES: on minSdk 33 it is declared {@code neverForLocation} (android-core manifest), which
+     * covers DNS-SD discovery and connect without location. The stock BundleClient runs the same discovery and
+     * connect with only NEARBY requested at runtime (its {@code HomeScreen}); the
+     * {@code @RequiresPermission(ACCESS_FINE_LOCATION)} on {@code DDDWifiDirect} is a lint annotation only.
+     * Requiring FINE here used to block every VISIT, and with it the bootstrap, on a permission the UI could
+     * not even obtain on API 31+ (a FINE request without COARSE is dropped by the system).
      *
-     * @param forVisit true for VISIT (also needs ACCESS_FINE_LOCATION)
+     * @param forVisit true for VISIT, false for HOST (currently the same requirements; kept for clarity)
      * @return null if OK, otherwise a clear reason for {@code RadioCallback.failed}
      */
     String precheck(boolean forVisit) {
         if (manager == null) return "Wi-Fi Direct is not supported on this device";
         if (!hasNearbyPermission()) return "NEARBY_WIFI_DEVICES permission not granted";
-        if (forVisit && !hasFineLocationPermission()) return "ACCESS_FINE_LOCATION permission not granted";
         if (!p2pEnabled()) return "Wi-Fi Direct is disabled (turn on Wi-Fi)";
         if (!ensureChannel()) return "could not initialize the Wi-Fi Direct channel";
         return null;

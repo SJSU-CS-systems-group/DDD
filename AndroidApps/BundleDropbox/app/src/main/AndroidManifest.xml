@@ -7,7 +7,9 @@
    - FOREGROUND_SERVICE and WAKE_LOCK reach BundleTransport only transitively via work-runtime;
      startForeground() on targetSdk 34 and the keep-awake lock need them, so declare them explicitly.
    - The dropbox both HOSTS a Wi-Fi Direct group (like BundleTransport) and JOINS one via DNS-SD
-     discovery (like BundleClient, whose discovery path requires FINE_LOCATION + NEARBY_WIFI_DEVICES).
+     discovery (like BundleClient). On minSdk 33 both need only NEARBY_WIFI_DEVICES (neverForLocation),
+     which is the only Wi-Fi permission requested at runtime; ACCESS_FINE_LOCATION is merged in from
+     android-core anyway and kept declared here for parity, but never required.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
@@ -28,6 +30,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Unattended relay: restart the service after a reboot (BootReceiver, "Start on boot" setting). -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
     <uses-feature android:name="android.hardware.wifi.direct" android:required="true"/>
 
@@ -44,6 +48,17 @@
             android:enabled="true"
             android:foregroundServiceType="dataSync"
             android:exported="false"/>
+
+        <!-- Starts DropboxService after boot when "Start on boot" is on. Exported only so the system can
+             deliver BOOT_COMPLETED; it ignores every other action. -->
+        <receiver
+            android:name="net.discdd.bundledropbox.service.BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+            </intent-filter>
+        </receiver>
 
         <activity
             android:name="net.discdd.bundledropbox.BundleDropboxActivity"

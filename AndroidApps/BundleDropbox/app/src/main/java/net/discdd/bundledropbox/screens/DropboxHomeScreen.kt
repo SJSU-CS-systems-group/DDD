@@ -43,6 +43,10 @@ import net.discdd.screens.BugReportScreen
 import net.discdd.screens.LogScreen
 import net.discdd.screens.PermissionScreen
 import net.discdd.viewmodels.SettingsViewModel
+import java.util.logging.Level
+import java.util.logging.Logger
+
+private val logger = Logger.getLogger("DropboxHomeScreen")
 
 /** One pager tab: title plus content (same shape as the transport's `TabItem`). */
 data class TabItem(
@@ -58,10 +62,10 @@ data class TabItem(
  * appear when android-core's easter egg is toggled on the Status tab. As in the transport,
  * android-core's [SettingsViewModel] drives the first-open notification sheet and the easter egg.
  *
- * Runtime permissions: NEARBY_WIFI_DEVICES (every Wi-Fi P2P call), ACCESS_FINE_LOCATION (the
- * BundleClient-style DNS-SD discovery and connect used in VISIT mode, R5 §3) and POST_NOTIFICATIONS
- * (foreground-service notification, asked through [NotificationBottomSheet] on first open). When a
- * Wi-Fi permission becomes granted the service is told to retry radio work.
+ * Runtime permissions: NEARBY_WIFI_DEVICES (every Wi-Fi P2P call, both roles; declared
+ * `neverForLocation`, so no location permission is needed, exactly like the stock BundleClient) and
+ * POST_NOTIFICATIONS (foreground-service notification, asked through [NotificationBottomSheet] on first
+ * open). When the Wi-Fi permission becomes granted the service is told to retry radio work.
  */
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -73,15 +77,20 @@ fun DropboxHomeScreen(viewModel: SettingsViewModel = viewModel()) {
     val status by DropboxStatusRepository.status.collectAsState()
 
     val nearbyWifiState = rememberPermissionState(Manifest.permission.NEARBY_WIFI_DEVICES)
-    val fineLocationState = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
     val notificationState = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS,
             onPermissionResult = { viewModel.onFirstOpen() })
 
     // Same hook as the transport (TransportHomeScreen -> wifiPermissionGranted), but off the main thread
-    // because DropboxControls methods may block briefly.
-    LaunchedEffect(nearbyWifiState.status, fineLocationState.status) {
+    // because DropboxControls methods may block briefly. Unlike the transport's hook, ours can throw
+    // (the service reports "failed to start" / "still starting" through IllegalStateException), and an
+    // uncaught exception in a LaunchedEffect would crash the app, so it is caught and logged; the service
+    // already publishes the failure as lastError on the Status tab.
+    LaunchedEffect(nearbyWifiState.status) {
         if (nearbyWifiState.status.isGranted) {
-            withContext(Dispatchers.IO) { DropboxServiceManager.controls()?.wifiPermissionGranted() }
+            withContext(Dispatchers.IO) {
+                runCatching { DropboxServiceManager.controls()?.wifiPermissionGranted() }
+                        .onFailure { logger.log(Level.WARNING, "wifiPermissionGranted failed: ${it.message}") }
+            }
         }
     }
 
@@ -94,7 +103,7 @@ fun DropboxHomeScreen(viewModel: SettingsViewModel = viewModel()) {
                     })
                 },
                 TabItem(title = context.getString(R.string.local_wifi)) {
-                    WifiDirectScreen(permissionStates = listOf(nearbyWifiState, fineLocationState))
+                    WifiDirectScreen(permissionStates = listOf(nearbyWifiState))
                 },
                 TabItem(title = context.getString(R.string.storage)) { StorageScreen() },
                 TabItem(title = context.getString(R.string.settings)) { SettingsScreen() },
@@ -107,7 +116,7 @@ fun DropboxHomeScreen(viewModel: SettingsViewModel = viewModel()) {
         listOf(
                 TabItem(title = context.getString(R.string.logs)) { LogScreen() },
                 TabItem(title = context.getString(R.string.permissions)) {
-                    PermissionScreen(runtimePermissions = listOf(nearbyWifiState, fineLocationState, notificationState))
+                    PermissionScreen(runtimePermissions = listOf(nearbyWifiState, notificationState))
                 },
         )
     }

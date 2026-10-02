@@ -7,10 +7,12 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.Context;
 import android.content.pm.ServiceInfo;
-import android.net.wifi.WifiManager;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.PowerManager;
 import android.os.SystemClock;
 import android.util.Base64;
@@ -105,6 +107,8 @@ public class DropboxService extends Service implements DropboxControls {
     static final String VISIT_GATE_KEY = "visit";
     /** How long a UI control waits for initialization to finish before reporting "not ready". */
     private static final long READY_WAIT_MS = 15_000;
+    /** Delay before a failed initialization is retried on its own (unattended relay, nobody to reopen the app). */
+    static final long INIT_RETRY_MS = 60_000;
     private static final String WAKE_TAG = "DDDDropbox:keepAwake";
 
     private final IBinder binder = new LocalBinder();
@@ -113,12 +117,18 @@ public class DropboxService extends Service implements DropboxControls {
         t.setDaemon(true);
         return t;
     });
-    /** Completes when every component is constructed and the cycle has been started. */
-    private final CompletableFuture<Void> ready = new CompletableFuture<>();
+    /**
+     * Completes when every component is constructed and the cycle has been started. Replaced by a fresh
+     * future before each initialization attempt (a failed attempt is retried, see {@link #onInitFailed}).
+     */
+    private volatile CompletableFuture<Void> ready = new CompletableFuture<>();
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    /** Retries a failed initialization ({@link #onInitFailed}); main thread. */
+    private final Runnable initRetry = this::retryInitialize;
     /** Monotonic clock for the cycle and session tracker (deadlines survive wall-clock changes). */
     private final Clock clock = SystemClock::elapsedRealtime;
 
-    private boolean started; // main thread only: makes onStartCommand idempotent (START_STICKY redelivery)
+    private boolean started; // main thread only: true while initialized or initializing; reset on failure
     private volatile boolean destroyed;
 
     // Components, written once on dropbox-service before `ready` completes (volatile: read from callbacks).
@@ -133,9 +143,8 @@ public class DropboxService extends Service implements DropboxControls {
     private volatile RoleCycleController controller;
     private volatile ActivityGate gate;
 
-    // Keep-awake locks (main thread only).
+    // Keep-awake lock (main thread only).
     private PowerManager.WakeLock wakeLock;
-    private WifiManager.WifiLock wifiLock;
 
     /** Must be a field: SharedPreferences holds listeners weakly. Runs on the main thread. */
     private final SharedPreferences.OnSharedPreferenceChangeListener prefsListener = (p, key) -> onPrefChanged(key);
@@ -154,15 +163,27 @@ public class DropboxService extends Service implements DropboxControls {
         // startForegroundService() requires startForeground() promptly on every start command, so this
         // runs synchronously each time; it is cheap and idempotent.
         startInForeground(getString(R.string.dropbox_notification_text));
-        if (started) {
-            // Already wired (activity re-created, or START_STICKY re-delivery): nothing to redo.
-            return START_STICKY;
+        if (!started) {
+            // Not wired yet, or the previous attempt failed (a reopened app or a sticky restart retries now).
+            beginInitialize();
         }
-        started = true;
-        // Heavy work (key generation, directory scans, fsync) off the main thread, as in the transport.
-        serviceExecutor.execute(this::initialize);
+        // Otherwise already wired or wiring (activity re-created, START_STICKY re-delivery): nothing to redo.
         // The dropbox is a stationary, always-plugged-in relay: restart it if the system kills it.
         return START_STICKY;
+    }
+
+    /** Scheduled after a failed initialization; a start command may already have retried. Main thread. */
+    private void retryInitialize() {
+        if (!started && !destroyed) beginInitialize();
+    }
+
+    /** Starts one initialization attempt on {@code dropbox-service}. Main thread. */
+    private void beginInitialize() {
+        started = true;
+        mainHandler.removeCallbacks(initRetry);
+        if (ready.isDone()) ready = new CompletableFuture<>(); // previous attempt failed
+        // Heavy work (key generation, directory scans, fsync) off the main thread, as in the transport.
+        serviceExecutor.execute(this::initialize);
     }
 
     /**
@@ -184,9 +205,7 @@ public class DropboxService extends Service implements DropboxControls {
             SharedPreferences p = DropboxPrefs.get(this);
             prefs = p;
 
-            File dir = getExternalFilesDir(null);
-            if (dir == null) dir = getFilesDir();
-            DropboxPaths paths = new DropboxPaths(dir.toPath()).createDirectories();
+            DropboxPaths paths = new DropboxPaths(storageRoot(this).toPath()).createDirectories();
 
             DropboxIdentity id = DropboxIdentity.load(paths,
                                                       b -> Base64.encodeToString(b, Base64.DEFAULT),
@@ -234,9 +253,12 @@ public class DropboxService extends Service implements DropboxControls {
             driver.initialize();
             driver.addStateListener(new DropboxWifiStateBridge());
             // UNAVAILABLE retries "after 30 s or when Wi-Fi/permission state changes" (03 Architecture).
+            // A lost role (hosted group gone, P2P disabled, channel lost) ends the current dwell at once rather
+            // than leaving the cycle "serving clients" with no group for the rest of the timer.
             driver.setEnvironmentListener((available, reason) -> {
                 logUi(UserLogType.WIFI, available ? Level.INFO : Level.WARNING, "Wi-Fi Direct: " + reason);
                 if (available) cycle.retryNow();
+                else cycle.roleLost(reason);
             });
 
             getMainExecutor().execute(() -> {
@@ -257,12 +279,47 @@ public class DropboxService extends Service implements DropboxControls {
             cycle.start();
             ready.complete(null);
         } catch (Throwable e) {
-            logger.log(Level.SEVERE, "DropboxService initialization failed", e);
-            String msg = "Dropbox failed to start: " + e.getMessage();
-            DropboxStatusRepository.modify(s -> s.toBuilder().lastError(msg).build());
-            logUi(UserLogType.WIFI, Level.SEVERE, msg);
-            ready.completeExceptionally(e);
+            onInitFailed(e);
         }
+    }
+
+    /**
+     * A failed initialization must not leave a "relaying bundles" foreground service that does nothing until
+     * someone force-stops the app. Release whatever was built, show the failure in the notification and the
+     * Status tab, and retry: on the next start command (app reopened, sticky restart) or after
+     * {@link #INIT_RETRY_MS} on its own. Runs on {@code dropbox-service}.
+     */
+    private void onInitFailed(Throwable e) {
+        logger.log(Level.SEVERE, "DropboxService initialization failed", e);
+        String msg = "Dropbox failed to start: " + e.getMessage();
+        DropboxStatusRepository.modify(s -> s.toBuilder().lastError(msg).build());
+        logUi(UserLogType.WIFI, Level.SEVERE, msg + " (retrying in " + INIT_RETRY_MS / 1000 + " s)");
+        releaseComponents();
+        ready.completeExceptionally(e);
+        getMainExecutor().execute(() -> {
+            if (destroyed) return;
+            started = false;
+            updateNotification(msg + ". Retrying shortly.");
+            mainHandler.postDelayed(initRetry, INIT_RETRY_MS);
+        });
+    }
+
+    /**
+     * Stops and forgets every component a (possibly partial) initialization built, so a retry starts clean
+     * (the RPC server in particular must free port 7777). Runs on {@code dropbox-service}.
+     */
+    private void releaseComponents() {
+        RoleCycleController cycle = controller;
+        if (cycle != null) cycle.shutdown();
+        WifiDirectRadioDriver driver = radio;
+        if (driver != null) driver.shutdown();
+        DropboxRpcServer server = rpcServer;
+        if (server != null) server.stop();
+        controller = null;
+        gate = null;
+        radio = null;
+        rpcServer = null;
+        visitClient = null;
     }
 
     @Override
@@ -283,6 +340,7 @@ public class DropboxService extends Service implements DropboxControls {
     public void onDestroy() {
         logger.info("DropboxService destroyed");
         destroyed = true;
+        mainHandler.removeCallbacks(initRetry);
         SharedPreferences p = prefs;
         if (p != null) p.unregisterOnSharedPreferenceChangeListener(prefsListener);
         releaseKeepAwake();
@@ -369,12 +427,19 @@ public class DropboxService extends Service implements DropboxControls {
         refreshStatus(); // activeSessions > 0 while VISITING = "Exchanging with transport"
         logUi(UserLogType.EXCHANGE, Level.INFO, "Exchanging with transport " + carrierId);
         try {
+            // token::isCancelled: a drain-cap force release that lands before visit() starts must not be
+            // lost (the hook's client.cancel() alone would be reset when the visit begins).
             VisitResult r = client.visit(carrierAddress,
                                          TransportVisitClient.TRANSPORT_PORT,
                                          carrierId,
-                                         () -> !stopRequested.getAsBoolean() && !g.isClosing());
+                                         () -> !stopRequested.getAsBoolean() && !g.isClosing(),
+                                         token::isCancelled);
             onVisitResult(r);
-            return r.ok();
+            // VisitCallback contract: success means the recency fetch succeeded AND the transfers finished.
+            // A carrier that never synced (no SUCCESS blob) must not trigger early return: during bootstrap
+            // that would end VISIT, skip HOST (still no blob) and restart VISIT with the selector's
+            // attempted marks cleared, rejoining the same useless carrier over and over.
+            return r.ok() && r.recencyFetched();
         } finally {
             token.close(); // may fire the drain listener: VISIT_DRAINING ends now
             refreshStatus();
@@ -511,8 +576,11 @@ public class DropboxService extends Service implements DropboxControls {
 
     /**
      * Optional keep-awake (02 Decisions): the cycle's executor delays pause in deep sleep, which would only
-     * delay switches, but an unattended relay should keep cycling. Partial wake lock plus a low-latency Wi-Fi
-     * lock while {@code keep_awake} is on. Main thread only.
+     * delay switches, but an unattended relay should keep cycling. A partial wake lock while
+     * {@code keep_awake} is on keeps the CPU (and so the cycle timers, gRPC and the visit worker) running with
+     * the screen off. No Wi-Fi lock: {@code WIFI_MODE_FULL_LOW_LATENCY} only applies while the screen is on and
+     * the app is in the foreground, {@code WIFI_MODE_FULL_HIGH_PERF} is a no-op since API 29, and both concern
+     * the infrastructure station interface, not Wi-Fi Direct. Main thread only.
      */
     private void applyKeepAwake() {
         SharedPreferences p = prefs;
@@ -527,21 +595,14 @@ public class DropboxService extends Service implements DropboxControls {
             wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKE_TAG);
             wakeLock.setReferenceCounted(false);
         }
-        if (wifiLock == null) {
-            WifiManager wm = getSystemService(WifiManager.class);
-            wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_LOW_LATENCY, WAKE_TAG);
-            wifiLock.setReferenceCounted(false);
-        }
         // Held for as long as the setting is on (released in onDestroy or when turned off): the relay is
         // assumed to be plugged in, so there is deliberately no timeout.
         if (!wakeLock.isHeld()) wakeLock.acquire();
-        if (!wifiLock.isHeld()) wifiLock.acquire();
-        logger.info("Keep-awake locks held");
+        logger.info("Keep-awake wake lock held");
     }
 
     private void releaseKeepAwake() {
         if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
-        if (wifiLock != null && wifiLock.isHeld()) wifiLock.release();
     }
 
     // ------------------------------------------------------------------------------------------ UI controls
@@ -635,6 +696,16 @@ public class DropboxService extends Service implements DropboxControls {
     // ------------------------------------------------------------------------------------------ helpers
 
     /**
+     * The directory the dropbox store lives under: app-specific external storage when present (it is usually
+     * the larger volume), else internal files. Single source of truth for the service and for the Storage
+     * tab's free-space figure, so both always describe the same volume.
+     */
+    public static File storageRoot(Context context) {
+        File dir = context.getExternalFilesDir(null);
+        return dir != null ? dir : context.getFilesDir();
+    }
+
+    /**
      * Posts the persistent notification and promotes the service to the foreground with type dataSync
      * (manifest declares FOREGROUND_SERVICE + FOREGROUND_SERVICE_DATA_SYNC; Research/R5 §3). Main thread.
      */
@@ -668,7 +739,7 @@ public class DropboxService extends Service implements DropboxControls {
         return new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
                 .setContentTitle(getString(R.string.dropbox_notification_title))
                 .setContentText(text)
-                .setSmallIcon(R.drawable.bundledropbox_icon)
+                .setSmallIcon(R.drawable.ic_stat_dropbox) // monochrome: status-bar icons use alpha only
                 .setContentIntent(open)
                 .setOnlyAlertOnce(true)
                 .setOngoing(true)

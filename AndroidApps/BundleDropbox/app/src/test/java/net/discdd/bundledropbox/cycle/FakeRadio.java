@@ -36,6 +36,8 @@ final class FakeRadio implements RadioDriver {
     }
 
     final List<Call> calls = new ArrayList<>();
+    /** Count of {@link #withdrawHostAdvertisement()} calls (kept out of {@link #calls}: it has no callback). */
+    int withdrawals;
 
     Call last() {
         return calls.get(calls.size() - 1);
@@ -55,6 +57,11 @@ final class FakeRadio implements RadioDriver {
     @Override
     public void stopHosting(long gen, RadioCallback cb) {
         calls.add(new Call("stopHosting", gen, cb));
+    }
+
+    @Override
+    public void withdrawHostAdvertisement() {
+        withdrawals++;
     }
 
     @Override

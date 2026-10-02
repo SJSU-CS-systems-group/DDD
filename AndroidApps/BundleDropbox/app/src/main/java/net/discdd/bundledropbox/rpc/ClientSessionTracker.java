@@ -20,16 +20,29 @@ import java.util.logging.Logger;
  *   <li>Key = client remote IP ({@link RemoteAddrInterceptor}). The stock client has no session id.</li>
  *   <li>The first RPC from an IP calls {@link ActivityGate#tryAdmit(String)}. A {@code null} token means
  *       admissions are closed (draining / not hosting): the RPC is refused and the interceptor answers
- *       {@code UNAVAILABLE}. The client logs a failed exchange and retries on its own schedule.</li>
+ *       {@code UNAVAILABLE}. This is NOT a harmless "try later" for the stock client: it stamps
+ *       {@code lastExchange} for our advertised transportId even though the exchange failed, and then skips
+ *       us until the advertised id rotates or a newer recency blob is advertised (R3 §7). That is why the
+ *       cycle withdraws the DNS-SD record as soon as a HOST drain begins, and why sessions are never reaped
+ *       while draining (below).</li>
  *   <li>Later RPCs from an admitted IP reuse the session's token, so they pass even while draining:
  *       a client that already fetched the recency blob must be allowed to finish PSI and its upload.</li>
  *   <li>The session ends (token closed) when {@code uploadBundle} finishes, because upload is the last RPC
  *       of a stock client exchange (Research/R1 §3: getRecencyBlob, psiExchange, psiDownloadBundle,
  *       uploadBundle), or after {@link #DEFAULT_IDLE_TIMEOUT_MS} with no RPC in flight (client crashed,
  *       aborted after a RecencyException, or had nothing to upload).</li>
+ *   <li>Idle sessions are reaped only while admissions are OPEN. Between {@code psiDownloadBundle} and
+ *       {@code uploadBundle} the stock client does long local work with nothing in flight
+ *       ({@code clientFindMatches}, {@code processReceivedBundle}, {@code generateBundleForTransmission});
+ *       reaping it during a drain would make its upload a "new" client and get it refused, losing the most
+ *       valuable direction and locking the client out. While draining, the drain cap bounds a dead session
+ *       instead.</li>
  *   <li>If the cycle hits its drain cap it calls {@link ActivityGate#forceReleaseAll(String)}; the token's
  *       cancel hook drops the session here so the next RPC from that IP must be re-admitted (and is
- *       refused). In-flight RPCs are then cut by {@link DropboxRpcServer#stop()} ({@code shutdownNow}).</li>
+ *       refused). The server keeps running across roles, so RPCs still in flight are not cut here: they die
+ *       when {@code DropboxWifiHost.stop} removes the group (uploads are then aborted from staging, never
+ *       committed truncated). {@link DropboxRpcServer#stop()} ({@code shutdownNow}) only runs at service
+ *       teardown.</li>
  * </ul>
  *
  * <p>Why not use bundle-core's {@code BundleExchangeEvent}s for busy detection: they are unbalanced on
@@ -110,13 +123,15 @@ public final class ClientSessionTracker {
 
     /**
      * Ends idle sessions: those with no RPC in flight whose last activity is at least the idle timeout
-     * ago. Called periodically (about once a second) by {@link DropboxRpcServer}.
+     * ago. Called periodically (about once a second) by {@link DropboxRpcServer}. Does nothing while
+     * admissions are closed (see class docs: a reaped client could not be re-admitted during the drain).
      *
      * @return the number of sessions ended
      */
     public int reapIdle() {
         List<Session> ended = new ArrayList<>();
         int count;
+        if (!gate.isOpen()) return 0; // draining: the drain cap, not the idle timer, bounds dead sessions
         synchronized (this) {
             long now = clock.nowMillis();
             for (Session s : new ArrayList<>(sessions.values())) {

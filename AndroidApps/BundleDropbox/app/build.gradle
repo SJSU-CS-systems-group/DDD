@@ -4,11 +4,12 @@
 // Derived from BundleTransport/app/build.gradle (validated in Research/R5 §2). Differences:
 //  - no protobuf plugin: all generated gRPC classes ship in the bundle-core jar;
 //  - no nanohttpd / firebase / viewpager2 / recyclerview / espresso / viewBinding (Compose-only, offline);
-//  - JUnit 4 for JVM unit tests of the pure-Java store/ and cycle/ packages.
+//  - JUnit 4 for JVM unit tests of the pure-Java store/ and cycle/ packages;
+//  - no zxing / work-runtime / room+ksp / BuildConfig: nothing in the dropbox uses them (the dropbox shows
+//    no QR code, schedules no WorkManager jobs and has no database; android-core brings its own deps).
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
-    id "com.google.devtools.ksp" version "1.9.25-1.0.20"
     id 'ru.vyarus.animalsniffer' version '1.7.1'
 }
 
@@ -27,7 +28,6 @@ android {
 
     buildFeatures {
         compose = true
-        buildConfig = true      // BuildConfig.DEBUG gates StrictMode, as in the transport service
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.15"
@@ -79,9 +79,7 @@ dependencies {
     implementation "org.bouncycastle:bcprov-jdk15to18:1.78"
 
     implementation 'androidx.core:core-ktx:1.12.0'
-    implementation "androidx.work:work-runtime:2.9.0"
     implementation 'com.google.android.material:material:1.12.0'            // provides Theme.AppCompat.DayNight used in manifest
-    implementation "com.google.zxing:core:3.5.1"                            // QR for Wi-Fi group credentials
 
     def acraVersion = '5.12.0'
     implementation "ch.acra:acra-core:$acraVersion"                          // required by net.discdd.crashreports.AcraApp
@@ -97,10 +95,6 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.compose.runtime:runtime-livedata")
     implementation("com.google.accompanist:accompanist-permissions:0.37.2")
-
-    def room_version = "2.6.1"
-    implementation "androidx.room:room-runtime:$room_version"
-    ksp "androidx.room:room-compiler:$room_version"
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'

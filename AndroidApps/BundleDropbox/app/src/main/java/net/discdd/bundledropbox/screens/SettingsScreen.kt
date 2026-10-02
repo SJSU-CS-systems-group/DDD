@@ -88,6 +88,8 @@ fun SettingsScreen(viewModel: DropboxSettingsViewModel = viewModel()) {
                     form.rotateAdvertisedId, viewModel::onRotateAdvertisedIdChange)
             SwitchRow(R.string.settings_keep_awake, R.string.settings_keep_awake_help,
                     form.keepAwake, viewModel::onKeepAwakeChange)
+            SwitchRow(R.string.settings_start_on_boot, R.string.settings_start_on_boot_help,
+                    form.startOnBoot, viewModel::onStartOnBootChange)
 
             HorizontalDivider()
             TextButton(onClick = viewModel::resetToDefaults) { Text(stringResource(R.string.settings_reset_defaults)) }

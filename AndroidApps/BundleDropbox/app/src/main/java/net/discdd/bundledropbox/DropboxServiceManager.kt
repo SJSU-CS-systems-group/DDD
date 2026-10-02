@@ -8,15 +8,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import net.discdd.bundledropbox.service.DropboxService
 import java.util.concurrent.CompletableFuture
-import java.util.logging.Level
 import java.util.logging.Logger
 
 /**
- * Operator actions the UI can invoke on the running dropbox. `DropboxService` is expected to
- * implement this interface (`public class DropboxService extends Service implements DropboxControls`).
- *
- * It exists so the UI compiles independently of the service wiring: the UI only reaches the service
- * through [DropboxServiceManager.controls], which returns `null` until the bound service implements it.
+ * Operator actions the UI can invoke on the running dropbox, implemented by `DropboxService`. The UI
+ * reaches them only through [DropboxServiceManager.controls], which keeps screens and view models
+ * independent of the service class and easy to fake.
  *
  * Threading: the UI calls every method from a background coroutine (`Dispatchers.IO`), never from the
  * main thread, so implementations may block briefly; they must be thread-safe and should hand real
@@ -45,8 +42,9 @@ interface DropboxControls {
     fun clearDownstream()
 
     /**
-     * NEARBY_WIFI_DEVICES (and/or ACCESS_FINE_LOCATION) was just granted; retry radio work that failed
-     * for lack of permission. Mirrors `BundleTransportService.wifiPermissionGranted()`.
+     * NEARBY_WIFI_DEVICES was just granted; retry radio work that failed for lack of permission. Mirrors
+     * `BundleTransportService.wifiPermissionGranted()`. May throw IllegalStateException if the service
+     * failed to start or is still starting; callers must catch it.
      */
     fun wifiPermissionGranted()
 }
@@ -65,9 +63,6 @@ object DropboxServiceManager {
     // Written on the main thread by ServiceConnection callbacks, read from IO coroutines.
     @Volatile
     private var service: DropboxService? = null
-
-    @Volatile
-    private var warnedNoControls = false
 
     /** Completes with the service on the first successful bind (never reset, as in the transport). */
     val serviceReady = CompletableFuture<DropboxService>()
@@ -105,17 +100,6 @@ object DropboxServiceManager {
     /** @return the bound service, or `null` before the bind completes / after unbinding. */
     fun getService(): DropboxService? = service
 
-    /**
-     * @return the operator controls of the bound service, or `null` if not bound or if the service
-     *         does not (yet) implement [DropboxControls]
-     */
-    fun controls(): DropboxControls? {
-        val s = service ?: return null
-        val c = s as? DropboxControls
-        if (c == null && !warnedNoControls) {
-            warnedNoControls = true
-            logger.log(Level.WARNING, "DropboxService does not implement DropboxControls; UI actions are disabled")
-        }
-        return c
-    }
+    /** @return the operator controls of the bound service, or `null` before the bind completes / after unbinding */
+    fun controls(): DropboxControls? = service
 }

@@ -40,6 +40,10 @@ public class RoleCycleControllerThreadedTest {
         }
 
         @Override
+        public void withdrawHostAdvertisement() {
+        }
+
+        @Override
         public void startVisit(long gen, VisitCallback cb) {
             later(() -> cb.ready(gen));
         }

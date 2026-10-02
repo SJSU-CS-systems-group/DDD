@@ -87,7 +87,7 @@ public final class WifiRadioState {
     /** @return true if the last {@code WIFI_P2P_STATE_CHANGED_ACTION} said Wi-Fi Direct is enabled */
     public boolean p2pEnabled() { return p2pEnabled; }
 
-    /** @return true if NEARBY_WIFI_DEVICES (and ACCESS_FINE_LOCATION, needed for visits) are granted */
+    /** @return true if NEARBY_WIFI_DEVICES (the only runtime permission both roles need) is granted */
     public boolean permissionsGranted() { return permissionsGranted; }
 
     /** @return this phone's P2P device name (what clients show), or null if unknown */

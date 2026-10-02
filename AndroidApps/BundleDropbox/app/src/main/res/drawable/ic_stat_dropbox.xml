@@ -1,0 +1,20 @@
+<!--
+  Notification (status-bar) icon for DDD Dropbox. Status-bar icons are drawn from the alpha channel only,
+  so this is a monochrome version of bundledropbox_icon.xml: the white box and lid, with the up/down
+  arrows cut out as transparent holes (evenOdd fill) instead of painted in a second color.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="192"
+    android:viewportHeight="192">
+    <!-- box lid -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M30,52h132v16h-132z"/>
+    <!-- box body with the upstream (up) and downstream (down) arrows cut out -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M38,76h116v84a10,10 0,0 1,-10 10h-96a10,10 0,0 1,-10 -10z M74,90l20,22h-13v40h-14v-40h-13z M118,156l-20,-22h13v-40h14v40h13z"/>
+</vector>

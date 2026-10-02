@@ -27,6 +27,7 @@ data class SettingsForm(
         val returnAfterVisit: Boolean = DropboxPrefs.DEFAULT_RETURN_AFTER_VISIT,
         val rotateAdvertisedId: Boolean = DropboxPrefs.DEFAULT_ROTATE_ADVERTISED_ID,
         val keepAwake: Boolean = DropboxPrefs.DEFAULT_KEEP_AWAKE,
+        val startOnBoot: Boolean = DropboxPrefs.DEFAULT_START_ON_BOOT,
         /** true when the numeric fields differ from what is stored. */
         val dirty: Boolean = false,
         /** pref key -> @StringRes error text, for fields that failed validation on the last Save. */
@@ -83,6 +84,7 @@ class DropboxSettingsViewModel(application: Application) : AndroidViewModel(appl
                 returnAfterVisit = prefs.getBoolean(DropboxPrefs.KEY_RETURN_AFTER_VISIT, DropboxPrefs.DEFAULT_RETURN_AFTER_VISIT),
                 rotateAdvertisedId = prefs.getBoolean(DropboxPrefs.KEY_ROTATE_ADVERTISED_ID, DropboxPrefs.DEFAULT_ROTATE_ADVERTISED_ID),
                 keepAwake = prefs.getBoolean(DropboxPrefs.KEY_KEEP_AWAKE, DropboxPrefs.DEFAULT_KEEP_AWAKE),
+                startOnBoot = prefs.getBoolean(DropboxPrefs.KEY_START_ON_BOOT, DropboxPrefs.DEFAULT_START_ON_BOOT),
         )
     }
 
@@ -94,6 +96,7 @@ class DropboxSettingsViewModel(application: Application) : AndroidViewModel(appl
     fun onReturnAfterVisitChange(v: Boolean) = putBoolean(DropboxPrefs.KEY_RETURN_AFTER_VISIT, v) { it.copy(returnAfterVisit = v) }
     fun onRotateAdvertisedIdChange(v: Boolean) = putBoolean(DropboxPrefs.KEY_ROTATE_ADVERTISED_ID, v) { it.copy(rotateAdvertisedId = v) }
     fun onKeepAwakeChange(v: Boolean) = putBoolean(DropboxPrefs.KEY_KEEP_AWAKE, v) { it.copy(keepAwake = v) }
+    fun onStartOnBootChange(v: Boolean) = putBoolean(DropboxPrefs.KEY_START_ON_BOOT, v) { it.copy(startOnBoot = v) }
 
     private fun putBoolean(key: String, value: Boolean, change: (SettingsForm) -> SettingsForm) {
         _form.update(change)
@@ -147,6 +150,7 @@ class DropboxSettingsViewModel(application: Application) : AndroidViewModel(appl
                 putBoolean(DropboxPrefs.KEY_RETURN_AFTER_VISIT, DropboxPrefs.DEFAULT_RETURN_AFTER_VISIT)
                 putBoolean(DropboxPrefs.KEY_ROTATE_ADVERTISED_ID, DropboxPrefs.DEFAULT_ROTATE_ADVERTISED_ID)
                 putBoolean(DropboxPrefs.KEY_KEEP_AWAKE, DropboxPrefs.DEFAULT_KEEP_AWAKE)
+                putBoolean(DropboxPrefs.KEY_START_ON_BOOT, DropboxPrefs.DEFAULT_START_ON_BOOT)
             }
         }
     }

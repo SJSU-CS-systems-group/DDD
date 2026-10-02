@@ -36,6 +36,21 @@ public interface RadioDriver {
     void stopHosting(long gen, RadioCallback cb);
 
     /**
+     * The HOST dwell ended while admitted clients are still mid-exchange (HOST_DRAINING): stop being
+     * discoverable now (clear the DNS-SD record) but keep the group and the gRPC endpoint up so admitted
+     * clients can finish. Best effort and fire-and-forget: no callback; {@link #stopHosting} later clears
+     * services again anyway.
+     *
+     * <p>Why this exists: during the drain the gate refuses new clients with UNAVAILABLE, and the stock
+     * client stamps {@code lastExchange} for the advertised transportId even when its exchange failed
+     * ({@code BundleClientService.exchangeWith} calls {@code timeStampExchange} unconditionally, R3 §7).
+     * It then skips this transportId until the blob timestamp exceeds that stamp, i.e. a client that
+     * discovers us while we drain is locked out until the advertised id rotates. Withdrawing the record
+     * keeps new clients from discovering a dropbox that is about to refuse them.
+     */
+    void withdrawHostAdvertisement();
+
+    /**
      * Enter VISIT mode: discover {@code _ddd._tcp} peers that publish {@code recencyBlob} and have no
      * {@code dropbox} key (so dropboxes never visit each other), join the first one as a P2P client
      * (GO intent 0), run the carrier exchange, disconnect, and keep discovering.

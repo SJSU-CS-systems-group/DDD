@@ -301,11 +301,12 @@ public class RoleCycleControllerTest {
 
     @Test
     public void repeatedFailuresGoUnavailableThenRetry() {
+        blob.set(false); // bootstrap: VISIT only, so there is no other role to fall back to
         c.start();
         s.runReady();
         radio.last().fail("p2p busy");
         s.runReady();
-        assertEquals(CycleMode.HOST_STARTING, c.mode());
+        assertEquals(CycleMode.VISIT_STARTING, c.mode());
         s.advance(RoleCycleController.RETRY_BACKOFF_BASE_MS - 1);
         assertEquals(1, radio.calls.size());
         s.advance(1);
@@ -325,14 +326,134 @@ public class RoleCycleControllerTest {
         s.advance(RoleCycleController.UNAVAILABLE_RETRY_MS - 1);
         assertEquals(3, radio.calls.size());
         s.advance(1);
-        assertEquals(CycleMode.HOST_STARTING, c.mode());
+        assertEquals(CycleMode.VISIT_STARTING, c.mode());
         assertEquals(4, radio.calls.size());
+        ready();
+        assertEquals(CycleMode.VISITING, c.mode());
+    }
+
+    @Test
+    public void exhaustedStartFallsBackToOtherRoleOnce() {
+        // E.g. VISIT keeps failing for a VISIT-only reason: with a blob the dropbox should still host.
+        c.start();
+        s.runReady();
+        assertEquals("startHosting", radio.last().op);
+        failAllAttempts();
+        assertEquals("HOST exhausted: VISIT is tried next", CycleMode.VISIT_STARTING, c.mode());
+        assertEquals("startVisit", radio.last().op);
+        failAllAttempts();
+        assertEquals("both roles failed: park", CycleMode.UNAVAILABLE, c.mode());
+        assertEquals(2 * RoleCycleController.MAX_ATTEMPTS, radio.calls.size());
+
+        s.advance(RoleCycleController.UNAVAILABLE_RETRY_MS);
+        assertEquals("retry the last failed op first", "startVisit", radio.last().op);
+        failAllAttempts();
+        assertEquals("then the other role again", "startHosting", radio.last().op);
         ready();
         assertEquals(CycleMode.HOSTING, c.mode());
     }
 
     @Test
+    public void noFallbackToHostWithoutBlob() {
+        blob.set(false);
+        c.start();
+        s.runReady();
+        failAllAttempts();
+        assertEquals(CycleMode.UNAVAILABLE, c.mode());
+        assertEquals(List.of("startVisit", "startVisit", "startVisit"), radio.ops());
+    }
+
+    @Test
+    public void supersedingStopGetsItsOwnAttemptBudget() {
+        c.start();
+        s.runReady();
+        radio.last().fail("busy");
+        s.runReady();
+        s.advance(RoleCycleController.RETRY_BACKOFF_BASE_MS);
+        radio.last().fail("busy"); // START_HOST: 2 of 3 attempts used, backoff pending
+        s.runReady();
+        c.forceVisit();            // stop the failing start
+        s.runReady();
+        assertEquals("stopHosting", radio.last().op);
+        radio.last().fail("busy"); // first failure of the STOP must be retried, not park the cycle
+        s.runReady();
+        assertEquals(CycleMode.HOST_STOPPING, c.mode());
+        s.advance(RoleCycleController.RETRY_BACKOFF_BASE_MS);
+        assertEquals("stopHosting", radio.last().op);
+        ready();
+        assertEquals(CycleMode.VISIT_STARTING, c.mode());
+    }
+
+    /** Fail the pending op and each of its backoff retries. */
+    private void failAllAttempts() {
+        for (int i = 0; i < RoleCycleController.MAX_ATTEMPTS; i++) {
+            radio.last().fail("busy");
+            s.runReady();
+            if (i < RoleCycleController.MAX_ATTEMPTS - 1) s.advance(RoleCycleController.RETRY_BACKOFF_BASE_MS << i);
+        }
+    }
+
+    @Test
+    public void hostDrainWithdrawsAdvertisementButIdleSwitchDoesNot() {
+        startToHosting();
+        s.advance(CLIENT);
+        assertEquals("idle expiry stops hosting directly (stopHosting clears services)", 0, radio.withdrawals);
+        ready();
+        ready();
+        s.advance(TRANSPORT);
+        ready();
+        ready();
+        assertEquals(CycleMode.HOSTING, c.mode());
+        ActivityGate.Token t = gate.tryAdmit("192.168.49.10");
+        s.advance(CLIENT);
+        assertEquals(CycleMode.HOST_DRAINING, c.mode());
+        assertEquals("draining HOST stops advertising", 1, radio.withdrawals);
+        t.close();
+        s.runReady();
+        assertEquals(CycleMode.HOST_STOPPING, c.mode());
+    }
+
+    @Test
+    public void visitDrainDoesNotWithdraw() {
+        blob.set(false);
+        c.start();
+        s.runReady();
+        ready();
+        gate.tryAdmit("visit");
+        s.advance(TRANSPORT);
+        assertEquals(CycleMode.VISIT_DRAINING, c.mode());
+        assertEquals(0, radio.withdrawals);
+    }
+
+    @Test
+    public void roleLostWhileHostingStopsNow() {
+        startToHosting();
+        ActivityGate.Token t = gate.tryAdmit("192.168.49.10");
+        AtomicBoolean aborted = new AtomicBoolean();
+        t.setCancelHook(() -> aborted.set(true));
+        s.advance(5_000);
+        c.roleLost("hosted group lost");
+        s.runReady();
+        assertEquals(CycleMode.HOST_STOPPING, c.mode());
+        assertTrue(aborted.get());
+        assertEquals("stopHosting", radio.last().op);
+        ready();
+        assertEquals(CycleMode.VISIT_STARTING, c.mode());
+    }
+
+    @Test
+    public void roleLostIgnoredWhileStarting() {
+        c.start();
+        s.runReady();
+        c.roleLost("hosted group lost");
+        s.runReady();
+        assertEquals(CycleMode.HOST_STARTING, c.mode());
+        assertEquals(List.of("startHosting"), radio.ops());
+    }
+
+    @Test
     public void retryNowLeavesUnavailableImmediately() {
+        blob.set(false);
         c.start();
         s.runReady();
         for (int i = 0; i < RoleCycleController.MAX_ATTEMPTS; i++) {
@@ -343,7 +464,7 @@ public class RoleCycleControllerTest {
         int calls = radio.calls.size();
         c.retryNow(); // e.g. Wi-Fi turned on
         s.runReady();
-        assertEquals(CycleMode.HOST_STARTING, c.mode());
+        assertEquals(CycleMode.VISIT_STARTING, c.mode());
         assertEquals(calls + 1, radio.calls.size());
         s.advance(RoleCycleController.UNAVAILABLE_RETRY_MS); // old retry timer must be gone
         assertEquals(calls + 1, radio.calls.size());

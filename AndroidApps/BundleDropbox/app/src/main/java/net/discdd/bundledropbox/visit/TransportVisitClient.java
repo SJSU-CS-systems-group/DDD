@@ -38,11 +38,16 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -69,11 +74,13 @@ import static java.util.logging.Level.WARNING;
  *   <li><b>{@code getRecencyBlob}</b>, offered verbatim to the {@link RecencyBlobStore}. This always runs, even if
  *       {@code keepGoing} is already false: it is cheap and it is the only way a fresh dropbox can ever host
  *       (the stock client aborts the whole exchange without a SUCCESS, server-signed recency blob, R3/R4 §4.4).</li>
- *   <li><b>Upload</b> every UPSTREAM bundle not yet in the {@link ForwardLedger} for this carrier, oldest first.
+ *   <li><b>Upload</b> every UPSTREAM bundle not yet in the {@link ForwardLedger} for this carrier, newest first.
  *       Upload goes before download so the most valuable direction (client mail toward the internet) gets the
  *       radio time if the transport dwell is short (R2 §8).</li>
  *   <li><b>Download-all</b> of the carrier's client-bound bundles via repeated PSI sessions (R2 §4.3), committing
- *       each new one to DOWNSTREAM under the id read from the jar's {@code bundle.id}.</li>
+ *       each new one to DOWNSTREAM under the id read from the jar's {@code bundle.id}. Each visit to a carrier
+ *       resumes at the index where the previous visit to it stopped, so a listing too long for one dwell is
+ *       still covered over several visits.</li>
  * </ol>
  *
  * <p><b>Stopping.</b> {@code keepGoing} is checked BETWEEN bundles only, so a bundle in flight always completes
@@ -85,6 +92,9 @@ import static java.util.logging.Level.WARNING;
  * <p><b>Threading.</b> {@link #visit} blocks for the whole exchange; call it on a background worker, never the
  * main thread. Visits on one instance are serialized. {@link #cancel()} may be called from any thread and only
  * affects the visit in progress (a cancel issued while no visit runs is forgotten when the next one starts).
+ * A caller that can be cancelled before its visit even starts (the service's gate token, force-released by the
+ * drain cap) passes its own {@code cancelled} signal to {@link #visit(InetAddress, int, String, BooleanSupplier,
+ * BooleanSupplier)}; that signal is never reset, so such an early cancel cannot be lost.
  *
  * <p>Pure Java (no Android APIs) so it is exercised by JVM tests against a localhost fake carrier.
  */
@@ -119,6 +129,14 @@ public final class TransportVisitClient {
     private final Object visitLock = new Object();
     private volatile boolean cancelRequested;
     private volatile ManagedChannel activeChannel;
+    /**
+     * Per carrier: the transport index the next download-all pass starts at. The carrier lists its files in
+     * {@code File.listFiles()} order, which is stable while its directory is unchanged, and every index costs a
+     * fresh {@code psiExchange} (N modPows on the carrier). Always starting at 0 would replay the same prefix on
+     * every visit and never reach the tail of a long listing within one dwell. In memory only: after a restart
+     * the dropbox simply starts at 0 again. FUTURE: PSI known-ID skip makes this mostly unnecessary.
+     */
+    private final Map<String, Integer> nextDownloadIndex = new ConcurrentHashMap<>();
 
     /**
      * Production constructor: TLS channels built like the stock client, stock-client timeouts, system wall clock.
@@ -176,12 +194,29 @@ public final class TransportVisitClient {
      * @return what happened
      */
     public VisitResult visit(InetAddress host, int port, String carrierId, BooleanSupplier keepGoing) {
+        return visit(host, port, carrierId, keepGoing, () -> false);
+    }
+
+    /**
+     * {@link #visit(InetAddress, int, String, BooleanSupplier)} with a caller-owned hard-cancel signal.
+     *
+     * @param cancelled checked wherever {@link #cancel()} is honored; true stops the visit at once. Unlike the
+     *                  internal flag it is not reset when the visit starts, so a cancel that arrives between the
+     *                  caller taking its gate token and this call is not lost (wire it to
+     *                  {@code token::isCancelled})
+     */
+    public VisitResult visit(InetAddress host,
+                             int port,
+                             String carrierId,
+                             BooleanSupplier keepGoing,
+                             BooleanSupplier cancelled) {
         Objects.requireNonNull(host, "host");
         Objects.requireNonNull(carrierId, "carrierId");
         Objects.requireNonNull(keepGoing, "keepGoing");
+        Objects.requireNonNull(cancelled, "cancelled");
         synchronized (visitLock) {
             cancelRequested = false;
-            return new Visit(host, port, carrierId, keepGoing).run();
+            return new Visit(host, port, carrierId, keepGoing, cancelled).run();
         }
     }
 
@@ -246,6 +281,7 @@ public final class TransportVisitClient {
         private final int port;
         private final String carrierId;
         private final BooleanSupplier keepGoing;
+        private final BooleanSupplier cancelled;
 
         private boolean reachable;
         private boolean recencyFetched;
@@ -257,11 +293,12 @@ public final class TransportVisitClient {
         private boolean stoppedEarly;
         private String lastError;
 
-        Visit(InetAddress host, int port, String carrierId, BooleanSupplier keepGoing) {
+        Visit(InetAddress host, int port, String carrierId, BooleanSupplier keepGoing, BooleanSupplier cancelled) {
             this.host = host;
             this.port = port;
             this.carrierId = carrierId;
             this.keepGoing = keepGoing;
+            this.cancelled = cancelled;
         }
 
         VisitResult run() {
@@ -302,7 +339,7 @@ public final class TransportVisitClient {
             // two always sees the other (both fields are volatile).
             activeChannel = channel;
             try {
-                if (cancelRequested) throw new VisitStopped("cancelled");
+                checkCancelled();
                 var blocking = BundleExchangeServiceGrpc.newBlockingStub(channel);
                 var async = BundleExchangeServiceGrpc.newStub(channel);
                 fetchRecencyBlob(blocking);
@@ -369,8 +406,15 @@ public final class TransportVisitClient {
         // ---------------------------------------------------------------- upload
 
         /**
-         * Uploads every committed UPSTREAM bundle this carrier has not acknowledged yet. The ledger is updated only
-         * after a SUCCESS response, so failures are retried on the next visit. The carrier stores each upload
+         * Uploads every committed UPSTREAM bundle this carrier has not acknowledged yet, <b>newest first</b>. The
+         * ledger is updated only after a SUCCESS response, so failures are retried on the next visit.
+         *
+         * <p>Why newest first: the ledger is per carrier and UPSTREAM is never pruned in v1, so the first visit to
+         * a new carrier re-offers the whole history. The server ignores bundles whose counter is at or below the
+         * last one it received from that client ({@code ServerBundleTransmission}, R4), so each client's newest
+         * bundle is the one that matters and must not be starved by stale ones when the dwell is short.
+         * FUTURE: server ACKs (or keep/delete control ADUs) let the dropbox skip superseded UPSTREAM bundles
+         * altogether instead of merely ordering them last. The carrier stores each upload
          * verbatim as {@code BundleTransmission/server/<id>} and forwards it on its next server sync; it does no
          * identity or sender-type checks (R2 §3), so relaying other clients' bundles works unmodified.
          *
@@ -379,7 +423,9 @@ public final class TransportVisitClient {
          * and answer with keep/delete control ADUs (R4 §5 items 1 and 3).
          */
         private void uploadAll(BundleExchangeServiceGrpc.BundleExchangeServiceStub async) {
-            for (BundleRecord record : store.list(Direction.UPSTREAM)) {
+            List<BundleRecord> upstream = new ArrayList<>(store.list(Direction.UPSTREAM));
+            Collections.reverse(upstream); // list() is oldest first
+            for (BundleRecord record : upstream) {
                 String bundleId = record.bundleId();
                 if (ledger.wasForwardedTo(bundleId, carrierId)) continue;
                 checkContinue();
@@ -515,6 +561,10 @@ public final class TransportVisitClient {
          * and one extra pass runs (bounded by {@link VisitOptions#maxDownloadPasses()}) if the count changed or a
          * duplicate showed up during a pass, both signs that an index may have been missed.
          *
+         * <p>Resume: a pass walks the indices cyclically from {@link #nextDownloadIndex} for this carrier and
+         * records the index after each one attempted, so when the dwell (or the drain cap) cuts a visit short,
+         * the next visit continues with the indices this one never reached instead of replaying the same prefix.
+         *
          * <p>FUTURE: PSI known-ID skip — send up to 10 blinded ids the dropbox already holds per
          * {@code psiExchange} and download only unmatched indices (R2 §4.3 optional optimization).
          * <p>FUTURE: server-issued destination manifests replace download-all, so the dropbox pulls only bundles
@@ -530,7 +580,10 @@ public final class TransportVisitClient {
                 boolean listingChanged = false;
                 int duplicatesInPass = 0;
                 Set<String> idsThisPass = new HashSet<>();
-                for (int i = 0; i < n; i++) {
+                int start = n == 0 ? 0 : Math.floorMod(nextDownloadIndex.getOrDefault(carrierId, 0), n);
+                if (start != 0) logger.log(INFO, "resuming downloads from " + carrierId + " at index " + start);
+                for (int k = 0; k < n; k++) {
+                    int i = (start + k) % n;
                     checkContinue();
                     if (!store.hasCapacityFor(0)) {
                         error("store full; stopping downloads");
@@ -547,6 +600,7 @@ public final class TransportVisitClient {
                         }
                     }
                     IndexOutcome outcome = downloadIndex(blocking, session.getSessionId(), i);
+                    nextDownloadIndex.put(carrierId, i + 1); // floorMod'd against the next listing size
                     // A successful download consumes the session on the carrier; after an error the session state
                     // is ambiguous (expired vs file gone), so always start the next index with a fresh one.
                     session = null;
@@ -666,7 +720,7 @@ public final class TransportVisitClient {
         }
 
         private void checkCancelled() {
-            if (cancelRequested) throw new VisitStopped("cancelled");
+            if (cancelRequested || cancelled.getAsBoolean()) throw new VisitStopped("cancelled");
             if (Thread.currentThread().isInterrupted()) throw new VisitStopped("interrupted");
         }
 

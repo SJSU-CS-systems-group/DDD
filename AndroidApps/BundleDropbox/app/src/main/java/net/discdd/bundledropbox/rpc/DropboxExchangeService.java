@@ -28,6 +28,7 @@ import net.discdd.grpc.PSIResponse;
 import net.discdd.grpc.PublicKeyMap;
 import net.discdd.utils.BundleUtils;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
 import java.nio.file.Files;
@@ -92,6 +93,31 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
     public static final long PSI_SESSION_TTL_MS = 5 * 60 * 1000;
 
     /**
+     * Data bytes per download chunk sent to clients (1 MiB). Deliberately NOT bundle-core's
+     * {@code transferToStream}: it fills a 4 MiB buffer per message for any file of 4 MiB or more (its
+     * {@code Channels.newChannel} loop reads while {@code available() > 0}), and 4 MiB plus framing exceeds the
+     * stock client's default 4 MiB inbound limit ({@code ClientBundleTransmission} never raises it), so such a
+     * bundle would fail with RESOURCE_EXHAUSTED and never be delivered. 1 MiB keeps every message far below it.
+     */
+    public static final int DOWNLOAD_CHUNK_BYTES = 1024 * 1024;
+
+    /**
+     * Default cap on how many DOWNSTREAM bundles one {@code psiExchange} snapshot offers (the newest ones).
+     *
+     * <p>Why a cap: the PSI cost is linear in the snapshot on BOTH sides (the dropbox blinds every id in
+     * {@code transportProcess}; the stock client re-blinds every transport value in {@code clientFindMatches}),
+     * each a 3072-bit modPow of roughly 10-15 ms on a phone. A real transport stays near one bundle per client
+     * because the server deletes superseded bundles at each sync; the v1 dropbox keeps everything it pulled
+     * (download-all, {@code KeepAllRetentionPolicy}), so without a cap every client exchange would get slower
+     * forever and eventually miss the HOST dwell + drain cap or the client's 120 s PSI deadline, and a client cut
+     * off like that stamps the attempt and skips this transportId (R3 §7). Newest first because the server
+     * re-issues a client's bundle with new content until it is picked up, so old files are the likeliest stale.
+     * FUTURE: once server keep/delete control ADUs exist ({@code RetentionPolicy}), the store itself stays small
+     * and this cap becomes a safety net; destination manifests would narrow it per client.
+     */
+    public static final int DEFAULT_MAX_PSI_SNAPSHOT = 128;
+
+    /**
      * Upload state of the call currently executing on this thread. bundle-core's upload observer calls
      * {@link #pathProducer} and {@link #bundleCompletion} synchronously from inside {@code onNext} /
      * {@code onCompleted}, and those hooks carry no per-call context, so the wrapping observer binds it here
@@ -106,6 +132,7 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
     private final Clock clock;
     private final LongSupplier wallClock;
     private final ConcurrentHashMap<String, PsiSession> psiSessions = new ConcurrentHashMap<>();
+    private final int maxPsiSnapshot;
 
     /**
      * @param store        relay store (UPSTREAM receives client uploads, DOWNSTREAM is served to clients)
@@ -121,6 +148,23 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
                                   RpcEventListener listener,
                                   Clock clock,
                                   LongSupplier wallClock) {
+        this(store, recencyBlobs, deliveryLog, listener, clock, wallClock, DEFAULT_MAX_PSI_SNAPSHOT);
+    }
+
+    /**
+     * Same as the main constructor with an explicit PSI snapshot cap (tests).
+     *
+     * @param maxPsiSnapshot most DOWNSTREAM bundles (newest first) one PSI snapshot offers; must be &gt; 0
+     */
+    public DropboxExchangeService(RelayStore store,
+                                  RecencyBlobStore recencyBlobs,
+                                  DeliveryLog deliveryLog,
+                                  RpcEventListener listener,
+                                  Clock clock,
+                                  LongSupplier wallClock,
+                                  int maxPsiSnapshot) {
+        if (maxPsiSnapshot <= 0) throw new IllegalArgumentException("maxPsiSnapshot must be > 0");
+        this.maxPsiSnapshot = maxPsiSnapshot;
         if (store == null || recencyBlobs == null || deliveryLog == null || clock == null || wallClock == null) {
             throw new NullPointerException("store/recencyBlobs/deliveryLog/clock/wallClock");
         }
@@ -249,7 +293,9 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
      * {@code null} makes bundle-core fail the stream and answer {@code Status.FAILED}.
      * Note that {@code senderType} is always {@code null} here: the stock client sends it last.
      *
-     * <p>Download (legacy {@code downloadBundle}): committed DOWNSTREAM files only, {@code null} if absent.
+     * <p>Download: committed DOWNSTREAM files only, {@code null} if absent. Unused in practice, because
+     * {@link #downloadBundle} is overridden without calling bundle-core's version; kept so the abstract
+     * contract stays correct if that ever changes.
      */
     @Override
     protected Path pathProducer(BundleExchangeName bundleExchangeName,
@@ -306,10 +352,15 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
     // ---------------------------------------------------------------------------------------------
 
     /**
-     * Legacy download. The stock client only uses it if {@code psiExchange} is UNIMPLEMENTED. Validates the
-     * id first: bundle-core's {@code checkIdClean} throws outside its try (an unbalanced event and an
-     * UNKNOWN status, Research/R1 §3.5), so we answer INVALID_ARGUMENT instead. Records the bundle as served
-     * when the stream completes.
+     * Legacy download. The stock client only uses it if {@code psiExchange} is UNIMPLEMENTED. Same outcomes as
+     * bundle-core's {@code downloadBundle} (NOT_FOUND for an unknown id, INTERNAL on a read failure, the
+     * DOWNLOAD_STARTED/FINISHED event pair), but implemented here for two reasons:
+     * <ul>
+     *   <li>bundle-core's {@code checkIdClean} throws outside its try (an unbalanced event and an UNKNOWN status,
+     *       Research/R1 §3.5), so an unclean id is answered INVALID_ARGUMENT before anything else;</li>
+     *   <li>chunks must stay below the stock client's 4 MiB inbound limit ({@link #DOWNLOAD_CHUNK_BYTES}).</li>
+     * </ul>
+     * Only committed DOWNSTREAM files are served. Records the bundle as served when the stream completes.
      */
     @Override
     public void downloadBundle(BundleDownloadRequest request, StreamObserver<BundleDownloadResponse> responseObserver) {
@@ -320,23 +371,41 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
             responseObserver.onError(Status.INVALID_ARGUMENT.withDescription("Invalid bundle id").asException());
             return;
         }
-        super.downloadBundle(request, new StreamObserver<BundleDownloadResponse>() {
-            @Override
-            public void onNext(BundleDownloadResponse value) {
-                responseObserver.onNext(value);
+        onBundleExchangeEvent(BundleExchangeEvent.DOWNLOAD_STARTED);
+        try {
+            Path path = store.pathFor(Direction.DOWNSTREAM, id);
+            if (path == null || !Files.exists(path)) {
+                responseObserver.onError(Status.NOT_FOUND.withDescription("Bundle not found").asException());
+                return;
             }
+            streamFile(path, responseObserver);
+            responseObserver.onCompleted();
+            recordServed(id);
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, "Legacy download of " + id + " failed", e);
+            responseObserver.onError(Status.INTERNAL.withDescription(e.getMessage()).asException());
+        } finally {
+            onBundleExchangeEvent(BundleExchangeEvent.DOWNLOAD_FINISHED);
+        }
+    }
 
-            @Override
-            public void onError(Throwable t) {
-                responseObserver.onError(t);
+    /**
+     * Streams a committed file to a client in {@link #DOWNLOAD_CHUNK_BYTES} chunks (see there for why not
+     * bundle-core's {@code transferToStream}).
+     */
+    private static void streamFile(Path path, StreamObserver<BundleDownloadResponse> responseObserver)
+            throws IOException {
+        try (InputStream is = Files.newInputStream(path, StandardOpenOption.READ)) {
+            byte[] buffer = new byte[DOWNLOAD_CHUNK_BYTES];
+            int n;
+            while ((n = is.readNBytes(buffer, 0, buffer.length)) > 0) {
+                responseObserver.onNext(BundleDownloadResponse.newBuilder()
+                                                .setChunk(BundleChunk.newBuilder()
+                                                                  .setChunk(ByteString.copyFrom(buffer, 0, n))
+                                                                  .build())
+                                                .build());
             }
-
-            @Override
-            public void onCompleted() {
-                responseObserver.onCompleted();
-                recordServed(id);
-            }
-        });
+        }
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -369,8 +438,9 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
             var psi = new BundleOwnershipPSI();
             BigInteger secret = psi.generateSecret();
 
-            // Snapshot of committed DOWNSTREAM ids (file names == encrypted bundle ids). Staged downloads
-            // and the recency blob live elsewhere, so nothing needs filtering here.
+            // Snapshot of committed DOWNSTREAM ids (file names == encrypted bundle ids), newest
+            // maxPsiSnapshot only (see DEFAULT_MAX_PSI_SNAPSHOT). Staged downloads and the recency blob live
+            // elsewhere, so nothing needs filtering here.
             List<String> bundleIds = downstreamIds();
 
             List<BigInteger> clientBlinded = new ArrayList<>(numElements);
@@ -438,14 +508,7 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
                 responseObserver.onError(Status.NOT_FOUND.withDescription("Bundle file not found").asException());
                 return;
             }
-            try (InputStream is = Files.newInputStream(path, StandardOpenOption.READ)) {
-                transferToStream(is,
-                                 bytes -> responseObserver.onNext(BundleDownloadResponse.newBuilder()
-                                                                          .setChunk(BundleChunk.newBuilder()
-                                                                                            .setChunk(bytes)
-                                                                                            .build())
-                                                                          .build()));
-            }
+            streamFile(path, responseObserver);
             responseObserver.onCompleted();
             psiSessions.remove(request.getSessionId());
             recordServed(bundleId);
@@ -457,10 +520,15 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
         }
     }
 
+    /**
+     * @return the ids of the newest {@link #maxPsiSnapshot} committed DOWNSTREAM bundles, oldest first
+     *         ({@link RelayStore#list} order), as an immutable snapshot for one PSI session
+     */
     private List<String> downstreamIds() {
         List<BundleRecord> records = store.list(Direction.DOWNSTREAM);
-        List<String> ids = new ArrayList<>(records.size());
-        for (BundleRecord r : records) ids.add(r.bundleId());
+        int from = Math.max(0, records.size() - maxPsiSnapshot);
+        List<String> ids = new ArrayList<>(records.size() - from);
+        for (BundleRecord r : records.subList(from, records.size())) ids.add(r.bundleId());
         return Collections.unmodifiableList(ids);
     }
 

@@ -99,6 +99,20 @@ public class ClientSessionTrackerTest {
     }
 
     @Test
+    public void idleSessionsAreNotReapedWhileDraining() {
+        // Stock client between psiDownloadBundle and uploadBundle: nothing in flight, long local work.
+        tracker.beginRpc(A).end(false);
+        gate.closeAdmissions();
+        clock.advance(60_000);
+        assertEquals("no reaping while admissions are closed", 0, tracker.reapIdle());
+        ClientSessionTracker.RpcTicket upload = tracker.beginRpc(A);
+        assertNotNull("the late upload is still admitted", upload);
+        upload.end(true);
+        assertEquals(0, gate.activeCount());
+        assertEquals(1, drained.get());
+    }
+
+    @Test
     public void ticketEndIsIdempotent() {
         ClientSessionTracker.RpcTicket a1 = tracker.beginRpc(A);
         ClientSessionTracker.RpcTicket a2 = tracker.beginRpc(A);

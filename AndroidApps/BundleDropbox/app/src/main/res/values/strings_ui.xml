@@ -127,6 +127,8 @@
     <string name="settings_rotate_id">Rotate advertised ID</string>
     <string name="settings_rotate_id_help">Advertise a new ID after each successful visit so clients treat the dropbox as having new data.</string>
     <string name="settings_keep_awake">Keep awake</string>
-    <string name="settings_keep_awake_help">Hold wake and Wi-Fi locks while the service runs (for plugged-in use).</string>
+    <string name="settings_start_on_boot">Start on boot</string>
+    <string name="settings_start_on_boot_help">Start relaying automatically after the phone restarts, without opening the app.</string>
+    <string name="settings_keep_awake_help">Keep the CPU awake while the service runs, so the role cycle keeps switching with the screen off (for plugged-in use).</string>
     <string name="settings_reset_defaults">Reset all to defaults</string>
 </resources>

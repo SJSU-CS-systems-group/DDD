@@ -32,8 +32,16 @@ public final class DropboxPrefs {
     public static final String KEY_ROTATE_ADVERTISED_ID = "rotate_advertised_id";
     /** Store capacity, megabytes. */
     public static final String KEY_MAX_STORAGE_MB = "max_storage_mb";
-    /** Hold a partial wake lock + high-perf Wi-Fi lock while the service runs. */
+    /**
+     * Hold a partial wake lock while the service runs, so the cycle keeps running with the screen off (no
+     * Wi-Fi lock: see {@code DropboxService#applyKeepAwake}).
+     */
     public static final String KEY_KEEP_AWAKE = "keep_awake";
+    /**
+     * Start the dropbox service when the phone finishes booting ({@code service/BootReceiver}), so an
+     * unattended relay comes back after a power cut or OS update without anyone opening the app.
+     */
+    public static final String KEY_START_ON_BOOT = "start_on_boot";
 
     public static final int DEFAULT_CLIENT_PERIOD_S = (int) (CycleConfig.DEFAULT_CLIENT_PERIOD_MS / 1000);
     public static final int DEFAULT_TRANSPORT_PERIOD_S = (int) (CycleConfig.DEFAULT_TRANSPORT_PERIOD_MS / 1000);
@@ -42,6 +50,7 @@ public final class DropboxPrefs {
     public static final boolean DEFAULT_ROTATE_ADVERTISED_ID = true;
     public static final int DEFAULT_MAX_STORAGE_MB = 1024;
     public static final boolean DEFAULT_KEEP_AWAKE = false;
+    public static final boolean DEFAULT_START_ON_BOOT = true;
 
     private DropboxPrefs() {
     }

@@ -260,6 +260,56 @@ public class DropboxExchangeServiceTest {
         assertEquals(Status.Code.NOT_FOUND, Status.fromThrowable(dl.error).getCode());
     }
 
+    @Test
+    public void psiSnapshotOffersOnlyTheNewestBundles() throws Exception {
+        service = new DropboxExchangeService(store, blobs, deliveryLog, listener, clock, () -> 42L, 2);
+        store.putDownstream("oldest", "1".getBytes());
+        store.putDownstream("middle", "2".getBytes());
+        store.putDownstream("newest", "3".getBytes());
+        var psi = new BundleOwnershipPSI();
+        BigInteger a = psi.generateSecret();
+        PSIResponse r = psiExchange(psi, a, List.of("oldest", "newest"));
+        assertEquals("snapshot capped", 2, r.getTransportBlindedValuesCount());
+        var matches = psi.clientFindMatches(ints(r.getDoublyBlindedClientValuesList()),
+                                            ints(r.getTransportBlindedValuesList()), a);
+        assertEquals("only the newest bundle is offered", 1, matches.size());
+        assertEquals(1, matches.get(0).clientIndex());
+    }
+
+    @Test
+    public void largeDownloadsAreChunkedBelowClientInboundLimit() throws Exception {
+        // A stock client keeps gRPC's default 4 MiB inbound limit; bundle-core's transferToStream would send a
+        // file of 4 MiB or more as full 4 MiB messages, which that client rejects.
+        byte[] big = new byte[DropboxExchangeService.DOWNLOAD_CHUNK_BYTES * 4 + 12_345];
+        for (int i = 0; i < big.length; i++) big[i] = (byte) (i * 31);
+        store.putDownstream("big", big);
+
+        var dl = new RpcTestFakes.RecordingObserver<BundleDownloadResponse>();
+        service.downloadBundle(dlReq("big"), dl);
+        assertTrue(dl.completed);
+        assertEquals(5, dl.values.size());
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        for (BundleDownloadResponse c : dl.values) {
+            assertTrue(c.getChunk().getChunk().size() <= DropboxExchangeService.DOWNLOAD_CHUNK_BYTES);
+            assertTrue(c.getSerializedSize() < 4 * 1024 * 1024);
+            bytes.write(c.getChunk().getChunk().toByteArray());
+        }
+        assertTrue(java.util.Arrays.equals(big, bytes.toByteArray()));
+
+        var psi = new BundleOwnershipPSI();
+        PSIResponse r = psiExchange(psi, psi.generateSecret(), List.of("big"));
+        var psiDl = new RpcTestFakes.RecordingObserver<BundleDownloadResponse>();
+        service.psiDownloadBundle(PSIDownloadRequest.newBuilder().setSessionId(r.getSessionId())
+                                          .setTransportIndex(0).build(), psiDl);
+        assertTrue(psiDl.completed);
+        int total = 0;
+        for (BundleDownloadResponse c : psiDl.values) {
+            assertTrue(c.getChunk().getChunk().size() <= DropboxExchangeService.DOWNLOAD_CHUNK_BYTES);
+            total += c.getChunk().getChunk().size();
+        }
+        assertEquals(big.length, total);
+    }
+
     // ---- legacy download ----
 
     @Test

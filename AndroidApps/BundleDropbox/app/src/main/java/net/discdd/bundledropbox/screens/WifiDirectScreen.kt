@@ -53,9 +53,9 @@ import net.discdd.utils.UserLogRepository
  * clients; tap the client line for the list, as in the transport) and the carriers it discovers/joins
  * while visiting. No QR code: clients join by Wi-Fi Direct peer address, never by SSID/password (R1 §1).
  *
- * @param permissionStates the runtime permissions P2P needs, in request order: NEARBY_WIFI_DEVICES
- *                         (every P2P call) then ACCESS_FINE_LOCATION (BundleClient-style discovery /
- *                         connect in VISIT mode, R5 §3). The banner asks for the first missing one.
+ * @param permissionStates the runtime permissions P2P needs, in request order (today only
+ *                         NEARBY_WIFI_DEVICES, which covers both roles). The banner asks for the first
+ *                         missing one.
  */
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable

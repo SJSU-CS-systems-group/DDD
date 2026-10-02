@@ -21,10 +21,15 @@ import java.util.logging.Logger;
  * listener's {@code onComplete}/{@code onCancel} are guaranteed to fire exactly once per call, which gives
  * balanced in-flight accounting (unlike bundle-core's {@code BundleExchangeEvent}s, Research/R1 §3.2).
  *
- * <p>Refusing with {@code UNAVAILABLE} is safe for the stock client: any failed RPC is caught by
- * {@code doExchangeWithTransport}'s outer catch and the exchange is retried later (Research/R3 §2). A
- * draining dropbox never refuses an already admitted client, so an exchange is never cut in half by
- * admission (the drain cap / server stop is the only thing that does that).
+ * <p>Refusing with {@code UNAVAILABLE} is NOT free for the stock client: {@code doExchangeWithTransport}'s
+ * outer catch swallows the error, but {@code BundleClientService.exchangeWith} then stamps
+ * {@code lastExchange} for our advertised transportId anyway, and the client skips that id until a recency
+ * blob newer than the stamp is advertised (R3 §7). In practice a refused client is locked out until the
+ * advertised id rotates after the next successful carrier visit (or for good with rotation off, until a
+ * newer blob arrives). The cycle therefore minimizes refusals: it withdraws the DNS-SD record as soon as a
+ * HOST drain begins ({@code RadioDriver.withdrawHostAdvertisement}), and admitted clients are never reaped
+ * while draining ({@link ClientSessionTracker}). A draining dropbox never refuses an already admitted
+ * client, so an exchange is only cut in half by the drain cap.
  *
  * <p>Stateless apart from the tracker; thread-safe.
  */

@@ -17,6 +17,7 @@ import net.discdd.bundledropbox.DropboxPrefs
 import net.discdd.bundledropbox.DropboxServiceManager
 import net.discdd.bundledropbox.DropboxStatusRepository
 import net.discdd.bundledropbox.R
+import net.discdd.bundledropbox.service.DropboxService
 import net.discdd.bundledropbox.status.DropboxStatus
 import java.util.logging.Level
 import java.util.logging.Logger
@@ -25,7 +26,8 @@ import java.util.logging.Logger
  * Device-level storage numbers that do not come from [DropboxStatus].
  *
  * @property capacityBytes  configured store capacity (`max_storage_mb` setting)
- * @property deviceFreeBytes free bytes on the volume holding the app's files (0 if unknown)
+ * @property deviceFreeBytes free bytes on the volume holding the dropbox store
+ *                         ([DropboxService.storageRoot]; 0 if unknown)
  * @property message        transient result of a clear action, shown for a few seconds
  */
 data class StorageExtras(
@@ -68,7 +70,8 @@ class StorageViewModel(application: Application) : AndroidViewModel(application)
     fun refresh() {
         viewModelScope.launch(Dispatchers.IO) {
             val free = try {
-                StatFs(context.filesDir.path).availableBytes
+                // Same root the service builds its store under, so this is the volume bundles are written to.
+                StatFs(DropboxService.storageRoot(context).path).availableBytes
             } catch (e: IllegalArgumentException) {
                 0L
             }

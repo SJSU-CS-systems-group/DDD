@@ -30,8 +30,13 @@ import java.util.logging.Logger;
  *       exchange without a SUCCESS recency blob (Research/R3), so hosting would be useless. While
  *       {@code hasRecencyBlob} is false, HOST is skipped and VISIT periods loop.</li>
  *   <li>Failures: a failed radio op is retried with exponential backoff, {@link #MAX_ATTEMPTS} attempts in
- *       total; then the controller enters {@link CycleMode#UNAVAILABLE} and retries the same op after
- *       {@link #UNAVAILABLE_RETRY_MS}, or sooner via {@link #retryNow()} (Wi-Fi/permission changes).</li>
+ *       total (each distinct op gets its own budget). When a START exhausts its attempts the other role is
+ *       tried once (HOST only with a recency blob), so a role-specific failure cannot stop the dropbox from
+ *       doing the other half of its job. If that fails too, the controller enters
+ *       {@link CycleMode#UNAVAILABLE} and retries the last failed op after {@link #UNAVAILABLE_RETRY_MS},
+ *       or sooner via {@link #retryNow()} (Wi-Fi/permission changes).</li>
+ *   <li>Role lost: if the radio loses the role on its own mid-dwell (hosted group vanished, Wi-Fi Direct
+ *       disabled), {@link #roleLost(String)} tears the role down at once instead of waiting out the dwell.</li>
  *   <li>{@link #updateConfig(CycleConfig)} takes effect when the next dwell begins; the running dwell and
  *       its drain cap keep the config they started with, so a deadline already shown to the user never
  *       moves.</li>
@@ -112,6 +117,10 @@ public final class RoleCycleController {
     private long opGen;
     private Op pendingOp;
     private int attempts;
+    /** The op whose failure scheduled the pending backoff retry; any other op starts a fresh budget. */
+    private Op retryingOp;
+    /** True once a START that exhausted its attempts fell back to the other role (reset when a role works). */
+    private boolean fallbackTried;
     private long visitGen = -1;
     private Op unavailableOp;
     private TaskScheduler.Cancellable timer;
@@ -224,6 +233,18 @@ public final class RoleCycleController {
     }
 
     /**
+     * The radio lost the current role by itself (hosted group disappeared, Wi-Fi Direct disabled, P2P
+     * channel lost). If a role is dwelling or draining, nothing useful can happen until its timer ends, so
+     * abort its work and stop it now; the cycle then moves on (next role, or UNAVAILABLE if the radio
+     * cannot even be stopped/started). No-op while a radio op is pending (it fails on its own) or idle.
+     *
+     * @param reason human-readable cause (logged and reported through {@link CycleListener#onCycleError})
+     */
+    public void roleLost(String reason) {
+        post(() -> onRoleLost(reason));
+    }
+
+    /**
      * Operator "Visit transport now": end the current HOST dwell early (normal drain rules: admitted
      * clients finish their in-flight bundle, bounded by the drain cap) and start a VISIT next. No-op if a
      * visit is already starting or dwelling, or if the cycle is stopped/paused.
@@ -322,6 +343,12 @@ public final class RoleCycleController {
     /** Issue one radio op with a fresh generation. */
     private void issueOp(Op op) {
         cancelTimer();
+        if (op != retryingOp) {
+            // A different op (e.g. the STOP that supersedes a failing START after "Visit now") gets its own
+            // attempt budget; only a backoff retry of the same op keeps counting.
+            attempts = 0;
+            retryingOp = null;
+        }
         if (op.isStart()) {
             // Admit work as soon as the role is being prepared so a fast first client/carrier is never
             // rejected in the window between the radio being usable and "ready" reaching this thread.
@@ -381,6 +408,8 @@ public final class RoleCycleController {
         if (!isCurrent(op, gen)) return;
         pendingOp = null;
         attempts = 0;
+        retryingOp = null;
+        if (op.isStart()) fallbackTried = false; // a role works again: a later failure may fall back anew
         switch (op) {
             case START_HOST -> enterDwell(CycleMode.HOSTING);
             case START_VISIT -> {
@@ -405,11 +434,22 @@ public final class RoleCycleController {
             return;
         }
         if (attempts < MAX_ATTEMPTS) {
+            retryingOp = op;
             long backoff = RETRY_BACKOFF_BASE_MS << (attempts - 1);
             scheduleTimer(backoff, () -> issueOp(op));
-        } else {
-            enterUnavailable(op);
+            return;
         }
+        Role other = op.role == Role.HOST ? Role.VISIT : Role.HOST;
+        if (op.isStart() && !fallbackTried && (other == Role.VISIT || blobAvailable())) {
+            // One role can fail for a reason the other does not share (e.g. a VISIT-only discovery problem,
+            // or createGroup failing while joining still works). Try the other role before parking, so a
+            // dropbox that can still do half its job keeps doing it instead of looping in UNAVAILABLE.
+            fallbackTried = true;
+            logger.warning(op + " exhausted " + MAX_ATTEMPTS + " attempts; trying " + other + " instead");
+            startRole(other);
+            return;
+        }
+        enterUnavailable(op);
     }
 
     /** Dwell begins now that the radio is ready; the timer never includes preparation time. */
@@ -439,6 +479,16 @@ public final class RoleCycleController {
         }
         long capAt = expiryAt + activeConfig.drainCapMs();
         logger.info(mode + " ended (" + why + "), " + gate.activeCount() + " active: draining until cap");
+        if (role == Role.HOST) {
+            // New clients are refused from now on, and a refused stock client stamps lastExchange for our
+            // advertised id anyway and then skips us until the id rotates (R3 §7). Stop advertising so
+            // nobody new discovers us; admitted clients keep the group and endpoint until they finish.
+            try {
+                radio.withdrawHostAdvertisement();
+            } catch (RuntimeException e) {
+                logger.log(Level.WARNING, "withdrawHostAdvertisement threw", e);
+            }
+        }
         setMode(role == Role.HOST ? CycleMode.HOST_DRAINING : CycleMode.VISIT_DRAINING, capAt);
         long delay = capAt - clock.nowMillis();
         if (delay <= 0) {
@@ -462,6 +512,17 @@ public final class RoleCycleController {
         Role role = mode == CycleMode.HOST_DRAINING ? Role.HOST : Role.VISIT;
         gate.forceReleaseAll("drain cap");
         issueOp(Op.stopFor(role));
+    }
+
+    private void onRoleLost(String reason) {
+        if (!mode.isDwelling() && !mode.isDraining()) {
+            logger.fine("roleLost(" + reason + ") ignored in " + mode);
+            return;
+        }
+        Role role = mode.isHostSide() ? Role.HOST : Role.VISIT;
+        logger.warning(mode + ": role lost (" + reason + "); stopping " + role + " now");
+        notifyError(reason);
+        issueOp(Op.stopFor(role)); // closes admissions and force-releases whatever was still active
     }
 
     private void onVisitFinished(long gen, boolean success) {
@@ -550,6 +611,8 @@ public final class RoleCycleController {
         Op op = unavailableOp;
         unavailableOp = null;
         attempts = 0;
+        retryingOp = null;
+        fallbackTried = false; // fresh budget: if this role still fails, the other one gets a turn again
         logger.info("Retrying " + op + " after UNAVAILABLE");
         issueOp(op);
     }
