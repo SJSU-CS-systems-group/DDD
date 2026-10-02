@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Strings owned by the dropbox UI module (screens/, viewmodels/). Kept apart from strings.xml, which
+  holds the transport-compatible ids used by the copied Wi-Fi / RPC / service code.
+-->
+<resources>
+    <!-- Shared -->
+    <string name="cancel">Cancel</string>
+    <string name="value_unknown">unknown</string>
+    <string name="count_and_bytes">%1$d bundles · %2$s</string>
+    <string name="service_not_connected">Dropbox service is not connected yet.</string>
+
+    <!-- Title row role indicator -->
+    <string name="title_role_host">Client mode</string>
+    <string name="title_role_visit">Transport mode</string>
+    <string name="title_role_idle">Idle</string>
+
+    <!-- Operator states (Status tab big label) -->
+    <string name="op_accepting_clients">Accepting clients</string>
+    <string name="op_accepting_clients_explain">Hosting a Wi-Fi Direct group. Nearby DDD clients can drop off and pick up bundles.</string>
+    <string name="op_finishing_client_transfers">Finishing client transfers</string>
+    <string name="op_finishing_client_transfers_explain">Client time is up. New clients are turned away while connected ones finish.</string>
+    <string name="op_switching_to_transport">Switching to transport mode</string>
+    <string name="op_switching_to_transport_explain">Closing the client group before looking for a transport.</string>
+    <string name="op_searching_for_transport">Searching for transport</string>
+    <string name="op_searching_for_transport_explain">Looking for a nearby DDD transport to hand off deposits and collect pickups.</string>
+    <string name="op_exchanging_with_transport">Exchanging with transport</string>
+    <string name="op_exchanging_with_transport_explain">Connected to a transport: uploading deposits and downloading pickups.</string>
+    <string name="op_finishing_transport_transfer">Finishing transport transfer</string>
+    <string name="op_finishing_transport_transfer_explain">Transport time is up. Finishing the bundle in flight before switching back.</string>
+    <string name="op_restoring_client_service">Restoring client service</string>
+    <string name="op_restoring_client_service_explain">Re-creating the Wi-Fi Direct group so clients can find the dropbox again.</string>
+    <string name="op_waiting_for_first_visit">Waiting for first transport visit (no recency blob)</string>
+    <string name="op_waiting_for_first_visit_explain">Clients cannot be served until a transport provides a server-signed recency blob. Searching for a transport.</string>
+    <string name="op_paused">Paused</string>
+    <string name="op_paused_explain">The cycle is paused by the operator. Wi-Fi Direct is idle.</string>
+    <string name="op_not_running">Not running</string>
+    <string name="op_not_running_explain">The role cycle has not started yet.</string>
+    <string name="op_needs_attention">Needs attention</string>
+    <string name="op_needs_attention_explain">Wi-Fi Direct operations keep failing. Check that Wi-Fi is on and permissions are granted; the dropbox retries automatically.</string>
+
+    <!-- Status tab -->
+    <string name="status_dwell_left">Switching in %1$s</string>
+    <string name="status_drain_left">Drain cap in %1$s</string>
+    <string name="status_retry_in">Retrying in %1$s</string>
+    <string name="status_time_left">%1$s left</string>
+    <string name="status_cycle_mode">Cycle mode: %1$s</string>
+    <string name="status_pause">Pause</string>
+    <string name="status_resume">Resume</string>
+    <string name="status_visit_now">Visit transport now</string>
+    <string name="status_host_now">Host now</string>
+    <string name="status_advertised_id">Advertised ID</string>
+    <string name="status_recency_blob">Recency blob</string>
+    <string name="status_recency_blob_none">none yet</string>
+    <string name="status_recency_blob_age">%1$s old (%2$s)</string>
+    <string name="status_active_sessions">Active sessions</string>
+    <string name="status_upstream">Deposited (upstream)</string>
+    <string name="status_downstream">Pickups (downstream)</string>
+    <string name="status_last_visit">Last transport visit</string>
+    <string name="status_last_visit_none">No transport visit since start.</string>
+    <string name="status_carrier">Transport</string>
+    <string name="status_visit_result">Result</string>
+    <string name="status_visit_ok">OK</string>
+    <string name="status_visit_failed">Failed</string>
+    <string name="status_visit_uploaded">Uploaded</string>
+    <string name="status_visit_downloaded">Downloaded</string>
+    <string name="status_visit_ended">Ended</string>
+    <string name="status_ago">%1$s ago</string>
+    <string name="status_last_error">Last error</string>
+
+    <!-- Local Wifi tab -->
+    <string name="wifi_p2p_state">Wi-Fi Direct</string>
+    <string name="wifi_p2p_enabled">Enabled</string>
+    <string name="wifi_p2p_disabled">Disabled</string>
+    <string name="wifi_role">Current role</string>
+    <string name="wifi_role_host">Hosting clients</string>
+    <string name="wifi_role_visit">Visiting transports</string>
+    <string name="wifi_role_unavailable">Unavailable</string>
+    <string name="wifi_role_idle">Idle</string>
+    <string name="wifi_hosted_group">Client group</string>
+    <string name="wifi_group_name">Group name</string>
+    <string name="wifi_owner_address">Group owner address</string>
+    <string name="wifi_connected_clients">Connected clients</string>
+    <string name="wifi_carriers">Transports</string>
+    <string name="wifi_current_carrier">Current transport</string>
+    <string name="wifi_discovered_carriers">Discovered transports</string>
+    <string name="wifi_none">none</string>
+    <string name="wifi_open_settings">Open Wifi Settings</string>
+
+    <!-- Storage tab -->
+    <string name="storage_upstream">Deposited (upstream)</string>
+    <string name="storage_downstream">Pickups (downstream)</string>
+    <string name="storage_used_of_capacity">Used / capacity</string>
+    <string name="storage_used_value">%1$s / %2$s</string>
+    <string name="storage_device_free">Free on device</string>
+    <string name="storage_capacity_hint">Capacity is set in the Settings tab (max storage).</string>
+    <string name="storage_clear_upstream">Clear deposited (upstream)</string>
+    <string name="storage_clear_downstream">Clear pickups (downstream)</string>
+    <string name="storage_confirm_upstream">Delete all %1$d deposited bundles? Bundles not yet handed to a transport are lost and clients must resend them.</string>
+    <string name="storage_confirm_downstream">Delete all %1$d pickup bundles? Clients that have not collected them must get them from another transport.</string>
+    <string name="storage_confirm_delete">Delete</string>
+    <string name="storage_cleared_upstream">Deposited bundles cleared.</string>
+    <string name="storage_cleared_downstream">Pickup bundles cleared.</string>
+    <string name="storage_clear_failed">Clear failed: %1$s</string>
+    <string name="storage_future_title">Server-managed cleanup (future)</string>
+    <string name="storage_future_text">In this version the dropbox keeps every bundle until you clear it here. Later, the server will tell the dropbox which bundles to keep or delete, based on what clients have acknowledged.</string>
+
+    <!-- Settings tab -->
+    <string name="settings_timers">Cycle timers</string>
+    <string name="settings_client_period">Client period (s)</string>
+    <string name="settings_client_period_help">How long to host clients before visiting a transport.</string>
+    <string name="settings_transport_period">Transport period (s)</string>
+    <string name="settings_transport_period_help">How long to search for and exchange with a transport.</string>
+    <string name="settings_drain_cap">Drain cap (s)</string>
+    <string name="settings_drain_cap_help">Extra time allowed to finish transfers in flight when a period ends.</string>
+    <string name="settings_max_storage">Max storage (MB)</string>
+    <string name="settings_max_storage_help">Space the dropbox may use for bundles.</string>
+    <string name="settings_error_dwell">Enter 1 to 86400 seconds.</string>
+    <string name="settings_error_drain">Enter 0 to 3600 seconds.</string>
+    <string name="settings_error_storage">Enter 1 to 1048576 MB.</string>
+    <string name="settings_save">Save</string>
+    <string name="settings_revert">Revert</string>
+    <string name="settings_saved">Saved</string>
+    <string name="settings_behavior">Behavior</string>
+    <string name="settings_return_after_visit">Return after visit</string>
+    <string name="settings_return_after_visit_help">Go back to hosting clients as soon as a transport exchange succeeds.</string>
+    <string name="settings_rotate_id">Rotate advertised ID</string>
+    <string name="settings_rotate_id_help">Advertise a new ID after each successful visit so clients treat the dropbox as having new data.</string>
+    <string name="settings_keep_awake">Keep awake</string>
+    <string name="settings_keep_awake_help">Hold wake and Wi-Fi locks while the service runs (for plugged-in use).</string>
+    <string name="settings_reset_defaults">Reset all to defaults</string>
+</resources>
