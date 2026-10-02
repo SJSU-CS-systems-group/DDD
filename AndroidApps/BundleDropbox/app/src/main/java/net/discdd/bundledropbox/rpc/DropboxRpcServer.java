@@ -26,7 +26,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * The dropbox's client-facing gRPC server, running only while the dropbox is in HOST mode. To an
+ * The dropbox's client-facing gRPC server; clients can reach it only while the dropbox is in HOST mode. To an
  * unmodified BundleClient it is indistinguishable from BundleTransport's {@code RpcServer}, which it is
  * adapted from (Research/R1 §2.1, §6):
  * <ul>
@@ -44,11 +44,15 @@ import java.util.logging.Logger;
  * {@link ActivityGate} (or refuses with UNAVAILABLE while draining), then {@link DropboxExchangeService}
  * does the work against the {@link RelayStore}.
  *
- * <p>Lifecycle: the role cycle's radio driver calls {@link #start()} once the Wi-Fi Direct group is up and
- * {@link #stop()} before removing the group. A gRPC {@link Server} cannot be restarted, so every
- * {@code start()} builds a fresh one. Both are idempotent and {@code synchronized}. {@code stop()} blocks
- * for up to about {@value #STOP_GRACE_MS} + {@value #STOP_FORCE_MS} ms, so do not call it on the cycle's
- * state thread.
+ * <p>Lifecycle: {@code DropboxService} starts the server once and keeps it for the service lifetime, the
+ * way {@code BundleTransportService} keeps its {@code RpcServer} (it listens on the wildcard address, so it
+ * serves the P2P interface whenever the dropbox's group exists). Restarting it every HOST dwell would cost
+ * up to {@value #STOP_GRACE_MS} + {@value #STOP_FORCE_MS} ms per switch and risk a port-rebind failure.
+ * At the end of each HOST role the Wi-Fi host calls {@link #endClientSessions()} (via the service's
+ * {@code HostingEndpoint}); admission is controlled by the cycle's {@link ActivityGate}, not by the
+ * listening socket. A gRPC {@link Server} cannot be restarted, so every {@code start()} builds a fresh
+ * one. {@code start()}/{@code stop()} are idempotent and {@code synchronized}; {@code stop()} blocks briefly,
+ * so do not call it on the cycle's state thread.
  *
  * <p>FUTURE: a dropbox control endpoint with its own keys (so the server can classify the dropbox and send
  * it control ADUs) belongs in a new {@code control/} package and must not change what this server shows to
@@ -210,6 +214,18 @@ public final class DropboxRpcServer {
             tracker.closeAll();
             service.clearPsiSessions();
         }
+    }
+
+    /**
+     * Ends every client session (releasing its gate token) and drops all PSI sessions without stopping the
+     * listener. Called when a HOST role ends: a client that reconnects in the next HOST dwell must be
+     * admitted afresh and must run a fresh PSI against the then-current DOWNSTREAM snapshot. RPCs still in
+     * flight keep running until their connection dies with the group (their uploads are aborted from
+     * staging on cancel, so nothing truncated is committed).
+     */
+    public void endClientSessions() {
+        tracker.closeAll();
+        service.clearPsiSessions();
     }
 
     /** @return true between a successful {@link #start()} and {@link #stop()}. */

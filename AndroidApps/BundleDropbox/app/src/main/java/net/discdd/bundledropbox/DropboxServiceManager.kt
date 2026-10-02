@@ -80,7 +80,7 @@ object DropboxServiceManager {
     /** Pass to `bindService(intent, DropboxServiceManager.connection, BIND_AUTO_CREATE)`. */
     val connection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, binder: IBinder) {
-            val dropboxService = (binder as DropboxService.DropboxBinder).service
+            val dropboxService = (binder as DropboxService.LocalBinder).service
             setService(dropboxService)
             serviceReady.complete(dropboxService)
         }

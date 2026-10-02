@@ -248,6 +248,7 @@ public final class TransportVisitClient {
         private final BooleanSupplier keepGoing;
 
         private boolean reachable;
+        private boolean recencyFetched;
         private boolean recencyUpdated;
         private int uploaded;
         private int downloaded;
@@ -283,6 +284,7 @@ public final class TransportVisitClient {
             }
             VisitResult result = new VisitResult(carrierId,
                                                  reachable,
+                                                 recencyFetched,
                                                  recencyUpdated,
                                                  uploaded,
                                                  downloaded,
@@ -354,6 +356,8 @@ public final class TransportVisitClient {
                     logger.log(INFO, "carrier " + carrierId + " has no server-signed recency blob (status " +
                             response.getStatus() + "); it has probably never synced with the server");
                 }
+                recencyFetched = response.getStatus() == RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS &&
+                        response.hasRecencyBlob();
                 recencyUpdated = recencyStore.offer(response.toByteArray());
                 logger.log(INFO, "recency blob ts=" + response.getRecencyBlob().getBlobTimestamp() + " stored=" +
                         recencyUpdated);

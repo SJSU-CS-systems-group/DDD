@@ -116,6 +116,8 @@ public final class RoleCycleController {
     private Op unavailableOp;
     private TaskScheduler.Cancellable timer;
     private long timerSeq;
+    /** Role the operator asked for ({@link #forceVisit()}/{@link #forceHost()}); used once at the next switch. */
+    private Role forcedNext;
 
     /**
      * Production constructor: owns a new {@link ExecutorTaskScheduler} and {@link ActivityGate}.
@@ -219,6 +221,24 @@ public final class RoleCycleController {
                 retryFromUnavailable();
             }
         });
+    }
+
+    /**
+     * Operator "Visit transport now": end the current HOST dwell early (normal drain rules: admitted
+     * clients finish their in-flight bundle, bounded by the drain cap) and start a VISIT next. No-op if a
+     * visit is already starting or dwelling, or if the cycle is stopped/paused.
+     */
+    public void forceVisit() {
+        post(() -> forceRole(Role.VISIT, "operator: visit transport now"));
+    }
+
+    /**
+     * Operator "Host now": end the current VISIT dwell early (the in-flight bundle finishes, bounded by the
+     * drain cap) and host next. Ignored without a recency blob, because the stock client aborts its exchange
+     * without a SUCCESS recency blob (Research/R3), so hosting would only turn clients away.
+     */
+    public void forceHost() {
+        post(() -> forceRole(Role.HOST, "operator: host now"));
     }
 
     /**
@@ -456,15 +476,62 @@ public final class RoleCycleController {
         }
     }
 
+    /**
+     * Operator-requested switch. Reuses the ordinary paths so every timer/drain invariant still holds: a
+     * dwelling role ends through {@link #beginDrain} (as on expiry, with expiry = now), a role that is still
+     * starting is stopped (its late ready is then stale by generation), and a role already draining or
+     * stopping just has its successor overridden.
+     */
+    private void forceRole(Role target, String why) {
+        if (!running || paused || shutdownRequested || mode == CycleMode.STOPPED) {
+            logger.info("Ignoring '" + why + "' in " + mode + (paused ? " (paused)" : ""));
+            return;
+        }
+        if (target == Role.HOST && !blobAvailable()) {
+            logger.info("Ignoring '" + why + "': no recency blob yet, clients would abort (bootstrap)");
+            return;
+        }
+        if (mode == CycleMode.UNAVAILABLE) {
+            // A failed start is replaced by the requested start; a failed stop must still be retried first
+            // and the requested role follows it.
+            if (unavailableOp != null && unavailableOp.isStart()) {
+                unavailableOp = Op.startFor(target);
+            } else {
+                forcedNext = target;
+            }
+            cancelTimer();
+            retryFromUnavailable();
+            return;
+        }
+        Role current = mode.isHostSide() ? Role.HOST : Role.VISIT;
+        boolean startingOrDwelling = mode.isDwelling() || mode == CycleMode.HOST_STARTING ||
+                mode == CycleMode.VISIT_STARTING;
+        if (current == target && startingOrDwelling) {
+            logger.info("Ignoring '" + why + "': already in " + mode);
+            return;
+        }
+        forcedNext = target;
+        logger.info(why + " (in " + mode + ")");
+        if (mode.isDwelling()) {
+            beginDrain(clock.nowMillis(), why);
+        } else if (startingOrDwelling) {
+            issueOp(Op.stopFor(current)); // supersedes the pending start
+        }
+        // DRAINING/STOPPING: the switch is already under way; onRoleStopped picks forcedNext.
+    }
+
     /** Radio is idle after a role; pick the next role or settle in STOPPED. */
     private void onRoleStopped(Role finished) {
+        Role forced = forcedNext;
+        forcedNext = null;
         if (!running || paused || shutdownRequested) {
             setMode(CycleMode.STOPPED, CycleListener.NO_DEADLINE);
             maybeFinishShutdown();
             return;
         }
         // Bootstrap: without a recency blob clients abort (R3), so keep visiting until a carrier gives one.
-        Role next = finished == Role.HOST ? Role.VISIT : (blobAvailable() ? Role.HOST : Role.VISIT);
+        Role next = forced != null ? forced : (finished == Role.HOST ? Role.VISIT : Role.HOST);
+        if (next == Role.HOST && !blobAvailable()) next = Role.VISIT;
         startRole(next);
     }
 

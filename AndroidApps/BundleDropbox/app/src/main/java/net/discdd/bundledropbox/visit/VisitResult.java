@@ -22,6 +22,7 @@ import java.util.Objects;
 public final class VisitResult {
     private final String carrierId;
     private final boolean reachable;
+    private final boolean recencyFetched;
     private final boolean recencyUpdated;
     private final int uploaded;
     private final int downloaded;
@@ -52,8 +53,31 @@ public final class VisitResult {
                        int errors,
                        boolean stoppedEarly,
                        String lastError) {
+        this(carrierId, reachable, recencyUpdated, recencyUpdated, uploaded, downloaded, skipped, errors,
+             stoppedEarly, lastError);
+    }
+
+    /**
+     * Full constructor.
+     *
+     * @param recencyFetched true if the carrier answered {@code getRecencyBlob} with a SUCCESS, server-signed
+     *                       blob (whether or not it was newer than the cached one). The service bumps the
+     *                       advertised-id generation on this (03 Architecture §5); see the other constructor
+     *                       for the remaining parameters
+     */
+    public VisitResult(String carrierId,
+                       boolean reachable,
+                       boolean recencyFetched,
+                       boolean recencyUpdated,
+                       int uploaded,
+                       int downloaded,
+                       int skipped,
+                       int errors,
+                       boolean stoppedEarly,
+                       String lastError) {
         this.carrierId = Objects.requireNonNull(carrierId, "carrierId");
         this.reachable = reachable;
+        this.recencyFetched = recencyFetched || recencyUpdated;
         this.recencyUpdated = recencyUpdated;
         this.uploaded = uploaded;
         this.downloaded = downloaded;
@@ -68,6 +92,12 @@ public final class VisitResult {
 
     /** @return true if the carrier's gRPC port accepted a TCP connection. */
     public boolean reachable() { return reachable; }
+
+    /**
+     * @return true if the carrier returned a SUCCESS recency blob (stored or not). Basis for advertised-id
+     *         rotation: the carrier is in sync with the server, so what we now hold is as fresh as it gets.
+     */
+    public boolean recencyFetched() { return recencyFetched; }
 
     /** @return true if a newer SUCCESS recency blob was stored during this visit. */
     public boolean recencyUpdated() { return recencyUpdated; }
@@ -105,7 +135,8 @@ public final class VisitResult {
         if (this == o) return true;
         if (!(o instanceof VisitResult)) return false;
         VisitResult that = (VisitResult) o;
-        return reachable == that.reachable && recencyUpdated == that.recencyUpdated && uploaded == that.uploaded &&
+        return reachable == that.reachable && recencyFetched == that.recencyFetched &&
+                recencyUpdated == that.recencyUpdated && uploaded == that.uploaded &&
                 downloaded == that.downloaded && skipped == that.skipped && errors == that.errors &&
                 stoppedEarly == that.stoppedEarly && carrierId.equals(that.carrierId) &&
                 Objects.equals(lastError, that.lastError);
@@ -115,6 +146,7 @@ public final class VisitResult {
     public int hashCode() {
         return Objects.hash(carrierId,
                             reachable,
+                            recencyFetched,
                             recencyUpdated,
                             uploaded,
                             downloaded,
@@ -126,7 +158,7 @@ public final class VisitResult {
 
     @Override
     public String toString() {
-        return "VisitResult{carrier=" + carrierId + ", ok=" + ok() + ", reachable=" + reachable + ", recencyUpdated=" +
+        return "VisitResult{carrier=" + carrierId + ", ok=" + ok() + ", reachable=" + reachable + ", recencyFetched=" + recencyFetched + ", recencyUpdated=" +
                 recencyUpdated + ", uploaded=" + uploaded + ", downloaded=" + downloaded + ", skipped=" + skipped +
                 ", errors=" + errors + ", stoppedEarly=" + stoppedEarly +
                 (lastError == null ? "" : ", lastError=" + lastError) + "}";
