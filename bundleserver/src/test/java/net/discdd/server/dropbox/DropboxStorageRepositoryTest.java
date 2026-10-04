@@ -48,12 +48,16 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * H2-backed tests of the dropbox storage tables, the downstream-ACK recording in
  * {@link ServerApplicationDataManager#processAcknowledgement}, and {@link DropboxControlHandler} with real
- * repositories (no ServerSecurity, as in CLI mode).
+ * repositories. The handler gets a mocked ServerSecurity that knows no client, so every upstream entry the tables
+ * cannot map stays unmapped; {@link #withoutServerKeysControlAdusAreLeftForTheLiveServer} covers CLI mode (none).
  */
 @DataJpaTest
 @Import({ GrpcExecutor.class })
@@ -88,6 +92,8 @@ class DropboxStorageRepositoryTest {
     ClientBundleCountersRepository clientBundleCountersRepository;
     @Autowired
     ObjectProvider<ServerSecurity> noServerSecurity;
+    @SuppressWarnings("unchecked")
+    private final ObjectProvider<ServerSecurity> keysKnowingNoClient = mock(ObjectProvider.class);
 
     private AduStores aduStores;
     private DropboxControlHandler handler;
@@ -97,14 +103,8 @@ class DropboxStorageRepositoryTest {
     @BeforeEach
     void setUp() {
         aduStores = new AduStores(tempRootDir);
-        handler = new DropboxControlHandler(dropboxNodeRepository,
-                                            inventorySightingRepository,
-                                            receivedBundleRepository,
-                                            bundleMetadataRepository,
-                                            clientDownstreamAckRepository,
-                                            noServerSecurity,
-                                            aduStores,
-                                            Duration.ofDays(14));
+        when(keysKnowingNoClient.getIfAvailable()).thenReturn(mock(ServerSecurity.class));
+        handler = handler(keysKnowingNoClient);
         var cfg = new BundleServerConfig();
         cfg.getApplicationDataManager().setAppDataSizeLimit(100_000_000L);
         dataManager = new ServerApplicationDataManager(aduStores,
@@ -116,6 +116,17 @@ class DropboxStorageRepositoryTest {
                                                        clientDownstreamAckRepository,
                                                        List.of(handler),
                                                        cfg);
+    }
+
+    private DropboxControlHandler handler(ObjectProvider<ServerSecurity> serverSecurity) {
+        return new DropboxControlHandler(dropboxNodeRepository,
+                                         inventorySightingRepository,
+                                         receivedBundleRepository,
+                                         bundleMetadataRepository,
+                                         clientDownstreamAckRepository,
+                                         serverSecurity,
+                                         aduStores,
+                                         Duration.ofDays(14));
     }
 
     // ---------------------------------------------------------------- repositories
@@ -175,7 +186,13 @@ class DropboxStorageRepositoryTest {
     }
 
     private ADU inventory(long seq, List<UpstreamEntry> up, List<DownstreamEntry> down) throws Exception {
-        return aduOf(DropboxControlCodec.encode(new InventoryReport(seq, 0, 1000, 10, null, up, down, List.of())));
+        return inventory(seq, 0, up, down);
+    }
+
+    private ADU inventory(long seq, long lastAppliedPlanSeq, List<UpstreamEntry> up, List<DownstreamEntry> down)
+            throws Exception {
+        return aduOf(DropboxControlCodec.encode(new InventoryReport(seq, lastAppliedPlanSeq, 1000, 10, null, up, down,
+                                                                    List.of())));
     }
 
     private List<RetentionPlan> queuedPlans() throws Exception {
@@ -209,7 +226,7 @@ class DropboxStorageRepositoryTest {
     void staleReportIsIgnoredAndNewerReportReplacesQueuedPlan() throws Exception {
         handler.handleUpstream(D, List.of(inventory(5, List.of(), List.of())));
         handler.handleUpstream(D, List.of(inventory(5, List.of(), List.of()))); // replay
-        handler.handleUpstream(D, List.of(inventory(3, List.of(), List.of()))); // stale
+        handler.handleUpstream(D, List.of(inventory(3, 1, List.of(), List.of()))); // stale, plan 1 applied
         assertEquals(1, aduStores.getSendADUsStorage().getLastADUIdAdded(D, DropboxControl.APP_ID));
         assertEquals(5, dropboxNodeRepository.findById(D).orElseThrow().lastReportSeq);
 
@@ -218,6 +235,47 @@ class DropboxStorageRepositoryTest {
         assertEquals(1, plans.size(), "only the newest plan stays queued");
         assertEquals(2, plans.get(0).getPlanSeq());
         assertEquals(6, plans.get(0).getBasedOnReportSeq());
+    }
+
+    /** A dropbox that lost its control state restarts at a low reportSeq having applied no plan (review v2). */
+    @Test
+    void reportFromADropboxWithResetStateIsAcceptedAndLiftsItsCounter() throws Exception {
+        handler.handleUpstream(D, List.of(inventory(5, List.of(), List.of())));
+        handler.handleUpstream(D, List.of(inventory(1, 0, List.of(new UpstreamEntry("U9", 1, null)), List.of())));
+        var node = dropboxNodeRepository.findById(D).orElseThrow();
+        assertEquals(5, node.lastReportSeq, "the stored counter never goes back");
+        assertTrue(node.lastInventoryJson.contains("U9"), "the reset report is the current inventory");
+        var plan = queuedPlans().get(0);
+        assertEquals(2, plan.getPlanSeq());
+        assertEquals(5, plan.getBasedOnReportSeq(), "names the stored seq, so the dropbox continues above it");
+    }
+
+    /** The queue is written at once, the row only on commit: a lost row update must not reuse a planSeq. */
+    @Test
+    void planSeqStaysAboveThePlanStillQueued() throws Exception {
+        handler.handleUpstream(D, List.of(inventory(1, List.of(), List.of())));
+        handler.handleUpstream(D, List.of(inventory(2, List.of(), List.of())));
+        assertEquals(2, queuedPlans().get(0).getPlanSeq());
+        var node = dropboxNodeRepository.findById(D).orElseThrow();
+        node.lastPlanSeq = 1; // as if the RPC that queued plan 2 rolled back its database work
+        dropboxNodeRepository.save(node);
+
+        handler.handleUpstream(D, List.of(inventory(3, List.of(), List.of())));
+        assertEquals(3, queuedPlans().get(0).getPlanSeq());
+    }
+
+    @Test
+    void withoutServerKeysControlAdusAreLeftForTheLiveServer() throws Exception {
+        var cliHandler = handler(noServerSecurity);
+        assertThrows(java.io.IOException.class,
+                     () -> cliHandler.handleUpstream(D, List.of(inventory(1, List.of(), List.of()))));
+        assertFalse(cliHandler.isRegisteredFor(D));
+
+        handler.handleUpstream(D, List.of(inventory(1, List.of(), List.of())));
+        aduStores.getSendADUsStorage().deleteAllFilesUpTo(D, DropboxControl.APP_ID, 1);
+        receivedBundleRepository.save(new ReceivedBundle("U1", C, 1, null, 10, "T"));
+        cliHandler.beforeBundleGeneration(D); // no re-plan without keys
+        assertTrue(queuedPlans().isEmpty());
     }
 
     @Test

@@ -224,8 +224,12 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
         assertTrue(plan.getDeleteUpstream().isEmpty());
 
         // the stock client picks up bundle 2 and acknowledges it in an (ack-only) upstream bundle
-        deliverToServer(stockClientBundle(3, downstream2));
+        Path ackOnly = stockClientBundle(3, downstream2);
+        String ackOnlyId = BundleJarInfo.read(ackOnly).getBundleId();
+        deliverToServer(ackOnly);
         assertEquals(2, clientDownstreamAckRepository.findById(clientId).orElseThrow().ackedCounter);
+        // recorded once fully processed, although an ack-only bundle never advances lastReceivedBundleCounter
+        assertTrue(receivedBundleRepository.existsById(ackOnlyId));
 
         // no new inventory: the server re-plans the stored report when it builds the dropbox's next bundle
         var replanned = single(dropboxDownloads());

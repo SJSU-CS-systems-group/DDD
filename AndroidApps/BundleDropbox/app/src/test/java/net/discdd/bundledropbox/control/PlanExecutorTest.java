@@ -3,7 +3,6 @@ package net.discdd.bundledropbox.control;
 import net.discdd.bundledropbox.store.BundleRecord;
 import net.discdd.bundledropbox.store.Direction;
 import net.discdd.bundledropbox.store.FileRelayStore;
-import net.discdd.bundledropbox.store.ServerPlanRetentionPolicy;
 import net.discdd.dropbox.control.DropboxControl;
 import net.discdd.dropbox.control.DropboxControl.Reason;
 import net.discdd.dropbox.control.DropboxControl.SkipReason;
@@ -54,8 +53,7 @@ public class PlanExecutorTest {
     }
 
     private PlanExecutor newExecutor(ControlStateStore s) {
-        return new PlanExecutor(store, ServerPlanRetentionPolicy.INSTANCE, s, afterDeletions::incrementAndGet,
-                                () -> 42_000L);
+        return new PlanExecutor(store, s, afterDeletions::incrementAndGet, () -> 42_000L);
     }
 
     private static RetentionPlan plan(long seq, long basedOn, List<RetentionPlan.Deletion> up,
@@ -160,16 +158,6 @@ public class PlanExecutorTest {
         assertEquals(List.of("u1"), o.result().getDeleted());
         assertEquals(0, o.skipped());
         assertEquals(List.of(), ids(Direction.UPSTREAM));
-    }
-
-    @Test
-    public void policyRefusalIsReportedAsDeleteFailedAndKept() throws IOException {
-        ControlFixtures.commit(store, Direction.UPSTREAM, "u1", 10, null);
-        PlanExecutor refusing = new PlanExecutor(store, (d, id, r) -> false, state, afterDeletions::incrementAndGet,
-                                                 () -> 1L);
-        PlanExecutor.Outcome o = refusing.apply(plan(1, 0, List.of(del("u1", Reason.EXPIRED)), List.of()));
-        assertEquals(List.of("u1"), skippedIds(o.result(), SkipReason.DELETE_FAILED));
-        assertEquals(List.of("u1"), ids(Direction.UPSTREAM));
     }
 
     @Test

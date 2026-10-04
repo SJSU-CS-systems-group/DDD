@@ -143,7 +143,7 @@ public interface RelayStore {
      * Removes a committed bundle. Missing ids are ignored.
      *
      * <p>Two callers only: the operator "clear" action in the Storage tab, and {@code control/PlanExecutor}
-     * applying a server retention plan (checked by the {@link RetentionPolicy}). The relay path itself never
+     * applying a server retention plan. The relay path itself never
      * deletes: the dropbox cannot know whether a bundle was delivered end to end; only the server can.
      *
      * @param d        the queue

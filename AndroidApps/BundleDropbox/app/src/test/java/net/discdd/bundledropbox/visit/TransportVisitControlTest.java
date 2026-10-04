@@ -221,6 +221,46 @@ public class TransportVisitControlTest {
         assertEquals(0, r.controlUploaded());
     }
 
+    /** Full box: the plan bundle must still arrive, or nothing ever frees the space (review v2, critical). */
+    @Test(timeout = 60_000)
+    public void fullQuotaStillFetchesTheOwnBundleAndRelaysNothing() throws Exception {
+        for (int i = 0; i < 4; i++) BundleFixtures.bundleJar(carrier.toClient, "d" + i, "d" + i, 100);
+        BundleFixtures.bundleJar(carrier.toClient, "mine1", "mine1", 120);
+        control.ownership.put("mine1", ControlChannel.Ownership.MINE_NEW);
+        store.hasCapacity = false;
+
+        VisitResult r = visit();
+
+        assertEquals(List.of("mine1"), control.acceptedIds);
+        assertEquals(1, r.controlProcessed());
+        assertEquals(List.of(), downstreamIds());
+        assertEquals(0, r.downloaded());
+        try (var staged = Files.list(tmp.getRoot().toPath().resolve("dropbox").resolve("staging"))) {
+            assertEquals(0, staged.count());
+        }
+
+        // Once the plan freed space, the relayed bundles passed over in control-only mode are fetched.
+        store.hasCapacity = true;
+        control.ownership.put("mine1", ControlChannel.Ownership.MINE_ALREADY_PROCESSED);
+        visit();
+        assertEquals(List.of("d0", "d1", "d2", "d3"), downstreamIds());
+    }
+
+    /** Near-full box: a relayed bundle that does not fit must not hide the own bundle behind it. */
+    @Test(timeout = 60_000)
+    public void bundleOverQuotaSwitchesToControlOnly() throws Exception {
+        BundleFixtures.bundleJar(carrier.toClient, "big", "big", 40_000);
+        BundleFixtures.bundleJar(carrier.toClient, "mine1", "mine1", 120);
+        control.ownership.put("mine1", ControlChannel.Ownership.MINE_NEW);
+        store.downstreamQuotaBytes = 10_000;
+
+        VisitResult r = visit();
+
+        assertEquals(List.of("mine1"), control.acceptedIds);
+        assertEquals(List.of(), downstreamIds());
+        assertEquals(1, r.controlProcessed());
+    }
+
     @Test(timeout = 60_000)
     public void untrustedRecencyBlobGivesNoSenderId() throws Exception {
         carrier.recency = GetRecencyBlobResponse.getDefaultInstance(); // carrier never synced

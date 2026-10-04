@@ -1,6 +1,7 @@
 package net.discdd.bundledropbox.store;
 
 import net.discdd.bundlesecurity.SecurityUtils;
+import net.discdd.dropbox.control.BundleJarInfo;
 import net.discdd.utils.BundleUtils;
 
 import java.io.ByteArrayOutputStream;
@@ -9,9 +10,6 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.security.InvalidParameterException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
 import java.util.Optional;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -122,30 +120,16 @@ public final class BundleIds {
     }
 
     /**
-     * Computes the per-client tag R8 §5 proposes: {@code base64url(SHA-256(key bytes))}, where the key
-     * bytes are the Base64url payload line of the PEM-style {@code clientBase.pub} entry
-     * ({@code DDDPEMEncoder.createEncodedPublicKeyBytes}). If the entry is not in that 3-line form, the
-     * trimmed entry text itself is hashed: still stable per client, just not comparable with the server's tag.
+     * The per-client tag R8 §5 proposes, identical to the fingerprint the control contract reports to the server
+     * ({@link BundleJarInfo#clientKeyFingerprintFromPem}): {@code base64url(SHA-256(key bytes))} of the Base64url
+     * key line of the PEM-style {@code clientBase.pub} entry. One implementation, so the HOST offer's per-client
+     * grouping and the inventory's {@code clientKeyB64} always agree.
      *
      * @param pem trimmed content of the {@code clientBase.pub} entry
-     * @return the tag (43 chars, no padding)
+     * @return the tag (43 chars, no padding), or {@code null} if the entry is not a well-formed key
      */
     static String clientTag(String pem) {
-        byte[] material = pem.getBytes(StandardCharsets.UTF_8);
-        String[] lines = pem.split("\\r?\\n");
-        if (lines.length == 3 && lines[0].startsWith("-----BEGIN") && lines[2].startsWith("-----END")) {
-            try {
-                material = Base64.getUrlDecoder().decode(lines[1].trim());
-            } catch (IllegalArgumentException e) {
-                // keep hashing the raw text
-            }
-        }
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(material);
-            return Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 unavailable", e);
-        }
+        return BundleJarInfo.clientKeyFingerprintFromPem(pem);
     }
 
     /**

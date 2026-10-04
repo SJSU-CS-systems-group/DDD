@@ -6,7 +6,7 @@ package net.discdd.bundledropbox.store;
  * <p>Nothing is deleted based on it. "Served" means the {@code psiDownloadBundle} stream for that bundle
  * completed without error; it is not proof the client processed it. The counts are reported to the server in
  * the dropbox's inventory ({@code control/InventoryBuilder}) as advisory evidence; the server deletes a pickup
- * only on the client's own ack (see {@link RetentionPolicy}).
+ * only on the client's own ack (06 Storage Management Design § Server).
  */
 public interface DeliveryLog {
     /**

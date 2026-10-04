@@ -153,6 +153,20 @@ class DropboxRetentionPlannerTest {
     }
 
     @Test
+    void downstreamNotSupersededByANewerBundleOutsideTheClientsPsiWindow() {
+        // C acked 3; its PSI window reaches 3 + CLIENT_WINDOW, so R(3+W+2) cannot be fetched and replaces nothing
+        facts.acked.put("C", 3L);
+        long beyond = 3 + DropboxRetentionPlanner.CLIENT_WINDOW + 2;
+        facts.issued.put("R6", new IssuedBundle("C", 6));
+        facts.issued.put("R8", new IssuedBundle("C", 8));
+        facts.issued.put("RX", new IssuedBundle("C", beyond));
+        var d = plan(report(List.of(), List.of(down("R6"), down("R8"), down("RX"))));
+        // R8 is the newest reachable bundle, so only R6 is superseded; R8 and RX are kept
+        assertEquals(List.of(new Deletion("R6", Reason.SUPERSEDED)), d.deleteDownstream());
+        assertEquals(2, d.keptDownstream());
+    }
+
+    @Test
     void downstreamNotSupersededByNewerBundleTheDropboxDoesNotHold() {
         // the server has issued R5 for C, but the dropbox only holds R1: it may never receive R5
         facts.issued.put("R1", new IssuedBundle("C", 1));

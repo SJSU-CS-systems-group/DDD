@@ -44,7 +44,6 @@ import net.discdd.bundledropbox.store.FileDeliveryLog;
 import net.discdd.bundledropbox.store.FileRecencyBlobStore;
 import net.discdd.bundledropbox.store.FileRelayStore;
 import net.discdd.bundledropbox.store.JsonForwardLedger;
-import net.discdd.bundledropbox.store.ServerPlanRetentionPolicy;
 import net.discdd.bundledropbox.store.ServerTrust;
 import net.discdd.bundledropbox.visit.TransportVisitClient;
 import net.discdd.bundledropbox.visit.VisitResult;
@@ -292,7 +291,6 @@ public class DropboxService extends Service implements DropboxControls {
             DropboxControlManager ctl = new DropboxControlManager(controlEndpointRoot(this),
                                                                   relayStore,
                                                                   deliveryLog::readAll,
-                                                                  ServerPlanRetentionPolicy.INSTANCE,
                                                                   () -> {
                                                                       forwardLedger.pruneAgainst(relayStore);
                                                                       refreshStatus();

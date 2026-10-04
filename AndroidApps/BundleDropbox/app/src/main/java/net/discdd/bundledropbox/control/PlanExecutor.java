@@ -3,7 +3,6 @@ package net.discdd.bundledropbox.control;
 import net.discdd.bundledropbox.store.BundleRecord;
 import net.discdd.bundledropbox.store.Direction;
 import net.discdd.bundledropbox.store.RelayStore;
-import net.discdd.bundledropbox.store.RetentionPolicy;
 import net.discdd.dropbox.control.DropboxControl;
 import net.discdd.dropbox.control.InventoryReport;
 import net.discdd.dropbox.control.RetentionPlan;
@@ -36,7 +35,8 @@ import java.util.logging.Logger;
  *       ({@link ControlStateStore}).</li>
  * </ul>
  * Every reason the server gives is a monotonic fact (Research/R7 §5), so a stale plan cannot delete anything the
- * server still needs. Each deletion is also checked against the {@link RetentionPolicy}.
+ * server still needs. The server plan is the whole retention policy: the dropbox has no local rule that could
+ * overrule it, because it cannot see whether a bundle was delivered (Research/R3 §6, R4 §4.3).
  *
  * <p>Crash safety: deletions happen before the state is saved. A crash in between re-applies the same plan at the
  * next start (its ADU is only deleted after this returns, {@code DropboxControlEndpoint}); bundles already deleted
@@ -96,22 +96,18 @@ public final class PlanExecutor {
     }
 
     private final RelayStore store;
-    private final RetentionPolicy policy;
     private final ControlStateStore state;
     private final Runnable afterDeletions;
     private final LongSupplier wallClock;
 
     /**
      * @param store          the relay store bundles are deleted from
-     * @param policy         asked before each deletion ({@code ServerPlanRetentionPolicy} in production)
      * @param state          persisted plan sequence, results and totals
      * @param afterDeletions run once after a plan deleted something (the service prunes the forward ledger)
      * @param wallClock      epoch millis
      */
-    public PlanExecutor(RelayStore store, RetentionPolicy policy, ControlStateStore state, Runnable afterDeletions,
-                        LongSupplier wallClock) {
+    public PlanExecutor(RelayStore store, ControlStateStore state, Runnable afterDeletions, LongSupplier wallClock) {
         this.store = Objects.requireNonNull(store, "store");
-        this.policy = Objects.requireNonNull(policy, "policy");
         this.state = Objects.requireNonNull(state, "state");
         this.afterDeletions = Objects.requireNonNull(afterDeletions, "afterDeletions");
         this.wallClock = Objects.requireNonNull(wallClock, "wallClock");
@@ -160,20 +156,12 @@ public final class PlanExecutor {
         if (orders.isEmpty()) return new long[]{0, 0};
         Map<String, BundleRecord> held = new HashMap<>();
         for (BundleRecord r : store.list(d)) held.put(r.bundleId(), r);
-        Map<String, DropboxControl.Reason> unique = new HashMap<>();
         Set<String> order = new LinkedHashSet<>(); // a plan may repeat an id; act on it once, in plan order
-        for (RetentionPlan.Deletion o : orders) {
-            if (order.add(o.getBundleId())) unique.put(o.getBundleId(), o.getReason());
-        }
+        for (RetentionPlan.Deletion o : orders) order.add(o.getBundleId());
         for (String id : order) {
             BundleRecord r = held.get(id);
             if (r == null || !store.contains(d, id)) {
                 skipped.add(new InventoryReport.SkippedEntry(id, DropboxControl.SkipReason.NOT_FOUND));
-                continue;
-            }
-            if (!policy.mayDelete(d, id, unique.get(id))) {
-                // Kept on purpose; reported as a failed delete so the server keeps tracking it.
-                skipped.add(new InventoryReport.SkippedEntry(id, DropboxControl.SkipReason.DELETE_FAILED));
                 continue;
             }
             store.delete(d, id);

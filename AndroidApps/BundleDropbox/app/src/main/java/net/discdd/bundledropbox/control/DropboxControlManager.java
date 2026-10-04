@@ -5,7 +5,6 @@ import net.discdd.bundledropbox.store.BundleRecord;
 import net.discdd.bundledropbox.store.Direction;
 import net.discdd.bundledropbox.store.FileDeliveryLog;
 import net.discdd.bundledropbox.store.RelayStore;
-import net.discdd.bundledropbox.store.RetentionPolicy;
 import net.discdd.bundledropbox.visit.ControlChannel;
 import net.discdd.dropbox.control.RetentionPlan;
 
@@ -64,7 +63,6 @@ public final class DropboxControlManager implements ControlChannel {
 
     private final Path root;
     private final RelayStore store;
-    private final RetentionPolicy policy;
     private final Runnable afterDeletions;
     private final LongSupplier wallClock;
     private final Listener listener;
@@ -81,17 +79,14 @@ public final class DropboxControlManager implements ControlChannel {
      * @param root           endpoint root ({@code getDataDir()/ControlEndpoint})
      * @param store          the relay store (inventory source, deletion target)
      * @param servedEvents   delivery-log events ({@code FileDeliveryLog::readAll})
-     * @param policy         retention policy ({@code ServerPlanRetentionPolicy.INSTANCE})
      * @param afterDeletions run after a plan deleted bundles (prune the forward ledger)
      * @param wallClock      epoch millis
      * @param listener       service reactions
      */
     public DropboxControlManager(Path root, RelayStore store, Supplier<List<FileDeliveryLog.Served>> servedEvents,
-                                 RetentionPolicy policy, Runnable afterDeletions, LongSupplier wallClock,
-                                 Listener listener) {
+                                 Runnable afterDeletions, LongSupplier wallClock, Listener listener) {
         this.root = Objects.requireNonNull(root, "root");
         this.store = Objects.requireNonNull(store, "store");
-        this.policy = Objects.requireNonNull(policy, "policy");
         this.afterDeletions = Objects.requireNonNull(afterDeletions, "afterDeletions");
         this.wallClock = Objects.requireNonNull(wallClock, "wallClock");
         this.listener = Objects.requireNonNull(listener, "listener");
@@ -119,7 +114,7 @@ public final class DropboxControlManager implements ControlChannel {
                                                                         this::applyPlan);
             state = new ControlStateStore(root.resolve(DropboxControlEndpoint.CONTROL_DIR_NAME)
                                                   .resolve(ControlStateStore.FILE_NAME));
-            executor = new PlanExecutor(store, policy, state, afterDeletions, wallClock);
+            executor = new PlanExecutor(store, state, afterDeletions, wallClock);
             endpoint = opened;
             problem = null;
             opened.replayPending();

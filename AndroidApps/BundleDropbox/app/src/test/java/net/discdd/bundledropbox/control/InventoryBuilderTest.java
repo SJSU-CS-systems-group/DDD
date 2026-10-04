@@ -104,7 +104,7 @@ public class InventoryBuilderTest {
     @Test
     public void sequenceNumbersAndPendingResultsComeFromTheControlState() throws Exception {
         ControlFixtures.commit(store, Direction.UPSTREAM, "u1", 10, null);
-        PlanExecutor ex = new PlanExecutor(store, (d, id, r) -> true, state, () -> {}, () -> 9L);
+        PlanExecutor ex = new PlanExecutor(store, state, () -> {}, () -> 9L);
         state.recordReportQueued(4, "x", 1);
         ex.apply(new RetentionPlan(2, 4, null, List.of(new RetentionPlan.Deletion("u1", null)), List.of(), null));
 
@@ -138,7 +138,7 @@ public class InventoryBuilderTest {
         ControlFixtures.commit(store, Direction.UPSTREAM, "u1", 10, null);
         InventoryBuilder.Draft a = builder.build(state.snapshot(), 1L);
         state.recordReportQueued(a.report().getReportSeq(), a.fingerprint(), 1L);
-        PlanExecutor ex = new PlanExecutor(store, (d, id, r) -> true, state, () -> {}, () -> 9L);
+        PlanExecutor ex = new PlanExecutor(store, state, () -> {}, () -> 9L);
 
         ex.apply(new RetentionPlan(1, 1, null, List.of(), List.of(), null));
         InventoryBuilder.Draft b = builder.build(state.snapshot(), 2L);

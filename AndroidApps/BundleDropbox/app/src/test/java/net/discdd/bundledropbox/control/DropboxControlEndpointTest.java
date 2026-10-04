@@ -3,7 +3,6 @@ package net.discdd.bundledropbox.control;
 import net.discdd.bundledropbox.store.BundleRecord;
 import net.discdd.bundledropbox.store.Direction;
 import net.discdd.bundledropbox.store.FileRelayStore;
-import net.discdd.bundledropbox.store.ServerPlanRetentionPolicy;
 import net.discdd.bundledropbox.visit.ControlChannel;
 import net.discdd.bundlesecurity.BundleIDGenerator;
 import net.discdd.bundlesecurity.DDDPEMEncoder;
@@ -377,6 +376,46 @@ public class DropboxControlEndpointTest {
         assertEquals(b.clientId(), ClientSecurity.getInstance().getClientID());
     }
 
+    /** A crash part-way through a wipe must not leave old-server state behind a "fresh" endpoint (review v2). */
+    @Test
+    public void anInterruptedWipeIsFinishedOnTheNextOpen() throws Exception {
+        String idA = open(keysA).clientId();
+        // the crash: marker written, server keys already gone, the rest still present
+        Files.createFile(root.resolve(DropboxControlEndpoint.WIPE_MARKER));
+        deleteTree(root.resolve(SecurityUtils.BUNDLE_SECURITY_DIR).resolve(SecurityUtils.SERVER_KEY_PATH));
+
+        DropboxControlEndpoint b = open(keysB);
+        assertTrue(b.wasResetForNewServer());
+        assertNotEquals(idA, b.clientId());
+        assertFalse(Files.exists(root.resolve(DropboxControlEndpoint.WIPE_MARKER)));
+    }
+
+    /** Endpoint state without server keys (an interrupted wipe from before the marker) is not "fresh". */
+    @Test
+    public void stateWithoutServerKeysIsWiped() throws Exception {
+        open(keysA);
+        deleteTree(root.resolve(SecurityUtils.BUNDLE_SECURITY_DIR).resolve(SecurityUtils.SERVER_KEY_PATH));
+        assertTrue(open(keysA).wasResetForNewServer());
+    }
+
+    /** A truncated routing.metadata (bundle-core's truncating writer, then a crash) must not wedge the endpoint. */
+    @Test
+    public void truncatedRoutingMetadataIsRepaired() throws Exception {
+        DropboxControlEndpoint ep = open(keysA);
+        ep.prepareUpstream(inventory(1));
+        Path metadata = root.resolve("BundleRouting").resolve("routing.metadata");
+        Files.write(metadata, "{\"transport-1\": 4".getBytes(StandardCharsets.UTF_8));
+
+        assertNotNull(ep.prepareUpstream(inventory(2)));
+        new com.fasterxml.jackson.databind.ObjectMapper().readTree(metadata.toFile()); // parses again
+    }
+
+    private static void deleteTree(Path dir) throws IOException {
+        try (Stream<Path> walk = Files.walk(dir)) {
+            for (Path p : walk.sorted(Comparator.reverseOrder()).collect(Collectors.toList())) Files.delete(p);
+        }
+    }
+
     @Test
     public void aSecondRootInTheSameProcessIsRefused() throws Exception {
         open(keysA);
@@ -410,7 +449,7 @@ public class DropboxControlEndpointTest {
     private final AtomicLong clock = new AtomicLong(1_000_000L);
 
     private DropboxControlManager manager(FileRelayStore store, Events events, AtomicInteger afterDeletions) {
-        return new DropboxControlManager(root, store, List::of, ServerPlanRetentionPolicy.INSTANCE,
+        return new DropboxControlManager(root, store, List::of,
                                          afterDeletions::incrementAndGet, () -> 5_000_000L, events);
     }
 

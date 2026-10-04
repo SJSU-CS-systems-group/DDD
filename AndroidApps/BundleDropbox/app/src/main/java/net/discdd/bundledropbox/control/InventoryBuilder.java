@@ -11,18 +11,14 @@ import net.discdd.dropbox.control.DropboxControlCodec;
 import net.discdd.dropbox.control.DropboxControlException;
 import net.discdd.dropbox.control.InventoryReport;
 
-import java.io.IOException;
-import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -38,10 +34,10 @@ import java.util.logging.Logger;
  *   <li>{@link FileDeliveryLog} served events, aggregated per DOWNSTREAM id into {@code servedCount} and
  *       {@code lastServedAt}. They are advisory: the authoritative delivery evidence is the client's own ack,
  *       which reaches the server inside that client's next upstream bundle (Research/R6 §3.2).</li>
- *   <li>{@code clientKeyB64} for every bundle, computed by the contract's {@link BundleJarInfo} from the jar's
- *       plaintext {@code clientBase.pub}. The server records the same fingerprint per client, which lets it map an
- *       upstream id it never received to a client and decide SUPERSEDED. Cached per bundle id, since a committed
- *       bundle never changes.</li>
+ *   <li>{@code clientKeyB64} for every bundle: the store's {@link BundleRecord#clientTag()}, which is the
+ *       contract's {@link BundleJarInfo} fingerprint of the jar's plaintext {@code clientBase.pub}, computed once
+ *       when the bundle is committed or indexed. The server records the same fingerprint per client, which lets it
+ *       map an upstream id it never received to a client and decide SUPERSEDED.</li>
  *   <li>{@link ControlStateStore}: next {@code reportSeq}, {@code lastAppliedPlanSeq}, pending plan results.</li>
  * </ul>
  *
@@ -54,9 +50,6 @@ import java.util.logging.Logger;
  */
 public final class InventoryBuilder {
     private static final Logger logger = Logger.getLogger(InventoryBuilder.class.getName());
-
-    /** Cached "jar has no usable clientBase.pub" marker (a map value cannot be null). */
-    private static final String NO_KEY = "";
 
     /** A built report plus the fingerprint used to skip queuing identical reports. */
     public static final class Draft {
@@ -82,7 +75,6 @@ public final class InventoryBuilder {
 
     private final RelayStore store;
     private final Supplier<List<FileDeliveryLog.Served>> servedEvents;
-    private final Map<String, String> clientKeys = new HashMap<>(); // guarded by this; bundle id -> fingerprint
 
     /**
      * @param store        the relay store
@@ -105,18 +97,17 @@ public final class InventoryBuilder {
         List<BundleRecord> upRecords = store.list(Direction.UPSTREAM);
         List<BundleRecord> downRecords = store.list(Direction.DOWNSTREAM);
         StoreStats stats = store.stats();
-        pruneKeyCache(upRecords, downRecords);
 
         Map<String, long[]> served = aggregateServed(); // id -> {count, last}
         List<InventoryReport.UpstreamEntry> up = new ArrayList<>(upRecords.size());
         for (BundleRecord r : upRecords) {
-            up.add(new InventoryReport.UpstreamEntry(r.bundleId(), r.sizeBytes(), clientKey(Direction.UPSTREAM, r)));
+            up.add(new InventoryReport.UpstreamEntry(r.bundleId(), r.sizeBytes(), r.clientTag()));
         }
         List<InventoryReport.DownstreamEntry> down = new ArrayList<>(downRecords.size());
         for (BundleRecord r : downRecords) {
             long[] s = served.get(r.bundleId());
             down.add(new InventoryReport.DownstreamEntry(r.bundleId(), r.sizeBytes(),
-                                                         clientKey(Direction.DOWNSTREAM, r),
+                                                         r.clientTag(),
                                                          s == null ? 0 : s[0], s == null ? null : s[1]));
         }
         List<InventoryReport.PlanResult> results = new ArrayList<>(state.pendingResults());
@@ -157,8 +148,8 @@ public final class InventoryBuilder {
      * fingerprint give the server's planner the same input.
      *
      * <p>{@code reportSeq}, {@code createdAt}, {@code lastAppliedPlanSeq} and {@code planResults} are left out on
-     * purpose. The server answers every accepted report with a plan, even an empty one (M13
-     * {@code DropboxControlHandler}). If applying that plan changed the fingerprint, the dropbox would send a new
+     * purpose. The server answers every accepted report with a plan, even an empty one (server
+     * {@code DropboxControlHandler}; 06 Storage Management Design § Server). If applying that plan changed the fingerprint, the dropbox would send a new
      * report, which gets another plan, and so on: one report and one plan per carrier round trip, forever.
      * Outcomes that matter (a plan that deleted or skipped something) still trigger a report through
      * {@link ControlStateStore.Snapshot#hasUnreportedResults()}, and a deletion changes the bundle lists anyway.
@@ -190,30 +181,5 @@ public final class InventoryBuilder {
             agg[1] = Math.max(agg[1], s.servedAtMillis());
         }
         return out;
-    }
-
-    private String clientKey(Direction d, BundleRecord r) {
-        String cached = clientKeys.get(r.bundleId());
-        if (cached == null) {
-            cached = NO_KEY;
-            Path path = store.pathFor(d, r.bundleId());
-            if (path != null) {
-                try {
-                    String fp = BundleJarInfo.read(path).getClientKeyFingerprint();
-                    if (fp != null) cached = fp;
-                } catch (IOException | RuntimeException e) {
-                    logger.log(Level.FINE, "No client key fingerprint for " + r.bundleId() + ": " + e);
-                }
-            }
-            clientKeys.put(r.bundleId(), cached);
-        }
-        return cached.isEmpty() ? null : cached;
-    }
-
-    private void pruneKeyCache(List<BundleRecord> up, List<BundleRecord> down) {
-        Set<String> present = new HashSet<>();
-        for (BundleRecord r : up) present.add(r.bundleId());
-        for (BundleRecord r : down) present.add(r.bundleId());
-        clientKeys.keySet().retainAll(present);
     }
 }

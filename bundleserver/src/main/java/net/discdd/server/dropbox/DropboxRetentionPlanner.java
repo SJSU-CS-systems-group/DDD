@@ -3,6 +3,7 @@ package net.discdd.server.dropbox;
 import net.discdd.dropbox.control.DropboxControl.Reason;
 import net.discdd.dropbox.control.InventoryReport;
 import net.discdd.dropbox.control.RetentionPlan.Deletion;
+import net.discdd.utils.Constants;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -33,9 +34,12 @@ import java.util.OptionalLong;
  *   <li>the server issued this ID for {@code (client, counter)} and the client has acknowledged a counter ≥ that →
  *       delete, {@code CLIENT_ACKED} (the client now rejects it anyway);</li>
  *   <li>the same report also holds a downstream bundle the server issued for the same client with a higher counter
- *       → delete, {@code SUPERSEDED} (the newer one re-carries every unacknowledged ADU). Supersession is judged only
- *       against bundles the dropbox itself holds, never against newer bundles the server issued elsewhere: the
- *       dropbox may never receive those;</li>
+ *       that the client can still fetch → delete, {@code SUPERSEDED} (the newer one re-carries every unacknowledged
+ *       ADU). Supersession is judged only against bundles the dropbox itself holds, never against newer bundles the
+ *       server issued elsewhere: the dropbox may never receive those. "Can still fetch" means a counter no higher
+ *       than {@code ackedCounter + }{@link #CLIENT_WINDOW}: a stock client offers PSI only the next window of IDs
+ *       after the largest it received ({@code ClientWindow.getWindow}), and the server's downstream counter is not
+ *       bounded by that window (Research R7 §2), so a newer bundle beyond it would replace nothing;</li>
  *   <li>otherwise keep. A bundle the server never issued (another server, or a wiped database) is "unknown" and
  *       expires like an unknown upstream entry.</li>
  * </ol>
@@ -89,6 +93,13 @@ public final class DropboxRetentionPlanner {
         }
     }
 
+    /**
+     * How many downstream IDs past its last received bundle a stock client asks for in PSI
+     * ({@code Constants.DEFAULT_WINDOW_SIZE}, fixed in every shipped client). Measured from the server's
+     * {@code ackedCounter}, which is never above the client's real position, so the bound only errs toward keeping.
+     */
+    static final long CLIENT_WINDOW = Constants.DEFAULT_WINDOW_SIZE;
+
     private final Duration unknownTtl;
 
     /**
@@ -96,10 +107,6 @@ public final class DropboxRetentionPlanner {
      */
     public DropboxRetentionPlanner(Duration unknownTtl) {
         this.unknownTtl = Objects.requireNonNull(unknownTtl, "unknownTtl");
-    }
-
-    public Duration getUnknownTtl() {
-        return unknownTtl;
     }
 
     public Decision plan(InventoryReport report, Facts facts, long nowMs) {
@@ -113,14 +120,17 @@ public final class DropboxRetentionPlanner {
             else deleteUpstream.add(new Deletion(entry.getBundleId(), reason));
         }
 
-        // the highest counter the dropbox holds per client, among downstream bundles this server issued
+        // the highest counter the dropbox holds per client that the client can still fetch, among downstream
+        // bundles this server issued
         var issued = new HashMap<String, IssuedBundle>();
         var newestHeld = new HashMap<String, Long>();
         for (var entry : report.getDownstream()) {
             var bundle = facts.issuedDownstream(entry.getBundleId());
             if (bundle == null) continue;
             issued.put(entry.getBundleId(), bundle);
-            newestHeld.merge(bundle.clientId(), bundle.counter(), Math::max);
+            if (bundle.counter() <= facts.ackedCounter(bundle.clientId()) + CLIENT_WINDOW) {
+                newestHeld.merge(bundle.clientId(), bundle.counter(), Math::max);
+            }
         }
         var deleteDownstream = new ArrayList<Deletion>();
         var seenDownstream = new LinkedHashSet<String>();
@@ -157,7 +167,8 @@ public final class DropboxRetentionPlanner {
         var bundle = issued.get(id);
         if (bundle == null) return expired(Direction.DOWNSTREAM, id, facts, nowMs) ? Reason.EXPIRED : null;
         if (bundle.counter() <= facts.ackedCounter(bundle.clientId())) return Reason.CLIENT_ACKED;
-        if (bundle.counter() < newestHeld.get(bundle.clientId())) return Reason.SUPERSEDED;
+        Long newest = newestHeld.get(bundle.clientId());
+        if (newest != null && bundle.counter() < newest) return Reason.SUPERSEDED;
         return null;
     }
 

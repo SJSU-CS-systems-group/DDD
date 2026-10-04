@@ -26,6 +26,7 @@ import net.discdd.grpc.PSIRequest;
 import net.discdd.grpc.PSIResponse;
 import net.discdd.grpc.RecencyBlobStatus;
 import net.discdd.bundlesecurity.SecurityUtils;
+import net.discdd.dropbox.control.DropboxControl;
 import net.discdd.tls.GrpcSecurityKey;
 import net.discdd.utils.BundleUtils;
 
@@ -91,7 +92,9 @@ import static java.util.logging.Level.WARNING;
  *       keeps a client's still-current bundle in the HOST PSI snapshot. Each visit to a carrier resumes at the
  *       index where the previous visit to it stopped, so a listing too long for one dwell is still covered over
  *       several visits. A bundle addressed to the dropbox itself ({@link ControlChannel#classify}) goes to
- *       {@link ControlChannel#accept} and <b>never</b> into the relay store: no client could ever use it.</li>
+ *       {@link ControlChannel#accept} and <b>never</b> into the relay store: no client could ever use it. When
+ *       the quota is full the walk goes on in <b>control-only</b> mode (see {@link #CONTROL_BUNDLE_MAX_BYTES}),
+ *       because the retention plan that frees the space arrives in exactly such a bundle.</li>
  *   <li><b>Ack re-upload</b>: if a retention plan was processed during this visit, the dropbox's own bundle is
  *       regenerated (it now acks the plan bundle and reports the plan's results) and uploaded once more, which
  *       saves the server a full carrier round trip (Research/R7 §8).</li>
@@ -129,6 +132,18 @@ public final class TransportVisitClient {
 
     /** Upper bound on the size of a {@code bundle.id} entry we are willing to read (ids are at most 100 chars). */
     private static final int MAX_BUNDLE_ID_ENTRY_BYTES = 1024;
+
+    /**
+     * Control reserve: the most a download in control-only mode may stage outside the DOWNSTREAM quota. When the
+     * quota is full the dropbox still has to find its own downstream bundle, since the retention plan inside it is
+     * the only thing that frees space (06 Storage Management Design "Visit flow"); charging that bundle to the
+     * relay quota would deadlock a full box. The jar's {@code bundle.id} entry is written after the payload
+     * ({@code BundleUtils.encryptPayloadAndCreateBundle}), so ownership is known only once the whole jar is
+     * staged; a control bundle carries one control message ({@code DropboxControl.MAX_MESSAGE_BYTES}) plus jar
+     * and encryption overhead, so anything larger cannot be ours and is abandoned at this cap. The staged copy
+     * is never committed and is deleted right after classification.
+     */
+    static final long CONTROL_BUNDLE_MAX_BYTES = DropboxControl.MAX_MESSAGE_BYTES + 1024L * 1024;
 
     /** Extra wait beyond the RPC deadline for the upload response before giving up locally. */
     private static final long UPLOAD_RESPONSE_GRACE_MS = 5_000;
@@ -673,6 +688,13 @@ public final class TransportVisitClient {
          * records the index after each one attempted, so when the dwell (or the drain cap) cuts a visit short,
          * the next visit continues with the indices this one never reached instead of replaying the same prefix.
          *
+         * <p>Full quota: instead of stopping, the walk switches to control-only mode (if a control channel is
+         * wired): each remaining index is staged under {@link #CONTROL_BUNDLE_MAX_BYTES} without the quota check,
+         * only the dropbox's own bundle is kept (and handed to the endpoint), and the walk ends once it is found.
+         * The resume index does not advance in this mode, so relayed bundles passed over are fetched by a later
+         * visit once the plan has freed space. An index that ran out of quota mid-stream is retried once in
+         * control-only mode, since it may be the own bundle itself.
+         *
          * <p>FUTURE: PSI known-ID skip — send up to 10 blinded ids the dropbox already holds per
          * {@code psiExchange} and download only unmatched indices (R2 §4.3 optional optimization).
          * <p>FUTURE: server-issued destination manifests replace download-all, so the dropbox pulls only bundles
@@ -690,14 +712,15 @@ public final class TransportVisitClient {
                 Set<String> idsThisPass = new HashSet<>();
                 int start = n == 0 ? 0 : Math.floorMod(nextDownloadIndex.getOrDefault(carrierId, 0), n);
                 if (start != 0) logger.log(INFO, "resuming downloads from " + carrierId + " at index " + start);
+                boolean controlOnly = false;
                 for (int k = 0; k < n; k++) {
                     int i = (start + k) % n;
                     checkContinue();
-                    if (!store.hasCapacityFor(Direction.DOWNSTREAM, 0)) {
+                    if (!controlOnly && !store.hasCapacityFor(Direction.DOWNSTREAM, 0)) {
                         // DOWNSTREAM has its own quota below the total capacity, so a full DOWNSTREAM never
-                        // blocks client uploads (Audit M10).
-                        error("downstream quota full; stopping downloads");
-                        return;
+                        // blocks client uploads (Audit M10). Keep looking for the own bundle only.
+                        if (!enterControlOnly("downstream quota full")) return;
+                        controlOnly = true;
                     }
                     if (session == null) {
                         session = countingExchange(blocking);
@@ -709,19 +732,44 @@ public final class TransportVisitClient {
                             if (i >= m) break;
                         }
                     }
-                    IndexOutcome outcome = downloadIndex(blocking, session.getSessionId(), i);
-                    if (outcome == IndexOutcome.STOP) return; // out of space; retried on a later visit
-                    nextDownloadIndex.put(carrierId, i + 1); // floorMod'd against the next listing size
+                    IndexOutcome outcome = downloadIndex(blocking, session.getSessionId(), i, controlOnly);
                     // A successful download consumes the session on the carrier; after an error the session state
                     // is ambiguous (expired vs file gone), so always start the next index with a fresh one.
                     session = null;
+                    if (outcome == IndexOutcome.STOP) {
+                        // Out of quota mid-stream: this very index may be the own bundle, so retry it control-only.
+                        if (!enterControlOnly("bundle at index " + i + " does not fit the downstream quota")) {
+                            return;
+                        }
+                        controlOnly = true;
+                        k--;
+                        continue;
+                    }
+                    if (controlOnly) {
+                        // the server keeps one current bundle per client; once ours is seen there is no more to find
+                        if (outcome.own) return;
+                        continue; // no resume-index advance: the relayed bundle is fetched once space is freed
+                    }
+                    nextDownloadIndex.put(carrierId, i + 1); // floorMod'd against the next listing size
                     if (outcome.listingChanged) listingChanged = true;
                     if (outcome.bundleId != null && !idsThisPass.add(outcome.bundleId)) duplicatesInPass++;
                 }
-                if (!listingChanged && duplicatesInPass == 0) return;
+                if (controlOnly || (!listingChanged && duplicatesInPass == 0)) return;
                 logger.log(INFO, "pass " + pass + " may have missed bundles (listingChanged=" + listingChanged +
                         ", duplicates=" + duplicatesInPass + ")");
             }
+        }
+
+        /**
+         * Records why relayed downloads stop (an error, as before: the visit did not fetch everything) and reports
+         * whether the walk can go on looking for the own bundle.
+         *
+         * @return false if no control channel is wired, so nothing addressed to the dropbox can exist
+         */
+        private boolean enterControlOnly(String why) {
+            boolean go = control != ControlChannel.NONE;
+            error(why + (go ? "; looking only for the dropbox's own bundle" : "; stopping downloads"));
+            return go;
         }
 
         /**
@@ -755,10 +803,15 @@ public final class TransportVisitClient {
          * not a bundle jar counts as skipped, not as an error: a stock transport creates the client-bound file
          * before its own server download and leaves it empty or partial if that fails, and the next good sync
          * replaces it (Audit m6), so it must not make the whole visit "failed".
+         *
+         * <p>{@code controlOnly}: the quota is full, so the bundle is staged without the quota check but only up
+         * to {@link #CONTROL_BUNDLE_MAX_BYTES}, and is kept only if it is the dropbox's own (see
+         * {@link #downloadAll}). Relayed bundles passed over this way are not counted as skipped or as errors.
          */
         private IndexOutcome downloadIndex(BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub blocking,
                                            String sessionId,
-                                           int index) {
+                                           int index,
+                                           boolean controlOnly) {
             Staged staged;
             try {
                 staged = store.beginStaging(Direction.DOWNSTREAM);
@@ -780,6 +833,16 @@ public final class TransportVisitClient {
                 while (chunks.hasNext()) {
                     ByteString chunk = chunks.next().getChunk().getChunk();
                     bytes += chunk.size();
+                    if (controlOnly) {
+                        if (bytes > CONTROL_BUNDLE_MAX_BYTES) {
+                            // too large to be a control bundle, so not ours; left for a visit with free space
+                            store.abort(staged);
+                            context.cancel(null);
+                            return new IndexOutcome(null, false);
+                        }
+                        chunk.writeTo(out);
+                        continue;
+                    }
                     if (bytes > RelayStore.MAX_BUNDLE_BYTES) {
                         // Never storable: skip it (the resume index moves past it) rather than stopping, or every
                         // later visit would restart at this index and never reach the rest of the listing.
@@ -792,9 +855,9 @@ public final class TransportVisitClient {
                     if (!store.hasCapacityFor(Direction.DOWNSTREAM, chunk.size())) {
                         store.abort(staged);
                         context.cancel(null);
-                        error("bundle at index " + index + " does not fit the downstream quota (" + bytes +
-                                      " B so far); stopping downloads");
-                        return IndexOutcome.STOP;
+                        logger.log(INFO, "bundle at index " + index + " exceeds the downstream quota after " + bytes +
+                                " B");
+                        return IndexOutcome.STOP; // downloadAll records the error
                     }
                     chunk.writeTo(out);
                 }
@@ -852,6 +915,10 @@ public final class TransportVisitClient {
                 } finally {
                     store.abort(staged);
                 }
+                return new IndexOutcome(bundleId, false, true);
+            }
+            if (controlOnly) {
+                store.abort(staged); // a relayed bundle: no room for it now
                 return new IndexOutcome(bundleId, false);
             }
             if (store.contains(Direction.DOWNSTREAM, bundleId)) {
@@ -927,10 +994,17 @@ public final class TransportVisitClient {
 
         final String bundleId;
         final boolean listingChanged;
+        /** The bundle was addressed to the dropbox itself (processed or already processed). */
+        final boolean own;
 
         IndexOutcome(String bundleId, boolean listingChanged) {
+            this(bundleId, listingChanged, false);
+        }
+
+        IndexOutcome(String bundleId, boolean listingChanged, boolean own) {
             this.bundleId = bundleId;
             this.listingChanged = listingChanged;
+            this.own = own;
         }
     }
 }

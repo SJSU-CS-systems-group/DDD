@@ -48,7 +48,12 @@ import static java.util.logging.Level.WARNING;
  * <p>
  * Flow for one accepted report: upsert {@link DropboxNode} (which also adds the control app ID to that client's
  * {@code app_ids.txt}), refresh {@link InventorySighting} first-seen times, plan, then replace any queued plan ADU with
- * the new plan. A report whose {@code reportSeq} is not newer than the stored one is ignored.
+ * the new plan. A report whose {@code reportSeq} is not newer than the stored one is ignored (a re-sent copy), with
+ * one exception: a report numbered <em>below</em> the stored one that also applied fewer plans than the server sent
+ * means the dropbox lost its control state. It is accepted as the current inventory, and its plan names the stored
+ * {@code reportSeq} as {@code basedOnReportSeq}, which lifts the dropbox's counter at once
+ * ({@code ControlStateStore.recordPlanApplied} on the dropbox). Ignoring it would leave every report of the reset
+ * dropbox unanswered until its numbering caught up.
  * <p>
  * Timing (Research R6 §3.3 "evaluation timing"): a dropbox uploads its own control bundle in the same carrier sync as
  * the relayed bundles it reports, and the server may process the report first. So {@link #beforeBundleGeneration}
@@ -56,13 +61,18 @@ import static java.util.logging.Level.WARNING;
  * decision changed; the plan that leaves for the dropbox reflects everything the server knows by then.
  * <p>
  * Dependencies are limited to repositories, {@link AduStores} and an {@code ObjectProvider<ServerSecurity>} (see
- * {@link InternalAppHandler} for the Spring cycle this avoids). The public methods are synchronized so that work on
- * one JVM does not interleave. On a live server every bundle RPC runs inside one transaction ({@code GrpcExecutor}), so
- * the writes made here commit with the RPC that triggered them; the {@code @Transactional} on
- * {@code processReceivedBundle} itself is bypassed by self-invocation (Research R8 §1). Two RPCs racing for the same
- * dropbox can therefore both read the same {@code lastPlanSeq} and queue two plans with one number. That is harmless:
- * every deletion reason is a monotonic fact, the dropbox applies a {@code planSeq} once, and anything a skipped plan
- * would have deleted is re-planned for the next bundle.
+ * {@link InternalAppHandler} for the Spring cycle this avoids). Without a {@code ServerSecurity} (CLI mode, or keys
+ * that failed to load) the planner could not map any upstream entry to its client and would expire live pending
+ * bundles, so the handler then leaves control ADUs in place for the live server and does not re-plan.
+ * <p>
+ * Concurrency: planning is serialized by this object's monitor; a stock client's bundle generation never takes it
+ * ({@link #beforeBundleGeneration} returns before locking for non-dropbox clients). On a live server every bundle
+ * RPC runs inside one transaction ({@code GrpcExecutor}), so the database writes made here commit with the RPC that
+ * triggered them (the {@code @Transactional} on {@code processReceivedBundle} is bypassed by self-invocation,
+ * Research R8 §1), while the plan ADU is written to the send store at once. A second RPC can therefore run before
+ * the first one's {@code lastPlanSeq} is visible, and a rolled-back RPC can leave a queued plan the database never
+ * recorded. {@link #enqueuePlan} numbers each plan above the plan already queued for that dropbox as well, so a
+ * {@code planSeq} is never issued twice (the dropbox ignores any number it has already applied).
  */
 @Component
 public class DropboxControlHandler implements InternalAppHandler {
@@ -76,6 +86,7 @@ public class DropboxControlHandler implements InternalAppHandler {
     private final ObjectProvider<ServerSecurity> serverSecurityProvider;
     private final StoreADUs sendFolder;
     private final DropboxRetentionPlanner planner;
+    private final BundleIdKeys bundleIdKeys = new BundleIdKeys();
 
     public DropboxControlHandler(DropboxNodeRepository dropboxNodeRepository,
                                  InventorySightingRepository inventorySightingRepository,
@@ -109,6 +120,10 @@ public class DropboxControlHandler implements InternalAppHandler {
 
     @Override
     public synchronized void handleUpstream(String clientId, List<ADU> adus) throws IOException {
+        if (serverSecurityProvider.getIfAvailable() == null) {
+            // the ADUs stay in the receive store and are handled by the live server (class Javadoc)
+            throw new IOException("server keys unavailable; leaving control ADUs from " + clientId + " in place");
+        }
         // A dropbox re-sends unacknowledged control ADUs, so one delivery can hold several reports: keep the newest.
         InventoryReport newest = null;
         String newestJson = null;
@@ -132,16 +147,23 @@ public class DropboxControlHandler implements InternalAppHandler {
         long now = System.currentTimeMillis();
         var node = dropboxNodeRepository.findById(clientId).orElse(null);
         if (node != null && newest.getReportSeq() <= node.lastReportSeq) {
-            logger.log(INFO,
-                       "Ignoring stale inventory " + newest.getReportSeq() + " from dropbox " + clientId +
-                               " (have " + node.lastReportSeq + ")");
-            return;
+            boolean reset = newest.getReportSeq() < node.lastReportSeq &&
+                    newest.getLastAppliedPlanSeq() < node.lastPlanSeq;
+            if (!reset) {
+                logger.log(INFO,
+                           "Ignoring stale inventory " + newest.getReportSeq() + " from dropbox " + clientId +
+                                   " (have " + node.lastReportSeq + ")");
+                return;
+            }
+            logger.log(WARNING,
+                       "Dropbox " + clientId + " restarted its report numbering at " + newest.getReportSeq() +
+                               " (have " + node.lastReportSeq + "); accepting it and lifting its counter");
         }
         if (node == null) {
             node = new DropboxNode(clientId, now);
             logger.log(INFO, "Registered dropbox " + clientId);
         }
-        node.lastReportSeq = newest.getReportSeq();
+        node.lastReportSeq = Math.max(node.lastReportSeq, newest.getReportSeq());
         node.lastAppliedPlanSeq = newest.getLastAppliedPlanSeq();
         node.capacityBytes = newest.getCapacityBytes();
         node.usedBytes = newest.getUsedBytes();
@@ -156,8 +178,19 @@ public class DropboxControlHandler implements InternalAppHandler {
         enqueuePlan(node, newest, decision, now);
     }
 
+    /**
+     * Re-plans the stored report before a bundle for a dropbox is built. Runs for every client's bundle generation,
+     * so the cheap checks (not a dropbox, no server keys) come before the monitor: a stock client never waits for a
+     * dropbox's planning.
+     */
     @Override
-    public synchronized void beforeBundleGeneration(String clientId) {
+    public void beforeBundleGeneration(String clientId) {
+        if (clientId == null || serverSecurityProvider.getIfAvailable() == null) return;
+        if (!dropboxNodeRepository.existsById(clientId)) return;
+        replan(clientId);
+    }
+
+    private synchronized void replan(String clientId) {
         var node = dropboxNodeRepository.findById(clientId).orElse(null);
         if (node == null || node.lastInventoryJson == null) return;
         try {
@@ -179,7 +212,8 @@ public class DropboxControlHandler implements InternalAppHandler {
                                         receivedBundleRepository,
                                         bundleMetadataRepository,
                                         clientDownstreamAckRepository,
-                                        serverSecurityProvider.getIfAvailable());
+                                        serverSecurityProvider.getIfAvailable(),
+                                        bundleIdKeys);
     }
 
     /**
@@ -230,17 +264,20 @@ public class DropboxControlHandler implements InternalAppHandler {
      * Queues the plan as the only pending control ADU for the dropbox. Older queued plans are deleted first (the same
      * move as the CLI's message-client delete-all), so only the newest plan rides the next bundle; a plan already sent
      * in an unacknowledged bundle is harmless because plans carry only monotonic facts and the dropbox ignores any
-     * {@code planSeq} it has already applied. The sequence number is reserved in the database before the ADU is
-     * written, so a crash can leave a gap in the numbering but never reuse a number.
+     * {@code planSeq} it has already applied.
      * <p>
-     * The next number is also kept above the report's {@code lastAppliedPlanSeq}: the dropbox applies only plans
-     * numbered higher than the last one it applied, so if this server lost its {@link DropboxNode} row (a wiped
-     * database) while the dropbox kept its endpoint, restarting at 1 would make the dropbox ignore every plan.
+     * The next number is above three things: the stored {@code lastPlanSeq}; the report's {@code lastAppliedPlanSeq}
+     * (if this server lost its {@link DropboxNode} row while the dropbox kept its endpoint, restarting at 1 would
+     * make the dropbox ignore every plan); and the plan still queued in the send store. The last one matters
+     * because the queue is written immediately while {@code lastPlanSeq} commits only with the RPC's transaction: a
+     * rollback or crash after the write, or a concurrent RPC that read the row before this one committed, would
+     * otherwise reuse a number the dropbox may already have applied, and it would silently skip the second plan.
      */
     private void enqueuePlan(DropboxNode node, InventoryReport report, Decision decision, long now) throws IOException {
-        long planSeq = Math.max(node.lastPlanSeq, report.getLastAppliedPlanSeq()) + 1;
+        long planSeq = Math.max(Math.max(node.lastPlanSeq, report.getLastAppliedPlanSeq()),
+                                queuedPlanSeq(node.clientId)) + 1;
         var plan = new RetentionPlan(planSeq,
-                                     report.getReportSeq(),
+                                     Math.max(report.getReportSeq(), node.lastReportSeq),
                                      now,
                                      decision.deleteUpstream(),
                                      decision.deleteDownstream(),
@@ -272,6 +309,19 @@ public class DropboxControlHandler implements InternalAppHandler {
                            "): delete " + decision.deleteUpstream().size() + " upstream, " +
                            decision.deleteDownstream().size() + " downstream; keep " + decision.keptUpstream() +
                            " upstream, " + decision.keptDownstream() + " downstream");
+    }
+
+    /** the planSeq of the plan ADU still queued for the dropbox, or 0 if none is queued (or it cannot be read) */
+    private long queuedPlanSeq(String dropboxId) {
+        long lastAdded = sendFolder.getLastADUIdAdded(dropboxId, DropboxControl.APP_ID);
+        if (lastAdded <= sendFolder.getLastADUIdDeleted(dropboxId, DropboxControl.APP_ID)) return 0;
+        try {
+            return DropboxControlCodec.decodePlan(sendFolder.getADU(dropboxId, DropboxControl.APP_ID, lastAdded))
+                    .getPlanSeq();
+        } catch (IOException | DropboxControlException | RuntimeException e) {
+            logger.log(WARNING, "Cannot read the plan queued for dropbox " + dropboxId, e);
+            return 0;
+        }
     }
 
     /** the decision a stored plan encodes, or null if there is none or it cannot be read */

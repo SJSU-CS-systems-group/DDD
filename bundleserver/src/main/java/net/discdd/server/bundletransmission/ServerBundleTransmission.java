@@ -143,10 +143,9 @@ public class ServerBundleTransmission {
             var receivedBundleCounter =
                     this.bundleSecurity.getCounterFromBundlePath(uncompressedBundle.getSource().toPath(),
                                                                  BundleIDGenerator.UPSTREAM);
-            // record before the duplicate check: duplicates and ack-only bundles must be recorded too
-            recordReceivedBundle(uncompressedBundle, clientId, receivedBundleCounter, senderId);
-
             if (receivedBundleCounter <= counters.lastReceivedBundleCounter) {
+                // a bundle with this counter or a later one was fully processed, so this copy is safe to record
+                recordReceivedBundle(uncompressedBundle, clientId, receivedBundleCounter, senderId);
                 logger.log(WARNING,
                            "[BundleTransmission] Skipping bundle " + bundle.getSource().getName() +
                                    " already received");
@@ -206,6 +205,8 @@ public class ServerBundleTransmission {
                                                               receivedBundleCounter,
                                                               uncompressedPayload.getADUs());
             }
+            // only now: the payload decrypted and its ack and ADUs are stored (ack-only bundles included)
+            recordReceivedBundle(uncompressedBundle, clientId, receivedBundleCounter, senderId);
         } finally {
             FileUtils.recursiveDelete(bundleRecvProcDir);
         }
@@ -214,10 +215,12 @@ public class ServerBundleTransmission {
     /**
      * Remember that this upstream bundle reached the server, keyed by the jar's plaintext {@code bundle.id} (the same
      * string a dropbox uses as the file name). The dropbox retention planner turns this into RECEIVED_BY_SERVER and
-     * SUPERSEDED decisions. Recording happens once the server identity and client have been verified, but before
-     * the duplicate check, because {@code lastReceivedBundleCounter} only advances for bundles with ADUs (Research R8
-     * §1). A failure here is logged and processing continues; a database error inside the RPC's transaction
-     * ({@code GrpcExecutor}) still rolls that RPC back, and the carrier re-uploads the bundle later.
+     * SUPERSEDED decisions, so a row must mean "processed", never just "arrived": it is written only after the
+     * payload decrypted and its ack and ADUs were stored, or for a duplicate whose counter the server has already
+     * processed. A bundle that fails part-way leaves no row ({@code processBundleFile} swallows the exception, so
+     * the RPC's transaction still commits whatever ran before). Ack-only bundles take the main path, since
+     * {@code lastReceivedBundleCounter} only advances for bundles with ADUs (Research R8 §1). A failure to record
+     * is logged and does not fail the bundle; the dropbox then keeps its copy a while longer.
      */
     private void recordReceivedBundle(UncompressedBundle uncompressedBundle,
                                       String clientId,

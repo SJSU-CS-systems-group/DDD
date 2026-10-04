@@ -14,10 +14,14 @@ import net.discdd.model.Bundle;
 import net.discdd.pathutils.ClientPaths;
 import net.discdd.utils.StoreADUs;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.whispersystems.libsignal.ecc.Curve;
 import org.whispersystems.libsignal.ecc.ECPrivateKey;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -30,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Level;
@@ -176,7 +181,7 @@ public final class DropboxControlEndpoint {
                                                         "opened " + processRoot + ", refusing " + r);
             }
             Files.createDirectories(r);
-            boolean reset = serverKeysChanged(r, identityPem, signedPrePem, ratchetPem);
+            boolean reset = needsWipe(r, identityPem, signedPrePem, ratchetPem);
             if (reset) {
                 logger.log(Level.WARNING, "Server keys changed: starting a fresh control endpoint in " + r);
                 wipeContents(r);
@@ -471,41 +476,67 @@ public final class DropboxControlEndpoint {
     }
 
     /**
-     * Recreates {@code BundleRouting/routing.metadata} as an empty JSON map if it is missing or blank. bundle-core's
-     * {@code ClientRouting} is a process-wide singleton that writes this file only when it is first constructed,
-     * and reads it on every bundle generation and every received bundle. After a server-key change wipes the
-     * endpoint root in the same process, the singleton survives but the file does not, so without this every
-     * later bundle would fail with NoSuchFileException until the app restarts.
+     * Recreates {@code BundleRouting/routing.metadata} as an empty JSON map if it is missing, blank or not the map
+     * bundle-core expects. bundle-core's {@code ClientRouting} is a process-wide singleton that writes this file
+     * only when it is first constructed, and reads it on every bundle generation and every received bundle. Two
+     * ways it goes bad: a server-key change wipes the endpoint root in the same process (the singleton survives,
+     * the file does not), and bundle-core's truncating Jackson {@code writeValue} can leave a partial file after a
+     * crash. Either makes every later bundle fail; worse, {@code processReceivedBundle} updates this file only
+     * after Signal decryption, so each failed attempt also burns that bundle's Signal message (R7 §7). The file
+     * holds only per-transport sighting counts, so resetting it loses nothing the server needs.
      */
     static void ensureRoutingMetadata(ClientPaths paths) throws IOException {
         Path file = paths.metadataFile.toPath();
-        boolean blank;
+        boolean valid;
         try {
-            blank = new String(Files.readAllBytes(file), StandardCharsets.UTF_8).trim().isEmpty();
-        } catch (NoSuchFileException e) {
-            blank = true;
+            // the exact shape ClientRouting reads: a JSON object of numbers
+            // ("null" parses to no map at all, which ClientRouting would then dereference)
+            valid = new ObjectMapper().readValue(file.toFile(), new TypeReference<HashMap<String, Long>>() {}) != null;
+        } catch (NoSuchFileException | FileNotFoundException e) {
+            valid = false;
+        } catch (JsonProcessingException e) {
+            logger.log(Level.WARNING, "Repairing unreadable " + file.getFileName() + ": " + e.getOriginalMessage());
+            valid = false;
         }
-        if (blank) {
+        if (!valid) {
             Files.createDirectories(file.toAbsolutePath().getParent());
             Files.write(file, "{}".getBytes(StandardCharsets.UTF_8));
         }
     }
 
-    /** @return true if {@code root} holds server keys that differ from the given ones */
-    private static boolean serverKeysChanged(Path root, byte[] identity, byte[] signedPre, byte[] ratchet) {
+    /**
+     * Marker written before a wipe starts and removed when it is complete. A crash part-way through a wipe can
+     * delete the server keys while state encrypted under the old server (the largest received id, the Signal
+     * session) survives; that endpoint would look fresh and then fail every downstream bundle. With the marker,
+     * the next {@link #open} finishes the interrupted wipe instead.
+     */
+    static final String WIPE_MARKER = ".wipe-pending";
+
+    /**
+     * @return true if {@code root} must be wiped: a wipe was interrupted, its server keys differ from the given
+     *         ones, or it holds endpoint state but no server identity key (left by an interrupted wipe that
+     *         predates the marker). An empty root is a fresh endpoint.
+     * @throws IOException if the stored keys cannot be read; the endpoint then stays closed rather than wiping
+     *                     the dropbox's identity over what may be a transient error
+     */
+    static boolean needsWipe(Path root, byte[] identity, byte[] signedPre, byte[] ratchet) throws IOException {
+        if (Files.exists(root.resolve(WIPE_MARKER))) return true;
         Path dir = root.resolve(SecurityUtils.BUNDLE_SECURITY_DIR).resolve(SecurityUtils.SERVER_KEY_PATH);
-        return differs(dir.resolve(SecurityUtils.SERVER_IDENTITY_KEY), identity) ||
-                differs(dir.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY), signedPre) ||
+        Path identityFile = dir.resolve(SecurityUtils.SERVER_IDENTITY_KEY);
+        if (!Files.exists(identityFile)) {
+            try (Stream<Path> children = Files.list(root)) {
+                return children.findAny().isPresent();
+            }
+        }
+        return differs(identityFile, identity) || differs(dir.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY), signedPre) ||
                 differs(dir.resolve(SecurityUtils.SERVER_RATCHET_KEY), ratchet);
     }
 
-    private static boolean differs(Path existing, byte[] wanted) {
+    private static boolean differs(Path existing, byte[] wanted) throws IOException {
         try {
             return !normalizePem(Files.readAllBytes(existing)).equals(normalizePem(wanted));
         } catch (NoSuchFileException e) {
-            return false; // fresh endpoint
-        } catch (IOException e) {
-            return true;
+            return true; // the identity key exists, so a missing sibling means the key set is incomplete
         }
     }
 
@@ -528,10 +559,19 @@ public final class DropboxControlEndpoint {
         ClientSecurity.resetInstance(); // same root (enforced), so the singleton's ClientPaths are still right
     }
 
-    private static void wipeContents(Path root) throws IOException {
+    /** Deletes everything under {@code root}, bracketed by {@link #WIPE_MARKER} so a crash resumes the wipe. */
+    static void wipeContents(Path root) throws IOException {
+        Path marker = root.resolve(WIPE_MARKER);
+        if (!Files.exists(marker)) Files.createFile(marker);
         try (Stream<Path> children = Files.list(root)) {
-            for (Path child : (Iterable<Path>) children::iterator) deleteRecursively(child);
+            for (Path child : (Iterable<Path>) children::iterator) {
+                if (!child.equals(marker)) deleteRecursively(child);
+            }
         }
+        try (Stream<Path> left = Files.list(root)) {
+            if (left.anyMatch(p -> !p.equals(marker))) throw new IOException("could not wipe " + root);
+        }
+        Files.delete(marker);
     }
 
     private static void deleteRecursively(Path p) {
