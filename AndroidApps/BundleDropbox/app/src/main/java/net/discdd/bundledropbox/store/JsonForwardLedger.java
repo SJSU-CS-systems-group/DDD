@@ -23,8 +23,8 @@ import java.util.logging.Logger;
 /**
  * Persistent {@link ForwardLedger} stored as JSON at {@code Dropbox/meta/forwarded.json}.
  *
- * <p>Role in the dropbox: upstream bundles are kept until the operator clears them (v1 has no
- * keep/delete loop), so each VISIT asks this ledger which upstream bundles the current carrier has
+ * <p>Role in the dropbox: upstream bundles are kept until a server retention plan or the operator deletes
+ * them, so each VISIT asks this ledger which upstream bundles the current carrier has
  * not acknowledged yet, and uploads only those. Each carrier is tracked separately because each one
  * reaches the server on its own schedule (Research/R2 §3).
  *
@@ -112,7 +112,7 @@ public final class JsonForwardLedger implements ForwardLedger {
 
     /**
      * Drops entries for bundles that no longer exist, so the ledger does not grow forever after the
-     * operator clears storage (and, FUTURE, after server-directed deletes).
+     * operator clears storage or a server retention plan deletes bundles.
      *
      * @param bundleStillExists returns true for ids that should be kept
      * @return number of bundle entries removed

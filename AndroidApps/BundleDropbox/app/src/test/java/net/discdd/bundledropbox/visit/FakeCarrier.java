@@ -65,6 +65,8 @@ final class FakeCarrier implements AutoCloseable {
     final AtomicInteger psiExchanges = new AtomicInteger();
     final AtomicInteger psiDownloads = new AtomicInteger();
     final AtomicInteger uploads = new AtomicInteger();
+    /** Bundle ids of completed uploads, in completion order. */
+    final List<String> uploadOrder = new java.util.concurrent.CopyOnWriteArrayList<>();
 
     private final Map<String, List<String>> psiSessions = new ConcurrentHashMap<>();
     private final ExecutorService executor = Executors.newFixedThreadPool(4);
@@ -119,6 +121,7 @@ final class FakeCarrier implements AutoCloseable {
 
         @Override
         protected void bundleCompletion(BundleExchangeName name, BundleSenderType senderType, Path path) {
+            uploadOrder.add(name.encryptedBundleId());
             uploads.incrementAndGet();
         }
 

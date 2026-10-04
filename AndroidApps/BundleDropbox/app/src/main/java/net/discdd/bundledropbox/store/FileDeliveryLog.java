@@ -26,17 +26,18 @@ import java.util.logging.Logger;
  * {@code {"bundleId":"...","servedAt":<epoch millis>}}, written each time a DOWNSTREAM bundle finished
  * streaming to a client ({@code psiDownloadBundle} or legacy {@code downloadBundle} completed).
  *
- * <p>v1 use: debugging and the Storage/Status UI ("served N times"). It deletes nothing and is not proof
- * of delivery: the client might still discard the bundle (e.g. not its newest, Research/R2 §6).
+ * <p>Use: {@code servedCount} and {@code lastServedAt} in the dropbox's inventory reports
+ * ({@code control/InventoryBuilder}), and debugging. It deletes nothing and is not proof of delivery: the
+ * client might still discard the bundle (e.g. not its newest, Research/R2 §6); the server decides deletion
+ * from the client's own ack.
  *
  * <p>JSON Lines rather than one JSON document so recording is a cheap append that never rewrites
  * history; a torn last line after a crash is skipped by {@link #readAll()}. Because a torn line has no
  * trailing newline, the next append first terminates it ({@link #needsLineBreak}); otherwise the new record
  * would be glued onto the torn one and both lines would be lost (Audit i4).
  *
- * <p>FUTURE: basis for client-ACK report ADUs sent through the dropbox's own control endpoint, so the
- * server can issue keep/delete decisions ({@link RetentionPolicy}). FUTURE: rotate or compact the file
- * once reports are acknowledged by the server; v1 lets it grow (about 100 bytes per served bundle).
+ * <p>FUTURE: rotate or compact the file (drop events of bundles no longer held); it grows by about 100 bytes
+ * per served bundle and is read in full for every inventory report.
  *
  * <p>Threading: appends are {@code synchronized}. I/O failures are logged, never thrown, so a full disk
  * cannot break the RPC that served the bundle. Pure Java, JVM-testable.
@@ -64,7 +65,6 @@ public final class FileDeliveryLog implements DeliveryLog {
     @Override
     public synchronized void recordServed(String downstreamBundleId, long atMillis) {
         if (downstreamBundleId == null) return;
-        // FUTURE: client-ACK reports: these events will feed report ADUs to the server's control endpoint.
         JsonObject o = new JsonObject();
         o.addProperty("bundleId", downstreamBundleId);
         o.addProperty("servedAt", atMillis);

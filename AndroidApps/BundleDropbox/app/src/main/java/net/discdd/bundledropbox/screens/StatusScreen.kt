@@ -48,7 +48,8 @@ import java.util.Date
  * Status tab: the operator's at-a-glance view of the role cycle.
  *
  * Shows a large operator label ([OperatorState]), a live countdown to the mode deadline with a progress
- * bar, identity / recency-blob / queue / last-visit details, the last error, and the cycle controls
+ * bar, identity / recency-blob / queue details, the server-managed storage (control channel) state, the
+ * last visit, the last error, and the cycle controls
  * (Pause/Resume, Visit now, Host now, and Stop/Start for the whole relay).
  * Like the transport's Upload tab, the mode card is wrapped in android-core's [EasterEgg] (7 taps in
  * 3 s) to toggle the admin tabs.
@@ -109,8 +110,8 @@ fun StatusScreen(
             }
 
             DetailsCard(status)
-            // FUTURE: once server destination manifests replace download-all and the dropbox registers via
-            // its control endpoint, show the manifest scope and control-channel state here.
+            ControlCard(status)
+            // FUTURE: once server destination manifests replace download-all, show the manifest scope here.
             LastVisitCard(status.lastVisit())
 
             status.lastError()?.let { err ->
@@ -263,6 +264,45 @@ private fun DetailsCard(status: DropboxStatus) {
         }
     }
 }
+
+/**
+ * The dropbox's own control endpoint: its client id at the server, the trusted keys, the newest inventory
+ * report and retention plan, and how many held bundles still wait for the server's decision (all of them:
+ * nothing is deleted without a plan).
+ */
+@Composable
+private fun ControlCard(status: DropboxStatus) {
+    val control = status.control()
+    val now = System.currentTimeMillis()
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(R.string.status_control_title), fontWeight = FontWeight.Bold)
+            if (control.serverKeys().isNotEmpty()) {
+                LabeledValue(stringResource(R.string.status_control_server_keys), control.serverKeys())
+            }
+            if (!control.available()) {
+                Text(stringResource(R.string.status_control_unavailable), style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error)
+                control.problem()?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                return@Column
+            }
+            LabeledValue(stringResource(R.string.status_control_client_id),
+                    control.endpointClientId() ?: stringResource(R.string.value_unknown))
+            LabeledValue(stringResource(R.string.status_control_last_report),
+                    seqAge(control.lastReportSeq(), control.lastReportAtMillis(), now))
+            LabeledValue(stringResource(R.string.status_control_last_plan),
+                    seqAge(control.lastPlanSeq(), control.lastPlanAtMillis(), now))
+            LabeledValue(stringResource(R.string.status_control_waiting),
+                    stringResource(R.string.status_control_waiting_value, status.upstreamCount(),
+                            status.downstreamCount()))
+        }
+    }
+}
+
+@Composable
+private fun seqAge(seq: Long, atMillis: Long, now: Long): String =
+        if (seq == 0L) stringResource(R.string.status_control_none_yet)
+        else stringResource(R.string.status_control_seq_age, seq, StatusFormat.formatAge(now - atMillis))
 
 @Composable
 private fun recencyBlobText(status: DropboxStatus): String {

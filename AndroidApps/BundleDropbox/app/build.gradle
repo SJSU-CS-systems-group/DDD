@@ -5,8 +5,9 @@
 //  - no protobuf plugin: all generated gRPC classes ship in the bundle-core jar;
 //  - no nanohttpd / firebase / viewpager2 / recyclerview / espresso / viewBinding (Compose-only, offline);
 //  - JUnit 4 for JVM unit tests of the pure-Java store/ and cycle/ packages;
-//  - no zxing / work-runtime / room+ksp / BuildConfig: nothing in the dropbox uses them (the dropbox shows
-//    no QR code, schedules no WorkManager jobs and has no database; android-core brings its own deps).
+//  - no zxing / work-runtime / room+ksp / BuildConfig: nothing in the dropbox uses them (it shows no QR code,
+//    schedules no WorkManager jobs and has no database). Scanning the server-keys QR uses android-core's
+//    QRScannerScreen, whose CameraX / ML Kit dependencies android-core brings itself.
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
@@ -105,4 +106,27 @@ dependencies {
 animalsniffer {
     ignoreFailures = false
     annotation = 'org.codehaus.mojo.animal_sniffer.IgnoreJRERequirement'
+}
+
+// Bridge for the dropbox control contract (bundle-core package net.discdd.dropbox.control, commit 6750faa59f).
+// The app normally gets it from the bundle-core jar in the local Maven repository. That jar is only refreshed by
+// `mvn install` in bundle-core, which cannot run on Apple-silicon hosts without Rosetta (the published
+// protoc-gen-grpc-java osx-aarch_64 binary is x86_64). When the installed jar predates the contract, the package
+// is compiled from a read-only copy of bundle-core's own sources instead. As soon as an up-to-date jar is
+// installed this adds nothing, so the classes are never duplicated. Remove once every build host can install
+// bundle-core.
+def localMavenRepo = System.getProperty('maven.repo.local') ?: new File(System.getProperty('user.home'), '.m2/repository').path
+def installedBundleCore = new File(localMavenRepo, 'net/discdd/bundle-core/0.0.2/bundle-core-0.0.2.jar')
+def installedJarHasControlContract = installedBundleCore.isFile() && new java.util.zip.ZipFile(installedBundleCore).withCloseable {
+    it.getEntry('net/discdd/dropbox/control/DropboxControl.class') != null
+}
+if (!installedJarHasControlContract) {
+    def bridgedContractDir = layout.buildDirectory.dir('generated/source/dropboxControlContract/java').get().asFile
+    def syncControlContract = tasks.register('syncDropboxControlContract', Sync) {
+        from(rootProject.file('../bundle-core/src/main/java')) { include 'net/discdd/dropbox/control/**' }
+        into bridgedContractDir
+    }
+    android.sourceSets.main.java.srcDir(bridgedContractDir)
+    tasks.named('preBuild') { dependsOn syncControlContract }
+    logger.lifecycle('BundleDropbox: installed bundle-core lacks net.discdd.dropbox.control; compiling it from bundle-core sources')
 }

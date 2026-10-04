@@ -60,9 +60,8 @@ import java.util.logging.Logger;
  * one. {@code start()}/{@code stop()} are idempotent and {@code synchronized}; {@code stop()} blocks briefly,
  * so do not call it on the cycle's state thread.
  *
- * <p>FUTURE: a dropbox control endpoint with its own keys (so the server can classify the dropbox and send
- * it control ADUs) belongs in a new {@code control/} package and must not change what this server shows to
- * stock clients. FUTURE: gRPC-over-internet fallback would reuse {@link DropboxExchangeService} unchanged.
+ * <p>The dropbox's own control endpoint ({@code control/}) talks to the server only through carriers, never
+ * through this server, so stock clients see nothing of it. FUTURE: gRPC-over-internet fallback would reuse {@link DropboxExchangeService} unchanged.
  */
 public final class DropboxRpcServer {
     private static final Logger logger = Logger.getLogger(DropboxRpcServer.class.getName());

@@ -341,14 +341,9 @@ public final class FileRelayStore implements RelayStore {
         return d == Direction.UPSTREAM || downBytes + stagedDown + incoming <= downstreamQuotaBytes();
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * <p>FUTURE: server keep/delete control ADUs (through {@link RetentionPolicy}) will call this too.
-     */
+    /** {@inheritDoc} */
     @Override
     public void delete(Direction d, String bundleId) {
-        // FUTURE: server keep/delete control ADUs will call this via RetentionPolicy; v1 = operator clear only.
         if (!BundleIds.isClean(bundleId)) return;
         synchronized (lock) {
             Path p = paths.dirFor(d).resolve(bundleId);

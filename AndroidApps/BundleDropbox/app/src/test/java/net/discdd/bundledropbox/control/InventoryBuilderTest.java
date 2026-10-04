@@ -1,0 +1,166 @@
+package net.discdd.bundledropbox.control;
+
+import net.discdd.bundledropbox.store.BundleRecord;
+import net.discdd.bundledropbox.store.Direction;
+import net.discdd.bundledropbox.store.FileDeliveryLog;
+import net.discdd.bundledropbox.store.FileRelayStore;
+import net.discdd.bundledropbox.store.RelayStore;
+import net.discdd.bundledropbox.store.Staged;
+import net.discdd.bundledropbox.store.StoreStats;
+import net.discdd.dropbox.control.BundleJarInfo;
+import net.discdd.dropbox.control.DropboxControl;
+import net.discdd.dropbox.control.DropboxControlCodec;
+import net.discdd.dropbox.control.InventoryReport;
+import net.discdd.dropbox.control.RetentionPlan;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+import org.whispersystems.libsignal.ecc.Curve;
+import org.whispersystems.libsignal.ecc.ECPublicKey;
+
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicLong;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+/**
+ * JVM tests for {@link InventoryBuilder}: a full snapshot of the relay store with sizes, the contract's client key
+ * fingerprints, delivery-log served counts, the control state's sequence numbers and pending plan results, a
+ * fingerprint that ignores {@code reportSeq}/{@code createdAt}, and trimming to the contract bounds.
+ */
+public class InventoryBuilderTest {
+    @Rule
+    public TemporaryFolder tmp = new TemporaryFolder();
+
+    private final AtomicLong clock = new AtomicLong(1_000_000L);
+    private final List<FileDeliveryLog.Served> served = new CopyOnWriteArrayList<>();
+    private FileRelayStore store;
+    private ControlStateStore state;
+    private InventoryBuilder builder;
+
+    @Before
+    public void setUp() throws IOException {
+        store = ControlFixtures.newStore(tmp.newFolder("dropbox").toPath(), clock);
+        state = new ControlStateStore(tmp.getRoot().toPath().resolve("state.json"));
+        builder = new InventoryBuilder(store, () -> served);
+    }
+
+    @Test
+    public void reportsEveryHeldBundleWithFingerprintsAndServedCounts() throws Exception {
+        ECPublicKey alice = Curve.generateKeyPair().getPublicKey();
+        ECPublicKey bob = Curve.generateKeyPair().getPublicKey();
+        BundleRecord u1 = ControlFixtures.commit(store, Direction.UPSTREAM, "u1", 100, alice);
+        BundleRecord u2 = ControlFixtures.commit(store, Direction.UPSTREAM, "u2", 50, null); // no clientBase.pub
+        BundleRecord d1 = ControlFixtures.commit(store, Direction.DOWNSTREAM, "d1", 300, bob);
+        ControlFixtures.commit(store, Direction.DOWNSTREAM, "d2", 10, bob);
+        served.add(new FileDeliveryLog.Served("d1", 5_000));
+        served.add(new FileDeliveryLog.Served("d1", 7_000));
+        served.add(new FileDeliveryLog.Served("d1", 6_000));
+        served.add(new FileDeliveryLog.Served("deleted-long-ago", 1)); // not held: not reported
+
+        InventoryReport r = builder.build(state.snapshot(), 123_456L).report();
+
+        assertEquals(1, r.getReportSeq());
+        assertEquals(0, r.getLastAppliedPlanSeq());
+        assertEquals(Long.valueOf(123_456L), r.getCreatedAt());
+        assertEquals(ControlFixtures.CAPACITY, r.getCapacityBytes());
+        assertEquals(u1.sizeBytes() + u2.sizeBytes() + d1.sizeBytes() + store.list(Direction.DOWNSTREAM).get(1).sizeBytes(),
+                     r.getUsedBytes());
+
+        assertEquals(2, r.getUpstream().size());
+        InventoryReport.UpstreamEntry e1 = r.getUpstream().get(0);
+        assertEquals("u1", e1.getBundleId());
+        assertEquals(u1.sizeBytes(), e1.getSizeBytes());
+        assertEquals(BundleJarInfo.clientKeyFingerprint(alice.serialize()), e1.getClientKeyB64());
+        assertNull(r.getUpstream().get(1).getClientKeyB64());
+
+        InventoryReport.DownstreamEntry de1 = r.getDownstream().get(0);
+        assertEquals("d1", de1.getBundleId());
+        assertEquals(3, de1.getServedCount());
+        assertEquals(Long.valueOf(7_000), de1.getLastServedAt());
+        assertEquals(BundleJarInfo.clientKeyFingerprint(bob.serialize()), de1.getClientKeyB64());
+        InventoryReport.DownstreamEntry de2 = r.getDownstream().get(1);
+        assertEquals(0, de2.getServedCount());
+        assertNull(de2.getLastServedAt());
+        assertTrue(r.getPlanResults().isEmpty());
+    }
+
+    @Test
+    public void encodedDraftDecodesToTheSameReport() throws Exception {
+        ControlFixtures.commit(store, Direction.UPSTREAM, "u1", 100, Curve.generateKeyPair().getPublicKey());
+        InventoryBuilder.Draft d = builder.build(state.snapshot(), 1L);
+        assertEquals(d.report(), DropboxControlCodec.decodeInventory(d.encoded()));
+    }
+
+    @Test
+    public void sequenceNumbersAndPendingResultsComeFromTheControlState() throws Exception {
+        ControlFixtures.commit(store, Direction.UPSTREAM, "u1", 10, null);
+        PlanExecutor ex = new PlanExecutor(store, (d, id, r) -> true, state, () -> {}, () -> 9L);
+        state.recordReportQueued(4, "x", 1);
+        ex.apply(new RetentionPlan(2, 4, null, List.of(new RetentionPlan.Deletion("u1", null)), List.of(), null));
+
+        InventoryReport r = builder.build(state.snapshot(), 1L).report();
+
+        assertEquals(5, r.getReportSeq());
+        assertEquals(2, r.getLastAppliedPlanSeq());
+        assertEquals(1, r.getPlanResults().size());
+        assertEquals(List.of("u1"), r.getPlanResults().get(0).getDeleted());
+        assertTrue(r.getUpstream().isEmpty());
+    }
+
+    @Test
+    public void fingerprintIgnoresSeqAndTimeButNotContent() throws Exception {
+        ControlFixtures.commit(store, Direction.UPSTREAM, "u1", 10, null);
+        InventoryBuilder.Draft a = builder.build(state.snapshot(), 1L);
+        state.recordReportQueued(a.report().getReportSeq(), a.fingerprint(), 1L);
+        InventoryBuilder.Draft b = builder.build(state.snapshot(), 99L);
+        assertEquals(2, b.report().getReportSeq());
+        assertEquals(a.fingerprint(), b.fingerprint());
+
+        served.add(new FileDeliveryLog.Served("u1", 3)); // an UPSTREAM id: not a pickup, changes nothing
+        assertEquals(a.fingerprint(), builder.build(state.snapshot(), 5L).fingerprint());
+
+        ControlFixtures.commit(store, Direction.DOWNSTREAM, "d1", 10, null);
+        assertNotEquals(a.fingerprint(), builder.build(state.snapshot(), 5L).fingerprint());
+    }
+
+    @Test
+    public void oversizedInventoryIsTrimmedToTheContractBound() throws Exception {
+        int n = DropboxControl.MAX_ENTRIES_PER_LIST + 7;
+        List<BundleRecord> many = new ArrayList<>(n);
+        for (int i = 0; i < n; i++) many.add(new BundleRecord("u" + i, Direction.UPSTREAM, 1, i));
+        InventoryBuilder big = new InventoryBuilder(new ListOnlyStore(many), List::of);
+
+        InventoryBuilder.Draft d = big.build(state.snapshot(), 1L);
+
+        assertTrue(d.report().getUpstream().size() <= DropboxControl.MAX_ENTRIES_PER_LIST);
+        assertEquals("u0", d.report().getUpstream().get(0).getBundleId()); // oldest first
+        assertTrue(d.encoded().length <= DropboxControl.MAX_MESSAGE_BYTES);
+    }
+
+    /** A relay store that only lists records (for bound tests; no files, so no fingerprints). */
+    private static final class ListOnlyStore implements RelayStore {
+        private final List<BundleRecord> up;
+
+        ListOnlyStore(List<BundleRecord> up) { this.up = up; }
+
+        @Override public Staged beginStaging(Direction d) { throw new UnsupportedOperationException(); }
+        @Override public BundleRecord commit(Staged s, String id) { throw new UnsupportedOperationException(); }
+        @Override public void abort(Staged s) {}
+        @Override public List<BundleRecord> list(Direction d) { return d == Direction.UPSTREAM ? up : List.of(); }
+        @Override public Path pathFor(Direction d, String bundleId) { return null; }
+        @Override public boolean contains(Direction d, String bundleId) { return false; }
+        @Override public boolean touch(Direction d, String bundleId) { return false; }
+        @Override public StoreStats stats() { return new StoreStats(up.size(), up.size(), 0, 0, 0, 1L << 40); }
+        @Override public boolean hasCapacityFor(Direction d, long bytes) { return true; }
+        @Override public void delete(Direction d, String bundleId) {}
+    }
+}

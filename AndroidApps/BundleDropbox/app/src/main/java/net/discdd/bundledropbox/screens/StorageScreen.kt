@@ -29,19 +29,19 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import net.discdd.bundledropbox.R
+import net.discdd.bundledropbox.status.DropboxStatus
 import net.discdd.bundledropbox.viewmodels.StatusFormat
 import net.discdd.bundledropbox.viewmodels.StorageViewModel
 
 /**
  * Storage tab: how many opaque bundles the dropbox holds in each direction, against the configured
- * capacity, plus two operator "clear" actions and a "reset recency blob" recovery action, each behind a
- * confirmation dialog.
+ * capacity, the state of server-managed cleanup, plus two operator "clear" actions and a "reset recency
+ * blob" recovery action, each behind a confirmation dialog.
  *
  * Upstream = "deposited" by clients, waiting for a carrier. Downstream = "pickups" pulled from
- * carriers, waiting for clients. In v1 nothing is ever deleted automatically
- * (KeepAllRetentionPolicy). FUTURE: the server manages dropbox storage with keep/delete control ADUs
- * and learns client delivery from client-ACK reports; this screen then shows that state and the clear
- * buttons become an emergency override.
+ * carriers, waiting for clients. Bundles are deleted automatically only when a server retention plan names
+ * them (`control/PlanExecutor`, 06 Storage Management Design); every bundle held is therefore "awaiting a
+ * server decision". The clear buttons are a manual override that does not wait for the server.
  */
 @Composable
 fun StorageScreen(viewModel: StorageViewModel = viewModel()) {
@@ -109,14 +109,7 @@ fun StorageScreen(viewModel: StorageViewModel = viewModel()) {
                 Text(it, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
             }
 
-            // FUTURE: server keep/delete control ADUs (RetentionPolicy + RelayStore.delete) and client-ACK
-            // reports (DeliveryLog) will manage this storage; show their state here instead of this note.
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(stringResource(R.string.storage_future_title), fontWeight = FontWeight.Bold)
-                    Text(stringResource(R.string.storage_future_text), style = MaterialTheme.typography.bodySmall)
-                }
-            }
+            ServerCleanupCard(status)
         }
     }
 
@@ -159,4 +152,38 @@ private fun ConfirmClearDialog(title: String, text: String, onConfirm: () -> Uni
             },
             dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
+}
+
+/** Server-managed cleanup: what still awaits a server decision, what the server had deleted, the last plan. */
+@Composable
+private fun ServerCleanupCard(status: DropboxStatus) {
+    val control = status.control()
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(R.string.storage_server_title), fontWeight = FontWeight.Bold)
+            if (!control.available()) {
+                Text(stringResource(R.string.storage_server_unavailable,
+                        control.problem() ?: stringResource(R.string.value_unknown)),
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                return@Column
+            }
+            LabeledValue(stringResource(R.string.storage_server_pending_up),
+                    stringResource(R.string.count_and_bytes, status.upstreamCount(),
+                            StatusFormat.formatBytes(status.upstreamBytes())))
+            LabeledValue(stringResource(R.string.storage_server_pending_down),
+                    stringResource(R.string.count_and_bytes, status.downstreamCount(),
+                            StatusFormat.formatBytes(status.downstreamBytes())))
+            LabeledValue(stringResource(R.string.storage_server_deleted_up),
+                    stringResource(R.string.count_and_bytes, control.deletedUpstreamCount().toInt(),
+                            StatusFormat.formatBytes(control.deletedUpstreamBytes())))
+            LabeledValue(stringResource(R.string.storage_server_deleted_down),
+                    stringResource(R.string.count_and_bytes, control.deletedDownstreamCount().toInt(),
+                            StatusFormat.formatBytes(control.deletedDownstreamBytes())))
+            LabeledValue(stringResource(R.string.storage_server_last_plan),
+                    if (control.lastPlanSeq() == 0L) stringResource(R.string.storage_server_no_plan)
+                    else stringResource(R.string.storage_server_plan_value, control.lastPlanSeq(),
+                            StatusFormat.formatAge(System.currentTimeMillis() - control.lastPlanAtMillis())))
+            Text(stringResource(R.string.storage_server_text), style = MaterialTheme.typography.bodySmall)
+        }
+    }
 }

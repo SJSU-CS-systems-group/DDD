@@ -4,8 +4,8 @@ package net.discdd.bundledropbox.store;
  * Remembers which UPSTREAM bundles have already been handed to which carrier (BundleTransport), so a
  * visit only uploads what that carrier does not have yet.
  *
- * <p>Upstream bundles are never deleted in v1 (no keep/delete loop), so without this ledger every
- * visit would re-upload the whole queue. Different carriers are tracked separately because each one
+ * <p>Upstream bundles stay until a server retention plan (or the operator) deletes them, so without this
+ * ledger every visit would re-upload the whole queue. Different carriers are tracked separately because each one
  * reaches the server independently; uploading to all of them maximizes delivery odds.
  *
  * <p>The carrier id is the transport's advertised DNS-SD {@code transportId} (Research/R1 §2.4).

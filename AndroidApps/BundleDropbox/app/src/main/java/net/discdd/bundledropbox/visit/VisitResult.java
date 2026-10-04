@@ -17,6 +17,10 @@ import java.util.Objects;
  *   <li>The UI shows it as {@code DropboxStatus.LastVisit}.</li>
  * </ul>
  *
+ * <p>The control-channel counters ({@link #controlUploaded()}, {@link #controlProcessed()}) count the dropbox's
+ * <em>own</em> bundles, which never enter the relay store; {@link #uploaded()}, {@link #downloaded()} and
+ * {@link #skipped()} count relayed bundles only.
+ *
  * <p>Plain final class rather than a Java record (project rule); record-style accessors.
  */
 public final class VisitResult {
@@ -30,6 +34,8 @@ public final class VisitResult {
     private final int errors;
     private final boolean stoppedEarly;
     private final String lastError;
+    private final int controlUploaded;
+    private final int controlProcessed;
 
     /**
      * @param carrierId      the carrier's DNS-SD {@code transportId} the visit was made to
@@ -87,6 +93,32 @@ public final class VisitResult {
         this.errors = errors;
         this.stoppedEarly = stoppedEarly;
         this.lastError = lastError;
+        this.controlUploaded = 0;
+        this.controlProcessed = 0;
+    }
+
+    private VisitResult(VisitResult base, int controlUploaded, int controlProcessed) {
+        this.carrierId = base.carrierId;
+        this.reachable = base.reachable;
+        this.recencyFetched = base.recencyFetched;
+        this.recencyUpdated = base.recencyUpdated;
+        this.uploaded = base.uploaded;
+        this.downloaded = base.downloaded;
+        this.skipped = base.skipped;
+        this.errors = base.errors;
+        this.stoppedEarly = base.stoppedEarly;
+        this.lastError = base.lastError;
+        this.controlUploaded = controlUploaded;
+        this.controlProcessed = controlProcessed;
+    }
+
+    /**
+     * @param controlUploaded  the dropbox's own control bundles the carrier acknowledged during this visit
+     * @param controlProcessed bundles addressed to the dropbox that its control endpoint processed
+     * @return a copy of this result carrying the control-channel counters
+     */
+    public VisitResult withControl(int controlUploaded, int controlProcessed) {
+        return new VisitResult(this, controlUploaded, controlProcessed);
     }
 
     /** @return the carrier's DNS-SD {@code transportId}. */
@@ -126,6 +158,12 @@ public final class VisitResult {
     /** @return description of the last error, or {@code null} if none. */
     public String lastError() { return lastError; }
 
+    /** @return the dropbox's own control bundles (inventory reports) the carrier acknowledged. */
+    public int controlUploaded() { return controlUploaded; }
+
+    /** @return bundles addressed to the dropbox (retention plans) processed by its control endpoint. */
+    public int controlProcessed() { return controlProcessed; }
+
     /**
      * @return true if the carrier was reached, every phase (recency, upload, download-all) ran to completion,
      *         and no error occurred. This is the {@code success} flag for {@code VisitCallback.visitFinished}.
@@ -144,7 +182,8 @@ public final class VisitResult {
         return reachable == that.reachable && recencyFetched == that.recencyFetched &&
                 recencyUpdated == that.recencyUpdated && uploaded == that.uploaded &&
                 downloaded == that.downloaded && skipped == that.skipped && errors == that.errors &&
-                stoppedEarly == that.stoppedEarly && carrierId.equals(that.carrierId) &&
+                stoppedEarly == that.stoppedEarly && controlUploaded == that.controlUploaded &&
+                controlProcessed == that.controlProcessed && carrierId.equals(that.carrierId) &&
                 Objects.equals(lastError, that.lastError);
     }
 
@@ -159,14 +198,17 @@ public final class VisitResult {
                             skipped,
                             errors,
                             stoppedEarly,
-                            lastError);
+                            lastError,
+                            controlUploaded,
+                            controlProcessed);
     }
 
     @Override
     public String toString() {
         return "VisitResult{carrier=" + carrierId + ", ok=" + ok() + ", reachable=" + reachable + ", recencyFetched=" + recencyFetched + ", recencyUpdated=" +
                 recencyUpdated + ", uploaded=" + uploaded + ", downloaded=" + downloaded + ", skipped=" + skipped +
-                ", errors=" + errors + ", stoppedEarly=" + stoppedEarly +
+                ", errors=" + errors + ", stoppedEarly=" + stoppedEarly + ", controlUploaded=" + controlUploaded +
+                ", controlProcessed=" + controlProcessed +
                 (lastError == null ? "" : ", lastError=" + lastError) + "}";
     }
 }

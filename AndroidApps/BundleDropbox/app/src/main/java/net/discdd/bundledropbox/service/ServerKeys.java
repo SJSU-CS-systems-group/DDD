@@ -24,20 +24,23 @@ import java.util.Objects;
  *       {@code server_ratchet}, the same defaults the stock BundleClient uses when it has no custom keys
  *       ({@code BundleClientService}, "custom_server_keys" false).</li>
  *   <li>{@link Source#IMPORTED}: keys saved by {@link #saveImported}, preferred when all three files exist.
- *       This is the hook for the planned Settings "Server keys (QR)" import, which parses BundleClient's
+ *       Written by the Settings "Server keys (QR)" import ({@link ServerKeysUrl}), which reads BundleClient's
  *       {@code https://discdd.net/srvr?...identity=..&signedpre=..&ratchet=..} URL so the dropbox can trust a
  *       laptop server (06 Storage Management Design, "Server keys for the endpoint").</li>
  * </ul>
  *
  * <p>Uses: the identity key pins recency blobs (audit M5/M6: a stock client rejects a blob whose
  * {@code serverPublicKey} is not its server's, so the dropbox must not store or serve one either); the three
- * PEM files are what {@code ClientPaths} needs for the planned control endpoint.
+ * PEM files are what {@code ClientPaths} needs for the control endpoint ({@code control/DropboxControlEndpoint}).
  *
  * <p>Pure Java; the service passes the raw-resource streams in. Immutable and thread-safe.
  */
 public final class ServerKeys {
     /** Directory (under the dropbox's {@code meta/}) holding imported keys. */
     public static final String IMPORTED_DIR_NAME = "serverKeys";
+
+    /** File in the imported-keys directory naming where the keys came from (e.g. {@code host:port}). */
+    static final String ORIGIN_FILE_NAME = "origin.txt";
 
     /** Where the keys came from. */
     public enum Source { BUNDLED, IMPORTED }
@@ -53,10 +56,17 @@ public final class ServerKeys {
     private final byte[] signedPrePem;
     private final byte[] ratchetPem;
     private final ECPublicKey identityKey;
+    private final String origin;
 
     private ServerKeys(Source source, byte[] identityPem, byte[] signedPrePem, byte[] ratchetPem)
             throws InvalidKeyException {
+        this(source, identityPem, signedPrePem, ratchetPem, null);
+    }
+
+    private ServerKeys(Source source, byte[] identityPem, byte[] signedPrePem, byte[] ratchetPem, String origin)
+            throws InvalidKeyException {
         this.source = source;
+        this.origin = origin == null || origin.isBlank() ? null : origin.trim();
         this.identityPem = identityPem;
         this.signedPrePem = signedPrePem;
         this.ratchetPem = ratchetPem;
@@ -91,17 +101,54 @@ public final class ServerKeys {
      */
     public static ServerKeys saveImported(Path importedDir, String identityB64, String signedPreB64,
                                           String ratchetB64) throws IOException, InvalidKeyException {
-        ServerKeys keys = new ServerKeys(Source.IMPORTED, pem(identityB64), pem(signedPreB64), pem(ratchetB64));
+        return saveImported(importedDir, identityB64, signedPreB64, ratchetB64, null);
+    }
+
+    /**
+     * {@link #saveImported(Path, String, String, String)} that also records where the keys came from.
+     *
+     * @param origin operator-facing origin such as {@code host:port} from the QR URL, or {@code null}
+     */
+    public static ServerKeys saveImported(Path importedDir, String identityB64, String signedPreB64,
+                                          String ratchetB64, String origin) throws IOException, InvalidKeyException {
+        ServerKeys keys = new ServerKeys(Source.IMPORTED, pem(identityB64), pem(signedPreB64), pem(ratchetB64),
+                                         origin);
         Files.createDirectories(importedDir);
         writeAtomically(importedDir.resolve(SecurityUtils.SERVER_IDENTITY_KEY), keys.identityPem);
         writeAtomically(importedDir.resolve(SecurityUtils.SERVER_SIGNED_PRE_KEY), keys.signedPrePem);
         writeAtomically(importedDir.resolve(SecurityUtils.SERVER_RATCHET_KEY), keys.ratchetPem);
+        Path originFile = importedDir.resolve(ORIGIN_FILE_NAME);
+        if (keys.origin == null) Files.deleteIfExists(originFile);
+        else writeAtomically(originFile, keys.origin.getBytes(StandardCharsets.UTF_8));
         return keys;
+    }
+
+    /**
+     * Forgets imported keys, so the next {@link #load} returns the bundled defaults.
+     *
+     * @param importedDir {@code meta/serverKeys}
+     */
+    public static void deleteImported(Path importedDir) throws IOException {
+        for (String name : new String[]{ SecurityUtils.SERVER_IDENTITY_KEY, SecurityUtils.SERVER_SIGNED_PRE_KEY,
+                                         SecurityUtils.SERVER_RATCHET_KEY, ORIGIN_FILE_NAME }) {
+            Files.deleteIfExists(importedDir.resolve(name));
+        }
     }
 
     /** @return where the keys came from */
     public Source source() {
         return source;
+    }
+
+    /** @return the recorded origin of imported keys (e.g. {@code host:port}), or {@code null} */
+    public String origin() {
+        return origin;
+    }
+
+    /** @return operator-facing description: "built-in", "imported" or "imported from host:port" */
+    public String describe() {
+        if (source == Source.BUNDLED) return "built-in";
+        return origin == null ? "imported" : "imported from " + origin;
     }
 
     /** @return the server identity key: the key recency blobs must be signed with */
@@ -165,8 +212,11 @@ public final class ServerKeys {
         Path ratchet = dir.resolve(SecurityUtils.SERVER_RATCHET_KEY);
         if (!Files.isRegularFile(id) || !Files.isRegularFile(pre) || !Files.isRegularFile(ratchet)) return null;
         try {
+            Path originFile = dir.resolve(ORIGIN_FILE_NAME);
+            String origin = Files.isRegularFile(originFile) ?
+                            new String(Files.readAllBytes(originFile), StandardCharsets.UTF_8) : null;
             return new ServerKeys(Source.IMPORTED, Files.readAllBytes(id), Files.readAllBytes(pre),
-                                  Files.readAllBytes(ratchet));
+                                  Files.readAllBytes(ratchet), origin);
         } catch (IOException | InvalidKeyException e) {
             // A damaged import must not stop the relay: fall back to the bundled keys (logged by the caller).
             return null;

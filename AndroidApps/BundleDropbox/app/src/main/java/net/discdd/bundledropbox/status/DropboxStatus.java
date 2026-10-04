@@ -40,6 +40,7 @@ public final class DropboxStatus {
     private final long downstreamBytes;
     private final LastVisit lastVisit;
     private final String lastError;
+    private final ControlStatus control;
 
     private DropboxStatus(Builder b) {
         this.mode = Objects.requireNonNull(b.mode, "mode");
@@ -54,6 +55,7 @@ public final class DropboxStatus {
         this.downstreamBytes = b.downstreamBytes;
         this.lastVisit = b.lastVisit;
         this.lastError = b.lastError;
+        this.control = Objects.requireNonNull(b.control, "control");
     }
 
     /** @return a builder with every field at its {@link #INITIAL} value. */
@@ -107,6 +109,9 @@ public final class DropboxStatus {
     /** @return the most recent error message for the UI, or {@code null}. */
     public String lastError() { return lastError; }
 
+    /** @return the dropbox's control channel (server-managed storage); {@link ControlStatus#NONE} before start. */
+    public ControlStatus control() { return control; }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -117,14 +122,14 @@ public final class DropboxStatus {
                 upstreamCount == s.upstreamCount && upstreamBytes == s.upstreamBytes &&
                 downstreamCount == s.downstreamCount && downstreamBytes == s.downstreamBytes && mode == s.mode &&
                 Objects.equals(advertisedId, s.advertisedId) && Objects.equals(lastVisit, s.lastVisit) &&
-                Objects.equals(lastError, s.lastError);
+                Objects.equals(lastError, s.lastError) && control.equals(s.control);
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(mode, modeStartedAtMillis, deadlineAtMillis, advertisedId, recencyBlobTimestamp,
                             activeSessions, upstreamCount, upstreamBytes, downstreamCount, downstreamBytes,
-                            lastVisit, lastError);
+                            lastVisit, lastError, control);
     }
 
     @Override
@@ -133,7 +138,7 @@ public final class DropboxStatus {
                 deadlineAtMillis + ", advertisedId=" + advertisedId + ", blobTs=" + recencyBlobTimestamp +
                 ", sessions=" + activeSessions + ", up=" + upstreamCount + "/" + upstreamBytes + "B, down=" +
                 downstreamCount + "/" + downstreamBytes + "B, lastVisit=" + lastVisit + ", lastError=" + lastError +
-                "}";
+                ", control=" + control + "}";
     }
 
     /** Mutable builder for {@link DropboxStatus}. Not thread-safe; use one per update. */
@@ -150,6 +155,7 @@ public final class DropboxStatus {
         private long downstreamBytes = 0;
         private LastVisit lastVisit = null;
         private String lastError = null;
+        private ControlStatus control = ControlStatus.NONE;
 
         private Builder() {
         }
@@ -167,6 +173,7 @@ public final class DropboxStatus {
             this.downstreamBytes = s.downstreamBytes;
             this.lastVisit = s.lastVisit;
             this.lastError = s.lastError;
+            this.control = s.control;
         }
 
         /** Sets the mode. */
@@ -215,6 +222,9 @@ public final class DropboxStatus {
 
         /** Sets the last error message ({@code null} clears it). */
         public Builder lastError(String v) { this.lastError = v; return this; }
+
+        /** Sets the control-channel status ({@code null} means {@link ControlStatus#NONE}). */
+        public Builder control(ControlStatus v) { this.control = v == null ? ControlStatus.NONE : v; return this; }
 
         /** @return the immutable snapshot */
         public DropboxStatus build() { return new DropboxStatus(this); }

@@ -24,13 +24,13 @@ import java.util.List;
  *   <li>Only committed files are ever listed, counted per direction, forwarded or served. Staged files
  *       live in {@link DropboxPaths#staging} and are invisible to PSI and to forwarding.</li>
  *   <li>Thread-safe: called concurrently from the gRPC executor, the visit worker and the UI.</li>
- *   <li>v1 never deletes on its own ({@code KeepAllRetentionPolicy}); see {@link #delete}.</li>
+ *   <li>Nothing in the relay path deletes on its own; see {@link #delete}.</li>
  * </ul>
  *
  * <p><b>Capacity</b> is split per direction ({@link #hasCapacityFor(Direction, long)}): DOWNSTREAM may not
  * grow into a reserved UPSTREAM share. Download-all pulls every carrier bundle for every client, and since
- * nothing is deleted autonomously, a shared budget let DOWNSTREAM fill the store and refuse every client
- * upload indefinitely (Audit M10). Client mail toward the internet is the direction the design values most.
+ * only a server plan (or the operator) frees space, a shared budget let DOWNSTREAM fill the store and refuse
+ * every client upload until then (Audit M10). Client mail toward the internet is the direction the design values most.
  * Writers also enforce the budget while streaming, not only before and after (Audit m7).
  *
  * Implemented by {@code store/FileRelayStore}.
@@ -142,9 +142,9 @@ public interface RelayStore {
     /**
      * Removes a committed bundle. Missing ids are ignored.
      *
-     * <p>ONLY for the operator "clear" action in the Storage tab. Nothing in the v1 relay path deletes
-     * bundles: the dropbox cannot know whether a bundle was delivered end to end.
-     * FUTURE: server keep/delete control ADUs (via {@link RetentionPolicy}) will be the other caller.
+     * <p>Two callers only: the operator "clear" action in the Storage tab, and {@code control/PlanExecutor}
+     * applying a server retention plan (checked by the {@link RetentionPolicy}). The relay path itself never
+     * deletes: the dropbox cannot know whether a bundle was delivered end to end; only the server can.
      *
      * @param d        the queue
      * @param bundleId encrypted bundle id

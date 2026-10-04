@@ -41,9 +41,8 @@ data class StorageExtras(
  * service publishes `RelayStore.stats()` into it), the capacity from [DropboxPrefs], and the two
  * operator "clear" actions plus "reset recency blob" go to the service.
  *
- * v1 never deletes bundles on its own (KeepAllRetentionPolicy); the clear buttons are the only
- * deletion path. FUTURE: server keep/delete control ADUs drive `RetentionPolicy` + `RelayStore.delete`
- * and the clear buttons become a last-resort override.
+ * Automatic deletion happens only on server retention plans (`control/PlanExecutor`); the clear buttons
+ * are the operator's manual override.
  */
 class StorageViewModel(application: Application) : AndroidViewModel(application) {
     private val logger = Logger.getLogger(StorageViewModel::class.java.name)

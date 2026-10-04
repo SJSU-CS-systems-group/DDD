@@ -62,6 +62,26 @@ interface DropboxControls {
     fun resetRecencyBlob()
 
     /**
+     * Settings "Server keys (QR)": trust the DDD server named by a scanned or pasted
+     * `https://discdd.net/srvr?host=..&port=..&identity=..&signedpre=..&ratchet=..` URL (the one BundleClient
+     * scans). Re-pins the recency blob check and re-creates the dropbox's control endpoint, which then
+     * appears to that server as a new client.
+     *
+     * @return operator-facing description of the keys now trusted
+     * @throws IllegalArgumentException if the text is not a server URL or holds an invalid key
+     * @throws IllegalStateException if the service is not ready or the keys cannot be saved
+     */
+    fun importServerKeys(url: String): String
+
+    /**
+     * Forgets imported server keys and trusts android-core's built-in ones again (same re-wiring as
+     * [importServerKeys]).
+     *
+     * @return operator-facing description of the keys now trusted
+     */
+    fun useBuiltInServerKeys(): String
+
+    /**
      * NEARBY_WIFI_DEVICES was just granted; retry radio work that failed for lack of permission. Mirrors
      * `BundleTransportService.wifiPermissionGranted()`. May throw IllegalStateException if the service
      * failed to start or is still starting; callers must catch it.

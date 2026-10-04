@@ -33,6 +33,10 @@
     <!-- Unattended relay: restart the service after a reboot (BootReceiver, "Start on boot" setting). -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
+    <!-- Settings "Server keys (QR)": scanning the server's QR code (android-core QRScannerScreen). Optional: the
+         same URL can be pasted, so a dropbox without a camera still installs and works. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <uses-feature android:name="android.hardware.wifi.direct" android:required="true"/>
 
     <application

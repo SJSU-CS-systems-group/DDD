@@ -74,6 +74,16 @@
     <string name="status_visit_ended">Ended</string>
     <string name="status_ago">%1$s ago</string>
     <string name="status_last_error">Last error</string>
+    <string name="status_control_title">Server-managed storage</string>
+    <string name="status_control_client_id">Dropbox client ID</string>
+    <string name="status_control_server_keys">Server keys</string>
+    <string name="status_control_last_report">Last storage report</string>
+    <string name="status_control_last_plan">Last cleanup plan</string>
+    <string name="status_control_seq_age">#%1$d, %2$s ago</string>
+    <string name="status_control_none_yet">none yet</string>
+    <string name="status_control_waiting">Waiting for server cleanup</string>
+    <string name="status_control_waiting_value">%1$d deposited, %2$d pickups</string>
+    <string name="status_control_unavailable">Unavailable: the dropbox relays bundles but nothing is deleted until you clear storage.</string>
 
     <!-- Local Wifi tab -->
     <string name="wifi_p2p_state">Wi-Fi Direct</string>
@@ -112,8 +122,16 @@
     <string name="storage_recency_reset">Reset recency blob</string>
     <string name="storage_recency_reset_confirm">Forget the stored recency blob? Clients stop seeing this dropbox until a transport synced with the right server is visited. Use this only if clients reject the dropbox (for example after a transport from another server was visited).</string>
     <string name="storage_recency_reset_done">Recency blob reset. Visiting transports for a new one.</string>
-    <string name="storage_future_title">Server-managed cleanup (future)</string>
-    <string name="storage_future_text">In this version the dropbox keeps every bundle until you clear it here. Later, the server will tell the dropbox which bundles to keep or delete, based on what clients have acknowledged.</string>
+    <string name="storage_server_title">Server-managed cleanup</string>
+    <string name="storage_server_text">The dropbox reports what it holds to the server on every transport visit. The server answers with a cleanup plan listing bundles that are safe to delete: deposits it has received (or that a newer one replaced) and pickups their client has acknowledged. Everything else is kept. The clear buttons above remain a manual override.</string>
+    <string name="storage_server_unavailable">Server-managed cleanup is not running (%1$s). Bundles are kept until you clear them.</string>
+    <string name="storage_server_pending_up">Deposited, awaiting server decision</string>
+    <string name="storage_server_pending_down">Pickups, awaiting server decision</string>
+    <string name="storage_server_deleted_up">Deposited, deleted by server</string>
+    <string name="storage_server_deleted_down">Pickups, deleted by server</string>
+    <string name="storage_server_last_plan">Last cleanup plan</string>
+    <string name="storage_server_plan_value">#%1$d, %2$s ago</string>
+    <string name="storage_server_no_plan">none yet</string>
 
     <!-- Settings tab -->
     <string name="settings_timers">Cycle timers</string>
@@ -142,4 +160,14 @@
     <string name="settings_start_on_boot_help">Start relaying after the phone restarts or the app is updated, without opening the app (not after you press Stop). With a PIN or pattern lock, unlock once after a restart.</string>
     <string name="settings_keep_awake_help">Recommended for a plugged-in relay. Holds a partial wake lock while the dropbox is cycling (not paused or stopped). Without it, Android suspends the CPU with the screen off, the role timers stop counting, and the dropbox can stay in one role far longer than its period.</string>
     <string name="settings_reset_defaults">Reset all to defaults</string>
+    <string name="settings_server_keys">Server keys (QR)</string>
+    <string name="settings_server_keys_help">The DDD server whose keys the dropbox trusts. It accepts only recency blobs signed by this server and sends its storage reports to it. To use another server (for example a laptop server), scan the QR code from its /qr page, or paste the https://discdd.net/srvr?… URL. Changing keys gives the dropbox a new client identity at that server.</string>
+    <string name="settings_server_keys_current">Trusting</string>
+    <string name="settings_server_keys_scan">Scan server QR code</string>
+    <string name="settings_server_keys_url">Server URL</string>
+    <string name="settings_server_keys_url_help">Paste the URL encoded in the server\'s QR code.</string>
+    <string name="settings_server_keys_import">Import</string>
+    <string name="settings_server_keys_builtin">Use built-in keys</string>
+    <string name="settings_server_keys_done">Now trusting %1$s server keys.</string>
+    <string name="settings_server_keys_failed">Server keys not changed: %1$s</string>
 </resources>

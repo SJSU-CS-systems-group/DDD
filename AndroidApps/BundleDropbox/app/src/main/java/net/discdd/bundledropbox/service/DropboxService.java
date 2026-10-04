@@ -32,6 +32,8 @@ import net.discdd.bundledropbox.cycle.Clock;
 import net.discdd.bundledropbox.cycle.CycleListener;
 import net.discdd.bundledropbox.cycle.CycleMode;
 import net.discdd.bundledropbox.cycle.RoleCycleController;
+import net.discdd.bundledropbox.control.DropboxControlManager;
+import net.discdd.bundledropbox.control.PlanExecutor;
 import net.discdd.bundledropbox.rpc.DropboxRpcServer;
 import net.discdd.bundledropbox.rpc.RpcEventListener;
 import net.discdd.bundledropbox.status.DropboxStatus;
@@ -42,6 +44,7 @@ import net.discdd.bundledropbox.store.FileDeliveryLog;
 import net.discdd.bundledropbox.store.FileRecencyBlobStore;
 import net.discdd.bundledropbox.store.FileRelayStore;
 import net.discdd.bundledropbox.store.JsonForwardLedger;
+import net.discdd.bundledropbox.store.ServerPlanRetentionPolicy;
 import net.discdd.bundledropbox.store.ServerTrust;
 import net.discdd.bundledropbox.visit.TransportVisitClient;
 import net.discdd.bundledropbox.visit.VisitResult;
@@ -50,7 +53,11 @@ import net.discdd.bundledropbox.wifi.HostingEndpoint;
 import net.discdd.bundledropbox.wifi.WifiDirectRadioDriver;
 import net.discdd.utils.UserLogRepository.UserLogType;
 
+import org.whispersystems.libsignal.InvalidKeyException;
+
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -76,7 +83,10 @@ import java.util.logging.Logger;
  *                      ├─ JsonForwardLedger (meta/forwarded.json) ──────────┼─ TransportVisitClient (VISIT)
  *                      ├─ FileDeliveryLog (meta/delivery-log.jsonl) ────────┘
  *                      └─ DropboxIdentity (GrpcSecurity/ keys, baseId, advertised-id generation)
- *  ServerKeys (meta/serverKeys/ if imported, else android-core R.raw.server_*) ──▶ ServerTrust ──▶ recency store
+ *  ServerKeys (meta/serverKeys/ if imported, else android-core R.raw.server_*) ─┬▶ ServerTrust ──▶ recency store
+ *                                                                              └▶ DropboxControlManager
+ *  DropboxControlManager (dataDir/ControlEndpoint: the dropbox's own DDD client endpoint) ──▶ TransportVisitClient
+ *        inventory reports out / retention plans in ──▶ PlanExecutor ──▶ FileRelayStore.delete + ledger prune
  *
  *  RoleCycleController ── RadioDriver ──▶ WifiDirectRadioDriver
  *        │ gate()                             ├─ DropboxWifiHost   ── HostingEndpoint ──▶ DropboxRpcServer
@@ -160,6 +170,11 @@ public class DropboxService extends Service implements DropboxControls {
     private volatile WifiDirectRadioDriver radio;
     private volatile RoleCycleController controller;
     private volatile ActivityGate gate;
+    private volatile DropboxPaths dropboxPaths;
+    /** The dropbox's own control endpoint (server-managed storage); relay-only while it cannot open. */
+    private volatile DropboxControlManager control;
+    /** Serializes operator server-key changes (import / back to built-in). */
+    private final Object serverKeysLock = new Object();
 
     // Keep-awake lock (main thread only).
     private PowerManager.WakeLock wakeLock;
@@ -252,6 +267,7 @@ public class DropboxService extends Service implements DropboxControls {
             prefs = p;
 
             DropboxPaths paths = new DropboxPaths(storageRoot(this).toPath()).createDirectories();
+            dropboxPaths = paths;
             ServerKeys keys = loadServerKeys(paths);
 
             DropboxIdentity id = DropboxIdentity.load(paths,
@@ -271,7 +287,23 @@ public class DropboxService extends Service implements DropboxControls {
             recency = recencyStore;
             ledger = forwardLedger;
 
-            TransportVisitClient client = new TransportVisitClient(relayStore, forwardLedger, recencyStore, id.keys());
+            // The dropbox's own client endpoint: inventory reports out, server retention plans in. A plan's
+            // deletions also drop the ledger rows of the deleted bundles.
+            DropboxControlManager ctl = new DropboxControlManager(controlEndpointRoot(this),
+                                                                  relayStore,
+                                                                  deliveryLog::readAll,
+                                                                  ServerPlanRetentionPolicy.INSTANCE,
+                                                                  () -> {
+                                                                      forwardLedger.pruneAgainst(relayStore);
+                                                                      refreshStatus();
+                                                                  },
+                                                                  System::currentTimeMillis,
+                                                                  new ControlEvents());
+            control = ctl;
+            openControl(ctl, keys);
+
+            TransportVisitClient client =
+                    new TransportVisitClient(relayStore, forwardLedger, recencyStore, ctl, id.keys());
             visitClient = client;
             visitExchange = VisitCoordinator.exchangeOf(client);
 
@@ -321,8 +353,8 @@ public class DropboxService extends Service implements DropboxControls {
 
             logUi(UserLogType.WIFI, Level.INFO, "Dropbox " + id.baseId() + " starting (" +
                     (recencyStore.currentTimestamp() > 0 ? "recency blob cached" :
-                     "no recency blob yet: visiting transports first") + ", trusting " +
-                    (keys.source() == ServerKeys.Source.IMPORTED ? "imported" : "built-in") + " server keys)");
+                     "no recency blob yet: visiting transports first") + ", trusting " + keys.describe() +
+                    " server keys)");
             errors.clear(StatusErrors.Source.STARTUP);
             refreshStatus();
             if (destroyed) {
@@ -384,6 +416,7 @@ public class DropboxService extends Service implements DropboxControls {
         rpcServer = null;
         visitClient = null;
         visitExchange = null;
+        control = null;
     }
 
     @Override
@@ -496,6 +529,8 @@ public class DropboxService extends Service implements DropboxControls {
         String summary = "Transport " + r.carrierId() + ": " + (r.ok() ? "ok" : "incomplete") + ", uploaded " +
                 r.uploaded() + ", downloaded " + r.downloaded() + ", already held " + r.skipped() +
                 (r.recencyUpdated() ? ", newer recency blob stored" : "") +
+                (r.controlUploaded() > 0 ? ", storage report sent" : "") +
+                (r.controlProcessed() > 0 ? ", server cleanup plan received" : "") +
                 (r.lastError() == null ? "" : ", last error: " + r.lastError());
         logUi(UserLogType.EXCHANGE, r.ok() ? Level.INFO : Level.WARNING, summary);
         DropboxStatus.LastVisit last = new DropboxStatus.LastVisit(r.carrierId(), r.uploaded(), r.downloaded(),
@@ -503,7 +538,57 @@ public class DropboxService extends Service implements DropboxControls {
         if (r.ok()) errors.clear(StatusErrors.Source.VISIT);
         else if (r.lastError() != null) errors.report(StatusErrors.Source.VISIT, "Visit: " + r.lastError());
         DropboxStatusRepository.modify(s -> s.toBuilder().lastVisit(last).lastError(errors.current()).build());
-        // FUTURE: once the server sends keep/delete control ADUs, apply them here via RetentionPolicy.
+        // Retention plans were already applied during the visit (DropboxControlManager); just show the result.
+        refreshStatus();
+    }
+
+    /** Log and status reactions to the control channel (called with the manager's lock held: must not block). */
+    private final class ControlEvents implements DropboxControlManager.Listener {
+        @Override
+        public void planApplied(PlanExecutor.Outcome o) {
+            if (!o.applied()) {
+                logger.info("Server cleanup " + o);
+                return;
+            }
+            logUi(UserLogType.EXCHANGE, Level.INFO, "Server cleanup plan #" + o.planSeq() + ": deleted " +
+                    o.deletedUpstream() + " deposited and " + o.deletedDownstream() + " pickup bundles" +
+                    (o.skipped() > 0 ? " (" + o.skipped() + " listed bundles were not held)" : ""));
+        }
+
+        @Override
+        public void reportQueued(long reportSeq, int upstreamEntries, int downstreamEntries) {
+            logUi(UserLogType.EXCHANGE, Level.INFO, "Storage report #" + reportSeq + " ready for the server (" +
+                    upstreamEntries + " deposited, " + downstreamEntries + " pickups)");
+        }
+
+        @Override
+        public void problem(String message) {
+            logUi(UserLogType.EXCHANGE, Level.WARNING, message);
+        }
+
+        @Override
+        public void statusChanged() {
+            refreshStatus();
+        }
+    }
+
+    /**
+     * Opens (or re-opens, after a server-key change) the control endpoint and moves any of the dropbox's own
+     * bundles out of the pickup queue. A failure leaves the relay running without server-managed cleanup.
+     */
+    private void openControl(DropboxControlManager ctl, ServerKeys keys) {
+        if (ctl.open(keys.describe(), keys.identityPem(), keys.signedPrePem(), keys.ratchetPem())) {
+            int adopted = ctl.adoptOwnBundles();
+            if (adopted > 0) {
+                logUi(UserLogType.EXCHANGE, Level.INFO, "Removed " + adopted +
+                        " of the dropbox's own bundles from the pickups (they are not for clients)");
+            }
+            logUi(UserLogType.EXCHANGE, Level.INFO, "Server-managed storage active; the dropbox is client " +
+                    ctl.status().endpointClientId() + " at the server");
+        } else {
+            logUi(UserLogType.EXCHANGE, Level.WARNING, "Server-managed storage unavailable (" +
+                    ctl.status().problem() + "); relaying without it");
+        }
     }
 
     /** Role-cycle events (on {@code dropbox-cycle}). */
@@ -563,7 +648,7 @@ public class DropboxService extends Service implements DropboxControls {
 
         @Override
         public void onDownloadServed(String bundleId) {
-            // FUTURE: the DeliveryLog entry written alongside this becomes a client-ACK report ADU.
+            // The DeliveryLog entry written alongside this feeds servedCount in the next inventory report.
             logUi(UserLogType.EXCHANGE, Level.INFO, "Client picked up bundle " + shortId(bundleId));
         }
 
@@ -591,6 +676,8 @@ public class DropboxService extends Service implements DropboxControls {
             if (g != null) b.activeSessions(g.activeKeyCount());
             FileRelayStore st = store;
             if (st != null) b.storeStats(st.stats());
+            DropboxControlManager ctl = control;
+            if (ctl != null) b.control(ctl.status());
             b.lastError(errors.current());
             return b.build();
         });
@@ -755,7 +842,7 @@ public class DropboxService extends Service implements DropboxControls {
     /**
      * Operator "clear": delete every committed bundle of one direction, then drop ledger rows of bundles
      * that no longer exist. Staged (in-flight) files are untouched; they commit or abort on their own.
-     * FUTURE: server keep/delete control ADUs (RetentionPolicy) replace this manual clear.
+     * A manual override: normally server retention plans free the storage ({@code control/PlanExecutor}).
      */
     private void clear(Direction d) {
         awaitReady();
@@ -768,6 +855,62 @@ public class DropboxService extends Service implements DropboxControls {
         refreshStatus();
         logUi(UserLogType.EXCHANGE, Level.INFO, "Operator cleared " + n + " " +
                 (d == Direction.UPSTREAM ? "deposited (upstream)" : "pickup (downstream)") + " bundles");
+    }
+
+    /**
+     * Operator "Server keys (QR)" import: trust the server named by a scanned or pasted
+     * {@code https://discdd.net/srvr?...} URL. Saves the keys, re-pins the recency store (a cached blob from
+     * the old server is dropped and a visit forced, since clients of the new server would reject it), and
+     * re-creates the control endpoint, which then starts a fresh client identity at the new server.
+     */
+    @Override
+    public String importServerKeys(String urlText) {
+        awaitReady();
+        ServerKeysUrl url = ServerKeysUrl.parse(urlText);
+        synchronized (serverKeysLock) {
+            ServerKeys keys;
+            try {
+                keys = ServerKeys.saveImported(importedKeysDir(), url.identity(), url.signedPre(), url.ratchet(),
+                                               url.origin());
+            } catch (InvalidKeyException e) {
+                throw new IllegalArgumentException("The server URL holds an invalid key: " + e.getMessage(), e);
+            } catch (IOException e) {
+                throw new IllegalStateException("Could not save the server keys: " + e.getMessage(), e);
+            }
+            applyServerKeys(keys);
+            return keys.describe();
+        }
+    }
+
+    /** Operator "Use built-in server keys": forgets imported keys and re-wires like {@link #importServerKeys}. */
+    @Override
+    public String useBuiltInServerKeys() {
+        awaitReady();
+        synchronized (serverKeysLock) {
+            ServerKeys keys;
+            try {
+                ServerKeys.deleteImported(importedKeysDir());
+                keys = loadServerKeys(dropboxPaths);
+            } catch (Exception e) {
+                throw new IllegalStateException("Could not restore the built-in server keys: " + e.getMessage(), e);
+            }
+            applyServerKeys(keys);
+            return keys.describe();
+        }
+    }
+
+    /** Re-pins the recency store and re-opens the control endpoint for {@code keys}. */
+    private void applyServerKeys(ServerKeys keys) {
+        boolean blobKept = recency.setVerifier(new ServerTrust(keys.identityKey(), System::currentTimeMillis));
+        openControl(control, keys);
+        refreshStatus();
+        logUi(UserLogType.EXCHANGE, Level.INFO, "Now trusting " + keys.describe() + " server keys" +
+                (blobKept ? "" : "; dropped the recency blob of the previous server, visiting transports for a new one"));
+        if (!blobKept) controller.forceVisit();
+    }
+
+    private Path importedKeysDir() {
+        return dropboxPaths.meta.resolve(ServerKeys.IMPORTED_DIR_NAME);
     }
 
     @Override
@@ -809,9 +952,17 @@ public class DropboxService extends Service implements DropboxControls {
     }
 
     /**
+     * Root of the dropbox's own control endpoint: internal storage ({@code getDataDir()/ControlEndpoint}), so
+     * its private client keys never sit on shared storage, and away from the relay store's tree (Research/R7 §1).
+     */
+    static Path controlEndpointRoot(Context context) {
+        return context.getDataDir().toPath().resolve("ControlEndpoint");
+    }
+
+    /**
      * The server keys the dropbox trusts: imported keys under {@code meta/serverKeys} if present, else
      * android-core's built-in {@code R.raw.server_*} (the stock client's defaults). Their identity key pins the
-     * recency blobs the dropbox stores and re-serves (audit M5/M6).
+     * recency blobs the dropbox stores and re-serves (audit M5/M6); all three seed the control endpoint.
      */
     private ServerKeys loadServerKeys(DropboxPaths paths) throws Exception {
         android.content.res.Resources res = getResources();

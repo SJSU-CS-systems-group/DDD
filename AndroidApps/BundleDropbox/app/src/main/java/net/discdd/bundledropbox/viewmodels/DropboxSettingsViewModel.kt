@@ -11,8 +11,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import net.discdd.bundledropbox.DropboxControls
 import net.discdd.bundledropbox.DropboxPrefs
+import net.discdd.bundledropbox.DropboxServiceManager
+import net.discdd.bundledropbox.DropboxStatusRepository
 import net.discdd.bundledropbox.R
+import net.discdd.bundledropbox.status.DropboxStatus
+import java.util.logging.Level
+import java.util.logging.Logger
 
 /**
  * Editable form state of the Settings tab. Numeric fields are kept as the raw text the operator
@@ -34,6 +40,23 @@ data class SettingsForm(
         val errors: Map<String, Int> = emptyMap(),
         /** transient "Saved" confirmation. */
         val saved: Boolean = false,
+)
+
+/**
+ * State of the Settings tab's "Server keys (QR)" section.
+ *
+ * @property url      the pasted (or last scanned) server URL
+ * @property scanning true while the camera QR scanner is shown
+ * @property busy     true while an import or reset runs in the service
+ * @property message  result of the last import or reset, or `null`
+ * @property failed   true if [message] reports a failure
+ */
+data class ServerKeysForm(
+        val url: String = "",
+        val scanning: Boolean = false,
+        val busy: Boolean = false,
+        val message: String? = null,
+        val failed: Boolean = false,
 )
 
 /**
@@ -64,9 +87,20 @@ object SettingsValidation {
  * advertised-ID / keep-awake / capacity settings. The UI never talks to the controller directly.
  *
  * Switches are written immediately; numeric fields are written together on Save after validation.
+ *
+ * Server keys are not preferences: an import goes straight to the service ([DropboxControls.importServerKeys]),
+ * which saves the keys and re-wires the recency check and the control endpoint. The keys currently trusted
+ * are read back from [DropboxStatus.control].
  */
 class DropboxSettingsViewModel(application: Application) : AndroidViewModel(application) {
+    private val logger = Logger.getLogger(DropboxSettingsViewModel::class.java.name)
     private val prefs: SharedPreferences = DropboxPrefs.get(application)
+
+    /** Latest status; the Settings tab shows `control().serverKeys()` from it. */
+    val status: StateFlow<DropboxStatus> = DropboxStatusRepository.status
+
+    private val _serverKeys = MutableStateFlow(ServerKeysForm())
+    val serverKeys: StateFlow<ServerKeysForm> = _serverKeys.asStateFlow()
 
     private val _form = MutableStateFlow(SettingsForm())
     val form: StateFlow<SettingsForm> = _form.asStateFlow()
@@ -156,4 +190,44 @@ class DropboxSettingsViewModel(application: Application) : AndroidViewModel(appl
     }
 
     fun clearSaved() = _form.update { it.copy(saved = false) }
+
+    fun onServerUrlChange(v: String) = _serverKeys.update { it.copy(url = v, message = null) }
+
+    fun startScan() = _serverKeys.update { it.copy(scanning = true, message = null) }
+
+    fun stopScan() = _serverKeys.update { it.copy(scanning = false) }
+
+    /** A QR code was scanned: show its text and import it at once (the scanner reports one code per opening). */
+    fun onScanned(text: String) {
+        _serverKeys.update { it.copy(url = text, scanning = false) }
+        importServerKeys()
+    }
+
+    /** Imports the keys of the URL in the text field. */
+    fun importServerKeys() {
+        val url = _serverKeys.value.url
+        changeServerKeys("importServerKeys") { it.importServerKeys(url) }
+    }
+
+    /** Goes back to android-core's built-in server keys. */
+    fun useBuiltInServerKeys() = changeServerKeys("useBuiltInServerKeys") { it.useBuiltInServerKeys() }
+
+    private fun changeServerKeys(name: String, action: (DropboxControls) -> String) {
+        _serverKeys.update { it.copy(busy = true, message = null) }
+        viewModelScope.launch(Dispatchers.IO) {
+            val app = getApplication<Application>()
+            val controls = DropboxServiceManager.controls()
+            val (msg, failed) = if (controls == null) {
+                app.getString(R.string.service_not_connected) to true
+            } else {
+                try {
+                    app.getString(R.string.settings_server_keys_done, action(controls)) to false
+                } catch (e: Exception) {
+                    logger.log(Level.WARNING, "$name failed", e)
+                    app.getString(R.string.settings_server_keys_failed, e.message ?: e.javaClass.simpleName) to true
+                }
+            }
+            _serverKeys.update { it.copy(busy = false, message = msg, failed = failed) }
+        }
+    }
 }

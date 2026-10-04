@@ -138,7 +138,7 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
     /**
      * @param store        relay store (UPSTREAM receives client uploads, DOWNSTREAM is served to clients)
      * @param recencyBlobs cached carrier recency blob
-     * @param deliveryLog  records DOWNSTREAM bundles streamed to clients (FUTURE: client-ACK reports)
+     * @param deliveryLog  records DOWNSTREAM bundles streamed to clients (servedCount in inventory reports)
      * @param listener     status events; may be {@link RpcEventListener#NO_OP}
      * @param clock        monotonic clock for PSI session TTLs
      * @param wallClock    wall clock (epoch millis) for {@link DeliveryLog} timestamps
@@ -345,8 +345,8 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
             return null;
         }
         if (!store.hasCapacityFor(Direction.UPSTREAM, 0)) {
-            // FUTURE: server keep/delete control ADUs (RetentionPolicy) could free DOWNSTREAM space here
-            // instead of refusing; v1 never deletes on its own because it cannot know what was delivered.
+            // Refuse rather than evict: only a server retention plan (or the operator) may delete, because the
+            // dropbox cannot know what was delivered.
             ctx.failReason = "store full";
             return null;
         }
@@ -553,9 +553,8 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
 
     private void recordServed(String bundleId) {
         try {
-            // FUTURE: client-ACK reports. "Served" is not proof of delivery; the client's ack for this
-            // bundle travels inside its NEXT upstream bundle. Once the dropbox has a control endpoint it
-            // will report these so the server can issue keep/delete decisions (RetentionPolicy).
+            // "Served" is not proof of delivery: the client's ack travels inside its NEXT upstream bundle, which
+            // only the server reads. The count is reported as advisory servedCount in the inventory.
             deliveryLog.recordServed(bundleId, wallClock.getAsLong());
         } catch (RuntimeException e) {
             logger.log(Level.WARNING, "Could not record served bundle " + bundleId, e);

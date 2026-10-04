@@ -50,7 +50,7 @@ public final class DropboxTxt {
 
     /** Value of {@link #KEY_DDD} for a dropbox. The dropbox is offline, so there is no server URL to publish. */
     public static final String DDD_VALUE_DROPBOX = "dropbox";
-    // FUTURE: dropbox control endpoint / server destination manifests may need more TXT keys; bump this
+    // FUTURE: server destination manifests may need more TXT keys; bump this
     // version then so newer dropboxes can tell old ones apart.
     /** Value of {@link #KEY_DROPBOX}: the dropbox TXT schema version. */
     public static final String DROPBOX_VALUE = "1";

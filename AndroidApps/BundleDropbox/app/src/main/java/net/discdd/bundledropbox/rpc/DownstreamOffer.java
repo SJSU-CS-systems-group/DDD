@@ -17,11 +17,11 @@ import java.util.Set;
  *
  * <p><b>Why newest per client (Audit M7).</b> A stock transport only ever holds a client's newest bundle,
  * because the server tells it to delete superseded ones at each sync. The dropbox keeps every version it pulled
- * (v1 never deletes on its own). The stock client fills its PSI window in ascending counter order, sorts the
+ * until a server retention plan names it. The stock client fills its PSI window in ascending counter order, sorts the
  * matches by window index and downloads only the first, so offering counters 5, 6 and 7 makes it take 5 (stale)
  * and fall one carrier visit behind per version. Server bundles are cumulative (a newer one re-carries every
  * un-acked ADU, Research/R8 §7.3), so offering only the newest loses nothing. Older versions are NOT deleted;
- * they are just not offered (no autonomous deletion; server-managed retention removes them later).
+ * they are just not offered (no autonomous deletion; a server retention plan removes them as SUPERSEDED).
  *
  * <p><b>Grouping without decryption.</b> Bundles are grouped by {@link BundleRecord#clientTag()}, derived from
  * the jar's plaintext {@code clientBase.pub} entry, which the server writes with the same per-client key into

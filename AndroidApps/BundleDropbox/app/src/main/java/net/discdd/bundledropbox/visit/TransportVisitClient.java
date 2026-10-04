@@ -77,6 +77,11 @@ import static java.util.logging.Level.WARNING;
  *       always runs, even if {@code keepGoing} is already false: it is cheap and it is the only way a fresh
  *       dropbox can ever host (the stock client aborts the whole exchange without a SUCCESS, server-signed
  *       recency blob, R3/R4 §4.4).</li>
+ *   <li><b>Own control bundle</b> ({@link ControlChannel#ownBundleForVisit()}): the dropbox's own DDD client
+ *       bundle, carrying its inventory report and the ack of the last retention plan it processed, is uploaded
+ *       <b>before</b> any relayed bundle so a short dwell never starves the server-managed cleanup loop
+ *       (06 Storage Management Design "Visit flow"). It is not in the relay store or the ledger; an id already
+ *       acknowledged by this carrier is not re-sent.</li>
  *   <li><b>Upload</b> every UPSTREAM bundle not yet in the {@link ForwardLedger} for this carrier, newest first.
  *       Upload goes before download so the most valuable direction (client mail toward the internet) gets the
  *       radio time if the transport dwell is short (R2 §8).</li>
@@ -85,7 +90,11 @@ import static java.util.logging.Level.WARNING;
  *       quota (checked per chunk). An id already held is {@linkplain RelayStore#touch touched} instead, which
  *       keeps a client's still-current bundle in the HOST PSI snapshot. Each visit to a carrier resumes at the
  *       index where the previous visit to it stopped, so a listing too long for one dwell is still covered over
- *       several visits.</li>
+ *       several visits. A bundle addressed to the dropbox itself ({@link ControlChannel#classify}) goes to
+ *       {@link ControlChannel#accept} and <b>never</b> into the relay store: no client could ever use it.</li>
+ *   <li><b>Ack re-upload</b>: if a retention plan was processed during this visit, the dropbox's own bundle is
+ *       regenerated (it now acks the plan bundle and reports the plan's results) and uploaded once more, which
+ *       saves the server a full carrier round trip (Research/R7 §8).</li>
  * </ol>
  *
  * <p><b>Stopping.</b> {@code keepGoing} is checked BETWEEN bundles only, so a bundle in flight always completes
@@ -130,6 +139,7 @@ public final class TransportVisitClient {
     private final RelayStore store;
     private final ForwardLedger ledger;
     private final RecencyBlobStore recencyStore;
+    private final ControlChannel control;
     private final CarrierChannelFactory channelFactory;
     private final VisitOptions options;
     private final LongSupplier wallClock;
@@ -145,6 +155,12 @@ public final class TransportVisitClient {
      * the dropbox simply starts at 0 again. FUTURE: PSI known-ID skip makes this mostly unnecessary.
      */
     private final Map<String, Integer> nextDownloadIndex = new ConcurrentHashMap<>();
+    /**
+     * Per carrier: the id of the dropbox's own bundle that carrier last acknowledged. The same id is not sent to
+     * the same carrier again: it would only overwrite an identical file there, and the server ignores a bundle
+     * whose counter it already received. In memory only: after a restart the current bundle is sent once more.
+     */
+    private final Map<String, String> ownBundleAckedBy = new ConcurrentHashMap<>();
 
     /**
      * Production constructor: TLS channels built like the stock client, stock-client timeouts, system wall clock.
@@ -152,18 +168,36 @@ public final class TransportVisitClient {
      * @param store          the relay store (UPSTREAM is read, DOWNSTREAM is written)
      * @param ledger         per-carrier record of acknowledged uploads
      * @param recencyStore   cache of the newest server-signed recency blob
+     * @param control        the dropbox's own control endpoint, or {@link ControlChannel#NONE}
      * @param identityOrNull the dropbox TLS identity presented as client certificate, or {@code null}
      */
     public TransportVisitClient(RelayStore store,
                                 ForwardLedger ledger,
                                 RecencyBlobStore recencyStore,
+                                ControlChannel control,
                                 GrpcSecurityKey identityOrNull) {
         this(store,
              ledger,
              recencyStore,
+             control,
              CarrierChannelFactory.tls(identityOrNull),
              VisitOptions.DEFAULTS,
              System::currentTimeMillis);
+    }
+
+    /**
+     * Relay-only constructor (no control channel), for tests of the relay path.
+     *
+     * @see #TransportVisitClient(RelayStore, ForwardLedger, RecencyBlobStore, ControlChannel, CarrierChannelFactory,
+     *      VisitOptions, LongSupplier)
+     */
+    public TransportVisitClient(RelayStore store,
+                                ForwardLedger ledger,
+                                RecencyBlobStore recencyStore,
+                                CarrierChannelFactory channelFactory,
+                                VisitOptions options,
+                                LongSupplier wallClock) {
+        this(store, ledger, recencyStore, ControlChannel.NONE, channelFactory, options, wallClock);
     }
 
     /**
@@ -172,6 +206,7 @@ public final class TransportVisitClient {
      * @param store          the relay store
      * @param ledger         per-carrier record of acknowledged uploads
      * @param recencyStore   cache of the newest server-signed recency blob
+     * @param control        the dropbox's own control endpoint, or {@link ControlChannel#NONE}
      * @param channelFactory creates one new channel per visit
      * @param options        probe, deadline and pass bounds
      * @param wallClock      wall-clock millis for {@link ForwardLedger#recordForwarded}
@@ -179,12 +214,14 @@ public final class TransportVisitClient {
     public TransportVisitClient(RelayStore store,
                                 ForwardLedger ledger,
                                 RecencyBlobStore recencyStore,
+                                ControlChannel control,
                                 CarrierChannelFactory channelFactory,
                                 VisitOptions options,
                                 LongSupplier wallClock) {
         this.store = Objects.requireNonNull(store, "store");
         this.ledger = Objects.requireNonNull(ledger, "ledger");
         this.recencyStore = Objects.requireNonNull(recencyStore, "recencyStore");
+        this.control = Objects.requireNonNull(control, "control");
         this.channelFactory = Objects.requireNonNull(channelFactory, "channelFactory");
         this.options = Objects.requireNonNull(options, "options");
         this.wallClock = Objects.requireNonNull(wallClock, "wallClock");
@@ -300,6 +337,10 @@ public final class TransportVisitClient {
         private int errors;
         private boolean stoppedEarly;
         private String lastError;
+        /** The carrier's recency-blob {@code senderId}: the transport id the server routes replies by. */
+        private String carrierSenderId;
+        private int controlUploaded;
+        private int controlProcessed;
 
         Visit(InetAddress host, int port, String carrierId, BooleanSupplier keepGoing, BooleanSupplier cancelled) {
             this.host = host;
@@ -336,7 +377,7 @@ public final class TransportVisitClient {
                                                  skipped,
                                                  errors,
                                                  stoppedEarly,
-                                                 lastError);
+                                                 lastError).withControl(controlUploaded, controlProcessed);
             logger.log(INFO, "visit finished: " + result);
             return result;
         }
@@ -351,8 +392,12 @@ public final class TransportVisitClient {
                 var blocking = BundleExchangeServiceGrpc.newBlockingStub(channel);
                 var async = BundleExchangeServiceGrpc.newStub(channel);
                 fetchRecencyBlob(blocking);
+                uploadOwnBundle(async);
                 uploadAll(async);
                 downloadAll(blocking);
+                // Optional extra (class Javadoc): only while the dwell lasts, so it never turns a complete visit
+                // into a "stopped early" one.
+                if (controlProcessed > 0 && keepGoing.getAsBoolean()) uploadOwnBundle(async);
             } finally {
                 activeChannel = null;
                 channel.shutdownNow();
@@ -408,6 +453,9 @@ public final class TransportVisitClient {
                 byte[] raw = response.toByteArray();
                 recencyFetched = recencyStore.isTrusted(raw);
                 recencyUpdated = recencyStore.offer(raw);
+                String senderId = response.getRecencyBlob().getSenderId();
+                // Only a blob from our server names the carrier the way that server routes (R7 §4).
+                if (recencyFetched && !senderId.isEmpty()) carrierSenderId = senderId;
                 if (response.getStatus() == RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS && !recencyFetched) {
                     logger.log(WARNING, "carrier " + carrierId + " serves a recency blob our clients would reject " +
                             "(another server, bad signature or future timestamp); not relayed");
@@ -422,21 +470,39 @@ public final class TransportVisitClient {
         // ---------------------------------------------------------------- upload
 
         /**
+         * Uploads the dropbox's own control bundle, unless this carrier already acknowledged the same id. Runs
+         * before the relayed uploads: it is small, and the inventory it carries is what lets the server free
+         * the dropbox's storage. A failure is recorded like any upload failure and retried on the next visit.
+         */
+        private void uploadOwnBundle(BundleExchangeServiceGrpc.BundleExchangeServiceStub async) {
+            checkContinue();
+            ControlChannel.OwnBundle own;
+            try {
+                own = control.ownBundleForVisit();
+            } catch (RuntimeException e) {
+                // The control channel must never break the relay.
+                logger.log(WARNING, "control channel failed to prepare its bundle", e);
+                return;
+            }
+            if (own == null || own.bundleId().equals(ownBundleAckedBy.get(carrierId))) return;
+            if (uploadOne(async, own.bundleId(), own.path())) {
+                ownBundleAckedBy.put(carrierId, own.bundleId());
+                controlUploaded++;
+                logger.log(INFO, "uploaded own control bundle " + own.bundleId() + " to " + carrierId);
+            }
+        }
+
+        /**
          * Uploads every committed UPSTREAM bundle this carrier has not acknowledged yet, <b>newest first</b>. The
          * ledger is updated only after a SUCCESS response, so failures are retried on the next visit.
          *
-         * <p>Why newest first: the ledger is per carrier and UPSTREAM is never pruned in v1, so the first visit to
-         * a new carrier re-offers the whole history. The server ignores bundles whose counter is at or below the
-         * last one it received from that client ({@code ServerBundleTransmission}, R4), so each client's newest
-         * bundle is the one that matters and must not be starved by stale ones when the dwell is short.
-         * FUTURE: server ACKs (or keep/delete control ADUs) let the dropbox skip superseded UPSTREAM bundles
-         * altogether instead of merely ordering them last. The carrier stores each upload
-         * verbatim as {@code BundleTransmission/server/<id>} and forwards it on its next server sync; it does no
-         * identity or sender-type checks (R2 §3), so relaying other clients' bundles works unmodified.
-         *
-         * <p>FUTURE: dropbox control endpoint — also upload the dropbox's own control bundle (client-ACK reports
-         * from {@code DeliveryLog}, holdings) signed with its own keys, so the server can classify it as a dropbox
-         * and answer with keep/delete control ADUs (R4 §5 items 1 and 3).
+         * <p>Why newest first: the ledger is per carrier, so the first visit to a new carrier re-offers every
+         * UPSTREAM bundle still held. The server ignores bundles whose counter is at or below the last one it
+         * received from that client ({@code ServerBundleTransmission}, R4), so each client's newest bundle is the
+         * one that matters and must not be starved by stale ones when the dwell is short. Stale bundles leave the
+         * store once a server retention plan reports them received or superseded. The carrier stores each upload verbatim as
+         * {@code BundleTransmission/server/<id>} and forwards it on its next server sync; it does no identity or
+         * sender-type checks (R2 §3), so relaying other clients' bundles works unmodified.
          */
         private void uploadAll(BundleExchangeServiceGrpc.BundleExchangeServiceStub async) {
             List<BundleRecord> upstream = new ArrayList<>(store.list(Direction.UPSTREAM));
@@ -767,6 +833,27 @@ public final class TransportVisitClient {
                         "(truncated?); skipped");
                 return new IndexOutcome(null, false);
             }
+            ControlChannel.Ownership ownership = classifyOwn(bundleId);
+            if (ownership != ControlChannel.Ownership.NOT_MINE) {
+                // Addressed to the dropbox itself: process it in-app and never relay it (class Javadoc).
+                try {
+                    if (ownership == ControlChannel.Ownership.MINE_NEW) {
+                        if (control.accept(staged.path(), carrierSenderId)) {
+                            controlProcessed++;
+                            logger.log(INFO, "processed own control bundle " + bundleId + " from " + carrierId);
+                        } else {
+                            logger.log(WARNING, "own control bundle " + bundleId + " could not be processed");
+                        }
+                    } else {
+                        skipped++; // the server re-offers its newest bundle until superseded
+                    }
+                } catch (RuntimeException e) {
+                    logger.log(WARNING, "control channel failed on " + bundleId, e);
+                } finally {
+                    store.abort(staged);
+                }
+                return new IndexOutcome(bundleId, false);
+            }
             if (store.contains(Direction.DOWNSTREAM, bundleId)) {
                 // Expected and frequent: the server re-offers the same bundle until superseded, and the carrier
                 // keeps it after serving (R2 §6, R4 §4.2). Same id means same bytes, so keep the existing file,
@@ -788,6 +875,17 @@ public final class TransportVisitClient {
         }
 
         // ---------------------------------------------------------------- helpers
+
+        /** {@link ControlChannel#classify}, treating a failing channel as "not mine" so the relay goes on. */
+        private ControlChannel.Ownership classifyOwn(String bundleId) {
+            try {
+                ControlChannel.Ownership o = control.classify(bundleId);
+                return o == null ? ControlChannel.Ownership.NOT_MINE : o;
+            } catch (RuntimeException e) {
+                logger.log(WARNING, "control channel failed to classify " + bundleId, e);
+                return ControlChannel.Ownership.NOT_MINE;
+            }
+        }
 
         /** Between-bundle check: cancel, interrupt, or the cycle's {@code keepGoing} turning false. */
         private void checkContinue() {

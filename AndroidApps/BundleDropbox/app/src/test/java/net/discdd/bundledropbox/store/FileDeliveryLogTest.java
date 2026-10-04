@@ -1,5 +1,6 @@
 package net.discdd.bundledropbox.store;
 
+import net.discdd.dropbox.control.DropboxControl;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -14,7 +15,7 @@ import java.util.List;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-/** JVM tests for {@link FileDeliveryLog} and {@link KeepAllRetentionPolicy}. */
+/** JVM tests for {@link FileDeliveryLog} and {@link ServerPlanRetentionPolicy}. */
 public class FileDeliveryLogTest {
     @Rule
     public TemporaryFolder tmp = new TemporaryFolder();
@@ -67,8 +68,12 @@ public class FileDeliveryLogTest {
     }
 
     @Test
-    public void keepAllNeverDeletes() {
-        assertEquals(false, KeepAllRetentionPolicy.INSTANCE.mayDelete(
-                new BundleRecord("id", Direction.DOWNSTREAM, 1, 1)));
+    public void serverPlanPolicyHonoursEveryServerOrderIncludingUnknownReasons() {
+        for (DropboxControl.Reason r : DropboxControl.Reason.values()) {
+            assertTrue(ServerPlanRetentionPolicy.INSTANCE.mayDelete(Direction.UPSTREAM, "id", r));
+        }
+        assertTrue(ServerPlanRetentionPolicy.INSTANCE.mayDelete(Direction.DOWNSTREAM, "id", null));
+        assertEquals(false, ServerPlanRetentionPolicy.INSTANCE.mayDelete(null, "id", null));
+        assertEquals(false, ServerPlanRetentionPolicy.INSTANCE.mayDelete(Direction.DOWNSTREAM, null, null));
     }
 }
