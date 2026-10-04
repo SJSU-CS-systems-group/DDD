@@ -545,6 +545,46 @@ public class DropboxControlEndpointTest {
     }
 
     @Test
+    public void managerRetainsOwnBundleWhenAdoptionFailsSoItCanRetry() throws Exception {
+        FileRelayStore store = ControlFixtures.newStore(tmp.newFolder("dropbox").toPath(), clock);
+        ControlFixtures.commit(store, Direction.UPSTREAM, "u1", 10, null);
+        Events events = new Events();
+        DropboxControlManager m = manager(store, events, new AtomicInteger());
+        assertTrue(m.open("built-in", keysA.identityPem, keysA.signedPrePem, keysA.ratchetPem));
+        ControlChannel.OwnBundle own = m.ownBundleForVisit();
+        server.receive(own.path(), work("w"));
+        Path planJar = server.send(m.status().endpointClientId(), 1, 1,
+                                   plan(1, 1, List.of(new RetentionPlan.Deletion("u1", Reason.SUPERSEDED))),
+                                   own.bundleId(), work("out"));
+        net.discdd.bundledropbox.store.Staged staged = store.beginStaging(Direction.DOWNSTREAM);
+        try (OutputStream out = staged.open()) {
+            Files.copy(planJar, out);
+        }
+        BundleRecord adopted = store.commit(staged, null);
+
+        // Make the real accept path fail at its scratch-file copy, then restore the directory for retry.
+        Path incoming = root.resolve(DropboxControlEndpoint.CONTROL_DIR_NAME).resolve("incoming");
+        Path displacedIncoming = incoming.resolveSibling("incoming.saved");
+        Files.move(incoming, displacedIncoming);
+        Files.write(incoming, new byte[]{1});
+        try {
+            assertEquals(0, m.adoptOwnBundles());
+            assertTrue("failed control bundle must remain available", store.contains(Direction.DOWNSTREAM,
+                                                                                      adopted.bundleId()));
+            assertEquals("failed acceptance must not apply the plan", 0, m.status().lastPlanSeq());
+        } finally {
+            Files.delete(incoming);
+            Files.move(displacedIncoming, incoming);
+        }
+
+        assertEquals(1, m.adoptOwnBundles());
+        assertFalse(store.contains(Direction.DOWNSTREAM, adopted.bundleId()));
+        assertFalse(store.contains(Direction.UPSTREAM, "u1"));
+        assertEquals(1, m.status().lastPlanSeq());
+        assertEquals("successful adoption is replay-safe", 0, m.adoptOwnBundles());
+    }
+
+    @Test
     public void managerWithUnusableKeysFallsBackToRelayOnly() throws Exception {
         FileRelayStore store = ControlFixtures.newStore(tmp.newFolder("dropbox").toPath(), clock);
         Events events = new Events();

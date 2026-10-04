@@ -130,10 +130,10 @@ public final class DropboxControlManager implements ControlChannel {
 
     /**
      * Start-up scan of DOWNSTREAM for the dropbox's own bundles that reached the relay store before the endpoint
-     * existed or under other keys (R7 §4.1): a new one is processed, and every one is removed from the store,
-     * since no client could ever use it.
+     * existed or under other keys (R7 §4.1). Successfully processed or already-processed bundles are removed,
+     * since no client could ever use them; a bundle that fails processing stays in the store for retry.
      *
-     * @return number of own bundles removed from the relay store
+     * @return number of own bundles safely removed from the relay store
      */
     public synchronized int adoptOwnBundles() {
         if (endpoint == null) return 0;
@@ -141,8 +141,16 @@ public final class DropboxControlManager implements ControlChannel {
         for (BundleRecord r : store.list(Direction.DOWNSTREAM)) {
             Ownership o = endpoint.classify(r.bundleId());
             if (o == Ownership.NOT_MINE) continue;
-            Path path = store.pathFor(Direction.DOWNSTREAM, r.bundleId());
-            if (o == Ownership.MINE_NEW && path != null) endpoint.accept(path, null);
+            boolean safeToDelete = o == Ownership.MINE_ALREADY_PROCESSED;
+            if (o == Ownership.MINE_NEW) {
+                Path path = store.pathFor(Direction.DOWNSTREAM, r.bundleId());
+                if (path != null) {
+                    DropboxControlEndpoint.AcceptResult result = endpoint.accept(path, null);
+                    safeToDelete = result == DropboxControlEndpoint.AcceptResult.PROCESSED ||
+                                   result == DropboxControlEndpoint.AcceptResult.ALREADY_PROCESSED;
+                }
+            }
+            if (!safeToDelete) continue;
             store.delete(Direction.DOWNSTREAM, r.bundleId());
             removed++;
         }
