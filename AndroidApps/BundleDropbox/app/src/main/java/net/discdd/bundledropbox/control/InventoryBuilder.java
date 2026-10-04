@@ -76,7 +76,7 @@ public final class InventoryBuilder {
         /** @return the report's codec bytes (the ADU content) */
         public byte[] encoded() { return encoded.clone(); }
 
-        /** @return a digest of everything except {@code reportSeq} and {@code createdAt} */
+        /** @return a digest of the inventory itself (see {@link InventoryBuilder#fingerprint}) */
         public String fingerprint() { return fingerprint; }
     }
 
@@ -153,13 +153,19 @@ public final class InventoryBuilder {
     }
 
     /**
-     * Digest of the report without {@code reportSeq} and {@code createdAt}: two reports with the same fingerprint
-     * tell the server exactly the same thing.
+     * Digest of what the dropbox holds: capacity, usage and both bundle lists. Two reports with the same
+     * fingerprint give the server's planner the same input.
+     *
+     * <p>{@code reportSeq}, {@code createdAt}, {@code lastAppliedPlanSeq} and {@code planResults} are left out on
+     * purpose. The server answers every accepted report with a plan, even an empty one (M13
+     * {@code DropboxControlHandler}). If applying that plan changed the fingerprint, the dropbox would send a new
+     * report, which gets another plan, and so on: one report and one plan per carrier round trip, forever.
+     * Outcomes that matter (a plan that deleted or skipped something) still trigger a report through
+     * {@link ControlStateStore.Snapshot#hasUnreportedResults()}, and a deletion changes the bundle lists anyway.
      */
     static String fingerprint(InventoryReport r) throws DropboxControlException {
-        InventoryReport normalized = new InventoryReport(1, r.getLastAppliedPlanSeq(), r.getCapacityBytes(),
-                                                         r.getUsedBytes(), null, r.getUpstream(),
-                                                         r.getDownstream(), r.getPlanResults());
+        InventoryReport normalized = new InventoryReport(1, 0, r.getCapacityBytes(), r.getUsedBytes(), null,
+                                                         r.getUpstream(), r.getDownstream(), null);
         try {
             MessageDigest sha = MessageDigest.getInstance("SHA-256");
             return Base64.getUrlEncoder().withoutPadding().encodeToString(

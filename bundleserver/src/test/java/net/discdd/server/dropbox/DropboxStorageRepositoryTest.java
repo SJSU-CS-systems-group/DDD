@@ -231,6 +231,15 @@ class DropboxStorageRepositoryTest {
     }
 
     @Test
+    void planSeqStaysAboveTheDropboxsLastAppliedPlanAfterServerStateLoss() throws Exception {
+        // A dropbox that applied plan 40 under a server whose DropboxNode row has since been lost.
+        handler.handleUpstream(D, List.of(aduOf(DropboxControlCodec.encode(
+                new InventoryReport(9, 40, 1000, 10, null, List.of(), List.of(), List.of())))));
+        assertEquals(41, queuedPlans().get(0).getPlanSeq());
+        assertEquals(41, dropboxNodeRepository.findById(D).orElseThrow().lastPlanSeq);
+    }
+
+    @Test
     void malformedAndUnknownControlAdusAreDropped() throws Exception {
         handler.handleUpstream(D, List.of(aduOf("not json".getBytes(StandardCharsets.UTF_8)),
                                           aduOf("{\"type\":\"telemetry\",\"v\":1}".getBytes(StandardCharsets.UTF_8))));

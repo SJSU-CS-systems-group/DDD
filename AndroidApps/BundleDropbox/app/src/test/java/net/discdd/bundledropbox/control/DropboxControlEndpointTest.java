@@ -467,6 +467,15 @@ public class DropboxControlEndpointTest {
         assertTrue(inv2.getUpstream().isEmpty());
         assertEquals(List.of("u1"), inv2.getPlanResults().get(0).getDeleted());
         assertEquals(2, m.status().lastReportSeq());
+
+        // The server answers report 2 with an empty plan (it answers every report). Applying it must not queue a
+        // third report, or every plan would trigger a report and every report a plan, forever.
+        Path emptyPlanJar = server.send(clientId, 2, 2, plan(2, inv2.getReportSeq(), List.of()), own2.bundleId(),
+                                        work("out2"));
+        assertTrue(m.accept(emptyPlanJar, "transport-T1"));
+        assertEquals(2, m.status().lastPlanSeq());
+        m.ownBundleForVisit();
+        assertEquals(List.of(1L, 2L), events.reports);
         assertTrue(events.problems.isEmpty());
     }
 

@@ -27,6 +27,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -130,6 +131,26 @@ public class InventoryBuilderTest {
 
         ControlFixtures.commit(store, Direction.DOWNSTREAM, "d1", 10, null);
         assertNotEquals(a.fingerprint(), builder.build(state.snapshot(), 5L).fingerprint());
+    }
+
+    @Test
+    public void fingerprintIgnoresAppliedPlansSoAnEmptyPlanDoesNotTriggerAReport() throws Exception {
+        ControlFixtures.commit(store, Direction.UPSTREAM, "u1", 10, null);
+        InventoryBuilder.Draft a = builder.build(state.snapshot(), 1L);
+        state.recordReportQueued(a.report().getReportSeq(), a.fingerprint(), 1L);
+        PlanExecutor ex = new PlanExecutor(store, (d, id, r) -> true, state, () -> {}, () -> 9L);
+
+        ex.apply(new RetentionPlan(1, 1, null, List.of(), List.of(), null));
+        InventoryBuilder.Draft b = builder.build(state.snapshot(), 2L);
+        assertEquals(1, b.report().getLastAppliedPlanSeq());
+        assertEquals(1, b.report().getPlanResults().size()); // carried when a report goes anyway
+        assertEquals(a.fingerprint(), b.fingerprint());
+        assertFalse(state.snapshot().hasUnreportedResults());
+
+        ex.apply(new RetentionPlan(2, 1, null, List.of(new RetentionPlan.Deletion("gone", null)), List.of(), null));
+        assertTrue(state.snapshot().hasUnreportedResults()); // a NOT_FOUND outcome is worth a report
+        state.recordReportQueued(2, builder.build(state.snapshot(), 3L).fingerprint(), 3L);
+        assertFalse(state.snapshot().hasUnreportedResults());
     }
 
     @Test

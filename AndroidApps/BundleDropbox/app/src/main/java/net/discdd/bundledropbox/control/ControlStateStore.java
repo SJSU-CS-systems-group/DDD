@@ -33,8 +33,10 @@ import java.util.logging.Logger;
  *   <li>{@code pendingResults}: outcomes of applied plans that the server has not seen yet. Each one is sent in
  *       every inventory until a later plan is based on a report that carried it, which proves the server read it
  *       (bounded by {@link DropboxControl#MAX_PLAN_RESULTS}).</li>
- *   <li>{@code lastReportFingerprint}: lets the endpoint skip queuing an identical report, so an unchanged
- *       dropbox keeps re-offering the same bundle instead of burning a new bundle id per visit (Research/R7 §7).</li>
+ *   <li>{@code lastReportFingerprint}: a digest of the last queued report's inventory (see
+ *       {@code InventoryBuilder.fingerprint}). It lets the manager skip queuing an unchanged report, so an
+ *       unchanged dropbox keeps re-offering the same bundle instead of burning a new bundle id per visit
+ *       (Research/R7 §7).</li>
  *   <li>Totals of bundles deleted on server orders, per direction, for the Storage tab.</li>
  * </ul>
  *
@@ -202,6 +204,11 @@ public final class ControlStateStore {
             return p;
         }
 
+        /** @return true if the plan neither deleted nor skipped anything */
+        boolean isEmpty() {
+            return (deleted == null || deleted.isEmpty()) && (skippedIds == null || skippedIds.isEmpty());
+        }
+
         PendingResult copy() {
             PendingResult p = new PendingResult();
             p.planSeq = planSeq;
@@ -244,6 +251,7 @@ public final class ControlStateStore {
         private final long deletedDownstreamCount;
         private final long deletedDownstreamBytes;
         private final List<InventoryReport.PlanResult> pendingResults;
+        private final boolean hasUnreportedResults;
 
         private Snapshot(State s) {
             lastReportSeq = s.lastReportSeq;
@@ -259,6 +267,11 @@ public final class ControlStateStore {
             List<InventoryReport.PlanResult> results = new ArrayList<>();
             for (PendingResult r : s.pendingResults) results.add(r.toResult());
             pendingResults = Collections.unmodifiableList(results);
+            boolean unreported = false;
+            for (PendingResult r : s.pendingResults) {
+                if (r.firstReportSeq == 0 && !r.isEmpty()) unreported = true;
+            }
+            hasUnreportedResults = unreported;
         }
 
         /** @return reportSeq of the newest queued inventory, 0 if none yet */
@@ -293,5 +306,13 @@ public final class ControlStateStore {
 
         /** @return plan outcomes the server has not seen yet, oldest first */
         public List<InventoryReport.PlanResult> pendingResults() { return pendingResults; }
+
+        /**
+         * @return true if a plan deleted or skipped something and no queued report has carried that outcome yet.
+         *         Outcomes of plans that changed nothing do not count: the server answers every accepted report
+         *         with a plan, often an empty one, so reporting empty outcomes would make each plan trigger a
+         *         report and each report a plan, forever.
+         */
+        public boolean hasUnreportedResults() { return hasUnreportedResults; }
     }
 }

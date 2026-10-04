@@ -232,9 +232,13 @@ public class DropboxControlHandler implements InternalAppHandler {
      * in an unacknowledged bundle is harmless because plans carry only monotonic facts and the dropbox ignores any
      * {@code planSeq} it has already applied. The sequence number is reserved in the database before the ADU is
      * written, so a crash can leave a gap in the numbering but never reuse a number.
+     * <p>
+     * The next number is also kept above the report's {@code lastAppliedPlanSeq}: the dropbox applies only plans
+     * numbered higher than the last one it applied, so if this server lost its {@link DropboxNode} row (a wiped
+     * database) while the dropbox kept its endpoint, restarting at 1 would make the dropbox ignore every plan.
      */
     private void enqueuePlan(DropboxNode node, InventoryReport report, Decision decision, long now) throws IOException {
-        long planSeq = node.lastPlanSeq + 1;
+        long planSeq = Math.max(node.lastPlanSeq, report.getLastAppliedPlanSeq()) + 1;
         var plan = new RetentionPlan(planSeq,
                                      report.getReportSeq(),
                                      now,

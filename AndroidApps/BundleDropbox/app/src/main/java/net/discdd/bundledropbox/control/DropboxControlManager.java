@@ -24,9 +24,11 @@ import java.util.logging.Logger;
  *
  * <p>Flow per visit (06 Storage Management Design "Visit flow"):
  * <ol>
- *   <li>{@link #ownBundleForVisit()}: build an inventory; queue it only if it differs from the last one queued
- *       (or the last one is older than {@link #REPORT_REFRESH_MS}, so the server can re-evaluate time-based rules
- *       such as its unknown-bundle TTL); return the endpoint's newest bundle.</li>
+ *   <li>{@link #ownBundleForVisit()}: build an inventory; queue it only if the held bundles differ from the last
+ *       one queued, a plan deleted or skipped something that no report carried yet, or the last report is older
+ *       than {@link #REPORT_REFRESH_MS} (so the server can re-evaluate time-based rules such as its unknown-bundle
+ *       TTL); return the endpoint's newest bundle. Applying an empty plan alone never queues a report, which
+ *       keeps the report/plan exchange from running forever ({@link InventoryBuilder#fingerprint}).</li>
  *   <li>{@link #classify} / {@link #accept}: bundles addressed to the dropbox are processed by the endpoint, whose
  *       plans reach {@link PlanExecutor#apply} through the endpoint's sink.</li>
  * </ol>
@@ -169,7 +171,7 @@ public final class DropboxControlManager implements ControlChannel {
             InventoryBuilder.Draft draft = inventory.build(s, now);
             boolean changed = !draft.fingerprint().equals(s.lastReportFingerprint());
             boolean stale = now - s.lastReportAtMillis() >= REPORT_REFRESH_MS || now < s.lastReportAtMillis();
-            boolean queue = changed || stale;
+            boolean queue = changed || stale || s.hasUnreportedResults();
             // ADU first, state second: a crash in between re-uses this reportSeq for the next report, which the
             // server then ignores as "not newer" once; the following report (or the refresh) recovers.
             OwnBundle own = endpoint.prepareUpstream(queue ? draft.encoded() : null);
