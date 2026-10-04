@@ -41,6 +41,17 @@ public class StatusFormatTest {
     }
 
     @Test
+    public void operatorStopWinsOverTheLastSnapshot() {
+        // A stopped service publishes nothing more, so the persisted flag decides (audit m15).
+        assertEquals(OperatorState.STOPPED_BY_OPERATOR,
+                     StatusFormat.operatorState(status(CycleMode.HOSTING, 1L, 0), false, true));
+        assertEquals(OperatorState.STOPPED_BY_OPERATOR,
+                     StatusFormat.operatorState(status(CycleMode.STOPPED, 1L, 0), true, true));
+        assertEquals(OperatorState.ACCEPTING_CLIENTS,
+                     StatusFormat.operatorState(status(CycleMode.HOSTING, 1L, 0), false, false));
+    }
+
+    @Test
     public void bootstrapWithoutBlobShowsWaitingButStillShowsExchange() {
         assertEquals(OperatorState.WAITING_FOR_FIRST_VISIT,
                      StatusFormat.operatorState(status(CycleMode.VISIT_STARTING, 0, 0), false));

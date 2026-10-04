@@ -26,22 +26,35 @@ public final class DropboxPrefs {
     /** End VISIT early after a successful carrier exchange. */
     public static final String KEY_RETURN_AFTER_VISIT = "return_after_visit";
     /**
-     * Bump the advertised transport id after each successful visit so clients' "new data" filter
-     * (blobTimestamp &gt; lastExchange per transportId) sees a fresh transport (Research/R3).
+     * Advertise a new transport id at the start of every hosting period, so clients' "new data" filter
+     * (blobTimestamp &gt; lastExchange per transportId, Research/R3) lets each client exchange once per period
+     * ({@code service/HostPeriodIdRotator}).
      */
     public static final String KEY_ROTATE_ADVERTISED_ID = "rotate_advertised_id";
     /** Store capacity, megabytes. */
     public static final String KEY_MAX_STORAGE_MB = "max_storage_mb";
     /**
-     * Hold a partial wake lock while the service runs, so the cycle keeps running with the screen off (no
-     * Wi-Fi lock: see {@code DropboxService#applyKeepAwake}).
+     * Hold a partial wake lock while the relay is cycling (not paused or stopped). Without it the cycle's
+     * timers stop counting while the CPU sleeps with the screen off, so a role could outlast its period many
+     * times over (audit M1-M3). On by default for this always-plugged-in relay. No Wi-Fi lock: see
+     * {@code DropboxService#applyKeepAwake}.
      */
     public static final String KEY_KEEP_AWAKE = "keep_awake";
     /**
-     * Start the dropbox service when the phone finishes booting ({@code service/BootReceiver}), so an
-     * unattended relay comes back after a power cut or OS update without anyone opening the app.
+     * Start the dropbox service when the phone finishes booting or after an app update
+     * ({@code service/BootReceiver}), so an unattended relay comes back without anyone opening the app.
      */
     public static final String KEY_START_ON_BOOT = "start_on_boot";
+    /**
+     * Operator Pause, persisted so a sticky restart, a reboot or an update does not silently resume cycling
+     * (audit m15). Written by the service only; not a Settings-tab control.
+     */
+    public static final String KEY_PAUSED = "cycle_paused";
+    /**
+     * Operator Stop: the foreground service is stopped and is not started again by boot, app update or opening
+     * the app, until the operator presses Start (audit m15). Written by the service only.
+     */
+    public static final String KEY_RELAY_STOPPED = "relay_stopped";
 
     public static final int DEFAULT_CLIENT_PERIOD_S = (int) (CycleConfig.DEFAULT_CLIENT_PERIOD_MS / 1000);
     public static final int DEFAULT_TRANSPORT_PERIOD_S = (int) (CycleConfig.DEFAULT_TRANSPORT_PERIOD_MS / 1000);
@@ -49,7 +62,7 @@ public final class DropboxPrefs {
     public static final boolean DEFAULT_RETURN_AFTER_VISIT = CycleConfig.DEFAULT_RETURN_AFTER_VISIT;
     public static final boolean DEFAULT_ROTATE_ADVERTISED_ID = true;
     public static final int DEFAULT_MAX_STORAGE_MB = 1024;
-    public static final boolean DEFAULT_KEEP_AWAKE = false;
+    public static final boolean DEFAULT_KEEP_AWAKE = true;
     public static final boolean DEFAULT_START_ON_BOOT = true;
 
     private DropboxPrefs() {
@@ -88,5 +101,15 @@ public final class DropboxPrefs {
     public static long maxStorageBytes(SharedPreferences prefs) {
         int mb = prefs.getInt(KEY_MAX_STORAGE_MB, DEFAULT_MAX_STORAGE_MB);
         return (mb >= 1 ? mb : DEFAULT_MAX_STORAGE_MB) * 1024L * 1024L;
+    }
+
+    /** @return true if the operator paused the cycle ({@link #KEY_PAUSED}) */
+    public static boolean isPaused(SharedPreferences prefs) {
+        return prefs.getBoolean(KEY_PAUSED, false);
+    }
+
+    /** @return true if the operator stopped the relay ({@link #KEY_RELAY_STOPPED}) */
+    public static boolean isRelayStopped(SharedPreferences prefs) {
+        return prefs.getBoolean(KEY_RELAY_STOPPED, false);
     }
 }

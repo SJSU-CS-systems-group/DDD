@@ -153,8 +153,24 @@ final class RpcTestFakes {
         }
 
         @Override
-        public synchronized boolean hasCapacityFor(long bytes) {
+        public synchronized boolean hasCapacityFor(Direction d, long bytes) {
             return stats().usedBytes() + bytes <= capacityBytes;
+        }
+
+        @Override
+        public synchronized boolean touch(Direction d, String bundleId) {
+            BundleRecord r = committed.get(d).get(bundleId);
+            if (r == null) return false;
+            committed.get(d).put(bundleId, r.withLastSeen(System.currentTimeMillis()));
+            return true;
+        }
+
+        /** Adds a DOWNSTREAM record with explicit jar metadata (client tag, build time, last seen). */
+        synchronized void putDownstream(String id, byte[] bytes, String clientTag, long builtAt, long committedAt,
+                                        long lastSeen) throws IOException {
+            Files.write(dirs.get(Direction.DOWNSTREAM).resolve(id), bytes);
+            committed.get(Direction.DOWNSTREAM).put(id, new BundleRecord(id, Direction.DOWNSTREAM, bytes.length,
+                                                                         committedAt, lastSeen, clientTag, builtAt));
         }
 
         @Override

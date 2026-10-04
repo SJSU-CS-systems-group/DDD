@@ -22,6 +22,11 @@ import java.util.logging.Logger;
  * a truncated file. In particular a truncated {@code recencyBlob.bin} would make the dropbox unable to
  * host at all (the stock client aborts without a SUCCESS recency blob, Research/R3 §2).
  *
+ * <p>Every rename is followed by an fsync of the destination directory ({@link #fsyncDirectory}): fsyncing
+ * the file makes its bytes durable, but the new directory entry is only durable once the directory itself is
+ * flushed. Without it a power cut can roll the rename back, losing an upload already acknowledged SUCCESS
+ * or a newer recency blob (Audit m8).
+ *
  * <p>Package-private: an implementation detail of {@code store/}.
  */
 final class AtomicFiles {
@@ -69,6 +74,23 @@ final class AtomicFiles {
         } catch (AtomicMoveNotSupportedException e) {
             logger.log(Level.WARNING, "Atomic move not supported, falling back to plain replace: " + target);
             Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+        }
+        fsyncDirectory(target.toAbsolutePath().getParent());
+    }
+
+    /**
+     * Makes directory-entry changes (a rename into {@code dir}) durable. Best effort: on Linux/Android a
+     * directory opens read-only and {@code fsync} works; platforms that refuse to open a directory throw, and
+     * that is ignored because the rename itself already happened.
+     *
+     * @param dir the directory to flush; null is ignored
+     */
+    static void fsyncDirectory(Path dir) {
+        if (dir == null) return;
+        try (FileChannel ch = FileChannel.open(dir, StandardOpenOption.READ)) {
+            ch.force(true);
+        } catch (IOException | RuntimeException e) {
+            logger.log(Level.FINE, "Directory fsync not supported for " + dir + ": " + e);
         }
     }
 

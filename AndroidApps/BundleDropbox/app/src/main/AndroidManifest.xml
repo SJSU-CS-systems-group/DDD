@@ -43,25 +43,33 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.DayNight">
 
+        <!-- dataSync is compliant at targetSdk 34. FUTURE (audit i8): at targetSdk 35+ dataSync is limited to
+             6 h per 24 h and may not start from BOOT_COMPLETED; switch to connectedDevice
+             (FOREGROUND_SERVICE_CONNECTED_DEVICE) before raising targetSdk. -->
         <service
             android:name="net.discdd.bundledropbox.service.DropboxService"
             android:enabled="true"
             android:foregroundServiceType="dataSync"
             android:exported="false"/>
 
-        <!-- Starts DropboxService after boot when "Start on boot" is on. Exported only so the system can
-             deliver BOOT_COMPLETED; it ignores every other action. -->
+        <!-- Starts DropboxService after boot and after an app update (Android does not restart a sticky
+             service whose package was replaced) when "Start automatically" is on and the operator has not
+             pressed Stop. Exported only so the system can deliver these broadcasts; it ignores every other
+             action. No LOCKED_BOOT_COMPLETED: all dropbox state is in credential-encrypted storage. -->
         <receiver
             android:name="net.discdd.bundledropbox.service.BootReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
             </intent-filter>
         </receiver>
 
+        <!-- singleTop: the notification reopens the existing instance instead of stacking a second one. -->
         <activity
             android:name="net.discdd.bundledropbox.BundleDropboxActivity"
+            android:launchMode="singleTop"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>

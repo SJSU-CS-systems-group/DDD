@@ -32,4 +32,14 @@ public interface CycleListener {
      */
     default void onCycleError(CycleMode mode, String reason) {
     }
+
+    /**
+     * The operator pause flag changed ({@code RoleCycleController.pause()}/{@code resume()}). The service
+     * persists it so a sticky restart, reboot or app update does not silently resume cycling against the
+     * operator's choice (Audit m15); on the next start it calls {@code pause()} before {@code start()}.
+     *
+     * @param paused the new value
+     */
+    default void onPausedChanged(boolean paused) {
+    }
 }

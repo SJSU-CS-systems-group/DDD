@@ -1,6 +1,7 @@
 package net.discdd.bundledropbox.viewmodels
 
 import android.app.Application
+import android.content.SharedPreferences
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -10,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import net.discdd.bundledropbox.DropboxControls
+import net.discdd.bundledropbox.DropboxPrefs
 import net.discdd.bundledropbox.DropboxServiceManager
 import net.discdd.bundledropbox.DropboxStatusRepository
 import net.discdd.bundledropbox.status.DropboxStatus
@@ -17,8 +19,8 @@ import java.util.logging.Level
 import java.util.logging.Logger
 
 /**
- * Backs the Status tab: exposes the latest [DropboxStatus] plus the operator "paused" flag, and
- * forwards Pause/Resume, "Visit transport now" and "Host now" to the service.
+ * Backs the Status tab: exposes the latest [DropboxStatus] plus the operator "paused" and "stopped"
+ * flags, and forwards Pause/Resume, Stop/Start, "Visit transport now" and "Host now" to the service.
  *
  * Every service call runs on `Dispatchers.IO` (see [DropboxControls] threading note). The countdown
  * ticker lives in the composable, not here, so the view model holds no timers.
@@ -41,7 +43,23 @@ class StatusViewModel(application: Application) : AndroidViewModel(application) 
      */
     val paused: StateFlow<Boolean> = _paused.asStateFlow()
 
+    private val prefs: SharedPreferences = DropboxPrefs.get(application)
+    private val _relayStopped = MutableStateFlow(DropboxPrefs.isRelayStopped(prefs))
+
+    /**
+     * true while the operator has stopped the relay. Read from the persisted flag the service writes,
+     * because a stopped service publishes no further status.
+     */
+    val relayStopped: StateFlow<Boolean> = _relayStopped.asStateFlow()
+
+    /** Must be a field: SharedPreferences holds listeners weakly. */
+    private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { p, key ->
+        if (key == null || key == DropboxPrefs.KEY_RELAY_STOPPED) _relayStopped.value = DropboxPrefs.isRelayStopped(p)
+    }
+
     init {
+        prefs.registerOnSharedPreferenceChangeListener(prefsListener)
+
         viewModelScope.launch(Dispatchers.IO) {
             combine(status, serviceConnected) { _, _ -> Unit }.collect {
                 DropboxServiceManager.controls()?.let { c ->
@@ -58,6 +76,18 @@ class StatusViewModel(application: Application) : AndroidViewModel(application) 
     fun visitTransportNow() = call("forceVisitNow") { it.forceVisitNow() }
 
     fun hostNow() = call("forceHostNow") { it.forceHostNow() }
+
+    fun stopRelay() = call("stopRelay") { it.stopRelay(); _relayStopped.value = true }
+
+    /** Start after Stop; goes through a start command, so it works even while no service is bound. */
+    fun startRelay() {
+        _relayStopped.value = false
+        DropboxServiceManager.startRelay(getApplication())
+    }
+
+    override fun onCleared() {
+        prefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
+    }
 
     private fun call(name: String, action: (DropboxControls) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {

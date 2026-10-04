@@ -1,11 +1,13 @@
 package net.discdd.bundledropbox.visit;
 
+import com.google.protobuf.ByteString;
 import net.discdd.bundledropbox.store.BundleRecord;
 import net.discdd.bundledropbox.store.Direction;
 import net.discdd.bundledropbox.store.DropboxPaths;
 import net.discdd.bundledropbox.store.FileRecencyBlobStore;
 import net.discdd.bundledropbox.store.FileRelayStore;
 import net.discdd.bundledropbox.store.JsonForwardLedger;
+import net.discdd.bundledropbox.store.ServerTrust;
 import net.discdd.bundledropbox.store.Staged;
 import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.grpc.GetRecencyBlobResponse;
@@ -17,6 +19,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.whispersystems.libsignal.ecc.Curve;
+import org.whispersystems.libsignal.ecc.ECKeyPair;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -162,6 +166,8 @@ public class TransportVisitClientTest {
         assertEquals(0, again.downloaded());
         assertEquals(2, again.skipped());
         assertEquals(1, carrier.uploads.get());
+        // Audit M9: re-offered ids are touched, which keeps them in the HOST PSI snapshot.
+        assertEquals(List.of("d1", "d2"), store.touched.stream().sorted().collect(Collectors.toList()));
     }
 
     @Test(timeout = 60_000)
@@ -287,20 +293,47 @@ public class TransportVisitClientTest {
         assertSameBytes(bigDown, store.pathFor(Direction.DOWNSTREAM, "bigDown"));
     }
 
+    /**
+     * Audit m6: a stock transport creates the client-bound file before its own server download and leaves it
+     * empty or truncated if that fails. Such files are skipped; they must not mark the whole visit failed.
+     */
     @Test(timeout = 60_000)
-    public void nonBundleFileOnCarrierIsCountedAndSkipped() throws Exception {
+    public void emptyOrNonBundleFilesOnCarrierAreSkippedNotErrors() throws Exception {
         byte[] junk = new byte[1000];
         new Random(1).nextBytes(junk);
         Files.write(carrier.toClient.resolve("junk"), junk);
+        Files.write(carrier.toClient.resolve("empty"), new byte[0]);
         carrierHolds("d1", 100);
+
+        VisitResult r = visit();
+
+        assertTrue(r.toString(), r.ok());
+        assertEquals(0, r.errors());
+        assertEquals(2, r.skipped());
+        assertEquals(1, r.downloaded());
+        assertEquals(List.of("d1"), downstreamIds());
+        assertEquals(0, store.stagingFileCount());
+    }
+
+    /** Audit m7 + M10: the DOWNSTREAM quota is enforced while the bundle streams in, not just before it. */
+    @Test(timeout = 60_000)
+    public void downloadThatWouldExceedTheDownstreamQuotaIsCutOffMidStream() throws Exception {
+        carrierHolds("big", 200_000);
+        store.downstreamQuotaBytes = 50_000;
 
         VisitResult r = visit();
 
         assertFalse(r.ok());
         assertEquals(1, r.errors());
-        assertEquals(1, r.downloaded());
-        assertEquals(List.of("d1"), downstreamIds());
-        assertEquals(0, store.stagingFileCount());
+        assertTrue(r.lastError(), r.lastError().contains("does not fit"));
+        assertEquals(0, r.downloaded());
+        assertTrue(downstreamIds().isEmpty());
+        assertEquals("partial download discarded", 0, store.stagingFileCount());
+
+        store.downstreamQuotaBytes = Long.MAX_VALUE / 4;   // space freed: the next visit gets it
+        VisitResult next = visit();
+        assertTrue(next.toString(), next.ok());
+        assertEquals(List.of("big"), downstreamIds());
     }
 
     @Test(timeout = 60_000)
@@ -382,13 +415,15 @@ public class TransportVisitClientTest {
         DropboxPaths paths = new DropboxPaths(tmp.newFolder("realRoot").toPath());
         FileRelayStore realStore = new FileRelayStore(paths, 64L * 1024 * 1024);
         JsonForwardLedger realLedger = new JsonForwardLedger(paths);
-        FileRecencyBlobStore realRecency = new FileRecencyBlobStore(paths);
+        ECKeyPair server = Curve.generateKeyPair();
+        FileRecencyBlobStore realRecency =
+                new FileRecencyBlobStore(paths, new ServerTrust(server.getPublicKey(), System::currentTimeMillis));
         Staged up = realStore.beginStaging(Direction.UPSTREAM);
         try (var out = up.open()) {
             Files.copy(BundleFixtures.bundleJar(fixtures, "realUp", "realUp", 1000), out);
         }
         realStore.commit(up, "realUp");
-        carrier.recency = successBlob(7_000);
+        carrier.recency = signedBlob(server, 7_000);
         Path d1 = carrierHolds("d1", 2000);
         TransportVisitClient real = new TransportVisitClient(realStore,
                                                              realLedger,
@@ -400,12 +435,57 @@ public class TransportVisitClientTest {
         VisitResult r = real.visit(InetAddress.getLoopbackAddress(), carrier.port, CARRIER, () -> true);
 
         assertTrue(r.toString(), r.ok());
+        assertTrue(r.recencyFetched());
         assertTrue(r.recencyUpdated());
         assertEquals(7_000, realRecency.currentTimestamp());
         assertTrue(realLedger.wasForwardedTo("realUp", CARRIER));
         assertSameBytes(realStore.pathFor(Direction.UPSTREAM, "realUp"), carrier.toServer.resolve("realUp"));
         assertSameBytes(d1, realStore.pathFor(Direction.DOWNSTREAM, "d1"));
         assertEquals(0, realStore.stats().stagedBytes());
+    }
+
+    /**
+     * Audit M5: a carrier synced to another deployment's server serves a SUCCESS blob our clients would reject.
+     * It is neither stored nor counted as "recency fetched" (which drives id rotation and the bootstrap early
+     * return), while its bundles are still exchanged as usual.
+     */
+    @Test(timeout = 60_000)
+    public void foreignServerBlobIsNotTrustedOrStored() throws Exception {
+        DropboxPaths paths = new DropboxPaths(tmp.newFolder("trustRoot").toPath());
+        ECKeyPair ours = Curve.generateKeyPair();
+        ECKeyPair foreign = Curve.generateKeyPair();
+        FileRecencyBlobStore realRecency =
+                new FileRecencyBlobStore(paths, new ServerTrust(ours.getPublicKey(), System::currentTimeMillis));
+        TransportVisitClient real = new TransportVisitClient(store, ledger, realRecency, CarrierChannelFactory.tls(null),
+                                                             VisitOptions.DEFAULTS.withProbe(3, 50),
+                                                             System::currentTimeMillis);
+        carrier.recency = signedBlob(foreign, 9_000);
+        carrierHolds("d1", 100);
+
+        VisitResult r = real.visit(InetAddress.getLoopbackAddress(), carrier.port, CARRIER, () -> true);
+
+        assertTrue(r.toString(), r.ok());
+        assertFalse(r.recencyFetched());
+        assertFalse(r.recencyUpdated());
+        assertEquals(0, realRecency.currentTimestamp());
+        assertEquals(List.of("d1"), downstreamIds());
+
+        carrier.recency = signedBlob(ours, 8_000);
+        VisitResult good = real.visit(InetAddress.getLoopbackAddress(), carrier.port, CARRIER, () -> true);
+        assertTrue(good.recencyFetched());
+        assertTrue(good.recencyUpdated());
+        assertEquals(8_000, realRecency.currentTimestamp());
+    }
+
+    private static GetRecencyBlobResponse signedBlob(ECKeyPair signer, long ts) throws Exception {
+        RecencyBlob blob = RecencyBlob.newBuilder().setBlobTimestamp(ts).setSenderId("sha1-of-T").build();
+        return GetRecencyBlobResponse.newBuilder()
+                .setStatus(RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS)
+                .setRecencyBlob(blob)
+                .setRecencyBlobSignature(ByteString.copyFrom(Curve.calculateSignature(signer.getPrivateKey(),
+                                                                                      blob.toByteArray())))
+                .setServerPublicKey(ByteString.copyFrom(signer.getPublicKey().serialize()))
+                .build();
     }
 
     @Test

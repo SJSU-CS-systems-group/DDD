@@ -39,7 +39,7 @@ data class StorageExtras(
 /**
  * Backs the Storage tab. Per-direction counts and bytes come from [DropboxStatusRepository] (the
  * service publishes `RelayStore.stats()` into it), the capacity from [DropboxPrefs], and the two
- * operator "clear" actions go to the service.
+ * operator "clear" actions plus "reset recency blob" go to the service.
  *
  * v1 never deletes bundles on its own (KeepAllRetentionPolicy); the clear buttons are the only
  * deletion path. FUTURE: server keep/delete control ADUs drive `RetentionPolicy` + `RelayStore.delete`
@@ -84,6 +84,9 @@ class StorageViewModel(application: Application) : AndroidViewModel(application)
 
     /** Deletes all pickups (DOWNSTREAM, server-to-client) bundles via the service. */
     fun clearDownstream() = clear(R.string.storage_cleared_downstream) { it.clearDownstream() }
+
+    /** Forgets the stored recency blob via the service (audit M6 operator recovery). */
+    fun resetRecencyBlob() = clear(R.string.storage_recency_reset_done) { it.resetRecencyBlob() }
 
     fun clearMessage() = _extras.update { it.copy(message = null) }
 

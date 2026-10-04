@@ -7,6 +7,8 @@ import com.google.gson.JsonParser;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
@@ -28,7 +30,9 @@ import java.util.logging.Logger;
  * of delivery: the client might still discard the bundle (e.g. not its newest, Research/R2 §6).
  *
  * <p>JSON Lines rather than one JSON document so recording is a cheap append that never rewrites
- * history; a torn last line after a crash is skipped by {@link #readAll()}.
+ * history; a torn last line after a crash is skipped by {@link #readAll()}. Because a torn line has no
+ * trailing newline, the next append first terminates it ({@link #needsLineBreak}); otherwise the new record
+ * would be glued onto the torn one and both lines would be lost (Audit i4).
  *
  * <p>FUTURE: basis for client-ACK report ADUs sent through the dropbox's own control endpoint, so the
  * server can issue keep/delete decisions ({@link RetentionPolicy}). FUTURE: rotate or compact the file
@@ -66,13 +70,28 @@ public final class FileDeliveryLog implements DeliveryLog {
         o.addProperty("servedAt", atMillis);
         try {
             Files.createDirectories(file.toAbsolutePath().getParent());
+            boolean lineBreakFirst = needsLineBreak(file);
             try (BufferedWriter w = Files.newBufferedWriter(file, StandardCharsets.UTF_8, StandardOpenOption.CREATE,
                                                             StandardOpenOption.WRITE, StandardOpenOption.APPEND)) {
+                if (lineBreakFirst) w.write('\n');
                 w.write(GSON.toJson(o));
                 w.write('\n');
             }
         } catch (IOException e) {
             logger.log(Level.WARNING, "Could not append to delivery log " + file, e);
+        }
+    }
+
+    /** @return true if {@code f} exists, is non-empty and does not end in a newline (a torn last line). */
+    private static boolean needsLineBreak(Path f) throws IOException {
+        try (FileChannel ch = FileChannel.open(f, StandardOpenOption.READ)) {
+            long size = ch.size();
+            if (size == 0) return false;
+            ByteBuffer last = ByteBuffer.allocate(1);
+            ch.read(last, size - 1);
+            return last.get(0) != '\n';
+        } catch (NoSuchFileException e) {
+            return false;
         }
     }
 

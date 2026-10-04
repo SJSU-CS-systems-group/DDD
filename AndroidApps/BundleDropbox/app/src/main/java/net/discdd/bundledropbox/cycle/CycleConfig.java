@@ -6,7 +6,8 @@ package net.discdd.bundledropbox.cycle;
  *
  * <p>Defaults come from 02 Decisions: client-serving dwell 60 s, transport search/exchange dwell 30 s,
  * drain cap 15 s, return early after a successful visit. Dwell timers start only when the radio reports
- * the mode is ready; the drain cap is measured from dwell expiry and is never extended.
+ * the mode is ready; the drain cap is measured from the start of the drain (the dwell expiry, or the moment
+ * a late expiry is detected) and is never extended.
  *
  * <p>Change at runtime with withers and {@code RoleCycleController.updateConfig(CycleConfig)}.
  */
@@ -56,7 +57,7 @@ public final class CycleConfig {
     /** @return VISITING dwell in ms. */
     public long transportPeriodMs() { return transportPeriodMs; }
 
-    /** @return drain cap in ms, measured from dwell expiry. */
+    /** @return drain cap in ms, measured from the start of the drain (see class docs). */
     public long drainCapMs() { return drainCapMs; }
 
     /** @return whether VISIT ends early after a successful carrier exchange. */

@@ -33,7 +33,9 @@
     <string name="op_waiting_for_first_visit">Waiting for first transport visit (no recency blob)</string>
     <string name="op_waiting_for_first_visit_explain">Clients cannot be served until a transport provides a server-signed recency blob. Searching for a transport.</string>
     <string name="op_paused">Paused</string>
-    <string name="op_paused_explain">The cycle is paused by the operator. Wi-Fi Direct is idle.</string>
+    <string name="op_paused_explain">The cycle is paused by the operator. Wi-Fi Direct is idle. The pause is kept across restarts.</string>
+    <string name="op_stopped">Stopped</string>
+    <string name="op_stopped_explain">The operator stopped the dropbox. It does not relay, and it does not start again after a reboot or update until you press Start.</string>
     <string name="op_not_running">Not running</string>
     <string name="op_not_running_explain">The role cycle has not started yet.</string>
     <string name="op_needs_attention">Needs attention</string>
@@ -49,6 +51,11 @@
     <string name="status_resume">Resume</string>
     <string name="status_visit_now">Visit transport now</string>
     <string name="status_host_now">Host now</string>
+    <string name="status_stop_relay">Stop dropbox</string>
+    <string name="status_start_relay">Start dropbox</string>
+    <string name="status_confirm_stop_title">Stop the dropbox?</string>
+    <string name="status_confirm_stop">The dropbox stops serving clients and visiting transports, and stays stopped after a reboot or app update until you press Start. Stored bundles are kept.</string>
+    <string name="status_confirm_stop_ok">Stop</string>
     <string name="status_advertised_id">Advertised ID</string>
     <string name="status_recency_blob">Recency blob</string>
     <string name="status_recency_blob_none">none yet</string>
@@ -102,11 +109,15 @@
     <string name="storage_cleared_upstream">Deposited bundles cleared.</string>
     <string name="storage_cleared_downstream">Pickup bundles cleared.</string>
     <string name="storage_clear_failed">Clear failed: %1$s</string>
+    <string name="storage_recency_reset">Reset recency blob</string>
+    <string name="storage_recency_reset_confirm">Forget the stored recency blob? Clients stop seeing this dropbox until a transport synced with the right server is visited. Use this only if clients reject the dropbox (for example after a transport from another server was visited).</string>
+    <string name="storage_recency_reset_done">Recency blob reset. Visiting transports for a new one.</string>
     <string name="storage_future_title">Server-managed cleanup (future)</string>
     <string name="storage_future_text">In this version the dropbox keeps every bundle until you clear it here. Later, the server will tell the dropbox which bundles to keep or delete, based on what clients have acknowledged.</string>
 
     <!-- Settings tab -->
     <string name="settings_timers">Cycle timers</string>
+    <string name="settings_timers_note">Timer changes take effect when the next client or transport period starts. Use Visit transport now or Host now on the Status tab to switch at once.</string>
     <string name="settings_client_period">Client period (s)</string>
     <string name="settings_client_period_help">How long to host clients before visiting a transport.</string>
     <string name="settings_transport_period">Transport period (s)</string>
@@ -120,15 +131,15 @@
     <string name="settings_error_storage">Enter 1 to 1048576 MB.</string>
     <string name="settings_save">Save</string>
     <string name="settings_revert">Revert</string>
-    <string name="settings_saved">Saved</string>
+    <string name="settings_saved">Saved. Takes effect from the next period.</string>
     <string name="settings_behavior">Behavior</string>
     <string name="settings_return_after_visit">Return after visit</string>
     <string name="settings_return_after_visit_help">Go back to hosting clients as soon as a transport exchange succeeds.</string>
     <string name="settings_rotate_id">Rotate advertised ID</string>
-    <string name="settings_rotate_id_help">Advertise a new ID after each successful visit so clients treat the dropbox as having new data.</string>
+    <string name="settings_rotate_id_help">Advertise a new ID at the start of every client period. Stock clients exchange at most once per ID until the server data changes, so this lets each nearby client exchange once per period.</string>
     <string name="settings_keep_awake">Keep awake</string>
-    <string name="settings_start_on_boot">Start on boot</string>
-    <string name="settings_start_on_boot_help">Start relaying automatically after the phone restarts, without opening the app.</string>
-    <string name="settings_keep_awake_help">Keep the CPU awake while the service runs, so the role cycle keeps switching with the screen off (for plugged-in use).</string>
+    <string name="settings_start_on_boot">Start automatically</string>
+    <string name="settings_start_on_boot_help">Start relaying after the phone restarts or the app is updated, without opening the app (not after you press Stop). With a PIN or pattern lock, unlock once after a restart.</string>
+    <string name="settings_keep_awake_help">Recommended for a plugged-in relay. Holds a partial wake lock while the dropbox is cycling (not paused or stopped). Without it, Android suspends the CPU with the screen off, the role timers stop counting, and the dropbox can stay in one role far longer than its period.</string>
     <string name="settings_reset_defaults">Reset all to defaults</string>
 </resources>

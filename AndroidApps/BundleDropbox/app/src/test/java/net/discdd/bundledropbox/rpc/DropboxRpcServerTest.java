@@ -241,6 +241,56 @@ public class DropboxRpcServerTest {
         assertEquals(1234, blob.getRecencyBlob().getBlobTimestamp());
     }
 
+    /**
+     * Audit m20: the per-HOST-role path. Production never restarts the server between roles; it calls
+     * {@code endClientSessions()} at the end of each HOST role, which must release every session token while
+     * the listener keeps running and drop PSI sessions so the next dwell starts a fresh PSI.
+     */
+    @Test
+    public void endClientSessionsReleasesSessionsAndPsiStateWithoutStoppingTheServer() throws Exception {
+        store.putDownstream("reply-bundle", "hello".getBytes(StandardCharsets.UTF_8));
+        ManagedChannel ch = channel();
+        blocking(ch).getRecencyBlob(GetRecencyBlobRequest.getDefaultInstance());
+        var psi = new BundleOwnershipPSI();
+        BigInteger a = psi.generateSecret();
+        var req = PSIRequest.newBuilder();
+        for (BigInteger v : psi.clientBlindBundleIds(List.of("reply-bundle"), a)) {
+            req.addClientBlindedValues(PSIElement.newBuilder().setValue(ByteString.copyFrom(v.toByteArray())));
+        }
+        PSIResponse pr = blocking(ch).psiExchange(req.build());
+        assertEquals(1, server.activeSessions());
+        assertEquals(1, server.exchangeService().psiSessionCount());
+
+        // HOST role ends: admissions close, then the endpoint ends client sessions.
+        gate.closeAdmissions();
+        server.endClientSessions();
+        assertTrue("listener keeps running across roles", server.isRunning());
+        assertEquals(0, server.activeSessions());
+        assertEquals(0, gate.activeCount());
+        assertEquals(0, server.exchangeService().psiSessionCount());
+
+        // The same client is a new session now, refused while the gate is closed...
+        try {
+            blocking(ch).getRecencyBlob(GetRecencyBlobRequest.getDefaultInstance());
+            fail("expected UNAVAILABLE");
+        } catch (StatusRuntimeException e) {
+            assertEquals(Status.Code.UNAVAILABLE, e.getStatus().getCode());
+        }
+
+        // ...and in the next HOST dwell its old PSI session is gone, so it must run a fresh PSI.
+        gate.openAdmissions();
+        try {
+            Iterator<BundleDownloadResponse> it = blocking(ch).psiDownloadBundle(PSIDownloadRequest.newBuilder()
+                    .setSessionId(pr.getSessionId())
+                    .setTransportIndex(0)
+                    .build());
+            while (it.hasNext()) it.next();
+            fail("expected NOT_FOUND");
+        } catch (StatusRuntimeException e) {
+            assertEquals(Status.Code.NOT_FOUND, e.getStatus().getCode());
+        }
+    }
+
     private static void waitFor(java.util.function.BooleanSupplier cond) throws InterruptedException {
         long deadline = System.currentTimeMillis() + 5_000;
         while (!cond.getAsBoolean()) {

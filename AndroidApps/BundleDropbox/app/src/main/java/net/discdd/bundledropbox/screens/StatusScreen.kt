@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -18,10 +19,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -43,7 +48,8 @@ import java.util.Date
  * Status tab: the operator's at-a-glance view of the role cycle.
  *
  * Shows a large operator label ([OperatorState]), a live countdown to the mode deadline with a progress
- * bar, identity / recency-blob / queue / last-visit details, the last error, and the cycle controls.
+ * bar, identity / recency-blob / queue / last-visit details, the last error, and the cycle controls
+ * (Pause/Resume, Visit now, Host now, and Stop/Start for the whole relay).
  * Like the transport's Upload tab, the mode card is wrapped in android-core's [EasterEgg] (7 taps in
  * 3 s) to toggle the admin tabs.
  *
@@ -59,6 +65,8 @@ fun StatusScreen(
     val status by viewModel.status.collectAsState()
     val paused by viewModel.paused.collectAsState()
     val connected by viewModel.serviceConnected.collectAsState()
+    val stopped by viewModel.relayStopped.collectAsState()
+    var confirmStop by remember { mutableStateOf(false) }
 
     // 1 s ticker for the countdown. DropboxStatus deadlines are on the monotonic
     // SystemClock.elapsedRealtime() clock (the cycle Clock), so "now" must be read from the same clock;
@@ -70,7 +78,7 @@ fun StatusScreen(
         }
     }
 
-    val op = StatusFormat.operatorState(status, paused)
+    val op = StatusFormat.operatorState(status, paused, stopped)
 
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
@@ -82,15 +90,23 @@ fun StatusScreen(
         ) {
             EasterEgg(content = { ModeCard(status, op, nowMono) }, onToggle = onToggleEasterEgg)
 
-            CycleControls(
-                    status = status,
-                    paused = paused,
-                    enabled = connected,
-                    onPause = viewModel::pause,
-                    onResume = viewModel::resume,
-                    onVisitNow = viewModel::visitTransportNow,
-                    onHostNow = viewModel::hostNow,
-            )
+            if (stopped) {
+                // A stopped relay has no running cycle to control; Start goes through a start command,
+                // so it does not need a bound service.
+                Button(onClick = viewModel::startRelay, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.status_start_relay))
+                }
+            } else {
+                CycleControls(
+                        status = status,
+                        paused = paused,
+                        enabled = connected,
+                        onPause = viewModel::pause,
+                        onResume = viewModel::resume,
+                        onVisitNow = viewModel::visitTransportNow,
+                        onHostNow = viewModel::hostNow,
+                )
+            }
 
             DetailsCard(status)
             // FUTURE: once server destination manifests replace download-all and the dropbox registers via
@@ -107,7 +123,33 @@ fun StatusScreen(
                     }
                 }
             }
+
+            if (!stopped) {
+                // Last on the screen and behind a confirmation: it ends the relay until Start is pressed.
+                TextButton(onClick = { confirmStop = true }, enabled = connected, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.status_stop_relay), color = MaterialTheme.colorScheme.error)
+                }
+            }
         }
+    }
+
+    if (confirmStop) {
+        AlertDialog(
+                title = { Text(stringResource(R.string.status_confirm_stop_title)) },
+                text = { Text(stringResource(R.string.status_confirm_stop)) },
+                onDismissRequest = { confirmStop = false },
+                confirmButton = {
+                    TextButton(onClick = {
+                        confirmStop = false
+                        viewModel.stopRelay()
+                    }) {
+                        Text(stringResource(R.string.status_confirm_stop_ok), color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { confirmStop = false }) { Text(stringResource(R.string.cancel)) }
+                },
+        )
     }
 }
 

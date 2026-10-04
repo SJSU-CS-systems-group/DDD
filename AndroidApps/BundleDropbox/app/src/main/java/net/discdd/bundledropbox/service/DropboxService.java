@@ -25,6 +25,7 @@ import net.discdd.bundledropbox.DropboxControls;
 import net.discdd.bundledropbox.DropboxPrefs;
 import net.discdd.bundledropbox.DropboxStatusRepository;
 import net.discdd.bundledropbox.DropboxWifiState;
+import net.discdd.bundledropbox.UserLog;
 import net.discdd.bundledropbox.R;
 import net.discdd.bundledropbox.cycle.ActivityGate;
 import net.discdd.bundledropbox.cycle.Clock;
@@ -41,31 +42,32 @@ import net.discdd.bundledropbox.store.FileDeliveryLog;
 import net.discdd.bundledropbox.store.FileRecencyBlobStore;
 import net.discdd.bundledropbox.store.FileRelayStore;
 import net.discdd.bundledropbox.store.JsonForwardLedger;
+import net.discdd.bundledropbox.store.ServerTrust;
 import net.discdd.bundledropbox.visit.TransportVisitClient;
 import net.discdd.bundledropbox.visit.VisitResult;
 import net.discdd.bundledropbox.wifi.DropboxWifiStateBridge;
 import net.discdd.bundledropbox.wifi.HostingEndpoint;
 import net.discdd.bundledropbox.wifi.WifiDirectRadioDriver;
-import net.discdd.screens.LogFragment;
-import net.discdd.utils.UserLogRepository;
 import net.discdd.utils.UserLogRepository.UserLogType;
 
 import java.io.File;
-import java.net.InetAddress;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.function.BooleanSupplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * The dropbox runtime: a started, sticky foreground service that wires every module together and keeps
  * the oscillating Wi-Fi Direct role cycle running with the screen off (02 Decisions: always plugged in,
- * foreground service, optional keep-awake). Lifecycle adapted from {@code BundleTransportService}.
+ * foreground service, keep-awake). Lifecycle adapted from {@code BundleTransportService}.
+ *
+ * <p>Operator lifecycle: Pause idles the radio but keeps the service; Stop ({@link #stopRelay}) also ends the
+ * foreground service, and nothing (boot, app update, opening the app) starts it again until the operator
+ * presses Start ({@link #ACTION_START}). Both are persisted in {@link DropboxPrefs} (audit m15).
  *
  * <h2>Wiring (03 Architecture)</h2>
  * <pre>
@@ -74,12 +76,14 @@ import java.util.logging.Logger;
  *                      ├─ JsonForwardLedger (meta/forwarded.json) ──────────┼─ TransportVisitClient (VISIT)
  *                      ├─ FileDeliveryLog (meta/delivery-log.jsonl) ────────┘
  *                      └─ DropboxIdentity (GrpcSecurity/ keys, baseId, advertised-id generation)
+ *  ServerKeys (meta/serverKeys/ if imported, else android-core R.raw.server_*) ──▶ ServerTrust ──▶ recency store
  *
  *  RoleCycleController ── RadioDriver ──▶ WifiDirectRadioDriver
  *        │ gate()                             ├─ DropboxWifiHost   ── HostingEndpoint ──▶ DropboxRpcServer
- *        ▼                                    └─ DropboxWifiJoiner ── VisitRunner ──────▶ {@link #runVisit}
- *   ActivityGate ◀── ClientSessionTracker (one token per client IP) / visit worker (one token per visit)
+ *        ▼                                    └─ DropboxWifiJoiner ── VisitRunner ──────▶ {@link VisitCoordinator}
+ *   ActivityGate ◀── ClientSessionTracker (one token per client IP) / VisitCoordinator (one per visit, from join)
  *
+ *  Cycle listeners: HostPeriodIdRotator (new advertised id per HOST period), then status/notification.
  *  Status:  CycleListener, RpcEventListener, visit results ──▶ DropboxStatusRepository (UI Status/Storage)
  *           WifiRadioState ── DropboxWifiStateBridge ──▶ DropboxWifiState (UI Local Wifi)
  * </pre>
@@ -91,7 +95,8 @@ import java.util.logging.Logger;
  *   <li>{@code dropbox-service}: one thread for initialization (disk I/O, key generation) and teardown.</li>
  *   <li>{@code dropbox-cycle}: the controller's owner thread; {@link CycleListener} callbacks.</li>
  *   <li>{@code dropbox-rpc-*}: client RPCs; {@link RpcEventListener} callbacks.</li>
- *   <li>{@code dropbox-wifi-worker-*}: {@link HostingEndpoint} calls and {@link #runVisit} (blocking).</li>
+ *   <li>{@code dropbox-wifi-worker-*}: {@link HostingEndpoint} calls and {@link VisitCoordinator#runVisit}
+ *       (blocking).</li>
  *   <li>UI controls ({@link DropboxControls}) arrive on Kotlin {@code Dispatchers.IO}.</li>
  * </ul>
  * Every component is thread-safe; status is published with the repository's atomic
@@ -103,8 +108,11 @@ public class DropboxService extends Service implements DropboxControls {
     /** Notification channel id (the transport uses "DDD-Transport"). */
     public static final String NOTIFICATION_CHANNEL_ID = "DDD-Dropbox";
     private static final int NOTIFICATION_ID = 1;
-    /** ActivityGate key of the visit worker's token (client sessions are keyed by IP, so no clash). */
-    static final String VISIT_GATE_KEY = "visit";
+    /**
+     * Start command sent by the operator's Start button ({@code DropboxServiceManager.startRelay}). The only
+     * start that clears a persisted Stop; every other start (activity, boot, app update) respects it.
+     */
+    public static final String ACTION_START = "net.discdd.bundledropbox.action.START";
     /** How long a UI control waits for initialization to finish before reporting "not ready". */
     private static final long READY_WAIT_MS = 15_000;
     /** Delay before a failed initialization is retried on its own (unattended relay, nobody to reopen the app). */
@@ -130,6 +138,15 @@ public class DropboxService extends Service implements DropboxControls {
 
     private boolean started; // main thread only: true while initialized or initializing; reset on failure
     private volatile boolean destroyed;
+    /** The operator pressed Stop ({@link #stopRelay}); cleared by an {@link #ACTION_START} command. */
+    private volatile boolean relayStopped;
+    /** What the Status tab's "Last error" card shows, and when it clears (audit m12). */
+    private final StatusErrors errors = new StatusErrors();
+    /**
+     * Current notification text (main thread). Every start command must call {@code startForeground}, which
+     * re-posts the notification; reusing this keeps the role or failure text instead of resetting it (m13).
+     */
+    private String notificationText;
 
     // Components, written once on dropbox-service before `ready` completes (volatile: read from callbacks).
     private volatile SharedPreferences prefs;
@@ -139,12 +156,22 @@ public class DropboxService extends Service implements DropboxControls {
     private volatile JsonForwardLedger ledger;
     private volatile DropboxRpcServer rpcServer;
     private volatile TransportVisitClient visitClient;
+    private volatile VisitCoordinator.Exchange visitExchange;
     private volatile WifiDirectRadioDriver radio;
     private volatile RoleCycleController controller;
     private volatile ActivityGate gate;
 
     // Keep-awake lock (main thread only).
     private PowerManager.WakeLock wakeLock;
+
+    /** The joiner's {@code VisitRunner}: one gate token per carrier visit, taken when the join starts. */
+    private final VisitCoordinator visits = new VisitCoordinator(() -> gate,
+                                                                 () -> visitExchange,
+                                                                 () -> {
+                                                                     FileRecencyBlobStore r = recency;
+                                                                     return r != null && r.currentTimestamp() > 0;
+                                                                 },
+                                                                 new VisitEvents());
 
     /** Must be a field: SharedPreferences holds listeners weakly. Runs on the main thread. */
     private final SharedPreferences.OnSharedPreferenceChangeListener prefsListener = (p, key) -> onPrefChanged(key);
@@ -160,21 +187,40 @@ public class DropboxService extends Service implements DropboxControls {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
-        // startForegroundService() requires startForeground() promptly on every start command, so this
-        // runs synchronously each time; it is cheap and idempotent.
-        startInForeground(getString(R.string.dropbox_notification_text));
+        // startForegroundService() requires startForeground() promptly on every start command, even one that
+        // is refused below, so this runs synchronously each time; it is cheap and idempotent.
+        if (notificationText == null) notificationText = getString(R.string.dropbox_notification_text);
+        startInForeground();
+        SharedPreferences p = DropboxPrefs.get(this);
+        if (intent != null && ACTION_START.equals(intent.getAction())) {
+            p.edit().putBoolean(DropboxPrefs.KEY_RELAY_STOPPED, false).commit(); // before the check below
+        }
+        if (DropboxPrefs.isRelayStopped(p)) {
+            // The operator stopped the relay: a boot, update or app-open start must not bring it back.
+            logger.info("Start command ignored: the operator stopped the dropbox");
+            relayStopped = true;
+            leaveForeground();
+            return START_NOT_STICKY;
+        }
+        boolean restart = relayStopped; // Start pressed while this (still bound) instance was stopped
+        relayStopped = false;
         if (!started) {
             // Not wired yet, or the previous attempt failed (a reopened app or a sticky restart retries now).
             beginInitialize();
+        } else if (restart) {
+            RoleCycleController cycle = controller;
+            if (cycle != null) cycle.start(); // a persisted pause still keeps the radio idle
+            logUi(UserLogType.WIFI, Level.INFO, "Operator started the dropbox");
         }
         // Otherwise already wired or wiring (activity re-created, START_STICKY re-delivery): nothing to redo.
+        applyKeepAwake(); // also covers initialization and the init-retry wait (Handler delays stop in sleep)
         // The dropbox is a stationary, always-plugged-in relay: restart it if the system kills it.
         return START_STICKY;
     }
 
     /** Scheduled after a failed initialization; a start command may already have retried. Main thread. */
     private void retryInitialize() {
-        if (!started && !destroyed) beginInitialize();
+        if (!started && !destroyed && !relayStopped) beginInitialize();
     }
 
     /** Starts one initialization attempt on {@code dropbox-service}. Main thread. */
@@ -193,19 +239,20 @@ public class DropboxService extends Service implements DropboxControls {
      *       leftover staging files, so it must finish before any RPC or visit can stage.</li>
      *   <li>The controller owns the {@link ActivityGate}; the RPC server and the visit worker share it.
      *       The radio driver is constructed before the controller (the controller needs it), and its
-     *       {@code VisitRunner} reads {@link #gate} lazily, only once the cycle runs.</li>
+     *       {@code VisitRunner} ({@link #visits}) reads {@link #gate} lazily, only once the cycle runs.</li>
      *   <li>The RPC server is started once for the service lifetime (like the transport's).</li>
-     *   <li>{@code controller.start()} last.</li>
+     *   <li>A persisted operator pause is applied, then {@code controller.start()} last.</li>
      * </ol>
      */
     private void initialize() {
         try {
-            // The service has no LogFragment, but its JUL records should reach the Logs tab.
-            LogFragment.registerLoggerHandler();
+            // The service's JUL records should reach the Logs tab, through the thread-safe wrapper (audit M4).
+            UiLogBridge.install();
             SharedPreferences p = DropboxPrefs.get(this);
             prefs = p;
 
             DropboxPaths paths = new DropboxPaths(storageRoot(this).toPath()).createDirectories();
+            ServerKeys keys = loadServerKeys(paths);
 
             DropboxIdentity id = DropboxIdentity.load(paths,
                                                       b -> Base64.encodeToString(b, Base64.DEFAULT),
@@ -214,7 +261,9 @@ public class DropboxService extends Service implements DropboxControls {
             identity = id;
 
             FileRelayStore relayStore = new FileRelayStore(paths, DropboxPrefs.maxStorageBytes(p));
-            FileRecencyBlobStore recencyStore = new FileRecencyBlobStore(paths);
+            // Pinned to the server our clients trust: a blob they would reject is never stored (audit M5/M6).
+            FileRecencyBlobStore recencyStore =
+                    new FileRecencyBlobStore(paths, new ServerTrust(keys.identityKey(), System::currentTimeMillis));
             JsonForwardLedger forwardLedger = new JsonForwardLedger(paths);
             FileDeliveryLog deliveryLog = new FileDeliveryLog(paths);
             forwardLedger.pruneAgainst(relayStore); // forget ledger rows of bundles cleared while we were down
@@ -222,14 +271,16 @@ public class DropboxService extends Service implements DropboxControls {
             recency = recencyStore;
             ledger = forwardLedger;
 
-            visitClient = new TransportVisitClient(relayStore, forwardLedger, recencyStore, id.keys());
+            TransportVisitClient client = new TransportVisitClient(relayStore, forwardLedger, recencyStore, id.keys());
+            visitClient = client;
+            visitExchange = VisitCoordinator.exchangeOf(client);
 
             WifiDirectRadioDriver driver = new WifiDirectRadioDriver(this,
                                                                      id.baseId(),
                                                                      id::advertisedId,
                                                                      () -> recencyStore.current().orElse(null),
                                                                      hostingEndpoint,
-                                                                     this::runVisit);
+                                                                     visits);
             radio = driver;
 
             // Bootstrap rule: HOST only once a SUCCESS recency blob is cached (stock clients abort without one).
@@ -239,6 +290,9 @@ public class DropboxService extends Service implements DropboxControls {
                                                                 DropboxPrefs.cycleConfig(p));
             controller = cycle;
             gate = cycle.gate();
+            // Rotation first, so the status published by cycleListener already shows the new id (audit M8).
+            cycle.addListener(new HostPeriodIdRotator(id, adv -> logger.info("Advertising id " + adv +
+                                                                                  " for this client period")));
             cycle.addListener(cycleListener);
 
             rpcServer = new DropboxRpcServer(id.keys(), relayStore, recencyStore, deliveryLog, cycle.gate(), clock,
@@ -252,23 +306,24 @@ public class DropboxService extends Service implements DropboxControls {
 
             driver.initialize();
             driver.addStateListener(new DropboxWifiStateBridge());
-            // UNAVAILABLE retries "after 30 s or when Wi-Fi/permission state changes" (03 Architecture).
-            // A lost role (hosted group gone, P2P disabled, channel lost) ends the current dwell at once rather
-            // than leaving the cycle "serving clients" with no group for the rest of the timer.
-            driver.setEnvironmentListener((available, reason) -> {
-                logUi(UserLogType.WIFI, available ? Level.INFO : Level.WARNING, "Wi-Fi Direct: " + reason);
-                if (available) cycle.retryNow();
-                else cycle.roleLost(reason);
-            });
+            driver.setEnvironmentListener(new CycleEnvironmentBridge(
+                    cycle::retryNow,
+                    cycle::roleLost,
+                    (available, reason) -> logUi(UserLogType.WIFI, available ? Level.INFO : Level.WARNING,
+                                                 "Wi-Fi Direct: " + reason)));
+            // Joined-but-silent clients end the HOST drain's joined-client grace without waiting for its poll.
+            driver.setHostedClientsListener(count -> cycle.hostedClientsChanged());
 
             getMainExecutor().execute(() -> {
                 p.registerOnSharedPreferenceChangeListener(prefsListener);
                 applyKeepAwake();
             });
 
-            logUi(UserLogType.WIFI, Level.INFO, "Dropbox " + id.baseId() + " starting (advertising " +
-                    id.advertisedId() + ", " + (recencyStore.currentTimestamp() > 0 ? "recency blob cached" :
-                    "no recency blob yet: visiting transports first") + ")");
+            logUi(UserLogType.WIFI, Level.INFO, "Dropbox " + id.baseId() + " starting (" +
+                    (recencyStore.currentTimestamp() > 0 ? "recency blob cached" :
+                     "no recency blob yet: visiting transports first") + ", trusting " +
+                    (keys.source() == ServerKeys.Source.IMPORTED ? "imported" : "built-in") + " server keys)");
+            errors.clear(StatusErrors.Source.STARTUP);
             refreshStatus();
             if (destroyed) {
                 // onDestroy ran while we were initializing; its teardown task (queued behind us on this
@@ -276,7 +331,13 @@ public class DropboxService extends Service implements DropboxControls {
                 ready.completeExceptionally(new IllegalStateException("service destroyed during startup"));
                 return;
             }
-            cycle.start();
+            // Operator pause survives restarts (audit m15): pause() before start() keeps the radio idle.
+            if (DropboxPrefs.isPaused(p)) {
+                cycle.pause();
+                logUi(UserLogType.WIFI, Level.INFO, "Role cycle stays paused (paused by the operator)");
+            }
+            // A Stop pressed while we were initializing: stay wired (the UI is bound) but do not cycle.
+            if (!relayStopped) cycle.start();
             ready.complete(null);
         } catch (Throwable e) {
             onInitFailed(e);
@@ -292,13 +353,15 @@ public class DropboxService extends Service implements DropboxControls {
     private void onInitFailed(Throwable e) {
         logger.log(Level.SEVERE, "DropboxService initialization failed", e);
         String msg = "Dropbox failed to start: " + e.getMessage();
-        DropboxStatusRepository.modify(s -> s.toBuilder().lastError(msg).build());
+        errors.report(StatusErrors.Source.STARTUP, msg);
+        refreshStatus();
         logUi(UserLogType.WIFI, Level.SEVERE, msg + " (retrying in " + INIT_RETRY_MS / 1000 + " s)");
         releaseComponents();
         ready.completeExceptionally(e);
         getMainExecutor().execute(() -> {
             if (destroyed) return;
             started = false;
+            if (relayStopped) return; // the operator stopped it: the next Start retries
             updateNotification(msg + ". Retrying shortly.");
             mainHandler.postDelayed(initRetry, INIT_RETRY_MS);
         });
@@ -320,6 +383,7 @@ public class DropboxService extends Service implements DropboxControls {
         radio = null;
         rpcServer = null;
         visitClient = null;
+        visitExchange = null;
     }
 
     @Override
@@ -402,59 +466,33 @@ public class DropboxService extends Service implements DropboxControls {
         }
     };
 
-    /**
-     * {@code VisitRunner}: one exchange with a carrier the Wi-Fi joiner has joined. Runs on a driver worker
-     * thread and blocks for the whole exchange.
-     *
-     * <p>Holds one {@link ActivityGate} token for the whole visit (03 Architecture "Visit-side keying"), so
-     * a dwell that expires mid-exchange drains instead of cutting the transfer: {@code keepGoing} turns
-     * false when admissions close, the client finishes the in-flight bundle and returns, the token closes
-     * and the controller switches. If the drain cap passes first, the gate force-releases the token and its
-     * cancel hook hard-cancels the gRPC channel; partial downloads are aborted from staging and nothing is
-     * marked forwarded without the carrier's SUCCESS ack, so the work stays retryable.
-     */
-    private boolean runVisit(InetAddress carrierAddress, String carrierId, BooleanSupplier stopRequested) {
-        ActivityGate g = gate;
-        TransportVisitClient client = visitClient;
-        if (g == null || client == null) return false;
-        ActivityGate.Token token = g.tryAdmit(VISIT_GATE_KEY);
-        if (token == null) {
-            // The dwell ended between joining the carrier and starting the exchange.
-            logger.info("Visit to " + carrierId + " skipped: admissions closed");
-            return false;
+    /** Status and log reactions to the joiner's carrier exchanges (on a driver worker thread). */
+    private final class VisitEvents implements VisitCoordinator.Events {
+        @Override
+        public void exchangeStarting(String carrierId) {
+            refreshStatus(); // activeSessions > 0 while VISITING = "Exchanging with transport"
+            logUi(UserLogType.EXCHANGE, Level.INFO, "Exchanging with transport " + carrierId);
         }
-        token.setCancelHook(client::cancel);
-        refreshStatus(); // activeSessions > 0 while VISITING = "Exchanging with transport"
-        logUi(UserLogType.EXCHANGE, Level.INFO, "Exchanging with transport " + carrierId);
-        try {
-            // token::isCancelled: a drain-cap force release that lands before visit() starts must not be
-            // lost (the hook's client.cancel() alone would be reset when the visit begins).
-            VisitResult r = client.visit(carrierAddress,
-                                         TransportVisitClient.TRANSPORT_PORT,
-                                         carrierId,
-                                         () -> !stopRequested.getAsBoolean() && !g.isClosing(),
-                                         token::isCancelled);
-            onVisitResult(r);
-            // VisitCallback contract: success means the recency fetch succeeded AND the transfers finished.
-            // A carrier that never synced (no SUCCESS blob) must not trigger early return: during bootstrap
-            // that would end VISIT, skip HOST (still no blob) and restart VISIT with the selector's
-            // attempted marks cleared, rejoining the same useless carrier over and over.
-            return r.ok() && r.recencyFetched();
-        } finally {
-            token.close(); // may fire the drain listener: VISIT_DRAINING ends now
+
+        @Override
+        public void visitResult(VisitResult result) {
+            onVisitResult(result);
+        }
+
+        @Override
+        public void exchangeEnded() {
+            refreshStatus();
+        }
+
+        @Override
+        public void visitSkipped(String carrierId, String why) {
+            logger.info("Visit to " + carrierId + " skipped: " + why);
             refreshStatus();
         }
     }
 
-    /** Status, log and advertised-id rotation after a carrier exchange. */
+    /** Status and log after a carrier exchange. */
     private void onVisitResult(VisitResult r) {
-        DropboxIdentity id = identity;
-        if (r.recencyFetched() && id != null && id.isRotating()) {
-            // 03 Architecture §5: clients only exchange when blobTimestamp > their lastExchange for that
-            // transportId (R3). A new id makes clients treat the refreshed dropbox as a new transport.
-            String advertised = id.bumpGeneration();
-            logUi(UserLogType.EXCHANGE, Level.INFO, "Next client advertisement uses id " + advertised);
-        }
         String summary = "Transport " + r.carrierId() + ": " + (r.ok() ? "ok" : "incomplete") + ", uploaded " +
                 r.uploaded() + ", downloaded " + r.downloaded() + ", already held " + r.skipped() +
                 (r.recencyUpdated() ? ", newer recency blob stored" : "") +
@@ -462,12 +500,9 @@ public class DropboxService extends Service implements DropboxControls {
         logUi(UserLogType.EXCHANGE, r.ok() ? Level.INFO : Level.WARNING, summary);
         DropboxStatus.LastVisit last = new DropboxStatus.LastVisit(r.carrierId(), r.uploaded(), r.downloaded(),
                                                                    System.currentTimeMillis(), r.ok());
-        String error = r.ok() ? null : r.lastError();
-        DropboxStatusRepository.modify(s -> {
-            DropboxStatus.Builder b = s.toBuilder().lastVisit(last);
-            if (error != null) b.lastError("Visit: " + error);
-            return b.build();
-        });
+        if (r.ok()) errors.clear(StatusErrors.Source.VISIT);
+        else if (r.lastError() != null) errors.report(StatusErrors.Source.VISIT, "Visit: " + r.lastError());
+        DropboxStatusRepository.modify(s -> s.toBuilder().lastVisit(last).lastError(errors.current()).build());
         // FUTURE: once the server sends keep/delete control ADUs, apply them here via RetentionPolicy.
     }
 
@@ -475,21 +510,33 @@ public class DropboxService extends Service implements DropboxControls {
     private final CycleListener cycleListener = new CycleListener() {
         @Override
         public void onModeChanged(CycleMode previous, CycleMode current, long startedAt, long deadline) {
+            // A role works again: an earlier radio error is no longer current (audit m12).
+            if (current == CycleMode.HOSTING || current == CycleMode.VISITING) errors.clear(StatusErrors.Source.RADIO);
             refreshStatus();
             if (current == CycleMode.HOSTING || current == CycleMode.VISITING || current == CycleMode.STOPPED ||
                     current == CycleMode.UNAVAILABLE) {
                 logUi(UserLogType.WIFI, current == CycleMode.UNAVAILABLE ? Level.WARNING : Level.INFO,
                       "Role: " + describe(current));
                 getMainExecutor().execute(() -> {
-                    if (!destroyed) updateNotification("Currently " + describe(current));
+                    // After Stop the notification is removed; a late role update must not post it again.
+                    if (!destroyed && !relayStopped) updateNotification("Currently " + describe(current));
                 });
             }
         }
 
         @Override
         public void onCycleError(CycleMode mode, String reason) {
-            DropboxStatusRepository.modify(s -> s.toBuilder().lastError(reason).build());
+            errors.report(StatusErrors.Source.RADIO, reason);
+            refreshStatus();
             logUi(UserLogType.WIFI, Level.WARNING, "Radio error in " + mode + ": " + reason);
+        }
+
+        @Override
+        public void onPausedChanged(boolean paused) {
+            // Persisted so a sticky restart, reboot or app update does not resume cycling (audit m15).
+            SharedPreferences p = prefs;
+            if (p != null) p.edit().putBoolean(DropboxPrefs.KEY_PAUSED, paused).apply();
+            getMainExecutor().execute(DropboxService.this::applyKeepAwake); // no timers run while paused
         }
     };
 
@@ -544,6 +591,7 @@ public class DropboxService extends Service implements DropboxControls {
             if (g != null) b.activeSessions(g.activeKeyCount());
             FileRelayStore st = store;
             if (st != null) b.storeStats(st.stats());
+            b.lastError(errors.current());
             return b.build();
         });
     }
@@ -575,17 +623,20 @@ public class DropboxService extends Service implements DropboxControls {
     }
 
     /**
-     * Optional keep-awake (02 Decisions): the cycle's executor delays pause in deep sleep, which would only
-     * delay switches, but an unattended relay should keep cycling. A partial wake lock while
-     * {@code keep_awake} is on keeps the CPU (and so the cycle timers, gRPC and the visit worker) running with
-     * the screen off. No Wi-Fi lock: {@code WIFI_MODE_FULL_LOW_LATENCY} only applies while the screen is on and
-     * the app is in the foreground, {@code WIFI_MODE_FULL_HIGH_PERF} is a no-op since API 29, and both concern
-     * the infrastructure station interface, not Wi-Fi Direct. Main thread only.
+     * Keep-awake (02 Decisions; audit M1-M3). Being plugged in turns off Doze but does not stop the kernel from
+     * suspending the CPU with the screen off, and while it is suspended the cycle's executor timers and the
+     * Wi-Fi layer's {@code Handler.postDelayed} timeouts stop counting: a 60 s client period could last many
+     * times longer, so the relay stopped oscillating. With {@code keep_awake} on (the default) a partial wake
+     * lock is held while the relay is cycling, and released while paused or stopped, when no timer runs
+     * ({@link RelayPolicy#wantsWakeLock}). No Wi-Fi lock: {@code WIFI_MODE_FULL_LOW_LATENCY} only applies while
+     * the screen is on and the app is in the foreground, {@code WIFI_MODE_FULL_HIGH_PERF} is a no-op since
+     * API 29, and both concern the infrastructure station interface, not Wi-Fi Direct. Main thread only.
      */
     private void applyKeepAwake() {
-        SharedPreferences p = prefs;
-        boolean want = p != null && !destroyed &&
-                p.getBoolean(DropboxPrefs.KEY_KEEP_AWAKE, DropboxPrefs.DEFAULT_KEEP_AWAKE);
+        SharedPreferences p = prefs != null ? prefs : DropboxPrefs.get(this);
+        boolean want = RelayPolicy.wantsWakeLock(p.getBoolean(DropboxPrefs.KEY_KEEP_AWAKE,
+                                                               DropboxPrefs.DEFAULT_KEEP_AWAKE),
+                                                 isCyclePaused(), relayStopped, destroyed);
         if (!want) {
             releaseKeepAwake();
             return;
@@ -595,14 +646,19 @@ public class DropboxService extends Service implements DropboxControls {
             wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKE_TAG);
             wakeLock.setReferenceCounted(false);
         }
-        // Held for as long as the setting is on (released in onDestroy or when turned off): the relay is
-        // assumed to be plugged in, so there is deliberately no timeout.
-        if (!wakeLock.isHeld()) wakeLock.acquire();
-        logger.info("Keep-awake wake lock held");
+        // Held while cycling (released on pause, stop, destroy or when turned off): the relay is assumed to
+        // be plugged in, so there is deliberately no timeout.
+        if (!wakeLock.isHeld()) {
+            wakeLock.acquire();
+            logger.info("Keep-awake wake lock held");
+        }
     }
 
     private void releaseKeepAwake() {
-        if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
+        if (wakeLock != null && wakeLock.isHeld()) {
+            wakeLock.release();
+            logger.info("Keep-awake wake lock released");
+        }
     }
 
     // ------------------------------------------------------------------------------------------ UI controls
@@ -624,7 +680,37 @@ public class DropboxService extends Service implements DropboxControls {
     @Override
     public boolean isCyclePaused() {
         RoleCycleController cycle = controller;
-        return cycle != null && cycle.isPaused();
+        if (cycle != null) return cycle.isPaused();
+        return DropboxPrefs.isPaused(DropboxPrefs.get(this)); // not wired yet: report what will be applied
+    }
+
+    /**
+     * Operator Stop (audit m15): persist it, stop the cycle (radio idle), then leave the foreground and stop
+     * the started service. While an activity is still bound the instance stays alive, idle; it is destroyed
+     * when the last activity unbinds. Boot, app updates and opening the app do not start it again; only an
+     * {@link #ACTION_START} command does. Does not wait for initialization, so a relay that failed to start
+     * can be stopped too.
+     */
+    @Override
+    public void stopRelay() {
+        DropboxPrefs.get(this).edit().putBoolean(DropboxPrefs.KEY_RELAY_STOPPED, true).commit();
+        relayStopped = true;
+        logUi(UserLogType.WIFI, Level.INFO, "Operator stopped the dropbox");
+        RoleCycleController cycle = controller;
+        CompletableFuture<Void> stopped = cycle != null ? cycle.stop() : CompletableFuture.completedFuture(null);
+        // Leave the foreground once the radio is idle; bounded, because a stop can be cancelled by Start.
+        stopped.orTimeout(RoleCycleController.SHUTDOWN_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                .whenComplete((v, e) -> getMainExecutor().execute(() -> {
+                    if (relayStopped && !destroyed) leaveForeground();
+                }));
+    }
+
+    /** Drops the foreground state and the started state (bound clients keep the instance alive). Main thread. */
+    private void leaveForeground() {
+        mainHandler.removeCallbacks(initRetry);
+        applyKeepAwake(); // releases: relayStopped
+        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE);
+        stopSelf();
     }
 
     @Override
@@ -647,6 +733,23 @@ public class DropboxService extends Service implements DropboxControls {
     @Override
     public void clearDownstream() {
         clear(Direction.DOWNSTREAM);
+    }
+
+    /**
+     * Operator "reset recency blob" (audit M6, {@code recency-blob-poisoning}). After the reset
+     * {@code currentTimestamp() == 0}, so the bootstrap rule keeps the cycle on VISIT until a carrier serves a
+     * blob {@link ServerTrust} accepts. A HOST dwell in progress is ended at once (normal drain rules), because
+     * clients would otherwise keep seeing the old blob in the TXT record until the dwell expires.
+     */
+    @Override
+    public void resetRecencyBlob() {
+        awaitReady();
+        FileRecencyBlobStore r = recency;
+        if (r == null) throw new IllegalStateException("Dropbox is not initialized");
+        r.reset();
+        refreshStatus();
+        logUi(UserLogType.EXCHANGE, Level.WARNING, "Operator reset the recency blob; visiting transports for a new one");
+        controller.forceVisit();
     }
 
     /**
@@ -706,10 +809,34 @@ public class DropboxService extends Service implements DropboxControls {
     }
 
     /**
-     * Posts the persistent notification and promotes the service to the foreground with type dataSync
-     * (manifest declares FOREGROUND_SERVICE + FOREGROUND_SERVICE_DATA_SYNC; Research/R5 §3). Main thread.
+     * The server keys the dropbox trusts: imported keys under {@code meta/serverKeys} if present, else
+     * android-core's built-in {@code R.raw.server_*} (the stock client's defaults). Their identity key pins the
+     * recency blobs the dropbox stores and re-serves (audit M5/M6).
      */
-    private void startInForeground(String text) {
+    private ServerKeys loadServerKeys(DropboxPaths paths) throws Exception {
+        android.content.res.Resources res = getResources();
+        return ServerKeys.load(paths.meta.resolve(ServerKeys.IMPORTED_DIR_NAME),
+                               () -> res.openRawResource(net.discdd.android_core.R.raw.server_identity),
+                               () -> res.openRawResource(net.discdd.android_core.R.raw.server_signed_pre),
+                               () -> res.openRawResource(net.discdd.android_core.R.raw.server_ratchet));
+    }
+
+    /**
+     * Posts the persistent notification (with {@link #notificationText}) and promotes the service to the
+     * foreground with type dataSync (manifest declares FOREGROUND_SERVICE + FOREGROUND_SERVICE_DATA_SYNC;
+     * Research/R5 §3). Main thread.
+     *
+     * <p>If Android refuses the promotion, the relay keeps running as a background service that the system
+     * may stop at any time, so the failure is shown on the Status tab and in the log instead of only logcat
+     * (audit m13); the next start command (opening the app, a sticky restart) tries again and clears it.
+     *
+     * <p>FUTURE (audit i8): dataSync is compliant at targetSdk 34. From targetSdk 35 a dataSync service is
+     * limited to 6 h per 24 h and may not be started from BOOT_COMPLETED, which would break an always-on
+     * relay. Before raising targetSdk, switch to {@code connectedDevice} (permission
+     * FOREGROUND_SERVICE_CONNECTED_DEVICE; its prerequisite is met by CHANGE_WIFI_STATE / NEARBY_WIFI_DEVICES)
+     * here, in the manifest and in {@code BootReceiver}.
+     */
+    private void startInForeground() {
         try {
             NotificationManager nm = getSystemService(NotificationManager.class);
             NotificationChannel channel =
@@ -717,15 +844,22 @@ public class DropboxService extends Service implements DropboxControls {
                                             getString(R.string.dropbox_notification_channel_name),
                                             NotificationManager.IMPORTANCE_LOW);
             nm.createNotificationChannel(channel); // no-op if it exists
-            ServiceCompat.startForeground(this, NOTIFICATION_ID, buildNotification(text),
+            ServiceCompat.startForeground(this, NOTIFICATION_ID, buildNotification(notificationText),
                                           ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+            if (errors.clear(StatusErrors.Source.FOREGROUND)) refreshStatus();
         } catch (Exception e) {
+            String msg = "Could not run as a foreground service (" + e.getMessage() +
+                    "). Android may stop the relay; open the app to retry.";
             logger.log(Level.SEVERE, "Failed to start foreground service", e);
+            errors.report(StatusErrors.Source.FOREGROUND, msg);
+            refreshStatus();
+            logUi(UserLogType.WIFI, Level.SEVERE, msg);
         }
     }
 
-    /** Replaces the foreground notification's text with the current role. Main thread. */
+    /** Replaces the foreground notification's text (role, or init failure) and remembers it. Main thread. */
     private void updateNotification(String text) {
+        notificationText = text;
         try {
             getSystemService(NotificationManager.class).notify(NOTIFICATION_ID, buildNotification(text));
         } catch (RuntimeException e) {
@@ -734,8 +868,11 @@ public class DropboxService extends Service implements DropboxControls {
     }
 
     private Notification buildNotification(String text) {
-        PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, BundleDropboxActivity.class),
-                                                       PendingIntent.FLAG_IMMUTABLE);
+        // SINGLE_TOP|CLEAR_TOP: tapping the notification reuses the open activity instead of stacking a second
+        // one, whose destruction would disconnect the first one's UI (audit m11).
+        Intent show = new Intent(this, BundleDropboxActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent open = PendingIntent.getActivity(this, 0, show, PendingIntent.FLAG_IMMUTABLE);
         return new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
                 .setContentTitle(getString(R.string.dropbox_notification_title))
                 .setContentText(text)
@@ -761,11 +898,13 @@ public class DropboxService extends Service implements DropboxControls {
         return id.length() <= 12 ? id : id.substring(0, 12) + "…";
     }
 
-    /** JUL plus the in-app user log (Logs tab / Local Wifi log), in plain English like the wifi package. */
+    /**
+     * JUL plus the in-app user log (Logs tab / Local Wifi log), in plain English like the wifi package. Never
+     * throws: it is called from the cycle, RPC and visit threads, where a logging failure must not change
+     * control flow (audit M4).
+     */
     private static void logUi(UserLogType type, Level level, String message) {
-        logger.log(level, type + ": " + message);
-        UserLogRepository.INSTANCE.log(new UserLogRepository.UserLogEntry(type, System.currentTimeMillis(), message,
-                                                                          level));
+        UserLog.log(logger, type, level, message);
     }
 
     /** Local binder handed to {@code DropboxServiceManager} (mirrors the transport's service binder). */

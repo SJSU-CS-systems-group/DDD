@@ -1,6 +1,8 @@
 package net.discdd.bundledropbox.cycle;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.BooleanSupplier;
@@ -21,9 +23,17 @@ import java.util.logging.Logger;
  *       {@link RadioDriver#startVisit} reports ready (discovery started).</li>
  *   <li>On dwell expiry the {@link ActivityGate} closes admissions. If nothing is active the role
  *       switches at once; otherwise the controller waits for the gate's drain listener (finish the
- *       in-flight bundle, then switch) or for the drain cap, measured from the <em>nominal</em> expiry and
+ *       in-flight bundle, then switch) or for the drain cap. The cap is fixed when the drain begins and is
  *       never extended by new arrivals. At the cap the gate force-releases every token (cancel hooks
  *       abort in-flight work) and the role is torn down; partial work stays retryable.</li>
+ *   <li>Joined-but-silent clients (HOST only): the gate only learns about a stock client at its first
+ *       RPC, but a client that has already joined our group may still be probing the server or doing the
+ *       TLS handshake (Audit m5). If {@link RadioDriver#hostedClientCount()} reports more joined clients
+ *       than the gate has admitted keys, HOST_DRAINING keeps admissions open for up to
+ *       {@link #JOINED_CLIENT_GRACE_MS} (never past the drain cap) so that client's first RPC is
+ *       admitted instead of refused; a refused stock client would stamp {@code lastExchange} and skip us
+ *       until the advertised id rotates (R3 §7). The DNS-SD record is withdrawn for the whole drain, so
+ *       new clients do not discover us during the grace.</li>
  *   <li>Early return: with {@link CycleConfig#returnAfterVisit()}, a successful
  *       {@link VisitCallback#visitFinished} ends the VISIT dwell immediately (same drain rules).</li>
  *   <li>Bootstrap: a fresh dropbox has no server-signed recency blob and the stock client aborts its
@@ -41,6 +51,42 @@ import java.util.logging.Logger;
  *       its drain cap keep the config they started with, so a deadline already shown to the user never
  *       moves.</li>
  * </ul>
+ *
+ * <h2>Stop, pause and a radio that will not stop</h2>
+ * {@link #stop()} (operator "Stop dropbox", service teardown) and {@link #pause()} both halt: abort work,
+ * stop the radio, end in {@link CycleMode#STOPPED}. Pause is remembered until {@link #resume()} and is
+ * reported through {@link CycleListener#onPausedChanged(boolean)} so the service can persist it; calling
+ * {@code pause()} before {@link #start()} restores a persisted pause without touching the radio.
+ * A halt never leaves the radio half torn down on purpose: from UNAVAILABLE it issues one best-effort stop of
+ * the failed role (a failed STOP means group removal was never observed, and a failed START may have left a
+ * group or a local service behind). If a stop issued by a halt fails, the controller still settles in
+ * STOPPED (it must not loop on a radio that refuses to stop) but remembers the role as <em>dirty</em>: the
+ * next {@link #start()}/{@link #resume()} runs that stop before the first role, and a later halt
+ * (stop/pause/shutdown) tries it once more. Driver stops are idempotent (they clear services and remove any
+ * group), so a redundant stop is harmless.
+ *
+ * <h2>Time base and deep sleep (Audit M1/M2)</h2>
+ * Every deadline is an absolute {@link Clock} time ({@code SystemClock.elapsedRealtime} in production,
+ * which keeps counting while the CPU is suspended). The {@link TaskScheduler} is only used to <em>wake</em>
+ * the owner thread, never to measure time: {@link ExecutorTaskScheduler} delays use
+ * {@code System.nanoTime}, which stops in suspend, so a delay handed to it can stretch by however long the
+ * device slept. To keep timing correct anyway:
+ * <ul>
+ *   <li>A timer is armed in slices of at most {@link #TIMER_SLICE_MS}; each wake re-reads the clock and
+ *       either fires the timer or re-arms for the remainder. A stretched timer is therefore late by at most
+ *       one slice of awake time, not by a whole dwell.</li>
+ *   <li>Every event that reaches the owner thread (radio callback, gate admission or drain, operator
+ *       command, {@link #hostedClientsChanged()}) first fires an overdue timer, so the client or carrier
+ *       whose arrival woke the CPU sees the cycle already caught up.</li>
+ *   <li>A dwell expiry detected late starts its drain at <em>detection</em> time
+ *       ({@code capAt = max(expiryAt, now) + drainCap}). Measuring the cap from the nominal expiry would
+ *       make it look already exceeded after a sleep, and force-cancel the very work (often the client whose
+ *       arrival woke us) that the "finish the in-flight bundle, then switch" rule protects. The cap itself,
+ *       once the drain has begun, is real time: if it is detected late, in-flight work has had at least the
+ *       full cap and is cancelled.</li>
+ * </ul>
+ * The service additionally holds a partial wake lock ({@code keep_awake}, on by default) so the CPU does not
+ * suspend in the first place; the measures above keep the cycle correct if it does anyway.
  *
  * <h2>Threading</h2>
  * All state is owned by one {@link TaskScheduler} thread. Public methods may be called from any thread;
@@ -62,6 +108,20 @@ public final class RoleCycleController {
     public static final long UNAVAILABLE_RETRY_MS = 30_000L;
     /** Upper bound on waiting for radio teardown after {@link #shutdown()}. */
     public static final long SHUTDOWN_TIMEOUT_MS = 5_000L;
+    /**
+     * Longest delay handed to the {@link TaskScheduler} at once. Each wake re-checks the {@link Clock}, so a
+     * timer whose scheduler delay stopped counting during CPU suspend is late by at most this much awake
+     * time (see class docs, "Time base and deep sleep").
+     */
+    public static final long TIMER_SLICE_MS = 5_000L;
+    /**
+     * Longest time HOST_DRAINING keeps admissions open for clients that joined the group but have not sent
+     * their first RPC (Audit m5: the window from join to first RPC is about 1-2 s: server probe, TLS
+     * handshake). Never extends the drain cap.
+     */
+    public static final long JOINED_CLIENT_GRACE_MS = 5_000L;
+    /** How often {@link RadioDriver#hostedClientCount()} is re-read during the joined-client grace. */
+    public static final long JOINED_CLIENT_POLL_MS = 500L;
 
     /** The two roles. */
     private enum Role { HOST, VISIT }
@@ -104,11 +164,12 @@ public final class RoleCycleController {
     /** Latest config requested by {@link #updateConfig}; copied into {@link #activeConfig} at dwell start. */
     private volatile CycleConfig requestedConfig;
 
-    // Snapshots readable from any thread (written only on the owner thread).
+    // Snapshots readable from any thread (written only on the owner thread, except paused).
     private volatile CycleMode mode = CycleMode.STOPPED;
     private volatile long modeStartedAtMillis;
     private volatile long deadlineAtMillis = CycleListener.NO_DEADLINE;
     private volatile boolean paused;
+    private volatile boolean runningSnapshot;
 
     // Owner-thread state.
     private CycleConfig activeConfig;
@@ -123,16 +184,28 @@ public final class RoleCycleController {
     private boolean fallbackTried;
     private long visitGen = -1;
     private Op unavailableOp;
-    private TaskScheduler.Cancellable timer;
-    private long timerSeq;
     /** Role the operator asked for ({@link #forceVisit()}/{@link #forceHost()}); used once at the next switch. */
     private Role forcedNext;
+    /** Role whose stop failed during a halt: the radio may still hold its group/service (see class docs). */
+    private Role dirtyRole;
+    /** End of the joined-client grace in HOST_DRAINING, or {@link CycleListener#NO_DEADLINE} when none. */
+    private long joinGraceUntil = CycleListener.NO_DEADLINE;
+    /** Last pause state reported through {@link CycleListener#onPausedChanged}. */
+    private boolean pausedReported;
+    /** Futures returned by {@link #stop()} that complete when the controller reaches STOPPED. */
+    private final List<CompletableFuture<Void>> stopWaiters = new ArrayList<>();
+
+    // The single state timer: an absolute Clock deadline plus the scheduler wake-up currently armed for it.
+    private Runnable timerTask;
+    private long timerDueAt;
+    private TaskScheduler.Cancellable timerWake;
+    private long timerSeq;
 
     /**
      * Production constructor: owns a new {@link ExecutorTaskScheduler} and {@link ActivityGate}.
      *
      * @param radio          radio side ({@code wifi/WifiDirectRadioDriver})
-     * @param clock          monotonic clock ({@code SystemClock::elapsedRealtime} on Android)
+     * @param clock          monotonic clock that keeps counting in deep sleep ({@code SystemClock::elapsedRealtime})
      * @param hasRecencyBlob true once a SUCCESS recency blob is cached ({@code RecencyBlobStore.current()})
      * @param config         initial timer settings
      */
@@ -159,8 +232,10 @@ public final class RoleCycleController {
         this.hasRecencyBlob = hasRecencyBlob;
         this.requestedConfig = config;
         this.activeConfig = config;
-        // The gate fires this on whatever thread closed the last token; hop to the owner thread.
+        // The gate fires these on whatever thread closed the last token / admitted work; hop to the owner
+        // thread. An admission is also a wake-up event: post() fires an overdue timer first.
         gate.setDrainListener(() -> post(this::onDrained));
+        gate.setAdmissionListener(() -> post(this::onActivity));
     }
 
     // ------------------------------------------------------------------------------------------------
@@ -182,32 +257,65 @@ public final class RoleCycleController {
         listeners.remove(l);
     }
 
-    /** Start cycling (service started). The first role is HOST if a recency blob is cached, else VISIT. */
+    /**
+     * Start cycling (service started, or the operator restarted a stopped dropbox). The first role is HOST
+     * if a recency blob is cached, else VISIT. If {@link #pause()} was called first, the radio stays idle
+     * until {@link #resume()}.
+     */
     public void start() {
         post(() -> {
             running = true;
+            runningSnapshot = true;
+            // A stop still tearing down is overruled: its futures will not see STOPPED now.
+            for (CompletableFuture<Void> f : stopWaiters) f.cancel(false);
+            stopWaiters.clear();
             kick();
         });
     }
 
-    /** Stop cycling: abort in-flight work, tear down the radio, end in {@link CycleMode#STOPPED}. */
-    public void stop() {
-        post(() -> {
+    /**
+     * Stop cycling (operator "Stop dropbox"): abort in-flight work, tear down the radio and end in
+     * {@link CycleMode#STOPPED}. Unlike {@link #shutdown()} the controller can be started again. The pause
+     * flag is left as it is.
+     *
+     * @return completes (on the owner thread) once the controller is STOPPED; completes exceptionally if the
+     *         controller is shut down first, and is cancelled if {@link #start()} overrules it. A stop the
+     *         radio refuses still completes (see class docs, "dirty" role), so callers may follow it with
+     *         {@code stopForeground}/{@code stopSelf}.
+     */
+    public CompletableFuture<Void> stop() {
+        CompletableFuture<Void> done = new CompletableFuture<>();
+        boolean posted = post(() -> {
             running = false;
+            runningSnapshot = false;
+            stopWaiters.add(done);
             halt("stop requested");
+            completeStopWaitersIfStopped();
         });
+        if (!posted) done.completeExceptionally(new IllegalStateException("role cycle already shut down"));
+        return done;
     }
 
-    /** Operator pause: like {@link #stop()} but remembered as paused until {@link #resume()}. */
+    /**
+     * Operator pause: like {@link #stop()} but remembered as paused until {@link #resume()}. Reported to
+     * {@link CycleListener#onPausedChanged(boolean)} so the service can persist it across restarts; call it
+     * before {@link #start()} to restore a persisted pause.
+     */
     public void pause() {
         paused = true;
-        post(() -> halt("paused"));
+        post(() -> {
+            reportPaused();
+            halt("paused");
+        });
     }
 
     /** Undo {@link #pause()}; cycling continues if {@link #start()} was called. */
     public void resume() {
         paused = false;
-        post(this::kick);
+        post(() -> {
+            reportPaused();
+            kick();
+        });
     }
 
     /**
@@ -245,6 +353,15 @@ public final class RoleCycleController {
     }
 
     /**
+     * The set of P2P clients joined to the hosted group changed (optional hint from the radio side). Lets the
+     * joined-client grace end as soon as the last silent client sends its first RPC or leaves, instead of at
+     * the next {@link #JOINED_CLIENT_POLL_MS} poll; also a wake-up event for overdue timers. Any thread.
+     */
+    public void hostedClientsChanged() {
+        post(this::onActivity);
+    }
+
+    /**
      * Operator "Visit transport now": end the current HOST dwell early (normal drain rules: admitted
      * clients finish their in-flight bundle, bounded by the drain cap) and start a VISIT next. No-op if a
      * visit is already starting or dwelling, or if the cycle is stopped/paused.
@@ -271,11 +388,13 @@ public final class RoleCycleController {
         post(() -> {
             shutdownRequested = true;
             running = false;
+            runningSnapshot = false;
             halt("shutdown");
             if (mode == CycleMode.STOPPED) {
-                scheduler.shutdown();
+                finishShutdown();
             } else {
-                scheduler.schedule(scheduler::shutdown, SHUTDOWN_TIMEOUT_MS);
+                // Plain scheduler delay (not the sliced state timer): a bound on teardown, not a deadline.
+                scheduler.schedule(this::finishShutdown, SHUTDOWN_TIMEOUT_MS);
             }
         });
     }
@@ -300,6 +419,11 @@ public final class RoleCycleController {
         return paused;
     }
 
+    /** @return true between {@link #start()} and {@link #stop()}/{@link #shutdown()} (snapshot). */
+    public boolean isRunning() {
+        return runningSnapshot;
+    }
+
     /** @return the most recently requested config (may not be in force until the next dwell). */
     public CycleConfig config() {
         return requestedConfig;
@@ -309,27 +433,49 @@ public final class RoleCycleController {
     // Owner-thread state machine
     // ------------------------------------------------------------------------------------------------
 
-    /** Begin the first role if running, not paused and idle. */
+    /** Begin the first role if running, not paused and idle (after cleaning up a dirty radio). */
     private void kick() {
         if (!running || paused || shutdownRequested || mode != CycleMode.STOPPED) return;
-        startRole(blobAvailable() ? Role.HOST : Role.VISIT);
+        Role first = blobAvailable() ? Role.HOST : Role.VISIT;
+        if (dirtyRole != null) {
+            Role dirty = dirtyRole;
+            dirtyRole = null;
+            logger.info("Radio may still hold " + dirty + " state from a failed stop: stopping it before " + first);
+            forcedNext = first; // onRoleStopped picks it (and still skips HOST without a blob)
+            issueOp(Op.stopFor(dirty));
+            return;
+        }
+        startRole(first);
     }
 
     /** Abort whatever is happening and drive the radio to idle; ends in STOPPED via {@link #onRoleStopped}. */
     private void halt(String why) {
-        if (mode == CycleMode.STOPPED) return;
+        if (mode == CycleMode.STOPPED) {
+            if (dirtyRole != null) {
+                Role dirty = dirtyRole;
+                dirtyRole = null;
+                logger.info("Halting (" + why + "): one more best-effort stop of dirty " + dirty);
+                issueOp(Op.stopFor(dirty));
+            }
+            return;
+        }
         logger.info("Halting role cycle in " + mode + ": " + why);
         if (mode == CycleMode.UNAVAILABLE) {
-            // The failed op left the radio idle (or as idle as it can get); nothing to tear down.
-            cancelTimer();
-            gate.closeAdmissions();
-            gate.forceReleaseAll(why);
-            setMode(CycleMode.STOPPED, CycleListener.NO_DEADLINE);
-            maybeFinishShutdown();
+            // The radio is not known to be idle here: a failed STOP means group removal was never observed,
+            // and a failed START may have left a group or local service behind (Audit m4/m22). Issue one
+            // best-effort stop of that role; if it fails too, onOpFailed settles in STOPPED and marks it dirty.
+            Op failed = unavailableOp;
+            unavailableOp = null;
+            issueOp(Op.stopFor(failed != null ? failed.role : Role.HOST));
             return;
         }
         Op stop = Op.stopFor(mode.isHostSide() ? Role.HOST : Role.VISIT);
         if (pendingOp != stop) issueOp(stop); // already stopping: onRoleStopped will see the flags
+    }
+
+    /** @return true when a stop/pause/shutdown is in effect, so a finished stop must end in STOPPED. */
+    private boolean halting() {
+        return !running || paused || shutdownRequested;
     }
 
     private void startRole(Role role) {
@@ -343,6 +489,7 @@ public final class RoleCycleController {
     /** Issue one radio op with a fresh generation. */
     private void issueOp(Op op) {
         cancelTimer();
+        joinGraceUntil = CycleListener.NO_DEADLINE;
         if (op != retryingOp) {
             // A different op (e.g. the STOP that supersedes a failing START after "Visit now") gets its own
             // attempt budget; only a backoff retry of the same op keeps counting.
@@ -427,10 +574,12 @@ public final class RoleCycleController {
         attempts++;
         logger.warning(op + " failed (attempt " + attempts + "/" + MAX_ATTEMPTS + "): " + reason);
         notifyError(reason);
-        if (!op.isStart() && (!running || paused)) {
-            // Tearing down because of stop/pause: don't loop on a radio that won't stop; just give up.
+        if (!op.isStart() && halting()) {
+            // A halt makes one best-effort stop: don't loop on a radio that won't stop. The radio may still
+            // hold this role's group/service, so remember it; the next start (or halt) stops it first.
+            dirtyRole = op.role;
+            logger.warning(op + " failed while halting; settling in STOPPED with " + op.role + " possibly dirty");
             setMode(CycleMode.STOPPED, CycleListener.NO_DEADLINE);
-            maybeFinishShutdown();
             return;
         }
         if (attempts < MAX_ATTEMPTS) {
@@ -463,26 +612,41 @@ public final class RoleCycleController {
     }
 
     /**
-     * Close admissions; switch now if idle, else drain until the gate empties or the cap passes.
+     * Close admissions (unless joined HOST clients still need their first RPC); switch now if idle, else
+     * drain until the gate empties or the cap passes.
      *
-     * @param expiryAt nominal dwell end (or now, for early return). The cap is measured from here, not
-     *                 from when this task happened to run, so a late timer can only shorten the drain.
+     * @param expiryAt nominal dwell end (or now, for early return / operator switch). The drain starts at
+     *                 {@code max(expiryAt, now)}: an expiry detected late (the device slept through the
+     *                 timer) still gets the full drain cap from detection, so in-flight work is not
+     *                 force-cancelled just because the wake-up was late (class docs, "Time base").
      */
     private void beginDrain(long expiryAt, String why) {
         if (!mode.isDwelling()) return;
         Role role = mode == CycleMode.HOSTING ? Role.HOST : Role.VISIT;
-        gate.closeAdmissions();
-        if (gate.activeCount() == 0) {
-            logger.info(mode + " ended (" + why + "), idle: switching now");
-            issueOp(Op.stopFor(role));
-            return;
+        long now = clock.nowMillis();
+        long drainStart = Math.max(expiryAt, now);
+        if (now - expiryAt > TIMER_SLICE_MS) {
+            logger.info(mode + " expiry detected " + (now - expiryAt) + " ms late (CPU suspended?): drain " +
+                                "measured from detection");
         }
-        long capAt = expiryAt + activeConfig.drainCapMs();
-        logger.info(mode + " ended (" + why + "), " + gate.activeCount() + " active: draining until cap");
+        long capAt = drainStart + activeConfig.drainCapMs();
+        int unadmitted = role == Role.HOST ? unadmittedJoinedClients() : 0;
+        boolean grace = unadmitted > 0 && capAt > now;
+        if (!grace) {
+            gate.closeAdmissions();
+            if (gate.activeCount() == 0) {
+                logger.info(mode + " ended (" + why + "), idle: switching now");
+                issueOp(Op.stopFor(role));
+                return;
+            }
+        }
+        logger.info(mode + " ended (" + why + "), " + gate.activeCount() + " active" +
+                            (grace ? ", " + unadmitted + " joined client(s) not yet admitted: grace" : "") +
+                            ": draining until cap");
         if (role == Role.HOST) {
-            // New clients are refused from now on, and a refused stock client stamps lastExchange for our
-            // advertised id anyway and then skips us until the id rotates (R3 §7). Stop advertising so
-            // nobody new discovers us; admitted clients keep the group and endpoint until they finish.
+            // New clients are refused once admissions close, and a refused stock client stamps lastExchange
+            // for our advertised id anyway and then skips us until the id rotates (R3 §7). Stop advertising
+            // so nobody new discovers us; admitted (and joined) clients keep the group and endpoint.
             try {
                 radio.withdrawHostAdvertisement();
             } catch (RuntimeException e) {
@@ -490,7 +654,17 @@ public final class RoleCycleController {
             }
         }
         setMode(role == Role.HOST ? CycleMode.HOST_DRAINING : CycleMode.VISIT_DRAINING, capAt);
-        long delay = capAt - clock.nowMillis();
+        if (grace) {
+            joinGraceUntil = Math.min(drainStart + JOINED_CLIENT_GRACE_MS, capAt);
+            scheduleTimer(Math.min(JOINED_CLIENT_POLL_MS, joinGraceUntil - now), this::checkJoinGrace);
+            return;
+        }
+        armDrainCap(capAt, now);
+    }
+
+    /** Arm the drain-cap timer for an already-fixed {@code capAt}; a cap already reached forces now. */
+    private void armDrainCap(long capAt, long now) {
+        long delay = capAt - now;
         if (delay <= 0) {
             onDrainCap();
         } else {
@@ -498,11 +672,57 @@ public final class RoleCycleController {
         }
     }
 
+    /**
+     * Joined-client grace (HOST_DRAINING with admissions still open): keep waiting while a joined client has
+     * no admitted session and the grace lasts; then close admissions and continue as an ordinary drain with
+     * the cap fixed at {@link #beginDrain}.
+     */
+    private void checkJoinGrace() {
+        if (mode != CycleMode.HOST_DRAINING || joinGraceUntil == CycleListener.NO_DEADLINE) return;
+        long now = clock.nowMillis();
+        int unadmitted = unadmittedJoinedClients();
+        if (unadmitted > 0 && now < joinGraceUntil) {
+            scheduleTimer(Math.min(JOINED_CLIENT_POLL_MS, joinGraceUntil - now), this::checkJoinGrace);
+            return;
+        }
+        joinGraceUntil = CycleListener.NO_DEADLINE;
+        gate.closeAdmissions();
+        logger.info("Joined-client grace over (" + (unadmitted > 0 ? unadmitted + " still silent" :
+                "every joined client admitted or gone") + "), " + gate.activeCount() + " active");
+        if (gate.activeCount() == 0) {
+            issueOp(Op.stopFor(Role.HOST));
+            return;
+        }
+        armDrainCap(deadlineAtMillis, now);
+    }
+
+    /**
+     * @return joined group clients that hold no gate key yet (0 if the driver cannot tell). Compares counts
+     *         because the driver knows clients by MAC and the gate by IP; a client that already finished but
+     *         stays joined also counts, which costs at most {@link #JOINED_CLIENT_GRACE_MS}.
+     */
+    private int unadmittedJoinedClients() {
+        int joined;
+        try {
+            joined = radio.hostedClientCount();
+        } catch (RuntimeException e) {
+            logger.log(Level.WARNING, "hostedClientCount threw; assuming no joined clients", e);
+            return 0;
+        }
+        return Math.max(0, joined - gate.activeKeyCount());
+    }
+
     /** Gate drain listener (re-posted): the in-flight work finished before the cap. */
     private void onDrained() {
         if (!mode.isDraining() || gate.activeCount() != 0) return; // stale or late: already switched
+        if (joinGraceUntil != CycleListener.NO_DEADLINE) return; // the grace check decides
         logger.info(mode + ": drained before cap");
         issueOp(Op.stopFor(mode == CycleMode.HOST_DRAINING ? Role.HOST : Role.VISIT));
+    }
+
+    /** Gate admission or joined-client change (re-posted): lets the grace end without waiting for a poll. */
+    private void onActivity() {
+        if (joinGraceUntil != CycleListener.NO_DEADLINE) checkJoinGrace();
     }
 
     /** Drain cap reached: force-release (cancel hooks abort in-flight work) and switch anyway. */
@@ -585,9 +805,8 @@ public final class RoleCycleController {
     private void onRoleStopped(Role finished) {
         Role forced = forcedNext;
         forcedNext = null;
-        if (!running || paused || shutdownRequested) {
+        if (halting()) {
             setMode(CycleMode.STOPPED, CycleListener.NO_DEADLINE);
-            maybeFinishShutdown();
             return;
         }
         // Bootstrap: without a recency blob clients abort (R3), so keep visiting until a carrier gives one.
@@ -617,8 +836,42 @@ public final class RoleCycleController {
         issueOp(op);
     }
 
-    private void maybeFinishShutdown() {
-        if (shutdownRequested && mode == CycleMode.STOPPED) scheduler.shutdown();
+    /** Owner thread: STOPPED was entered (or shutdown timed out). Completes stop futures, finishes shutdown. */
+    private void onStopped() {
+        completeStopWaitersIfStopped();
+        if (shutdownRequested) finishShutdown();
+    }
+
+    private void completeStopWaitersIfStopped() {
+        if (mode != CycleMode.STOPPED || stopWaiters.isEmpty()) return;
+        List<CompletableFuture<Void>> done = new ArrayList<>(stopWaiters);
+        stopWaiters.clear();
+        for (CompletableFuture<Void> f : done) f.complete(null);
+    }
+
+    /** Release the scheduler; stop futures still waiting (teardown timed out) complete exceptionally. */
+    private void finishShutdown() {
+        if (!stopWaiters.isEmpty()) {
+            List<CompletableFuture<Void>> left = new ArrayList<>(stopWaiters);
+            stopWaiters.clear();
+            IllegalStateException e = new IllegalStateException("shut down before the radio stopped (" + mode + ")");
+            for (CompletableFuture<Void> f : left) f.completeExceptionally(e);
+        }
+        scheduler.shutdown();
+    }
+
+    /** Tell listeners about a pause change (owner thread; the volatile flag was set by the caller). */
+    private void reportPaused() {
+        boolean now = paused;
+        if (now == pausedReported) return;
+        pausedReported = now;
+        for (CycleListener l : listeners) {
+            try {
+                l.onPausedChanged(now);
+            } catch (RuntimeException e) {
+                logger.log(Level.WARNING, "CycleListener threw", e);
+            }
+        }
     }
 
     // ------------------------------------------------------------------------------------------------
@@ -649,6 +902,7 @@ public final class RoleCycleController {
                 logger.log(Level.WARNING, "CycleListener threw", e);
             }
         }
+        if (next == CycleMode.STOPPED) onStopped();
     }
 
     private void notifyError(String reason) {
@@ -661,31 +915,77 @@ public final class RoleCycleController {
         }
     }
 
-    /** The single state timer (dwell, drain cap, retry backoff or UNAVAILABLE retry). */
+    /**
+     * Arm the single state timer (dwell, drain cap, joined-client poll, retry backoff or UNAVAILABLE retry)
+     * to run {@code task} at {@link Clock} time now + {@code delayMs}. The deadline lives on the clock; the
+     * scheduler only provides wake-ups of at most {@link #TIMER_SLICE_MS} (class docs, "Time base").
+     */
     private void scheduleTimer(long delayMs, Runnable task) {
         cancelTimer();
+        timerTask = task;
+        timerDueAt = clock.nowMillis() + Math.max(0, delayMs);
+        armTimerWake();
+    }
+
+    private void armTimerWake() {
         long seq = timerSeq;
-        timer = scheduler.schedule(() -> {
+        long wait = Math.min(Math.max(0, timerDueAt - clock.nowMillis()), TIMER_SLICE_MS);
+        timerWake = scheduler.schedule(() -> {
             if (seq != timerSeq) return; // cancelled after it was already queued to run
-            timer = null;
-            guarded(task);
-        }, delayMs);
+            timerWake = null;
+            guarded(this::onTimerWake);
+        }, wait);
+    }
+
+    /** A scheduler wake-up: fire the timer if its clock deadline passed, else sleep another slice. */
+    private void onTimerWake() {
+        if (timerTask == null) return;
+        if (clock.nowMillis() >= timerDueAt) {
+            fireTimer();
+        } else {
+            armTimerWake();
+        }
+    }
+
+    /** Before every owner-thread event: a timer whose deadline passed while the CPU slept fires first. */
+    private void fireOverdueTimer() {
+        if (timerTask == null) return;
+        long late = clock.nowMillis() - timerDueAt;
+        if (late < 0) return;
+        if (late > 0) logger.info("State timer overdue by " + late + " ms (CPU suspended?): firing on wake-up");
+        fireTimer();
+    }
+
+    private void fireTimer() {
+        Runnable task = timerTask;
+        cancelTimer();
+        task.run();
     }
 
     private void cancelTimer() {
         timerSeq++;
-        if (timer != null) {
-            timer.cancel();
-            timer = null;
+        timerTask = null;
+        if (timerWake != null) {
+            timerWake.cancel();
+            timerWake = null;
         }
     }
 
-    /** Post to the owner thread; dropped (logged) after shutdown. */
-    private void post(Runnable task) {
+    /**
+     * Post to the owner thread; every posted event first fires an overdue timer (class docs, "Time base").
+     *
+     * @return false if dropped because the scheduler has shut down
+     */
+    private boolean post(Runnable task) {
         try {
-            scheduler.execute(() -> guarded(task));
+            scheduler.execute(() -> {
+                guarded(this::fireOverdueTimer);
+                guarded(task);
+            });
+            return true;
         } catch (RejectedExecutionException e) {
             logger.fine("Role cycle task dropped after shutdown");
+            return false;
         }
     }
 

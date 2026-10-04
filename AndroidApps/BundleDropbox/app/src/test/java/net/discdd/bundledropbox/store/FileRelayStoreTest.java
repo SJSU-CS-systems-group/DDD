@@ -300,17 +300,137 @@ public class FileRelayStoreTest {
     @Test
     public void capacityCheckIncludesStagedBytes() throws IOException {
         store.setCapacityBytes(5_000);
-        assertTrue(store.hasCapacityFor(5_000));
-        assertFalse(store.hasCapacityFor(5_001));
+        assertTrue(store.hasCapacityFor(Direction.UPSTREAM, 5_000));
+        assertFalse(store.hasCapacityFor(Direction.UPSTREAM, 5_001));
         Staged s = stageRaw(Direction.UPSTREAM, new byte[3_000]);
-        assertTrue(store.hasCapacityFor(2_000));
-        assertFalse(store.hasCapacityFor(2_001));
+        assertTrue(store.hasCapacityFor(Direction.UPSTREAM, 2_000));
+        assertFalse(store.hasCapacityFor(Direction.UPSTREAM, 2_001));
         store.commit(s, "big");
-        assertFalse(store.hasCapacityFor(2_001));   // committed bytes still count
-        assertTrue(store.hasCapacityFor(0));
+        assertFalse(store.hasCapacityFor(Direction.UPSTREAM, 2_001));   // committed bytes still count
+        assertTrue(store.hasCapacityFor(Direction.UPSTREAM, 0));
         store.delete(Direction.UPSTREAM, "big");
-        assertTrue(store.hasCapacityFor(5_000));
+        assertTrue(store.hasCapacityFor(Direction.UPSTREAM, 5_000));
         assertEquals(2_000, new StoreStats(0, 3_000, 0, 0, 0, 5_000).freeBytes());
+    }
+
+    /** Audit M10: download-all can never take the share reserved for client uploads. */
+    @Test
+    public void downstreamCannotUseTheUpstreamReserve() throws IOException {
+        store.setCapacityBytes(10_000);   // default reserve 25% -> downstream quota 7,500
+        assertEquals(7_500, store.downstreamQuotaBytes());
+        assertTrue(store.hasCapacityFor(Direction.DOWNSTREAM, 7_500));
+        assertFalse(store.hasCapacityFor(Direction.DOWNSTREAM, 7_501));
+
+        // Downstream staged bytes count against the quota while they stream in.
+        Staged down = stageRaw(Direction.DOWNSTREAM, new byte[7_000]);
+        assertTrue(store.hasCapacityFor(Direction.DOWNSTREAM, 500));
+        assertFalse(store.hasCapacityFor(Direction.DOWNSTREAM, 501));
+        store.commit(down, "downFull");
+        assertFalse("downstream quota reached", store.hasCapacityFor(Direction.DOWNSTREAM, 501));
+        assertTrue("uploads still have the reserve", store.hasCapacityFor(Direction.UPSTREAM, 3_000));
+        assertFalse(store.hasCapacityFor(Direction.UPSTREAM, 3_001));
+
+        // Upstream may use space downstream leaves free, which then also limits downstream (total cap).
+        store.commit(stageRaw(Direction.UPSTREAM, new byte[2_900]), "up1");
+        assertFalse(store.hasCapacityFor(Direction.DOWNSTREAM, 101));
+        assertTrue(store.hasCapacityFor(Direction.DOWNSTREAM, 100));
+
+        store.setUpstreamReservePercent(0);   // v1 behaviour: one shared budget
+        assertEquals(10_000, store.downstreamQuotaBytes());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void reservePercentIsBounded() {
+        store.setUpstreamReservePercent(95);
+    }
+
+    /** Audit M7 groundwork: commit records the plaintext client tag and the jar build time. */
+    @Test
+    public void commitRecordsClientTagAndBuildTime() throws IOException {
+        Staged a = store.beginStaging(Direction.DOWNSTREAM);
+        try (OutputStream out = a.open()) {
+            TestBundles.writeJar(out, "v1", 10, "Ab_c-key", 1_700_000_000_000L);
+        }
+        BundleRecord r1 = store.commit(a, null);
+        Staged b = store.beginStaging(Direction.DOWNSTREAM);
+        try (OutputStream out = b.open()) {
+            TestBundles.writeJar(out, "v2", 10, "Ab_c-key", 1_700_000_100_000L);
+        }
+        BundleRecord r2 = store.commit(b, null);
+        BundleRecord plain = store.commit(stageJar(Direction.DOWNSTREAM, "noKey", 10), null);
+
+        assertNotNull(r1.clientTag());
+        assertEquals("same clientBase.pub, same tag", r1.clientTag(), r2.clientTag());
+        assertEquals(BundleIds.clientTag("-----BEGIN EC PUBLIC KEY-----\nAb_c-key\n-----END EC PUBLIC KEY-----"),
+                     r1.clientTag());
+        assertEquals(1_700_000_000_000L, r1.builtAtMillis());
+        assertEquals(1_700_000_100_000L, r2.builtAtMillis());
+        assertNull(plain.clientTag());
+
+        // Rebuilt from the jars on restart.
+        FileRelayStore reopened = newStore();
+        for (BundleRecord r : reopened.list(Direction.DOWNSTREAM)) {
+            if (r.bundleId().equals("v2")) {
+                assertEquals(r2.clientTag(), r.clientTag());
+                assertEquals(r2.builtAtMillis(), r.builtAtMillis());
+            }
+        }
+    }
+
+    /** Audit M9: a re-offered bundle's last-seen time advances and survives a restart (via mtime). */
+    @Test
+    public void touchAdvancesLastSeenAndPersistsIt() throws IOException {
+        BundleRecord r = store.commit(stageJar(Direction.DOWNSTREAM, "current", 10), null);
+        assertEquals(r.committedAtMillis(), r.lastSeenAtMillis());
+        assertTrue(store.touch(Direction.DOWNSTREAM, "current"));
+        BundleRecord touched = store.list(Direction.DOWNSTREAM).get(0);
+        assertTrue(touched.lastSeenAtMillis() > r.lastSeenAtMillis());
+        assertEquals("commit time unchanged in memory", r.committedAtMillis(), touched.committedAtMillis());
+        assertFalse(store.touch(Direction.DOWNSTREAM, "absent"));
+        assertFalse(store.touch(Direction.UPSTREAM, "current"));
+        assertFalse(store.touch(Direction.DOWNSTREAM, "../x"));
+
+        BundleRecord reloaded = newStore().list(Direction.DOWNSTREAM).get(0);
+        assertEquals(touched.lastSeenAtMillis(), reloaded.lastSeenAtMillis());
+    }
+
+    /** Audit i9: the "newest first" upload order rests on committedAt with a bundle-id tie-break. */
+    @Test
+    public void listOrderingBasisIsCommitTimeThenIdAndSurvivesRestart() throws IOException {
+        AtomicLong frozen = new AtomicLong(5_000_000L);
+        FileRelayStore s = new FileRelayStore(paths, CAPACITY, frozen::get);
+        s.commit(stageWith(s, "zeta"), null);
+        s.commit(stageWith(s, "alpha"), null);   // same commit time as zeta: id decides
+        frozen.set(6_000_000L);
+        s.commit(stageWith(s, "mid"), null);
+        List<String> ids = new ArrayList<>();
+        for (BundleRecord r : s.list(Direction.UPSTREAM)) ids.add(r.bundleId());
+        assertEquals(List.of("alpha", "zeta", "mid"), ids);
+
+        List<String> afterRestart = new ArrayList<>();
+        for (BundleRecord r : new FileRelayStore(paths, CAPACITY, frozen::get).list(Direction.UPSTREAM)) {
+            afterRestart.add(r.bundleId());
+        }
+        assertEquals(ids, afterRestart);
+    }
+
+    private static Staged stageWith(FileRelayStore s, String id) throws IOException {
+        Staged st = s.beginStaging(Direction.UPSTREAM);
+        try (OutputStream out = st.open()) {
+            TestBundles.writeJar(out, id, 10);
+        }
+        return st;
+    }
+
+    /** Audit m8: the rename is followed by a directory fsync, which must never fail the commit. */
+    @Test
+    public void directoryFsyncIsBestEffort() throws IOException {
+        AtomicFiles.fsyncDirectory(paths.upstream);
+        AtomicFiles.fsyncDirectory(paths.root.resolve("does-not-exist"));
+        AtomicFiles.fsyncDirectory(null);
+        Path target = paths.meta.resolve("x.bin");
+        AtomicFiles.write(target, new byte[]{1, 2});
+        assertArrayEquals(new byte[]{1, 2}, Files.readAllBytes(target));
     }
 
     @Test(expected = IllegalArgumentException.class)

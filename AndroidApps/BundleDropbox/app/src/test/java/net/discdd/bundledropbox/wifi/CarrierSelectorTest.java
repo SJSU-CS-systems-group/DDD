@@ -113,4 +113,27 @@ public class CarrierSelectorTest {
         assertEquals(0, a.firstSeenAtMillis());
         assertEquals(1, a.lastSeenAtMillis());
     }
+
+    @Test
+    public void carriersWithoutAddressAreNotCandidates() {
+        CarrierSelector sel = new CarrierSelector();
+        sel.beginPeriod();
+        sel.observe("A", "", "A", 0, 0);
+        assertNull(sel.next(1));
+        sel.observe("A", "aa:aa", "A", 0, 2); // a later answer carries the address
+        assertEquals("aa:aa", sel.next(3).deviceAddress());
+    }
+
+    @Test
+    public void failedVisitStillRotatesToTheOtherCarrier() {
+        CarrierSelector sel = new CarrierSelector();
+        sel.beginPeriod();
+        sel.observe("A", "aa:aa", "A", 0, 0);
+        sel.observe("B", "bb:bb", "B", 0, 1);
+        sel.recordVisit(sel.next(2).carrierId(), 3, false);
+        sel.beginPeriod();
+        sel.observe("A", "aa:aa", "A", 0, 10);
+        sel.observe("B", "bb:bb", "B", 0, 11);
+        assertEquals("B", sel.next(12).carrierId());
+    }
 }

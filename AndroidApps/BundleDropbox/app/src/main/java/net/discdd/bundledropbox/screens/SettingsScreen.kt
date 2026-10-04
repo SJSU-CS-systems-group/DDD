@@ -37,8 +37,8 @@ import net.discdd.bundledropbox.viewmodels.DropboxSettingsViewModel
 /**
  * Settings tab: the role-cycle timers and relay options from 03 Architecture "Settings", persisted to
  * [DropboxPrefs]. The running service applies changes through its preference listener
- * (`RoleCycleController.updateConfig`); how a change affects a dwell already in progress is decided by
- * the controller, not the UI.
+ * (`RoleCycleController.updateConfig`). Timer changes apply from the next dwell (a running dwell's
+ * deadline never moves), which the tab says next to the timers and in the "Saved" text (audit i7).
  */
 @Composable
 fun SettingsScreen(viewModel: DropboxSettingsViewModel = viewModel()) {
@@ -61,6 +61,7 @@ fun SettingsScreen(viewModel: DropboxSettingsViewModel = viewModel()) {
         ) {
             Text(stringResource(R.string.settings_timers), style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.settings_timers_note), style = MaterialTheme.typography.bodySmall)
             NumberField(R.string.settings_client_period, R.string.settings_client_period_help, form.clientPeriodS,
                     form.errors[DropboxPrefs.KEY_CLIENT_PERIOD_S], viewModel::onClientPeriodChange)
             NumberField(R.string.settings_transport_period, R.string.settings_transport_period_help,

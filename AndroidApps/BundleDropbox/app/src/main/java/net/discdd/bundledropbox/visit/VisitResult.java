@@ -38,7 +38,8 @@ public final class VisitResult {
      *                       (SUCCESS and strictly newer than the cached one)
      * @param uploaded       UPSTREAM bundles the carrier acknowledged with {@code SUCCESS} during this visit
      * @param downloaded     new DOWNSTREAM bundles committed to the store during this visit
-     * @param skipped        downloaded bundles discarded because the store (or this visit) already held that id
+     * @param skipped        downloaded carrier files discarded: the store (or this visit) already held that id, or
+     *                       the file was empty / not a bundle jar (transient on a stock carrier, not an error)
      * @param errors         per-bundle or per-RPC failures (including a fatal one, if any)
      * @param stoppedEarly   true if the visit ended before finishing because {@code keepGoing} turned false,
      *                       {@link TransportVisitClient#cancel()} was called, or the thread was interrupted
@@ -60,8 +61,9 @@ public final class VisitResult {
     /**
      * Full constructor.
      *
-     * @param recencyFetched true if the carrier answered {@code getRecencyBlob} with a SUCCESS, server-signed
-     *                       blob (whether or not it was newer than the cached one). The service bumps the
+     * @param recencyFetched true if the carrier answered {@code getRecencyBlob} with a blob the dropbox's
+     *                       clients would accept (SUCCESS, signed by the pinned server, not from the future),
+     *                       whether or not it was newer than the cached one. The service bumps the
      *                       advertised-id generation on this (03 Architecture §5); see the other constructor
      *                       for the remaining parameters
      */
@@ -94,8 +96,9 @@ public final class VisitResult {
     public boolean reachable() { return reachable; }
 
     /**
-     * @return true if the carrier returned a SUCCESS recency blob (stored or not). Basis for advertised-id
-     *         rotation: the carrier is in sync with the server, so what we now hold is as fresh as it gets.
+     * @return true if the carrier returned a recency blob our clients trust (stored or not). Basis for
+     *         advertised-id rotation: the carrier is in sync with our server, so what we now hold is as fresh as
+     *         it gets. A carrier synced to another deployment's server does not count.
      */
     public boolean recencyFetched() { return recencyFetched; }
 
@@ -108,7 +111,10 @@ public final class VisitResult {
     /** @return number of new DOWNSTREAM bundles committed. */
     public int downloaded() { return downloaded; }
 
-    /** @return number of downloaded bundles discarded as already held (the cost of v1 download-all). */
+    /**
+     * @return number of downloaded carrier files discarded: already held (the cost of v1 download-all), or empty /
+     *         not a bundle jar
+     */
     public int skipped() { return skipped; }
 
     /** @return number of errors encountered. */

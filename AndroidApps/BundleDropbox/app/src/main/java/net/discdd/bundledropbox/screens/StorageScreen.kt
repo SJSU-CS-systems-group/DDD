@@ -34,7 +34,8 @@ import net.discdd.bundledropbox.viewmodels.StorageViewModel
 
 /**
  * Storage tab: how many opaque bundles the dropbox holds in each direction, against the configured
- * capacity, plus two operator "clear" actions behind confirmation dialogs.
+ * capacity, plus two operator "clear" actions and a "reset recency blob" recovery action, each behind a
+ * confirmation dialog.
  *
  * Upstream = "deposited" by clients, waiting for a carrier. Downstream = "pickups" pulled from
  * carriers, waiting for clients. In v1 nothing is ever deleted automatically
@@ -48,6 +49,7 @@ fun StorageScreen(viewModel: StorageViewModel = viewModel()) {
     val extras by viewModel.extras.collectAsState()
     var confirmUpstream by remember { mutableStateOf(false) }
     var confirmDownstream by remember { mutableStateOf(false) }
+    var confirmRecencyReset by remember { mutableStateOf(false) }
 
     LaunchedEffect(extras.message) {
         if (extras.message != null) {
@@ -97,6 +99,11 @@ fun StorageScreen(viewModel: StorageViewModel = viewModel()) {
                     enabled = status.downstreamCount() > 0) {
                 Text(stringResource(R.string.storage_clear_downstream))
             }
+            // Audit M6: manual recovery from a recency blob that clients reject (e.g. from another server).
+            OutlinedButton(onClick = { confirmRecencyReset = true }, modifier = Modifier.fillMaxWidth(),
+                    enabled = status.recencyBlobTimestamp() > 0) {
+                Text(stringResource(R.string.storage_recency_reset))
+            }
 
             extras.message?.let {
                 Text(it, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
@@ -119,6 +126,14 @@ fun StorageScreen(viewModel: StorageViewModel = viewModel()) {
                 text = stringResource(R.string.storage_confirm_upstream, status.upstreamCount()),
                 onConfirm = { confirmUpstream = false; viewModel.clearUpstream() },
                 onDismiss = { confirmUpstream = false },
+        )
+    }
+    if (confirmRecencyReset) {
+        ConfirmClearDialog(
+                title = stringResource(R.string.storage_recency_reset),
+                text = stringResource(R.string.storage_recency_reset_confirm),
+                onConfirm = { confirmRecencyReset = false; viewModel.resetRecencyBlob() },
+                onDismiss = { confirmRecencyReset = false },
         )
     }
     if (confirmDownstream) {

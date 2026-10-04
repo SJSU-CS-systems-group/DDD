@@ -1,6 +1,8 @@
 package net.discdd.bundledropbox
 
 import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +22,10 @@ import java.util.logging.Logger
  * work to the service's own executor / the role-cycle controller's single thread.
  */
 interface DropboxControls {
-    /** Stops the role cycle (radio idle, `CycleMode.STOPPED`) until [resumeCycle]. Idempotent. */
+    /**
+     * Stops the role cycle (radio idle, `CycleMode.STOPPED`) until [resumeCycle]. Idempotent. Persisted:
+     * the cycle stays paused across restarts, reboots and app updates.
+     */
     fun pauseCycle()
 
     /** Restarts the role cycle after [pauseCycle]. Idempotent. */
@@ -28,6 +33,13 @@ interface DropboxControls {
 
     /** @return true while the operator has the cycle paused (STOPPED alone also means "not started"). */
     fun isCyclePaused(): Boolean
+
+    /**
+     * Operator "Stop dropbox": idles the radio and ends the foreground service. It stays stopped (no start at
+     * boot, after an update or when the app opens) until [DropboxServiceManager.startRelay]. Does not wait
+     * for the service to finish starting.
+     */
+    fun stopRelay()
 
     /** Ends the current HOST dwell now (normal drain rules apply) and starts a transport visit. */
     fun forceVisitNow()
@@ -40,6 +52,14 @@ interface DropboxControls {
 
     /** Operator "clear pickups": deletes every DOWNSTREAM (server-to-client) bundle from the store. */
     fun clearDownstream()
+
+    /**
+     * Operator "reset recency blob" (audit M6): forgets the stored recency blob, so the dropbox stops
+     * advertising and serving it and goes back to the bootstrap state (VISIT only) until a carrier supplies
+     * a blob signed by the pinned server. Ends a HOST dwell early. Manual recovery from a bad blob; an
+     * untrusted blob is already dropped automatically when the service starts.
+     */
+    fun resetRecencyBlob()
 
     /**
      * NEARBY_WIFI_DEVICES was just granted; retry radio work that failed for lack of permission. Mirrors
@@ -55,7 +75,11 @@ interface DropboxControls {
  * [getService] / [controls], and code that must wait for the first bind uses [serviceReady].
  *
  * Unlike the transport, the activity never stops the service when it is destroyed: the dropbox is
- * a stationary relay that keeps cycling with the screen off.
+ * a stationary relay that keeps cycling with the screen off. Only the operator's Stop button does.
+ *
+ * Bindings are reference-counted ([onActivityBound] / [onActivityUnbound]): if two activity instances
+ * exist (e.g. one opened from the notification), destroying one must not disconnect the other's UI
+ * (audit m11).
  */
 object DropboxServiceManager {
     private val logger = Logger.getLogger(DropboxServiceManager::class.java.name)
@@ -63,6 +87,9 @@ object DropboxServiceManager {
     // Written on the main thread by ServiceConnection callbacks, read from IO coroutines.
     @Volatile
     private var service: DropboxService? = null
+
+    /** Activity instances currently bound with [connection] (main thread only). */
+    private var bindings = 0
 
     /** Completes with the service on the first successful bind (never reset, as in the transport). */
     val serviceReady = CompletableFuture<DropboxService>()
@@ -95,6 +122,29 @@ object DropboxServiceManager {
         logger.info("Clearing dropbox service")
         service = null
         _connected.value = false
+    }
+
+    /** An activity bound [connection] successfully. Main thread. */
+    fun onActivityBound() {
+        bindings++
+    }
+
+    /**
+     * An activity is about to unbind [connection]. Clears the handle only when it was the last one; other
+     * instances keep a working UI. Main thread.
+     */
+    fun onActivityUnbound() {
+        bindings = (bindings - 1).coerceAtLeast(0)
+        if (bindings == 0) clearService()
+    }
+
+    /**
+     * Operator "Start dropbox" after [DropboxControls.stopRelay]. The [DropboxService.ACTION_START] command
+     * is the only start that clears the persisted stop.
+     */
+    fun startRelay(context: Context) {
+        val intent = Intent(context, DropboxService::class.java).setAction(DropboxService.ACTION_START)
+        context.applicationContext.startForegroundService(intent)
     }
 
     /** @return the bound service, or `null` before the bind completes / after unbinding. */

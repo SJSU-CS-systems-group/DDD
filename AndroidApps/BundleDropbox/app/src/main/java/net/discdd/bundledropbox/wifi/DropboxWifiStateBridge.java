@@ -10,8 +10,8 @@ import java.util.stream.Collectors;
  * Mirrors {@link WifiRadioState} into the UI's Kotlin {@code DropboxWifiState} StateFlow (the dropbox's
  * replacement for the transport's {@code DDDWifiServiceEvents} + polling of {@code networkInfo}, R5 §5.5).
  *
- * <p>Kept as a separate adapter so the radio code itself stays Kotlin-free; the integrator registers it:
- * {@code driver.addStateListener(new DropboxWifiStateBridge())}.
+ * <p>Kept as a separate adapter so the radio code itself stays Kotlin-free; {@code DropboxService} registers
+ * it with {@code driver.addStateListener(new DropboxWifiStateBridge())}.
  */
 public final class DropboxWifiStateBridge implements WifiRadioStateListener {
     @Override

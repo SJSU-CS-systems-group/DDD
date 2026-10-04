@@ -22,8 +22,22 @@ public final class WifiTimeouts {
     /** How long stopVisit waits for a cancelled {@link VisitRunner} to return before reporting idle. */
     public static final long RUNNER_EXIT_MS = 5_000L;
 
-    /** Interval between {@code requestGroupInfo}/{@code requestConnectionInfo} polls. */
+    /** Interval between {@code requestGroupInfo} polls (group formed / group removed). */
     public static final long POLL_INTERVAL_MS = 500L;
+    /**
+     * Interval between {@code requestConnectionInfo} polls while joining a carrier. Slower than
+     * {@link #POLL_INTERVAL_MS} on purpose: this is only the fallback for a missed
+     * {@code WIFI_P2P_CONNECTION_CHANGED_ACTION} (Research/R2 §1.3 item 4), GO negotiation plus DHCP take
+     * seconds anyway, and extra requests during negotiation only add load on a framework that is already
+     * answering BUSY. Bounded overall by {@link #CONNECT_MS}.
+     */
+    public static final long CONNECTION_POLL_MS = 1_000L;
+    /**
+     * Backoff for re-creating the P2P channel after the framework dropped it (first retry after 1 s, doubling
+     * up to 30 s, the controller's UNAVAILABLE retry interval). Re-creating it lets the driver report
+     * "available" again, so the cycle can leave UNAVAILABLE at once (audit finding m10).
+     */
+    public static final RetryBackoff CHANNEL_RECOVERY = new RetryBackoff(1_000L, 30_000L, Integer.MAX_VALUE);
     /**
      * Re-issue {@code discoverServices} this often while idle in VISIT: Android stops a service
      * discovery on its own after a while, and a fresh request also re-queries carriers that appeared late.

@@ -75,6 +75,7 @@ fun DropboxHomeScreen(viewModel: SettingsViewModel = viewModel()) {
     val firstOpen by viewModel.firstOpen.collectAsState()
     val showEasterEgg by viewModel.showEasterEgg.collectAsState()
     val status by DropboxStatusRepository.status.collectAsState()
+    val connected by DropboxServiceManager.connected.collectAsState()
 
     val nearbyWifiState = rememberPermissionState(Manifest.permission.NEARBY_WIFI_DEVICES)
     val notificationState = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS,
@@ -84,9 +85,11 @@ fun DropboxHomeScreen(viewModel: SettingsViewModel = viewModel()) {
     // because DropboxControls methods may block briefly. Unlike the transport's hook, ours can throw
     // (the service reports "failed to start" / "still starting" through IllegalStateException), and an
     // uncaught exception in a LaunchedEffect would crash the app, so it is caught and logged; the service
-    // already publishes the failure as lastError on the Status tab.
-    LaunchedEffect(nearbyWifiState.status) {
-        if (nearbyWifiState.status.isGranted) {
+    // already publishes the failure as lastError on the Status tab. Keyed on `connected` too: a grant
+    // that lands before the service is bound would otherwise be lost (controls() is null), leaving the
+    // radio in UNAVAILABLE until its 30 s retry (audit i6).
+    LaunchedEffect(nearbyWifiState.status, connected) {
+        if (connected && nearbyWifiState.status.isGranted) {
             withContext(Dispatchers.IO) {
                 runCatching { DropboxServiceManager.controls()?.wifiPermissionGranted() }
                         .onFailure { logger.log(Level.WARNING, "wifiPermissionGranted failed: ${it.message}") }

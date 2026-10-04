@@ -29,9 +29,11 @@ import java.util.logging.Logger;
  *   <li><b>advertisedId.</b> A stock client only exchanges with a transport when the transport's
  *       {@code blobTimestamp} is newer than the client's last exchange with that {@code transportId}
  *       (Research/R3). The dropbox re-serves a carrier's blob, so after one exchange a client would ignore
- *       it until the carrier's server sync advanced. 03 Architecture §5: after each visit where the recency
- *       fetch succeeded the dropbox bumps a persisted generation and advertises {@code baseId-gen}, so
- *       clients see a "new" transport. With rotation off it advertises plain {@code baseId}.</li>
+ *       it until the carrier's server sync advanced. The dropbox therefore bumps a persisted generation at
+ *       the start of every hosting period ({@link HostPeriodIdRotator}, audit M8) and advertises
+ *       {@code baseId-gen}, so each client sees a "new" transport once per period. (03 Architecture §5
+ *       bumped it only after a visit that fetched a blob, which allowed one exchange per carrier visit.)
+ *       With rotation off it advertises plain {@code baseId}.</li>
  * </ul>
  *
  * <p>The generation lives in {@code meta/advertisedIdGeneration} (decimal text, atomic replace), so it
@@ -129,8 +131,8 @@ public final class DropboxIdentity {
     }
 
     /**
-     * Advances the generation and persists it. Called by the service after a visit whose recency fetch
-     * succeeded, when rotation is on. The new id is advertised at the next {@code startHosting}.
+     * Advances the generation and persists it. Called by {@link HostPeriodIdRotator} when a hosting period
+     * starts with rotation on, before the Wi-Fi host builds its TXT record.
      *
      * @return the new advertised id
      */
@@ -140,7 +142,7 @@ public final class DropboxIdentity {
             writeAtomically(generationFile, Long.toString(generation));
         } catch (IOException e) {
             // Keep the in-memory value: the worst case after a crash is re-advertising an older id,
-            // which only makes clients skip one exchange until the next bump.
+            // which only makes clients that already used it skip that one hosting period.
             logger.log(Level.WARNING, "Could not persist advertised-id generation " + generation, e);
         }
         return advertisedId();

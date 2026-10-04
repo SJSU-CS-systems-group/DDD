@@ -35,6 +35,10 @@ final class FakeRelayStore implements RelayStore {
     private final AtomicLong commitClock = new AtomicLong(1_000);
     private final Map<Direction, Map<String, BundleRecord>> records = new LinkedHashMap<>();
     volatile boolean hasCapacity = true;
+    /** DOWNSTREAM quota (committed + staged bytes) for the in-stream budget tests. */
+    volatile long downstreamQuotaBytes = Long.MAX_VALUE / 4;
+    /** Ids passed to {@link #touch}, in order. */
+    final List<String> touched = new java.util.concurrent.CopyOnWriteArrayList<>();
     int aborts;
 
     FakeRelayStore(Path root) throws IOException {
@@ -137,7 +141,30 @@ final class FakeRelayStore implements RelayStore {
     }
 
     @Override
-    public boolean hasCapacityFor(long bytes) { return hasCapacity; }
+    public boolean hasCapacityFor(Direction d, long bytes) {
+        if (!hasCapacity) return false;
+        if (d != Direction.DOWNSTREAM) return true;
+        return stats().downstreamBytes() + stagedBytes() + Math.max(0, bytes) <= downstreamQuotaBytes;
+    }
+
+    @Override
+    public synchronized boolean touch(Direction d, String bundleId) {
+        BundleRecord r = records.get(d).get(bundleId);
+        if (r == null) return false;
+        touched.add(bundleId);
+        records.get(d).put(bundleId, r.withLastSeen(commitClock.incrementAndGet()));
+        return true;
+    }
+
+    private long stagedBytes() {
+        try (var s = Files.list(root.resolve("staging"))) {
+            long total = 0;
+            for (Path p : (Iterable<Path>) s::iterator) total += Files.size(p);
+            return total;
+        } catch (IOException e) {
+            return 0;
+        }
+    }
 
     @Override
     public synchronized void delete(Direction d, String bundleId) {

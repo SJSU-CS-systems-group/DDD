@@ -134,6 +134,87 @@ public class DropboxExchangeServiceTest {
         assertTrue(listener.failed.get(0).contains("store full"));
     }
 
+    /** Audit m9: a second bundleId in one stream fails the upload instead of leaking bundle-core's writer. */
+    @Test
+    public void repeatedBundleIdInOneStreamIsRefusedAndNothingIsLeftStaged() throws Exception {
+        var resp = new RpcTestFakes.RecordingObserver<BundleUploadResponse>();
+        StreamObserver<BundleUploadRequest> req = service.uploadBundle(resp);
+        req.onNext(idMsg("first"));
+        req.onNext(chunkMsg("part one".getBytes()));
+        req.onNext(idMsg("second"));
+        req.onNext(chunkMsg("part two".getBytes()));   // dropped: the call already answered
+        req.onNext(BundleUploadRequest.newBuilder().setSenderType(BundleSenderType.CLIENT).build());
+        req.onCompleted();
+        assertEquals(1, resp.values.size());
+        assertEquals(net.discdd.grpc.Status.FAILED, resp.values.get(0).getStatus());
+        assertTrue(store.list(Direction.UPSTREAM).isEmpty());
+        assertEquals(0, store.stagedFileCount());
+        assertEquals(1, store.aborted.size());
+        assertTrue(listener.failed.toString(), listener.failed.get(0).contains("repeated bundleId"));
+    }
+
+    /** Audit m7: the capacity is enforced per chunk, before the bytes reach the disk. */
+    @Test
+    public void uploadExceedingCapacityMidStreamIsCutOff() throws Exception {
+        store.capacityBytes = 1_000;
+        var resp = new RpcTestFakes.RecordingObserver<BundleUploadResponse>();
+        StreamObserver<BundleUploadRequest> req = service.uploadBundle(resp);
+        req.onNext(idMsg("too-big"));
+        req.onNext(chunkMsg(new byte[600]));
+        req.onNext(chunkMsg(new byte[600]));   // would reach 1,200 bytes
+        req.onNext(chunkMsg(new byte[600]));   // dropped
+        req.onNext(BundleUploadRequest.newBuilder().setSenderType(BundleSenderType.CLIENT).build());
+        req.onCompleted();
+        assertEquals(1, resp.values.size());
+        assertEquals(net.discdd.grpc.Status.FAILED, resp.values.get(0).getStatus());
+        assertTrue(resp.completed);
+        assertTrue(store.list(Direction.UPSTREAM).isEmpty());
+        assertEquals("staged partial removed", 0, store.stagedFileCount());
+        assertTrue(listener.failed.toString(), listener.failed.get(0).contains("store full"));
+    }
+
+    /** Audit i3: user-visible (INFO+) log lines must not pair a client IP with its bundle id. */
+    @Test
+    public void infoLogsDoNotNameTheUploadedBundle() throws Exception {
+        java.util.logging.Logger log = java.util.logging.Logger.getLogger(DropboxExchangeService.class.getName());
+        List<String> infoLines = new java.util.concurrent.CopyOnWriteArrayList<>();
+        java.util.logging.Handler h = new java.util.logging.Handler() {
+            @Override
+            public void publish(java.util.logging.LogRecord r) {
+                if (r.getLevel().intValue() >= java.util.logging.Level.INFO.intValue()) infoLines.add(r.getMessage());
+            }
+
+            @Override
+            public void flush() {}
+
+            @Override
+            public void close() {}
+        };
+        log.addHandler(h);
+        try {
+            upload("secret-bundle-id", true, true, "x".getBytes());
+            upload("other-secret-id", false, true, "x".getBytes());
+        } finally {
+            log.removeHandler(h);
+        }
+        assertTrue(infoLines.size() >= 2);
+        for (String line : infoLines) {
+            assertTrue(line, !line.contains("secret-bundle-id") && !line.contains("other-secret-id"));
+        }
+    }
+
+    private static BundleUploadRequest idMsg(String id) {
+        return BundleUploadRequest.newBuilder()
+                .setBundleId(EncryptedBundleId.newBuilder().setEncryptedId(id).build())
+                .build();
+    }
+
+    private static BundleUploadRequest chunkMsg(byte[] b) {
+        return BundleUploadRequest.newBuilder()
+                .setChunk(BundleChunk.newBuilder().setChunk(ByteString.copyFrom(b)).build())
+                .build();
+    }
+
     @Test
     public void reUploadOfSameIdReplaces() throws Exception {
         upload("same", true, true, "one".getBytes());
@@ -261,19 +342,71 @@ public class DropboxExchangeServiceTest {
     }
 
     @Test
-    public void psiSnapshotOffersOnlyTheNewestBundles() throws Exception {
+    public void psiSnapshotCapKeepsTheMostRecentlySeenBundles() throws Exception {
         service = new DropboxExchangeService(store, blobs, deliveryLog, listener, clock, () -> 42L, 2);
-        store.putDownstream("oldest", "1".getBytes());
-        store.putDownstream("middle", "2".getBytes());
-        store.putDownstream("newest", "3".getBytes());
+        store.putDownstream("oldest", "1".getBytes(), null, -1, 100, 100);
+        store.putDownstream("middle", "2".getBytes(), null, -1, 200, 200);
+        store.putDownstream("newest", "3".getBytes(), null, -1, 300, 300);
         var psi = new BundleOwnershipPSI();
         BigInteger a = psi.generateSecret();
         PSIResponse r = psiExchange(psi, a, List.of("oldest", "newest"));
         assertEquals("snapshot capped", 2, r.getTransportBlindedValuesCount());
         var matches = psi.clientFindMatches(ints(r.getDoublyBlindedClientValuesList()),
                                             ints(r.getTransportBlindedValuesList()), a);
-        assertEquals("only the newest bundle is offered", 1, matches.size());
+        assertEquals("only the most recently seen bundles are offered", 1, matches.size());
         assertEquals(1, matches.get(0).clientIndex());
+    }
+
+    /**
+     * Audit M9: a client's current bundle that a carrier keeps re-offering ({@code touch}) stays in the capped
+     * snapshot even after newer bundles for other clients arrived.
+     */
+    @Test
+    public void reOfferedBundleDoesNotAgeOutOfTheCappedSnapshot() throws Exception {
+        service = new DropboxExchangeService(store, blobs, deliveryLog, listener, clock, () -> 42L, 1);
+        store.putDownstream("idle-client-current", "1".getBytes(), "IDLE", 1_000, 100, 100);
+        store.putDownstream("busy-client", "2".getBytes(), "BUSY", 2_000, 200, 200);
+        assertTrue(store.touch(Direction.DOWNSTREAM, "idle-client-current")); // carrier re-offered it just now
+        var psi = new BundleOwnershipPSI();
+        BigInteger a = psi.generateSecret();
+        PSIResponse r = psiExchange(psi, a, List.of("idle-client-current"));
+        assertEquals(1, r.getTransportBlindedValuesCount());
+        assertEquals(1, psi.clientFindMatches(ints(r.getDoublyBlindedClientValuesList()),
+                                              ints(r.getTransportBlindedValuesList()), a).size());
+    }
+
+    /**
+     * Audit M7: the stock client downloads only its first match in window (ascending counter) order, so a
+     * superseded version must not be offered or it would take the stale one first.
+     */
+    @Test
+    public void psiOffersOnlyTheNewestBundlePerClient() throws Exception {
+        store.putDownstream("x-counter5", "old".getBytes(), "CLIENT-X", 5_000, 900, 900); // arrived last
+        store.putDownstream("x-counter6", "new".getBytes(), "CLIENT-X", 6_000, 100, 100);
+        store.putDownstream("y-counter1", "y".getBytes(), "CLIENT-Y", 1_000, 50, 50);
+        var psi = new BundleOwnershipPSI();
+        BigInteger a = psi.generateSecret();
+        // The client's window lists counters in ascending order: 5 before 6.
+        PSIResponse r = psiExchange(psi, a, List.of("x-counter5", "x-counter6"));
+        assertEquals("one bundle per client", 2, r.getTransportBlindedValuesCount());
+        var matches = psi.clientFindMatches(ints(r.getDoublyBlindedClientValuesList()),
+                                            ints(r.getTransportBlindedValuesList()), a);
+        assertEquals(1, matches.size());
+        assertEquals("the newer counter is the only match", 1, matches.get(0).clientIndex());
+        assertTrue("older version is kept, just not offered", store.contains(Direction.DOWNSTREAM, "x-counter5"));
+    }
+
+    @Test
+    public void legacyDownloadServesOnlyTheNewestBundlePerClient() throws Exception {
+        store.putDownstream("x-counter5", "old".getBytes(), "CLIENT-X", 5_000, 100, 100);
+        store.putDownstream("x-counter6", "new".getBytes(), "CLIENT-X", 6_000, 200, 200);
+        var old = new RpcTestFakes.RecordingObserver<BundleDownloadResponse>();
+        service.downloadBundle(dlReq("x-counter5"), old);
+        assertEquals(Status.Code.NOT_FOUND, Status.fromThrowable(old.error).getCode());
+        var current = new RpcTestFakes.RecordingObserver<BundleDownloadResponse>();
+        service.downloadBundle(dlReq("x-counter6"), current);
+        assertTrue(current.completed);
+        assertEquals(List.of("x-counter6"), deliveryLog.served);
     }
 
     @Test

@@ -12,18 +12,28 @@ package net.discdd.bundledropbox.cycle;
  * STOPPED → (no recency blob? skip HOST) → VISIT_STARTING → VISITING → VISIT_DRAINING → VISIT_STOPPING
  *         → HOST_STARTING → HOSTING → HOST_DRAINING → HOST_STOPPING → VISIT_STARTING → ...
  * any radio failure after bounded retries → UNAVAILABLE → (30 s or Wi-Fi/permission change) → retry
+ * stop/pause/shutdown from any state → *_STOPPING → STOPPED
  * </pre>
  */
 public enum CycleMode {
-    /** Controller not running (service stopped or paused). Radio idle. */
+    /**
+     * Controller not running (stopped or paused). Radio idle, unless a stop issued by the halt failed: the
+     * controller then retries that stop before the next start (see {@code RoleCycleController}).
+     */
     STOPPED,
-    /** Creating the Wi-Fi Direct group, advertising DNS-SD and starting the gRPC server. */
+    /**
+     * Creating the Wi-Fi Direct group, making sure the (always-running) client gRPC server is listening, and
+     * advertising DNS-SD.
+     */
     HOST_STARTING,
     /** Serving clients; the client dwell timer ({@link CycleConfig#clientPeriodMs()}) is running. */
     HOSTING,
-    /** Client dwell expired: new clients rejected, admitted sessions finishing (bounded by the drain cap). */
+    /**
+     * Client dwell expired: advertisement withdrawn, admitted sessions finishing (bounded by the drain cap).
+     * New clients are rejected, except during the short joined-client grace at its start.
+     */
     HOST_DRAINING,
-    /** Stopping the gRPC server, removing the group and clearing local services. */
+    /** Clearing local services, ending the HOST role's client sessions and removing the group. */
     HOST_STOPPING,
     /** Starting DNS-SD discovery for {@code _ddd._tcp} carriers. */
     VISIT_STARTING,

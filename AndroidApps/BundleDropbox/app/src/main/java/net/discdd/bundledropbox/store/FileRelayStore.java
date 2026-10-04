@@ -51,8 +51,15 @@ import java.util.logging.Logger;
  * never block each other except for the instant of the rename.
  *
  * <p><b>Capacity.</b> {@link #hasCapacityFor} compares committed + staged bytes against a capacity the
- * service sets from the {@code max_storage_mb} preference ({@link #setCapacityBytes}). The store itself
- * never refuses a commit for capacity: the bytes are already on disk and counted as staged by then.
+ * service sets from the {@code max_storage_mb} preference ({@link #setCapacityBytes}). DOWNSTREAM is further
+ * limited to {@code capacity - upstreamReserve} ({@link #setUpstreamReservePercent}, default
+ * {@value #DEFAULT_UPSTREAM_RESERVE_PERCENT}%), so download-all can never take the space client uploads
+ * need (Audit M10); UPSTREAM may use any space DOWNSTREAM leaves free. The store itself never refuses a
+ * commit for capacity: the bytes are already on disk and counted as staged by then.
+ *
+ * <p><b>Jar metadata.</b> On commit and on {@link #reconcile()} the store reads each bundle's plaintext
+ * {@code clientBase.pub} tag and build time ({@link BundleIds#inspect}) into its {@link BundleRecord}, so
+ * the HOST side can pick the newest bundle per client without touching the disk (Audit M7).
  *
  * <p>Pure Java, no Android imports, so it runs in JVM unit tests.
  */
@@ -62,9 +69,13 @@ public final class FileRelayStore implements RelayStore {
     /** Suffix of staging temp files. Contains '.', so it can never be mistaken for a clean bundle id. */
     static final String STAGING_SUFFIX = ".part";
 
+    /** Default share of the capacity DOWNSTREAM may never use, kept free for client uploads. */
+    public static final int DEFAULT_UPSTREAM_RESERVE_PERCENT = 25;
+
     private final DropboxPaths paths;
     private final LongSupplier wallClockMillis;
     private volatile long capacityBytes;
+    private volatile int upstreamReservePercent = DEFAULT_UPSTREAM_RESERVE_PERCENT;
 
     /** Guards {@link #index} and every rename/delete inside the queue directories. */
     private final Object lock = new Object();
@@ -112,6 +123,23 @@ public final class FileRelayStore implements RelayStore {
     }
 
     /**
+     * Sets the share of the capacity reserved for UPSTREAM (client uploads). DOWNSTREAM receives are refused
+     * once DOWNSTREAM committed + staged bytes would exceed {@code capacity * (100 - percent) / 100}.
+     *
+     * @param percent 0 (no reserve, the v1 shared budget) to 90
+     */
+    public void setUpstreamReservePercent(int percent) {
+        if (percent < 0 || percent > 90) throw new IllegalArgumentException("reserve percent must be 0..90: " + percent);
+        this.upstreamReservePercent = percent;
+    }
+
+    /** @return the most bytes DOWNSTREAM (committed + staged) may occupy. */
+    public long downstreamQuotaBytes() {
+        long cap = capacityBytes;
+        return cap - cap / 100 * upstreamReservePercent - (cap % 100) * upstreamReservePercent / 100;
+    }
+
+    /**
      * Startup recovery: deletes staging files not owned by a live {@link Staged} handle (receives that
      * were interrupted by a crash or kill; the peer re-sends them on its next exchange) and rebuilds the
      * committed index from the queue directories.
@@ -145,7 +173,11 @@ public final class FileRelayStore implements RelayStore {
                             logger.log(Level.FINE, "Ignoring non-bundle file " + p);
                             continue;
                         }
-                        m.put(name, new BundleRecord(name, d, Files.size(p), Files.getLastModifiedTime(p).toMillis()));
+                        long mtime = Files.getLastModifiedTime(p).toMillis();
+                        BundleIds.JarInfo info = BundleIds.inspect(p).orElse(null);
+                        m.put(name, new BundleRecord(name, d, Files.size(p), mtime, mtime,
+                                                     info == null ? null : info.clientTag(),
+                                                     info == null ? BundleRecord.UNKNOWN_TIME : info.builtAtMillis()));
                     }
                 }
             }
@@ -175,7 +207,8 @@ public final class FileRelayStore implements RelayStore {
             s.closeStream();
             if (!Files.isRegularFile(s.path)) throw new IOException("Staged file vanished: " + s.path);
 
-            String id = resolveId(s.path, claimedIdOrNull);
+            BundleIds.JarInfo info = BundleIds.inspect(s.path).orElse(null);
+            String id = resolveId(info == null ? null : info.rawId(), claimedIdOrNull);
             Path target = targetFor(s.direction, id);
             long size = Files.size(s.path);
             long now = wallClockMillis.getAsLong();
@@ -183,10 +216,13 @@ public final class FileRelayStore implements RelayStore {
             Files.setLastModifiedTime(s.path, FileTime.fromMillis(now));
             AtomicFiles.fsync(s.path);
 
-            BundleRecord rec = new BundleRecord(id, s.direction, size, now);
+            BundleRecord rec = new BundleRecord(id, s.direction, size, now, now,
+                                                info == null ? null : info.clientTag(),
+                                                info == null ? BundleRecord.UNKNOWN_TIME : info.builtAtMillis());
             synchronized (lock) {
                 // Same id replaces: clients re-send the same bundle id until acked and the server re-offers
                 // the same downstream id until superseded (Research/R4 §4.2), so overwrite is the dedupe.
+                // moveReplacing also fsyncs the queue directory, so an acknowledged commit survives power loss.
                 AtomicFiles.moveReplacing(s.path, target);
                 BundleRecord old = index.get(s.direction).put(id, rec);
                 if (old != null) logger.log(Level.FINE, "Replaced " + s.direction + " bundle " + id);
@@ -223,13 +259,13 @@ public final class FileRelayStore implements RelayStore {
         }
     }
 
+    /** {@inheritDoc} Ordering basis: committedAt (file mtime across restarts), then bundle id. */
     @Override
     public List<BundleRecord> list(Direction d) {
         List<BundleRecord> out;
         synchronized (lock) {
             out = new ArrayList<>(index.get(d).values());
         }
-        // Oldest first; id as tie-breaker so the order is deterministic.
         out.sort(Comparator.comparingLong(BundleRecord::committedAtMillis).thenComparing(BundleRecord::bundleId));
         return out;
     }
@@ -250,6 +286,31 @@ public final class FileRelayStore implements RelayStore {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Also advances the file mtime so the last-seen time survives a restart (reconcile reads it back as
+     * both committedAt and lastSeen). A failure to set the mtime only loses that persistence and is logged.
+     */
+    @Override
+    public boolean touch(Direction d, String bundleId) {
+        if (!BundleIds.isClean(bundleId)) return false;
+        long now = wallClockMillis.getAsLong();
+        synchronized (lock) {
+            BundleRecord r = index.get(d).get(bundleId);
+            if (r == null) return false;
+            BundleRecord touched = r.withLastSeen(now);
+            if (touched == r) return true;
+            try {
+                Files.setLastModifiedTime(paths.dirFor(d).resolve(bundleId), FileTime.fromMillis(now));
+            } catch (IOException e) {
+                logger.log(Level.FINE, "Could not persist last-seen time of " + d + " bundle " + bundleId, e);
+            }
+            index.get(d).put(bundleId, touched);
+            return true;
+        }
+    }
+
     @Override
     public StoreStats stats() {
         int upCount, downCount;
@@ -262,12 +323,22 @@ public final class FileRelayStore implements RelayStore {
             upBytes = sum(up);
             downBytes = sum(down);
         }
-        return new StoreStats(upCount, upBytes, downCount, downBytes, stagedBytes(), capacityBytes);
+        return new StoreStats(upCount, upBytes, downCount, downBytes, stagedBytes(null), capacityBytes);
     }
 
     @Override
-    public boolean hasCapacityFor(long bytes) {
-        return stats().usedBytes() + Math.max(0, bytes) <= capacityBytes;
+    public boolean hasCapacityFor(Direction d, long bytes) {
+        Objects.requireNonNull(d, "direction");
+        long upBytes, downBytes;
+        synchronized (lock) {
+            upBytes = sum(index.get(Direction.UPSTREAM));
+            downBytes = sum(index.get(Direction.DOWNSTREAM));
+        }
+        long stagedDown = stagedBytes(Direction.DOWNSTREAM);
+        long stagedUp = stagedBytes(Direction.UPSTREAM);
+        long incoming = Math.max(0, bytes);
+        if (upBytes + downBytes + stagedUp + stagedDown + incoming > capacityBytes) return false;
+        return d == Direction.UPSTREAM || downBytes + stagedDown + incoming <= downstreamQuotaBytes();
     }
 
     /**
@@ -301,10 +372,10 @@ public final class FileRelayStore implements RelayStore {
      * the stock client blinds in PSI, so a mismatch means the file would never be matched and is
      * rejected. A claim with no readable jar id is accepted as-is, like the stock transport does.
      */
-    private static String resolveId(Path file, String claimedIdOrNull) throws IOException {
+    private static String resolveId(String jarIdOrNull, String claimedIdOrNull) throws IOException {
         String claimed = claimedIdOrNull == null ? null : claimedIdOrNull.trim();
         if (claimed != null && claimed.isEmpty()) claimed = null;
-        Optional<String> fromJar = BundleIds.tryReadRaw(file);
+        Optional<String> fromJar = Optional.ofNullable(jarIdOrNull);
         String id;
         if (claimed != null && fromJar.isPresent()) {
             if (!claimed.equals(fromJar.get())) {
@@ -338,9 +409,11 @@ public final class FileRelayStore implements RelayStore {
         return (StagedFile) staged;
     }
 
-    private long stagedBytes() {
+    /** @param d direction to count, or null for both */
+    private long stagedBytes(Direction d) {
         long total = 0;
         for (StagedFile s : activeStaged) {
+            if (d != null && s.direction != d) continue;
             try {
                 total += Files.size(s.path);
             } catch (IOException e) {

@@ -16,9 +16,30 @@ final class TestBundles {
 
     /** Writes a jar whose {@code bundle.id} entry holds {@code idEntryContent} (null = no entry). */
     static void writeJar(OutputStream out, String idEntryContent, int payloadBytes) throws IOException {
+        writeJar(out, idEntryContent, payloadBytes, null, -1);
+    }
+
+    /**
+     * Like {@link #writeJar(OutputStream, String, int)} plus a {@code clientBase.pub} entry in the PEM-style
+     * form {@code DDDPEMEncoder.createEncodedPublicKeyBytes} writes, and an explicit {@code bundle.id} entry
+     * time (the jar build time the store records).
+     *
+     * @param clientKey   fake Base64url key line for {@code clientBase.pub}, or null for no entry
+     * @param builtAtMs   {@code bundle.id} entry time, or -1 to let the zip writer stamp "now"
+     */
+    static void writeJar(OutputStream out, String idEntryContent, int payloadBytes, String clientKey, long builtAtMs)
+            throws IOException {
         try (JarOutputStream jar = new JarOutputStream(out)) {
+            if (clientKey != null) {
+                jar.putNextEntry(new JarEntry(BundleIds.CLIENT_BASE_KEY_ENTRY));
+                jar.write(("-----BEGIN EC PUBLIC KEY-----\n" + clientKey + "\n-----END EC PUBLIC KEY-----")
+                                  .getBytes(StandardCharsets.UTF_8));
+                jar.closeEntry();
+            }
             if (idEntryContent != null) {
-                jar.putNextEntry(new JarEntry(BundleIds.BUNDLE_ID_ENTRY));
+                JarEntry idEntry = new JarEntry(BundleIds.BUNDLE_ID_ENTRY);
+                if (builtAtMs >= 0) idEntry.setTime(builtAtMs);
+                jar.putNextEntry(idEntry);
                 jar.write(idEntryContent.getBytes(StandardCharsets.UTF_8));
                 jar.closeEntry();
             }

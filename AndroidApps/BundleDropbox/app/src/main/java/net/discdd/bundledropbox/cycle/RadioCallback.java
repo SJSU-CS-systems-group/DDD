@@ -20,7 +20,8 @@ public interface RadioCallback {
 
     /**
      * The operation failed. The controller retries with bounded backoff (3 attempts), then enters
-     * {@link CycleMode#UNAVAILABLE}.
+     * {@link CycleMode#UNAVAILABLE}; a stop issued by a stop/pause/shutdown is tried once and then left
+     * for the next start.
      *
      * @param gen    generation passed to the {@link RadioDriver} call
      * @param reason human-readable cause for logs and {@code DropboxStatus.lastError}

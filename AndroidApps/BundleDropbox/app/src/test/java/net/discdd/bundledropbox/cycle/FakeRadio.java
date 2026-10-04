@@ -38,6 +38,10 @@ final class FakeRadio implements RadioDriver {
     final List<Call> calls = new ArrayList<>();
     /** Count of {@link #withdrawHostAdvertisement()} calls (kept out of {@link #calls}: it has no callback). */
     int withdrawals;
+    /** Value returned by {@link #hostedClientCount()} (P2P clients joined to the hosted group). */
+    int hostedClients;
+    /** If set, {@link #hostedClientCount()} throws it. */
+    RuntimeException hostedClientsError;
 
     Call last() {
         return calls.get(calls.size() - 1);
@@ -62,6 +66,12 @@ final class FakeRadio implements RadioDriver {
     @Override
     public void withdrawHostAdvertisement() {
         withdrawals++;
+    }
+
+    @Override
+    public int hostedClientCount() {
+        if (hostedClientsError != null) throw hostedClientsError;
+        return hostedClients;
     }
 
     @Override

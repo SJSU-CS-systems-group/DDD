@@ -23,6 +23,7 @@ enum class OperatorState(@StringRes val labelRes: Int, @StringRes val explanatio
     RESTORING_CLIENT_SERVICE(R.string.op_restoring_client_service, R.string.op_restoring_client_service_explain),
     WAITING_FOR_FIRST_VISIT(R.string.op_waiting_for_first_visit, R.string.op_waiting_for_first_visit_explain),
     PAUSED(R.string.op_paused, R.string.op_paused_explain),
+    STOPPED_BY_OPERATOR(R.string.op_stopped, R.string.op_stopped_explain),
     NOT_RUNNING(R.string.op_not_running, R.string.op_not_running_explain),
     NEEDS_ATTENTION(R.string.op_needs_attention, R.string.op_needs_attention_explain),
 }
@@ -39,9 +40,13 @@ object StatusFormat {
      * @param status latest [DropboxStatus] from `DropboxStatusRepository`
      * @param paused true if the operator paused the cycle (the controller reports STOPPED in that
      *               case, which is otherwise indistinguishable from "not started yet")
+     * @param stopped true if the operator stopped the relay (persisted `relay_stopped`); wins over
+     *               whatever the last snapshot says, because a stopped service may publish nothing more
      */
     @JvmStatic
-    fun operatorState(status: DropboxStatus, paused: Boolean): OperatorState {
+    @JvmOverloads
+    fun operatorState(status: DropboxStatus, paused: Boolean, stopped: Boolean = false): OperatorState {
+        if (stopped) return OperatorState.STOPPED_BY_OPERATOR
         // Bootstrap (03 Architecture §1): with no recency blob the controller loops VISIT periods only,
         // because the stock client aborts its whole exchange without a SUCCESS recency blob (R1 §0.3,
         // R3). Searching in that phase is reported as "waiting for first transport visit" so the

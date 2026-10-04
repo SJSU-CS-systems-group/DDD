@@ -8,9 +8,14 @@ import java.util.function.BooleanSupplier;
  *
  * <p>The radio layer only knows how to get the dropbox onto a carrier's network; what happens there
  * (getRecencyBlob, upload of unforwarded upstream bundles, download-all via PSI; Research/R2 §4.3, §8) is
- * the integrator's {@code visit/TransportVisitClient}. The integrator implements this interface, typically
- * as {@code (addr, carrierId, stop) -> transportVisitClient.visit(addr, 7777, carrierId, stop).ok()},
- * holding one {@code ActivityGate} token for the whole call.
+ * {@code visit/TransportVisitClient}. {@code service/VisitCoordinator} implements this interface: it holds one
+ * {@code ActivityGate} "visit" token from the start of the join to the end of the exchange, and returns
+ * {@code ok() && recencyFetched()} of the visit result, and only if the blob was actually stored.
+ *
+ * <p>Join hooks (audit m1, {@code join-not-protected-by-gate}): the joiner calls {@link #beginJoin} right
+ * before it issues {@code connect} and {@link #endJoin} when an attempt ends, so a dwell that expires
+ * mid-join drains instead of discarding the join. The defaults make both hooks no-ops for runners that do
+ * not care about the gate (tests, older wiring).
  *
  * <p>Threading: called on a driver worker thread (never the main thread), at most once per joined carrier.
  * It may block for the whole exchange.
@@ -20,9 +25,33 @@ import java.util.function.BooleanSupplier;
  * carrier group is then removed, which also breaks the gRPC connection. Implementations should check
  * {@code stopRequested} between bundles, finish or abort the in-flight bundle, keep partial work
  * retryable, and return promptly. The driver waits at most {@link WifiTimeouts#RUNNER_EXIT_MS} for it.
+ * {@code stopRequested} also turns true (with an interrupt) if Wi-Fi Direct is disabled or the channel is
+ * lost mid-exchange; the result is then still reported as {@code visitFinished}.
  */
 @FunctionalInterface
 public interface VisitRunner {
+    /**
+     * Called on the main thread right before the joiner issues {@code connect} to a carrier. The runner may
+     * reserve whatever must outlive the join (the service takes the visit gate token here).
+     *
+     * @param carrierId the carrier's TXT {@code transportId}
+     * @return false to skip this connect because the visit period is already ending (admissions closed);
+     *         the joiner then stays in discovery without joining
+     */
+    default boolean beginJoin(String carrierId) {
+        return true;
+    }
+
+    /**
+     * Called on the main thread whenever an attempt that called {@link #beginJoin} ends: after a failed
+     * join, after leaving the carrier, or when the visit session ends. Must be idempotent and a no-op once
+     * {@link #runVisit} has taken over what {@code beginJoin} reserved.
+     *
+     * @param carrierId the carrier passed to {@link #beginJoin}
+     */
+    default void endJoin(String carrierId) {
+    }
+
     /**
      * Runs one carrier exchange.
      *

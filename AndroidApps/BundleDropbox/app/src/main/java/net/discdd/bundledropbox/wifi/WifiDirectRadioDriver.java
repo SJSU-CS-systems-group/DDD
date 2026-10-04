@@ -48,10 +48,20 @@ import static java.util.logging.Level.WARNING;
  * {@link RadioCallback}s, {@link WifiRadioStateListener}s and the {@link RadioEnvironmentListener} are
  * invoked on the main thread; the controller re-posts to its own executor (RadioCallback contract).
  *
- * <p>Wiring (integrator): construct in the service, {@link #initialize()}, register
- * {@link DropboxWifiStateBridge} (and/or other listeners), hand the driver to the controller, call
- * {@link #wifiPermissionGranted()} when the UI obtains NEARBY_WIFI_DEVICES, and {@link #shutdown()} in
- * {@code onDestroy} after the controller is stopped.
+ * <p>Environment events ({@link RadioEnvironmentListener}): availability is edge-detected by
+ * {@link AvailabilityEdges} from real observations only (P2P state, permission, channel up/down); a role
+ * lost while the radio stays usable (hosted group vanished) is reported separately through
+ * {@link RadioEnvironmentListener#onRoleLost} and never touches the edge state (audit findings m3/m10).
+ * After the framework drops the channel, the driver re-creates it with {@link WifiTimeouts#CHANNEL_RECOVERY}
+ * backoff, so "available" is reported again and the cycle can leave UNAVAILABLE without its 30 s timer.
+ *
+ * <p>Hosted clients ({@link HostedClientsListener}): the P2P client count of our group, for the role
+ * cycle's idle-switch decision (audit finding m5); also readable with {@link #hostedClientCount()}.
+ *
+ * <p>Wiring (DropboxService): construct, {@link #initialize()}, register {@link DropboxWifiStateBridge},
+ * set the environment and hosted-clients listeners, hand the driver to the controller, call
+ * {@link #wifiPermissionGranted()} when the UI obtains NEARBY_WIFI_DEVICES, and {@link #shutdown()} after
+ * the controller is stopped.
  *
  * <p>FUTURE: a Wi-Fi Aware or gRPC-over-internet link would be another {@link RadioDriver}; nothing in
  * the controller depends on Wi-Fi Direct.
@@ -71,11 +81,14 @@ public final class WifiDirectRadioDriver implements RadioDriver {
 
     private volatile WifiRadioState state = WifiRadioState.INITIAL;
     private volatile RadioEnvironmentListener environmentListener;
+    private volatile HostedClientsListener hostedClientsListener;
+    private volatile int hostedClientCount;
+    private final AvailabilityEdges availability = new AvailabilityEdges();
+    private final Runnable recoverChannel = this::recoverChannel;
+    private int channelRecoveryAttempt;
     private boolean initialized;
     private boolean receiverRegistered;
-    private boolean discoveryRunning;
     private String lastError;
-    private boolean lastAvailable;
 
     /**
      * @param context              service context (the application context is used internally)
@@ -85,7 +98,8 @@ public final class WifiDirectRadioDriver implements RadioDriver {
      *                             ({@code baseId-gen} with rotation, 03 Architecture §5)
      * @param recencyBlobSupplier  raw cached {@code GetRecencyBlobResponse} bytes, or null if none
      *                             (e.g. {@code () -> recencyBlobStore.current().orElse(null)})
-     * @param endpoint             client-facing server started/stopped with the hosted group (gRPC 7777)
+     * @param endpoint             client-server hooks around hosting: ensure the always-on gRPC server (7777)
+     *                             is up before advertising, end client sessions on stopHosting
      * @param visitRunner          carrier exchange run after joining a carrier (TransportVisitClient)
      */
     public WifiDirectRadioDriver(Context context,
@@ -102,7 +116,8 @@ public final class WifiDirectRadioDriver implements RadioDriver {
                                         recencyBlobSupplier,
                                         endpoint == null ? HostingEndpoint.NONE : endpoint,
                                         this::publish,
-                                        () -> notifyEnvironment(false, "hosted group lost"));
+                                        this::reportRoleLost,
+                                        this::onHostedClientCount);
         this.joiner = new DropboxWifiJoiner(link, visitRunner, this::publish);
         intentFilter.addAction(WIFI_P2P_STATE_CHANGED_ACTION);
         intentFilter.addAction(WIFI_P2P_CONNECTION_CHANGED_ACTION);
@@ -144,6 +159,7 @@ public final class WifiDirectRadioDriver implements RadioDriver {
         main.post(() -> {
             if (!initialized) return;
             initialized = false;
+            main.removeCallbacks(recoverChannel);
             unregisterReceiver();
             link.close();
             state = WifiRadioState.INITIAL;
@@ -163,16 +179,8 @@ public final class WifiDirectRadioDriver implements RadioDriver {
             registerReceiver();
             requestStates();
             publish();
-            notifyEnvironment(isAvailable(), "permission granted");
+            reportAvailabilityEdge("permission granted");
         });
-    }
-
-    /**
-     * Re-advertises the TXT record while hosting, e.g. after a visit stored a newer recency blob while the
-     * dropbox is (unusually) still hosting. Normally not needed: each startHosting reads both suppliers.
-     */
-    public void refreshAdvertisement() {
-        main.post(host::refreshAdvertisement);
     }
 
     // ---------------------------------------------------------------- RadioDriver
@@ -185,14 +193,14 @@ public final class WifiDirectRadioDriver implements RadioDriver {
             } else if (joiner.isActive()) {
                 cb.failed(gen, "cannot host while a visit is active (stopVisit first)");
             } else {
-                host.start(gen, failureRecorder(cb));
+                host.start(gen, new FailureRecorder(cb));
             }
         });
     }
 
     @Override
     public void stopHosting(long gen, RadioCallback cb) {
-        main.post(() -> host.stop(gen, failureRecorder(cb)));
+        main.post(() -> host.stop(gen, new FailureRecorder(cb)));
     }
 
     @Override
@@ -208,14 +216,14 @@ public final class WifiDirectRadioDriver implements RadioDriver {
             } else if (host.isActive()) {
                 cb.failed(gen, "cannot visit while hosting (stopHosting first)");
             } else {
-                joiner.start(gen, failureRecorder(cb));
+                joiner.start(gen, new FailureRecorder(cb));
             }
         });
     }
 
     @Override
     public void stopVisit(long gen, RadioCallback cb) {
-        main.post(() -> joiner.stop(gen, failureRecorder(cb)));
+        main.post(() -> joiner.stop(gen, new FailureRecorder(cb)));
     }
 
     // ---------------------------------------------------------------- observable state
@@ -238,6 +246,28 @@ public final class WifiDirectRadioDriver implements RadioDriver {
     /** Sets (or clears with null) the single environment listener. */
     public void setEnvironmentListener(RadioEnvironmentListener listener) {
         environmentListener = listener;
+    }
+
+    /**
+     * Sets (or clears with null) the single hosted-clients listener. It is called on the main thread
+     * whenever the P2P client count of our hosted group changes (edge-triggered, including the drop to 0);
+     * the service forwards it to {@code RoleCycleController.hostedClientsChanged()} so the joined-client
+     * grace ends without waiting for its next poll of {@link #hostedClientCount()}.
+     */
+    public void setHostedClientsListener(HostedClientsListener listener) {
+        hostedClientsListener = listener;
+    }
+
+    /**
+     * RadioDriver hook for the joined-client grace (audit m5): the cached count from the last
+     * {@code WifiP2pGroup.getClientList()} the host saw. Cheap and thread-safe (volatile read), never calls
+     * into WifiP2pManager.
+     *
+     * @return P2P clients currently in our hosted group, 0 when not hosting
+     */
+    @Override
+    public int hostedClientCount() {
+        return hostedClientCount;
     }
 
     /** Rebuilds the snapshot from host, joiner and link; main thread only. */
@@ -289,67 +319,127 @@ public final class WifiDirectRadioDriver implements RadioDriver {
         }
     }
 
-    /** Wraps a callback so failures land in {@link WifiRadioState#lastError()}. */
-    private RadioCallback failureRecorder(RadioCallback cb) {
-        return new RadioCallback() {
-            @Override
-            public void ready(long gen) {
-                cb.ready(gen);
-            }
+    /**
+     * Wraps a start/stop callback so failures land in {@link WifiRadioState#lastError()} before the
+     * controller hears them. Implements {@link VisitCallback} so one wrapper serves both kinds of op;
+     * {@code visitFinished} is forwarded only if the wrapped callback is a VisitCallback.
+     */
+    private final class FailureRecorder implements VisitCallback {
+        private final RadioCallback cb;
 
-            @Override
-            public void failed(long gen, String reason) {
-                lastError = reason;
-                publish();
-                cb.failed(gen, reason);
-            }
-        };
-    }
+        FailureRecorder(RadioCallback cb) {
+            this.cb = cb;
+        }
 
-    private VisitCallback failureRecorder(VisitCallback cb) {
-        return new VisitCallback() {
-            @Override
-            public void ready(long gen) {
-                cb.ready(gen);
-            }
+        @Override
+        public void ready(long gen) {
+            cb.ready(gen);
+        }
 
-            @Override
-            public void failed(long gen, String reason) {
-                lastError = reason;
-                publish();
-                cb.failed(gen, reason);
-            }
+        @Override
+        public void failed(long gen, String reason) {
+            lastError = reason;
+            publish();
+            cb.failed(gen, reason);
+        }
 
-            @Override
-            public void visitFinished(long gen, boolean success) {
-                cb.visitFinished(gen, success);
-            }
-        };
+        @Override
+        public void visitFinished(long gen, boolean success) {
+            if (cb instanceof VisitCallback v) v.visitFinished(gen, success);
+        }
     }
 
     // ---------------------------------------------------------------- environment
 
+    /** @return true when the radio is usable: P2P supported, channel up, P2P not disabled, NEARBY granted */
     private boolean isAvailable() {
-        return link.manager != null && link.p2pEnabled() && link.hasNearbyPermission();
+        return link.manager != null && link.channel() != null && link.p2pEnabled() && link.hasNearbyPermission();
     }
 
-    private void notifyEnvironment(boolean available, String reason) {
-        lastAvailable = available;
+    /**
+     * Observes the real environment and reports it if it is an edge.
+     *
+     * @return true if an edge was reported
+     */
+    private boolean reportAvailabilityEdge(String reason) {
+        boolean available = isAvailable();
+        if (!availability.observe(available)) return false;
         RadioEnvironmentListener l = environmentListener;
-        if (l == null) return;
+        if (l == null) return true;
         try {
             l.onRadioAvailabilityChanged(available, reason);
         } catch (RuntimeException e) {
             logger.log(WARNING, "environment listener threw", e);
         }
+        return true;
+    }
+
+    /** A role was lost while the radio stays usable; deliberately not an availability observation. */
+    private void reportRoleLost(String reason) {
+        RadioEnvironmentListener l = environmentListener;
+        if (l == null) return;
+        try {
+            l.onRoleLost(reason);
+        } catch (RuntimeException e) {
+            logger.log(WARNING, "environment listener threw", e);
+        }
+    }
+
+    /** Host callback: client count of our group changed (main thread). */
+    private void onHostedClientCount(int count) {
+        hostedClientCount = count;
+        HostedClientsListener l = hostedClientsListener;
+        if (l == null) return;
+        try {
+            l.onHostedClientCountChanged(count);
+        } catch (RuntimeException e) {
+            logger.log(WARNING, "hosted-clients listener threw", e);
+        }
+    }
+
+    /**
+     * Wi-Fi Direct went away under both roles (disabled or channel lost): fail in-flight ops now and end
+     * an established role.
+     *
+     * @return true if an established HOSTING or VISIT role was ended
+     */
+    private boolean loseRoles(String reason) {
+        boolean hostLost = host.onRadioLost(reason);
+        boolean visitLost = joiner.onRadioLost(reason);
+        return hostLost || visitLost;
     }
 
     private void onChannelLost() {
         lastError = "Wi-Fi Direct channel lost";
-        host.onP2pDisabled();
-        joiner.onP2pDisabled();
+        boolean lostRole = loseRoles(lastError);
         publish();
-        notifyEnvironment(false, lastError);
+        // The channel is part of availability, so this is normally a real "unavailable" edge (which the
+        // service maps to roleLost); report role loss explicitly only if the edge state already said so.
+        if (!reportAvailabilityEdge(lastError) && lostRole) reportRoleLost(lastError);
+        channelRecoveryAttempt = 0;
+        scheduleChannelRecovery();
+    }
+
+    private void scheduleChannelRecovery() {
+        main.removeCallbacks(recoverChannel);
+        long delay = WifiTimeouts.CHANNEL_RECOVERY.delayBeforeRetry(channelRecoveryAttempt++);
+        if (delay >= 0) main.postDelayed(recoverChannel, delay);
+    }
+
+    /**
+     * Re-creates a channel the framework dropped (or picks up one a radio op already re-created) and asks
+     * for the P2P state, whose answer reports the "available" edge (audit finding m10: before this, a
+     * lazily re-created channel never produced one, so UNAVAILABLE waited out its 30 s timer).
+     */
+    private void recoverChannel() {
+        if (!initialized) return;
+        if (link.ensureChannel()) {
+            link.wifi(INFO, "Wi-Fi Direct channel re-initialized");
+            requestStates();
+            publish();
+        } else {
+            scheduleChannelRecovery();
+        }
     }
 
     private void requestStates() {
@@ -366,20 +456,18 @@ public final class WifiDirectRadioDriver implements RadioDriver {
     }
 
     private void onP2pState(int p2pState) {
-        boolean wasAvailable = lastAvailable;
         link.setP2pState(p2pState);
         boolean enabled = p2pState == WifiP2pManager.WIFI_P2P_STATE_ENABLED;
+        boolean lostRole = false;
         if (!enabled) {
             link.wifiRes(WARNING, R.string.Wifi_disabled);
-            host.onP2pDisabled();
-            joiner.onP2pDisabled();
+            lostRole = loseRoles("Wi-Fi Direct was disabled");
         }
         publish();
-        boolean available = isAvailable();
-        // Only edges are interesting: the sticky broadcast repeats the current state on registration.
-        if (available != wasAvailable) {
-            notifyEnvironment(available, enabled ? "Wi-Fi Direct enabled" : "Wi-Fi Direct disabled");
-        }
+        // Only edges are reported: the sticky broadcast repeats the current state on registration. If a role
+        // was running although the edge state already said "unavailable", still tell the cycle it is gone.
+        String reason = enabled ? "Wi-Fi Direct enabled" : "Wi-Fi Direct disabled";
+        if (!reportAvailabilityEdge(reason) && lostRole) reportRoleLost(reason);
     }
 
     private void onDeviceInfo(WifiP2pDevice device) {
@@ -425,9 +513,10 @@ public final class WifiDirectRadioDriver implements RadioDriver {
                 case WIFI_P2P_THIS_DEVICE_CHANGED_ACTION ->
                         onDeviceInfo(intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE, WifiP2pDevice.class));
                 case WIFI_P2P_DISCOVERY_CHANGED_ACTION -> {
-                    discoveryRunning = intent.getIntExtra(WifiP2pManager.EXTRA_DISCOVERY_STATE, -1) ==
+                    // Debug aid only: nothing depends on it (the joiner re-issues discovery on its own timer).
+                    boolean started = intent.getIntExtra(WifiP2pManager.EXTRA_DISCOVERY_STATE, -1) ==
                             WifiP2pManager.WIFI_P2P_DISCOVERY_STARTED;
-                    logger.fine("P2P discovery " + (discoveryRunning ? "started" : "stopped"));
+                    logger.fine("P2P discovery " + (started ? "started" : "stopped"));
                 }
                 default -> {
                 }

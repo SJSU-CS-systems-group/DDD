@@ -26,9 +26,25 @@ import java.util.List;
  *   <li>Thread-safe: called concurrently from the gRPC executor, the visit worker and the UI.</li>
  *   <li>v1 never deletes on its own ({@code KeepAllRetentionPolicy}); see {@link #delete}.</li>
  * </ul>
+ *
+ * <p><b>Capacity</b> is split per direction ({@link #hasCapacityFor(Direction, long)}): DOWNSTREAM may not
+ * grow into a reserved UPSTREAM share. Download-all pulls every carrier bundle for every client, and since
+ * nothing is deleted autonomously, a shared budget let DOWNSTREAM fill the store and refuse every client
+ * upload indefinitely (Audit M10). Client mail toward the internet is the direction the design values most.
+ * Writers also enforce the budget while streaming, not only before and after (Audit m7).
+ *
  * Implemented by {@code store/FileRelayStore}.
  */
 public interface RelayStore {
+
+    /**
+     * Upper bound on one bundle the dropbox will receive (64 MiB), enforced while streaming by the HOST
+     * upload path and the VISIT download loop. A bundle's ADU content is capped by the server's
+     * {@code app-data-size-limit} (30 MiB in {@code application.yml}) plus small jar/encryption overhead, so
+     * this leaves 2x headroom for honest peers while stopping a peer that streams chunks forever from filling
+     * the device (Audit m7; {@code maxInboundMessageSize} only limits single messages).
+     */
+    long MAX_BUNDLE_BYTES = 64L * 1024 * 1024;
 
     /**
      * Starts receiving a bundle for direction {@code d} by creating a fresh, uniquely named temp file
@@ -69,9 +85,16 @@ public interface RelayStore {
     void abort(Staged s);
 
     /**
+     * Lists the committed bundles of one queue.
+     *
+     * <p>Ordering basis: {@link BundleRecord#committedAtMillis()} ascending (oldest first), ties broken by
+     * bundle id so the order is deterministic. {@code committedAt} is the dropbox's wall clock at commit,
+     * persisted as the file mtime; the VISIT upload loop reverses this list to send UPSTREAM bundles newest
+     * first. Wall-clock based, so a clock jump can misorder bundles committed across it; in practice one
+     * client's bundles arrive in counter order, which is what "newest first" relies on.
+     *
      * @param d the queue to list
-     * @return committed bundles only, sorted by {@link BundleRecord#committedAtMillis()} ascending
-     *         (oldest first); a snapshot, never {@code null}
+     * @return committed bundles only, oldest first (see above); a snapshot, never {@code null}
      */
     List<BundleRecord> list(Direction d);
 
@@ -90,14 +113,31 @@ public interface RelayStore {
      */
     boolean contains(Direction d, String bundleId);
 
+    /**
+     * Records that a carrier offered {@code bundleId} again, i.e. the server still considers it current
+     * (it re-offers a client's newest bundle until a newer one supersedes it, Research/R4 §4.2). Advances
+     * {@link BundleRecord#lastSeenAtMillis()}, which orders the HOST PSI snapshot, so a client's still-current
+     * bundle does not age out of the capped snapshot just because it was first downloaded long ago (Audit M9).
+     *
+     * @param d        the queue
+     * @param bundleId encrypted bundle id; ignored if absent
+     * @return true if the bundle exists and was touched
+     */
+    boolean touch(Direction d, String bundleId);
+
     /** @return a fresh occupancy snapshot (counts and bytes per direction, staged bytes, capacity). */
     StoreStats stats();
 
     /**
-     * @param bytes size of a bundle about to be received (use 0 if unknown)
-     * @return true if committed + staged bytes + {@code bytes} stay within the configured capacity
+     * Admission check before (and while) receiving into direction {@code d}.
+     *
+     * @param d     the queue the bytes will land in
+     * @param bytes additional bytes about to be received (0 for "is there room at all"). Bytes already
+     *              written to staged files are counted, so a writer calls this per chunk with the chunk size
+     * @return true if committed + staged bytes + {@code bytes} stay within the total capacity and, for
+     *         {@link Direction#DOWNSTREAM}, within the downstream quota (capacity minus the upstream reserve)
      */
-    boolean hasCapacityFor(long bytes);
+    boolean hasCapacityFor(Direction d, long bytes);
 
     /**
      * Removes a committed bundle. Missing ids are ignored.

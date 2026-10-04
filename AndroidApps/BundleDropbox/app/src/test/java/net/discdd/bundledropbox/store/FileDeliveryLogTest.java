@@ -45,6 +45,20 @@ public class FileDeliveryLogTest {
                      log.readAll());
     }
 
+    /** Audit i4: an append after a torn last line (no trailing newline) must not merge into it. */
+    @Test
+    public void appendAfterTornLastLineStartsANewLine() throws IOException {
+        Path f = tmp.getRoot().toPath().resolve("torn.jsonl");
+        FileDeliveryLog log = new FileDeliveryLog(f);
+        log.recordServed("before", 1);
+        Files.write(f, "{\"bundleId\":\"cut-by-power-loss\",\"serv".getBytes(StandardCharsets.UTF_8),
+                    StandardOpenOption.APPEND);
+        log.recordServed("after", 2);
+        assertEquals(List.of(new FileDeliveryLog.Served("before", 1), new FileDeliveryLog.Served("after", 2)),
+                     log.readAll());
+        assertEquals(3, Files.readAllLines(f).size());
+    }
+
     @Test
     public void nullIdIgnored() {
         FileDeliveryLog log = new FileDeliveryLog(tmp.getRoot().toPath().resolve("x.jsonl"));

@@ -35,7 +35,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -53,13 +52,17 @@ import java.util.logging.Logger;
  * <ul>
  *   <li><b>uploadBundle</b> (client to server traffic): written to a {@link RelayStore#beginStaging staged}
  *       file, committed to {@link Direction#UPSTREAM} under the client's claimed encrypted bundle id only
- *       after the stream completed successfully, otherwise aborted. Refused when the store is full or the
- *       id is unclean. The transport writes straight to the final name, so a partial upload would later
- *       be forwarded truncated (Research/R1 §3.2); staging prevents that.</li>
+ *       after the stream completed successfully, otherwise aborted. Refused when the store is full, the
+ *       id is unclean, the stream repeats its {@code bundleId}, or the bytes streamed exceed the remaining
+ *       UPSTREAM capacity or {@link RelayStore#MAX_BUNDLE_BYTES} (checked per chunk, Audit m7). The transport
+ *       writes straight to the final name, so a partial upload would later be forwarded truncated
+ *       (Research/R1 §3.2); staging prevents that.</li>
  *   <li><b>psiExchange / psiDownloadBundle</b> (server to client traffic): exactly the transport's semantics
  *       (at most 10 blinded client values, a per-session snapshot of the DOWNSTREAM file names, 5 min TTL,
- *       session removed after a successful download) over committed DOWNSTREAM bundles only.</li>
- *   <li><b>downloadBundle</b> (legacy, only used if PSI is UNIMPLEMENTED): DOWNSTREAM committed files only.</li>
+ *       session removed after a successful download) over committed DOWNSTREAM bundles only. Like a stock
+ *       transport, the snapshot holds only the newest bundle per destination client ({@link DownstreamOffer}).</li>
+ *   <li><b>downloadBundle</b> (legacy, only used if PSI is UNIMPLEMENTED): committed DOWNSTREAM files that are
+ *       their client's newest only.</li>
  *   <li><b>getRecencyBlob</b>: the carrier's server-signed blob from {@link RecencyBlobStore}, served
  *       verbatim.</li>
  * </ul>
@@ -102,18 +105,16 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
     public static final int DOWNLOAD_CHUNK_BYTES = 1024 * 1024;
 
     /**
-     * Default cap on how many DOWNSTREAM bundles one {@code psiExchange} snapshot offers (the newest ones).
+     * Default cap on how many DOWNSTREAM bundles one {@code psiExchange} snapshot offers. The snapshot already
+     * holds only one bundle per client ({@link DownstreamOffer}), so this caps the number of CLIENTS served per
+     * session; the ones a carrier most recently confirmed as current are kept.
      *
      * <p>Why a cap: the PSI cost is linear in the snapshot on BOTH sides (the dropbox blinds every id in
      * {@code transportProcess}; the stock client re-blinds every transport value in {@code clientFindMatches}),
-     * each a 3072-bit modPow of roughly 10-15 ms on a phone. A real transport stays near one bundle per client
-     * because the server deletes superseded bundles at each sync; the v1 dropbox keeps everything it pulled
-     * (download-all, {@code KeepAllRetentionPolicy}), so without a cap every client exchange would get slower
-     * forever and eventually miss the HOST dwell + drain cap or the client's 120 s PSI deadline, and a client cut
-     * off like that stamps the attempt and skips this transportId (R3 §7). Newest first because the server
-     * re-issues a client's bundle with new content until it is picked up, so old files are the likeliest stale.
-     * FUTURE: once server keep/delete control ADUs exist ({@code RetentionPolicy}), the store itself stays small
-     * and this cap becomes a safety net; destination manifests would narrow it per client.
+     * each a 3072-bit modPow of roughly 10-15 ms on a phone. Without a cap a dropbox serving many clients would
+     * eventually miss the HOST dwell + drain cap or the client's 120 s PSI deadline, and a client cut off like
+     * that stamps the attempt and skips this transportId (R3 §7).
+     * FUTURE: destination manifests would narrow the snapshot per client.
      */
     public static final int DEFAULT_MAX_PSI_SNAPSHOT = 128;
 
@@ -154,7 +155,7 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
     /**
      * Same as the main constructor with an explicit PSI snapshot cap (tests).
      *
-     * @param maxPsiSnapshot most DOWNSTREAM bundles (newest first) one PSI snapshot offers; must be &gt; 0
+     * @param maxPsiSnapshot most DOWNSTREAM bundles (one per client) one PSI snapshot offers; must be &gt; 0
      */
     public DropboxExchangeService(RelayStore store,
                                   RecencyBlobStore recencyBlobs,
@@ -176,7 +177,11 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
         this.wallClock = wallClock;
     }
 
-    /** Drops all PSI sessions (called when the server stops; clients start a fresh PSI next time). */
+    /**
+     * Drops all PSI sessions. Called at the end of every HOST role ({@code DropboxRpcServer.endClientSessions})
+     * and when the server stops, so a client in the next HOST dwell runs a fresh PSI against the then-current
+     * DOWNSTREAM snapshot.
+     */
     public void clearPsiSessions() {
         psiSessions.clear();
     }
@@ -252,6 +257,18 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
                     // answer again. Drop the rest of the client's stream quietly.
                     return;
                 }
+                if (value.hasChunk()) {
+                    String overBudget = ctx.admitChunk(value.getChunk().getChunk().size());
+                    if (overBudget != null) {
+                        // bundle-core appends every chunk with no limit, so the budget is enforced here, before
+                        // the bytes reach the disk. Failing through bundle-core's own error path closes its
+                        // writer and produces the FAILED response; ctx.finish then aborts the staged file.
+                        ctx.failReason = overBudget;
+                        withUpload(ctx, () -> base.onError(
+                                Status.RESOURCE_EXHAUSTED.withDescription(overBudget).asException()));
+                        return;
+                    }
+                }
                 withUpload(ctx, () -> base.onNext(value));
             }
 
@@ -289,9 +306,15 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
 
     /**
      * Upload: refuse unclean ids (the transport does not sanitize upload ids and they become file names,
-     * Research/R1 §3.2) and refuse when the store is full; otherwise start a staged file. Returning
-     * {@code null} makes bundle-core fail the stream and answer {@code Status.FAILED}.
-     * Note that {@code senderType} is always {@code null} here: the stock client sends it last.
+     * Research/R1 §3.2), refuse when UPSTREAM has no room, and refuse a second {@code bundleId} in one stream;
+     * otherwise start a staged file. Returning {@code null} makes bundle-core fail the stream and answer
+     * {@code Status.FAILED}. Note that {@code senderType} is always {@code null} here: the stock client sends
+     * it last.
+     *
+     * <p>Why a repeated {@code bundleId} is refused rather than restarting the upload: bundle-core replaces its
+     * writer on every {@code bundleId} message without closing the previous one, leaking that fd and its (by
+     * then unlinked, uncounted) disk blocks until GC (Audit m9). Returning null instead makes bundle-core's
+     * error path close the writer it still holds. The stock client never sends two ids in one stream.
      *
      * <p>Download: committed DOWNSTREAM files only, {@code null} if absent. Unused in practice, because
      * {@link #downloadBundle} is overridden without calling bundle-core's version; kept so the abstract
@@ -310,6 +333,10 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
             logger.log(Level.SEVERE, "pathProducer called for an upload outside an upload context");
             return null;
         }
+        if (ctx.hasStaged()) {
+            ctx.failReason = "repeated bundleId in one upload stream";
+            return null;
+        }
         ctx.claimedId = id;
         try {
             BundleUtils.checkIdClean(id);
@@ -317,7 +344,7 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
             ctx.failReason = "unclean bundle id";
             return null;
         }
-        if (!store.hasCapacityFor(0)) {
+        if (!store.hasCapacityFor(Direction.UPSTREAM, 0)) {
             // FUTURE: server keep/delete control ADUs (RetentionPolicy) could free DOWNSTREAM space here
             // instead of refusing; v1 never deletes on its own because it cannot know what was delivered.
             ctx.failReason = "store full";
@@ -325,7 +352,7 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
         }
         try {
             Staged staged = store.beginStaging(Direction.UPSTREAM);
-            ctx.replaceStaged(staged);
+            ctx.setStaged(staged);
             return staged.path();
         } catch (Exception e) {
             logger.log(Level.SEVERE, "Cannot stage upload " + id, e);
@@ -360,7 +387,8 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
      *       Research/R1 §3.5), so an unclean id is answered INVALID_ARGUMENT before anything else;</li>
      *   <li>chunks must stay below the stock client's 4 MiB inbound limit ({@link #DOWNLOAD_CHUNK_BYTES}).</li>
      * </ul>
-     * Only committed DOWNSTREAM files are served. Records the bundle as served when the stream completes.
+     * Only committed DOWNSTREAM files that are their client's newest are served ({@link DownstreamOffer}).
+     * Records the bundle as served when the stream completes.
      */
     @Override
     public void downloadBundle(BundleDownloadRequest request, StreamObserver<BundleDownloadResponse> responseObserver) {
@@ -374,7 +402,10 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
         onBundleExchangeEvent(BundleExchangeEvent.DOWNLOAD_STARTED);
         try {
             Path path = store.pathFor(Direction.DOWNSTREAM, id);
-            if (path == null || !Files.exists(path)) {
+            // A superseded version is reported as absent: the stock legacy loop takes the FIRST window id it
+            // finds, which would be the oldest version (Audit M7); its newer id is further on in the window.
+            if (path == null || !Files.exists(path) ||
+                    !DownstreamOffer.newestPerClient(store.list(Direction.DOWNSTREAM)).contains(id)) {
                 responseObserver.onError(Status.NOT_FOUND.withDescription("Bundle not found").asException());
                 return;
             }
@@ -438,10 +469,10 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
             var psi = new BundleOwnershipPSI();
             BigInteger secret = psi.generateSecret();
 
-            // Snapshot of committed DOWNSTREAM ids (file names == encrypted bundle ids), newest
-            // maxPsiSnapshot only (see DEFAULT_MAX_PSI_SNAPSHOT). Staged downloads and the recency blob live
-            // elsewhere, so nothing needs filtering here.
-            List<String> bundleIds = downstreamIds();
+            // Snapshot of committed DOWNSTREAM ids (file names == encrypted bundle ids): newest bundle per client,
+            // at most maxPsiSnapshot clients (DownstreamOffer). Staged downloads and the recency blob live
+            // elsewhere, so nothing else needs filtering here.
+            List<String> bundleIds = DownstreamOffer.snapshot(store.list(Direction.DOWNSTREAM), maxPsiSnapshot);
 
             List<BigInteger> clientBlinded = new ArrayList<>(numElements);
             for (PSIElement e : request.getClientBlindedValuesList()) {
@@ -520,18 +551,6 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
         }
     }
 
-    /**
-     * @return the ids of the newest {@link #maxPsiSnapshot} committed DOWNSTREAM bundles, oldest first
-     *         ({@link RelayStore#list} order), as an immutable snapshot for one PSI session
-     */
-    private List<String> downstreamIds() {
-        List<BundleRecord> records = store.list(Direction.DOWNSTREAM);
-        int from = Math.max(0, records.size() - maxPsiSnapshot);
-        List<String> ids = new ArrayList<>(records.size() - from);
-        for (BundleRecord r : records.subList(from, records.size())) ids.add(r.bundleId());
-        return Collections.unmodifiableList(ids);
-    }
-
     private void recordServed(String bundleId) {
         try {
             // FUTURE: client-ACK reports. "Served" is not proof of delivery; the client's ack for this
@@ -566,8 +585,10 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
     private final class UploadContext {
         final String remoteIp;
         String claimedId;     // set by pathProducer
-        String failReason;    // set when pathProducer refuses
+        volatile String failReason; // set when pathProducer or the byte budget refuses
         private Staged staged; // null once committed or aborted
+        private boolean stagedOnce; // a staged file was ever started (repeated bundleId detection)
+        private long bytesReceived;
         private boolean completionSeen;
         private boolean finished; // a response has been produced
 
@@ -579,11 +600,29 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
             return finished;
         }
 
-        synchronized void replaceStaged(Staged s) {
-            // A second bundleId message in one stream restarts the upload; drop the earlier file.
-            if (staged != null) store.abort(staged);
+        synchronized boolean hasStaged() {
+            return stagedOnce;
+        }
+
+        synchronized void setStaged(Staged s) {
             staged = s;
-            completionSeen = false;
+            stagedOnce = true;
+        }
+
+        /**
+         * Byte budget check for one incoming chunk, before bundle-core writes it.
+         *
+         * @return null to accept it, or why the upload must be refused
+         */
+        String admitChunk(int chunkBytes) {
+            synchronized (this) {
+                if (staged == null) return null; // nothing staged: bundle-core fails the chunk on its own
+                bytesReceived += chunkBytes;
+                if (bytesReceived > RelayStore.MAX_BUNDLE_BYTES) return "bundle larger than " +
+                        RelayStore.MAX_BUNDLE_BYTES + " bytes";
+            }
+            // The staged file's bytes so far already count as used; add only the incoming chunk.
+            return store.hasCapacityFor(Direction.UPSTREAM, chunkBytes) ? null : "store full";
         }
 
         synchronized void markCompletionSeen(Path path) {
@@ -606,10 +645,10 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
                 if (toCommit == null) {
                     failure = failReason != null ? failReason : "no bundle received";
                 } else if (response.getStatus() != net.discdd.grpc.Status.SUCCESS) {
-                    failure = "stream failed";
+                    failure = failReason != null ? failReason : "stream failed";
                 } else if (!completionSeen) {
                     failure = "stream ended before sender type";
-                } else if (!store.hasCapacityFor(0)) {
+                } else if (!store.hasCapacityFor(Direction.UPSTREAM, 0)) {
                     // The size is only known once received; enforce the cap before making it visible.
                     failure = "store full";
                 }
@@ -617,7 +656,10 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
             if (failure == null) {
                 try {
                     BundleRecord record = store.commit(toCommit, claimedId);
-                    logger.log(Level.INFO, "Committed upload " + record.bundleId() + " from " + remoteIp);
+                    // The client IP is logged only at FINE: paired with a (deterministic) encrypted bundle id in
+                    // the user-visible Logs tab it would link a device to its traffic (Audit i3).
+                    logger.log(Level.INFO, "Committed client upload (" + record.sizeBytes() + " B)");
+                    logger.log(Level.FINE, "Committed upload " + record.bundleId() + " from " + remoteIp);
                     listener.onUploadCommitted(record);
                     return response;
                 } catch (Exception e) {
@@ -626,7 +668,8 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
                 }
             }
             if (toCommit != null) store.abort(toCommit);
-            logger.log(Level.INFO, "Upload " + claimedId + " from " + remoteIp + " discarded: " + failure);
+            logger.log(Level.INFO, "Client upload discarded: " + failure);
+            logger.log(Level.FINE, "Upload " + claimedId + " from " + remoteIp + " discarded: " + failure);
             listener.onUploadFailed(claimedId, failure);
             return response.getStatus() == net.discdd.grpc.Status.SUCCESS ?
                    BundleUploadResponse.newBuilder().setStatus(net.discdd.grpc.Status.FAILED).build() :

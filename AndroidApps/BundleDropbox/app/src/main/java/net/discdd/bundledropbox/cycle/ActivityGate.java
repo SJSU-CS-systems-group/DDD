@@ -21,12 +21,25 @@ import java.util.logging.Logger;
  *       first RPC admits the session; later RPCs from an admitted IP must still pass while draining,
  *       otherwise a client that already uploaded its first chunk would be cut off mid-exchange. That is
  *       why {@link #tryAdmit(String)} still succeeds for a key that has a live token while the gate is
- *       closed. A typical tracker holds one session token per IP until {@code uploadBundle} completes
- *       or 10 s idle, and may take extra per-RPC tokens.</li>
- *   <li><b>VISIT side</b> ({@code visit/TransportVisitClient}): one token covers the whole visit. The
- *       worker checks {@link #isClosing()} between bundles, finishes the in-flight bundle, then stops
- *       and closes the token.</li>
+ *       closed. The tracker holds one session token per IP until {@code uploadBundle} completes or the
+ *       session is reaped idle (10 s, only while admissions are open); in-flight RPCs are counted in the
+ *       tracker, not as extra tokens.</li>
+ *   <li><b>VISIT side</b> ({@code service/VisitCoordinator}, the joiner's visit runner): one token, taken
+ *       when the carrier connect starts ({@code beginJoin}, audit m1), covers the join and the whole carrier
+ *       exchange. {@code TransportVisitClient} gets {@code !isClosing()} as its
+ *       keep-going check, so it finishes the in-flight bundle and returns once admissions close; the
+ *       runner then closes the token, and the token's cancel hook hard-cancels the exchange at the drain
+ *       cap.</li>
  * </ul>
+ *
+ * <p>Admissions are normally closed at dwell expiry. The one exception is the controller's joined-client
+ * grace in HOST_DRAINING (see {@code RoleCycleController}): admissions stay open for a few seconds so a
+ * client that joined our group but has not sent its first RPC yet is admitted rather than refused.
+ *
+ * <p>The gate is role-agnostic: every START (HOST or VISIT) opens it. The client-facing gRPC server
+ * listens for the whole service lifetime ({@code rpc/DropboxRpcServer}), so admission, not the socket, is
+ * what refuses clients between roles; during VISIT no stock client can reach it anyway, because the dropbox
+ * is then a group client, not a group owner.
  *
  * <p>When admissions are closed and the last live token closes, the drain listener fires (the
  * controller then switches role without waiting for the drain cap). When the cap is reached the
@@ -104,6 +117,7 @@ public final class ActivityGate {
     private int activeCount;
     private boolean open;
     private Runnable drainListener;
+    private Runnable admissionListener;
 
     /** Create a gate with admissions closed (the controller opens it when a role starts). */
     public ActivityGate() {
@@ -120,17 +134,23 @@ public final class ActivityGate {
      * @return a new token, or null if the work must be rejected (the RPC layer maps this to
      *         {@code Status.UNAVAILABLE})
      */
-    public synchronized Token tryAdmit(String key) {
+    public Token tryAdmit(String key) {
         if (key == null) throw new NullPointerException("key");
-        Set<Token> forKey = live.get(key);
-        if (!open && (forKey == null || forKey.isEmpty())) return null;
-        if (forKey == null) {
-            forKey = new LinkedHashSet<>();
-            live.put(key, forKey);
+        Token t;
+        Runnable fire;
+        synchronized (this) {
+            Set<Token> forKey = live.get(key);
+            if (!open && (forKey == null || forKey.isEmpty())) return null;
+            if (forKey == null) {
+                forKey = new LinkedHashSet<>();
+                live.put(key, forKey);
+            }
+            t = new Token(key);
+            forKey.add(t);
+            activeCount++;
+            fire = admissionListener;
         }
-        Token t = new Token(key);
-        forKey.add(t);
-        activeCount++;
+        if (fire != null) runSafely(fire, "admission listener");
         return t;
     }
 
@@ -184,6 +204,17 @@ public final class ActivityGate {
      */
     public synchronized void setDrainListener(Runnable listener) {
         this.drainListener = listener;
+    }
+
+    /**
+     * Set the listener fired (on the admitting thread, outside the gate's lock) after every successful
+     * {@link #tryAdmit(String)}. The controller uses it as a wake-up event: it re-checks its deadlines
+     * (an arriving client may be what woke a suspended CPU) and its joined-client grace. Callers of
+     * {@code tryAdmit} may hold their own locks ({@code ClientSessionTracker} does), so the listener must
+     * not block or take other locks; the controller's listener only posts to its executor.
+     */
+    public synchronized void setAdmissionListener(Runnable listener) {
+        this.admissionListener = listener;
     }
 
     /**

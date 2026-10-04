@@ -10,11 +10,18 @@ import java.util.concurrent.TimeUnit;
  * {@code dropbox-cycle}. This is the "one single-thread executor owns all state" of 03 Architecture.
  *
  * <p>R5 §4: the stock {@code DDDFixedRateScheduler} is minutes-only with fixed delay, so the role cycle
- * uses its own second-level timers here. Note that a {@code ScheduledExecutorService} measures delays
- * with {@code System.nanoTime()}, which on Android stops in deep sleep; the dropbox is assumed plugged in
- * with a foreground service (02 Decisions), and the controller computes deadlines from the injected
- * {@link Clock} ({@code elapsedRealtime}), so a late wake-up only delays a switch and never extends a
- * deadline. FUTURE: use AlarmManager or a wake lock if unplugged operation is ever needed.
+ * uses its own second-level timers here.
+ *
+ * <p>Time base: a {@code ScheduledExecutorService} measures delays with {@code System.nanoTime()}
+ * ({@code CLOCK_MONOTONIC}), which stops while the CPU is suspended. Being plugged in disables Doze but
+ * does <em>not</em> stop the kernel from suspending with the screen off, so a delay here can stretch by
+ * however long the device slept (Audit M1/M2). The controller therefore uses this class only to wake up:
+ * it keeps every deadline on its {@link Clock} ({@code elapsedRealtime}, which counts through suspend),
+ * hands over delays of at most {@code RoleCycleController.TIMER_SLICE_MS}, and re-checks its deadlines on
+ * every wake-up and event. The service also holds a partial wake lock ({@code keep_awake}, on by default for
+ * the stationary relay), so in practice the CPU does not suspend. AlarmManager is not used: exact alarms
+ * every 30-60 s need the user-granted {@code SCHEDULE_EXACT_ALARM} permission on Android 12+, while-idle
+ * alarms are rate-limited in Doze, and for a plugged-in relay the wake lock already keeps timers honest.
  */
 public final class ExecutorTaskScheduler implements TaskScheduler {
     private final ScheduledThreadPoolExecutor executor;

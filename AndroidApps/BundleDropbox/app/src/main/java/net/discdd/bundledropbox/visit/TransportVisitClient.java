@@ -5,7 +5,7 @@ import io.grpc.Context;
 import io.grpc.ManagedChannel;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.ClientCallStreamObserver;
-import io.grpc.stub.StreamObserver;
+import io.grpc.stub.ClientResponseObserver;
 import net.discdd.bundledropbox.store.BundleRecord;
 import net.discdd.bundledropbox.store.Direction;
 import net.discdd.bundledropbox.store.ForwardLedger;
@@ -49,6 +49,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BooleanSupplier;
@@ -71,16 +72,20 @@ import static java.util.logging.Level.WARNING;
  *   <li><b>Socket probe</b> of {@code host:7777} with bounded retries, as the stock client does
  *       ({@code ClientBundleTransmission.isServerRunning}): right after a P2P join the carrier's port may not be
  *       routable yet.</li>
- *   <li><b>{@code getRecencyBlob}</b>, offered verbatim to the {@link RecencyBlobStore}. This always runs, even if
- *       {@code keepGoing} is already false: it is cheap and it is the only way a fresh dropbox can ever host
- *       (the stock client aborts the whole exchange without a SUCCESS, server-signed recency blob, R3/R4 §4.4).</li>
+ *   <li><b>{@code getRecencyBlob}</b>, offered verbatim to the {@link RecencyBlobStore}, which keeps it only if
+ *       the dropbox's clients would accept it (pinned server key, valid signature, not from the future). This
+ *       always runs, even if {@code keepGoing} is already false: it is cheap and it is the only way a fresh
+ *       dropbox can ever host (the stock client aborts the whole exchange without a SUCCESS, server-signed
+ *       recency blob, R3/R4 §4.4).</li>
  *   <li><b>Upload</b> every UPSTREAM bundle not yet in the {@link ForwardLedger} for this carrier, newest first.
  *       Upload goes before download so the most valuable direction (client mail toward the internet) gets the
  *       radio time if the transport dwell is short (R2 §8).</li>
  *   <li><b>Download-all</b> of the carrier's client-bound bundles via repeated PSI sessions (R2 §4.3), committing
- *       each new one to DOWNSTREAM under the id read from the jar's {@code bundle.id}. Each visit to a carrier
- *       resumes at the index where the previous visit to it stopped, so a listing too long for one dwell is
- *       still covered over several visits.</li>
+ *       each new one to DOWNSTREAM under the id read from the jar's {@code bundle.id}, within the DOWNSTREAM
+ *       quota (checked per chunk). An id already held is {@linkplain RelayStore#touch touched} instead, which
+ *       keeps a client's still-current bundle in the HOST PSI snapshot. Each visit to a carrier resumes at the
+ *       index where the previous visit to it stopped, so a listing too long for one dwell is still covered over
+ *       several visits.</li>
  * </ol>
  *
  * <p><b>Stopping.</b> {@code keepGoing} is checked BETWEEN bundles only, so a bundle in flight always completes
@@ -118,6 +123,9 @@ public final class TransportVisitClient {
 
     /** Extra wait beyond the RPC deadline for the upload response before giving up locally. */
     private static final long UPLOAD_RESPONSE_GRACE_MS = 5_000;
+
+    /** Longest single sleep while waiting for upload flow control, so a caller-side cancel is noticed. */
+    static final long READY_WAIT_SLICE_MS = 100;
 
     private final RelayStore store;
     private final ForwardLedger ledger;
@@ -379,8 +387,12 @@ public final class TransportVisitClient {
 
         /**
          * Fetches the carrier's recency blob and offers the serialized response to the store, which keeps it only
-         * if it is SUCCESS and strictly newer. A carrier that never synced with the server answers with the
-         * default instance (status UNDEFINED), which is normal and not an error.
+         * if the dropbox's clients would accept it and it is strictly newer. A carrier that never synced with the
+         * server answers with the default instance (status UNDEFINED), which is normal and not an error.
+         *
+         * <p>{@code recencyFetched} means "this carrier holds a blob our clients trust", not merely SUCCESS: a
+         * carrier synced to another deployment's server must not count as in sync (the service rotates the
+         * advertised id and ends a bootstrap VISIT early on it, Audit M5).
          *
          * <p>Re-serialization is safe: the server signature covers the {@code RecencyBlob} message, which the
          * stock client re-serializes itself before verifying.
@@ -393,9 +405,13 @@ public final class TransportVisitClient {
                     logger.log(INFO, "carrier " + carrierId + " has no server-signed recency blob (status " +
                             response.getStatus() + "); it has probably never synced with the server");
                 }
-                recencyFetched = response.getStatus() == RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS &&
-                        response.hasRecencyBlob();
-                recencyUpdated = recencyStore.offer(response.toByteArray());
+                byte[] raw = response.toByteArray();
+                recencyFetched = recencyStore.isTrusted(raw);
+                recencyUpdated = recencyStore.offer(raw);
+                if (response.getStatus() == RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS && !recencyFetched) {
+                    logger.log(WARNING, "carrier " + carrierId + " serves a recency blob our clients would reject " +
+                            "(another server, bad signature or future timestamp); not relayed");
+                }
                 logger.log(INFO, "recency blob ts=" + response.getRecencyBlob().getBlobTimestamp() + " stored=" +
                         recencyUpdated);
             } catch (StatusRuntimeException e) {
@@ -455,16 +471,34 @@ public final class TransportVisitClient {
          */
         private boolean uploadOne(BundleExchangeServiceGrpc.BundleExchangeServiceStub async, String bundleId, Path path) {
             CompletableFuture<BundleUploadResponse> response = new CompletableFuture<>();
-            StreamObserver<BundleUploadResponse> responseObserver = new StreamObserver<>() {
-                @Override
-                public void onNext(BundleUploadResponse value) { response.complete(value); }
+            // Released by gRPC's onReady callback and by the call ending, so awaitReady sleeps instead of polling.
+            Semaphore readySignal = new Semaphore(0);
+            ClientResponseObserver<BundleUploadRequest, BundleUploadResponse> responseObserver =
+                    new ClientResponseObserver<>() {
+                        @Override
+                        public void beforeStart(ClientCallStreamObserver<BundleUploadRequest> requestStream) {
+                            // Must be registered before the call starts (gRPC contract for setOnReadyHandler).
+                            requestStream.setOnReadyHandler(readySignal::release);
+                        }
 
-                @Override
-                public void onError(Throwable t) { response.completeExceptionally(t); }
+                        @Override
+                        public void onNext(BundleUploadResponse value) {
+                            response.complete(value);
+                            readySignal.release();
+                        }
 
-                @Override
-                public void onCompleted() { response.complete(null); }
-            };
+                        @Override
+                        public void onError(Throwable t) {
+                            response.completeExceptionally(t);
+                            readySignal.release();
+                        }
+
+                        @Override
+                        public void onCompleted() {
+                            response.complete(null);
+                            readySignal.release();
+                        }
+                    };
             var requests = (ClientCallStreamObserver<BundleUploadRequest>) async.withDeadlineAfter(options.longDeadlineMs(),
                                                                                                      MILLISECONDS)
                     .uploadBundle(responseObserver);
@@ -476,7 +510,7 @@ public final class TransportVisitClient {
                 byte[] buffer = new byte[UPLOAD_CHUNK_BYTES];
                 int n;
                 while ((n = in.readNBytes(buffer, 0, buffer.length)) > 0) {
-                    if (!awaitReady(requests, response)) break;
+                    if (!awaitReady(requests, response, readySignal)) break;
                     requests.onNext(BundleUploadRequest.newBuilder()
                                             .setChunk(BundleChunk.newBuilder().setChunk(ByteString.copyFrom(buffer, 0, n)))
                                             .build());
@@ -524,17 +558,25 @@ public final class TransportVisitClient {
          * bundle in memory. Waiting for {@code isReady()} bounds that to roughly one chunk. Only cancel stops this
          * wait; {@code keepGoing} does not, because the in-flight bundle must complete.
          *
+         * <p>Event driven: {@code readySignal} is released by gRPC's onReady handler and when the call ends, so
+         * the worker sleeps while the carrier drains the window instead of polling {@code isReady()} every few
+         * milliseconds for the whole upload (Audit i5). The wait still wakes every {@value #READY_WAIT_SLICE_MS}
+         * ms because the caller's cancel signal ({@code token::isCancelled}) cannot notify; {@link #cancel()}
+         * itself also ends the call, which releases the signal at once.
+         *
          * @return false if the call already finished (error) and nothing more should be sent
          */
         private boolean awaitReady(ClientCallStreamObserver<BundleUploadRequest> requests,
-                                   CompletableFuture<BundleUploadResponse> response) {
+                                   CompletableFuture<BundleUploadResponse> response,
+                                   Semaphore readySignal) {
             long giveUpAt = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(options.longDeadlineMs());
             while (!requests.isReady()) {
                 if (response.isDone()) return false;
                 checkCancelled();
                 if (System.nanoTime() > giveUpAt) return true; // let the RPC deadline report the failure
                 try {
-                    Thread.sleep(2);
+                    // A permit left over from an earlier onReady only causes one extra isReady() check.
+                    readySignal.tryAcquire(READY_WAIT_SLICE_MS, MILLISECONDS);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     throw new VisitStopped("interrupted during upload");
@@ -585,8 +627,10 @@ public final class TransportVisitClient {
                 for (int k = 0; k < n; k++) {
                     int i = (start + k) % n;
                     checkContinue();
-                    if (!store.hasCapacityFor(0)) {
-                        error("store full; stopping downloads");
+                    if (!store.hasCapacityFor(Direction.DOWNSTREAM, 0)) {
+                        // DOWNSTREAM has its own quota below the total capacity, so a full DOWNSTREAM never
+                        // blocks client uploads (Audit M10).
+                        error("downstream quota full; stopping downloads");
                         return;
                     }
                     if (session == null) {
@@ -600,6 +644,7 @@ public final class TransportVisitClient {
                         }
                     }
                     IndexOutcome outcome = downloadIndex(blocking, session.getSessionId(), i);
+                    if (outcome == IndexOutcome.STOP) return; // out of space; retried on a later visit
                     nextDownloadIndex.put(carrierId, i + 1); // floorMod'd against the next listing size
                     // A successful download consumes the session on the carrier; after an error the session state
                     // is ambiguous (expired vs file gone), so always start the next index with a fresh one.
@@ -635,7 +680,16 @@ public final class TransportVisitClient {
             }
         }
 
-        /** Streams index {@code i} into staging, names it from {@code bundle.id}, then commits or discards it. */
+        /**
+         * Streams index {@code i} into staging, names it from {@code bundle.id}, then commits or discards it.
+         *
+         * <p>The DOWNSTREAM quota and {@link RelayStore#MAX_BUNDLE_BYTES} are enforced per chunk, so one carrier
+         * bundle cannot overshoot the capacity or fill the device (Audit m7). A full quota stops the pass at this
+         * index (retried on a later visit); an oversized bundle is skipped as an error. An empty stream or a file that is
+         * not a bundle jar counts as skipped, not as an error: a stock transport creates the client-bound file
+         * before its own server download and leaves it empty or partial if that fails, and the next good sync
+         * replaces it (Audit m6), so it must not make the whole visit "failed".
+         */
         private IndexOutcome downloadIndex(BundleExchangeServiceGrpc.BundleExchangeServiceBlockingStub blocking,
                                            String sessionId,
                                            int index) {
@@ -659,8 +713,24 @@ public final class TransportVisitClient {
                                                    .build());
                 while (chunks.hasNext()) {
                     ByteString chunk = chunks.next().getChunk().getChunk();
-                    chunk.writeTo(out);
                     bytes += chunk.size();
+                    if (bytes > RelayStore.MAX_BUNDLE_BYTES) {
+                        // Never storable: skip it (the resume index moves past it) rather than stopping, or every
+                        // later visit would restart at this index and never reach the rest of the listing.
+                        store.abort(staged);
+                        context.cancel(null); // ends the server stream now instead of at its deadline
+                        error("bundle at index " + index + " exceeds " + RelayStore.MAX_BUNDLE_BYTES + " B; skipped");
+                        return new IndexOutcome(null, false);
+                    }
+                    // The staged bytes written so far already count as used; add only this chunk.
+                    if (!store.hasCapacityFor(Direction.DOWNSTREAM, chunk.size())) {
+                        store.abort(staged);
+                        context.cancel(null);
+                        error("bundle at index " + index + " does not fit the downstream quota (" + bytes +
+                                      " B so far); stopping downloads");
+                        return IndexOutcome.STOP;
+                    }
+                    chunk.writeTo(out);
                 }
             } catch (StatusRuntimeException e) {
                 store.abort(staged);
@@ -684,19 +754,25 @@ public final class TransportVisitClient {
 
             if (bytes == 0) {
                 store.abort(staged);
-                error("carrier sent an empty bundle at index " + index);
+                skipped++;
+                logger.log(INFO, "carrier file at index " + index + " is empty (its own server download failed?); " +
+                        "skipped");
                 return new IndexOutcome(null, false);
             }
             String bundleId = readJarBundleId(staged.path());
             if (bundleId == null) {
                 store.abort(staged);
-                error("download at index " + index + " is not a bundle jar with a clean bundle.id");
+                skipped++;
+                logger.log(INFO, "carrier file at index " + index + " is not a bundle jar with a clean bundle.id " +
+                        "(truncated?); skipped");
                 return new IndexOutcome(null, false);
             }
             if (store.contains(Direction.DOWNSTREAM, bundleId)) {
                 // Expected and frequent: the server re-offers the same bundle until superseded, and the carrier
-                // keeps it after serving (R2 §6, R4 §4.2). Same id means same bytes, so keep the existing file.
+                // keeps it after serving (R2 §6, R4 §4.2). Same id means same bytes, so keep the existing file,
+                // but record that the server still considers it current (keeps it in the PSI snapshot, Audit M9).
                 store.abort(staged);
+                store.touch(Direction.DOWNSTREAM, bundleId);
                 skipped++;
                 return new IndexOutcome(bundleId, false);
             }
@@ -748,6 +824,9 @@ public final class TransportVisitClient {
 
     /** Result of one index download: the id read from the jar (if any) and whether the listing changed. */
     private static final class IndexOutcome {
+        /** Downloads must stop (no space); the index is retried on a later visit. */
+        static final IndexOutcome STOP = new IndexOutcome(null, false);
+
         final String bundleId;
         final boolean listingChanged;
 

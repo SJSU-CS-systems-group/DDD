@@ -12,6 +12,7 @@ import android.os.SystemClock;
 import androidx.annotation.StringRes;
 import androidx.core.content.ContextCompat;
 
+import net.discdd.bundledropbox.UserLog;
 import net.discdd.utils.LogUtil;
 import net.discdd.utils.UserLogRepository;
 
@@ -49,6 +50,13 @@ final class P2pLink {
         void invoke(WifiP2pManager manager, WifiP2pManager.Channel channel, WifiP2pManager.ActionListener listener);
     }
 
+    // Shared WifiP2pManager requests, named so call sites stay on one readable line.
+    static final P2pCall CLEAR_LOCAL_SERVICES = (m, c, l) -> m.clearLocalServices(c, l);
+    static final P2pCall CLEAR_SERVICE_REQUESTS = (m, c, l) -> m.clearServiceRequests(c, l);
+    static final P2pCall DISCOVER_SERVICES = (m, c, l) -> m.discoverServices(c, l);
+    static final P2pCall STOP_PEER_DISCOVERY = (m, c, l) -> m.stopPeerDiscovery(c, l);
+    static final P2pCall CANCEL_CONNECT = (m, c, l) -> m.cancelConnect(c, l);
+
     /** Blocking work run off the main thread. */
     interface BlockingTask {
         void run() throws Exception;
@@ -57,6 +65,22 @@ final class P2pLink {
     /** Completion of an async step: {@code failure} is null iff {@code ok}. */
     interface Result {
         void done(boolean ok, String failure);
+    }
+
+    /** A named {@link P2pCall}, one step of a {@link #bestEffort} sequence. */
+    static final class Step {
+        final String what;
+        final P2pCall call;
+
+        private Step(String what, P2pCall call) {
+            this.what = what;
+            this.call = call;
+        }
+    }
+
+    /** @return a named step for {@link #bestEffort} */
+    static Step step(String what, P2pCall call) {
+        return new Step(what, call);
     }
 
     final Context context;
@@ -269,6 +293,28 @@ final class P2pLink {
     }
 
     /**
+     * Runs {@code steps} one after another, each bounded by {@link WifiTimeouts#SERVICE_OP_MS}, ignoring
+     * their outcome (a failure is logged at FINE: e.g. {@code cancelConnect} with nothing pending answers
+     * ERROR), then runs {@code then}. Stops early, without running {@code then}, once {@code stillWanted}
+     * turns false. Flattens what used to be nested best-effort callback chains.
+     */
+    void bestEffort(BooleanSupplier stillWanted, Runnable then, Step... steps) {
+        runBestEffort(0, steps, stillWanted, then);
+    }
+
+    private void runBestEffort(int i, Step[] steps, BooleanSupplier stillWanted, Runnable then) {
+        if (!stillWanted.getAsBoolean()) return;
+        if (i == steps.length) {
+            then.run();
+            return;
+        }
+        action(steps[i].what, WifiTimeouts.SERVICE_OP_MS, steps[i].call, stillWanted, (ok, why) -> {
+            if (!ok) logger.fine(why + " (best effort, continuing)");
+            runBestEffort(i + 1, steps, stillWanted, then);
+        });
+    }
+
+    /**
      * Polls {@code requestGroupInfo} every {@link WifiTimeouts#POLL_INTERVAL_MS} until {@code until}
      * accepts the group (which may be null), {@code timeoutMs} passes, or {@code stillWanted} turns false.
      * A watchdog covers a framework that never answers.
@@ -421,15 +467,11 @@ final class P2pLink {
 
     /**
      * Logs to java.util.logging and to the user-visible log list (android-core {@code UserLogRepository}),
-     * for messages that have no string resource. The dropbox's strings.xml is owned by the scaffold, so
-     * new dropbox-only radio messages are plain English here.
+     * for dropbox-only radio messages that have no string resource (messages shared with the transport use
+     * {@link #wifiRes} and its localized strings).
      */
     void ui(UserLogRepository.UserLogType type, Level level, String message) {
-        logger.log(level, type + ": " + message);
-        UserLogRepository.INSTANCE.log(new UserLogRepository.UserLogEntry(type,
-                                                                          System.currentTimeMillis(),
-                                                                          message,
-                                                                          level));
+        UserLog.log(logger, type, level, message);
     }
 
     /** {@link #ui} for Wi-Fi messages. */

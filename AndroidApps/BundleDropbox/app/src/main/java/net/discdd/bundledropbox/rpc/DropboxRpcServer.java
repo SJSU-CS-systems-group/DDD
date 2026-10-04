@@ -37,6 +37,12 @@ import java.util.logging.Logger;
  *       pinning and no CA (Research/R3 §4). Client certificates are not requested, as on the transport.</li>
  *   <li>Max inbound message 5 MB: the client uploads in 4,000,000-byte chunks.</li>
  *   <li>Fixed pool of 4 executor threads, as on the transport.</li>
+ *   <li>Server keepalive ({@value #KEEPALIVE_TIME_MS} ms ping, {@value #KEEPALIVE_TIMEOUT_MS} ms timeout) and a
+ *       {@value #MAX_CONNECTION_IDLE_MS} ms idle limit, which the transport does not set. grpc-okhttp's
+ *       defaults are a 2 h keepalive and no idle limit, so a client that walks out of range mid-upload would
+ *       keep its call, its staged bytes and their share of the capacity until its own 120 s deadline cancels
+ *       it, or until the group is torn down (Audit U1). Server pings need nothing from the client beyond the
+ *       HTTP/2 PING ack every gRPC peer sends, so stock-client behaviour is unchanged.</li>
  * </ul>
  *
  * <p>Interceptor chain (outermost first): {@link RemoteAddrInterceptor} puts the client IP in the context,
@@ -73,6 +79,15 @@ public final class DropboxRpcServer {
     public static final long STOP_FORCE_MS = 1_000;
     /** How often idle client sessions are reaped. */
     public static final long REAP_PERIOD_MS = 1_000;
+    /** Server-to-client HTTP/2 PING interval on a quiet connection. */
+    public static final long KEEPALIVE_TIME_MS = 20_000;
+    /** A connection whose PING is not acked within this is closed, cancelling its calls. */
+    public static final long KEEPALIVE_TIMEOUT_MS = 10_000;
+    /**
+     * A connection with no RPC in flight for this long is closed gracefully. Far longer than the gaps in the
+     * stock client's exchange (its PSI blinding between RPCs takes seconds), so it only reaps abandoned sockets.
+     */
+    public static final long MAX_CONNECTION_IDLE_MS = 60_000;
 
     private final KeyPair keyPair;
     private final X509Certificate cert;
@@ -165,6 +180,9 @@ public final class DropboxRpcServer {
         // ServerInterceptors.intercept runs the LAST interceptor first: remoteAddr, then admission.
         Server s = OkHttpServerBuilder.forPort(port, credentials)
                 .maxInboundMessageSize(MAX_INBOUND_MESSAGE_SIZE)
+                .keepAliveTime(KEEPALIVE_TIME_MS, TimeUnit.MILLISECONDS)
+                .keepAliveTimeout(KEEPALIVE_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                .maxConnectionIdle(MAX_CONNECTION_IDLE_MS, TimeUnit.MILLISECONDS)
                 .addService(ServerInterceptors.intercept(service, admission, remoteAddr))
                 .executor(exec)
                 .build();

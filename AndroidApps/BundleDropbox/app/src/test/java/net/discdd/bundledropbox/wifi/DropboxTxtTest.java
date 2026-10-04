@@ -118,6 +118,22 @@ public class DropboxTxtTest {
         assertEquals("peer is a dropbox", ad.rejection());
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void advertisedIdTooLongForATxtEntryRejected() {
+        DropboxTxt.hostRecord("x".repeat(256 - "transportId=".length()), null);
+    }
+
+    @Test
+    public void ownRecordWithoutBlobIsIgnoredLikeTheStockClientDoes() {
+        // Without a cached blob the dropbox omits recencyBlob; the client (and our VISIT filter, even if the
+        // dropbox key were missing) ignores a peer without it.
+        Map<String, String> own = new HashMap<>(DropboxTxt.hostRecord("D1", null));
+        own.remove(DropboxTxt.KEY_DROPBOX);
+        DropboxTxt.CarrierAd ad = DropboxTxt.parseCarrier(own);
+        assertFalse(ad.isAccepted());
+        assertEquals("no recencyBlob", ad.rejection());
+    }
+
     @Test
     public void rejectsMissingOrBadFields() {
         assertFalse(DropboxTxt.parseCarrier(null).isAccepted());

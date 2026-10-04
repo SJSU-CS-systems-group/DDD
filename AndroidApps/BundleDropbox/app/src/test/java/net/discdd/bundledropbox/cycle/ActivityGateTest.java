@@ -105,4 +105,21 @@ public class ActivityGateTest {
         assertEquals(0, hooks.get());
         assertFalse(t.isCancelled());
     }
+
+    @Test
+    public void admissionListenerFiresOnlyForAdmittedWork() {
+        ActivityGate g = new ActivityGate();
+        AtomicInteger admitted = new AtomicInteger();
+        // The listener fires after the token is counted (100 would mean it ran too early).
+        g.setAdmissionListener(() -> admitted.addAndGet(g.activeCount() > 0 ? 1 : 100));
+        assertNull(g.tryAdmit("a"));
+        assertEquals("refusal is not an event", 0, admitted.get());
+        g.openAdmissions();
+        ActivityGate.Token t = g.tryAdmit("a");
+        assertEquals(1, admitted.get());
+        g.closeAdmissions();
+        assertNotNull(g.tryAdmit("a")); // follow-on token of an admitted key
+        assertEquals(2, admitted.get());
+        t.close();
+    }
 }
