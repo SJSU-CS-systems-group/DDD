@@ -16,20 +16,29 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.net.ssl.SSLException;
+import java.io.IOException;
 import java.time.Duration;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Level.WARNING;
 
 /**
+ * Delivers upstream ADUs to their consumers: in-process {@link InternalAppHandler}s first, otherwise the gRPC service
+ * adapter registered for the app ID.
+ * <p>
  * Remember that this class has a different concept of "send" and "receive" folders than the original code.
  * Data in the "send" folder are going back to BundleClients.
  * Data in the "receive" folder are coming from BundleClients and going to the adapters.
@@ -47,18 +56,23 @@ public class BundleServerAduDeliverer implements ServerApplicationDataManager.Ad
     private final Duration revalidateAppSpinDelay;
     private final long grpcTimeout = 20_000 /* milliseconds */;
     private final GrpcSecurityKey serverGrpcSecurityKey;
+    // appId to in-process handler; these app IDs never go to a service adapter
+    private final Map<String, InternalAppHandler> internalHandlers;
 
     BundleServerAduDeliverer(AduStores aduStores,
                              RegisteredAppAdapterRepository registeredAppAdapterRepository,
                              @Value("${serviceadapter.datacheck.interval}") Duration dataCheckInterval,
                              @Value("${serviceadapter.revalidate-delay:5s}") Duration revalidateAppSpinDelay,
-                             GrpcSecurityKey serverGrpcSecurityKey) {
+                             GrpcSecurityKey serverGrpcSecurityKey,
+                             List<InternalAppHandler> internalHandlers) {
         this.sendFolder = aduStores.getSendADUsStorage();
         this.receiveFolder = aduStores.getReceiveADUsStorage();
         this.registeredAppAdapterRepository = registeredAppAdapterRepository;
         this.dataCheckInterval = dataCheckInterval;
         this.revalidateAppSpinDelay = revalidateAppSpinDelay;
         this.serverGrpcSecurityKey = serverGrpcSecurityKey;
+        this.internalHandlers =
+                internalHandlers.stream().collect(Collectors.toMap(InternalAppHandler::appId, Function.identity()));
     }
 
     private long lastRevalidateAppsMs;
@@ -109,6 +123,10 @@ public class BundleServerAduDeliverer implements ServerApplicationDataManager.Ad
     public void init() {
         revalidateApps(false);
         sendFolder.getAllClientApps().forEach(app -> addAppWithPendingData(app.appId(), app.clientId()));
+        // in-process apps: consume anything stored but not handled before a crash or restart
+        receiveFolder.getAllClientApps()
+                .filter(app -> internalHandlers.containsKey(app.appId()))
+                .forEach(app -> addAppWithPendingData(app.appId(), app.clientId()));
         logger.log(INFO, "Checking for pending data from service adapters every " + dataCheckInterval);
         scheduler.scheduleWithFixedDelay(this::checkServiceAdapters,
                                          dataCheckInterval.toMillis(),
@@ -136,6 +154,11 @@ public class BundleServerAduDeliverer implements ServerApplicationDataManager.Ad
     }
 
     private void addAppWithPendingData(String appId, String clientId) {
+        var internalHandler = internalHandlers.get(appId);
+        if (internalHandler != null) {
+            deliverToInternalHandler(internalHandler, clientId);
+            return;
+        }
         // BundleClient has no service adapter by design; ADUs are injected directly via CLI
         if (ServerApplicationDataManager.BUNDLE_CLIENT_APP_ID.equals(appId)) return;
         // if the app isn't registered, check to see if something changed
@@ -145,6 +168,25 @@ public class BundleServerAduDeliverer implements ServerApplicationDataManager.Ad
             logger.log(SEVERE, "No service adapter for " + appId + " things are going to break");
         } else {
             addAppWithPendingData(appState, clientId);
+        }
+    }
+
+    /**
+     * The in-process counterpart of {@link #contactServiceAdapterForClient}. It runs synchronously on the calling
+     * thread (bundle processing), which keeps the work cheap and makes the handler's reply exist before the upload RPC
+     * returns (Research R8 §7.2). The consumed ADUs are deleted only after the handler returns normally.
+     */
+    private void deliverToInternalHandler(InternalAppHandler handler, String clientId) {
+        String appId = handler.appId();
+        try {
+            var adus = receiveFolder.getAppData(clientId, appId);
+            if (adus.isEmpty()) return;
+            handler.handleUpstream(clientId, adus);
+            long lastAduId = adus.get(adus.size() - 1).getADUId();
+            receiveFolder.deleteAllFilesUpTo(clientId, appId, lastAduId);
+        } catch (IOException | RuntimeException e) {
+            // leave the ADUs in place; they are offered again with the next delivery for this client
+            logger.log(WARNING, "In-process handler for " + appId + " failed for " + clientId, e);
         }
     }
 

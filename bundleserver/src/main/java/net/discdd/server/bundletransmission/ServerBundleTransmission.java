@@ -7,6 +7,7 @@ import net.discdd.bundlesecurity.DDDPEMEncoder;
 import net.discdd.bundlesecurity.InvalidClientIDException;
 import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.bundlesecurity.ServerSecurity;
+import net.discdd.dropbox.control.BundleJarInfo;
 import net.discdd.grpc.BundleSenderType;
 import net.discdd.grpc.GetRecencyBlobResponse;
 import net.discdd.grpc.RecencyBlob;
@@ -20,7 +21,9 @@ import net.discdd.server.bundlerouting.BundleRouting;
 import net.discdd.server.bundlerouting.ServerWindowService;
 import net.discdd.server.bundlesecurity.ServerBundleSecurity;
 import net.discdd.server.config.BundleServerConfig;
+import net.discdd.server.repository.ReceivedBundleRepository;
 import net.discdd.server.repository.entity.ClientBundleCounters;
+import net.discdd.server.repository.entity.ReceivedBundle;
 import net.discdd.utils.BundleUtils;
 import net.discdd.utils.Constants;
 import net.discdd.utils.FileUtils;
@@ -74,6 +77,7 @@ public class ServerBundleTransmission {
     private final BundleRouting bundleRouting;
     private final ServerWindowService serverWindowService;
     private final ServerSecurity serverSecurity;
+    private final ReceivedBundleRepository receivedBundleRepository;
     @Value("${bundle-server.bundle-store-shared}")
     private String bundleStoreShared;
     SecureRandom secureRandom = new SecureRandom();
@@ -83,8 +87,10 @@ public class ServerBundleTransmission {
                                     BundleRouting bundleRouting,
                                     BundleServerConfig config,
                                     ServerWindowService serverWindowService,
-                                    ServerSecurity serverSecurity) {
+                                    ServerSecurity serverSecurity,
+                                    ReceivedBundleRepository receivedBundleRepository) {
         this.config = config;
+        this.receivedBundleRepository = receivedBundleRepository;
         this.bundleSecurity = bundleSecurity;
         this.applicationDataManager = applicationDataManager;
         this.bundleRouting = bundleRouting;
@@ -137,6 +143,8 @@ public class ServerBundleTransmission {
             var receivedBundleCounter =
                     this.bundleSecurity.getCounterFromBundlePath(uncompressedBundle.getSource().toPath(),
                                                                  BundleIDGenerator.UPSTREAM);
+            // record before the duplicate check: duplicates and ack-only bundles must be recorded too
+            recordReceivedBundle(uncompressedBundle, clientId, receivedBundleCounter, senderId);
 
             if (receivedBundleCounter <= counters.lastReceivedBundleCounter) {
                 logger.log(WARNING,
@@ -203,6 +211,37 @@ public class ServerBundleTransmission {
         }
     }
 
+    /**
+     * Remember that this upstream bundle reached the server, keyed by the jar's plaintext {@code bundle.id} (the same
+     * string a dropbox uses as the file name). The dropbox retention planner turns this into RECEIVED_BY_SERVER and
+     * SUPERSEDED decisions. Recording happens once the server identity and client have been verified, but before
+     * the duplicate check, because {@code lastReceivedBundleCounter} only advances for bundles with ADUs (Research R8
+     * §1). A failure here is logged and processing continues; a database error inside the RPC's transaction
+     * ({@code GrpcExecutor}) still rolls that RPC back, and the carrier re-uploads the bundle later.
+     */
+    private void recordReceivedBundle(UncompressedBundle uncompressedBundle,
+                                      String clientId,
+                                      long bundleCounter,
+                                      String uploaderId) {
+        try {
+            String bundleId = uncompressedBundle.getBundleId();
+            if (receivedBundleRepository.existsById(bundleId)) return;
+            String fingerprint = null;
+            Path baseKeyPath = uncompressedBundle.getSource().toPath().resolve(SecurityUtils.CLIENT_BASE_KEY);
+            if (Files.isRegularFile(baseKeyPath)) {
+                fingerprint = BundleJarInfo.clientKeyFingerprintFromPem(Files.readString(baseKeyPath));
+            }
+            receivedBundleRepository.save(new ReceivedBundle(bundleId,
+                                                             clientId,
+                                                             bundleCounter,
+                                                             fingerprint,
+                                                             System.currentTimeMillis(),
+                                                             uploaderId));
+        } catch (Exception e) {
+            logger.log(WARNING, "Could not record received bundle for client " + clientId, e);
+        }
+    }
+
     public void processBundleFile(File bundleFile, BundleSenderType senderType, String senderId) {
         Bundle bundle = new Bundle(bundleFile);
         try {
@@ -227,6 +266,8 @@ public class ServerBundleTransmission {
     public String generateBundleForClient(String clientId) throws InvalidClientIDException, GeneralSecurityException,
             InvalidKeyException, IOException {
         logger.log(INFO, "[BundleTransmission] Processing bundle generation request for client " + clientId);
+        // lets in-process apps (dropbox retention plans) refresh their queued ADUs from the latest server facts
+        applicationDataManager.beforeBundleGeneration(clientId);
 
         ClientBundleCounters bundleCountersForClient = this.applicationDataManager.getBundleCountersForClient(clientId);
         if (this.serverWindowService.isWindowFull(clientId)) {
@@ -257,7 +298,7 @@ public class ServerBundleTransmission {
                                                  adus,
                                                  null,
                                                  pipedInputStream,
-                                                 applicationDataManager.getRegisteredAppIds());
+                                                 applicationDataManager.getRegisteredAppIds(clientId));
         Files.createDirectories(getClientSendDirectory(clientId));
         try {
             var bundleOutputStream = Files.newOutputStream(getPathForBundleToSend(clientId, encryptedBundleId),

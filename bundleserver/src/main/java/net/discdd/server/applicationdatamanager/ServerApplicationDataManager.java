@@ -4,10 +4,12 @@ import net.discdd.model.ADU;
 import net.discdd.server.config.BundleServerConfig;
 import net.discdd.server.repository.BundleMetadataRepository;
 import net.discdd.server.repository.ClientBundleCountersRepository;
+import net.discdd.server.repository.ClientDownstreamAckRepository;
 import net.discdd.server.repository.RegisteredAppAdapterRepository;
 import net.discdd.server.repository.SentAduDetailsRepository;
 import net.discdd.server.repository.entity.BundleMetadata;
 import net.discdd.server.repository.entity.ClientBundleCounters;
+import net.discdd.server.repository.entity.ClientDownstreamAck;
 import net.discdd.server.repository.entity.SentAduDetails;
 import net.discdd.utils.StoreADUs;
 import org.springframework.stereotype.Service;
@@ -23,7 +25,9 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
 
+import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
 
 @Service
 public class ServerApplicationDataManager {
@@ -37,6 +41,8 @@ public class ServerApplicationDataManager {
     private final BundleMetadataRepository bundleMetadataRepository;
     private final RegisteredAppAdapterRepository registeredAppAdapterRepository;
     private final ClientBundleCountersRepository clientBundleCountersRepository;
+    private final ClientDownstreamAckRepository clientDownstreamAckRepository;
+    private final List<InternalAppHandler> internalAppHandlers;
     AduDeliveredListener aduDeliveredListener;
     private final StoreADUs receiveADUsStorage;
     private final StoreADUs sendADUsStorage;
@@ -47,9 +53,13 @@ public class ServerApplicationDataManager {
                                         BundleMetadataRepository bundleMetadataRepository,
                                         RegisteredAppAdapterRepository registeredAppAdapterRepository,
                                         ClientBundleCountersRepository clientBundleCountersRepository,
+                                        ClientDownstreamAckRepository clientDownstreamAckRepository,
+                                        List<InternalAppHandler> internalAppHandlers,
                                         BundleServerConfig bundleServerConfig) {
         this.aduDeliveredListener = aduDeliveredListener;
         this.clientBundleCountersRepository = clientBundleCountersRepository;
+        this.clientDownstreamAckRepository = clientDownstreamAckRepository;
+        this.internalAppHandlers = List.copyOf(internalAppHandlers);
         this.sentAduDetailsRepository = sentAduDetailsRepository;
         this.bundleMetadataRepository = bundleMetadataRepository;
         this.bundleServerConfig = bundleServerConfig;
@@ -58,12 +68,38 @@ public class ServerApplicationDataManager {
         this.receiveADUsStorage = aduStores.getReceiveADUsStorage();
     }
 
+    /** App IDs every client gets: the service adapters' app IDs plus BundleClient's own. */
     public List<String> getRegisteredAppIds() {
         var ids = new ArrayList<>(registeredAppAdapterRepository.findAllAppIds().stream().toList());
         // BundleClient's App ID is directly included here since server notifications are
         // injected to BundleClient via the server CLI without needing a service adapter.
         ids.add(BUNDLE_CLIENT_APP_ID);
         return ids;
+    }
+
+    /**
+     * App IDs for one client: {@link #getRegisteredAppIds()} plus the app IDs of in-process handlers that apply to
+     * this client (for example the dropbox control app ID, only for dropboxes). This list drives which send-store
+     * ADUs go into the client's bundles and is written to the bundle's {@code app_ids.txt}, which the client then
+     * uses as its upload filter (Research R8 §2.3).
+     */
+    public List<String> getRegisteredAppIds(String clientId) {
+        var ids = getRegisteredAppIds();
+        for (var handler : internalAppHandlers) {
+            if (!ids.contains(handler.appId()) && handler.isRegisteredFor(clientId)) ids.add(handler.appId());
+        }
+        return ids;
+    }
+
+    /** Give in-process handlers a chance to refresh their queued replies before a bundle is built for the client. */
+    public void beforeBundleGeneration(String clientId) {
+        for (var handler : internalAppHandlers) {
+            try {
+                handler.beforeBundleGeneration(clientId);
+            } catch (RuntimeException e) {
+                logger.log(WARNING, "beforeBundleGeneration failed in handler for " + handler.appId(), e);
+            }
+        }
     }
 
     public void processAcknowledgement(String clientId, String bundleId) throws IOException {
@@ -83,10 +119,32 @@ public class ServerApplicationDataManager {
         }
 
         sentAduDetailsRepository.deleteByBundleId(bundleId);
+        recordDownstreamAck(clientId, bundleId);
 
         logger.log(INFO,
                    "[StateManager] Processed acknowledgement and deleted bundle id " + bundleId +
                            " corresponding to client " + clientId);
+    }
+
+    /**
+     * Raise the client's acked downstream counter to the counter of the acked bundle. The ACK is the exact encrypted
+     * downstream bundle ID, and BundleMetadata maps it to (client, counter) without decryption (Research R8 §4).
+     * An ACK the server did not issue (another server, or a wiped database) or that belongs to another client is
+     * ignored.
+     */
+    private void recordDownstreamAck(String clientId, String ackedBundleId) {
+        var metadata = bundleMetadataRepository.findById(ackedBundleId);
+        if (metadata.isEmpty() || !clientId.equals(metadata.get().clientId)) {
+            logger.log(FINE, "ACK " + ackedBundleId + " from " + clientId + " does not match an issued bundle");
+            return;
+        }
+        long counter = metadata.get().bundleCounter;
+        var ack = clientDownstreamAckRepository.findById(clientId).orElse(null);
+        if (ack != null && ack.ackedCounter >= counter) return;
+        clientDownstreamAckRepository.save(new ClientDownstreamAck(clientId,
+                                                                   counter,
+                                                                   ackedBundleId,
+                                                                   System.currentTimeMillis()));
     }
 
     public void storeReceivedADUs(String clientId, String bundleId, long receivedBundleCounter, List<ADU> adus) throws
@@ -151,7 +209,7 @@ public class ServerApplicationDataManager {
 
         final long dataSizeLimit = this.bundleServerConfig.getApplicationDataManager().getAppDataSizeLimit();
         var sizeLimiter = new SizeLimiter(dataSizeLimit - initialSize);
-        for (String appId : this.getRegisteredAppIds()) {
+        for (String appId : this.getRegisteredAppIds(clientId)) {
             var sentAdus = new SentAduDetails();
             sentAdus.appId = appId;
             sentAdus.bundleId = bundleId;
@@ -194,7 +252,7 @@ public class ServerApplicationDataManager {
         var details = sentAduDetailsRepository.findByBundleId(lastBundleSent);
         var lastAdus = new HashMap<String, Long>();
         details.forEach(d -> lastAdus.put(d.appId, d.aduIdRangeEnd));
-        return getRegisteredAppIds().stream().anyMatch(app -> {
+        return getRegisteredAppIds(clientId).stream().anyMatch(app -> {
             var lastStoredAdu = sendADUsStorage.getLastADUIdAdded(clientId, app);
             var lastDeletedAdu = sendADUsStorage.getLastADUIdDeleted(clientId, app);
             return lastStoredAdu > Math.max(lastAdus.getOrDefault(app, 0L), lastDeletedAdu);

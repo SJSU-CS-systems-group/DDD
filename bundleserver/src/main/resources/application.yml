@@ -24,6 +24,12 @@ serviceadapter:
   datacheck:
     interval: 10m
 
+dropbox:
+  retention:
+    # a bundle in a DDD Dropbox's inventory that the server cannot map to a client (unknown upstream, or a
+    # downstream bundle this server never issued) is kept this long after its first sighting, then expired
+    unknown-ttl: 14d
+
 ssl-grpc:
   server:
     port: 7778

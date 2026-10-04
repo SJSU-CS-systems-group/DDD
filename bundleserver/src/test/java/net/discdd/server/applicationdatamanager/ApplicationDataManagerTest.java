@@ -4,6 +4,7 @@ import net.discdd.model.ADU;
 import net.discdd.server.config.BundleServerConfig;
 import net.discdd.server.repository.BundleMetadataRepository;
 import net.discdd.server.repository.ClientBundleCountersRepository;
+import net.discdd.server.repository.ClientDownstreamAckRepository;
 import net.discdd.server.repository.RegisteredAppAdapterRepository;
 import net.discdd.server.repository.SentAduDetailsRepository;
 import net.discdd.server.repository.entity.RegisteredAppAdapter;
@@ -22,6 +23,7 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -51,6 +53,8 @@ public class ApplicationDataManagerTest {
     private BundleMetadataRepository bundleMetadataRepository;
     @Autowired
     private ClientBundleCountersRepository clientBundleCountersRepository;
+    @Autowired
+    private ClientDownstreamAckRepository clientDownstreamAckRepository;
     private BundleServerConfig bundleServerConfig; // = mock(BundleServerConfig.class);
     private StoreADUs receiveADUsStorage;
     private StoreADUs sendADUsStorage;
@@ -68,6 +72,8 @@ public class ApplicationDataManagerTest {
                                                                   bundleMetadataRepository,
                                                                   registeredAppAdapterRepository,
                                                                   clientBundleCountersRepository,
+                                                                  clientDownstreamAckRepository,
+                                                                  List.of(),
                                                                   bundleServerConfig);
         var receiveADUsStorageField = ServerApplicationDataManager.class.getDeclaredField("receiveADUsStorage");
         receiveADUsStorageField.setAccessible(true);
@@ -103,6 +109,8 @@ public class ApplicationDataManagerTest {
                                                 bundleMetadataRepository,
                                                 registeredAppAdapterRepository,
                                                 clientBundleCountersRepository,
+                                                clientDownstreamAckRepository,
+                                                List.of(),
                                                 cfg);
     }
 
