@@ -151,11 +151,8 @@ public class ServerApplicationDataManager {
             IOException {
         logger.log(INFO, "[ApplicationDataManager] Store ADUs");
 
-        updateLastReceivedCounter(clientId, receivedBundleCounter, bundleId);
-        logger.log(INFO, "[StateManager] Registered bundle identifier: " + bundleId + " of client " + clientId);
         var affectedAppIds = new HashSet<String>();
 
-        Map<String, List<ADU>> appIdToADUMap = new HashMap<>();
         for (var adu : adus) {
             var addedFile = receiveADUsStorage.addADU(clientId,
                                                       adu.getAppId(),
@@ -163,6 +160,9 @@ public class ServerApplicationDataManager {
                                                       adu.getADUId());
             if (addedFile != null) affectedAppIds.add(adu.getAppId());
         }
+        // The counter authorizes the duplicate path to record a receipt. All ADU bytes must exist first.
+        updateLastReceivedCounter(clientId, receivedBundleCounter, bundleId);
+        logger.log(INFO, "[StateManager] Registered bundle identifier: " + bundleId + " of client " + clientId);
         aduDeliveredListener.onAduDelivered(clientId, affectedAppIds);
     }
 

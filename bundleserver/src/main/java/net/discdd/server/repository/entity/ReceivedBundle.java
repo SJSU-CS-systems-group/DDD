@@ -13,10 +13,10 @@ import lombok.NoArgsConstructor;
  * from the jar's plaintext {@code bundle.id} entry. That string is also the bundle's file name on transports and
  * dropboxes, so a dropbox inventory can be matched against this table without any decryption.
  * <p>
- * Rows are written by {@code ServerBundleTransmission.processReceivedBundle} <em>before</em> its duplicate check,
- * so duplicates and ack-only bundles are recorded too. Ack-only bundles never advance
- * {@code ClientBundleCounters.lastReceivedBundleCounter} (Research R8 §1), which is why the dropbox retention planner
- * uses this table, not the counters, as "the highest upstream counter received".
+ * Rows are written after acknowledgement processing and ADU storage succeed, or when the processed counter
+ * proves that this bundle (or a later cumulative bundle) was already processed. ACK-only bundles advance that
+ * counter too. The retention planner uses these rows as receipt evidence; an attempted receive is not enough.
+ * File, Signal-session and database updates are not one atomic transaction, so this is not a power-loss guarantee.
  */
 @Entity
 @Table(name = "received_bundle",

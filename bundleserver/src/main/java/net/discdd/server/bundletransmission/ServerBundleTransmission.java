@@ -32,30 +32,41 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.whispersystems.libsignal.InvalidKeyException;
 import org.whispersystems.libsignal.InvalidMessageException;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
+import java.security.DigestInputStream;
 import java.security.GeneralSecurityException;
+import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
@@ -69,6 +80,10 @@ import static net.discdd.grpc.BundleSenderType.CLIENT;
 public class ServerBundleTransmission {
 
     private static final Logger logger = Logger.getLogger(ServerBundleTransmission.class.getName());
+    private static final ReentrantLock[] receiveLocks = new ReentrantLock[64];
+    static {
+        Arrays.setAll(receiveLocks, ignored -> new ReentrantLock());
+    }
     private final ExecutorService executorService = Executors.newCachedThreadPool();
     public static final int WINDOW_LENGTH = 3;
     private final BundleServerConfig config;
@@ -138,77 +153,190 @@ public class ServerBundleTransmission {
                                                                                            .toPath()
                                                                                            .resolve(SecurityUtils.CLIENT_IDENTITY_KEY));
             String clientId = generateID(clientIdBase64);
-            var counters = this.applicationDataManager.getBundleCountersForClient(clientId);
-
             var receivedBundleCounter =
                     this.bundleSecurity.getCounterFromBundlePath(uncompressedBundle.getSource().toPath(),
                                                                  BundleIDGenerator.UPSTREAM);
-            if (receivedBundleCounter <= counters.lastReceivedBundleCounter) {
-                // a bundle with this counter or a later one was fully processed, so this copy is safe to record
-                recordReceivedBundle(uncompressedBundle, clientId, receivedBundleCounter, senderId);
-                logger.log(WARNING,
-                           "[BundleTransmission] Skipping bundle " + bundle.getSource().getName() +
-                                   " already received");
-                return;
-            }
-
-            Payload payload = this.bundleSecurity.decryptPayload(uncompressedBundle);
-            if (payload == null) {
-                throw new Exception("Payload is null");
-            }
-
-            UncompressedPayload uncompressedPayload =
-                    BundleUtils.extractPayload(payload, uncompressedBundle.getSource().toPath());
-            logger.log(INFO,
-                       "[CrashReports] extracted payload to: " + uncompressedPayload.getSource().getAbsolutePath());
-            Path crashReportSrcDir =
-                    uncompressedPayload.getSource().toPath().resolve(Constants.BUNDLE_CRASH_REPORT_DIRECTORY_NAME);
-            logger.log(INFO,
-                       "[CrashReports] looking for crash reports in: " + crashReportSrcDir + " exists=" +
-                               Files.isDirectory(crashReportSrcDir));
-            if (Files.isDirectory(crashReportSrcDir)) {
-                Path destDir = Path.of(bundleStoreShared, "crashReports", "client");
-                logger.log(INFO, "[CrashReports] writing to destDir: " + destDir);
-                try {
-                    Files.createDirectories(destDir);
-                    long timestamp = System.currentTimeMillis();
-                    try (var entries = Files.list(crashReportSrcDir).filter(Files::isRegularFile)) {
-                        var reports = entries.sorted().collect(Collectors.toList());
-                        logger.log(INFO,
-                                   "[CrashReports] found " + reports.size() + " report(s) for client " + clientId);
-                        for (int i = 0; i < reports.size(); i++) {
-                            Path dest = destDir.resolve(clientId + "_" + timestamp + "_" + (i + 1));
-                            logger.log(INFO, "[CrashReports] copying " + reports.get(i) + " -> " + dest);
-                            Files.copy(reports.get(i), dest, StandardCopyOption.REPLACE_EXISTING);
-                        }
-                    }
-                } catch (Exception e) {
-                    logger.log(WARNING, "[CrashReports] failed to extract crash reports for client " + clientId, e);
-                }
-            }
-            if (!"HB".equals(uncompressedPayload.getAckRecord().getBundleId())) {
-                this.serverWindowService.processACK(clientId, uncompressedPayload.getAckRecord().getBundleId());
-            }
-
+            Path stagedPayload = stagedPayloadPath(clientId, uncompressedBundle.getBundleId(), bundle.getSource().toPath());
+            ReentrantLock receiveLock = receiveLocks[Math.floorMod(clientId.hashCode(), receiveLocks.length)];
+            receiveLock.lock();
+            boolean unlockWithTransaction = false;
             try {
-                this.bundleRouting.processClientMetaData(uncompressedPayload.getSource().toPath(), senderId, clientId);
-            } catch (ClientMetaDataFileException | SQLException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
+                // A client's Signal session and receive counter are shared by all of its bundles. Keep
+                // the lock through transaction completion so the next bundle sees the committed counter.
+                if (TransactionSynchronizationManager.isActualTransactionActive() &&
+                        TransactionSynchronizationManager.isSynchronizationActive()) {
+                    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                        @Override
+                        public void afterCompletion(int status) {
+                            receiveLock.unlock();
+                        }
+                    });
+                    unlockWithTransaction = true;
+                }
+                var counters = this.applicationDataManager.getBundleCountersForClient(clientId);
+                if (receivedBundleCounter <= counters.lastReceivedBundleCounter) {
+                    // The counter advances only after every ADU was stored.
+                    recordReceivedBundle(uncompressedBundle, clientId, receivedBundleCounter, senderId);
+                    deleteStagedPayloadAfterCommit(stagedPayload);
+                    logger.log(WARNING,
+                               "[BundleTransmission] Skipping bundle " + bundle.getSource().getName() +
+                                       " already received");
+                    return;
+                }
 
-            this.applicationDataManager.processAcknowledgement(clientId,
-                                                               uncompressedPayload.getAckRecord().getBundleId());
-            if (!uncompressedPayload.getADUs().isEmpty()) {
+                Payload payload = decryptOrResume(uncompressedBundle, stagedPayload);
+
+                UncompressedPayload uncompressedPayload =
+                        BundleUtils.extractPayload(payload, uncompressedBundle.getSource().toPath());
+                logger.log(INFO,
+                           "[CrashReports] extracted payload to: " + uncompressedPayload.getSource().getAbsolutePath());
+                Path crashReportSrcDir =
+                        uncompressedPayload.getSource().toPath().resolve(Constants.BUNDLE_CRASH_REPORT_DIRECTORY_NAME);
+                logger.log(INFO,
+                           "[CrashReports] looking for crash reports in: " + crashReportSrcDir + " exists=" +
+                                   Files.isDirectory(crashReportSrcDir));
+                if (Files.isDirectory(crashReportSrcDir)) {
+                    Path destDir = Path.of(bundleStoreShared, "crashReports", "client");
+                    logger.log(INFO, "[CrashReports] writing to destDir: " + destDir);
+                    try {
+                        Files.createDirectories(destDir);
+                        long timestamp = System.currentTimeMillis();
+                        try (var entries = Files.list(crashReportSrcDir).filter(Files::isRegularFile)) {
+                            var reports = entries.sorted().collect(Collectors.toList());
+                            logger.log(INFO,
+                                       "[CrashReports] found " + reports.size() + " report(s) for client " + clientId);
+                            for (int i = 0; i < reports.size(); i++) {
+                                Path dest = destDir.resolve(clientId + "_" + timestamp + "_" + (i + 1));
+                                logger.log(INFO, "[CrashReports] copying " + reports.get(i) + " -> " + dest);
+                                Files.copy(reports.get(i), dest, StandardCopyOption.REPLACE_EXISTING);
+                            }
+                        }
+                    } catch (Exception e) {
+                        logger.log(WARNING, "[CrashReports] failed to extract crash reports for client " + clientId, e);
+                    }
+                }
+                if (!"HB".equals(uncompressedPayload.getAckRecord().getBundleId())) {
+                    this.serverWindowService.processACK(clientId, uncompressedPayload.getAckRecord().getBundleId());
+                }
+
+                try {
+                    this.bundleRouting.processClientMetaData(uncompressedPayload.getSource().toPath(), senderId, clientId);
+                } catch (ClientMetaDataFileException | SQLException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+
+                this.applicationDataManager.processAcknowledgement(clientId,
+                                                                   uncompressedPayload.getAckRecord().getBundleId());
                 this.applicationDataManager.storeReceivedADUs(clientId,
                                                               uncompressedPayload.getBundleId(),
                                                               receivedBundleCounter,
                                                               uncompressedPayload.getADUs());
+                // only now: the payload decrypted and its ack and ADUs are stored (ack-only bundles included)
+                recordReceivedBundle(uncompressedBundle, clientId, receivedBundleCounter, senderId);
+                deleteStagedPayloadAfterCommit(stagedPayload);
+            } finally {
+                if (!unlockWithTransaction) receiveLock.unlock();
             }
-            // only now: the payload decrypted and its ack and ADUs are stored (ack-only bundles included)
-            recordReceivedBundle(uncompressedBundle, clientId, receivedBundleCounter, senderId);
         } finally {
             FileUtils.recursiveDelete(bundleRecvProcDir);
+        }
+    }
+
+    /**
+     * Signal consumes a message when it decrypts it, before the receive store can write the ADUs. Keep the
+     * authenticated plaintext payload across a store failure so the same encrypted bundle can be retried.
+     */
+    private Payload decryptOrResume(UncompressedBundle bundle, Path stagedPayload) throws Exception {
+        Path stageDir = stagedPayload.getParent();
+        Path decrypted = stageDir.resolve(bundle.getBundleId() + SecurityUtils.DECRYPTED_FILE_EXT);
+        Path marker = stageDir.resolve("authenticated.sha256");
+        if (Files.isRegularFile(marker)) {
+            String expected = Files.readString(marker);
+            if (!expected.matches("[0-9a-f]{64}")) {
+                throw new IOException("Invalid authenticated receive payload marker: " + marker);
+            }
+            if (expected.equals(sha256(stagedPayload))) return new Payload(bundle.getBundleId(), stagedPayload.toFile());
+            if (expected.equals(sha256(decrypted))) {
+                return new Payload(bundle.getBundleId(), promoteOrKeep(decrypted, stagedPayload).toFile());
+            }
+            throw new IOException("Authenticated receive payload is missing or changed: " + stageDir);
+        }
+
+        Files.createDirectories(stageDir);
+        // A decrypt interrupted before its authentication marker may have left partial plaintext.
+        Files.deleteIfExists(decrypted);
+        Path output = serverSecurity.decrypt(bundle.getSource().toPath(), stageDir);
+        Files.writeString(marker, sha256(output));
+        return new Payload(bundle.getBundleId(), promoteOrKeep(output, stagedPayload).toFile());
+    }
+
+    private Path promoteOrKeep(Path authenticatedOutput, Path stagedPayload) {
+        try {
+            return Files.move(authenticatedOutput, stagedPayload, StandardCopyOption.ATOMIC_MOVE,
+                              StandardCopyOption.REPLACE_EXISTING);
+        } catch (AtomicMoveNotSupportedException e) {
+            try {
+                return Files.move(authenticatedOutput, stagedPayload, StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException fallbackFailure) {
+                logger.log(WARNING, "Could not promote authenticated receive payload; using its original path",
+                           fallbackFailure);
+                return authenticatedOutput;
+            }
+        } catch (IOException e) {
+            logger.log(WARNING, "Could not promote authenticated receive payload; using its original path", e);
+            return authenticatedOutput;
+        }
+    }
+
+    private static String sha256(Path file) throws IOException {
+        if (!Files.isRegularFile(file)) return "";
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            try (var input = new DigestInputStream(Files.newInputStream(file), digest)) {
+                input.transferTo(OutputStream.nullOutputStream());
+            }
+            return HexFormat.of().formatHex(digest.digest());
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 unavailable", e);
+        }
+    }
+
+    private Path stagedPayloadPath(String clientId, String bundleId, Path uploadedJar) throws Exception {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        digest.update((clientId + "\0" + bundleId + "\0").getBytes(UTF_8));
+        try (var input = new DigestInputStream(Files.newInputStream(uploadedJar), digest)) {
+            input.transferTo(OutputStream.nullOutputStream());
+        }
+        return config.getBundleTransmission().getReceivedProcessingDirectory()
+                .resolve("retry-payloads")
+                .resolve(HexFormat.of().formatHex(digest.digest()))
+                .resolve("payload.jar");
+    }
+
+    private void deleteStagedPayload(Path stagedPayload) {
+        try {
+            if (!Files.isDirectory(stagedPayload.getParent())) return;
+            try (var entries = Files.list(stagedPayload.getParent())) {
+                for (Path entry : entries.toList()) Files.deleteIfExists(entry);
+            }
+            Files.deleteIfExists(stagedPayload.getParent());
+        } catch (IOException e) {
+            logger.log(WARNING, "Could not remove received payload staging file " + stagedPayload, e);
+        }
+    }
+
+    private void deleteStagedPayloadAfterCommit(Path stagedPayload) {
+        if (TransactionSynchronizationManager.isActualTransactionActive() &&
+                TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    deleteStagedPayload(stagedPayload);
+                }
+            });
+        } else {
+            deleteStagedPayload(stagedPayload);
         }
     }
 
@@ -218,9 +346,9 @@ public class ServerBundleTransmission {
      * SUPERSEDED decisions, so a row must mean "processed", never just "arrived": it is written only after the
      * payload decrypted and its ack and ADUs were stored, or for a duplicate whose counter the server has already
      * processed. A bundle that fails part-way leaves no row ({@code processBundleFile} swallows the exception, so
-     * the RPC's transaction still commits whatever ran before). Ack-only bundles take the main path, since
-     * {@code lastReceivedBundleCounter} only advances for bundles with ADUs (Research R8 §1). A failure to record
-     * is logged and does not fail the bundle; the dropbox then keeps its copy a while longer.
+     * the RPC's transaction still commits whatever ran before). Ack-only bundles advance the same counter after
+     * their acknowledgement is processed. A failure to record is logged and does not fail the bundle; the dropbox
+     * then keeps its copy a while longer.
      */
     private void recordReceivedBundle(UncompressedBundle uncompressedBundle,
                                       String clientId,
