@@ -27,9 +27,9 @@ import java.util.logging.Logger;
  * flushed. Without it a power cut can roll the rename back, losing an upload already acknowledged SUCCESS
  * or a newer recency blob (Audit m8).
  *
- * <p>Package-private: an implementation detail of {@code store/}.
+ * <p>Public so control bookkeeping can use the same durable replacement path as store metadata.
  */
-final class AtomicFiles {
+public final class AtomicFiles {
     private static final Logger logger = Logger.getLogger(AtomicFiles.class.getName());
 
     private AtomicFiles() {}
@@ -43,7 +43,7 @@ final class AtomicFiles {
      * @throws IOException if the content could not be written or moved into place; the old file is
      *                     then left untouched
      */
-    static void write(Path target, byte[] data) throws IOException {
+    public static void write(Path target, byte[] data) throws IOException {
         Path dir = target.toAbsolutePath().getParent();
         Files.createDirectories(dir);
         Path tmp = dir.resolve(target.getFileName() + ".tmp-" + UUID.randomUUID());

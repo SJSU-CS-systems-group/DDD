@@ -3,16 +3,15 @@ package net.discdd.bundledropbox.control;
 import com.google.gson.Gson;
 import com.google.gson.JsonParseException;
 
+import net.discdd.bundledropbox.store.AtomicFiles;
 import net.discdd.dropbox.control.DropboxControl;
 import net.discdd.dropbox.control.InventoryReport;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -40,7 +39,8 @@ import java.util.logging.Logger;
  *   <li>Totals of bundles deleted on server orders, per direction, for the Storage tab.</li>
  * </ul>
  *
- * <p>Writes are atomic (temp file, then rename). An unreadable file starts from zero, which is safe: a too-low
+ * <p>Writes use the store's durable atomic replacement helper: file contents are flushed before rename and the
+ * parent directory is flushed on a best-effort basis. An unreadable file starts from zero, which is safe: a too-low
  * {@code lastAppliedPlanSeq} only re-applies monotonic facts, and a too-low {@code reportSeq} is corrected the next
  * time the server's plan names a higher {@code basedOnReportSeq} ({@link #recordPlanApplied}).
  *
@@ -134,15 +134,8 @@ public final class ControlStateStore {
 
     private void save(State next) throws IOException {
         byte[] json = GSON.toJson(next).getBytes(StandardCharsets.UTF_8);
-        Files.createDirectories(file.toAbsolutePath().getParent());
-        Path tmp = file.resolveSibling(file.getFileName() + ".tmp");
-        Files.write(tmp, json);
-        try {
-            Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-        } catch (AtomicMoveNotSupportedException e) {
-            Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
-        }
-        state = next; // only after the file is durable, so memory never runs ahead of disk
+        AtomicFiles.write(file, json);
+        state = next; // only after replacement succeeds, so memory never runs ahead of disk
     }
 
     private static State load(Path file) {
