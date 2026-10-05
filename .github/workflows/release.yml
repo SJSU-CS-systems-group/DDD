@@ -15,6 +15,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@v6
+
       - name: Configure Maven to use GitHub Packages
         run: |
           mkdir -p ~/.m2
