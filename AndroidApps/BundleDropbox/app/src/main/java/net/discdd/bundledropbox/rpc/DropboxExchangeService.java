@@ -59,10 +59,9 @@ import java.util.logging.Logger;
  *       (Research/R1 §3.2); staging prevents that.</li>
  *   <li><b>psiExchange / psiDownloadBundle</b> (server to client traffic): exactly the transport's semantics
  *       (at most 10 blinded client values, a per-session snapshot of the DOWNSTREAM file names, 5 min TTL,
- *       session removed after a successful download) over committed DOWNSTREAM bundles only. Like a stock
- *       transport, the snapshot holds only the newest bundle per destination client ({@link DownstreamOffer}).</li>
- *   <li><b>downloadBundle</b> (legacy, only used if PSI is UNIMPLEMENTED): committed DOWNSTREAM files that are
- *       their client's newest only.</li>
+ *       session removed after a successful download) over every committed DOWNSTREAM bundle, as a stock
+ *       transport does ({@link DownstreamOffer}).</li>
+ *   <li><b>downloadBundle</b> (legacy, only used if PSI is UNIMPLEMENTED): any committed DOWNSTREAM file.</li>
  *   <li><b>getRecencyBlob</b>: the carrier's server-signed blob from {@link RecencyBlobStore}, served
  *       verbatim.</li>
  * </ul>
@@ -105,20 +104,6 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
     public static final int DOWNLOAD_CHUNK_BYTES = 1024 * 1024;
 
     /**
-     * Default cap on how many DOWNSTREAM bundles one {@code psiExchange} snapshot offers. The snapshot already
-     * holds only one bundle per client ({@link DownstreamOffer}), so this caps the number of CLIENTS served per
-     * session; the ones a carrier most recently confirmed as current are kept.
-     *
-     * <p>Why a cap: the PSI cost is linear in the snapshot on BOTH sides (the dropbox blinds every id in
-     * {@code transportProcess}; the stock client re-blinds every transport value in {@code clientFindMatches}),
-     * each a 3072-bit modPow of roughly 10-15 ms on a phone. Without a cap a dropbox serving many clients would
-     * eventually miss the HOST dwell + drain cap or the client's 120 s PSI deadline, and a client cut off like
-     * that stamps the attempt and skips this transportId (R3 §7).
-     * FUTURE: destination manifests would narrow the snapshot per client.
-     */
-    public static final int DEFAULT_MAX_PSI_SNAPSHOT = 128;
-
-    /**
      * Upload state of the call currently executing on this thread. bundle-core's upload observer calls
      * {@link #pathProducer} and {@link #bundleCompletion} synchronously from inside {@code onNext} /
      * {@code onCompleted}, and those hooks carry no per-call context, so the wrapping observer binds it here
@@ -133,7 +118,6 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
     private final Clock clock;
     private final LongSupplier wallClock;
     private final ConcurrentHashMap<String, PsiSession> psiSessions = new ConcurrentHashMap<>();
-    private final int maxPsiSnapshot;
 
     /**
      * @param store        relay store (UPSTREAM receives client uploads, DOWNSTREAM is served to clients)
@@ -149,23 +133,6 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
                                   RpcEventListener listener,
                                   Clock clock,
                                   LongSupplier wallClock) {
-        this(store, recencyBlobs, deliveryLog, listener, clock, wallClock, DEFAULT_MAX_PSI_SNAPSHOT);
-    }
-
-    /**
-     * Same as the main constructor with an explicit PSI snapshot cap (tests).
-     *
-     * @param maxPsiSnapshot most DOWNSTREAM bundles (one per client) one PSI snapshot offers; must be &gt; 0
-     */
-    public DropboxExchangeService(RelayStore store,
-                                  RecencyBlobStore recencyBlobs,
-                                  DeliveryLog deliveryLog,
-                                  RpcEventListener listener,
-                                  Clock clock,
-                                  LongSupplier wallClock,
-                                  int maxPsiSnapshot) {
-        if (maxPsiSnapshot <= 0) throw new IllegalArgumentException("maxPsiSnapshot must be > 0");
-        this.maxPsiSnapshot = maxPsiSnapshot;
         if (store == null || recencyBlobs == null || deliveryLog == null || clock == null || wallClock == null) {
             throw new NullPointerException("store/recencyBlobs/deliveryLog/clock/wallClock");
         }
@@ -387,8 +354,8 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
      *       Research/R1 §3.5), so an unclean id is answered INVALID_ARGUMENT before anything else;</li>
      *   <li>chunks must stay below the stock client's 4 MiB inbound limit ({@link #DOWNLOAD_CHUNK_BYTES}).</li>
      * </ul>
-     * Only committed DOWNSTREAM files that are their client's newest are served ({@link DownstreamOffer}).
-     * Records the bundle as served when the stream completes.
+     * Serves any committed DOWNSTREAM file, as a stock transport does. Records the bundle as served when
+     * the stream completes.
      */
     @Override
     public void downloadBundle(BundleDownloadRequest request, StreamObserver<BundleDownloadResponse> responseObserver) {
@@ -402,10 +369,7 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
         onBundleExchangeEvent(BundleExchangeEvent.DOWNLOAD_STARTED);
         try {
             Path path = store.pathFor(Direction.DOWNSTREAM, id);
-            // A superseded version is reported as absent: the stock legacy loop takes the FIRST window id it
-            // finds, which would be the oldest version (Audit M7); its newer id is further on in the window.
-            if (path == null || !Files.exists(path) ||
-                    !DownstreamOffer.newestPerClient(store.list(Direction.DOWNSTREAM)).contains(id)) {
+            if (path == null || !Files.exists(path)) {
                 responseObserver.onError(Status.NOT_FOUND.withDescription("Bundle not found").asException());
                 return;
             }
@@ -469,10 +433,10 @@ public final class DropboxExchangeService extends BundleExchangeServiceImpl {
             var psi = new BundleOwnershipPSI();
             BigInteger secret = psi.generateSecret();
 
-            // Snapshot of committed DOWNSTREAM ids (file names == encrypted bundle ids): newest bundle per client,
-            // at most maxPsiSnapshot clients (DownstreamOffer). Staged downloads and the recency blob live
-            // elsewhere, so nothing else needs filtering here.
-            List<String> bundleIds = DownstreamOffer.snapshot(store.list(Direction.DOWNSTREAM), maxPsiSnapshot);
+            // The stock transport offers every held client-bound file. The dropbox likewise offers every
+            // committed DOWNSTREAM ID; an older held version can be the only one in the client's window.
+            // Staged downloads and the recency blob live elsewhere.
+            List<String> bundleIds = DownstreamOffer.snapshot(store.list(Direction.DOWNSTREAM));
 
             List<BigInteger> clientBlinded = new ArrayList<>(numElements);
             for (PSIElement e : request.getClientBlindedValuesList()) {
