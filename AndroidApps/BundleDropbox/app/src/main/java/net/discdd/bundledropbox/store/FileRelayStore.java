@@ -59,7 +59,7 @@ import java.util.logging.Logger;
  *
  * <p><b>Jar metadata.</b> On commit and on {@link #reconcile()} the store reads each bundle's plaintext
  * {@code clientBase.pub} tag and build time ({@link BundleIds#inspect}) into its {@link BundleRecord}, so
- * the HOST side can pick the newest bundle per client without touching the disk (Audit M7).
+ * inventory reports can identify client keys without reopening each jar. HOST offers all retained versions.
  *
  * <p>Pure Java, no Android imports, so it runs in JVM unit tests.
  */

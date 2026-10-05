@@ -35,8 +35,9 @@ public final class DropboxPrefs {
     public static final String KEY_MAX_STORAGE_MB = "max_storage_mb";
     /**
      * Hold a partial wake lock while the relay is cycling (not paused or stopped). Without it the cycle's
-     * timers stop counting while the CPU sleeps with the screen off, so a role could outlast its period many
-     * times over (audit M1-M3). On by default for this always-plugged-in relay. No Wi-Fi lock: see
+     * elapsed-time deadlines still advance during sleep, but callbacks cannot run until the CPU wakes. A role
+     * can therefore outlast its period before the controller catches up. On by default for this plugged-in relay.
+     * No Wi-Fi lock: see
      * {@code DropboxService#applyKeepAwake}.
      */
     public static final String KEY_KEEP_AWAKE = "keep_awake";

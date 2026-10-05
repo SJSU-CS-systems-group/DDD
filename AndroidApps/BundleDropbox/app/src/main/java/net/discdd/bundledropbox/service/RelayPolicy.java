@@ -32,9 +32,9 @@ public final class RelayPolicy {
     }
 
     /**
-     * Whether the partial wake lock should be held (audit M1/M2/M3: the cycle's executor timers and the Wi-Fi
-     * layer's {@code Handler.postDelayed} timeouts stop counting while the CPU is suspended, so with the screen
-     * off a dwell could last many times its period). Held while the relay is cycling: on by default, released
+     * Whether the partial wake lock should be held. Role deadlines use elapsed time and advance during sleep,
+     * but callbacks wait for wake; Wi-Fi {@code Handler.postDelayed} timeouts exclude deep sleep. A dwell can
+     * therefore exceed its period. Held while the relay is cycling: on by default, released
      * while paused or stopped (no timers run then) and after destroy.
      */
     public static boolean wantsWakeLock(boolean keepAwakeSetting, boolean paused, boolean operatorStopped,

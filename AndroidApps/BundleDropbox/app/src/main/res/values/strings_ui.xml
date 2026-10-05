@@ -123,7 +123,7 @@
     <string name="storage_recency_reset_confirm">Forget the stored recency blob? Clients stop seeing this dropbox until a transport synced with the right server is visited. Use this only if clients reject the dropbox (for example after a transport from another server was visited).</string>
     <string name="storage_recency_reset_done">Recency blob reset. Visiting transports for a new one.</string>
     <string name="storage_server_title">Server-managed cleanup</string>
-    <string name="storage_server_text">The dropbox reports what it holds to the server on every transport visit. The server answers with a cleanup plan listing bundles that are safe to delete: deposits it has received (or that a newer one replaced) and pickups their client has acknowledged. Everything else is kept. The clear buttons above remain a manual override.</string>
+    <string name="storage_server_text">The dropbox sends storage reports through transports. Only a server cleanup plan removes relayed bundles automatically: deposits received by the server, pickups acknowledged by their client, superseded bundles, or unknown bundles expired under server policy. Expiry does not prove delivery. The clear buttons above remain a manual override.</string>
     <string name="storage_server_unavailable">Server-managed cleanup is not running (%1$s). Bundles are kept until you clear them.</string>
     <string name="storage_server_pending_up">Deposited, awaiting server decision</string>
     <string name="storage_server_pending_down">Pickups, awaiting server decision</string>
@@ -158,7 +158,7 @@
     <string name="settings_keep_awake">Keep awake</string>
     <string name="settings_start_on_boot">Start automatically</string>
     <string name="settings_start_on_boot_help">Start relaying after the phone restarts or the app is updated, without opening the app (not after you press Stop). With a PIN or pattern lock, unlock once after a restart.</string>
-    <string name="settings_keep_awake_help">Recommended for a plugged-in relay. Holds a partial wake lock while the dropbox is cycling (not paused or stopped). Without it, Android suspends the CPU with the screen off, the role timers stop counting, and the dropbox can stay in one role far longer than its period.</string>
+    <string name="settings_keep_awake_help">Recommended for a plugged-in relay. Holds a partial wake lock while the dropbox is cycling (not paused or stopped). Without it, Android may suspend the CPU with the screen off. Role deadlines continue to advance, but switching waits until the CPU wakes, so a role can last longer than its period.</string>
     <string name="settings_reset_defaults">Reset all to defaults</string>
     <string name="settings_server_keys">Server keys (QR)</string>
     <string name="settings_server_keys_help">The DDD server whose keys the dropbox trusts. It accepts only recency blobs signed by this server and sends its storage reports to it. To use another server (for example a laptop server), scan the QR code from its /qr page, or paste the https://discdd.net/srvr?… URL. Changing keys gives the dropbox a new client identity at that server.</string>

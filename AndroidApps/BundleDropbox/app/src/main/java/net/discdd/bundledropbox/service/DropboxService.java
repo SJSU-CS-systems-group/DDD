@@ -709,9 +709,10 @@ public class DropboxService extends Service implements DropboxControls {
 
     /**
      * Keep-awake (02 Decisions; audit M1-M3). Being plugged in turns off Doze but does not stop the kernel from
-     * suspending the CPU with the screen off, and while it is suspended the cycle's executor timers and the
-     * Wi-Fi layer's {@code Handler.postDelayed} timeouts stop counting: a 60 s client period could last many
-     * times longer, so the relay stopped oscillating. With {@code keep_awake} on (the default) a partial wake
+     * suspending the CPU with the screen off. Elapsed-time role deadlines advance during sleep, but their
+     * callbacks run only after wake; the controller then detects expiry and drains. Wi-Fi layer
+     * {@code Handler.postDelayed} timeouts use uptime and exclude deep sleep. Either delay can extend a role
+     * beyond its configured period. With {@code keep_awake} on (the default) a partial wake
      * lock is held while the relay is cycling, and released while paused or stopped, when no timer runs
      * ({@link RelayPolicy#wantsWakeLock}). No Wi-Fi lock: {@code WIFI_MODE_FULL_LOW_LATENCY} only applies while
      * the screen is on and the app is in the foreground, {@code WIFI_MODE_FULL_HIGH_PERF} is a no-op since
