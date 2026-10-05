@@ -105,7 +105,7 @@ public class InventoryBuilderTest {
     public void sequenceNumbersAndPendingResultsComeFromTheControlState() throws Exception {
         ControlFixtures.commit(store, Direction.UPSTREAM, "u1", 10, null);
         PlanExecutor ex = new PlanExecutor(store, state, () -> {}, () -> 9L);
-        state.recordReportQueued(4, "x", 1);
+        state.recordReportQueued(4, "x", 1, state.snapshot().pendingResults());
         ex.apply(new RetentionPlan(2, 4, null, List.of(new RetentionPlan.Deletion("u1", null)), List.of(), null));
 
         InventoryReport r = builder.build(state.snapshot(), 1L).report();
@@ -121,7 +121,7 @@ public class InventoryBuilderTest {
     public void fingerprintIgnoresSeqAndTimeButNotContent() throws Exception {
         ControlFixtures.commit(store, Direction.UPSTREAM, "u1", 10, null);
         InventoryBuilder.Draft a = builder.build(state.snapshot(), 1L);
-        state.recordReportQueued(a.report().getReportSeq(), a.fingerprint(), 1L);
+        state.recordReportQueued(a.report().getReportSeq(), a.fingerprint(), 1L, a.report().getPlanResults());
         InventoryBuilder.Draft b = builder.build(state.snapshot(), 99L);
         assertEquals(2, b.report().getReportSeq());
         assertEquals(a.fingerprint(), b.fingerprint());
@@ -137,7 +137,7 @@ public class InventoryBuilderTest {
     public void fingerprintIgnoresAppliedPlansSoAnEmptyPlanDoesNotTriggerAReport() throws Exception {
         ControlFixtures.commit(store, Direction.UPSTREAM, "u1", 10, null);
         InventoryBuilder.Draft a = builder.build(state.snapshot(), 1L);
-        state.recordReportQueued(a.report().getReportSeq(), a.fingerprint(), 1L);
+        state.recordReportQueued(a.report().getReportSeq(), a.fingerprint(), 1L, a.report().getPlanResults());
         PlanExecutor ex = new PlanExecutor(store, state, () -> {}, () -> 9L);
 
         ex.apply(new RetentionPlan(1, 1, null, List.of(), List.of(), null));
@@ -149,7 +149,7 @@ public class InventoryBuilderTest {
 
         ex.apply(new RetentionPlan(2, 1, null, List.of(new RetentionPlan.Deletion("gone", null)), List.of(), null));
         assertTrue(state.snapshot().hasUnreportedResults()); // a NOT_FOUND outcome is worth a report
-        state.recordReportQueued(2, builder.build(state.snapshot(), 3L).fingerprint(), 3L);
+        state.recordReportQueued(2, builder.build(state.snapshot(), 3L).fingerprint(), 3L, state.snapshot().pendingResults());
         assertFalse(state.snapshot().hasUnreportedResults());
     }
 
@@ -165,6 +165,27 @@ public class InventoryBuilderTest {
         assertTrue(d.report().getUpstream().size() <= DropboxControl.MAX_ENTRIES_PER_LIST);
         assertEquals("u0", d.report().getUpstream().get(0).getBundleId()); // oldest first
         assertTrue(d.encoded().length <= DropboxControl.MAX_MESSAGE_BYTES);
+    }
+
+    @Test
+    public void resultsOmittedByTheByteBoundAreNotAcknowledgedAsReported() throws Exception {
+        List<String> deleted = new ArrayList<>();
+        for (int i = 0; i < 20_000; i++) deleted.add("b".repeat(80) + i);
+        for (int seq = 1; seq <= 3; seq++) {
+            state.recordPlanApplied(seq, 0, new InventoryReport.PlanResult(seq, deleted, List.of()),
+                                    0, 0, 0, 0, seq);
+        }
+        InventoryBuilder.Draft draft = builder.build(state.snapshot(), 10);
+        List<Long> omitted = new ArrayList<>(List.of(1L, 2L, 3L));
+        for (InventoryReport.PlanResult r : draft.report().getPlanResults()) omitted.remove(r.getPlanSeq());
+        assertFalse("Fixture must exercise actual message-size trimming", omitted.isEmpty());
+        state.recordReportQueued(draft.report().getReportSeq(), draft.fingerprint(), 10, draft.report().getPlanResults());
+        state.recordPlanApplied(4, draft.report().getReportSeq(),
+                                new InventoryReport.PlanResult(4, List.of(), List.of()), 0, 0, 0, 0, 11);
+        List<Long> remaining = new ArrayList<>();
+        for (InventoryReport.PlanResult r : state.snapshot().pendingResults()) remaining.add(r.getPlanSeq());
+        assertTrue("A plan based on the trimmed report cannot acknowledge omitted outcomes",
+                   remaining.containsAll(omitted));
     }
 
     /** A relay store that only lists records (for bound tests; no files, so no fingerprints). */

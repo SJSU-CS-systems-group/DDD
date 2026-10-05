@@ -31,7 +31,7 @@ import java.util.logging.Logger;
  *   <li>{@code lastAppliedPlanSeq}: plans are applied only if {@code planSeq > lastAppliedPlanSeq} (contract rule),
  *       which makes replays and re-deliveries harmless.</li>
  *   <li>{@code pendingResults}: outcomes of applied plans that the server has not seen yet. Each one is sent in
- *       every inventory until a later plan is based on a report that carried it, which proves the server read it
+ *       inventories as space permits until a later plan is based on a report that carried it, which proves the server read it
  *       (bounded by {@link DropboxControl#MAX_PLAN_RESULTS}).</li>
  *   <li>{@code lastReportFingerprint}: a digest of the last queued report's inventory (see
  *       {@code InventoryBuilder.fingerprint}). It lets the manager skip queuing an unchanged report, so an
@@ -78,14 +78,21 @@ public final class ControlStateStore {
      * @param reportSeq   the report's sequence number (greater than {@link Snapshot#lastReportSeq()})
      * @param fingerprint content fingerprint of the report (see {@code InventoryBuilder.fingerprint})
      * @param nowMillis   wall clock
+     * @param includedResults the outcomes actually present after message-size trimming
      */
-    public synchronized void recordReportQueued(long reportSeq, String fingerprint, long nowMillis) throws IOException {
+    public synchronized void recordReportQueued(long reportSeq, String fingerprint, long nowMillis,
+                                                List<InventoryReport.PlanResult> includedResults) throws IOException {
         State next = state.copy();
         next.lastReportSeq = Math.max(next.lastReportSeq, reportSeq);
         next.lastReportFingerprint = fingerprint;
         next.lastReportAtMillis = nowMillis;
         for (PendingResult r : next.pendingResults) {
+            boolean included = includedResults.stream().anyMatch(result -> result.getPlanSeq() == r.planSeq);
+            if (!included) continue;
             if (r.firstReportSeq == 0) r.firstReportSeq = reportSeq;
+            if (!r.includedReports.contains(reportSeq)) r.includedReports.add(reportSeq);
+            // Forgetting old evidence only causes retransmission; it must never imply acknowledgement.
+            while (r.includedReports.size() > DropboxControl.MAX_PLAN_RESULTS) r.includedReports.remove(0);
         }
         save(next);
     }
@@ -113,8 +120,9 @@ public final class ControlStateStore {
         // A report numbered above ours can only exist if our counter was lost (e.g. the state file was damaged):
         // continue above it so the server does not ignore every later report as stale.
         next.lastReportSeq = Math.max(next.lastReportSeq, basedOnReportSeq);
-        // The server read every report up to basedOnReportSeq, so results first sent in one of those are known.
-        next.pendingResults.removeIf(r -> r.firstReportSeq != 0 && r.firstReportSeq <= basedOnReportSeq);
+        // Reports can be skipped in transit or omit outcomes to fit the wire bound. Only the exact report
+        // named by this plan proves receipt of the outcomes it contained.
+        next.pendingResults.removeIf(r -> r.includedReports.contains(basedOnReportSeq));
         next.pendingResults.add(PendingResult.of(result));
         while (next.pendingResults.size() > DropboxControl.MAX_PLAN_RESULTS) next.pendingResults.remove(0);
         next.deletedUpstreamCount += deletedUp;
@@ -143,6 +151,11 @@ public final class ControlStateStore {
             if (s == null) return new State();
             if (s.pendingResults == null) s.pendingResults = new ArrayList<>();
             s.pendingResults.removeIf(r -> r == null || r.planSeq <= 0);
+            for (PendingResult r : s.pendingResults) {
+                if (r.includedReports == null) r.includedReports = new ArrayList<>();
+                // Old bookkeeping could mark even omitted outcomes as sent. Do not infer receipt from it.
+                if (r.includedReports.isEmpty()) r.firstReportSeq = 0;
+            }
             return s;
         } catch (NoSuchFileException e) {
             return new State();
@@ -192,6 +205,8 @@ public final class ControlStateStore {
         List<String> skippedReasons = new ArrayList<>();
         /** reportSeq of the first inventory that carried this result; 0 = not reported yet. */
         long firstReportSeq;
+        /** Exact report sequences that carried this outcome; bounded evidence, not cumulative ACKs. */
+        List<Long> includedReports = new ArrayList<>();
 
         static PendingResult of(InventoryReport.PlanResult r) {
             PendingResult p = new PendingResult();
@@ -216,6 +231,7 @@ public final class ControlStateStore {
             p.skippedIds = new ArrayList<>(skippedIds == null ? List.of() : skippedIds);
             p.skippedReasons = new ArrayList<>(skippedReasons == null ? List.of() : skippedReasons);
             p.firstReportSeq = firstReportSeq;
+            p.includedReports = new ArrayList<>(includedReports);
             return p;
         }
 

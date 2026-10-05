@@ -163,15 +163,30 @@ public class PlanExecutorTest {
     @Test
     public void resultsAreForgottenOnceAPlanIsBasedOnAReportThatCarriedThem() throws IOException {
         executor.apply(plan(1, 0, List.of(), List.of()));
-        state.recordReportQueued(5, "fp", 1); // report #5 carries plan 1's result
+        state.recordReportQueued(5, "fp", 1, state.snapshot().pendingResults()); // report #5 carries plan 1's result
         executor.apply(plan(2, 4, List.of(), List.of())); // based on #4: the server has not seen #5 yet
         assertEquals(List.of(1L, 2L), planSeqs(state.snapshot()));
 
-        state.recordReportQueued(6, "fp2", 2); // carries both
+        state.recordReportQueued(6, "fp2", 2, state.snapshot().pendingResults()); // carries both
         executor.apply(plan(3, 5, List.of(), List.of())); // the server read #5 (plan 1's result)
         assertEquals(List.of(2L, 3L), planSeqs(state.snapshot()));
         executor.apply(plan(4, 6, List.of(), List.of()));
         assertEquals(List.of(3L, 4L), planSeqs(state.snapshot())); // plan 3's result has not been reported yet
+    }
+
+    @Test
+    public void laterReportThatOmitsAnOutcomeDoesNotAcknowledgeItAfterRestart() throws IOException {
+        executor.apply(plan(1, 0, List.of(), List.of()));
+        state.recordReportQueued(5, "fp", 1, state.snapshot().pendingResults());
+        state.recordReportQueued(6, "trimmed", 2, List.of());
+        ControlStateStore reloaded = new ControlStateStore(stateFile);
+        reloaded.recordPlanApplied(2, 6, new InventoryReport.PlanResult(2, List.of(), List.of()),
+                                   0, 0, 0, 0, 3);
+        assertEquals(List.of(1L, 2L), planSeqs(reloaded.snapshot()));
+        // Even after a newer report, the exact older report still proves which outcome reached the server.
+        reloaded.recordPlanApplied(3, 5, new InventoryReport.PlanResult(3, List.of(), List.of()),
+                                   0, 0, 0, 0, 4);
+        assertEquals(List.of(2L, 3L), planSeqs(reloaded.snapshot()));
     }
 
     @Test

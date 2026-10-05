@@ -179,7 +179,8 @@ public final class DropboxControlManager implements ControlChannel {
             // server then ignores as "not newer" once; the following report (or the refresh) recovers.
             OwnBundle own = endpoint.prepareUpstream(queue ? draft.encoded() : null);
             if (queue) {
-                state.recordReportQueued(draft.report().getReportSeq(), draft.fingerprint(), now);
+                state.recordReportQueued(draft.report().getReportSeq(), draft.fingerprint(), now,
+                                         draft.report().getPlanResults());
                 listener.reportQueued(draft.report().getReportSeq(), draft.report().getUpstream().size(),
                                       draft.report().getDownstream().size());
             }

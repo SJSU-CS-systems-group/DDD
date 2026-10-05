@@ -121,8 +121,7 @@ public final class InventoryBuilder {
             InventoryReport report = new InventoryReport(reportSeq, state.lastAppliedPlanSeq(),
                                                          stats.capacityBytes(), used, nowMillis,
                                                          up.subList(0, upLimit), down.subList(0, downLimit),
-                                                         results.subList(results.size() - resultLimit,
-                                                                         results.size()));
+                                                         results.subList(0, resultLimit));
             try {
                 byte[] encoded = DropboxControlCodec.encode(report);
                 if (upLimit < up.size() || downLimit < down.size() || resultLimit < results.size()) {
@@ -134,8 +133,8 @@ public final class InventoryBuilder {
             } catch (DropboxControlException e) {
                 if (e.getKind() != DropboxControlException.Kind.TOO_LARGE) throw e;
                 if (upLimit == 0 && downLimit == 0 && resultLimit <= 1) throw e;
-                // Halve the largest list and retry; keep the newest plan results (the oldest are the likeliest
-                // to have been seen by the server already).
+                // Halve the largest list and retry. Old pending outcomes go first: only an exact
+                // report acknowledgement proves they were seen, and newer outcomes must not starve them.
                 if (upLimit >= downLimit && upLimit > 0) upLimit /= 2;
                 else if (downLimit > 0) downLimit /= 2;
                 else resultLimit = Math.max(1, resultLimit / 2);
