@@ -7,14 +7,15 @@ import net.discdd.bundledropbox.store.RelayStore;
 import net.discdd.bundledropbox.store.StoreStats;
 import net.discdd.dropbox.control.BundleJarInfo;
 import net.discdd.dropbox.control.DropboxControl;
-import net.discdd.dropbox.control.DropboxControlCodec;
 import net.discdd.dropbox.control.DropboxControlException;
 import net.discdd.dropbox.control.InventoryReport;
+import net.discdd.dropbox.control.InventoryCompleteness;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +25,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Builds the dropbox's {@link InventoryReport}: a full snapshot of the relayed bundles it holds, how often each
+ * Builds the dropbox's {@link InventoryReport}: a bounded page of relayed bundles it holds, how often each
  * pickup was served to clients, and the outcomes of plans the server has not seen yet (Modules/Control Contract).
  *
  * <p>Sources:
@@ -42,9 +43,9 @@ import java.util.logging.Logger;
  * </ul>
  *
  * <p>Bounds: the codec rejects lists above {@link DropboxControl#MAX_ENTRIES_PER_LIST} and messages above
- * {@link DropboxControl#MAX_MESSAGE_BYTES}. A dropbox holding more is reported partially, oldest bundles first:
- * they are the likeliest to be released, and the server never deletes because of absence, so omitted bundles
- * are simply reported once space frees up.
+ * {@link DropboxControl#MAX_MESSAGE_BYTES}. Records are sorted by encrypted ID and paged from the persisted
+ * cursor; a page stays in place until a matching plan is applied. The wire message explicitly marks a report
+ * complete only if it actually contains every held ID in both directions.
  *
  * <p>Thread-safe ({@code synchronized}). Pure Java, JVM-tested.
  */
@@ -56,11 +57,18 @@ public final class InventoryBuilder {
         private final InventoryReport report;
         private final byte[] encoded;
         private final String fingerprint;
+        private final String lastUpstreamId;
+        private final String lastDownstreamId;
+        private final boolean complete;
 
-        Draft(InventoryReport report, byte[] encoded, String fingerprint) {
+        Draft(InventoryReport report, byte[] encoded, String fingerprint, String lastUpstreamId,
+              String lastDownstreamId, boolean complete) {
             this.report = report;
             this.encoded = encoded;
             this.fingerprint = fingerprint;
+            this.lastUpstreamId = lastUpstreamId;
+            this.lastDownstreamId = lastDownstreamId;
+            this.complete = complete;
         }
 
         /** @return the report */
@@ -71,6 +79,12 @@ public final class InventoryBuilder {
 
         /** @return a digest of the inventory itself (see {@link InventoryBuilder#fingerprint}) */
         public String fingerprint() { return fingerprint; }
+
+        public String lastUpstreamId() { return lastUpstreamId; }
+
+        public String lastDownstreamId() { return lastDownstreamId; }
+
+        public boolean complete() { return complete; }
     }
 
     private final RelayStore store;
@@ -94,8 +108,14 @@ public final class InventoryBuilder {
      * @throws DropboxControlException only if even an empty report cannot be encoded (a bug)
      */
     public synchronized Draft build(ControlStateStore.Snapshot state, long nowMillis) throws DropboxControlException {
-        List<BundleRecord> upRecords = store.list(Direction.UPSTREAM);
-        List<BundleRecord> downRecords = store.list(Direction.DOWNSTREAM);
+        List<BundleRecord> allUp = new ArrayList<>(store.list(Direction.UPSTREAM));
+        List<BundleRecord> allDown = new ArrayList<>(store.list(Direction.DOWNSTREAM));
+        allUp.sort(Comparator.comparing(BundleRecord::bundleId));
+        allDown.sort(Comparator.comparing(BundleRecord::bundleId));
+        List<BundleRecord> upRecords = page(allUp, state.upstreamCursor(), state.pendingUpstreamEnd(),
+                                            state.hasPendingPage());
+        List<BundleRecord> downRecords = page(allDown, state.downstreamCursor(), state.pendingDownstreamEnd(),
+                                              state.hasPendingPage());
         StoreStats stats = store.stats();
 
         Map<String, long[]> served = aggregateServed(); // id -> {count, last}
@@ -123,13 +143,16 @@ public final class InventoryBuilder {
                                                          up.subList(0, upLimit), down.subList(0, downLimit),
                                                          results.subList(0, resultLimit));
             try {
-                byte[] encoded = DropboxControlCodec.encode(report);
+                boolean complete = upLimit == allUp.size() && downLimit == allDown.size();
+                byte[] encoded = InventoryCompleteness.encode(report, complete);
                 if (upLimit < up.size() || downLimit < down.size() || resultLimit < results.size()) {
                     logger.log(Level.WARNING, "Inventory trimmed to fit the contract bounds: " + upLimit + "/" +
                             up.size() + " up, " + downLimit + "/" + down.size() + " down, " + resultLimit + "/" +
                             results.size() + " plan results");
                 }
-                return new Draft(report, encoded, fingerprint(report));
+                String upEnd = upLimit == 0 ? null : up.get(upLimit - 1).getBundleId();
+                String downEnd = downLimit == 0 ? null : down.get(downLimit - 1).getBundleId();
+                return new Draft(report, encoded, fingerprint(report, complete), upEnd, downEnd, complete);
             } catch (DropboxControlException e) {
                 if (e.getKind() != DropboxControlException.Kind.TOO_LARGE) throw e;
                 if (upLimit == 0 && downLimit == 0 && resultLimit <= 1) throw e;
@@ -140,6 +163,29 @@ public final class InventoryBuilder {
                 else resultLimit = Math.max(1, resultLimit / 2);
             }
         }
+    }
+
+    private static List<BundleRecord> page(List<BundleRecord> sorted, String cursor, String pendingEnd,
+                                           boolean pending) {
+        if (sorted.isEmpty()) return List.of();
+        if (!pending && cursor == null && sorted.size() <= DropboxControl.MAX_ENTRIES_PER_LIST) return sorted;
+        List<BundleRecord> selected = new ArrayList<>();
+        boolean wrapped = pending && cursor != null && pendingEnd != null && pendingEnd.compareTo(cursor) <= 0;
+        for (BundleRecord record : sorted) {
+            String id = record.bundleId();
+            if (pending) {
+                if (pendingEnd == null || (wrapped ? id.compareTo(pendingEnd) > 0 :
+                        (cursor != null && id.compareTo(cursor) <= 0) || id.compareTo(pendingEnd) > 0)) continue;
+            } else if (cursor != null && id.compareTo(cursor) <= 0) {
+                continue;
+            }
+            selected.add(record);
+            if (selected.size() == DropboxControl.MAX_ENTRIES_PER_LIST) break;
+        }
+        if (!pending && selected.isEmpty()) {
+            return new ArrayList<>(sorted.subList(0, Math.min(sorted.size(), DropboxControl.MAX_ENTRIES_PER_LIST)));
+        }
+        return selected;
     }
 
     /**
@@ -154,12 +200,16 @@ public final class InventoryBuilder {
      * {@link ControlStateStore.Snapshot#hasUnreportedResults()}, and a deletion changes the bundle lists anyway.
      */
     static String fingerprint(InventoryReport r) throws DropboxControlException {
+        return fingerprint(r, false);
+    }
+
+    private static String fingerprint(InventoryReport r, boolean complete) throws DropboxControlException {
         InventoryReport normalized = new InventoryReport(1, 0, r.getCapacityBytes(), r.getUsedBytes(), null,
                                                          r.getUpstream(), r.getDownstream(), null);
         try {
             MessageDigest sha = MessageDigest.getInstance("SHA-256");
             return Base64.getUrlEncoder().withoutPadding().encodeToString(
-                    sha.digest(DropboxControlCodec.encode(normalized)));
+                    sha.digest(InventoryCompleteness.encode(normalized, complete)));
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("SHA-256 unavailable", e);
         }

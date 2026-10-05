@@ -228,7 +228,7 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
         String ackOnlyId = BundleJarInfo.read(ackOnly).getBundleId();
         deliverToServer(ackOnly);
         assertEquals(2, clientDownstreamAckRepository.findById(clientId).orElseThrow().ackedCounter);
-        // recorded once fully processed, although an ack-only bundle never advances lastReceivedBundleCounter
+        // ACK-only bundles advance the receive counter too, so retries take the safe duplicate path.
         assertTrue(receivedBundleRepository.existsById(ackOnlyId));
 
         // no new inventory: the server re-plans the stored report when it builds the dropbox's next bundle

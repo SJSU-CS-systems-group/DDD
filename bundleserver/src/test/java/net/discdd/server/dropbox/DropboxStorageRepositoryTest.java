@@ -5,6 +5,7 @@ import net.discdd.dropbox.control.DropboxControl;
 import net.discdd.dropbox.control.DropboxControl.Reason;
 import net.discdd.dropbox.control.DropboxControlCodec;
 import net.discdd.dropbox.control.InventoryReport;
+import net.discdd.dropbox.control.InventoryCompleteness;
 import net.discdd.dropbox.control.InventoryReport.DownstreamEntry;
 import net.discdd.dropbox.control.InventoryReport.UpstreamEntry;
 import net.discdd.dropbox.control.RetentionPlan;
@@ -195,6 +196,11 @@ class DropboxStorageRepositoryTest {
                                                                     List.of())));
     }
 
+    private ADU completeInventory(long seq, List<UpstreamEntry> up, List<DownstreamEntry> down) throws Exception {
+        return aduOf(InventoryCompleteness.encode(new InventoryReport(seq, 0, 1000, 10, null, up, down,
+                                                                       List.of()), true));
+    }
+
     private List<RetentionPlan> queuedPlans() throws Exception {
         var plans = new ArrayList<RetentionPlan>();
         for (var adu : aduStores.getSendADUsStorage().getAppData(D, DropboxControl.APP_ID)) {
@@ -333,16 +339,30 @@ class DropboxStorageRepositoryTest {
 
     @Test
     void sightingsKeepFirstSeenAndForgetUnlistedIds() throws Exception {
-        handler.handleUpstream(D, List.of(inventory(1, List.of(new UpstreamEntry("A", 1, null),
-                                                              new UpstreamEntry("B", 1, null)), List.of())));
+        handler.handleUpstream(D, List.of(completeInventory(1, List.of(new UpstreamEntry("A", 1, null),
+                                                                      new UpstreamEntry("B", 1, null)), List.of())));
         var firstSeenA = inventorySightingRepository.findById(new InventorySightingId(D, "UPSTREAM", "A"))
                 .orElseThrow().firstSeenMs;
         Thread.sleep(5);
-        handler.handleUpstream(D, List.of(inventory(2, List.of(new UpstreamEntry("A", 1, null)), List.of())));
+        handler.handleUpstream(D, List.of(completeInventory(2, List.of(new UpstreamEntry("A", 1, null)), List.of())));
         assertEquals(firstSeenA,
                      inventorySightingRepository.findById(new InventorySightingId(D, "UPSTREAM", "A"))
                              .orElseThrow().firstSeenMs);
         assertTrue(inventorySightingRepository.findById(new InventorySightingId(D, "UPSTREAM", "B")).isEmpty());
+    }
+
+    @Test
+    void partialAndLegacyPagesKeepOmittedSightingsAndTheirUnknownTtl() throws Exception {
+        handler.handleUpstream(D, List.of(inventory(1, List.of(new UpstreamEntry("A", 1, null),
+                                                              new UpstreamEntry("B", 1, null)), List.of())));
+        var bId = new InventorySightingId(D, "UPSTREAM", "B");
+        inventorySightingRepository.save(new InventorySighting(bId, 0));
+        handler.handleUpstream(D, List.of(inventory(2, List.of(new UpstreamEntry("A", 1, null)), List.of())));
+        assertEquals(0, inventorySightingRepository.findById(bId).orElseThrow().firstSeenMs,
+                     "an omitted page must not restart B's expiration clock");
+
+        handler.handleUpstream(D, List.of(inventory(3, List.of(new UpstreamEntry("B", 1, null)), List.of())));
+        assertEquals(List.of(new Deletion("B", Reason.EXPIRED)), queuedPlans().get(0).getDeleteUpstream());
     }
 
     @Test

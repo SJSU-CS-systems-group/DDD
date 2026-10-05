@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -168,6 +170,83 @@ public class InventoryBuilderTest {
     }
 
     @Test
+    public void acknowledgedPageReachesTailPastPermanentlyKeptPrefix() throws Exception {
+        int n = DropboxControl.MAX_ENTRIES_PER_LIST + 7;
+        List<BundleRecord> many = new ArrayList<>(n);
+        for (int i = 0; i < n; i++) {
+            many.add(new BundleRecord(String.format("u%05d", i), Direction.UPSTREAM, 1, i));
+        }
+        InventoryBuilder big = new InventoryBuilder(new ListOnlyStore(many), List::of);
+
+        InventoryBuilder.Draft first = big.build(state.snapshot(), 1L);
+        assertEquals("u00000", first.report().getUpstream().get(0).getBundleId());
+        assertEquals("u19999", first.report().getUpstream().get(19_999).getBundleId());
+        state.recordInventoryQueued(first, 1L);
+        state.recordPlanApplied(1, first.report().getReportSeq(),
+                                new InventoryReport.PlanResult(1, List.of(), List.of()),
+                                0, 0, 0, 0, 2L);
+
+        InventoryBuilder.Draft second = big.build(state.snapshot(), 3L);
+        assertEquals("u20000", second.report().getUpstream().get(0).getBundleId());
+        assertEquals("u20006", second.report().getUpstream().get(6).getBundleId());
+    }
+
+    @Test
+    public void pendingPageKeepsItsBoundaryAcrossRefreshRestartAndStoreChanges() throws Exception {
+        int n = DropboxControl.MAX_ENTRIES_PER_LIST + 1;
+        List<BundleRecord> many = new ArrayList<>(n);
+        for (int i = 0; i < n; i++) {
+            many.add(new BundleRecord(String.format("u%05d", i), Direction.UPSTREAM, 1, i));
+        }
+        InventoryBuilder big = new InventoryBuilder(new ListOnlyStore(many), List::of);
+        InventoryBuilder.Draft first = big.build(state.snapshot(), 1);
+        state.recordInventoryQueued(first, 1);
+        many.remove(100);
+        many.add(new BundleRecord("u19999a", Direction.UPSTREAM, 1, 99_999));
+        state = new ControlStateStore(tmp.getRoot().toPath().resolve("state.json"));
+
+        InventoryBuilder.Draft refreshed = big.build(state.snapshot(), 2);
+        assertEquals("u19999", refreshed.lastUpstreamId());
+        assertFalse(refreshed.report().getUpstream().stream().anyMatch(e -> e.getBundleId().equals("u19999a")));
+        state.recordInventoryQueued(refreshed, 2);
+        state.recordPlanApplied(1, 999, new InventoryReport.PlanResult(1, List.of(), List.of()),
+                                0, 0, 0, 0, 3);
+        assertTrue(state.snapshot().hasPendingPage());
+        state.recordPlanApplied(2, first.report().getReportSeq(),
+                                new InventoryReport.PlanResult(2, List.of(), List.of()), 0, 0, 0, 0, 4);
+        assertEquals("u19999a", big.build(state.snapshot(), 5).report().getUpstream().get(0).getBundleId());
+    }
+
+    @Test
+    public void pagesCoverBothDirectionsDespiteTheFourMiBMessageBound() throws Exception {
+        int n = DropboxControl.MAX_ENTRIES_PER_LIST + 7;
+        List<BundleRecord> up = new ArrayList<>(n);
+        List<BundleRecord> down = new ArrayList<>(n);
+        for (int i = 0; i < n; i++) {
+            String suffix = String.format("%05d", i) + "x".repeat(70);
+            up.add(new BundleRecord("u" + suffix, Direction.UPSTREAM, 1, i));
+            down.add(new BundleRecord("d" + suffix, Direction.DOWNSTREAM, 1, i));
+        }
+        InventoryBuilder big = new InventoryBuilder(new ListOnlyStore(up, down), List::of);
+        Set<String> seenUp = new HashSet<>();
+        Set<String> seenDown = new HashSet<>();
+        for (int visit = 1; visit <= 8 && (seenUp.size() < n || seenDown.size() < n); visit++) {
+            InventoryBuilder.Draft draft = big.build(state.snapshot(), visit);
+            assertTrue(draft.encoded().length <= DropboxControl.MAX_MESSAGE_BYTES);
+            assertTrue(draft.report().getUpstream().size() <= DropboxControl.MAX_ENTRIES_PER_LIST);
+            assertTrue(draft.report().getDownstream().size() <= DropboxControl.MAX_ENTRIES_PER_LIST);
+            draft.report().getUpstream().forEach(e -> seenUp.add(e.getBundleId()));
+            draft.report().getDownstream().forEach(e -> seenDown.add(e.getBundleId()));
+            state.recordInventoryQueued(draft, visit);
+            state.recordPlanApplied(visit, draft.report().getReportSeq(),
+                                    new InventoryReport.PlanResult(visit, List.of(), List.of()),
+                                    0, 0, 0, 0, visit);
+        }
+        assertEquals(n, seenUp.size());
+        assertEquals(n, seenDown.size());
+    }
+
+    @Test
     public void resultsOmittedByTheByteBoundAreNotAcknowledgedAsReported() throws Exception {
         List<String> deleted = new ArrayList<>();
         for (int i = 0; i < 20_000; i++) deleted.add("b".repeat(80) + i);
@@ -191,17 +270,23 @@ public class InventoryBuilderTest {
     /** A relay store that only lists records (for bound tests; no files, so no fingerprints). */
     private static final class ListOnlyStore implements RelayStore {
         private final List<BundleRecord> up;
+        private final List<BundleRecord> down;
 
-        ListOnlyStore(List<BundleRecord> up) { this.up = up; }
+        ListOnlyStore(List<BundleRecord> up) { this(up, List.of()); }
+
+        ListOnlyStore(List<BundleRecord> up, List<BundleRecord> down) {
+            this.up = up;
+            this.down = down;
+        }
 
         @Override public Staged beginStaging(Direction d) { throw new UnsupportedOperationException(); }
         @Override public BundleRecord commit(Staged s, String id) { throw new UnsupportedOperationException(); }
         @Override public void abort(Staged s) {}
-        @Override public List<BundleRecord> list(Direction d) { return d == Direction.UPSTREAM ? up : List.of(); }
+        @Override public List<BundleRecord> list(Direction d) { return d == Direction.UPSTREAM ? up : down; }
         @Override public Path pathFor(Direction d, String bundleId) { return null; }
         @Override public boolean contains(Direction d, String bundleId) { return false; }
         @Override public boolean touch(Direction d, String bundleId) { return false; }
-        @Override public StoreStats stats() { return new StoreStats(up.size(), up.size(), 0, 0, 0, 1L << 40); }
+        @Override public StoreStats stats() { return new StoreStats(up.size(), up.size(), down.size(), down.size(), 0, 1L << 40); }
         @Override public boolean hasCapacityFor(Direction d, long bytes) { return true; }
         @Override public void delete(Direction d, String bundleId) {}
     }

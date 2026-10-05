@@ -36,6 +36,9 @@ import java.util.logging.Logger;
  *       {@code InventoryBuilder.fingerprint}). It lets the manager skip queuing an unchanged report, so an
  *       unchanged dropbox keeps re-offering the same bundle instead of burning a new bundle id per visit
  *       (Research/R7 §7).</li>
+ *   <li>Inventory page cursors and exact report-sequence ranges that can acknowledge the pending page.
+ *       A delayed plan for an earlier refresh of the same page can advance it after a restart, while an
+ *       unrelated plan cannot skip unseen entries.</li>
  *   <li>Totals of bundles deleted on server orders, per direction, for the Storage tab.</li>
  * </ul>
  *
@@ -82,6 +85,18 @@ public final class ControlStateStore {
      */
     public synchronized void recordReportQueued(long reportSeq, String fingerprint, long nowMillis,
                                                 List<InventoryReport.PlanResult> includedResults) throws IOException {
+        recordReportQueued(reportSeq, fingerprint, nowMillis, includedResults, null);
+    }
+
+    /** Records an inventory page and the exact report sequence that can acknowledge its boundary. */
+    public synchronized void recordInventoryQueued(InventoryBuilder.Draft draft, long nowMillis) throws IOException {
+        recordReportQueued(draft.report().getReportSeq(), draft.fingerprint(), nowMillis,
+                           draft.report().getPlanResults(), draft);
+    }
+
+    private void recordReportQueued(long reportSeq, String fingerprint, long nowMillis,
+                                    List<InventoryReport.PlanResult> includedResults,
+                                    InventoryBuilder.Draft draft) throws IOException {
         State next = state.copy();
         next.lastReportSeq = Math.max(next.lastReportSeq, reportSeq);
         next.lastReportFingerprint = fingerprint;
@@ -94,7 +109,35 @@ public final class ControlStateStore {
             // Forgetting old evidence only causes retransmission; it must never imply acknowledgement.
             while (r.includedReports.size() > DropboxControl.MAX_PLAN_RESULTS) r.includedReports.remove(0);
         }
+        if (draft != null) {
+            if (!next.pendingPage && !draft.complete()) {
+                next.pendingPage = true;
+                next.pendingUpstreamEnd = draft.lastUpstreamId();
+                next.pendingDownstreamEnd = draft.lastDownstreamId();
+            }
+            if (next.pendingPage) {
+                next.pageAcks.add(new PageAckRange(reportSeq, reportSeq,
+                                                   draft.lastUpstreamId(), draft.lastDownstreamId()));
+                coalescePageAcks(next.pageAcks);
+            }
+        }
         save(next);
+    }
+
+    private static void coalescePageAcks(List<PageAckRange> ranges) {
+        int n = ranges.size();
+        if (n >= 2) {
+            PageAckRange previous = ranges.get(n - 2);
+            PageAckRange latest = ranges.get(n - 1);
+            if (previous.lastSeq != Long.MAX_VALUE && previous.lastSeq + 1 == latest.firstSeq &&
+                    Objects.equals(previous.upstreamEnd, latest.upstreamEnd) &&
+                    Objects.equals(previous.downstreamEnd, latest.downstreamEnd)) {
+                previous.lastSeq = latest.lastSeq;
+                ranges.remove(n - 1);
+            }
+        }
+        // Keep the oldest evidence and the newest changes; ordinary refreshes coalesce into one range.
+        while (ranges.size() > 16) ranges.remove(1);
     }
 
     /**
@@ -120,6 +163,19 @@ public final class ControlStateStore {
         // A report numbered above ours can only exist if our counter was lost (e.g. the state file was damaged):
         // continue above it so the server does not ignore every later report as stale.
         next.lastReportSeq = Math.max(next.lastReportSeq, basedOnReportSeq);
+        if (next.pendingPage) {
+            for (PageAckRange page : next.pageAcks) {
+                if (basedOnReportSeq >= page.firstSeq && basedOnReportSeq <= page.lastSeq) {
+                    if (page.upstreamEnd != null) next.upstreamCursor = page.upstreamEnd;
+                    if (page.downstreamEnd != null) next.downstreamCursor = page.downstreamEnd;
+                    next.pendingPage = false;
+                    next.pendingUpstreamEnd = null;
+                    next.pendingDownstreamEnd = null;
+                    next.pageAcks.clear();
+                    break;
+                }
+            }
+        }
         // Reports can be skipped in transit or omit outcomes to fit the wire bound. Only the exact report
         // named by this plan proves receipt of the outcomes it contained.
         next.pendingResults.removeIf(r -> r.includedReports.contains(basedOnReportSeq));
@@ -143,6 +199,8 @@ public final class ControlStateStore {
             State s = GSON.fromJson(new String(Files.readAllBytes(file), StandardCharsets.UTF_8), State.class);
             if (s == null) return new State();
             if (s.pendingResults == null) s.pendingResults = new ArrayList<>();
+            if (s.pageAcks == null) s.pageAcks = new ArrayList<>();
+            s.pageAcks.removeIf(r -> r == null || r.firstSeq <= 0 || r.lastSeq < r.firstSeq);
             s.pendingResults.removeIf(r -> r == null || r.planSeq <= 0);
             for (PendingResult r : s.pendingResults) {
                 if (r.includedReports == null) r.includedReports = new ArrayList<>();
@@ -171,6 +229,12 @@ public final class ControlStateStore {
         long deletedDownstreamCount;
         long deletedDownstreamBytes;
         List<PendingResult> pendingResults = new ArrayList<>();
+        String upstreamCursor;
+        String downstreamCursor;
+        boolean pendingPage;
+        String pendingUpstreamEnd;
+        String pendingDownstreamEnd;
+        List<PageAckRange> pageAcks = new ArrayList<>();
 
         State copy() {
             State c = new State();
@@ -186,8 +250,33 @@ public final class ControlStateStore {
             c.deletedDownstreamBytes = deletedDownstreamBytes;
             c.pendingResults = new ArrayList<>();
             for (PendingResult r : pendingResults) c.pendingResults.add(r.copy());
+            c.upstreamCursor = upstreamCursor;
+            c.downstreamCursor = downstreamCursor;
+            c.pendingPage = pendingPage;
+            c.pendingUpstreamEnd = pendingUpstreamEnd;
+            c.pendingDownstreamEnd = pendingDownstreamEnd;
+            c.pageAcks = new ArrayList<>();
+            for (PageAckRange range : pageAcks) c.pageAcks.add(range.copy());
             return c;
         }
+    }
+
+    private static final class PageAckRange {
+        long firstSeq;
+        long lastSeq;
+        String upstreamEnd;
+        String downstreamEnd;
+
+        private PageAckRange() {} // Gson
+
+        PageAckRange(long firstSeq, long lastSeq, String upstreamEnd, String downstreamEnd) {
+            this.firstSeq = firstSeq;
+            this.lastSeq = lastSeq;
+            this.upstreamEnd = upstreamEnd;
+            this.downstreamEnd = downstreamEnd;
+        }
+
+        PageAckRange copy() { return new PageAckRange(firstSeq, lastSeq, upstreamEnd, downstreamEnd); }
     }
 
     /** One plan outcome waiting to reach the server (Gson form of {@link InventoryReport.PlanResult}). */
@@ -261,6 +350,12 @@ public final class ControlStateStore {
         private final long deletedDownstreamBytes;
         private final List<InventoryReport.PlanResult> pendingResults;
         private final boolean hasUnreportedResults;
+        private final String upstreamCursor;
+        private final String downstreamCursor;
+        private final boolean pendingPage;
+        private final String pendingUpstreamEnd;
+        private final String pendingDownstreamEnd;
+        private final long latestPendingReportSeq;
 
         private Snapshot(State s) {
             lastReportSeq = s.lastReportSeq;
@@ -281,6 +376,12 @@ public final class ControlStateStore {
                 if (r.firstReportSeq == 0 && !r.isEmpty()) unreported = true;
             }
             hasUnreportedResults = unreported;
+            upstreamCursor = s.upstreamCursor;
+            downstreamCursor = s.downstreamCursor;
+            pendingPage = s.pendingPage;
+            pendingUpstreamEnd = s.pendingUpstreamEnd;
+            pendingDownstreamEnd = s.pendingDownstreamEnd;
+            latestPendingReportSeq = s.pageAcks.isEmpty() ? 0 : s.pageAcks.get(s.pageAcks.size() - 1).lastSeq;
         }
 
         /** @return reportSeq of the newest queued inventory, 0 if none yet */
@@ -315,6 +416,18 @@ public final class ControlStateStore {
 
         /** @return plan outcomes the server has not seen yet, oldest first */
         public List<InventoryReport.PlanResult> pendingResults() { return pendingResults; }
+
+        public String upstreamCursor() { return upstreamCursor; }
+
+        public String downstreamCursor() { return downstreamCursor; }
+
+        public boolean hasPendingPage() { return pendingPage; }
+
+        public String pendingUpstreamEnd() { return pendingUpstreamEnd; }
+
+        public String pendingDownstreamEnd() { return pendingDownstreamEnd; }
+
+        public long latestPendingReportSeq() { return latestPendingReportSeq; }
 
         /**
          * @return true if a plan deleted or skipped something and no queued report has carried that outcome yet.

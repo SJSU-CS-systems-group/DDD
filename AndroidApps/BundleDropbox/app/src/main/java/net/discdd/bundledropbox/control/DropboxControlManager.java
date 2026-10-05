@@ -26,8 +26,10 @@ import java.util.logging.Logger;
  *   <li>{@link #ownBundleForVisit()}: build an inventory; queue it only if the held bundles differ from the last
  *       one queued, a plan deleted or skipped something that no report carried yet, or the last report is older
  *       than {@link #REPORT_REFRESH_MS} (so the server can re-evaluate time-based rules such as its unknown-bundle
- *       TTL); return the endpoint's newest bundle. Applying an empty plan alone never queues a report, which
- *       keeps the report/plan exchange from running forever ({@link InventoryBuilder#fingerprint}).</li>
+ *       TTL); return the endpoint's newest bundle. For partial inventories, keep the current page until a
+ *       matching plan arrives; refreshes resend that page and a matching plan permits the next page. For a
+ *       complete inventory, an empty plan alone does not trigger another report
+ *       ({@link InventoryBuilder#fingerprint}).</li>
  *   <li>{@link #classify} / {@link #accept}: bundles addressed to the dropbox are processed by the endpoint, whose
  *       plans reach {@link PlanExecutor#apply} through the endpoint's sink.</li>
  * </ol>
@@ -171,16 +173,26 @@ public final class DropboxControlManager implements ControlChannel {
         try {
             ControlStateStore.Snapshot s = state.snapshot();
             long now = wallClock.getAsLong();
+            boolean stale = now - s.lastReportAtMillis() >= REPORT_REFRESH_MS || now < s.lastReportAtMillis();
+            if (s.hasPendingPage() && !stale && s.latestPendingReportSeq() != 0 &&
+                    s.lastReportSeq() == s.latestPendingReportSeq()) {
+                OwnBundle own = endpoint.prepareUpstream(null);
+                publish();
+                return own;
+            }
             InventoryBuilder.Draft draft = inventory.build(s, now);
             boolean changed = !draft.fingerprint().equals(s.lastReportFingerprint());
-            boolean stale = now - s.lastReportAtMillis() >= REPORT_REFRESH_MS || now < s.lastReportAtMillis();
-            boolean queue = changed || stale || s.hasUnreportedResults();
+            // A partial page stays in place until a plan based on that exact report is applied. A refresh
+            // re-sends the same logical page with a new sequence if its plan was lost; older queued sequences
+            // remain valid acknowledgements for that page.
+            boolean queue = s.hasPendingPage() ?
+                    stale || s.lastReportSeq() > s.latestPendingReportSeq() :
+                    changed || stale || s.hasUnreportedResults();
             // ADU first, state second: a crash in between re-uses this reportSeq for the next report, which the
             // server then ignores as "not newer" once; the following report (or the refresh) recovers.
             OwnBundle own = endpoint.prepareUpstream(queue ? draft.encoded() : null);
             if (queue) {
-                state.recordReportQueued(draft.report().getReportSeq(), draft.fingerprint(), now,
-                                         draft.report().getPlanResults());
+                state.recordInventoryQueued(draft, now);
                 listener.reportQueued(draft.report().getReportSeq(), draft.report().getUpstream().size(),
                                       draft.report().getDownstream().size());
             }

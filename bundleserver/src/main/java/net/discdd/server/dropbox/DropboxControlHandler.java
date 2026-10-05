@@ -5,6 +5,7 @@ import net.discdd.dropbox.control.DropboxControl;
 import net.discdd.dropbox.control.DropboxControlCodec;
 import net.discdd.dropbox.control.DropboxControlException;
 import net.discdd.dropbox.control.InventoryReport;
+import net.discdd.dropbox.control.InventoryCompleteness;
 import net.discdd.dropbox.control.RetentionPlan;
 import net.discdd.model.ADU;
 import net.discdd.server.applicationdatamanager.AduStores;
@@ -172,7 +173,8 @@ public class DropboxControlHandler implements InternalAppHandler {
         node = dropboxNodeRepository.save(node);
         logPlanResults(clientId, newest);
 
-        var sightings = refreshSightings(clientId, newest, now);
+        var sightings = refreshSightings(clientId, newest, now,
+                                         InventoryCompleteness.isComplete(newestJson.getBytes(StandardCharsets.UTF_8)));
         var decision = planner.plan(newest, facts(newest, sightings), now);
         // every accepted report gets a plan, even an empty one, so the dropbox learns its report was processed
         enqueuePlan(node, newest, decision, now);
@@ -217,10 +219,12 @@ public class DropboxControlHandler implements InternalAppHandler {
     }
 
     /**
-     * Records first-seen times for IDs new in this report and forgets IDs it no longer lists. Forgetting only resets
-     * the expiry clock; absence from a report never causes a deletion.
+     * Records first-seen times for IDs new in this report. Only an explicitly complete inventory permits
+     * forgetting sightings for absent IDs; older and paged reports preserve sightings across omitted pages.
+     * Absence never authorizes deleting a relayed payload.
      */
-    private List<InventorySighting> refreshSightings(String dropboxId, InventoryReport report, long now) {
+    private List<InventorySighting> refreshSightings(String dropboxId, InventoryReport report, long now,
+                                                     boolean complete) {
         var existing = new HashMap<String, InventorySighting>();
         for (var s : inventorySightingRepository.findByIdDropboxId(dropboxId)) {
             existing.put(ServerRetentionFacts.sightingKey(s.id.getDirection(), s.id.getBundleId()), s);
@@ -237,7 +241,8 @@ public class DropboxControlHandler implements InternalAppHandler {
                 .filter(e -> !listed.contains(e.getKey()))
                 .map(Map.Entry::getValue)
                 .toList();
-        if (!removed.isEmpty()) inventorySightingRepository.deleteAll(removed);
+        if (complete && !removed.isEmpty()) inventorySightingRepository.deleteAll(removed);
+        if (!complete) current.addAll(removed);
         if (!added.isEmpty()) inventorySightingRepository.saveAll(added);
         return current;
     }

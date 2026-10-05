@@ -3,6 +3,9 @@ package net.discdd.bundledropbox.control;
 import net.discdd.bundledropbox.store.BundleRecord;
 import net.discdd.bundledropbox.store.Direction;
 import net.discdd.bundledropbox.store.FileRelayStore;
+import net.discdd.bundledropbox.store.RelayStore;
+import net.discdd.bundledropbox.store.Staged;
+import net.discdd.bundledropbox.store.StoreStats;
 import net.discdd.bundledropbox.visit.ControlChannel;
 import net.discdd.bundlesecurity.BundleIDGenerator;
 import net.discdd.bundlesecurity.DDDPEMEncoder;
@@ -14,6 +17,7 @@ import net.discdd.dropbox.control.DropboxControl;
 import net.discdd.dropbox.control.DropboxControl.Reason;
 import net.discdd.dropbox.control.DropboxControlCodec;
 import net.discdd.dropbox.control.InventoryReport;
+import net.discdd.dropbox.control.InventoryCompleteness;
 import net.discdd.dropbox.control.RetentionPlan;
 import net.discdd.model.ADU;
 import net.discdd.model.Bundle;
@@ -451,6 +455,85 @@ public class DropboxControlEndpointTest {
     private DropboxControlManager manager(FileRelayStore store, Events events, AtomicInteger afterDeletions) {
         return new DropboxControlManager(root, store, List::of,
                                          afterDeletions::incrementAndGet, () -> 5_000_000L, events);
+    }
+
+    /** A realistic large inventory without writing twenty thousand jar files to the test filesystem. */
+    private static final class LargeInventoryStore implements RelayStore {
+        private final FileRelayStore delegate;
+        private final List<BundleRecord> upstream = new ArrayList<>();
+
+        LargeInventoryStore(FileRelayStore delegate) {
+            this.delegate = delegate;
+            for (int i = 0; i < 20_001; i++) {
+                upstream.add(new BundleRecord(String.format("u%05d", i), Direction.UPSTREAM, 1, 1));
+            }
+        }
+
+        @Override public Staged beginStaging(Direction d) throws IOException { return delegate.beginStaging(d); }
+        @Override public BundleRecord commit(Staged s, String id) throws IOException { return delegate.commit(s, id); }
+        @Override public void abort(Staged s) { delegate.abort(s); }
+        @Override public List<BundleRecord> list(Direction d) {
+            return d == Direction.UPSTREAM ? List.copyOf(upstream) : delegate.list(d);
+        }
+        @Override public Path pathFor(Direction d, String id) { return delegate.pathFor(d, id); }
+        @Override public boolean contains(Direction d, String id) {
+            return d == Direction.UPSTREAM ? upstream.stream().anyMatch(r -> r.bundleId().equals(id)) :
+                    delegate.contains(d, id);
+        }
+        @Override public boolean touch(Direction d, String id) { return delegate.touch(d, id); }
+        @Override public StoreStats stats() {
+            StoreStats actual = delegate.stats();
+            return new StoreStats(upstream.size(), upstream.size(), actual.downstreamCount(),
+                                  actual.downstreamBytes(), actual.stagedBytes(), actual.capacityBytes());
+        }
+        @Override public boolean hasCapacityFor(Direction d, long bytes) {
+            return delegate.hasCapacityFor(d, bytes);
+        }
+        @Override public void delete(Direction d, String id) {
+            if (d == Direction.UPSTREAM) upstream.removeIf(r -> r.bundleId().equals(id));
+            else delegate.delete(d, id);
+        }
+    }
+
+    @Test
+    public void managerKeepsPendingPageThroughRefreshAndRestartUntilDelayedPlanArrives() throws Exception {
+        LargeInventoryStore store = new LargeInventoryStore(ControlFixtures.newStore(tmp.newFolder("large").toPath(),
+                                                                                    clock));
+        Events events = new Events();
+        AtomicLong visitTime = new AtomicLong(5_000_000L);
+        DropboxControlManager m = new DropboxControlManager(root, store, List::of, () -> {}, visitTime::get, events);
+        assertTrue(m.open("built-in", keysA.identityPem, keysA.signedPrePem, keysA.ratchetPem));
+
+        ControlChannel.OwnBundle first = m.ownBundleForVisit();
+        Received firstReceived = server.receive(first.path(), work("large-first"));
+        InventoryReport firstReport = firstReceived.onlyInventory();
+        assertEquals(20_000, firstReport.getUpstream().size());
+        assertEquals("u19999", firstReport.getUpstream().get(19_999).getBundleId());
+        assertFalse(InventoryCompleteness.isComplete(firstReceived.controlAdus.get(0)));
+        assertEquals(first.bundleId(), m.ownBundleForVisit().bundleId());
+        assertEquals(List.of(1L), events.reports);
+
+        visitTime.addAndGet(DropboxControlManager.REPORT_REFRESH_MS + 1);
+        ControlChannel.OwnBundle refreshed = m.ownBundleForVisit();
+        Received refreshedReceived = server.receive(refreshed.path(), work("large-refresh"));
+        InventoryReport refreshedReport = refreshedReceived.onlyInventory();
+        assertEquals(2, refreshedReport.getReportSeq());
+        assertEquals("u19999", refreshedReport.getUpstream().get(19_999).getBundleId());
+        assertEquals(List.of(1L, 2L), events.reports);
+
+        assertTrue(m.open("built-in", keysA.identityPem, keysA.signedPrePem, keysA.ratchetPem));
+        assertEquals(refreshed.bundleId(), m.ownBundleForVisit().bundleId());
+        assertEquals(List.of(1L, 2L), events.reports);
+
+        Path delayedPlan = server.send(m.status().endpointClientId(), 1, 1,
+                                       plan(1, firstReport.getReportSeq(), List.of()), refreshed.bundleId(),
+                                       work("large-plan"));
+        assertTrue(m.accept(delayedPlan, "transport-T1"));
+        ControlChannel.OwnBundle tail = m.ownBundleForVisit();
+        InventoryReport tailReport = server.receive(tail.path(), work("large-tail")).onlyInventory();
+        assertEquals(3, tailReport.getReportSeq());
+        assertEquals(List.of("u20000"), tailReport.getUpstream().stream()
+                .map(InventoryReport.UpstreamEntry::getBundleId).collect(Collectors.toList()));
     }
 
     @Test
