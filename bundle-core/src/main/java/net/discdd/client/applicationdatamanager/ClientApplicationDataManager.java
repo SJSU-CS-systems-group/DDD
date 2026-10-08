@@ -112,7 +112,7 @@ public class ClientApplicationDataManager {
     public List<ADU> fetchADUsToSend(long initialSize, String clientId) throws IOException {
         List<ADU> adusToSend = new ArrayList<>();
         final long dataSizeLimit = ClientPaths.APP_DATA_SIZE_LIMIT;
-        var sizeLimiter = new SizeLimiter(dataSizeLimit - initialSize);
+        var sizeLimiter = new SizeLimiter(Math.max(0, dataSizeLimit - initialSize));
         // we cannot use .toList() since we are targeting Java 11, but Intellij really wants us to
         List<String> appIds = this.getRegisteredAppIds().isEmpty() ?
                               sendADUsStorage.getAllClientApps(true)
@@ -120,8 +120,14 @@ public class ClientApplicationDataManager {
                                       .collect(Collectors.toUnmodifiableList()) :
                               this.getRegisteredAppIds();
         for (String appId : appIds) {
+            int before = adusToSend.size();
             StreamExt.takeWhile(sendADUsStorage.getADUs(clientId, appId), a -> sizeLimiter.test(a.getSize()))
                     .forEach(adusToSend::add);
+            if (adusToSend.size() == before) {
+                // nothing fit (the oldest ADU alone exceeds the remaining budget) — send at least
+                // the oldest one so an oversized ADU can't permanently wedge this app's queue
+                sendADUsStorage.getADUs(clientId, appId).findFirst().ifPresent(adusToSend::add);
+            }
         }
         return adusToSend;
     }
@@ -170,8 +176,11 @@ public class ClientApplicationDataManager {
 
         @Override
         public boolean test(Long size) {
+            if (remaining - size < 0) {
+                return false;
+            }
             remaining -= size;
-            return remaining >= 0;
+            return true;
         }
     }
 
