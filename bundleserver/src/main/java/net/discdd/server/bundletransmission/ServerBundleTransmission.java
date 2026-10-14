@@ -1,6 +1,5 @@
 package net.discdd.server.bundletransmission;
 
-import com.google.protobuf.ByteString;
 import net.discdd.bundlerouting.RoutingExceptions.ClientMetaDataFileException;
 import net.discdd.bundlesecurity.BundleIDGenerator;
 import net.discdd.bundlesecurity.DDDPEMEncoder;
@@ -10,8 +9,6 @@ import net.discdd.bundlesecurity.ServerSecurity;
 import net.discdd.dropbox.control.BundleJarInfo;
 import net.discdd.grpc.BundleSenderType;
 import net.discdd.grpc.GetRecencyBlobResponse;
-import net.discdd.grpc.RecencyBlob;
-import net.discdd.grpc.RecencyBlobStatus;
 import net.discdd.model.Bundle;
 import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
@@ -19,6 +16,7 @@ import net.discdd.model.UncompressedPayload;
 import net.discdd.server.applicationdatamanager.ServerApplicationDataManager;
 import net.discdd.server.bundlerouting.BundleRouting;
 import net.discdd.server.bundlerouting.ServerWindowService;
+import net.discdd.server.bundlesecurity.RecencyBlobMinter;
 import net.discdd.server.bundlesecurity.ServerBundleSecurity;
 import net.discdd.server.config.BundleServerConfig;
 import net.discdd.server.repository.ReceivedBundleRepository;
@@ -49,7 +47,6 @@ import java.nio.file.StandardOpenOption;
 import java.security.DigestInputStream;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
-import java.security.SecureRandom;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -95,7 +92,6 @@ public class ServerBundleTransmission {
     private final ReceivedBundleRepository receivedBundleRepository;
     @Value("${bundle-server.bundle-store-shared}")
     private String bundleStoreShared;
-    SecureRandom secureRandom = new SecureRandom();
 
     public ServerBundleTransmission(ServerBundleSecurity bundleSecurity,
                                     ServerApplicationDataManager applicationDataManager,
@@ -457,21 +453,9 @@ public class ServerBundleTransmission {
         return encryptedBundleId;
     }
 
+    /** a fresh recency blob for the TLS peer {@code senderId}; see {@link RecencyBlobMinter} */
     public GetRecencyBlobResponse getRecencyBlob(String senderId) throws InvalidKeyException {
-        var blob = RecencyBlob.newBuilder()
-                .setVersion(0)
-                .setNonce(secureRandom.nextInt())
-                .setBlobTimestamp(System.currentTimeMillis())
-                .setSenderId(senderId)
-                .build();
-        byte[] signature = this.bundleSecurity.signRecencyBlob(blob);
-        byte[] publicKeyBytes = this.bundleSecurity.getIdentityPublicKey();
-        return GetRecencyBlobResponse.newBuilder()
-                .setStatus(RecencyBlobStatus.RECENCY_BLOB_STATUS_SUCCESS)
-                .setRecencyBlob(blob)
-                .setRecencyBlobSignature(ByteString.copyFrom(signature))
-                .setServerPublicKey(ByteString.copyFrom(publicKeyBytes))
-                .build();
+        return RecencyBlobMinter.mint(serverSecurity, senderId);
     }
 
     public Path getClientSendDirectory(String clientId) {

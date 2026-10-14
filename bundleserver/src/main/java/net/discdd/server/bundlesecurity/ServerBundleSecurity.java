@@ -1,8 +1,6 @@
 package net.discdd.server.bundlesecurity;
 
-import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.bundlesecurity.ServerSecurity;
-import net.discdd.grpc.RecencyBlob;
 import net.discdd.model.Payload;
 import net.discdd.model.UncompressedBundle;
 import net.discdd.utils.Constants;
@@ -65,14 +63,6 @@ public class ServerBundleSecurity {
 
     public boolean bundleServerIdMatchesCurrentServer(String receivedServerId) throws NoSuchAlgorithmException {
         return receivedServerId.equals(serverSecurity.getServerId());
-    }
-
-    public byte[] signRecencyBlob(RecencyBlob blob) throws InvalidKeyException {
-        return SecurityUtils.signMessageRaw(blob.toByteArray(), serverSecurity.getSigningKey());
-    }
-
-    public byte[] getIdentityPublicKey() {
-        return serverSecurity.getIdentityPublicKey().serialize();
     }
 
     public long getCounterFromBundlePath(Path bundlePath, boolean direction) throws GeneralSecurityException,

@@ -1,7 +1,9 @@
 package net.discdd.server;
 
 import net.discdd.bundlesecurity.BundleIDGenerator;
+import net.discdd.bundlesecurity.SecurityUtils;
 import net.discdd.client.bundletransmission.ClientBundleTransmission;
+import net.discdd.client.bundletransmission.TransportDevice;
 import net.discdd.dropbox.control.BundleJarInfo;
 import net.discdd.dropbox.control.DropboxControl;
 import net.discdd.dropbox.control.DropboxControl.Reason;
@@ -10,9 +12,12 @@ import net.discdd.dropbox.control.InventoryReport;
 import net.discdd.dropbox.control.InventoryReport.DownstreamEntry;
 import net.discdd.dropbox.control.InventoryReport.PlanResult;
 import net.discdd.dropbox.control.InventoryReport.UpstreamEntry;
+import net.discdd.dropbox.control.RecencyGrant;
+import net.discdd.dropbox.control.RecencyRequestSigner;
 import net.discdd.dropbox.control.RetentionPlan;
 import net.discdd.dropbox.control.RetentionPlan.Deletion;
 import net.discdd.grpc.BundleSenderType;
+import net.discdd.grpc.GetRecencyBlobResponse;
 import net.discdd.model.Bundle;
 import net.discdd.pathutils.ClientPaths;
 import net.discdd.server.applicationdatamanager.AduStores;
@@ -20,9 +25,11 @@ import net.discdd.server.applicationdatamanager.ServerApplicationDataManager;
 import net.discdd.server.bundletransmission.ServerBundleTransmission;
 import net.discdd.server.repository.ClientDownstreamAckRepository;
 import net.discdd.server.repository.DropboxNodeRepository;
+import net.discdd.server.repository.DropboxRecencyGrantRepository;
 import net.discdd.server.repository.ReceivedBundleRepository;
 import net.discdd.server.repository.SentAduDetailsRepository;
 import net.discdd.server.service.GrpcExecutor;
+import net.discdd.tls.GrpcSecurityKey;
 import net.discdd.utils.BundleUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
@@ -42,7 +49,9 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -57,8 +66,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code ServerSecurity}).
  * <ul>
  *   <li>The dropbox's embedded control endpoint is a real bundle-core {@link ClientBundleTransmission} with its own
- *       client identity. It uploads inventory ADUs under {@link DropboxControl#APP_ID} and accepts its own downstream
- *       bundles, as {@code DropboxControlEndpoint} does on the phone.</li>
+ *       client identity. It uploads inventory ADUs under {@link DropboxControl#APP_ID} and recency requests under
+ *       {@link DropboxControl#RECENCY_APP_ID}, and accepts its own downstream bundles, as
+ *       {@code DropboxControlEndpoint} does on the phone.</li>
  *   <li>The stock client is the raw Signal client from {@link End2EndTest} ({@code clientId}); its bundles are the
  *       ones the dropbox "holds" in its inventory.</li>
  * </ul>
@@ -84,7 +94,17 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
     static String dropboxId;
     /** every plan the dropbox endpoint has accepted, in arrival order (replays included) */
     static final List<RetentionPlan> receivedPlans = new CopyOnWriteArrayList<>();
+    /** every recency grant the dropbox endpoint has accepted, in arrival order */
+    static final List<RecencyGrant> receivedGrants = new CopyOnWriteArrayList<>();
     static int fileCounter;
+    /** a stock client's view of the dropbox when it checks the dropbox's blob */
+    static final TransportDevice DROPBOX_AS_TRANSPORT = new TransportDevice() {
+        @Override
+        public String getDescription() {return "dropbox";}
+
+        @Override
+        public String getId() {return "dropbox";}
+    };
 
     // facts carried from one ordered test to the next
     static String stockClientKey;
@@ -102,6 +122,8 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
     @Autowired
     DropboxNodeRepository dropboxNodeRepository;
     @Autowired
+    DropboxRecencyGrantRepository dropboxRecencyGrantRepository;
+    @Autowired
     ReceivedBundleRepository receivedBundleRepository;
     @Autowired
     ClientDownstreamAckRepository clientDownstreamAckRepository;
@@ -117,15 +139,27 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
                                     Files.readAllBytes(serverSignedPreKeyPath),
                                     Files.readAllBytes(serverRatchetKeyPath));
         dropbox = new ClientBundleTransmission(paths, adu -> {
-            // null marks the end of a batch; other app IDs are not the control channel
-            if (adu == null || !DropboxControl.APP_ID.equals(adu.getAppId())) return;
+            // null marks the end of a batch; other app IDs are not the control channels
+            if (adu == null) return;
             try {
-                receivedPlans.add(DropboxControlCodec.decodePlan(Files.readAllBytes(adu.getSource().toPath())));
+                byte[] bytes = Files.readAllBytes(adu.getSource().toPath());
+                if (DropboxControl.APP_ID.equals(adu.getAppId())) {
+                    receivedPlans.add(DropboxControlCodec.decodePlan(bytes));
+                } else if (DropboxControl.RECENCY_APP_ID.equals(adu.getAppId())) {
+                    receivedGrants.add(DropboxControlCodec.decodeRecencyGrant(bytes));
+                }
             } catch (Exception e) {
                 throw new IllegalStateException("dropbox received an undecodable control ADU", e);
             }
         });
         dropboxId = dropbox.getBundleSecurity().getClientSecurity().getClientID();
+        // BundleClient's freshness gate: a blob is new if it is newer than the last one seen from that device
+        Map<String, Long> lastBlobTimestamp = new ConcurrentHashMap<>();
+        dropbox.setRecencyTracker((device, response) -> {
+            long ts = response.getRecencyBlob().getBlobTimestamp();
+            Long previous = lastBlobTimestamp.put(device.getId(), ts);
+            return previous == null || ts > previous;
+        });
     }
 
     @Test
@@ -281,7 +315,73 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
         assertEquals(lastPlan.getDeleteUpstream(), plan.getDeleteUpstream());
     }
 
+    /**
+     * "09 Own Recency Blob Design": the dropbox asks for its own blob with a request signed by its TLS key, and the
+     * grant in its next bundle passes the checks a stock client applies ({@code processRecencyBlob}) for the senderId
+     * the gRPC {@code getRecencyBlob} would give the TLS certificate the dropbox presents.
+     */
+    @Test
+    void test5RecencyRequestIsAnsweredWithTheDropboxsOwnBlob() throws Exception {
+        assertFalse(serverApplicationDataManager.getRegisteredAppIds(dropboxId).contains(DropboxControl.RECENCY_APP_ID),
+                    "a client gets the recency app ID only after it asks");
+        assertFalse(dropbox.applicationDataManager.getRegisteredAppIds().contains(DropboxControl.RECENCY_APP_ID));
+        // the endpoint unions its app IDs into the server's list (DropboxControlEndpoint), so its first request uploads
+        var ids = new ArrayList<>(dropbox.applicationDataManager.getRegisteredAppIds());
+        ids.add(DropboxControl.RECENCY_APP_ID);
+        dropbox.applicationDataManager.setRegisteredAppIds(ids);
+
+        dropboxUploads(DropboxControl.RECENCY_APP_ID, recencyRequest(1));
+
+        String ownSenderId = SecurityUtils.generateID(dropboxTls().grpcCert.getPublicKey().getEncoded());
+        var row = dropboxRecencyGrantRepository.findById(dropboxId).orElseThrow();
+        assertEquals(1, row.lastRequestSeq);
+        assertEquals(ownSenderId, row.senderId);
+        assertTrue(aduStores.getReceiveADUsStorage().getAppData(dropboxId, DropboxControl.RECENCY_APP_ID).isEmpty());
+        assertTrue(serverApplicationDataManager.getRegisteredAppIds(dropboxId).contains(DropboxControl.RECENCY_APP_ID));
+
+        var grant = singleGrant(dropboxDownloadsGrants());
+        assertEquals(1, grant.getRequestSeq());
+        var response = GetRecencyBlobResponse.parseFrom(grant.getRecencyBlobBytes());
+        assertEquals(ownSenderId, response.getRecencyBlob().getSenderId());
+        assertTrue(dropbox.processRecencyBlob(DROPBOX_AS_TRANSPORT, response), "a stock client accepts the blob");
+        // the server's app_ids.txt now names the recency app, so the endpoint keeps uploading requests
+        assertTrue(dropbox.applicationDataManager.getRegisteredAppIds().contains(DropboxControl.RECENCY_APP_ID));
+        // the stock client's app ID list is untouched
+        assertFalse(serverApplicationDataManager.getRegisteredAppIds(clientId).contains(DropboxControl.RECENCY_APP_ID));
+    }
+
+    @Test
+    void test6NextRequestGetsAFresherBlobAndAReSentRequestIsNotReAnswered() throws Exception {
+        var sendStore = aduStores.getSendADUsStorage();
+        dropboxUploads(DropboxControl.RECENCY_APP_ID, recencyRequest(2));
+        long queuedId = sendStore.getLastADUIdAdded(dropboxId, DropboxControl.RECENCY_APP_ID);
+        // a copy of the same request in a later bundle (another carrier, or a re-send) while grant 2 is queued
+        dropboxUploads(DropboxControl.RECENCY_APP_ID, recencyRequest(2));
+        assertEquals(queuedId, sendStore.getLastADUIdAdded(dropboxId, DropboxControl.RECENCY_APP_ID));
+
+        var grant = singleGrant(dropboxDownloadsGrants());
+        assertEquals(2, grant.getRequestSeq());
+        var response = GetRecencyBlobResponse.parseFrom(grant.getRecencyBlobBytes());
+        assertTrue(dropbox.processRecencyBlob(DROPBOX_AS_TRANSPORT, response), "fresher than grant 1's blob");
+        assertEquals(2, dropboxRecencyGrantRepository.findById(dropboxId).orElseThrow().lastRequestSeq);
+        // the recency channel leaves the dropbox's control (plan) registration alone
+        assertTrue(serverApplicationDataManager.getRegisteredAppIds(dropboxId).contains(DropboxControl.APP_ID));
+    }
+
     // ---------------------------------------------------------------- helpers
+
+    private static GrpcSecurityKey dropboxTls() {
+        return dropbox.getBundleSecurity().getClientGrpcSecurityKey();
+    }
+
+    private static byte[] recencyRequest(long requestSeq) throws Exception {
+        return DropboxControlCodec.encode(RecencyRequestSigner.sign(dropboxId, requestSeq, dropboxTls().grpcKeyPair));
+    }
+
+    private static RecencyGrant singleGrant(List<RecencyGrant> grants) {
+        assertEquals(1, grants.size(), () -> "expected exactly one new grant, got " + grants);
+        return grants.get(0);
+    }
 
     private static InventoryReport report(long reportSeq,
                                           long lastAppliedPlanSeq,
@@ -300,12 +400,14 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
 
     /** One dropbox visit's upload: the endpoint builds its own bundle with a fresh inventory ADU; a carrier uploads it. */
     private void dropboxUploadsInventory(InventoryReport report) throws Exception {
+        dropboxUploads(DropboxControl.APP_ID, DropboxControlCodec.encode(report));
+    }
+
+    /** The same visit with a control ADU under any app ID. */
+    private void dropboxUploads(String appId, byte[] adu) throws Exception {
         // the endpoint reuses its last bundle unless an ADU is newer than it (millisecond mtimes)
         Thread.sleep(20);
-        dropbox.applicationDataManager.sendADUsStorage.addADU(null,
-                                                             DropboxControl.APP_ID,
-                                                             DropboxControlCodec.encode(report),
-                                                             -1);
+        dropbox.applicationDataManager.sendADUsStorage.addADU(null, appId, adu, -1);
         Bundle bundle = dropbox.generateBundleForTransmission();
         deliverToServer(bundle.getSource().toPath());
     }
@@ -346,11 +448,22 @@ public class DropboxControlEnd2EndTest extends End2EndTest {
      */
     private List<RetentionPlan> dropboxDownloads() throws Exception {
         int before = receivedPlans.size();
+        dropboxDownloadsBundle();
+        return new ArrayList<>(receivedPlans.subList(before, receivedPlans.size()));
+    }
+
+    /** {@link #dropboxDownloads}, returning the recency grants the bundle carried instead */
+    private List<RecencyGrant> dropboxDownloadsGrants() throws Exception {
+        int before = receivedGrants.size();
+        dropboxDownloadsBundle();
+        return new ArrayList<>(receivedGrants.subList(before, receivedGrants.size()));
+    }
+
+    private void dropboxDownloadsBundle() throws Exception {
         String bundleId = generateBundleForClient(dropboxId);
         Path copy = workDir.resolve("download-" + fileCounter++);
         Files.copy(serverBundleTransmission.getPathForBundleToSend(dropboxId, bundleId), copy);
         dropbox.processReceivedBundle(TRANSPORT_ID, new Bundle(copy.toFile()));
-        return new ArrayList<>(receivedPlans.subList(before, receivedPlans.size()));
     }
 
     private static RetentionPlan single(List<RetentionPlan> plans) {
