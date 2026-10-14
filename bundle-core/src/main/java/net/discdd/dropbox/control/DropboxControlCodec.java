@@ -24,7 +24,12 @@ import java.util.Map;
  * server messages (Gson, Research/R6 §1.1), with a {@code "type"} discriminator and a {@code "v"} version:
  *
  * <pre>{"type":"inventory","v":1,"reportSeq":42,...}
- * {"type":"plan","v":1,"planSeq":7,...}</pre>
+ * {"type":"plan","v":1,"planSeq":7,...}
+ * {"type":"recencyRequest","v":1,"requestSeq":3,"tlsPublicKey":"...","signature":"..."}
+ * {"type":"recencyGrant","v":1,"requestSeq":3,"recencyBlob":"...","issuedAt":...}</pre>
+ *
+ * <p>Inventories and plans travel under {@link DropboxControl#APP_ID}, recency requests and grants under
+ * {@link DropboxControl#RECENCY_APP_ID}; the typed decoders reject a message of the wrong type.
  *
  * <p>Rules, applied the same way by the server and the dropbox:
  * <ul>
@@ -34,7 +39,7 @@ import java.util.Map;
  *   <li>An unknown {@code type} or any {@code v} other than {@link DropboxControl#VERSION} is rejected with a
  *       typed {@link DropboxControlException}; receivers log and drop it.</li>
  *   <li>Every decoded message is validated ({@code INVALID} on bad bundle IDs, negative sizes, missing
- *       sequence numbers), and so is every message before it is encoded.</li>
+ *       sequence numbers, malformed Base64), and so is every message before it is encoded.</li>
  * </ul>
  *
  * <p>Stateless and thread-safe (Gson instances are thread-safe). Pure Java; must stay within the Android API 33
@@ -84,7 +89,7 @@ public final class DropboxControlCodec {
     /**
      * Encodes a message as UTF-8 JSON with {@code "type"} and {@code "v"} first.
      *
-     * @param message an {@link InventoryReport} or {@link RetentionPlan}
+     * @param message an {@link InventoryReport}, {@link RetentionPlan}, {@link RecencyRequest} or {@link RecencyGrant}
      * @return the ADU bytes
      * @throws DropboxControlException {@code INVALID} if the message breaks the contract, {@code TOO_LARGE} if a
      *                                 list or the encoded result exceeds the bounds
@@ -107,7 +112,7 @@ public final class DropboxControlCodec {
      * Decodes and validates one control ADU.
      *
      * @param bytes the ADU content
-     * @return an {@link InventoryReport} or a {@link RetentionPlan}
+     * @return an {@link InventoryReport}, {@link RetentionPlan}, {@link RecencyRequest} or {@link RecencyGrant}
      * @throws DropboxControlException typed by {@link DropboxControlException.Kind}
      */
     public static DropboxControlMessage decode(byte[] bytes) throws DropboxControlException {
@@ -164,7 +169,8 @@ public final class DropboxControlCodec {
     /**
      * Decodes an ADU that must be an inventory (the server side).
      *
-     * @throws DropboxControlException {@code UNEXPECTED_TYPE} for a valid plan, otherwise as {@link #decode(byte[])}
+     * @throws DropboxControlException {@code UNEXPECTED_TYPE} for any other valid message, otherwise as
+     *                                 {@link #decode(byte[])}
      */
     public static InventoryReport decodeInventory(byte[] bytes) throws DropboxControlException {
         return expect(decode(bytes), InventoryReport.class);
@@ -173,11 +179,33 @@ public final class DropboxControlCodec {
     /**
      * Decodes an ADU that must be a plan (the dropbox side).
      *
-     * @throws DropboxControlException {@code UNEXPECTED_TYPE} for a valid inventory, otherwise as
+     * @throws DropboxControlException {@code UNEXPECTED_TYPE} for any other valid message, otherwise as
      *                                 {@link #decode(byte[])}
      */
     public static RetentionPlan decodePlan(byte[] bytes) throws DropboxControlException {
         return expect(decode(bytes), RetentionPlan.class);
+    }
+
+    /**
+     * Decodes an ADU that must be a recency request (the server side). Checks the shape only; the signature is
+     * checked by {@link RecencyRequestSigner#verify}.
+     *
+     * @throws DropboxControlException {@code UNEXPECTED_TYPE} for any other valid message, otherwise as
+     *                                 {@link #decode(byte[])}
+     */
+    public static RecencyRequest decodeRecencyRequest(byte[] bytes) throws DropboxControlException {
+        return expect(decode(bytes), RecencyRequest.class);
+    }
+
+    /**
+     * Decodes an ADU that must be a recency grant (the dropbox side). Checks the shape only; the blob's server
+     * signature and {@code senderId} are the dropbox's to check.
+     *
+     * @throws DropboxControlException {@code UNEXPECTED_TYPE} for any other valid message, otherwise as
+     *                                 {@link #decode(byte[])}
+     */
+    public static RecencyGrant decodeRecencyGrant(byte[] bytes) throws DropboxControlException {
+        return expect(decode(bytes), RecencyGrant.class);
     }
 
     private static <T extends DropboxControlMessage> T expect(DropboxControlMessage m, Class<T> clazz) throws
@@ -192,6 +220,8 @@ public final class DropboxControlCodec {
     private static Class<? extends DropboxControlMessage> classFor(String type) throws DropboxControlException {
         if (DropboxControl.TYPE_INVENTORY.equals(type)) return InventoryReport.class;
         if (DropboxControl.TYPE_PLAN.equals(type)) return RetentionPlan.class;
+        if (DropboxControl.TYPE_RECENCY_REQUEST.equals(type)) return RecencyRequest.class;
+        if (DropboxControl.TYPE_RECENCY_GRANT.equals(type)) return RecencyGrant.class;
         throw new DropboxControlException(DropboxControlException.Kind.UNKNOWN_TYPE, "type=" + abbreviate(type));
     }
 

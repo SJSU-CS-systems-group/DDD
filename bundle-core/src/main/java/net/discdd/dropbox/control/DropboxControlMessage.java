@@ -4,13 +4,15 @@ import net.discdd.utils.BundleUtils;
 
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * Base of the two control messages ({@link InventoryReport}, {@link RetentionPlan}). It names the message's
- * {@code "type"} discriminator and holds the validation helpers both share.
+ * Base of the control messages: {@link InventoryReport} and {@link RetentionPlan} on the {@link DropboxControl#APP_ID}
+ * channel, {@link RecencyRequest} and {@link RecencyGrant} on the {@link DropboxControl#RECENCY_APP_ID} channel. It
+ * names the message's {@code "type"} discriminator and holds the validation helpers they share.
  *
  * <p>Messages are plain value objects that Gson fills reflectively. Their lists may be null after decoding
  * (absent or explicit {@code null} in JSON), so getters always return a non-null, unmodifiable view. The
@@ -22,7 +24,7 @@ public abstract class DropboxControlMessage {
 
     DropboxControlMessage() {}
 
-    /** @return the {@code "type"} discriminator, {@link DropboxControl#TYPE_INVENTORY} or {@link DropboxControl#TYPE_PLAN} */
+    /** @return the {@code "type"} discriminator, one of the {@code DropboxControl.TYPE_*} constants */
     public abstract String type();
 
     /**
@@ -90,6 +92,25 @@ public abstract class DropboxControlMessage {
                 !BASE64_CHARS.matcher(clientKeyB64).matches()) {
             invalid(field + " is not a Base64 key fingerprint: " + abbreviate(clientKeyB64));
         }
+    }
+
+    /**
+     * Checks a required standard Base64 field ({@link Base64#getEncoder()}: RFC 4648 alphabet, padding optional on
+     * decode) of bounded length that decodes to at least one byte.
+     *
+     * @return the decoded bytes
+     */
+    static byte[] requireBase64(String value, int maxChars, String field) throws DropboxControlException {
+        if (value == null || value.isEmpty()) invalid(field + " is missing");
+        if (value.length() > maxChars) invalid(field + " has " + value.length() + " characters, max " + maxChars);
+        byte[] decoded = null;
+        try {
+            decoded = Base64.getDecoder().decode(value);
+        } catch (IllegalArgumentException e) {
+            invalid(field + " is not standard Base64: " + abbreviate(value));
+        }
+        if (decoded.length == 0) invalid(field + " decodes to no bytes");
+        return decoded;
     }
 
     static void invalid(String message) throws DropboxControlException {

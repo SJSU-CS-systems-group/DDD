@@ -9,7 +9,11 @@ package net.discdd.dropbox.control;
  * in-process and answers with {@link RetentionPlan} ADUs under the same app ID, which the dropbox parses
  * itself. Both directions are encoded by {@link DropboxControlCodec}.
  *
- * <p>The design is "06 Storage Management Design" in the DDD Dropbox notes.
+ * <p>A second channel, under {@link #RECENCY_APP_ID}, gets the dropbox its own server-signed recency blob: the
+ * dropbox sends a {@link RecencyRequest} signed with its TLS key ({@link RecencyRequestSigner}), and the server
+ * answers with a {@link RecencyGrant} carrying a blob minted for that key's sender ID. It uses the same codec.
+ *
+ * <p>The designs are "06 Storage Management Design" and "09 Own Recency Blob Design" in the DDD Dropbox notes.
  */
 public final class DropboxControl {
     /**
@@ -19,6 +23,14 @@ public final class DropboxControl {
      */
     public static final String APP_ID = "net.discdd.bundledropbox.control";
 
+    /**
+     * ADU app ID of the recency channel, both directions. It has its own app ID, and so its own ADU queue on
+     * each side, because the {@link #APP_ID} queue holds exactly one message: the server keeps only the newest
+     * queued plan and the dropbox only its newest inventory snapshot. Like {@link #APP_ID}, it is not an Android
+     * package name.
+     */
+    public static final String RECENCY_APP_ID = "net.discdd.bundledropbox.recency";
+
     /** Wire version this code writes and the only version it accepts ({@code "v"} field). */
     public static final int VERSION = 1;
 
@@ -27,6 +39,12 @@ public final class DropboxControl {
 
     /** {@code "type"} discriminator of a {@link RetentionPlan} (server to dropbox). */
     public static final String TYPE_PLAN = "plan";
+
+    /** {@code "type"} discriminator of a {@link RecencyRequest} (dropbox to server, under {@link #RECENCY_APP_ID}). */
+    public static final String TYPE_RECENCY_REQUEST = "recencyRequest";
+
+    /** {@code "type"} discriminator of a {@link RecencyGrant} (server to dropbox, under {@link #RECENCY_APP_ID}). */
+    public static final String TYPE_RECENCY_GRANT = "recencyGrant";
 
     /**
      * Largest encoded message accepted or produced, in bytes (4 MiB). An inventory entry is about 200 bytes, so
@@ -46,6 +64,24 @@ public final class DropboxControl {
 
     /** Longest accepted {@code clientKeyB64} value (a fingerprint is 43 characters; see {@link BundleJarInfo}). */
     public static final int MAX_CLIENT_KEY_CHARS = 128;
+
+    /**
+     * Longest accepted {@code tlsPublicKey} value of a {@link RecencyRequest}. The X.509 DER of a P-256 key is 91
+     * bytes (124 Base64 characters); the bound leaves room for larger curves.
+     */
+    public static final int MAX_TLS_PUBLIC_KEY_CHARS = 1024;
+
+    /**
+     * Longest accepted {@code signature} value of a {@link RecencyRequest}. A DER-encoded P-256 ECDSA signature is
+     * at most 72 bytes (96 Base64 characters); a P-521 one is at most 139 bytes.
+     */
+    public static final int MAX_SIGNATURE_CHARS = 512;
+
+    /**
+     * Longest accepted {@code recencyBlob} value of a {@link RecencyGrant}. A serialized
+     * {@code GetRecencyBlobResponse} is about 150 bytes today; the bound leaves room for new optional fields.
+     */
+    public static final int MAX_RECENCY_BLOB_CHARS = 8192;
 
     /**
      * Why the server tells a dropbox to delete a bundle. Every reason is a monotonic fact, so applying a stale

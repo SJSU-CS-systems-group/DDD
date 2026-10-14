@@ -18,8 +18,8 @@ public class DropboxControlException extends Exception {
         UNKNOWN_TYPE,
         /** {@code "v"} is missing or not {@link DropboxControl#VERSION}. */
         UNSUPPORTED_VERSION,
-        /** A known, well-formed message of a type the caller did not ask for (see
-         *  {@link DropboxControlCodec#decodeInventory} and {@link DropboxControlCodec#decodePlan}). */
+        /** A known, well-formed message of a type the caller did not ask for (see the typed decoders such as
+         *  {@link DropboxControlCodec#decodePlan} and {@link DropboxControlCodec#decodeRecencyGrant}). */
         UNEXPECTED_TYPE,
         /** Well-formed JSON whose values break the contract (bad bundle ID, negative size, missing seq...). */
         INVALID
